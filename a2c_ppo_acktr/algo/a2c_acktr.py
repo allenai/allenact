@@ -1,8 +1,11 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
 
 from a2c_ppo_acktr.algo.kfac import KFACOptimizer
+
+
+def acktr_optimizer(actor_critic):
+    return KFACOptimizer(actor_critic)
 
 
 class A2C_ACKTR:
@@ -11,9 +14,7 @@ class A2C_ACKTR:
         actor_critic,
         value_loss_coef,
         entropy_coef,
-        lr=None,
-        eps=None,
-        alpha=None,
+        optimizer,
         max_grad_norm=None,
         acktr=False,
     ):
@@ -26,12 +27,7 @@ class A2C_ACKTR:
 
         self.max_grad_norm = max_grad_norm
 
-        if acktr:
-            self.optimizer = KFACOptimizer(actor_critic)
-        else:
-            self.optimizer = optim.RMSprop(
-                actor_critic.parameters(), lr, eps=eps, alpha=alpha
-            )
+        self.optimizer = optimizer
 
     def update(self, rollouts):
         obs_shape = rollouts.obs.size()[2:]
