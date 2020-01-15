@@ -1,35 +1,24 @@
-import copy
-import glob
+import os
 import os
 import time
 from collections import deque
+from typing import Any, Dict
 
-import gym
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 
-from a2c_ppo_acktr import algo, utils
-from a2c_ppo_acktr.arguments import get_args
-from a2c_ppo_acktr.model import Policy
-from a2c_ppo_acktr.storage import RolloutStorage
-from evaluation import evaluate
-
-from typing import List, Any, Dict
-from a2c_ppo_acktr.vector_task import VectorSampledTasks
 from configs.util import Builder
+from evaluation import evaluate
+from onpolicy_sync import losses, utils
+from onpolicy_sync.arguments import get_args
+from onpolicy_sync.envs import make_vec_envs
+from onpolicy_sync.model import Policy
+from onpolicy_sync.storage import RolloutStorage
+from onpolicy_sync.vector_task import VectorSampledTasks
+
 
 def train_loop(
-    args,
-    agent,
-    actor_critic,
-    rollouts,
-    envs,
-    eval_log_dir,
-    device,
-    start,
+    args, agent, actor_critic, rollouts, envs, eval_log_dir, device, start,
 ):
     episode_rewards = deque(maxlen=10)
     num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
@@ -159,38 +148,46 @@ def run_pipeline(
 ):
     losses = dict()
 
-    optimizer = train_pipeline['optimizer']
+    optimizer = train_pipeline["optimizer"]
     if isinstance(optimizer, Builder):
-        optimizer = optimizer(params=[p for p in policy.parameters() if p.requires_grad])
+        optimizer = optimizer(
+            params=[p for p in policy.parameters() if p.requires_grad]
+        )
 
-    vectask = VectorSampledTasks(make_sampler_fn=
-    rollouts = RolloutStorage(train_pipeline['num_steps'],
-                              train_pipeline['nproccesses'],
-                              vectask.observation_space.shape,
-                              envs.action_space,
-                              policy.recurrent_hidden_state_size,
-                              )
+    vectask = VectorSampledTasks(make_sampler_fn=None)
+    rollouts = RolloutStorage(
+        train_pipeline["num_steps"],
+        train_pipeline["nproccesses"],
+        vectask.observation_space.shape,
+        envs.action_space,
+        policy.recurrent_hidden_state_size,
+    )
     nsteps = 0
     start_time = time.time()
     for stage in train_pipeline["pipeline"]:
         stage_losses = dict()
-        stage_weights = {name: 1. for name in stage['losses']}
+        stage_weights = {name: 1.0 for name in stage["losses"]}
         for name in stage["losses"]:
             if name in losses:
                 stage_losses[name] = losses[name]
             else:
                 if isinstance(train_pipeline[name], Builder):
-                    losses[name] = train_pipeline[name](
-                        optimizer=optimizer
-                    )
+                    losses[name] = train_pipeline[name](optimizer=optimizer)
                 else:
                     losses[name] = train_pipeline[name]
                 stage_losses[name] = losses[name]
-            stage_limit = stage['criterion']  # - nsteps
-            train_loop(losses, policy, rollouts, vectask, eval_log_dir, train_pipeline['gpu_ids'], start_time, stage_limit)
+            stage_limit = stage["criterion"]  # - nsteps
+            train_loop(
+                losses,
+                policy,
+                rollouts,
+                vectask,
+                eval_log_dir,
+                train_pipeline["gpu_ids"],
+                start_time,
+                stage_limit,
+            )
             nsteps += stage_limit
-    start,
-)
 
 
 def main():
@@ -229,16 +226,14 @@ def main():
     actor_critic.to(device)
 
     if args.algo == "a2c":
-        agent = algo.A2C(
-            actor_critic,
+        agent = losses.A2C(
             args.value_loss_coef,
             args.entropy_coef,
             optimizer,
             max_grad_norm=args.max_grad_norm,
         )
     elif args.algo == "ppo":
-        agent = algo.PPO(
-            actor_critic,
+        agent = losses.PPO(
             args.clip_param,
             args.ppo_epoch,
             args.num_mini_batch,
@@ -248,9 +243,7 @@ def main():
             max_grad_norm=args.max_grad_norm,
         )
     elif args.algo == "acktr":
-        agent = algo.ACKTR(
-            actor_critic, args.value_loss_coef, args.entropy_coef, optimizer
-        )
+        agent = losses.ACKTR(args.value_loss_coef, args.entropy_coef, optimizer)
 
     rollouts = RolloutStorage(
         args.num_steps,
@@ -266,14 +259,7 @@ def main():
 
     start = time.time()
     train_loop(
-        args,
-        agent,
-        actor_critic,
-        rollouts,
-        envs,
-        eval_log_dir,
-        device,
-        start,
+        args, agent, actor_critic, rollouts, envs, eval_log_dir, device, start,
     )
 
 

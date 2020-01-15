@@ -1,10 +1,9 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-from a2c_ppo_acktr.distributions import Bernoulli, Categorical, DiagGaussian
-from a2c_ppo_acktr.utils import init
+from onpolicy_sync.utils import init
+from rl_base.distributions import Bernoulli, Categorical, DiagGaussian
 
 
 class Flatten(nn.Module):

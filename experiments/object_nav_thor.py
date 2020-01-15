@@ -1,14 +1,16 @@
-from rl_base.experiment_config import ExperimentConfig
-import torch.optim as optim
-import torch.nn as nn
-import numpy as np
 from typing import Dict, Any, List, Callable
-from a2c_ppo_acktr.algo import PPO
-from imitation.trainer import Imitation
-from models import ObjectNavThorModel
-from imitation.utils import LinearDecay
-from configs.util import Builder
+
+import numpy as np
+import torch.nn as nn
+import torch.optim as optim
+
 from configs.algo import algo_defaults
+from configs.util import Builder
+from imitation.trainer import Imitation
+from imitation.utils import LinearDecay
+from models import ObjectNavThorModel
+from onpolicy_sync.losses import PPO
+from rl_base.experiment_config import ExperimentConfig
 from rl_base.task import TaskSampler
 
 

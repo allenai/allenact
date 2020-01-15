@@ -4,7 +4,7 @@ import os
 import torch.nn as nn
 
 
-# from a2c_ppo_acktr.envs import VecNormalize
+# from onpolicy_sync.envs import VecNormalize
 
 
 # # Get a render function

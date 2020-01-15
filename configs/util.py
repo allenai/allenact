@@ -1,5 +1,5 @@
-from typing import NamedTuple, Dict, Any
 import copy
+from typing import NamedTuple, Dict, Any
 
 
 class Builder(NamedTuple):

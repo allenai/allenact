@@ -1,20 +1,14 @@
-import argparse
-import os
-
 # workaround to unpickle olf model files
-import sys
-
-import torch
 
 if __name__ == "__main__":
     # TODO: this file will not work until we've updated things
     #   to work with tasks instead of environments.
     raise NotImplementedError()
 
-    from a2c_ppo_acktr.envs import make_vec_envs
-    from a2c_ppo_acktr.utils import get_render_func, get_vec_normalize
+    from onpolicy_sync.envs import make_vec_envs
+    from onpolicy_sync.utils import get_render_func, get_vec_normalize
 
-    sys.path.append("a2c_ppo_acktr")
+    sys.path.append("onpolicy_sync")
 
     parser = argparse.ArgumentParser(description="RL")
     parser.add_argument("--seed", type=int, default=1, help="random seed (default: 1)")
