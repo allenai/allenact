@@ -136,3 +136,13 @@ class TaskSampler(abc.ABC):
     @abstractmethod
     def close(self) -> None:
         raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def all_observation_spaces_equal(self) -> bool:
+        """
+        Returns:
+            True if all Tasks that can be sampled by this sampler
+            have the same observation space. Otherwise False.
+        """
+        raise NotImplementedError()

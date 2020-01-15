@@ -11,15 +11,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from a2c_ppo_acktr import algo, utils
-from a2c_ppo_acktr.arguments import get_args
-from a2c_ppo_acktr.envs import make_vec_envs
-from a2c_ppo_acktr.model import Policy
-from a2c_ppo_acktr.storage import RolloutStorage
+from onpolicy_sync import losses, utils
+from onpolicy_sync.arguments import get_args
+from onpolicy_sync.envs import make_vec_envs
+from onpolicy_sync.model import Policy
+from onpolicy_sync.storage import RolloutStorage
 from evaluation import evaluate
 
 
-def train_loop(args, agent, actor_critic, rollouts, envs, episode_rewards, eval_log_dir, device):
+def train_loop(
+    args, agent, actor_critic, rollouts, envs, episode_rewards, eval_log_dir, device
+):
     num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
     for j in range(num_updates):
 
@@ -175,7 +177,7 @@ def main():
     actor_critic.to(device)
 
     if args.algo == "a2c":
-        agent = algo.A2C_ACKTR(
+        agent = losses.A2C_ACKTR(
             actor_critic,
             args.value_loss_coef,
             args.entropy_coef,
@@ -185,7 +187,7 @@ def main():
             max_grad_norm=args.max_grad_norm,
         )
     elif args.algo == "ppo":
-        agent = algo.PPO(
+        agent = losses.PPO(
             actor_critic,
             args.clip_param,
             args.ppo_epoch,
@@ -197,7 +199,7 @@ def main():
             max_grad_norm=args.max_grad_norm,
         )
     elif args.algo == "acktr":
-        agent = algo.A2C_ACKTR(
+        agent = losses.A2C_ACKTR(
             actor_critic, args.value_loss_coef, args.entropy_coef, acktr=True
         )
 
@@ -216,7 +218,17 @@ def main():
     episode_rewards = deque(maxlen=10)
 
     start = time.time()
-    train_loop(args, agent, actor_critic, rollouts, envs, episode_rewards, eval_log_dir, device, start)
+    train_loop(
+        args,
+        agent,
+        actor_critic,
+        rollouts,
+        envs,
+        episode_rewards,
+        eval_log_dir,
+        device,
+        start,
+    )
 
 
 if __name__ == "__main__":

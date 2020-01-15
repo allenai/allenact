@@ -3,32 +3,42 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions.utils import lazy_property
 
-from a2c_ppo_acktr.utils import AddBias, init
+from onpolicy_sync.utils import AddBias, init
 
 """
 Modify standard PyTorch distributions so they are compatible with this code.
 """
 
-#
-# Standardize distribution interfaces
-#
 
-# Categorical
-FixedCategorical = torch.distributions.Categorical
+class Distr(torch.distributions.Categorical):
+    def log_probs(self, actions: torch.LongTensor):
+        raise NotImplementedError()
 
-old_sample = FixedCategorical.sample
-FixedCategorical.sample = lambda self: old_sample(self).unsqueeze(-1)
 
-log_prob_cat = FixedCategorical.log_prob
-FixedCategorical.log_probs = (
-    lambda self, actions: log_prob_cat(self, actions.squeeze(-1))
-    .view(actions.size(0), -1)
-    .sum(-1)
-    .unsqueeze(-1)
-)
+class CategoricalDistr(Distr):
+    """A categorical distribution."""
 
-FixedCategorical.mode = lambda self: self.probs.argmax(dim=-1, keepdim=True)
+    def sample(self, sample_shape=torch.Size()):
+        return super().sample(sample_shape).unsqueeze(-1)
+
+    def log_probs(self, actions: torch.LongTensor):
+        return (
+            super()
+            .log_prob(actions.squeeze(-1))
+            .view(actions.size(0), -1)
+            .sum(-1)
+            .unsqueeze(-1)
+        )
+
+    @lazy_property
+    def log_probs_tensor(self):
+        return torch.log_softmax(self.logits, dim=-1)
+
+    def mode(self):
+        return self.probs.argmax(dim=-1, keepdim=True)
+
 
 # Normal
 FixedNormal = torch.distributions.Normal
@@ -71,7 +81,7 @@ class Categorical(nn.Module):
 
     def forward(self, x):
         x = self.linear(x)
-        return FixedCategorical(logits=x)
+        return CategoricalDistr(logits=x)
 
 
 class DiagGaussian(nn.Module):

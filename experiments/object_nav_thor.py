@@ -3,7 +3,7 @@ import torch.optim as optim
 import torch.nn as nn
 import numpy as np
 from typing import Dict, Any, List
-from a2c_ppo_acktr.algo import PPO
+from onpolicy_sync.losses import PPO
 from imitation.trainer import Imitation
 from models import ObjectNavThorModel
 from imitation.utils import LinearDecay
