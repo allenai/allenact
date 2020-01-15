@@ -1,8 +1,5 @@
-import math
-
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.distributions.utils import lazy_property
 
 from onpolicy_sync.utils import AddBias, init

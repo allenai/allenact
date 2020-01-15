@@ -14,6 +14,7 @@ class RLStepResult(typing.NamedTuple):
     done: bool
     info: Dict[str, Any]
 
+
 class ActorCriticOutput(tuple, typing.Generic[DistributionType]):
     distributions: DistributionType
     values: torch.FloatTensor

@@ -1,10 +1,4 @@
-import argparse
-import os
-
 # workaround to unpickle olf model files
-import sys
-
-import torch
 
 if __name__ == "__main__":
     # TODO: this file will not work until we've updated things

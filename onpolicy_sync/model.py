@@ -2,8 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from rl_base.distributions import Bernoulli, Categorical, DiagGaussian
 from onpolicy_sync.utils import init
+from rl_base.distributions import Bernoulli, Categorical, DiagGaussian
 
 
 class Flatten(nn.Module):

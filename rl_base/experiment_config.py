@@ -1,6 +1,7 @@
 import abc
-import torch.nn as nn
 from typing import Dict, Any
+
+import torch.nn as nn
 
 
 class ExperimentConfig(abc.ABC):

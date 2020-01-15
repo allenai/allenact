@@ -1,5 +1,4 @@
 import torch
-from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 
 def _flatten_helper(T, N, _tensor):

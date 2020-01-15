@@ -1,13 +1,17 @@
-from rl_base.experiment_config import ExperimentConfig
-import torch.optim as optim
-import torch.nn as nn
+from typing import Dict, Any, List, Callable
+
 import numpy as np
-from typing import Dict, Any, List
-from onpolicy_sync.losses import PPO
+import torch.nn as nn
+import torch.optim as optim
+
+from configs.algo import algo_defaults
+from configs.util import Builder
 from imitation.trainer import Imitation
-from models import ObjectNavThorModel
 from imitation.utils import LinearDecay
-from configs.util import ClassKWArgsTuple
+from models import ObjectNavThorModel
+from onpolicy_sync.losses import PPO
+from rl_base.experiment_config import ExperimentConfig
+from rl_base.task import TaskSampler
 
 
 ##
@@ -31,22 +35,23 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         num_steps = 128
         gpu_ids = [0, 1, 2]
         return {
-            "optimizer": optim.Adam,
-            "lr": lr,
-            "nproccesses": nprocesses,
+            "optimizer": Builder(optim.Adam, dict(lr=lr)),
+            "nprocesses": nprocesses,
             "num_mini_batch": num_mini_batch,
             "update_repeats": update_repeats,
             "num_steps": num_steps,
             "gpu_ids": gpu_ids,
-            "imitation_loss": ClassKWArgsTuple(Imitation,),
-            "ppo_loss": ClassKWArgsTuple(
-                PPO, {"ppo_epoch": update_repeats, "num_mini_batch": num_mini_batch}
+            "imitation_loss": Builder(Imitation,),
+            "ppo_loss": Builder(
+                PPO,
+                dict(ppo_epoch=update_repeats, num_mini_batch=num_mini_batch),
+                default=algo_defaults["ppo_loss"],
             ),
             "pipeline": [
                 {
                     "losses": ["imitation_loss"],
-                    "teacher_forcing": LinearDecay(
-                        startp=1, endp=1e-6, steps=dagger_steps
+                    "teacher_forcing": Builder(
+                        LinearDecay, dict(startp=1, endp=1e-6, steps=dagger_steps)
                     ),
                     "end_criterion": dagger_steps,
                 },
@@ -57,6 +62,14 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return ObjectNavThorModel()
+
+    @staticmethod
+    def make_sampler_fn(**kwargs) -> Callable:
+        def make_sampler() -> TaskSampler:
+            task_sampler = None  # TODO
+            return task_sampler
+
+        return make_sampler
 
     @staticmethod
     def _partition_inds(n: int, num_parts: int):

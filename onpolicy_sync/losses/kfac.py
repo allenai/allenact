@@ -7,6 +7,7 @@ import torch.optim as optim
 
 from onpolicy_sync.utils import AddBias
 
+
 # TODO: In order to make this code faster:
 # 1) Implement _extract_patches as a single cuda kernel
 # 2) Compute QR decomposition in a separate process

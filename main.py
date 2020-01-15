@@ -1,27 +1,26 @@
-import copy
-import glob
+import os
 import os
 import time
 from collections import deque
+from typing import Any, Dict
 
-import gym
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 
+from configs.util import Builder
+from evaluation import evaluate
 from onpolicy_sync import losses, utils
 from onpolicy_sync.arguments import get_args
 from onpolicy_sync.envs import make_vec_envs
 from onpolicy_sync.model import Policy
 from onpolicy_sync.storage import RolloutStorage
-from evaluation import evaluate
+from onpolicy_sync.vector_task import VectorSampledTasks
 
 
 def train_loop(
-    args, agent, actor_critic, rollouts, envs, episode_rewards, eval_log_dir, device
+    args, agent, actor_critic, rollouts, envs, eval_log_dir, device, start,
 ):
+    episode_rewards = deque(maxlen=10)
     num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
     for j in range(num_updates):
 
@@ -141,6 +140,56 @@ def train_loop(
             )
 
 
+def run_pipeline(
+    train_pipeline: Dict[str, Any],
+    policy: Policy,
+    train_sampler_kwargs: Dict[str, Any],
+    eval_log_dir: str,
+):
+    losses = dict()
+
+    optimizer = train_pipeline["optimizer"]
+    if isinstance(optimizer, Builder):
+        optimizer = optimizer(
+            params=[p for p in policy.parameters() if p.requires_grad]
+        )
+
+    vectask = VectorSampledTasks(make_sampler_fn=None)
+    rollouts = RolloutStorage(
+        train_pipeline["num_steps"],
+        train_pipeline["nproccesses"],
+        vectask.observation_space.shape,
+        envs.action_space,
+        policy.recurrent_hidden_state_size,
+    )
+    nsteps = 0
+    start_time = time.time()
+    for stage in train_pipeline["pipeline"]:
+        stage_losses = dict()
+        stage_weights = {name: 1.0 for name in stage["losses"]}
+        for name in stage["losses"]:
+            if name in losses:
+                stage_losses[name] = losses[name]
+            else:
+                if isinstance(train_pipeline[name], Builder):
+                    losses[name] = train_pipeline[name](optimizer=optimizer)
+                else:
+                    losses[name] = train_pipeline[name]
+                stage_losses[name] = losses[name]
+            stage_limit = stage["criterion"]  # - nsteps
+            train_loop(
+                losses,
+                policy,
+                rollouts,
+                vectask,
+                eval_log_dir,
+                train_pipeline["gpu_ids"],
+                start_time,
+                stage_limit,
+            )
+            nsteps += stage_limit
+
+
 def main():
     args = get_args()
 
@@ -177,31 +226,24 @@ def main():
     actor_critic.to(device)
 
     if args.algo == "a2c":
-        agent = losses.A2C_ACKTR(
-            actor_critic,
+        agent = losses.A2C(
             args.value_loss_coef,
             args.entropy_coef,
-            lr=args.lr,
-            eps=args.eps,
-            alpha=args.alpha,
+            optimizer,
             max_grad_norm=args.max_grad_norm,
         )
     elif args.algo == "ppo":
         agent = losses.PPO(
-            actor_critic,
             args.clip_param,
             args.ppo_epoch,
             args.num_mini_batch,
             args.value_loss_coef,
             args.entropy_coef,
-            lr=args.lr,
-            eps=args.eps,
+            optimizer,
             max_grad_norm=args.max_grad_norm,
         )
     elif args.algo == "acktr":
-        agent = losses.A2C_ACKTR(
-            actor_critic, args.value_loss_coef, args.entropy_coef, acktr=True
-        )
+        agent = losses.ACKTR(args.value_loss_coef, args.entropy_coef, optimizer)
 
     rollouts = RolloutStorage(
         args.num_steps,
@@ -215,19 +257,9 @@ def main():
     rollouts.obs[0].copy_(obs)
     rollouts.to(device)
 
-    episode_rewards = deque(maxlen=10)
-
     start = time.time()
     train_loop(
-        args,
-        agent,
-        actor_critic,
-        rollouts,
-        envs,
-        episode_rewards,
-        eval_log_dir,
-        device,
-        start,
+        args, agent, actor_critic, rollouts, envs, eval_log_dir, device, start,
     )
 
 
