@@ -13,7 +13,7 @@ from rl_base.common import EnvType
 
 
 class Sensor(Generic[EnvType]):
-    r"""Represents a sensor that provides data from the environment to agent.
+    """Represents a sensor that provides data from the environment to agent.
     The user of this class needs to implement the get_observation method and
     the user is also required to set the below attributes:
 
@@ -23,6 +23,7 @@ class Sensor(Generic[EnvType]):
         observation_space: ``gym.Space`` object corresponding to observation of
             sensor.
     """
+
     config: Dict[str, Any]
     uuid: str
     observation_space: gym.Space
@@ -39,7 +40,7 @@ class Sensor(Generic[EnvType]):
         raise NotImplementedError()
 
     def get_observation(self, env: EnvType, *args: Any, **kwargs: Any) -> Any:
-        r"""
+        """
         Returns:
             current observation for Sensor.
         """
@@ -47,8 +48,8 @@ class Sensor(Generic[EnvType]):
 
 
 class SensorSuite(Generic[EnvType]):
-    r"""Represents a set of sensors, with each sensor being identified
-    through a unique id.
+    """Represents a set of sensors, with each sensor being identified through a
+    unique id.
 
     Args:
         sensors: list containing sensors for the environment, uuid of each
@@ -64,9 +65,7 @@ class SensorSuite(Generic[EnvType]):
         for sensor in sensors:
             assert (
                 sensor.uuid not in self.sensors
-            ), "'{}' is duplicated sensor uuid".format(
-                sensor.uuid
-            )
+            ), "'{}' is duplicated sensor uuid".format(sensor.uuid)
             self.sensors[sensor.uuid] = sensor
             spaces[sensor.uuid] = sensor.observation_space
         self.observation_spaces = SpaceDict(spaces=spaces)
@@ -77,7 +76,7 @@ class SensorSuite(Generic[EnvType]):
     def get_observations(
         self, env: EnvType, *args: Any, **kwargs: Any
     ) -> Dict[str, Any]:
-        r"""
+        """
         Returns:
             collect data from all sensors and return it packaged inside
             a Dict.
