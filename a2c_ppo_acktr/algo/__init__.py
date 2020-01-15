@@ -8,18 +8,14 @@ class A2C(A2C_ACKTR):
         actor_critic,
         value_loss_coef,
         entropy_coef,
-        lr=None,
-        eps=None,
-        alpha=None,
+        optimizer,
         max_grad_norm=None,
     ):
         super().__init__(
             actor_critic,
             value_loss_coef,
             entropy_coef,
-            lr,
-            eps,
-            alpha,
+            optimizer,
             max_grad_norm,
             acktr=False,
         )
@@ -31,18 +27,14 @@ class ACKTR(A2C_ACKTR):
         actor_critic,
         value_loss_coef,
         entropy_coef,
-        lr=None,
-        eps=None,
-        alpha=None,
+        optimizer,
         max_grad_norm=None,
     ):
         super().__init__(
             actor_critic,
             value_loss_coef,
             entropy_coef,
-            lr,
-            eps,
-            alpha,
+            optimizer,
             max_grad_norm,
             acktr=True,
         )

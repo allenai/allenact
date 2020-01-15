@@ -1,7 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 
 
 class PPO:
@@ -13,8 +11,7 @@ class PPO:
         num_mini_batch,
         value_loss_coef,
         entropy_coef,
-        lr=None,
-        eps=None,
+        optimizer,
         max_grad_norm=None,
         use_clipped_value_loss=True,
     ):
@@ -31,7 +28,7 @@ class PPO:
         self.max_grad_norm = max_grad_norm
         self.use_clipped_value_loss = use_clipped_value_loss
 
-        self.optimizer = optim.Adam(actor_critic.parameters(), lr=lr, eps=eps)
+        self.optimizer = optimizer
 
     def update(self, rollouts):
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
@@ -52,12 +49,24 @@ class PPO:
                 )
 
             for sample in data_generator:
-                obs_batch, recurrent_hidden_states_batch, actions_batch, value_preds_batch, return_batch, masks_batch, old_action_log_probs_batch, adv_targ = (
-                    sample
-                )
+                (
+                    obs_batch,
+                    recurrent_hidden_states_batch,
+                    actions_batch,
+                    value_preds_batch,
+                    return_batch,
+                    masks_batch,
+                    old_action_log_probs_batch,
+                    adv_targ,
+                ) = sample
 
                 # Reshape to do in a single forward pass for all steps
-                values, action_log_probs, dist_entropy, _ = self.actor_critic.evaluate_actions(
+                (
+                    values,
+                    action_log_probs,
+                    dist_entropy,
+                    _,
+                ) = self.actor_critic.evaluate_actions(
                     obs_batch, recurrent_hidden_states_batch, masks_batch, actions_batch
                 )
 

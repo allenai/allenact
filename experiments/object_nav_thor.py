@@ -7,6 +7,7 @@ from a2c_ppo_acktr.algo import PPO
 from imitation.trainer import Imitation
 from models import ObjectNavThorModel
 from imitation.utils import LinearDecay
+from configs.util import ClassKWArgsTuple
 
 
 ##
@@ -37,15 +38,19 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "update_repeats": update_repeats,
             "num_steps": num_steps,
             "gpu_ids": gpu_ids,
+            "imitation_loss": ClassKWArgsTuple(Imitation,),
+            "ppo_loss": ClassKWArgsTuple(
+                PPO, {"ppo_epoch": update_repeats, "num_mini_batch": num_mini_batch}
+            ),
             "pipeline": [
                 {
-                    "losses": [Imitation],
+                    "losses": ["imitation_loss"],
                     "teacher_forcing": LinearDecay(
-                        startp=1, endp=0, steps=dagger_steps
+                        startp=1, endp=1e-6, steps=dagger_steps
                     ),
-                    "end_criteria": dagger_steps,
+                    "end_criterion": dagger_steps,
                 },
-                {"losses": [PPO, Imitation], "end_criteria": ppo_steps},
+                {"losses": ["ppo_loss", "imitation_loss"], "end_criterion": ppo_steps},
             ],
         }
 
