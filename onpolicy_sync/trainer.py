@@ -7,27 +7,30 @@ import torch.optim
 import torch
 import torch.nn as nn
 from onpolicy_sync.utils import batch_observations
+import os
 
 
 class Trainer:
     def __init__(
         self,
-        rollouts: RolloutStorage,
         vector_tasks: VectorSampledTasks,
         actor_critic: Policy,
         losses: List[Tuple[str, Loss, float]],
         optimizer: torch.optim.Optimizer,
+        num_steps: int,
         num_env_steps: int,
         update_epochs: int,
         update_mini_batches: int,
+        num_processes: int,
         gamma: float,
         use_gae: bool,
         gae_lambda: float,
         max_grad_norm: float,
         tracker: Any,
+        models_folder: str,
+        save_interval: int,
         teacher_forcing: Optional[torch.optim.lr_scheduler] = None,
     ):
-        self.rollouts = rollouts
         self.vector_tasks = vector_tasks
         self.actor_critic = actor_critic
 
@@ -35,10 +38,10 @@ class Trainer:
         self.optimizer = optimizer
 
         self.num_env_steps = num_env_steps
-        self.num_steps = self.rollouts.num_steps
+        self.num_steps = num_steps
         self.update_epochs = update_epochs
         self.update_mini_batches = update_mini_batches
-        self.num_processes = self.vector_tasks._num_processes
+        self.num_processes = num_processes
 
         self.num_updates = (
             int(self.num_env_steps) // self.num_steps // self.num_processes
@@ -54,15 +57,51 @@ class Trainer:
 
         self.scheduler = teacher_forcing
 
+        self.models_folder = models_folder
+        self.save_interval = save_interval
+
         self.update_count = 0
         self.backprop_count = 0
 
-    def update(self) -> None:
-        advantages = self.rollouts.returns[:-1] - self.rollouts.value_preds[:-1]
+    def checkpoint_save(self) -> None:
+        # save for every interval-th episode or for the last epoch
+        if (
+            self.save_interval > 0
+            and (
+                self.update_count % self.save_interval == 0
+                or self.update_count == self.num_updates - 1
+            )
+            and self.models_folder != ""
+        ):
+            os.makedirs(self.models_folder, exist_ok=True)
+
+            model_path = os.path.join(
+                self.models_folder, "model_%010d.pt" % self.update_count
+            )
+            torch.save(
+                {
+                    "update_count": self.update_count,
+                    "backprop_count": self.backprop_count,
+                    "model_state_dict": self.actor_critic.state_dict(),
+                    "optimizer_state_dict": self.optimizer.state_dict(),
+                },
+                model_path,
+            )
+
+    def checkpoint_load(self, checkpoint_file_name: str) -> None:
+        # Map location CPU is almost always better than mapping to a CUDA device.
+        ckpt_dict = torch.load(checkpoint_file_name, map_location="cpu")
+        self.actor_critic.load_state_dict(ckpt_dict["model_state_dict"])
+        self.update_count = ckpt_dict["update_count"]
+        self.backprop_count = ckpt_dict["backprop_count"]
+        self.optimizer.load_state_dict(ckpt_dict["optimizer_state_dict"])
+
+    def update(self, rollouts) -> None:
+        advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-5)
 
         for e in range(self.update_epochs):
-            data_generator = self.rollouts.recurrent_generator(
+            data_generator = rollouts.recurrent_generator(
                 advantages, self.update_mini_batches
             )
 
@@ -136,13 +175,15 @@ class Trainer:
             masks,
         )
 
-    def train(self):
-        rollouts = self.rollouts
-        actor_critic = self.actor_critic
-        vtasks = self.vector_tasks
+    def initialize_rollouts(self, rollouts):
+        observations = self.vector_tasks.next_task()
+        batch = batch_observations(observations)
 
-        observations = vtasks.next_task()
-        rollouts.observations[0].copy_(batch_observations(observations))
+        for sensor in rollouts.observations:
+            rollouts.observations[sensor][0].copy_(batch[sensor])
+
+    def train(self, rollouts):
+        self.initialize_rollouts(rollouts)
 
         while self.update_count < self.num_updates:
             for step in range(self.num_steps):
@@ -151,7 +192,7 @@ class Trainer:
             with torch.no_grad():
                 step_observation = {k: v[-1] for k, v in rollouts.observations.items()}
 
-                next_value = actor_critic.get_value(
+                next_value = self.actor_critic.get_value(
                     step_observation,
                     rollouts.recurrent_hidden_states[-1],
                     rollouts.prev_actions[-1],
@@ -168,4 +209,7 @@ class Trainer:
 
         if self.scheduler is not None:
             self.scheduler.step()
+
+        self.checkpoint_save()
+
         self.update_count += 1
