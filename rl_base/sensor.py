@@ -4,12 +4,13 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import OrderedDict
-from typing import Generic, Dict, Any, List
+from typing import Generic, Dict, Any, List, Optional
 
 import gym
 from gym.spaces import Dict as SpaceDict
 
 from rl_base.common import EnvType
+from rl_base.task import Task
 
 
 class Sensor(Generic[EnvType]):
@@ -39,7 +40,9 @@ class Sensor(Generic[EnvType]):
     def _get_observation_space(self) -> gym.Space:
         raise NotImplementedError()
 
-    def get_observation(self, env: EnvType, *args: Any, **kwargs: Any) -> Any:
+    def get_observation(
+        self, env: EnvType, task: Optional[Task], *args: Any, **kwargs: Any
+    ) -> Any:
         """
         Returns:
             current observation for Sensor.
@@ -74,7 +77,7 @@ class SensorSuite(Generic[EnvType]):
         return self.sensors[uuid]
 
     def get_observations(
-        self, env: EnvType, *args: Any, **kwargs: Any
+        self, env: EnvType, task: Optional[Task[EnvType]], *args: Any, **kwargs: Any
     ) -> Dict[str, Any]:
         """
         Returns:
@@ -82,6 +85,6 @@ class SensorSuite(Generic[EnvType]):
             a Dict.
         """
         return {
-            uuid: sensor.get_observation(env, *args, **kwargs)
+            uuid: sensor.get_observation(env=env, task=task, *args, **kwargs)
             for uuid, sensor in self.sensors.items()
         }
