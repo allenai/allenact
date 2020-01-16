@@ -42,7 +42,7 @@ class Task(Generic[EnvType]):
         self._num_steps_taken = 0
 
     def get_observations(self) -> Any:
-        return self.sensor_suite.get_observations(self.env)
+        return self.sensor_suite.get_observations(env=self.env, task=self)
 
     @property
     @abstractmethod
