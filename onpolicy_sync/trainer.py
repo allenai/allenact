@@ -142,7 +142,7 @@ class Trainer:
         vtasks = self.vector_tasks
 
         observations = vtasks.next_task()
-        rollouts.observations[0].copy_(observations)
+        rollouts.observations[0].copy_(batch_observations(observations))
 
         while self.update_count < self.num_updates:
             for step in range(self.num_steps):
