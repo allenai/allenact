@@ -4,7 +4,7 @@ import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 
-from configs.algo import algo_defaults
+from configs.losses import algo_defaults
 from configs.util import Builder
 from imitation.trainer import Imitation
 from imitation.utils import LinearDecay
@@ -64,8 +64,8 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         return ObjectNavThorModel()
 
     @staticmethod
-    def make_sampler_fn(**kwargs) -> Callable:
-        def make_sampler() -> TaskSampler:
+    def make_sampler_fn(**kwargs) -> Callable[..., TaskSampler]:
+        def make_sampler(**kwargs) -> TaskSampler:
             task_sampler = None  # TODO
             return task_sampler
 
