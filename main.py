@@ -253,8 +253,6 @@ def main():
         actor_critic.recurrent_hidden_state_size,
     )
 
-    obs = envs.reset()
-    rollouts.obs[0].copy_(obs)
     rollouts.to(device)
 
     start = time.time()
