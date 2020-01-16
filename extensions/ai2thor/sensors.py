@@ -15,7 +15,6 @@ class ScaleBothSides(object):
     """Rescales the input PIL.Image to the given 'width' and `height`.
 
     Attributes
-    ----------
         width: new width
         height: new height
         interpolation: Default: PIL.Image.BILINEAR

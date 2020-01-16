@@ -98,18 +98,25 @@ class Task(Generic[EnvType]):
     def close(self) -> None:
         raise NotImplementedError()
 
+    def metrics(self) -> Dict[str, Any]:
+        """Computes metrics related to the task after the task's completion.
+
+        @return: a dictionary where every key is a string (the metric's
+        name) and the value is the value of the metric.
+        @rtype: Dict[str, Any]
+        """
+        return {}
+
 
 class TaskSampler(abc.ABC):
-    # Abstract class defining a how new tasks are sampled
+    """Abstract class defining a how new tasks are sampled."""
 
     @property
     @abstractmethod
     def __len__(self) -> Union[int, float]:
         """
-        Returns:
-            Number of total tasks remaining that can be sampled.
-            Can be float('inf').
-
+        @return: Number of total tasks remaining that can be sampled. Can be
+        float('inf').
         """
         raise NotImplementedError()
 
@@ -117,10 +124,8 @@ class TaskSampler(abc.ABC):
     @abstractmethod
     def total_unique(self) -> Union[int, float, None]:
         """
-        Returns:
-            Total number of *unique* tasks that can be sampled.
-            Can be float('inf') or, if the total unique is not known,
-            None.
+        @return: Total number of *unique* tasks that can be sampled. Can be
+        float('inf') or, if the total unique is not known, None.
         """
         raise NotImplementedError()
 
@@ -141,8 +146,7 @@ class TaskSampler(abc.ABC):
     @abstractmethod
     def all_observation_spaces_equal(self) -> bool:
         """
-        Returns:
-            True if all Tasks that can be sampled by this sampler
-            have the same observation space. Otherwise False.
+        @return: True if all Tasks that can be sampled by this sampler have the
+        same observation space. Otherwise False.
         """
         raise NotImplementedError()
