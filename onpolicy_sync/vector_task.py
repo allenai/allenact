@@ -37,14 +37,11 @@ CALL_COMMAND = "call"
 
 
 def tile_images(images: List[np.ndarray]) -> np.ndarray:
-    r"""Tile multiple images into single image
+    """Tile multiple images into single image.
 
-    Args:
-        images: list of images where each image has dimension
-            (height x width x channels)
-
-    Returns:
-        tiled image (new_height x width x channels)
+    @param images: list of images where each image has dimension
+        (height x width x channels)
+    @return: tiled image (new_height x width x channels)
     """
     assert len(images) > 0, "empty list of images"
     np_images = np.asarray(images)
@@ -89,6 +86,7 @@ class VectorSampledTasks:
     """
 
     observation_space: SpaceDict
+    metrics_out_queue: mp.Queue
     _workers: List[Union[mp.Process, Thread]]
     _is_waiting: bool
     _num_processes: int
@@ -132,6 +130,8 @@ class VectorSampledTasks:
 
         self._is_closed = False
 
+        self.metrics_out_queue = self._mp_ctx.Queue()
+
         for write_fn in self._connection_write_fns:
             write_fn((OBSERVATION_SPACE_COMMAND, None))
 
@@ -171,6 +171,7 @@ class VectorSampledTasks:
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args: Dict[str, Any],
         auto_resample_when_done: bool,
+        metrics_out_queue: mp.Queue,
         child_pipe: Optional[Connection] = None,
         parent_pipe: Optional[Connection] = None,
     ) -> None:
@@ -186,9 +187,14 @@ class VectorSampledTasks:
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
                     step_result = current_task.step(data)
-                    if auto_resample_when_done and current_task.is_done():
-                        current_task = task_sampler.next_task()
-                        step_result.observations = current_task.get_observations()
+                    if current_task.is_done():
+                        metrics = current_task.metrics()
+                        if metrics is not None and len(metrics) != 0:
+                            metrics_out_queue.put(metrics)
+
+                        if auto_resample_when_done:
+                            current_task = task_sampler.next_task()
+                            step_result.observations = current_task.get_observations()
 
                     connection_write_fn(step_result)
 
@@ -252,6 +258,7 @@ class VectorSampledTasks:
                     make_sampler_fn,
                     sampler_fn_args,
                     self._auto_resample_when_done,
+                    self.metrics_out_queue,
                     worker_conn,
                     parent_conn,
                 ),
