@@ -1,6 +1,6 @@
 from onpolicy_sync.storage import RolloutStorage
 from rl_base.common import Loss
-from typing import List, Optional, Any, Tuple
+from typing import List, Optional, Any, Tuple, Dict
 from onpolicy_sync.vector_task import VectorSampledTasks
 from onpolicy_sync.model import Policy
 import torch.optim
@@ -15,7 +15,8 @@ class Trainer:
         self,
         vector_tasks: VectorSampledTasks,
         actor_critic: Policy,
-        losses: List[Tuple[str, Loss, float]],
+        losses: Dict[str, Loss],
+        loss_weights: Dict[str, float],
         optimizer: torch.optim.Optimizer,
         num_steps: int,
         num_env_steps: int,
@@ -29,12 +30,14 @@ class Trainer:
         tracker: Any,
         models_folder: str,
         save_interval: int,
+        pipeline_stage: int,
         teacher_forcing: Optional[torch.optim.lr_scheduler] = None,
     ):
         self.vector_tasks = vector_tasks
         self.actor_critic = actor_critic
 
         self.losses = losses
+        self.loss_weights = loss_weights
         self.optimizer = optimizer
 
         self.num_env_steps = num_env_steps
@@ -60,6 +63,8 @@ class Trainer:
         self.models_folder = models_folder
         self.save_interval = save_interval
 
+        self.pipeline_stage = pipeline_stage
+
         self.update_count = 0
         self.backprop_count = 0
 
@@ -76,10 +81,12 @@ class Trainer:
             os.makedirs(self.models_folder, exist_ok=True)
 
             model_path = os.path.join(
-                self.models_folder, "model_%010d.pt" % self.update_count
+                self.models_folder,
+                "model_stage_%02d_%010d.pt" % (self.pipeline_stage, self.update_count),
             )
             torch.save(
                 {
+                    "pipeline_stage": self.pipeline_stage,
                     "update_count": self.update_count,
                     "backprop_count": self.backprop_count,
                     "model_state_dict": self.actor_critic.state_dict(),
@@ -88,9 +95,7 @@ class Trainer:
                 model_path,
             )
 
-    def checkpoint_load(self, checkpoint_file_name: str) -> None:
-        # Map location CPU is almost always better than mapping to a CUDA device.
-        ckpt_dict = torch.load(checkpoint_file_name, map_location="cpu")
+    def checkpoint_load(self, ckpt_dict: Dict[str, Any]) -> None:
         self.actor_critic.load_state_dict(ckpt_dict["model_state_dict"])
         self.update_count = ckpt_dict["update_count"]
         self.backprop_count = ckpt_dict["backprop_count"]
@@ -120,9 +125,15 @@ class Trainer:
                     losses=[],
                 )
                 self.optimizer.zero_grad()
-                for loss_name, loss, loss_weight in self.losses:
+                for loss_name in self.losses:
+                    loss, loss_weight = (
+                        self.losses[loss_name],
+                        self.loss_weights[loss_name],
+                    )
+
                     current_loss, current_info = loss.loss(batch, actor_critic_output)
                     (loss_weight * current_loss).backward()
+
                     current_info["name"] = loss_name
                     current_info["weight"] = loss_weight
                     info["losses"].append(current_info)
@@ -200,7 +211,7 @@ class Trainer:
                 ).detach()
 
             rollouts.compute_returns(
-                next_value, self.use_gae, self.gamma, self.gae_lambda,
+                next_value, self.use_gae, self.gamma, self.gae_lambda
             )
 
             self.update()
