@@ -61,8 +61,8 @@ def run_pipeline(
             losses=stage_losses,
             loss_weights=stage_weights,
             optimizer=optimizer,
-            num_steps=stage_limit,
-            num_env_steps=train_pipeline["num_steps"],
+            rollout_steps=train_pipeline["num_steps"],
+            stage_task_steps=stage_limit,
             update_epochs=train_pipeline["update_repeats"],
             update_mini_batches=train_pipeline["num_mini_batch"],
             num_processes=train_pipeline["nprocesses"],
@@ -94,7 +94,7 @@ def run_pipeline(
 
             rollouts = None
 
-        nsteps += stage_limit
+        nsteps += stage_limit  # TODO
 
 
 def main():

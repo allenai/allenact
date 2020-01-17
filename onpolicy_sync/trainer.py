@@ -18,8 +18,8 @@ class Trainer:
         losses: Dict[str, Loss],
         loss_weights: Dict[str, float],
         optimizer: torch.optim.Optimizer,
-        num_steps: int,
-        num_env_steps: int,
+        rollout_steps: int,
+        stage_task_steps: int,
         update_epochs: int,
         update_mini_batches: int,
         num_processes: int,
@@ -40,15 +40,15 @@ class Trainer:
         self.loss_weights = loss_weights
         self.optimizer = optimizer
 
-        self.num_env_steps = num_env_steps
-        self.num_steps = num_steps
+        self.stage_task_steps = stage_task_steps
+        self.rollout_steps = rollout_steps
         self.update_epochs = update_epochs
         self.update_mini_batches = update_mini_batches
         self.num_processes = num_processes
 
         self.num_updates = (
-            int(self.num_env_steps) // self.num_steps // self.num_processes
-        )
+            int(self.stage_task_steps) // self.rollout_steps
+        ) // self.num_processes
 
         self.gamma = gamma
         self.use_gae = use_gae
@@ -58,7 +58,7 @@ class Trainer:
 
         self.tracker = tracker
 
-        self.scheduler = teacher_forcing
+        self.teacher_forcing = teacher_forcing
 
         self.models_folder = models_folder
         self.save_interval = save_interval
@@ -197,7 +197,7 @@ class Trainer:
         self.initialize_rollouts(rollouts)
 
         while self.update_count < self.num_updates:
-            for step in range(self.num_steps):
+            for step in range(self.rollout_steps):
                 self.collect_rollout_step(rollouts)
 
             with torch.no_grad():
@@ -218,8 +218,8 @@ class Trainer:
 
             rollouts.after_update()
 
-        if self.scheduler is not None:
-            self.scheduler.step()
+        if self.teacher_forcing is not None:
+            self.teacher_forcing.step()
 
         self.checkpoint_save()
 
