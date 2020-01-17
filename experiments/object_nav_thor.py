@@ -4,7 +4,7 @@ import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 
-from configs.algo import algo_defaults
+from configs.losses import algo_defaults
 from configs.util import Builder
 from imitation.trainer import Imitation
 from imitation.utils import LinearDecay
@@ -12,6 +12,7 @@ from models import ObjectNavThorModel
 from onpolicy_sync.losses import PPO
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.task import TaskSampler
+from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
 
 
 ##
@@ -64,12 +65,8 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         return ObjectNavThorModel()
 
     @staticmethod
-    def make_sampler_fn(**kwargs) -> Callable:
-        def make_sampler() -> TaskSampler:
-            task_sampler = None  # TODO
-            return task_sampler
-
-        return make_sampler
+    def make_sampler_fn(**kwargs) -> TaskSampler:
+        return ObjectNavTaskSampler(**kwargs)
 
     @staticmethod
     def _partition_inds(n: int, num_parts: int):

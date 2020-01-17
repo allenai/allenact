@@ -63,11 +63,11 @@ def tile_images(images: List[np.ndarray]) -> np.ndarray:
 
 class VectorSampledTasks:
     """Vectorized collection of tasks. Creates multiple processes where each
-    process runs its own TaskSampler. Each process generates one Task from it's
+    process runs its own TaskSampler. Each process generates one Task from its
     TaskSampler at a time and this class allows for interacting with these
     tasks in a vectorized manner. When a task on a process completes, the
     process samples another task from its task sampler. All the tasks are
-    synchronized (for step and reset methods).
+    synchronized (for step and new_task methods).
 
     Attributes:
         make_sampler_fn: function which creates a single TaskSampler.
@@ -178,7 +178,7 @@ class VectorSampledTasks:
         """process worker for creating and interacting with the
         Tasks/TaskSampler."""
         task_sampler = make_sampler_fn(**sampler_fn_args)
-        current_task = task_sampler.next_task()
+        # current_task = task_sampler.next_task()  # don't we need to call new_task externally to get initial observations?
 
         if parent_pipe is not None:
             parent_pipe.close()

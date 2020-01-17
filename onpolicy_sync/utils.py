@@ -1,8 +1,13 @@
 import glob
 import os
 
+import torch
 import torch.nn as nn
 
+from typing import List, Dict
+from collections import defaultdict
+
+import numpy as np
 
 # from onpolicy_sync.envs import VecNormalize
 
@@ -63,3 +68,40 @@ def cleanup_log_dir(log_dir):
         files = glob.glob(os.path.join(log_dir, "*.monitor.csv"))
         for f in files:
             os.remove(f)
+
+
+def batch_observations(
+    observations: List[Dict], device: Optional[torch.device] = None
+) -> Dict[str, torch.Tensor]:
+    r"""Transpose a batch of observation dicts to a dict of batched
+    observations.
+
+    Args:
+        observations:  list of dicts of observations.
+        device: The torch.device to put the resulting tensors on.
+            Will not move the tensors if None
+
+    Returns:
+        transposed dict of lists of observations.
+    """
+    batch = defaultdict(list)
+
+    for obs in observations:
+        for sensor in obs:
+            batch[sensor].append(_to_tensor(obs[sensor]))
+
+    for sensor in batch:
+        batch[sensor] = torch.stack(batch[sensor], dim=0).to(
+            device=device, dtype=torch.float
+        )
+
+    return batch
+
+
+def _to_tensor(v):
+    if torch.is_tensor(v):
+        return v
+    elif isinstance(v, np.ndarray):
+        return torch.from_numpy(v)
+    else:
+        return torch.tensor(v, dtype=torch.float)
