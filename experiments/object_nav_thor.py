@@ -1,18 +1,22 @@
-from typing import Dict, Any, List, Callable
+from typing import Dict, Any, List
 
+import gym
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 
 from configs.losses import algo_defaults
 from configs.util import Builder
+from extensions.ai2thor.object_nav_models import ObjectNavBaselineActorCritic
+from extensions.ai2thor.sensors import RGBSensorThor
+from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
+from extensions.ai2thor.tasks import ObjectNavTask
 from imitation.trainer import Imitation
 from imitation.utils import LinearDecay
-from models import ObjectNavThorModel
 from onpolicy_sync.losses import PPO
 from rl_base.experiment_config import ExperimentConfig
+from rl_base.sensor import SensorSuite
 from rl_base.task import TaskSampler
-from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
 
 
 ##
@@ -20,6 +24,10 @@ from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
 ##
 class ObjectNavThorExperimentConfig(ExperimentConfig):
     OBJECT_TYPES = ["Tomato", "Cup", "Television"]
+
+    SENSORS = [
+        RGBSensorThor({"height": 224, "width": 224, "use_resnet_normalization": True}),
+    ]
 
     @classmethod
     def tag(cls):
@@ -62,7 +70,13 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ObjectNavThorModel()
+        return ObjectNavBaselineActorCritic(
+            observation_space=SensorSuite(cls.SENSORS).observation_spaces,
+            action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            goal_sensor_uuid="object_type",
+            hidden_size=512,
+            object_type_embedding_dim=8,
+        )
 
     @staticmethod
     def make_sampler_fn(**kwargs) -> TaskSampler:
