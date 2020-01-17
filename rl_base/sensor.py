@@ -44,8 +44,7 @@ class Sensor(Generic[EnvType]):
         self, env: EnvType, task: Optional[Task], *args: Any, **kwargs: Any
     ) -> Any:
         """
-        Returns:
-            current observation for Sensor.
+        @return: current observation for Sensor.
         """
         raise NotImplementedError()
 
@@ -54,7 +53,7 @@ class SensorSuite(Generic[EnvType]):
     """Represents a set of sensors, with each sensor being identified through a
     unique id.
 
-    Args:
+    Attributes:
         sensors: list containing sensors for the environment, uuid of each
             sensor must be unique.
     """
@@ -80,9 +79,7 @@ class SensorSuite(Generic[EnvType]):
         self, env: EnvType, task: Optional[Task[EnvType]], *args: Any, **kwargs: Any
     ) -> Dict[str, Any]:
         """
-        Returns:
-            collect data from all sensors and return it packaged inside
-            a Dict.
+        @return: collect data from all sensors and return it packaged inside a Dict.
         """
         return {
             uuid: sensor.get_observation(env=env, task=task, *args, **kwargs)

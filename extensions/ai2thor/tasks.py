@@ -8,7 +8,7 @@ from extensions.ai2thor.constants import (
     ROTATE_RIGHT,
     LOOK_DOWN,
     LOOK_UP,
-)
+    END)
 from extensions.ai2thor.environment import AI2ThorEnvironment
 from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor
@@ -48,7 +48,7 @@ class AI2ThorTask(Task[AI2ThorEnvironment]):
     def last_action_success(self, value: Optional[bool]):
         self._last_action_success = value
 
-    def step(self, action: int) -> Dict[str, Any]:
+    def _step(self, action: int) -> RLStepResult:
         self._last_action_ind = action
         self.last_action = self.action_names()[action]
         self.last_action_success = None
@@ -65,7 +65,21 @@ class AI2ThorTask(Task[AI2ThorEnvironment]):
 
 
 class ObjectNavTask(Task[AI2ThorEnvironment]):
-    _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT, LOOK_DOWN, LOOK_UP)
+    _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT, LOOK_DOWN, LOOK_UP, END)
+
+    def __init__(
+        self,
+        env: AI2ThorEnvironment,
+        sensors: List[Sensor],
+        task_info: Dict[str, Any],
+        max_steps: int,
+        **kwargs
+    ) -> None:
+        super().__init__(
+            env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
+        )
+        self._took_end_action: bool = False
+        self._success: Optional[bool] = False
 
     @property
     def action_space(self):
@@ -83,8 +97,14 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
 
     def _step(self, action: int) -> RLStepResult:
         action_str = self.action_names()[action]
-        self.env.step({"action": action_str})
-        self.last_action_success = self.env.last_action_success
+
+        if action_str == END:
+            self._took_end_action = True
+            self._success = self._is_goal_object_visible()
+            self.last_action_success = self._success
+        else:
+            self.env.step({"action": action_str})
+            self.last_action_success = self.env.last_action_success
 
         step_result = RLStepResult(
             observation=self.get_observations(),
@@ -93,6 +113,10 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
             info={"last_action_success": self.last_action_success},
         )
         return step_result
+
+    def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
+        assert mode == "rgb", "only rgb rendering is implemented"
+        return self.env.current_frame
 
     def _is_goal_object_visible(self) -> bool:
         return any(
@@ -105,6 +129,17 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
 
         if not self.last_action_success:
             reward += -0.1
-        elif self._is_goal_object_visible():
-            reward += 1.0
+
+        if self._took_end_action:
+            reward += 1.0 if self._success else -1.0
+
         return float(reward)
+
+    def metrics(self) -> Dict[str, Any]:
+        if not self.is_done():
+            return {}
+        else:
+            return {
+                "success": self._success,
+                "ep_length": self.num_steps_taken()
+            }
