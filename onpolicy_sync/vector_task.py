@@ -14,6 +14,7 @@ from typing import Any, Callable, List, Optional, Sequence, Set, Tuple, Union, D
 import numpy as np
 from gym.spaces.dict import Dict as SpaceDict
 
+from rl_base.common import RLStepResult
 from rl_base.task import TaskSampler
 
 try:
@@ -36,14 +37,11 @@ CALL_COMMAND = "call"
 
 
 def tile_images(images: List[np.ndarray]) -> np.ndarray:
-    r"""Tile multiple images into single image
+    """Tile multiple images into single image.
 
-    Args:
-        images: list of images where each image has dimension
-            (height x width x channels)
-
-    Returns:
-        tiled image (new_height x width x channels)
+    @param images: list of images where each image has dimension
+        (height x width x channels)
+    @return: tiled image (new_height x width x channels)
     """
     assert len(images) > 0, "empty list of images"
     np_images = np.asarray(images)
@@ -71,7 +69,7 @@ class VectorSampledTasks:
     process samples another task from its task sampler. All the tasks are
     synchronized (for step and new_task methods).
 
-    Args:
+    Attributes:
         make_sampler_fn: function which creates a single TaskSampler.
         sampler_fn_args: sequence of dictionaries describing the args
             to pass to make_sampler_fn on each individual process.
@@ -88,6 +86,7 @@ class VectorSampledTasks:
     """
 
     observation_space: SpaceDict
+    metrics_out_queue: mp.Queue
     _workers: List[Union[mp.Process, Thread]]
     _is_waiting: bool
     _num_processes: int
@@ -131,6 +130,8 @@ class VectorSampledTasks:
 
         self._is_closed = False
 
+        self.metrics_out_queue = self._mp_ctx.Queue()
+
         for write_fn in self._connection_write_fns:
             write_fn((OBSERVATION_SPACE_COMMAND, None))
 
@@ -158,8 +159,7 @@ class VectorSampledTasks:
     @property
     def num_unpaused_tasks(self):
         """
-        Returns:
-             number of individual unpaused processes.
+        @return: number of individual unpaused processes.
         """
         return self._num_processes - len(self._paused)
 
@@ -171,6 +171,7 @@ class VectorSampledTasks:
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args: Dict[str, Any],
         auto_resample_when_done: bool,
+        metrics_out_queue: mp.Queue,
         child_pipe: Optional[Connection] = None,
         parent_pipe: Optional[Connection] = None,
     ) -> None:
@@ -186,9 +187,14 @@ class VectorSampledTasks:
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
                     step_result = current_task.step(data)
-                    if auto_resample_when_done and current_task.is_done():
-                        current_task = task_sampler.next_task()
-                        step_result.observations = current_task.get_observations()
+                    if current_task.is_done():
+                        metrics = current_task.metrics()
+                        if metrics is not None and len(metrics) != 0:
+                            metrics_out_queue.put(metrics)
+
+                        if auto_resample_when_done:
+                            current_task = task_sampler.next_task()
+                            step_result.observations = current_task.get_observations()
 
                     connection_write_fn(step_result)
 
@@ -252,6 +258,7 @@ class VectorSampledTasks:
                     make_sampler_fn,
                     sampler_fn_args,
                     self._auto_resample_when_done,
+                    self.metrics_out_queue,
                     worker_conn,
                     parent_conn,
                 ),
@@ -278,8 +285,7 @@ class VectorSampledTasks:
     def next_task(self):
         """Move to the the next Task for all TaskSamplers.
 
-        Returns:
-            list of initial observations for each of the new tasks.
+        @return: list of initial observations for each of the new tasks.
         """
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
@@ -290,15 +296,12 @@ class VectorSampledTasks:
         self._is_waiting = False
         return results
 
-    def next_task_at(self, index_process: int):
+    def next_task_at(self, index_process: int) -> List[RLStepResult]:
         """Move to the the next Task from the TaskSampler in index_process
         process in the vector.
 
-        Args:
-            index_process: index of the process to be reset
-
-        Returns:
-            list of length one containing the observations the newly sampled task.
+        @param index_process: index of the process to be reset
+        @return: list of length one containing the observations the newly sampled task.
         """
         self._is_waiting = True
         self._connection_write_fns[index_process]((NEXT_TASK_COMMAND, None))
@@ -306,15 +309,12 @@ class VectorSampledTasks:
         self._is_waiting = False
         return results
 
-    def step_at(self, index_process: int, action: int):
+    def step_at(self, index_process: int, action: int) -> [RLStepResult]:
         """Step in the index_process task in the vector.
 
-        Args:
-            index_process: index of the Task to be stepped in
-            action: action to be taken
-
-        Returns:
-            list containing the output of step method on the task in the indexed process.
+        @param index_process: index of the process to be reset
+        @param action: the action to take
+        @return: list containing the output of step method on the task in the indexed process.
         """
         self._is_waiting = True
         self._connection_write_fns[index_process]((STEP_COMMAND, action))
@@ -325,8 +325,7 @@ class VectorSampledTasks:
     def async_step(self, actions: List[int]) -> None:
         """Asynchronously step in the vectorized Tasks.
 
-        Args:
-            actions: actions to be performed in the vectorized Tasks.
+        @param actions: actions to be performed in the vectorized Tasks.
         """
         self._is_waiting = True
         for write_fn, action in zip(self._connection_write_fns, actions):
@@ -343,12 +342,8 @@ class VectorSampledTasks:
     def step(self, actions: List[int]):
         """Perform actions in the vectorized tasks.
 
-        Args:
-            actions: list of size _num_processes containing action to be taken
-                in each task.
-
-        Returns:
-            list of outputs from the step method of tasks.
+        @param actions: list of size _num_processes containing action to be taken in each task.
+        @return: list of outputs from the step method of tasks.
         """
         self.async_step(actions)
         return self.wait_step()
@@ -381,9 +376,8 @@ class VectorSampledTasks:
         when only some are active (for example during the last samples of
         running eval).
 
-        Args:
-            index: which process to pause. All indexes after this one will be
-                shifted down by one.
+        @param index: which process to pause. All indexes after this
+            one will be shifted down by one.
         """
         if self._is_waiting:
             for read_fn in self._connection_read_fns:
@@ -407,13 +401,10 @@ class VectorSampledTasks:
         """Calls a function (which is passed by name) on the selected task and
         returns the result.
 
-        Args:
-            index: which task to call the function on.
-            function_name: the name of the function to call on the task.
-            function_args: optional function args.
-
-        Returns:
-            result of calling the function.
+        @param index: which task to call the function on.
+        @param function_name: the name of the function to call on the task.
+        @param function_args: optional function args.
+        @return: result of calling the function.
         """
         self._is_waiting = True
         self._connection_write_fns[index](
@@ -429,14 +420,10 @@ class VectorSampledTasks:
         """Calls a list of functions (which are passed by name) on the
         corresponding task (by index).
 
-        Args:
-            function_names: the name of the functions to call on the tasks.
-            function_args_list: list of function args for each function. If
-                provided, len(function_args_list) should be as long as
-                len(function_names).
-
-        Returns:
-            result of calling the function.
+        @param function_names: the name of the functions to call on the tasks.
+        @param function_args_list: list of function args for each function.
+            If provided, len(function_args_list) should be as long as  len(function_names).
+        @return: list of results of calling the functions.
         """
         self._is_waiting = True
         if function_args_list is None:
@@ -505,13 +492,14 @@ class ThreadedVectorSampledTasks(VectorSampledTasks):
             parent_read_queues, parent_write_queues, sampler_fn_args
         ):
             thread = Thread(
-                target=self._task_sampling_loop_worker(),
+                target=self._task_sampling_loop_worker,
                 args=(
                     parent_write_queue.get,
                     parent_read_queue.put,
                     make_sampler_fn,
                     sampler_fn_args,
                     self._auto_resample_when_done,
+                    self.metrics_out_queue,
                 ),
             )
             self._workers.append(thread)

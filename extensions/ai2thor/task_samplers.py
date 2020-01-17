@@ -38,9 +38,7 @@ class ObjectNavTaskSampler(TaskSampler):
     @property
     def __len__(self) -> Union[int, float]:
         """
-        Returns:
-            Number of total tasks remaining that can be sampled.
-            Can be float('inf').
+        @return: Number of total tasks remaining that can be sampled. Can be float('inf').
         """
         return float("inf")
 
@@ -59,9 +57,8 @@ class ObjectNavTaskSampler(TaskSampler):
     @property
     def all_observation_spaces_equal(self) -> bool:
         """
-        Returns:
-            True if all Tasks that can be sampled by this sampler
-            have the same observation space. Otherwise False.
+        @return: True if all Tasks that can be sampled by this sampler have the
+            same observation space. Otherwise False.
         """
         return True
 
