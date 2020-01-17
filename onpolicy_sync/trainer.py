@@ -18,7 +18,7 @@ class Trainer:
         losses: Dict[str, Loss],
         loss_weights: Dict[str, float],
         optimizer: torch.optim.Optimizer,
-        rollout_steps: int,
+        steps_in_rollout: int,
         stage_task_steps: int,
         update_epochs: int,
         update_mini_batches: int,
@@ -41,13 +41,13 @@ class Trainer:
         self.optimizer = optimizer
 
         self.stage_task_steps = stage_task_steps
-        self.rollout_steps = rollout_steps
+        self.steps_in_rollout = steps_in_rollout
         self.update_epochs = update_epochs
         self.update_mini_batches = update_mini_batches
         self.num_processes = num_processes
 
-        self.num_updates = (
-            int(self.stage_task_steps) // self.rollout_steps
+        self.num_rollouts = (
+            int(self.stage_task_steps) // self.steps_in_rollout
         ) // self.num_processes
 
         self.gamma = gamma
@@ -65,63 +65,55 @@ class Trainer:
 
         self.pipeline_stage = pipeline_stage
 
-        self.update_count = 0
+        self.rollout_count = 0
         self.backprop_count = 0
 
     def checkpoint_save(self) -> None:
-        # save for every interval-th episode or for the last epoch
-        if (
-            self.save_interval > 0
-            and (
-                self.update_count % self.save_interval == 0
-                or self.update_count == self.num_updates - 1
-            )
-            and self.models_folder != ""
-        ):
-            os.makedirs(self.models_folder, exist_ok=True)
+        os.makedirs(self.models_folder, exist_ok=True)
 
-            model_path = os.path.join(
-                self.models_folder,
-                "model_stage_%02d_%010d.pt" % (self.pipeline_stage, self.update_count),
-            )
-            torch.save(
-                {
-                    "pipeline_stage": self.pipeline_stage,
-                    "update_count": self.update_count,
-                    "backprop_count": self.backprop_count,
-                    "model_state_dict": self.actor_critic.state_dict(),
-                    "optimizer_state_dict": self.optimizer.state_dict(),
-                },
-                model_path,
-            )
+        model_path = os.path.join(
+            self.models_folder,
+            "model_stage_%02d_%010d.pt" % (self.pipeline_stage, self.rollout_count),
+        )
+        torch.save(
+            {
+                "pipeline_stage": self.pipeline_stage,
+                "rollout_count": self.rollout_count,
+                "backprop_count": self.backprop_count,
+                "model_state_dict": self.actor_critic.state_dict(),
+                "optimizer_state_dict": self.optimizer.state_dict(),
+            },
+            model_path,
+        )
 
     def checkpoint_load(self, ckpt_dict: Dict[str, Any]) -> None:
         self.actor_critic.load_state_dict(ckpt_dict["model_state_dict"])
-        self.update_count = ckpt_dict["update_count"]
+        self.rollout_count = ckpt_dict["rollout_count"]
         self.backprop_count = ckpt_dict["backprop_count"]
         self.optimizer.load_state_dict(ckpt_dict["optimizer_state_dict"])
 
     def update(self, rollouts) -> None:
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
-        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-5)
 
         for e in range(self.update_epochs):
             data_generator = rollouts.recurrent_generator(
                 advantages, self.update_mini_batches
             )
 
-            for batch in data_generator:
+            for bit, batch in enumerate(data_generator):
                 # Reshape to do in a single forward pass for all steps
-                actor_critic_output = self.actor_critic.evaluate_actions(
+                actor_critic_output = self.actor_critic(
                     batch["observations"],
                     batch["recurrent_hidden_states"],
+                    batch["prev_actions"],  # for step 0, noop action as input
                     batch["masks"],
-                    batch["actions"],
                 )
 
                 info = dict(
                     backprop_count=self.backprop_count,
-                    update_count=self.update_count,
+                    rollout_count=self.rollout_count,
+                    epoch=e,
+                    batch=bit,
                     losses=[],
                 )
                 self.optimizer.zero_grad()
@@ -196,8 +188,8 @@ class Trainer:
     def train(self, rollouts):
         self.initialize_rollouts(rollouts)
 
-        while self.update_count < self.num_updates:
-            for step in range(self.rollout_steps):
+        while self.rollout_count < self.num_rollouts:
+            for step in range(self.steps_in_rollout):
                 self.collect_rollout_step(rollouts)
 
             with torch.no_grad():
@@ -214,13 +206,22 @@ class Trainer:
                 next_value, self.use_gae, self.gamma, self.gae_lambda
             )
 
-            self.update()
+            self.update(rollouts)
 
             rollouts.after_update()
 
         if self.teacher_forcing is not None:
             self.teacher_forcing.step()
 
-        self.checkpoint_save()
+        self.rollout_count += 1
 
-        self.update_count += 1
+        # save for every interval-th episode or for the last epoch
+        if (
+            self.save_interval > 0
+            and (
+                self.rollout_count % self.save_interval == 0
+                or self.rollout_count == self.num_rollouts
+            )
+            and self.models_folder != ""
+        ):
+            self.checkpoint_save()

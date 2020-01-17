@@ -178,7 +178,6 @@ class VectorSampledTasks:
         """process worker for creating and interacting with the
         Tasks/TaskSampler."""
         task_sampler = make_sampler_fn(**sampler_fn_args)
-        # current_task = task_sampler.next_task()  # don't we need to call new_task externally to get initial observations?
 
         if parent_pipe is not None:
             parent_pipe.close()
