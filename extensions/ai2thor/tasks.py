@@ -8,7 +8,8 @@ from extensions.ai2thor.constants import (
     ROTATE_RIGHT,
     LOOK_DOWN,
     LOOK_UP,
-    END)
+    END,
+)
 from extensions.ai2thor.environment import AI2ThorEnvironment
 from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor
@@ -139,7 +140,4 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         if not self.is_done():
             return {}
         else:
-            return {
-                "success": self._success,
-                "ep_length": self.num_steps_taken()
-            }
+            return {"success": self._success, "ep_length": self.num_steps_taken()}

@@ -36,7 +36,7 @@ def run_pipeline(
         make_sampler_fn=config.make_sampler_fn, sampler_fn_args=sampler_fn_args
     )
 
-    nsteps = 0
+    nupdates = 0
     info = deque(maxlen=100)
 
     ckpt_dict = None
@@ -61,7 +61,7 @@ def run_pipeline(
             losses=stage_losses,
             loss_weights=stage_weights,
             optimizer=optimizer,
-            rollout_steps=train_pipeline["num_steps"],
+            steps_in_rollout=train_pipeline["num_steps"],
             stage_task_steps=stage_limit,
             update_epochs=train_pipeline["update_repeats"],
             update_mini_batches=train_pipeline["num_mini_batch"],
@@ -94,7 +94,8 @@ def run_pipeline(
 
             rollouts = None
 
-        nsteps += stage_limit  # TODO
+        nupdates += trainer.num_rollouts
+        print("%d updates" % nupdates)
 
 
 def main():
