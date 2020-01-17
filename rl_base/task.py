@@ -103,7 +103,6 @@ class Task(Generic[EnvType]):
 
         @return: a dictionary where every key is a string (the metric's
         name) and the value is the value of the metric.
-        @rtype: Dict[str, Any]
         """
         return {}
 

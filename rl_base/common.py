@@ -14,7 +14,7 @@ class RLStepResult(typing.NamedTuple):
     done: typing.Optional[bool]
     info: typing.Optional[Dict[str, Any]]
 
-    def clone(self, other: "RLStepResult", new_info: Dict[str]):
+    def clone(self, other: "RLStepResult", new_info: Dict[str, Any]):
         return RLStepResult(
             observation=other.observation
             if "observation" not in new_info
