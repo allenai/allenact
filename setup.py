@@ -13,5 +13,6 @@ setup(
         "tensorboardx",
         "torch~=1.1.0",
         "ai2thor",
+        "networkx",
     ],
 )

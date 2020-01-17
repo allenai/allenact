@@ -31,10 +31,13 @@ master_doc = "index"
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx_autodoc_typehints",
     "sphinx_epytext",
     "sphinx.ext.todo",
     "sphinx.ext.githubpages",
 ]
+
+always_document_param_types = True  # passed to sphinx_autodoc_typehints
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -57,8 +60,25 @@ html_static_path = ["_static"]
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "alabaster"
+# html_theme = "alabaster"
 # html_theme = "stsci_rtd_theme"
 # html_theme = "sphinx_ustack_theme"
 # html_theme = "crate"
 # from crate.theme.rtd.conf.crate_server import *
+
+# Guzzle sphinx theme
+import guzzle_sphinx_theme
+
+# Adds an HTML table visitor to apply Bootstrap table classes
+html_translator_class = "guzzle_sphinx_theme.HTMLTranslator"
+html_theme_path = guzzle_sphinx_theme.html_theme_path()
+html_theme = "guzzle_sphinx_theme"
+
+# Register the theme as an extension to generate a sitemap.xml
+extensions.append("guzzle_sphinx_theme")
+
+# Guzzle theme options (see theme.conf for more information)
+html_theme_options = {
+    # Set the name of the project to appear in the sidebar
+    "project_nav_name": project,
+}

@@ -3,7 +3,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""Defines the tasks that an agent should complete in a given environment."""
+"""Defines the primary data structures by which agents interact with their
+environment."""
+
 import abc
 from abc import abstractmethod
 from typing import Dict, Any, Tuple, Generic, Union, List, Optional
@@ -17,6 +19,16 @@ from rl_base.sensor import Sensor, SensorSuite
 
 
 class Task(Generic[EnvType]):
+    """An abstract class defining a, goal directed, 'task.' Agents interact
+    with their environment through a task by taking a `step` after which they
+    receive new observations, rewards, and (potentially) other useful
+    information.
+
+    A Task is a helpful generalization of the OpenAI gym's `Env` class
+    and allows for multiple tasks (e.g. point and object navigation) to
+    be defined on a single environment (e.g. AI2-THOR).
+    """
+
     env: EnvType
     sensor_suite: SensorSuite[EnvType]
     task_info: Dict[str, Any]
@@ -46,7 +58,10 @@ class Task(Generic[EnvType]):
 
     @property
     @abstractmethod
-    def action_space(self):
+    def action_space(self) -> gym.Space:
+        """
+        @return: the action space for the task.
+        """
         raise NotImplementedError()
 
     @abstractmethod
@@ -84,6 +99,10 @@ class Task(Generic[EnvType]):
     @classmethod
     @abstractmethod
     def action_names(cls) -> Tuple[str, ...]:
+        """
+        @return: tuple of (ordered) action names so that taking action
+            running `task.step(i)` corresponds to taking action task.action_names()[i].
+        """
         raise NotImplementedError()
 
     @property
@@ -102,9 +121,19 @@ class Task(Generic[EnvType]):
         """Computes metrics related to the task after the task's completion.
 
         @return: a dictionary where every key is a string (the metric's
-        name) and the value is the value of the metric.
+            name) and the value is the value of the metric.
         """
         return {}
+
+    def query_expert(self) -> Tuple[Any, bool]:
+        """
+        @return: a tuple (x, y) where x is the expert action (or policy) and y is False \
+            if the expert could not determine the optimal action (otherwise True). Here y \
+            is used for masking. Even when y is False, x should still lie in the space of \
+            possible values (e.g. if x is the expert policy then x should be the correct length, \
+            sum to 1, and have non-negative entries).
+        """
+        raise NotImplementedError()
 
 
 class TaskSampler(abc.ABC):
@@ -115,7 +144,7 @@ class TaskSampler(abc.ABC):
     def __len__(self) -> Union[int, float]:
         """
         @return: Number of total tasks remaining that can be sampled. Can be
-        float('inf').
+            float('inf').
         """
         raise NotImplementedError()
 
@@ -124,21 +153,31 @@ class TaskSampler(abc.ABC):
     def total_unique(self) -> Union[int, float, None]:
         """
         @return: Total number of *unique* tasks that can be sampled. Can be
-        float('inf') or, if the total unique is not known, None.
+            float('inf') or, if the total unique is not known, None.
         """
         raise NotImplementedError()
 
     @property
     @abstractmethod
     def last_sampled_task(self) -> Optional[Task]:
+        """
+        @return: the most recently sampled Task.
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def next_task(self) -> Task:
+        """
+        @return: the next Task in the sampler's stream.
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def close(self) -> None:
+        """Closes any open environments or streams.
+
+        Should be run when done sampling.
+        """
         raise NotImplementedError()
 
     @property
@@ -146,6 +185,6 @@ class TaskSampler(abc.ABC):
     def all_observation_spaces_equal(self) -> bool:
         """
         @return: True if all Tasks that can be sampled by this sampler have the
-        same observation space. Otherwise False.
+            same observation space. Otherwise False.
         """
         raise NotImplementedError()

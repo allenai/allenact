@@ -150,11 +150,11 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         else:
             return {"success": self._success, "ep_length": self.num_steps_taken()}
 
-    def expert_action(self) -> Optional[int]:
+    def query_expert(self) -> Tuple[int, bool]:
         target = self.task_info["object_type"]
 
         if self._is_goal_object_visible():
-            return self.action_names().index(END)
+            return self.action_names().index(END), True
         else:
             key = (self.env.scene_name, target)
             if self._subsampled_locations_from_which_obj_visible is None:
@@ -226,7 +226,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
                 if path is not None:
                     paths.append(path)
             if len(paths) == 0:
-                return None
+                return 0, False
 
             shortest_path_ind = int(np.argmin([len(p) for p in paths]))
 
@@ -234,11 +234,14 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
                 warnings.warn(
                     "Shortest path computations suggest we are at the target but episode does not think so."
                 )
-                return None
+                return 0, False
 
             next_key_on_shortest_path = paths[shortest_path_ind][1]
-            return self.action_names().index(
-                self.env.action_transitioning_between_keys(
-                    current_loc_key, next_key_on_shortest_path
-                )
+            return (
+                self.action_names().index(
+                    self.env.action_transitioning_between_keys(
+                        current_loc_key, next_key_on_shortest_path
+                    )
+                ),
+                True,
             )
