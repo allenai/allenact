@@ -1,1 +1,0 @@
-from models.object_nav_thor import ObjectNavThorModel

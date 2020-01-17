@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo RUNNING BLACK
-pipenv run black *.py **/*.py
+pipenv run black *.py */*.py */*/*.py
 echo BLACK DONE
 echo ""
 

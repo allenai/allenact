@@ -66,21 +66,6 @@ FixedBernoulli.entropy = lambda self: bernoulli_entropy(self).sum(-1)
 FixedBernoulli.mode = lambda self: torch.gt(self.probs, 0.5).float()
 
 
-class Categorical(nn.Module):
-    def __init__(self, num_inputs, num_outputs):
-        super(Categorical, self).__init__()
-
-        init_ = lambda m: init(
-            m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), gain=0.01
-        )
-
-        self.linear = init_(nn.Linear(num_inputs, num_outputs))
-
-    def forward(self, x):
-        x = self.linear(x)
-        return CategoricalDistr(logits=x)
-
-
 class DiagGaussian(nn.Module):
     def __init__(self, num_inputs, num_outputs):
         super(DiagGaussian, self).__init__()

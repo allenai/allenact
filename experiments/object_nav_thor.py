@@ -1,18 +1,22 @@
-from typing import Dict, Any, List, Callable
+from typing import Dict, Any, List
 
+import gym
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 
 from configs.losses import algo_defaults
 from configs.util import Builder
+from extensions.ai2thor.models.object_nav_models import ObjectNavBaselineActorCritic
+from extensions.ai2thor.sensors import RGBSensorThor
+from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
+from extensions.ai2thor.tasks import ObjectNavTask
 from imitation.trainer import Imitation
 from imitation.utils import LinearDecay
-from models import ObjectNavThorModel
 from onpolicy_sync.losses import PPO
 from rl_base.experiment_config import ExperimentConfig
+from rl_base.sensor import SensorSuite
 from rl_base.task import TaskSampler
-from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
 
 
 ##
@@ -20,6 +24,24 @@ from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
 ##
 class ObjectNavThorExperimentConfig(ExperimentConfig):
     OBJECT_TYPES = ["Tomato", "Cup", "Television"]
+
+    SCREEN_SIZE = 224
+
+    SENSORS = [
+        RGBSensorThor(
+            {
+                "height": SCREEN_SIZE,
+                "width": SCREEN_SIZE,
+                "use_resnet_normalization": True,
+            }
+        ),
+    ]
+
+    ENV_ARGS = {
+        "player_screen_height": SCREEN_SIZE,
+        "player_screen_width": SCREEN_SIZE,
+        "quality": "Very Low",
+    }
 
     @classmethod
     def tag(cls):
@@ -62,7 +84,13 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ObjectNavThorModel()
+        return ObjectNavBaselineActorCritic(
+            action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            observation_space=SensorSuite(cls.SENSORS).observation_spaces,
+            goal_sensor_uuid="object_type",
+            hidden_size=512,
+            object_type_embedding_dim=8,
+        )
 
     @staticmethod
     def make_sampler_fn(**kwargs) -> TaskSampler:
@@ -77,42 +105,38 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             parts[i] += 1
         return np.cumsum(parts)
 
-    def _get_scene_split(
+    def _get_sampler_args_for_scene_split(
         self, scenes: List[str], process_ind: int, total_processes: int
-    ) -> List[str]:
+    ) -> Dict[str, Any]:
         assert total_processes <= len(scenes), "More processes than scenes."
         inds = [0] + self._partition_inds(len(scenes), total_processes)
-        return scenes[inds[process_ind] : inds[process_ind + 1]]
+
+        return {
+            "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
+            "object_type": self.OBJECT_TYPES,
+            "env_args": self.ENV_ARGS,
+        }
 
     def train_task_sampler_args(
         self, process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
         all_train_scenes = ["FloorPlan{}".format(i) for i in range(1, 21)]
-        return {
-            "scenes": self._get_scene_split(
-                all_train_scenes, process_ind, total_processes
-            ),
-            "object_type": self.OBJECT_TYPES,
-        }
+        return self._get_sampler_args_for_scene_split(
+            all_train_scenes, process_ind, total_processes
+        )
 
     def valid_task_sampler_args(
         self, process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
         all_valid_scenes = ["FloorPlan{}".format(i) for i in range(21, 26)]
-        return {
-            "scenes": self._get_scene_split(
-                all_valid_scenes, process_ind, total_processes
-            ),
-            "object_type": self.OBJECT_TYPES,
-        }
+        return self._get_sampler_args_for_scene_split(
+            all_valid_scenes, process_ind, total_processes
+        )
 
     def test_task_sampler_args(
         self, process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
         all_test_scenes = ["FloorPlan{}".format(i) for i in range(26, 31)]
-        return {
-            "scenes": self._get_scene_split(
-                all_test_scenes, process_ind, total_processes
-            ),
-            "object_type": self.OBJECT_TYPES,
-        }
+        return self._get_sampler_args_for_scene_split(
+            all_test_scenes, process_ind, total_processes
+        )

@@ -25,6 +25,9 @@ class AI2ThorEnvironment(object):
         time_scale: float = 1.0,
         visibility_distance: float = VISIBILITY_DISTANCE,
         fov: float = FOV,
+        player_screen_width: int = 300,
+        player_screen_height: int = 300,
+        quality: str = "Very Low",
         restrict_to_initially_reachable_points: bool = False,
         make_agents_visible: bool = True,
         object_open_speed: float = 1.0,
@@ -51,6 +54,10 @@ class AI2ThorEnvironment(object):
         self.object_open_speed = object_open_speed
         self.always_return_visible_range = always_return_visible_range
         self.simplify_physics = simplify_physics
+
+        self._start_player_screen_width = player_screen_width
+        self._start_player_screen_height = player_screen_height
+        self._quality = quality
 
     @property
     def scene_name(self) -> str:
@@ -102,12 +109,12 @@ class AI2ThorEnvironment(object):
         scene_name: Optional[str],
         move_mag: float = 0.25,
         offset: Tuple[int, int] = (0, 0),
-        player_screen_width=300,
-        player_screen_height=300,
-        quality="Very Low",
         **kwargs,
     ) -> None:
-        if player_screen_width < 300 or player_screen_height < 300:
+        if (
+            self._start_player_screen_width < 300
+            or self._start_player_screen_height < 300
+        ):
             self.controller.start(
                 x_display=self.x_display,
                 player_screen_width=300,
@@ -116,20 +123,20 @@ class AI2ThorEnvironment(object):
             self.controller.step(
                 {
                     "action": "ChangeResolution",
-                    "x": player_screen_width,
-                    "y": player_screen_height,
+                    "x": self._start_player_screen_width,
+                    "y": self._start_player_screen_height,
                 }
             )
         else:
             self.controller.start(
                 x_display=self.x_display,
-                player_screen_width=player_screen_width,
-                player_screen_height=player_screen_height,
+                player_screen_width=self._start_player_screen_width,
+                player_screen_height=self._start_player_screen_height,
             )
 
-        self.controller.step({"action": "ChangeQuality", "quality": quality})
+        self.controller.step({"action": "ChangeQuality", "quality": self._quality})
         if not self.controller.last_event.metadata["lastActionSuccess"]:
-            raise Exception("Failed to change quality to: {}.".format(quality))
+            raise Exception("Failed to change quality to: {}.".format(self._quality))
 
         self._started = True
         self.reset(scene_name=scene_name, move_mag=move_mag, offset=offset, **kwargs)
