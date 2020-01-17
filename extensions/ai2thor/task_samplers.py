@@ -1,4 +1,5 @@
 import random
+import warnings
 from typing import List, Dict, Optional, Any, Union
 
 from extensions.ai2thor.environment import AI2ThorEnvironment
@@ -82,6 +83,12 @@ class ObjectNavTaskSampler(TaskSampler):
             if ot in object_types_in_scene:
                 task_info["object_type"] = ot
                 break
+
+        if len(task_info) == 0:
+            warnings.warn(
+                "Scene {} does not contain any"
+                " objects of any of the types {}.".format(scene, self.object_types)
+            )
 
         self._last_sampled_task = ObjectNavTask(
             env=self.env,
