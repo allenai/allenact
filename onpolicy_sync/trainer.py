@@ -105,7 +105,7 @@ class Trainer:
                 actor_critic_output = self.actor_critic(
                     batch["observations"],
                     batch["recurrent_hidden_states"],
-                    batch["prev_actions"],
+                    batch["prev_actions"],  # for step 0, noop action as input
                     batch["masks"],
                 )
 
