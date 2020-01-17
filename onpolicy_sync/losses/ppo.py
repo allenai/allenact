@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Union
 
 import torch
 
@@ -18,7 +18,7 @@ class PPO(AbstractActorCriticLoss):
 
     def loss(
         self,
-        batch: Dict[str, torch.Tensor],
+        batch: Dict[str, Union[Dict[str, torch.Tensor]]],
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
         **kwargs

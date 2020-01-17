@@ -1,6 +1,7 @@
 """A wrapper for engaging with the THOR environment."""
 
 import copy
+import functools
 import json
 import math
 import os
@@ -10,10 +11,12 @@ import warnings
 from typing import Tuple, Dict, List, Set, Union, Any, Optional, Mapping, NamedTuple
 
 import ai2thor.server
+import networkx as nx
 import numpy as np
 from ai2thor.controller import Controller
 
 from extensions.ai2thor.constants import VISIBILITY_DISTANCE, FOV
+from extensions.ai2thor.misc_util import round_to_factor
 
 
 class AI2ThorEnvironment(object):
@@ -818,6 +821,205 @@ class AI2ThorEnvironment(object):
             if o["objectId"] == object_id:
                 return o
         return None
+
+    ###
+    # Following is used for computing shortest paths between states
+    ###
+    _CACHED_GRAPHS: Dict[str, nx.DiGraph] = {}
+
+    GRAPH_ACTIONS_SET = {"LookUp", "LookDown", "RotateLeft", "RotateRight", "MoveAhead"}
+
+    def reachable_points_with_rotations_and_horizons(self):
+        self.controller.step({"action": "GetReachablePositions"})
+        assert self.last_action_success
+
+        points_slim = self.last_event.metadata["actionReturn"]
+
+        points = []
+        for r in [0, 90, 180, 270]:
+            for horizon in [-30, 0, 30, 60]:
+                for p in points_slim:
+                    p = copy.copy(p)
+                    p["rotation"] = r
+                    p["horizon"] = horizon
+                    points.append(p)
+        return points
+
+    def location_for_key(self, key, y_value=0.0):
+        x, z, rot, hor = key
+        loc = dict(x=x, y=y_value, z=z, rotation=rot, horizon=hor)
+        return loc
+
+    def get_key(self, input: Dict[str, Any]) -> Tuple[float, float, int, int]:
+        if "x" in input:
+            x = input["x"]
+            z = input["z"]
+            rot = input["rotation"]
+            hor = input["horizon"]
+        else:
+            x = input["position"]["x"]
+            z = input["position"]["z"]
+            rot = input["rotation"]["y"]
+            hor = input["cameraHorizon"]
+
+        return (
+            round(x, 2),
+            round(z, 2),
+            round_to_factor(rot, 90) % 360,
+            round_to_factor(hor, 30) % 360,
+        )
+
+    def update_graph_with_failed_action(self, failed_action: str):
+        if (
+            self.scene_name not in self._CACHED_GRAPHS
+            or failed_action not in self.GRAPH_ACTIONS_SET
+        ):
+            return
+
+        source_key = self.get_key(self.last_event.metadata["agent"])
+        edge_dict = self.graph[source_key]
+        to_remove_key = None
+        for target_key in self.graph[source_key]:
+            if edge_dict[target_key]["action"] == failed_action:
+                to_remove_key = target_key
+                break
+        if to_remove_key is not None:
+            self.graph.remove_edge(source_key, to_remove_key)
+
+    def _add_from_to_edge(
+        self,
+        g: nx.DiGraph,
+        s: Tuple[float, float, int, int],
+        t: Tuple[float, float, int, int],
+    ):
+        def ae(x, y):
+            return abs(x - y) < 0.001
+
+        s_x, s_z, s_rot, s_hor = s
+        t_x, t_z, t_rot, t_hor = t
+
+        dist = round(math.sqrt((s_x - t_x) ** 2 + (s_z - t_z) ** 2), 2)
+        angle_dist = (round_to_factor(t_rot - s_rot, 90) % 360) // 90
+        horz_dist = (round_to_factor(t_hor - s_hor, 30) % 360) // 30
+
+        # If source and target differ by more than one action, continue
+        if sum(x != 0 for x in [dist, angle_dist, horz_dist]) != 1:
+            return
+
+        grid_size = self.grid_size
+        action = None
+        if angle_dist != 0:
+            if angle_dist == 1:
+                action = "RotateRight"
+            elif angle_dist == 3:
+                action = "RotateLeft"
+
+        elif horz_dist != 0:
+            if horz_dist == 11:
+                action = "LookUp"
+            elif horz_dist == 1:
+                action = "LookDown"
+        elif ae(dist, grid_size):
+            if (
+                (s_rot == 0 and ae(t_z - s_z, grid_size))
+                or (s_rot == 90 and ae(t_x - s_x, grid_size))
+                or (s_rot == 180 and ae(t_z - s_z, -grid_size))
+                or (s_rot == 270 and ae(t_x - s_x, -grid_size))
+            ):
+                g.add_edge(s, t, action="MoveAhead")
+
+        if action is not None:
+            g.add_edge(s, t, action=action)
+
+    @functools.lru_cache(1)
+    def possible_neighbor_offsets(self) -> Tuple[Tuple[float, float, int, int], ...]:
+        grid_size = round(self.grid_size, 2)
+        offsets = []
+        for rot_diff in [-90, 0, 90]:
+            for horz_diff in [-30, 0, 30, 60]:
+                for x_diff in [-grid_size, 0, grid_size]:
+                    for z_diff in [-grid_size, 0, grid_size]:
+                        if (rot_diff != 0) + (horz_diff != 0) + (x_diff != 0) + (
+                            z_diff != 0
+                        ) == 1:
+                            offsets.append((x_diff, z_diff, rot_diff, horz_diff))
+        return tuple(offsets)
+
+    def _add_node_to_graph(self, graph: nx.DiGraph, s: Tuple[float, float, int, int]):
+        if s in graph:
+            return
+
+        existing_nodes = set(graph.nodes())
+        graph.add_node(s)
+
+        for o in self.possible_neighbor_offsets():
+            t = (s[0] + o[0], s[1] + o[1], s[2] + o[2], s[3] + o[3])
+            if t in existing_nodes:
+                self._add_from_to_edge(graph, s, t)
+                self._add_from_to_edge(graph, t, s)
+
+    @property
+    def graph(self):
+        if self.scene_name not in self._CACHED_GRAPHS:
+            g = nx.DiGraph()
+            points = self.reachable_points_with_rotations_and_horizons()
+            for p in points:
+                self._add_node_to_graph(g, self.get_key(p))
+
+            self._CACHED_GRAPHS[self.scene_name] = g
+        return self._CACHED_GRAPHS[self.scene_name]
+
+    @graph.setter
+    def graph(self, g):
+        self._CACHED_GRAPHS[self.scene_name] = g
+
+    def _check_contains_key(self, key: Tuple[float, float, int, int], add_if_not=True):
+        if key not in self.graph:
+            warnings.warn(
+                "{} was not in the graph for scene {}.".format(key, self.scene_name)
+            )
+            if add_if_not:
+                self._add_node_to_graph(self.graph, key)
+
+    def shortest_state_path(self, source_state_key, goal_state_key):
+        self._check_contains_key(source_state_key)
+        self._check_contains_key(goal_state_key)
+        try:
+            path = nx.shortest_path(self.graph, source_state_key, goal_state_key)
+            return path
+        except Exception as _:
+            return None
+
+    def action_transitioning_between_keys(self, s, t):
+        self._check_contains_key(s)
+        self._check_contains_key(t)
+        if self.graph.has_edge(s, t):
+            return self.graph.get_edge_data(s, t)["action"]
+        else:
+            return None
+
+    def shortest_path_next_state(self, source_state_key, goal_state_key):
+        self._check_contains_key(source_state_key)
+        self._check_contains_key(goal_state_key)
+        if source_state_key == goal_state_key:
+            raise RuntimeError("called next state on the same source and goal state")
+        state_path = self.shortest_state_path(source_state_key, goal_state_key)
+        return state_path[1]
+
+    def shortest_path_next_action(self, source_state_key, goal_state_key):
+        self._check_contains_key(source_state_key)
+        self._check_contains_key(goal_state_key)
+
+        next_state_key = self.shortest_path_next_state(source_state_key, goal_state_key)
+        return self.graph.get_edge_data(source_state_key, next_state_key)["action"]
+
+    def shortest_path_length(self, source_state_key, goal_state_key):
+        self._check_contains_key(source_state_key)
+        self._check_contains_key(goal_state_key)
+        try:
+            return nx.shortest_path_length(self.graph, source_state_key, goal_state_key)
+        except nx.NetworkXNoPath as _:
+            return float("inf")
 
 
 class AI2ThorEnvironmentMapSettings(NamedTuple):

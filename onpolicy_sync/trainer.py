@@ -2,7 +2,7 @@ from onpolicy_sync.storage import RolloutStorage
 from rl_base.common import Loss
 from typing import List, Optional, Any, Tuple, Dict
 from onpolicy_sync.vector_task import VectorSampledTasks
-from onpolicy_sync.model import Policy
+from onpolicy_sync.policy import ActorCriticModel
 import torch.optim
 import torch
 import torch.nn as nn
@@ -14,7 +14,7 @@ class Trainer:
     def __init__(
         self,
         vector_tasks: VectorSampledTasks,
-        actor_critic: Policy,
+        actor_critic: ActorCriticModel,
         losses: Dict[str, Loss],
         loss_weights: Dict[str, float],
         optimizer: torch.optim.Optimizer,

@@ -1,3 +1,5 @@
+import warnings
+from random import random
 from typing import Tuple, List, Dict, Any, Optional
 
 import numpy as np
@@ -11,6 +13,7 @@ from extensions.ai2thor.constants import (
     END,
 )
 from extensions.ai2thor.environment import AI2ThorEnvironment
+from extensions.ai2thor.misc_util import round_to_factor
 from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor
 from rl_base.task import Task
@@ -68,6 +71,10 @@ class AI2ThorTask(Task[AI2ThorEnvironment]):
 class ObjectNavTask(Task[AI2ThorEnvironment]):
     _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT, LOOK_DOWN, LOOK_UP, END)
 
+    _CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE: Optional[
+        Dict[Tuple[str, str], Tuple[float, float, int, int]]
+    ] = None
+
     def __init__(
         self,
         env: AI2ThorEnvironment,
@@ -81,6 +88,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         )
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
+        self._subsampled_locations_from_which_obj_visible = None
 
     @property
     def action_space(self):
@@ -141,3 +149,96 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
             return {}
         else:
             return {"success": self._success, "ep_length": self.num_steps_taken()}
+
+    def expert_action(self) -> Optional[int]:
+        target = self.task_info["object_type"]
+
+        if self._is_goal_object_visible():
+            return self.action_names().index(END)
+        else:
+            key = (self.env.scene_name, target)
+            if self._subsampled_locations_from_which_obj_visible is None:
+                if key not in self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE:
+                    obj_ids = []
+                    obj_ids.extend(
+                        o["objectId"]
+                        for o in self.env.last_event.metadata["objects"]
+                        if o["objectType"] == target
+                    )
+
+                    assert len(obj_ids) != 0, "No objects to get an expert path to."
+
+                    locations_from_which_object_is_visible = []
+                    y = self.env.last_event.metadata["agent"]["position"]["y"]
+                    positions_to_check_interactionable_from = [
+                        {"x": x, "y": y, "z": z}
+                        for x, z in set((x, z) for x, z, _, _ in self.env.graph.nodes)
+                    ]
+                    for obj_id in set(obj_ids):
+                        self.env.controller.step(
+                            {
+                                "action": "PositionsFromWhichItemIsInteractable",
+                                "objectId": obj_id,
+                                "positions": positions_to_check_interactionable_from,
+                            }
+                        )
+                        assert (
+                            self.env.last_action_success
+                        ), "Could not get positions from which item was interactable."
+
+                        returned = self.env.last_event.metadata["actionReturn"]
+                        locations_from_which_object_is_visible.extend(
+                            (
+                                round(x, 2),
+                                round(z, 2),
+                                round_to_factor(rot, 90) % 360,
+                                round_to_factor(hor, 30) % 360,
+                            )
+                            for x, z, rot, hor, standing in zip(
+                                returned["x"],
+                                returned["z"],
+                                returned["rotation"],
+                                returned["horizon"],
+                                returned["standing"],
+                            )
+                            if standing == 1
+                        )
+
+                    self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE[
+                        key
+                    ] = locations_from_which_object_is_visible
+
+                self._subsampled_locations_from_which_obj_visible = self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE[
+                    key
+                ]
+                if len(self._subsampled_locations_from_which_obj_visible) > 5:
+                    self._subsampled_locations_from_which_obj_visible = random.sample(
+                        self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE[key], 5
+                    )
+
+            current_loc_key = self.env.get_key(self.env.last_event.metadata["agent"])
+            paths = []
+
+            for goal_key in self._subsampled_locations_from_which_obj_visible:
+                path = self.env.shortest_state_path(
+                    source_state_key=current_loc_key, goal_state_key=goal_key
+                )
+                if path is not None:
+                    paths.append(path)
+            if len(paths) == 0:
+                return None
+
+            shortest_path_ind = int(np.argmin([len(p) for p in paths]))
+
+            if len(paths[shortest_path_ind]) == 1:
+                warnings.warn(
+                    "Shortest path computations suggest we are at the target but episode does not think so."
+                )
+                return None
+
+            next_key_on_shortest_path = paths[shortest_path_ind][1]
+            return self.action_names().index(
+                self.env.action_transitioning_between_keys(
+                    current_loc_key, next_key_on_shortest_path
+                )
+            )
