@@ -492,13 +492,14 @@ class ThreadedVectorSampledTasks(VectorSampledTasks):
             parent_read_queues, parent_write_queues, sampler_fn_args
         ):
             thread = Thread(
-                target=self._task_sampling_loop_worker(),
+                target=self._task_sampling_loop_worker,
                 args=(
                     parent_write_queue.get,
                     parent_read_queue.put,
                     make_sampler_fn,
                     sampler_fn_args,
                     self._auto_resample_when_done,
+                    self.metrics_out_queue,
                 ),
             )
             self._workers.append(thread)
