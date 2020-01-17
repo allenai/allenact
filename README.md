@@ -11,7 +11,6 @@ library of Ilya Kostrikov and uses some data structures from FAIR's
 Currently, three RL algorithms are implemented
 * Advantage Actor Critic (A2C), see [A3C](https://arxiv.org/pdf/1602.01783v1.pdf)
 * [Proximal Policy Optimization (PPO)](https://arxiv.org/pdf/1707.06347.pdf)
-* Scalable trust-region method for deep reinforcement learning using Kronecker-factored approximation [ACKTR](https://arxiv.org/abs/1708.05144)
 
 Also see the OpenAI posts: [A2C/ACKTR](https://blog.openai.com/baselines-acktr-a2c/) and [PPO](https://blog.openai.com/openai-baselines-ppo/) for more information.
 
@@ -25,10 +24,10 @@ This library has been tested only in Python 3.6. In order to install requirement
 pip install -r requirements.txt
 ```
 
-Alternatively, if you use pipenv:
+Alternatively, if you use [pipenv](https://pipenv.kennethreitz.org/en/latest/):
 
 ```bash
-pipenv install
+pipenv install --skip-lock
 ```
 
 ## Contributions

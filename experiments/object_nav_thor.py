@@ -7,7 +7,7 @@ import torch.optim as optim
 
 from configs.losses import algo_defaults
 from configs.util import Builder
-from extensions.ai2thor.object_nav_models import ObjectNavBaselineActorCritic
+from extensions.ai2thor.models.object_nav_models import ObjectNavBaselineActorCritic
 from extensions.ai2thor.sensors import RGBSensorThor
 from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
 from extensions.ai2thor.tasks import ObjectNavTask
@@ -85,8 +85,8 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return ObjectNavBaselineActorCritic(
-            observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             goal_sensor_uuid="object_type",
             hidden_size=512,
             object_type_embedding_dim=8,

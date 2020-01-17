@@ -1,6 +1,6 @@
 import gym
 
-from extensions.ai2thor.basic_models import SimpleCNN, RNNStateEncoder
+from extensions.ai2thor.models.basic_models import SimpleCNN, RNNStateEncoder
 from onpolicy_sync.policy import ActorCriticModel, LinearCriticHead, LinearActorHead
 import torch.nn as nn
 import torch
@@ -13,20 +13,20 @@ from gym.spaces.dict import Dict as SpaceDict
 class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
     def __init__(
         self,
-        observation_space: SpaceDict,
         action_space: gym.spaces.Discrete,
+        observation_space: SpaceDict,
         goal_sensor_uuid: str,
         hidden_size=512,
         object_type_embedding_dim=8,
     ):
-        super().__init__(action_space=action_space)
+        super().__init__(action_space=action_space, observation_space=observation_space)
 
         self.goal_sensor_uuid = goal_sensor_uuid
-        self._n_object_types = observation_space.spaces[self.goal_sensor_uuid].n
+        self._n_object_types = self.observation_space.spaces[self.goal_sensor_uuid].n
         self._hidden_size = hidden_size
         self.object_type_embedding_size = object_type_embedding_dim
 
-        self.visual_encoder = SimpleCNN(observation_space, hidden_size)
+        self.visual_encoder = SimpleCNN(self.observation_space, hidden_size)
 
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self._hidden_size) + object_type_embedding_dim,

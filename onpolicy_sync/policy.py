@@ -6,17 +6,20 @@
 
 import typing
 
+import gym
 from torch import nn as nn
 
 from rl_base.common import DistributionType, ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
+from gym.spaces.dict import Dict as SpaceDict
 
 
 class ActorCriticModel(nn.Module, typing.Generic[DistributionType]):
-    def __init__(self, action_space):
+    def __init__(self, action_space: gym.spaces.Discrete, observation_space: SpaceDict):
         super().__init__()
         self.action_space = action_space
         self.dim_actions = action_space.n
+        self.observation_space = observation_space
 
     def forward(self, *args, **kwargs) -> ActorCriticOutput:
         raise NotImplementedError
