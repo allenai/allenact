@@ -26,6 +26,7 @@ tensorboardx = "*"
 torch = "~=1.1.0"
 ai2thor = "*"
 networkx = "*"
+Pillow = "==6.2.1"
 
 [requires]
 python_version = "3.6"

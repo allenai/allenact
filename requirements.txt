@@ -54,7 +54,7 @@ orderedmultidict==1.0.1
 packaging==19.2
 pathspec==0.7.0
 pep517==0.8.1
-Pillow==7.0.0
+Pillow==6.2.1
 pip-shims==0.4.0
 pipenv-setup==2.2.5
 pipfile==0.0.2

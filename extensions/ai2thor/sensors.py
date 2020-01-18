@@ -53,10 +53,11 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment]):
         if not self.should_normalize:
             low = 0.0
             high = 1.0
+            self.observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
         else:
-            low = np.reshape(-self.norm_means / self.norm_sds, (3,))
-            high = np.reshape((1 - self.norm_means) / self.norm_sds, (3,))
-        self._observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
+            low = np.tile(-self.norm_means / self.norm_sds, shape[:-1] + (1,))
+            high = np.tile((1 - self.norm_means) / self.norm_sds, shape[:-1] + (1,))
+            self.observation_space = gym.spaces.Box(low=low, high=high)
 
         self.scaler = (
             None
@@ -70,7 +71,7 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment]):
         return "rgb"
 
     def _get_observation_space(self) -> gym.spaces.Box:
-        return self._observation_space
+        return self.observation_space
 
     def get_observation(
         self,
@@ -107,13 +108,13 @@ class GoalObjectTypeThorSensor(Sensor):
             ot: i for i, ot in enumerate(self.ordered_object_types)
         }
 
-        self._observation_space = gym.spaces.Discrete(len(self.ordered_object_types))
+        self.observation_space = gym.spaces.Discrete(len(self.ordered_object_types))
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "goal_object_type_ind"
 
     def _get_observation_space(self) -> gym.spaces.Discrete:
-        return self._observation_space
+        return self.observation_space
 
     def get_observation(
         self,

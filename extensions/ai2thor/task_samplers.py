@@ -16,6 +16,8 @@ class ObjectNavTaskSampler(TaskSampler):
         sensors: List[Sensor],
         max_steps: int,
         env_args: Dict[str, Any],
+        *args,
+        **kwargs
     ) -> None:
         self.env_args = env_args
         self.scenes = scenes

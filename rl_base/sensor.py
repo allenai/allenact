@@ -34,7 +34,6 @@ class Sensor(Generic[EnvType]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
         self.config = config
         self.uuid = self._get_uuid()
-        self.observation_space = self._get_observation_space()
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         """The unique ID of the sensor.
@@ -49,7 +48,7 @@ class Sensor(Generic[EnvType]):
         raise NotImplementedError()
 
     def get_observation(
-        self, env: EnvType, task: "Task", *args: Any, **kwargs: Any
+        self, env: EnvType, task: Optional["Task"], *args: Any, **kwargs: Any
     ) -> Any:
         """Returns observations from the environment (or task).
 
@@ -94,7 +93,7 @@ class SensorSuite(Generic[EnvType]):
         return self.sensors[uuid]
 
     def get_observations(
-        self, env: EnvType, task: Optional["Task"], *args: Any, **kwargs: Any
+        self, env: EnvType, task: Optional["Task[EnvType]"], *args: Any, **kwargs: Any
     ) -> Dict[str, Any]:
         """
         @return: collect data from all sensors and return it packaged inside a Dict.
