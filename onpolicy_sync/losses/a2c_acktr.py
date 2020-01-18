@@ -1,5 +1,5 @@
 import warnings
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Union
 
 import torch
 
@@ -24,7 +24,7 @@ class A2C_ACKTR(AbstractActorCriticLoss):
 
     def loss(
         self,
-        batch: Dict[str, torch.Tensor],
+        batch: Dict[str, Union[Dict[str, torch.Tensor]]],
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
         **kwargs

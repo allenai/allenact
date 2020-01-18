@@ -19,10 +19,8 @@ from rl_base.sensor import SensorSuite
 from rl_base.task import TaskSampler
 
 
-##
-# ObjectNav configuration example
-##
 class ObjectNavThorExperimentConfig(ExperimentConfig):
+    """An object navigation experiment in THOR."""
     OBJECT_TYPES = sorted(["Cup", "Television", "Tomato"])
 
     SCREEN_SIZE = 224
