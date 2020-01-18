@@ -35,7 +35,7 @@ oauthlib==3.1.0
 opencv-python==4.1.2.30
 opt-einsum==3.1.0
 pathspec==0.7.0
-Pillow==7.0.0
+Pillow==6.2.1
 progressbar2==3.47.0
 protobuf==3.11.2
 pyasn1==0.4.8
@@ -58,8 +58,8 @@ tensorflow==2.1.0
 tensorflow-estimator==2.1.0
 termcolor==1.1.0
 toml==0.10.0
-torch==1.4.0
-torchvision==0.5.0
+torch==1.1.0
+torchvision==0.3
 typed-ast==1.4.1
 untokenize==0.1.1
 urllib3==1.25.7

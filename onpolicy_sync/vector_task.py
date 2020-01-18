@@ -117,6 +117,7 @@ class VectorSampledTasks:
         ).format(self._valid_start_methods, multiprocessing_start_method)
         self._auto_resample_when_done = auto_resample_when_done
         self._mp_ctx = mp.get_context(multiprocessing_start_method)
+        self.metrics_out_queue = self._mp_ctx.Queue()
         self._workers = []
         (
             self._connection_read_fns,
@@ -129,8 +130,6 @@ class VectorSampledTasks:
         )
 
         self._is_closed = False
-
-        self.metrics_out_queue = self._mp_ctx.Queue()
 
         for write_fn in self._connection_write_fns:
             write_fn((OBSERVATION_SPACE_COMMAND, None))
@@ -178,6 +177,7 @@ class VectorSampledTasks:
         """process worker for creating and interacting with the
         Tasks/TaskSampler."""
         task_sampler = make_sampler_fn(**sampler_fn_args)
+        current_task = task_sampler.next_task()
 
         if parent_pipe is not None:
             parent_pipe.close()
@@ -245,13 +245,20 @@ class VectorSampledTasks:
             *[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_processes)]
         )
         self._workers = []
-        for worker_conn, parent_conn, sampler_fn_args in zip(
-            worker_connections, parent_connections, sampler_fn_args
+        # for worker_conn, parent_conn, sampler_fn_args in zip(
+        #     worker_connections, parent_connections, sampler_fn_args
+        # ):
+        for id, stuff in enumerate(
+            zip(worker_connections, parent_connections, sampler_fn_args)
         ):
+            # print(id, stuff)
+            worker_conn, parent_conn, sampler_fn_args = stuff
+            print(id, sampler_fn_args)
             # noinspection PyUnresolvedReferences
             ps = self._mp_ctx.Process(
                 target=self._task_sampling_loop_worker,
                 args=(
+                    id,
                     worker_conn.recv,
                     worker_conn.send,
                     make_sampler_fn,
@@ -481,15 +488,17 @@ class ThreadedVectorSampledTasks(VectorSampledTasks):
     def _spawn_workers(
         self,
         make_sampler_fn: Callable[..., TaskSampler],
-        sampler_fn_args: Sequence[Tuple],
+        sampler_fn_args: Sequence[Dict[str, Any]],
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
         parent_read_queues, parent_write_queues = zip(
             *[(Queue(), Queue()) for _ in range(self._num_processes)]
         )
         self._workers = []
-        for parent_read_queue, parent_write_queue, sampler_fn_args in zip(
-            parent_read_queues, parent_write_queues, sampler_fn_args
+        for id, stuff in enumerate(
+            zip(parent_read_queues, parent_write_queues, sampler_fn_args)
         ):
+            print(id, stuff)
+            parent_read_queue, parent_write_queue, sampler_fn_args = stuff
             thread = Thread(
                 target=self._task_sampling_loop_worker,
                 args=(

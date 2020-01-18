@@ -4,13 +4,15 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import OrderedDict
-from typing import Generic, Dict, Any, List, Optional
+from typing import Generic, Dict, Any, List, Optional, TYPE_CHECKING
 
 import gym
 from gym.spaces import Dict as SpaceDict
 
 from rl_base.common import EnvType
-from rl_base.task import Task
+
+if TYPE_CHECKING:
+    from rl_base.task import Task
 
 
 class Sensor(Generic[EnvType]):
@@ -32,7 +34,6 @@ class Sensor(Generic[EnvType]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
         self.config = config
         self.uuid = self._get_uuid()
-        self.observation_space = self._get_observation_space()
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         raise NotImplementedError()
@@ -41,7 +42,7 @@ class Sensor(Generic[EnvType]):
         raise NotImplementedError()
 
     def get_observation(
-        self, env: EnvType, task: Optional[Task], *args: Any, **kwargs: Any
+        self, env: EnvType, task: Optional["Task"], *args: Any, **kwargs: Any
     ) -> Any:
         """
         @return: current observation for Sensor.
@@ -76,7 +77,7 @@ class SensorSuite(Generic[EnvType]):
         return self.sensors[uuid]
 
     def get_observations(
-        self, env: EnvType, task: Optional[Task[EnvType]], *args: Any, **kwargs: Any
+        self, env: EnvType, task: Optional["Task[EnvType]"], *args: Any, **kwargs: Any
     ) -> Dict[str, Any]:
         """
         @return: collect data from all sensors and return it packaged inside a Dict.

@@ -1,20 +1,20 @@
-from onpolicy_sync.storage import RolloutStorage
 from rl_base.common import Loss
-from typing import List, Optional, Any, Tuple, Dict
+from typing import Optional, Any, Dict
 from onpolicy_sync.vector_task import VectorSampledTasks
-from onpolicy_sync.model import Policy
+from onpolicy_sync.policy import ActorCriticModel
 import torch.optim
 import torch
 import torch.nn as nn
 from onpolicy_sync.utils import batch_observations
 import os
+from rl_base.distributions import CategoricalDistr
 
 
 class Trainer:
     def __init__(
         self,
         vector_tasks: VectorSampledTasks,
-        actor_critic: Policy,
+        actor_critic: ActorCriticModel[CategoricalDistr],
         losses: Dict[str, Loss],
         loss_weights: Dict[str, float],
         optimizer: torch.optim.Optimizer,
@@ -31,7 +31,8 @@ class Trainer:
         models_folder: str,
         save_interval: int,
         pipeline_stage: int,
-        teacher_forcing: Optional[torch.optim.lr_scheduler] = None,
+        teacher_forcing: Optional[torch.optim.lr_scheduler.LambdaLR] = None,
+        deterministic: bool = False,
     ):
         self.vector_tasks = vector_tasks
         self.actor_critic = actor_critic
@@ -64,6 +65,8 @@ class Trainer:
         self.save_interval = save_interval
 
         self.pipeline_stage = pipeline_stage
+
+        self.deterministic = deterministic
 
         self.rollout_count = 0
         self.backprop_count = 0
@@ -145,17 +148,18 @@ class Trainer:
                 k: v[rollouts.step] for k, v in rollouts.observations.items()
             }
 
-            (
-                values,
-                actions,
-                actions_log_probs,
-                recurrent_hidden_states,
-            ) = self.actor_critic.act(
+            actor_critic_output, recurrent_hidden_states = self.actor_critic(
                 step_observation,
                 rollouts.recurrent_hidden_states[rollouts.step],
                 rollouts.prev_actions[rollouts.step],
                 rollouts.masks[rollouts.step],
             )
+
+        actions = (
+            actor_critic_output.distributions.sample()
+            if self.deterministic
+            else actor_critic_output.distributions.mode()
+        )
 
         outputs = self.vector_tasks.step([a[0].item() for a in actions])
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
@@ -168,12 +172,13 @@ class Trainer:
         masks = torch.tensor(
             [[0.0] if done else [1.0] for done in dones], dtype=torch.float32
         )
+
         rollouts.insert(
             batch,
             recurrent_hidden_states,
             actions,
-            actions_log_probs,
-            values,
+            actor_critic_output.distributions.log_probs(actions),
+            actor_critic_output.values,
             rewards,
             masks,
         )
@@ -195,15 +200,15 @@ class Trainer:
             with torch.no_grad():
                 step_observation = {k: v[-1] for k, v in rollouts.observations.items()}
 
-                next_value = self.actor_critic.get_value(
+                actor_critic_output, _ = self.actor_critic(
                     step_observation,
                     rollouts.recurrent_hidden_states[-1],
                     rollouts.prev_actions[-1],
                     rollouts.masks[-1],
-                ).detach()
+                )
 
             rollouts.compute_returns(
-                next_value, self.use_gae, self.gamma, self.gae_lambda
+                actor_critic_output.values, self.use_gae, self.gamma, self.gae_lambda,
             )
 
             self.update(rollouts)
