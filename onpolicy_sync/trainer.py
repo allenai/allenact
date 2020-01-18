@@ -31,7 +31,7 @@ class Trainer:
         models_folder: str,
         save_interval: int,
         pipeline_stage: int,
-        teacher_forcing: Optional[torch.optim.lr_scheduler] = None,
+        teacher_forcing: Optional[torch.optim.lr_scheduler.LambdaLR] = None,
         deterministic: bool = False,
     ):
         self.vector_tasks = vector_tasks

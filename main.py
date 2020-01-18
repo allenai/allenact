@@ -7,7 +7,7 @@ import torch
 from configs.util import Builder
 from onpolicy_sync.arguments import get_args
 from onpolicy_sync.storage import RolloutStorage
-from onpolicy_sync.vector_task import VectorSampledTasks
+from onpolicy_sync.vector_task import VectorSampledTasks, ThreadedVectorSampledTasks
 from rl_base.experiment_config import ExperimentConfig
 from onpolicy_sync.trainer import Trainer
 
@@ -19,6 +19,8 @@ def run_pipeline(
 ):
     train_pipeline = config.training_pipeline()
 
+    torch.cuda.set_device("cuda:%d" % train_pipeline["gpu_ids"][0])
+
     actor_critic = config.create_model()  # TODO Don't we always have to create it?
 
     optimizer = train_pipeline["optimizer"]
@@ -28,7 +30,9 @@ def run_pipeline(
         )
 
     sampler_fn_args = [
-        config.train_task_sampler_args(it, train_pipeline["nprocesses"])
+        config.train_task_sampler_args(
+            process_ind=it, total_processes=train_pipeline["nprocesses"]
+        )
         for it in range(train_pipeline["nprocesses"])
     ]
 
@@ -101,8 +105,8 @@ def run_pipeline(
 def main():
     args = get_args()
     if args.experiment == "object_nav_thor":
-        from experiments.object_nav_thor import ObjectNavThorExperimentConfig as config
-    run_pipeline(config, args.output_dir, args.checkpoint)
+        from experiments.object_nav_thor import ObjectNavThorExperimentConfig as Config
+    run_pipeline(Config(), args.output_dir, args.checkpoint)
 
 
 if __name__ == "__main__":

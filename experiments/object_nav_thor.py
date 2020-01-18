@@ -8,7 +8,7 @@ import torch.optim as optim
 from configs.losses import algo_defaults
 from configs.util import Builder
 from extensions.ai2thor.models.object_nav_models import ObjectNavBaselineActorCritic
-from extensions.ai2thor.sensors import RGBSensorThor
+from extensions.ai2thor.sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
 from extensions.ai2thor.tasks import ObjectNavTask
 from imitation.trainer import Imitation
@@ -23,7 +23,7 @@ from rl_base.task import TaskSampler
 # ObjectNav configuration example
 ##
 class ObjectNavThorExperimentConfig(ExperimentConfig):
-    OBJECT_TYPES = ["Tomato", "Cup", "Television"]
+    OBJECT_TYPES = sorted(["Cup", "Television", "Tomato"])
 
     SCREEN_SIZE = 224
 
@@ -35,6 +35,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
                 "use_resnet_normalization": True,
             }
         ),
+        GoalObjectTypeThorSensor({"object_types": OBJECT_TYPES}),
     ]
 
     ENV_ARGS = {
@@ -42,6 +43,8 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         "player_screen_width": SCREEN_SIZE,
         "quality": "Very Low",
     }
+
+    MAX_STEPS = 100
 
     @classmethod
     def tag(cls):
@@ -51,12 +54,12 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
     def training_pipeline(cls, **kwargs):
         dagger_steps = 1000
         ppo_steps = 100000
-        nprocesses = 10
+        nprocesses = 1
         lr = 2.5e-4
         num_mini_batch = 3
         update_repeats = 1
         num_steps = 128
-        gpu_ids = [0, 1, 2]
+        gpu_ids = [0]
         return {
             "optimizer": Builder(optim.Adam, dict(lr=lr)),
             "nprocesses": nprocesses,
@@ -87,7 +90,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         return ObjectNavBaselineActorCritic(
             action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
-            goal_sensor_uuid="object_type",
+            goal_sensor_uuid="goal_object_type_ind",
             hidden_size=512,
             object_type_embedding_dim=8,
         )
@@ -98,23 +101,22 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
 
     @staticmethod
     def _partition_inds(n: int, num_parts: int):
-        m = n // num_parts
-        parts = [m] * num_parts
-        num_extra = n % num_parts
-        for i in range(num_extra):
-            parts[i] += 1
-        return np.cumsum(parts)
+        return np.round(np.linspace(0, n, num_parts + 1, endpoint=True)).astype(
+            np.int32
+        )
 
     def _get_sampler_args_for_scene_split(
         self, scenes: List[str], process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
         assert total_processes <= len(scenes), "More processes than scenes."
-        inds = [0] + self._partition_inds(len(scenes), total_processes)
+        inds = self._partition_inds(len(scenes), total_processes)
 
         return {
             "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
-            "object_type": self.OBJECT_TYPES,
+            "object_types": self.OBJECT_TYPES,
             "env_args": self.ENV_ARGS,
+            "max_steps": self.MAX_STEPS,
+            "sensors": self.SENSORS,
         }
 
     def train_task_sampler_args(
