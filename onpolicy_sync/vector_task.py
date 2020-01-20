@@ -136,7 +136,7 @@ class VectorSampledTasks:
 
         observation_spaces = [read_fn() for read_fn in self._connection_read_fns]
 
-        if all(os is not None for os in observation_spaces):
+        if any(os is None for os in observation_spaces):
             raise NotImplementedError(
                 "It appears that the `all_observation_spaces_equal`"
                 " is not True for some task sampler created by"
@@ -193,7 +193,9 @@ class VectorSampledTasks:
 
                         if auto_resample_when_done:
                             current_task = task_sampler.next_task()
-                            step_result.observations = current_task.get_observations()
+                            step_result = step_result.clone(
+                                {"observation": current_task.get_observations()}
+                            )
 
                     connection_write_fn(step_result)
 

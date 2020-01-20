@@ -23,23 +23,26 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
 
         self.goal_sensor_uuid = goal_sensor_uuid
         self._n_object_types = self.observation_space.spaces[self.goal_sensor_uuid].n
-        self._hidden_size = hidden_size
+        self.recurrent_hidden_state_size = hidden_size
         self.object_type_embedding_size = object_type_embedding_dim
 
         self.visual_encoder = SimpleCNN(self.observation_space, hidden_size)
 
         self.state_encoder = RNNStateEncoder(
-            (0 if self.is_blind else self._hidden_size) + object_type_embedding_dim,
-            self._hidden_size,
+            (0 if self.is_blind else self.recurrent_hidden_state_size)
+            + object_type_embedding_dim,
+            self.recurrent_hidden_state_size,
         )
 
         self.actor = LinearActorHead(
-            self._hidden_size + object_type_embedding_dim, action_space.n
+            self.recurrent_hidden_state_size, action_space.n
         )
-        self.critic = LinearCriticHead(self._hidden_size + object_type_embedding_dim)
+        self.critic = LinearCriticHead(
+            self.recurrent_hidden_state_size
+        )
 
         self.object_type_embedding = nn.Embedding(
-            num_embeddings=object_type_embedding_dim,
+            num_embeddings=self._n_object_types,
             embedding_dim=object_type_embedding_dim,
         )
 
@@ -47,7 +50,7 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
 
     @property
     def output_size(self):
-        return self._hidden_size
+        return self.recurrent_hidden_state_size
 
     @property
     def is_blind(self):

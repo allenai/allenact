@@ -11,16 +11,17 @@ from extensions.ai2thor.models.object_nav_models import ObjectNavBaselineActorCr
 from extensions.ai2thor.sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
 from extensions.ai2thor.tasks import ObjectNavTask
-from imitation.trainer import Imitation
 from imitation.utils import LinearDecay
 from onpolicy_sync.losses import PPO
+from onpolicy_sync.losses.imitation import Imitation
 from rl_base.experiment_config import ExperimentConfig
-from rl_base.sensor import SensorSuite
+from rl_base.sensor import SensorSuite, ExpertActionSensor
 from rl_base.task import TaskSampler
 
 
 class ObjectNavThorExperimentConfig(ExperimentConfig):
     """An object navigation experiment in THOR."""
+
     OBJECT_TYPES = sorted(["Cup", "Television", "Tomato"])
 
     SCREEN_SIZE = 224
@@ -34,6 +35,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             }
         ),
         GoalObjectTypeThorSensor({"object_types": OBJECT_TYPES}),
+        ExpertActionSensor({"nactions": 6}),
     ]
 
     ENV_ARGS = {
@@ -54,9 +56,9 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         ppo_steps = 100000
         nprocesses = 1
         lr = 2.5e-4
-        num_mini_batch = 3
+        num_mini_batch = 1
         update_repeats = 1
-        num_steps = 128
+        num_steps = 32
         gpu_ids = [0]
         return {
             "optimizer": Builder(optim.Adam, dict(lr=lr)),
@@ -66,14 +68,10 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "num_steps": num_steps,
             "gpu_ids": gpu_ids,
             "imitation_loss": Builder(Imitation,),
-            "ppo_loss": Builder(
-                PPO,
-                dict(ppo_epoch=update_repeats, num_mini_batch=num_mini_batch),
-                default=algo_defaults["ppo_loss"],
-            ),
+            "ppo_loss": Builder(PPO, dict(), default=algo_defaults["ppo_loss"],),
             "pipeline": [
                 {
-                    "losses": ["imitation_loss"],
+                    "losses": ["imitation_loss", "ppo_loss"],
                     "teacher_forcing": Builder(
                         LinearDecay, dict(startp=1, endp=1e-6, steps=dagger_steps)
                     ),

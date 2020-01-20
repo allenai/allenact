@@ -1,7 +1,8 @@
 import warnings
-from random import random
+import random
 from typing import Tuple, List, Dict, Any, Optional
 
+import gym
 import numpy as np
 
 from extensions.ai2thor.constants import (
@@ -71,9 +72,9 @@ class AI2ThorTask(Task[AI2ThorEnvironment]):
 class ObjectNavTask(Task[AI2ThorEnvironment]):
     _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT, LOOK_DOWN, LOOK_UP, END)
 
-    _CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE: Optional[
-        Dict[Tuple[str, str], Tuple[float, float, int, int]]
-    ] = None
+    _CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE: Dict[
+        Tuple[str, str], Tuple[float, float, int, int]
+    ] = {}
 
     def __init__(
         self,
@@ -92,17 +93,17 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
 
     @property
     def action_space(self):
-        raise NotImplementedError()
+        return gym.spaces.Discrete(len(self._actions))
 
     def reached_terminal_state(self) -> bool:
-        return self._is_goal_object_visible()
+        return self._took_end_action
 
     @classmethod
     def action_names(cls) -> Tuple[str, ...]:
         return cls._actions
 
     def close(self) -> None:
-        raise NotImplementedError()
+        self.env.stop()
 
     def _step(self, action: int) -> RLStepResult:
         action_str = self.action_names()[action]

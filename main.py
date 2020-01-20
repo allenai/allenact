@@ -19,7 +19,8 @@ def run_pipeline(
 ):
     train_pipeline = config.training_pipeline()
 
-    torch.cuda.set_device("cuda:%d" % train_pipeline["gpu_ids"][0])
+    if torch.cuda.is_available():
+        torch.cuda.set_device("cuda:%d" % train_pipeline["gpu_ids"][0])
 
     actor_critic = config.create_model()  # TODO Don't we always have to create it?
 
@@ -50,7 +51,7 @@ def run_pipeline(
         print("Loaded checkpoint from %s" % checkpoint_file_name)
 
     for sit, stage in enumerate(train_pipeline["pipeline"]):
-        stage_limit = stage["criterion"]
+        stage_limit = stage["end_criterion"]
         stage_losses = dict()
         stage_weights = {name: 1.0 for name in stage["losses"]}
         for name in stage["losses"]:
@@ -89,7 +90,7 @@ def run_pipeline(
             rollouts = RolloutStorage(
                 train_pipeline["num_steps"],
                 train_pipeline["nprocesses"],
-                vectask.observation_space.shape,
+                vectask.observation_space,
                 actor_critic.action_space,
                 actor_critic.recurrent_hidden_state_size,
             )

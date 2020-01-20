@@ -1,4 +1,5 @@
 import glob
+import numbers
 import os
 
 import torch
@@ -69,7 +70,8 @@ def batch_observations(
 
     for sensor in batch:
         batch[sensor] = torch.stack(batch[sensor], dim=0).to(
-            device=device, dtype=torch.float
+            device=device
+            # , dtype=torch.float
         )
 
     return batch
@@ -81,4 +83,6 @@ def _to_tensor(v):
     elif isinstance(v, np.ndarray):
         return torch.from_numpy(v)
     else:
-        return torch.tensor(v, dtype=torch.float)
+        return torch.tensor(
+            v, dtype=torch.int64 if isinstance(v, numbers.Integral) else torch.float
+        )

@@ -24,7 +24,7 @@ class A2C_ACKTR(AbstractActorCriticLoss):
 
     def loss(
         self,
-        batch: Dict[str, Union[Dict[str, torch.Tensor]]],
+        batch: Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]],
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
         **kwargs
