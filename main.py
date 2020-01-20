@@ -19,9 +19,14 @@ def run_pipeline(
 ):
     train_pipeline = config.training_pipeline()
 
-    torch.cuda.set_device("cuda:%d" % train_pipeline["gpu_ids"][0])
+    device = "cpu"
+    if torch.cuda.is_available():
+        device = "cuda:%d" % train_pipeline["gpu_ids"][0]
+        torch.cuda.set_device(device)
 
-    actor_critic = config.create_model()  # TODO Don't we always have to create it?
+    actor_critic = config.create_model().to(
+        device
+    )  # TODO Don't we always have to create it?
 
     optimizer = train_pipeline["optimizer"]
     if isinstance(optimizer, Builder):  # TODO Should it always be true (?)
@@ -50,7 +55,7 @@ def run_pipeline(
         print("Loaded checkpoint from %s" % checkpoint_file_name)
 
     for sit, stage in enumerate(train_pipeline["pipeline"]):
-        stage_limit = stage["criterion"]
+        stage_limit = stage["end_criterion"]
         stage_losses = dict()
         stage_weights = {name: 1.0 for name in stage["losses"]}
         for name in stage["losses"]:
@@ -79,6 +84,7 @@ def run_pipeline(
             save_interval=10000,
             pipeline_stage=sit,
             teacher_forcing=None,
+            device=device,
         )
 
         if ckpt_dict is not None and sit == ckpt_dict["pipeline_stage"]:
@@ -89,9 +95,9 @@ def run_pipeline(
             rollouts = RolloutStorage(
                 train_pipeline["num_steps"],
                 train_pipeline["nprocesses"],
-                vectask.observation_space.shape,
+                vectask.observation_space,
                 actor_critic.action_space,
-                actor_critic.recurrent_hidden_state_size,
+                actor_critic.recurrent_hidden_state_size(),
             )
 
             trainer.train(rollouts)

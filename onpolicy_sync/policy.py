@@ -21,6 +21,9 @@ class ActorCriticModel(nn.Module, typing.Generic[DistributionType]):
         self.dim_actions = action_space.n
         self.observation_space = observation_space
 
+    def recurrent_hidden_state_size(self):
+        raise NotImplementedError
+
     def forward(self, *args, **kwargs) -> ActorCriticOutput:
         raise NotImplementedError
 

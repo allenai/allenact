@@ -14,9 +14,7 @@ def acktr_optimizer(actor_critic):
 
 
 class A2C_ACKTR(AbstractActorCriticLoss):
-    def __init__(
-        self, value_loss_coef, entropy_coef, acktr=False,
-    ):
+    def __init__(self, value_loss_coef, entropy_coef, acktr=False, *args, **kwargs):
         self.acktr = acktr
 
         self.value_loss_coef = value_loss_coef
@@ -85,18 +83,14 @@ class A2C_ACKTR(AbstractActorCriticLoss):
 
 
 class A2C(A2C_ACKTR):
-    def __init__(
-        self, value_loss_coef, entropy_coef,
-    ):
+    def __init__(self, value_loss_coef, entropy_coef, *args, **kwargs):
         super().__init__(
             value_loss_coef=value_loss_coef, entropy_coef=entropy_coef, acktr=False,
         )
 
 
 class ACKTR(A2C_ACKTR):
-    def __init__(
-        self, value_loss_coef, entropy_coef,
-    ):
+    def __init__(self, value_loss_coef, entropy_coef, *args, **kwargs):
         super().__init__(
             value_loss_coef=value_loss_coef, entropy_coef=entropy_coef, acktr=True,
         )

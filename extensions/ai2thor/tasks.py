@@ -83,6 +83,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         max_steps: int,
         **kwargs
     ) -> None:
+        print("task info in objectnavtask %s" % task_info)
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
@@ -92,7 +93,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
 
     @property
     def action_space(self):
-        raise NotImplementedError()
+        return self._action_space  # why not in Task?
 
     def reached_terminal_state(self) -> bool:
         return self._is_goal_object_visible()
@@ -102,7 +103,8 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         return cls._actions
 
     def close(self) -> None:
-        raise NotImplementedError()
+        pass
+        # raise NotImplementedError()
 
     def _step(self, action: int) -> RLStepResult:
         action_str = self.action_names()[action]

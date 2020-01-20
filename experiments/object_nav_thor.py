@@ -21,6 +21,7 @@ from rl_base.task import TaskSampler
 
 class ObjectNavThorExperimentConfig(ExperimentConfig):
     """An object navigation experiment in THOR."""
+
     OBJECT_TYPES = sorted(["Cup", "Television", "Tomato"])
 
     SCREEN_SIZE = 224
@@ -42,7 +43,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         "quality": "Very Low",
     }
 
-    MAX_STEPS = 100
+    MAX_STEPS = 4
 
     @classmethod
     def tag(cls):
@@ -51,12 +52,12 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
     @classmethod
     def training_pipeline(cls, **kwargs):
         dagger_steps = 1000
-        ppo_steps = 100000
+        ppo_steps = 100
         nprocesses = 1
         lr = 2.5e-4
-        num_mini_batch = 3
-        update_repeats = 1
-        num_steps = 128
+        num_mini_batch = 1
+        update_repeats = 2
+        num_steps = 10
         gpu_ids = [0]
         return {
             "optimizer": Builder(optim.Adam, dict(lr=lr)),
@@ -72,14 +73,15 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
                 default=algo_defaults["ppo_loss"],
             ),
             "pipeline": [
-                {
-                    "losses": ["imitation_loss"],
-                    "teacher_forcing": Builder(
-                        LinearDecay, dict(startp=1, endp=1e-6, steps=dagger_steps)
-                    ),
-                    "end_criterion": dagger_steps,
-                },
-                {"losses": ["ppo_loss", "imitation_loss"], "end_criterion": ppo_steps},
+                # {
+                #     "losses": ["imitation_loss"],
+                #     "teacher_forcing": Builder(
+                #         LinearDecay, dict(startp=1, endp=1e-6, steps=dagger_steps)
+                #     ),
+                #     "end_criterion": dagger_steps,
+                # },
+                # {"losses": ["ppo_loss", "imitation_loss"], "end_criterion": ppo_steps},
+                {"losses": ["ppo_loss"], "end_criterion": ppo_steps},
             ],
         }
 
@@ -115,6 +117,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "env_args": self.ENV_ARGS,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
+            "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
         }
 
     def train_task_sampler_args(
