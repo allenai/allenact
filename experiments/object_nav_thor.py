@@ -2,6 +2,7 @@ from typing import Dict, Any, List
 
 import gym
 import numpy as np
+import torch
 import torch.nn as nn
 import torch.optim as optim
 
@@ -11,11 +12,11 @@ from extensions.ai2thor.models.object_nav_models import ObjectNavBaselineActorCr
 from extensions.ai2thor.sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
 from extensions.ai2thor.tasks import ObjectNavTask
-from imitation.trainer import Imitation
 from imitation.utils import LinearDecay
 from onpolicy_sync.losses import PPO
+from onpolicy_sync.losses.imitation import Imitation
 from rl_base.experiment_config import ExperimentConfig
-from rl_base.sensor import SensorSuite
+from rl_base.sensor import SensorSuite, ExpertActionSensor
 from rl_base.task import TaskSampler
 
 
@@ -35,6 +36,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             }
         ),
         GoalObjectTypeThorSensor({"object_types": OBJECT_TYPES}),
+        ExpertActionSensor({"nactions": 6}),
     ]
 
     ENV_ARGS = {
@@ -53,12 +55,12 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
     def training_pipeline(cls, **kwargs):
         dagger_steps = 1000
         ppo_steps = 100
-        nprocesses = 1
+        nprocesses = 2
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 2
-        num_steps = 10
-        gpu_ids = [0]
+        num_steps = 16
+        gpu_ids = None if not torch.cuda.is_available() else [0]
         return {
             "optimizer": Builder(optim.Adam, dict(lr=lr)),
             "nprocesses": nprocesses,
@@ -67,21 +69,16 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "num_steps": num_steps,
             "gpu_ids": gpu_ids,
             "imitation_loss": Builder(Imitation,),
-            "ppo_loss": Builder(
-                PPO,
-                dict(ppo_epoch=update_repeats, num_mini_batch=num_mini_batch),
-                default=algo_defaults["ppo_loss"],
-            ),
+            "ppo_loss": Builder(PPO, dict(), default=algo_defaults["ppo_loss"],),
             "pipeline": [
-                # {
-                #     "losses": ["imitation_loss"],
-                #     "teacher_forcing": Builder(
-                #         LinearDecay, dict(startp=1, endp=1e-6, steps=dagger_steps)
-                #     ),
-                #     "end_criterion": dagger_steps,
-                # },
-                # {"losses": ["ppo_loss", "imitation_loss"], "end_criterion": ppo_steps},
-                {"losses": ["ppo_loss"], "end_criterion": ppo_steps},
+                {
+                    "losses": ["imitation_loss", "ppo_loss"],
+                    "teacher_forcing": Builder(
+                        LinearDecay, dict(startp=1, endp=1e-6, steps=dagger_steps)
+                    ),
+                    "end_criterion": dagger_steps,
+                },
+                {"losses": ["ppo_loss", "imitation_loss"], "end_criterion": ppo_steps},
             ],
         }
 

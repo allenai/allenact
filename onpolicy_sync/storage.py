@@ -26,11 +26,6 @@ class RolloutStorage:
     ):
         self.observations = {}
 
-        for sensor in observation_space.spaces:
-            self.observations[sensor] = torch.zeros(
-                num_steps + 1, num_processes, *observation_space.spaces[sensor].shape
-            )
-
         self.recurrent_hidden_states = torch.zeros(
             num_steps + 1,
             num_recurrent_layers,
@@ -72,6 +67,24 @@ class RolloutStorage:
         self.prev_actions = self.prev_actions.to(device)
         self.masks = self.masks.to(device)
 
+    def insert_initial_observations(self, observations):
+        for sensor in observations:
+            if sensor not in self.observations:
+                self.observations[sensor] = (
+                    torch.zeros_like(observations[sensor])
+                    .unsqueeze(0)
+                    .repeat(
+                        self.num_steps + 1,
+                        *(1 for _ in range(len(observations[sensor].shape))),
+                    )
+                    .to(
+                        "cpu"
+                        if self.actions.get_device() < 0
+                        else self.actions.get_device()
+                    )
+                )
+            self.observations[sensor][0].copy_(observations[sensor])
+
     def insert(
         self,
         observations,
@@ -84,8 +97,17 @@ class RolloutStorage:
         *args,
     ):
         assert len(args) == 0
+
         for sensor in observations:
+            if sensor not in self.observations:
+                self.observations[sensor] = (
+                    torch.zeros_like(observations[sensor])
+                    .unsqueeze(0)
+                    .repeat(self.num_steps + 1)
+                    .to(self.actions.get_device())
+                )
             self.observations[sensor][self.step + 1].copy_(observations[sensor])
+
         self.recurrent_hidden_states[self.step + 1].copy_(recurrent_hidden_states)
         self.actions[self.step].copy_(actions)
         self.prev_actions[self.step + 1].copy_(actions)

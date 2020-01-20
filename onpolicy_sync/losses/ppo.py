@@ -17,6 +17,7 @@ class PPO(AbstractActorCriticLoss):
         *args,
         **kwargs
     ):
+        super().__init__(*args, **kwargs)
         self.clip_param = clip_param
         self.value_loss_coef = value_loss_coef
         self.entropy_coef = entropy_coef
@@ -24,7 +25,7 @@ class PPO(AbstractActorCriticLoss):
 
     def loss(
         self,
-        batch: Dict[str, Union[Dict[str, torch.Tensor]]],
+        batch: Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]],
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
         **kwargs
@@ -35,7 +36,7 @@ class PPO(AbstractActorCriticLoss):
         dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy().mean()
         action_log_probs = actor_critic_output.distributions.log_probs(actions)
 
-        ratio = torch.exp(action_log_probs - batch["old_action_log_probs_batch"])
+        ratio = torch.exp(action_log_probs - batch["old_action_log_probs"])
         surr1 = ratio * batch["norm_adv_targ"]
         surr2 = (
             torch.clamp(ratio, 1.0 - self.clip_param, 1.0 + self.clip_param)
@@ -44,9 +45,9 @@ class PPO(AbstractActorCriticLoss):
         action_loss = -torch.min(surr1, surr2).mean()
 
         if self.use_clipped_value_loss:
-            value_pred_clipped = batch["value_preds"] + (
-                values - batch["value_preds"]
-            ).clamp(-self.clip_param, self.clip_param)
+            value_pred_clipped = batch["values"] + (values - batch["values"]).clamp(
+                -self.clip_param, self.clip_param
+            )
             value_losses = (values - batch["returns"]).pow(2)
             value_losses_clipped = (value_pred_clipped - batch["returns"]).pow(2)
             value_loss = 0.5 * torch.max(value_losses, value_losses_clipped).mean()
@@ -62,7 +63,7 @@ class PPO(AbstractActorCriticLoss):
         return (
             total_loss,
             {
-                "total": total_loss.item(),
+                "ppo_total": total_loss.item(),
                 "value": value_loss.item(),
                 "action": action_loss.item(),
                 "entropy": -dist_entropy.item(),

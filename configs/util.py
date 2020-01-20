@@ -1,9 +1,9 @@
 import copy
-from typing import NamedTuple, Dict, Any
+from typing import NamedTuple, Dict, Any, Type
 
 
 class Builder(NamedTuple):
-    class_name: Any
+    class_name: Type
     kwargs: Dict[str, Any] = {}
     default: Dict[str, Any] = {}
 

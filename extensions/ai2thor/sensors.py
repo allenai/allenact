@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional, List
 import PIL
 import gym
 import numpy as np
+import typing
 from PIL import Image
 from torchvision import transforms
 
@@ -46,8 +47,8 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment]):
             "either both height/width must be None or neither."
         )
 
-        self.norm_means = np.array([[[0.485, 0.456, 0.406]]])
-        self.norm_sds = np.array([[[0.229, 0.224, 0.225]]])
+        self.norm_means = np.array([[[0.485, 0.456, 0.406]]], dtype=np.float32)
+        self.norm_sds = np.array([[[0.229, 0.224, 0.225]]], dtype=np.float32)
 
         shape = None if self.height is None else (self.height, self.width, 3)
         if not self.should_normalize:
@@ -86,8 +87,6 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment]):
         if rgb.dtype == np.uint8:
             rgb = rgb.astype(np.float32) / 255.0
 
-        print(rgb.dtype, self.norm_means, self.norm_sds)
-
         if self.should_normalize:
             rgb -= self.norm_means
             rgb /= self.norm_sds
@@ -116,7 +115,7 @@ class GoalObjectTypeThorSensor(Sensor):
         return "goal_object_type_ind"
 
     def _get_observation_space(self) -> gym.spaces.Discrete:
-        return self.observation_space
+        return typing.cast(gym.spaces.Discrete, self.observation_space)
 
     def get_observation(
         self,
@@ -125,4 +124,5 @@ class GoalObjectTypeThorSensor(Sensor):
         *args: Any,
         **kwargs: Any
     ) -> Any:
+
         return self.object_type_to_ind[task.task_info["object_type"]]

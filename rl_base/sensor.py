@@ -37,14 +37,14 @@ class Sensor(Generic[EnvType]):
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         """The unique ID of the sensor.
+
         @param args: extra args.
         @param kwargs: extra kwargs.
         """
         raise NotImplementedError()
 
     def _get_observation_space(self) -> gym.Space:
-        """The observation space of the sensor.
-        """
+        """The observation space of the sensor."""
         raise NotImplementedError()
 
     def get_observation(
@@ -87,6 +87,7 @@ class SensorSuite(Generic[EnvType]):
 
     def get(self, uuid: str) -> Sensor:
         """Return sensor with the given `uuid`.
+
         @param uuid: the unique id of the sensor
         @return: the sensor with unique id `uuid`.
         """
@@ -115,11 +116,13 @@ class ExpertActionSensor(Sensor[EnvType]):
         return "expert_action"
 
     def _get_observation_space(self) -> gym.spaces.Tuple:
-        """The observation space of the expert action sensor. Will equal
-            `gym.spaces.Tuple(gym.spaces.Discrete(num actions in task), gym.spaces.Discrete(2))`
-            where the first entry of the tuple is the expert action index and the second equals
-            0 if and only if the expert failed to generate a true expert action. The value
-            `num actions in task` should be in `config["nactions"]`
+        """The observation space of the expert action sensor.
+
+        Will equal `gym.spaces.Tuple(gym.spaces.Discrete(num actions in
+        task), gym.spaces.Discrete(2))` where the first entry of the
+        tuple is the expert action index and the second equals 0 if and
+        only if the expert failed to generate a true expert action. The
+        value `num actions in task` should be in `config["nactions"]`
         """
         return gym.spaces.Tuple(
             (gym.spaces.Discrete(self.config["nactions"]), gym.spaces.Discrete(2))

@@ -14,14 +14,14 @@ class RLStepResult(typing.NamedTuple):
     done: typing.Optional[bool]
     info: typing.Optional[Dict[str, Any]]
 
-    def clone(self, other: "RLStepResult", new_info: Dict[str, Any]):
+    def clone(self, new_info: Dict[str, Any]):
         return RLStepResult(
-            observation=other.observation
+            observation=self.observation
             if "observation" not in new_info
             else new_info["observation"],
-            reward=other.reward if "reward" not in new_info else new_info["reward"],
-            done=other.done if "done" not in new_info else new_info["done"],
-            info=other.info if "info" not in new_info else new_info["info"],
+            reward=self.reward if "reward" not in new_info else new_info["reward"],
+            done=self.done if "done" not in new_info else new_info["done"],
+            info=self.info if "info" not in new_info else new_info["info"],
         )
 
     def merge(self, other: "RLStepResult"):

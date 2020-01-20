@@ -1,3 +1,4 @@
+from imitation.utils import LinearDecay
 from rl_base.common import Loss
 from typing import Optional, Any, Dict
 from onpolicy_sync.vector_task import VectorSampledTasks
@@ -32,7 +33,7 @@ class Trainer:
         save_interval: int,
         pipeline_stage: int,
         device: str,
-        teacher_forcing: Optional[torch.optim.lr_scheduler.LambdaLR] = None,
+        teacher_forcing: Optional[LinearDecay] = None,
         deterministic: bool = False,
     ):
         self.vector_tasks = vector_tasks
@@ -121,11 +122,8 @@ class Trainer:
                 batch["observations"] = {
                     k: v.to(self.device) for k, v in batch["observations"].items()
                 }
-                step_observation = {
-                    k: v.to(self.device) for k, v in batch["observations"].items()
-                }
                 actor_critic_output, hidden_states = self.actor_critic(
-                    step_observation,
+                    batch["observations"],
                     batch["recurrent_hidden_states"].to(self.device),
                     batch["prev_actions"].to(self.device),
                     batch["masks"].to(self.device),
@@ -139,6 +137,7 @@ class Trainer:
                     losses=[],
                 )
                 self.optimizer.zero_grad()
+                total_loss: Optional[torch.FloatTensor] = None
                 for loss_name in self.losses:
                     print("new loss")
                     loss, loss_weight = (
@@ -147,14 +146,18 @@ class Trainer:
                     )
 
                     current_loss, current_info = loss.loss(batch, actor_critic_output)
-                    (loss_weight * current_loss).backward()
+                    if total_loss is None:
+                        total_loss = loss_weight * current_loss
+                    else:
+                        total_loss += loss_weight * current_loss
 
                     current_info["name"] = loss_name
                     current_info["weight"] = loss_weight
                     info["losses"].append(current_info)
-
+                assert total_loss is not None, "No losses specified?"
                 self.tracker.append(info)
 
+                total_loss.backward()
                 nn.utils.clip_grad_norm_(
                     self.actor_critic.parameters(), self.max_grad_norm
                 )
@@ -179,9 +182,14 @@ class Trainer:
 
         actions = (
             actor_critic_output.distributions.sample()
-            if self.deterministic
+            if not self.deterministic
             else actor_critic_output.distributions.mode()
         )
+        if self.teacher_forcing is not None and self.teacher_forcing() > 0:
+            raise NotImplementedError()
+            # teacher_forcing_mask = torch.bernoulli(actions.shape, p=self.teacher_forcing())
+            # teacher_forcing_mask *= step_observation["expert_actions"]
+            # actions = teacher_forcing_mask * step_observation["expert_actions"] + (1-teacher_forcing_mask)
 
         outputs = self.vector_tasks.step([a[0].item() for a in actions])
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
@@ -210,8 +218,7 @@ class Trainer:
         observations = self.vector_tasks.next_task()
         batch = batch_observations(observations)
 
-        for sensor in rollouts.observations:
-            rollouts.observations[sensor][0].copy_(batch[sensor])
+        rollouts.insert_initial_observations(batch)
 
     def train(self, rollouts):
         self.initialize_rollouts(rollouts)
@@ -241,18 +248,18 @@ class Trainer:
 
             rollouts.after_update()
 
-        if self.teacher_forcing is not None:
-            self.teacher_forcing.step()
+            if self.teacher_forcing is not None:
+                self.teacher_forcing.step(self.rollout_count)
 
-        self.rollout_count += 1
+            self.rollout_count += 1
 
-        # save for every interval-th episode or for the last epoch
-        if (
-            self.save_interval > 0
-            and (
-                self.rollout_count % self.save_interval == 0
-                or self.rollout_count == self.num_rollouts
-            )
-            and self.models_folder != ""
-        ):
-            self.checkpoint_save()
+            # save for every interval-th episode or for the last epoch
+            if (
+                self.save_interval > 0
+                and (
+                    self.rollout_count % self.save_interval == 0
+                    or self.rollout_count == self.num_rollouts
+                )
+                and self.models_folder != ""
+            ):
+                self.checkpoint_save()

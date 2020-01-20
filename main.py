@@ -97,7 +97,7 @@ def run_pipeline(
                 train_pipeline["nprocesses"],
                 vectask.observation_space,
                 actor_critic.action_space,
-                actor_critic.recurrent_hidden_state_size(),
+                actor_critic.recurrent_hidden_state_size,
             )
 
             trainer.train(rollouts)
