@@ -13,6 +13,7 @@ from rl_base.common import EnvType
 
 if TYPE_CHECKING:
     from rl_base.task import Task
+import numpy as np
 
 
 class Sensor(Generic[EnvType]):
@@ -136,4 +137,4 @@ class ExpertActionSensor(Sensor[EnvType]):
             "In expert action sensor, `task.query_expert()` "
             "did not return an integer action."
         )
-        return action, int(expert_was_successful)
+        return np.array([action, expert_was_successful], dtype=np.int64)

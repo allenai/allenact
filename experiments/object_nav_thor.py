@@ -1,3 +1,4 @@
+from math import ceil
 from typing import Dict, Any, List
 
 import gym
@@ -23,7 +24,13 @@ from rl_base.task import TaskSampler
 class ObjectNavThorExperimentConfig(ExperimentConfig):
     """An object navigation experiment in THOR."""
 
-    OBJECT_TYPES = sorted(["Cup", "Television", "Tomato"])
+    # OBJECT_TYPES = sorted(["Cup", "Television", "Tomato"])
+    OBJECT_TYPES = sorted(["Tomato"])
+    TRAIN_SCENES = [
+        "FloorPlan1_physics"
+    ]  # ["FloorPlan{}".format(i) for i in range(1, 21)]
+    VALID_SCENES = ["FloorPlan{}_physics".format(i) for i in range(21, 26)]
+    TEST_SCENSE = ["FloorPlan{}_physics".format(i) for i in range(26, 31)]
 
     SCREEN_SIZE = 224
 
@@ -45,7 +52,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         "quality": "Very Low",
     }
 
-    MAX_STEPS = 4
+    MAX_STEPS = 128
 
     @classmethod
     def tag(cls):
@@ -53,9 +60,9 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        dagger_steps = 1000
-        ppo_steps = 100
-        nprocesses = 2
+        dagger_steps = 1e4
+        ppo_steps = 1e6
+        nprocesses = 4
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 2
@@ -73,8 +80,8 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "pipeline": [
                 {
                     "losses": ["imitation_loss", "ppo_loss"],
-                    "teacher_forcing": Builder(
-                        LinearDecay, dict(startp=1, endp=1e-6, steps=dagger_steps)
+                    "teacher_forcing": LinearDecay(
+                        startp=1, endp=1e-6, steps=dagger_steps
                     ),
                     "end_criterion": dagger_steps,
                 },
@@ -105,7 +112,9 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
     def _get_sampler_args_for_scene_split(
         self, scenes: List[str], process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
-        assert total_processes <= len(scenes), "More processes than scenes."
+        if total_processes > len(scenes):
+            scenes = scenes * int(ceil(total_processes / len(scenes)))
+            scenes = scenes[: total_processes * (len(scenes) // total_processes)]
         inds = self._partition_inds(len(scenes), total_processes)
 
         return {
@@ -120,23 +129,20 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
     def train_task_sampler_args(
         self, process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
-        all_train_scenes = ["FloorPlan{}".format(i) for i in range(1, 21)]
         return self._get_sampler_args_for_scene_split(
-            all_train_scenes, process_ind, total_processes
+            self.TRAIN_SCENES, process_ind, total_processes
         )
 
     def valid_task_sampler_args(
         self, process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
-        all_valid_scenes = ["FloorPlan{}".format(i) for i in range(21, 26)]
         return self._get_sampler_args_for_scene_split(
-            all_valid_scenes, process_ind, total_processes
+            self.VALID_SCENES, process_ind, total_processes
         )
 
     def test_task_sampler_args(
         self, process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
-        all_test_scenes = ["FloorPlan{}".format(i) for i in range(26, 31)]
         return self._get_sampler_args_for_scene_split(
-            all_test_scenes, process_ind, total_processes
+            self.TEST_SCENSE, process_ind, total_processes
         )

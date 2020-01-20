@@ -69,11 +69,8 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         return self._hidden_size
 
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
-        print(observations[self.goal_sensor_uuid])
         target_encoding = self.get_object_type_encoding(observations)
         x = [target_encoding]
-
-        print(x[0].shape)
 
         if not self.is_blind:
             perception_embed = self.visual_encoder(observations)
@@ -81,8 +78,6 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
 
         x = torch.cat(x, dim=1)
         x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
-
-        print(x.shape, rnn_hidden_states.shape)
 
         return (
             ActorCriticOutput(
