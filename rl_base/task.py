@@ -34,7 +34,7 @@ class Task(Generic[EnvType]):
     task_info: Dict[str, Any]
     max_steps: int
     observation_space: SpaceDict
-    action_space: gym.Space
+    _action_space: gym.Space
 
     def __init__(
         self,
@@ -42,6 +42,7 @@ class Task(Generic[EnvType]):
         sensors: List[Sensor],
         task_info: Dict[str, Any],
         max_steps: int,
+        action_space: gym.Space,
         **kwargs
     ) -> None:
         self.env = env
@@ -52,6 +53,7 @@ class Task(Generic[EnvType]):
             {**self.sensor_suite.observation_spaces.spaces,}
         )
         self._num_steps_taken = 0
+        self._action_space = action_space
 
     def get_observations(self) -> Any:
         return self.sensor_suite.get_observations(env=self.env, task=self)

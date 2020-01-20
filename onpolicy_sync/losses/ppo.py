@@ -9,7 +9,13 @@ from rl_base.distributions import CategoricalDistr
 
 class PPO(AbstractActorCriticLoss):
     def __init__(
-        self, clip_param, value_loss_coef, entropy_coef, use_clipped_value_loss=True,
+        self,
+        clip_param,
+        value_loss_coef,
+        entropy_coef,
+        use_clipped_value_loss=True,
+        *args,
+        **kwargs
     ):
         self.clip_param = clip_param
         self.value_loss_coef = value_loss_coef
@@ -24,6 +30,7 @@ class PPO(AbstractActorCriticLoss):
         **kwargs
     ):
         actions = batch["actions"]
+        print(actor_critic_output)
         values = actor_critic_output.values
         dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy().mean()
         action_log_probs = actor_critic_output.distributions.log_probs(actions)

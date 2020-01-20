@@ -77,6 +77,7 @@ requests-oauthlib==1.3.0
 requirementslib==1.5.3
 rsa==4.0
 scipy==1.4.1
+setuptools==31.0.1
 six==1.14.0
 snowballstemmer==2.0.0
 Sphinx==2.3.1
@@ -100,7 +101,7 @@ tensorflow-estimator==2.1.0
 termcolor==1.1.0
 toml==0.10.0
 tomlkit==0.5.8
-torch==1.1.0.post2
+torch==1.1.0
 torchvision==0.3.0
 typed-ast==1.4.1
 typing==3.7.4.1

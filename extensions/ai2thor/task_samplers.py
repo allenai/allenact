@@ -6,6 +6,7 @@ from extensions.ai2thor.environment import AI2ThorEnvironment
 from extensions.ai2thor.tasks import ObjectNavTask
 from rl_base.sensor import Sensor
 from rl_base.task import TaskSampler
+import gym
 
 
 class ObjectNavTaskSampler(TaskSampler):
@@ -16,6 +17,7 @@ class ObjectNavTaskSampler(TaskSampler):
         sensors: List[Sensor],
         max_steps: int,
         env_args: Dict[str, Any],
+        action_space: gym.Space,
         *args,
         **kwargs
     ) -> None:
@@ -26,6 +28,7 @@ class ObjectNavTaskSampler(TaskSampler):
         self.env: Optional[AI2ThorEnvironment] = None
         self.sensors = sensors
         self.max_steps = max_steps
+        self._action_sapce = action_space
 
         self._last_sampled_task: Optional[ObjectNavTask] = None
 
@@ -66,13 +69,19 @@ class ObjectNavTaskSampler(TaskSampler):
         return True
 
     def next_task(self) -> ObjectNavTask:
+        print("creating next task")
         scene = random.choice(self.scenes)
 
         if self.env is not None:
+            print("resetting env")
             self.env.reset(scene)
         else:
+            print("creating env")
             self.env = self._create_environment()
+            print("starting env")
             self.env.start(scene_name=scene)
+
+        print("env up and ready")
 
         self.env.randomize_agent_location()
 
@@ -97,5 +106,6 @@ class ObjectNavTaskSampler(TaskSampler):
             sensors=self.sensors,
             task_info=task_info,
             max_steps=self.max_steps,
+            action_space=self._action_sapce,
         )
         return self._last_sampled_task

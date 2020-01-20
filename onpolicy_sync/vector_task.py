@@ -129,19 +129,27 @@ class VectorSampledTasks:
             ],
         )
 
+        print("created workers")
+
         self._is_closed = False
+
+        print("calling obs space")
 
         for write_fn in self._connection_write_fns:
             write_fn((OBSERVATION_SPACE_COMMAND, None))
 
+        print("reading obs space")
+
         observation_spaces = [read_fn() for read_fn in self._connection_read_fns]
 
-        if all(os is not None for os in observation_spaces):
-            raise NotImplementedError(
-                "It appears that the `all_observation_spaces_equal`"
-                " is not True for some task sampler created by"
-                " VectorSampledTasks. This is not currently supported."
-            )
+        print("obs space read")
+
+        # if all(os is not None for os in observation_spaces):
+        #     raise NotImplementedError(
+        #         "It appears that the `all_observation_spaces_equal`"
+        #         " is not True for some task sampler created by"
+        #         " VectorSampledTasks. This is not currently supported."
+        #     )
         if any(observation_spaces[0] != os for os in observation_spaces):
             raise NotImplementedError(
                 "It appears that the observation spaces of the samplers"
@@ -177,10 +185,13 @@ class VectorSampledTasks:
         """process worker for creating and interacting with the
         Tasks/TaskSampler."""
         task_sampler = make_sampler_fn(**sampler_fn_args)
+        print("created task sampler")
         current_task = task_sampler.next_task()
+        print("created task")
 
         if parent_pipe is not None:
             parent_pipe.close()
+            print("closed parent pipe (?)")
         try:
             command, data = connection_read_fn()
             while command != CLOSE_COMMAND:
@@ -193,7 +204,9 @@ class VectorSampledTasks:
 
                         if auto_resample_when_done:
                             current_task = task_sampler.next_task()
-                            step_result.observations = current_task.get_observations()
+                            step_result = RLStepResult(
+                                *((current_task.get_observations(),) + step_result[1:])
+                            )
 
                     connection_write_fn(step_result)
 
@@ -209,7 +222,10 @@ class VectorSampledTasks:
                     command == OBSERVATION_SPACE_COMMAND
                     or command == ACTION_SPACE_COMMAND
                 ):
-                    connection_write_fn(getattr(current_task, command))
+                    print("got space command")
+                    res = getattr(current_task, command)
+                    print("computed res %s" % res)
+                    connection_write_fn(res)
 
                 elif command == CALL_COMMAND:
                     function_name, function_args = data
