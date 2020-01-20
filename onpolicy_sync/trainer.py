@@ -32,6 +32,7 @@ class Trainer:
         models_folder: str,
         save_interval: int,
         pipeline_stage: int,
+        device: str,
         teacher_forcing: Optional[LinearDecay] = None,
         deterministic: bool = False,
     ):
@@ -52,6 +53,8 @@ class Trainer:
             int(self.stage_task_steps) // self.steps_in_rollout
         ) // self.num_processes
 
+        print("Using %d rollouts" % self.num_rollouts)
+
         self.gamma = gamma
         self.use_gae = use_gae
         self.gae_lambda = gae_lambda
@@ -68,6 +71,8 @@ class Trainer:
         self.pipeline_stage = pipeline_stage
 
         self.deterministic = deterministic
+
+        self.device = device
 
         self.rollout_count = 0
         self.backprop_count = 0
@@ -97,20 +102,31 @@ class Trainer:
         self.optimizer.load_state_dict(ckpt_dict["optimizer_state_dict"])
 
     def update(self, rollouts) -> None:
+        print("new update")
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
 
         for e in range(self.update_epochs):
+            print("new epoch")
             data_generator = rollouts.recurrent_generator(
                 advantages, self.update_mini_batches
             )
 
             for bit, batch in enumerate(data_generator):
+                print("new batch")
+
+                batch = {
+                    k: batch[k].to(self.device) if k != "observations" else batch[k]
+                    for k in batch
+                }
                 # Reshape to do in a single forward pass for all steps
-                actor_critic_output, recurrent_hidden_states = self.actor_critic(
+                batch["observations"] = {
+                    k: v.to(self.device) for k, v in batch["observations"].items()
+                }
+                actor_critic_output, hidden_states = self.actor_critic(
                     batch["observations"],
-                    batch["recurrent_hidden_states"],
-                    batch["prev_actions"],  # for step 0, noop action as input
-                    batch["masks"],
+                    batch["recurrent_hidden_states"].to(self.device),
+                    batch["prev_actions"].to(self.device),
+                    batch["masks"].to(self.device),
                 )
 
                 info = dict(
@@ -123,6 +139,7 @@ class Trainer:
                 self.optimizer.zero_grad()
                 total_loss: Optional[torch.FloatTensor] = None
                 for loss_name in self.losses:
+                    print("new loss")
                     loss, loss_weight = (
                         self.losses[loss_name],
                         self.loss_weights[loss_name],
@@ -148,17 +165,19 @@ class Trainer:
                 self.backprop_count += 1
 
     def collect_rollout_step(self, rollouts):
+        print("new rollout step")
         # sample actions
         with torch.no_grad():
             step_observation = {
-                k: v[rollouts.step] for k, v in rollouts.observations.items()
+                k: v[rollouts.step].to(self.device)
+                for k, v in rollouts.observations.items()
             }
 
             actor_critic_output, recurrent_hidden_states = self.actor_critic(
                 step_observation,
-                rollouts.recurrent_hidden_states[rollouts.step],
-                rollouts.prev_actions[rollouts.step],
-                rollouts.masks[rollouts.step],
+                rollouts.recurrent_hidden_states[rollouts.step].to(self.device),
+                rollouts.prev_actions[rollouts.step].to(self.device),
+                rollouts.masks[rollouts.step].to(self.device),
             )
 
         actions = (
@@ -195,6 +214,7 @@ class Trainer:
         )
 
     def initialize_rollouts(self, rollouts):
+        print("initialize rollouts")
         observations = self.vector_tasks.next_task()
         batch = batch_observations(observations)
 
@@ -204,17 +224,20 @@ class Trainer:
         self.initialize_rollouts(rollouts)
 
         while self.rollout_count < self.num_rollouts:
+            print("new rollout")
             for step in range(self.steps_in_rollout):
                 self.collect_rollout_step(rollouts)
 
             with torch.no_grad():
-                step_observation = {k: v[-1] for k, v in rollouts.observations.items()}
+                step_observation = {
+                    k: v[-1].to(self.device) for k, v in rollouts.observations.items()
+                }
 
                 actor_critic_output, _ = self.actor_critic(
                     step_observation,
-                    rollouts.recurrent_hidden_states[-1],
-                    rollouts.prev_actions[-1],
-                    rollouts.masks[-1],
+                    rollouts.recurrent_hidden_states[-1].to(self.device),
+                    rollouts.prev_actions[-1].to(self.device),
+                    rollouts.masks[-1].to(self.device),
                 )
 
             rollouts.compute_returns(

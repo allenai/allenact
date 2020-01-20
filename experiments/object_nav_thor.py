@@ -2,6 +2,7 @@ from typing import Dict, Any, List
 
 import gym
 import numpy as np
+import torch
 import torch.nn as nn
 import torch.optim as optim
 
@@ -44,7 +45,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         "quality": "Very Low",
     }
 
-    MAX_STEPS = 100
+    MAX_STEPS = 4
 
     @classmethod
     def tag(cls):
@@ -53,13 +54,13 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
     @classmethod
     def training_pipeline(cls, **kwargs):
         dagger_steps = 1000
-        ppo_steps = 100000
-        nprocesses = 1
+        ppo_steps = 100
+        nprocesses = 2
         lr = 2.5e-4
         num_mini_batch = 1
-        update_repeats = 1
-        num_steps = 32
-        gpu_ids = [0]
+        update_repeats = 2
+        num_steps = 16
+        gpu_ids = None if not torch.cuda.is_available() else [0]
         return {
             "optimizer": Builder(optim.Adam, dict(lr=lr)),
             "nprocesses": nprocesses,
@@ -113,6 +114,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "env_args": self.ENV_ARGS,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
+            "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
         }
 
     def train_task_sampler_args(

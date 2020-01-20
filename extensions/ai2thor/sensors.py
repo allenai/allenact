@@ -81,12 +81,11 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment]):
         *args: Any,
         **kwargs: Any
     ) -> Any:
-        rgb = env.current_frame
+        rgb = env.current_frame.copy()
         assert rgb.dtype in [np.uint8, np.float32]
 
         if rgb.dtype == np.uint8:
-            rgb = np.array(rgb, dtype=np.float32)
-            rgb = rgb / 255.0
+            rgb = rgb.astype(np.float32) / 255.0
 
         if self.should_normalize:
             rgb -= self.norm_means

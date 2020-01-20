@@ -19,10 +19,14 @@ def run_pipeline(
 ):
     train_pipeline = config.training_pipeline()
 
+    device = "cpu"
     if torch.cuda.is_available():
-        torch.cuda.set_device("cuda:%d" % train_pipeline["gpu_ids"][0])
+        device = "cuda:%d" % train_pipeline["gpu_ids"][0]
+        torch.cuda.set_device(device)
 
-    actor_critic = config.create_model()  # TODO Don't we always have to create it?
+    actor_critic = config.create_model().to(
+        device
+    )  # TODO Don't we always have to create it?
 
     optimizer = train_pipeline["optimizer"]
     if isinstance(optimizer, Builder):  # TODO Should it always be true (?)
@@ -80,6 +84,7 @@ def run_pipeline(
             save_interval=10000,
             pipeline_stage=sit,
             teacher_forcing=None,
+            device=device,
         )
 
         if ckpt_dict is not None and sit == ckpt_dict["pipeline_stage"]:

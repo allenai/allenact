@@ -37,13 +37,29 @@ class AI2ThorEnvironment(object):
         always_return_visible_range: bool = False,
         simplify_physics: bool = False,
     ) -> None:
-        self.controller = Controller()
+        print("env constructor")
+        # self.controller = Controller()
+        self._start_player_screen_width = player_screen_width
+        self._start_player_screen_height = player_screen_height
+        self.x_display = x_display
+        if (
+            self._start_player_screen_width < 300
+            or self._start_player_screen_height < 300
+        ):
+            self.controller = Controller(
+                x_display=self.x_display,
+                player_screen_width=300,
+                player_screen_height=300,
+            )
+        else:
+            print("ERROR: high resolution not supported")
+
+        print("created controller")
         self.controller.local_executable_path = local_thor_build
         self.controller.docker_enabled = docker_enabled
-        self.x_display = x_display
         self._initially_reachable_points: Optional[List[Dict]] = None
         self._initially_reachable_points_set: Optional[Set[Dict]] = None
-        self._started = False
+        self._started = True
         self._offset: Optional[Tuple[int, int]] = None
         self.move_mag: Optional[float] = None
         self.grid_size: Optional[float] = None
@@ -58,8 +74,6 @@ class AI2ThorEnvironment(object):
         self.always_return_visible_range = always_return_visible_range
         self.simplify_physics = simplify_physics
 
-        self._start_player_screen_width = player_screen_width
-        self._start_player_screen_height = player_screen_height
         self._quality = quality
 
     @property
@@ -118,11 +132,11 @@ class AI2ThorEnvironment(object):
             self._start_player_screen_width < 300
             or self._start_player_screen_height < 300
         ):
-            self.controller.start(
-                x_display=self.x_display,
-                player_screen_width=300,
-                player_screen_height=300,
-            )
+            # self.controller.start(
+            #     x_display=self.x_display,
+            #     player_screen_width=300,
+            #     player_screen_height=300,
+            # )
             self.controller.step(
                 {
                     "action": "ChangeResolution",
@@ -131,11 +145,13 @@ class AI2ThorEnvironment(object):
                 }
             )
         else:
-            self.controller.start(
-                x_display=self.x_display,
-                player_screen_width=self._start_player_screen_width,
-                player_screen_height=self._start_player_screen_height,
-            )
+            print("ERROR: Non-supported resolution")
+        # else:
+        #     self.controller.start(
+        #         x_display=self.x_display,
+        #         player_screen_width=self._start_player_screen_width,
+        #         player_screen_height=self._start_player_screen_height,
+        #     )
 
         self.controller.step({"action": "ChangeQuality", "quality": self._quality})
         if not self.controller.last_event.metadata["lastActionSuccess"]:
