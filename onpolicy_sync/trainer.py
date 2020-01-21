@@ -107,14 +107,11 @@ class Trainer:
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
 
         for e in range(self.update_epochs):
-            # print("new epoch")
             data_generator = rollouts.recurrent_generator(
                 advantages, self.update_mini_batches
             )
 
             for bit, batch in enumerate(data_generator):
-                # print("new batch")
-
                 batch = {
                     k: batch[k].to(self.device) if k != "observations" else batch[k]
                     for k in batch
@@ -140,7 +137,6 @@ class Trainer:
                 self.optimizer.zero_grad()
                 total_loss: Optional[torch.FloatTensor] = None
                 for loss_name in self.losses:
-                    # print("new loss")
                     loss, loss_weight = (
                         self.losses[loss_name],
                         self.loss_weights[loss_name],
@@ -157,6 +153,8 @@ class Trainer:
                     info["losses"].append(current_info)
                 assert total_loss is not None, "No losses specified?"
                 self.tracker.append(info)
+
+                # print(info)
 
                 total_loss.backward()
                 nn.utils.clip_grad_norm_(
