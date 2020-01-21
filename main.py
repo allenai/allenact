@@ -10,6 +10,7 @@ from onpolicy_sync.storage import RolloutStorage
 from onpolicy_sync.vector_task import VectorSampledTasks, ThreadedVectorSampledTasks
 from rl_base.experiment_config import ExperimentConfig
 from onpolicy_sync.trainer import Trainer
+from rl_base.preprocessor import Preprocessor, ObservationSet
 
 
 def run_pipeline(
@@ -24,22 +25,41 @@ def run_pipeline(
         device = "cuda:%d" % train_pipeline["gpu_ids"][0]
         torch.cuda.set_device(device)
 
-    actor_critic = config.create_model().to(
-        device
-    )  # TODO Don't we always have to create it?
-
-    optimizer = train_pipeline["optimizer"]
-    if isinstance(optimizer, Builder):  # TODO Should it always be true (?)
-        optimizer = optimizer(
-            params=[p for p in actor_critic.parameters() if p.requires_grad]
-        )
-
     sampler_fn_args = [
         config.train_task_sampler_args(
             process_ind=it, total_processes=train_pipeline["nprocesses"]
         )
         for it in range(train_pipeline["nprocesses"])
     ]
+    # print(sampler_fn_args)
+
+    observation_set = None
+    if "observation_set" in train_pipeline:
+        all_preprocessors = []
+        sensor_ids = []
+        preprocessor_ids = []
+        for observation in train_pipeline["observation_set"]:
+            if isinstance(observation, str):
+                sensor_ids.append(observation)
+            else:
+                if isinstance(observation, Builder):
+                    all_preprocessors.append(observation(config={"device": device}))
+                else:
+                    all_preprocessors.append(observation)
+                preprocessor_ids.append(all_preprocessors[-1].uuid)
+        print("sensors in obs", sensor_ids, "preprocessors in obs", preprocessor_ids)
+        observation_set = ObservationSet(
+            sensor_ids, preprocessor_ids, all_preprocessors
+        )
+        print("created observation set")
+
+    actor_critic = config.create_model().to(device)
+
+    optimizer = train_pipeline["optimizer"]
+    if isinstance(optimizer, Builder):  # TODO Should it always be true (?)
+        optimizer = optimizer(
+            params=[p for p in actor_critic.parameters() if p.requires_grad]
+        )
 
     vectask = VectorSampledTasks(
         make_sampler_fn=config.make_sampler_fn, sampler_fn_args=sampler_fn_args
@@ -95,9 +115,9 @@ def run_pipeline(
             rollouts = RolloutStorage(
                 train_pipeline["num_steps"],
                 train_pipeline["nprocesses"],
-                vectask.observation_space,
                 actor_critic.action_space,
                 actor_critic.recurrent_hidden_state_size,
+                observation_set=observation_set,
             )
 
             trainer.train(rollouts)
@@ -112,6 +132,10 @@ def main():
     args = get_args()
     if args.experiment == "object_nav_thor":
         from experiments.object_nav_thor import ObjectNavThorExperimentConfig as Config
+    elif args.experiment == "object_nav_thor_preresnet":
+        from experiments.object_nav_thor_preresnet import (
+            ObjectNavThorPreResnetExperimentConfig as Config,
+        )
     run_pipeline(Config(), args.output_dir, args.checkpoint)
 
 
