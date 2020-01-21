@@ -84,7 +84,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         max_steps: int,
         **kwargs
     ) -> None:
-        print("task info in objectnavtask %s" % task_info)
+        # print("task info in objectnavtask %s" % task_info)
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
@@ -116,6 +116,11 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         else:
             self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
+
+            if (
+                not self.last_action_success
+            ) and self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE is not None:
+                self.env.update_graph_with_failed_action(failed_action=action_str)
 
         step_result = RLStepResult(
             observation=self.get_observations(),
