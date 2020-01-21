@@ -40,7 +40,6 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment]):
         self.should_normalize = f(config, "use_resnet_normalization", False)
         self.height: Optional[int] = f(config, "height", None)
         self.width: Optional[int] = f(config, "width", None)
-        self.should_normalize = f(config, "use_resnet_normalization", False)
 
         assert (self.width is None) == (self.height is None), (
             "In RGBSensorThor's config, "
@@ -72,7 +71,7 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment]):
         return "rgb"
 
     def _get_observation_space(self) -> gym.spaces.Box:
-        return self.observation_space
+        return typing.cast(gym.spaces.Box, self.observation_space)
 
     def get_observation(
         self,
