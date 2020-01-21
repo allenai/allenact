@@ -9,6 +9,7 @@ import torch.nn as nn
 from onpolicy_sync.utils import batch_observations
 import os
 from rl_base.distributions import CategoricalDistr
+import torch.distributions
 
 
 class Trainer:
@@ -102,17 +103,17 @@ class Trainer:
         self.optimizer.load_state_dict(ckpt_dict["optimizer_state_dict"])
 
     def update(self, rollouts) -> None:
-        print("new update")
+        # print("new update")
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
 
         for e in range(self.update_epochs):
-            print("new epoch")
+            # print("new epoch")
             data_generator = rollouts.recurrent_generator(
                 advantages, self.update_mini_batches
             )
 
             for bit, batch in enumerate(data_generator):
-                print("new batch")
+                # print("new batch")
 
                 batch = {
                     k: batch[k].to(self.device) if k != "observations" else batch[k]
@@ -139,7 +140,7 @@ class Trainer:
                 self.optimizer.zero_grad()
                 total_loss: Optional[torch.FloatTensor] = None
                 for loss_name in self.losses:
-                    print("new loss")
+                    # print("new loss")
                     loss, loss_weight = (
                         self.losses[loss_name],
                         self.loss_weights[loss_name],
@@ -165,7 +166,7 @@ class Trainer:
                 self.backprop_count += 1
 
     def collect_rollout_step(self, rollouts):
-        print("new rollout step")
+        # print("new rollout step")
         # sample actions
         with torch.no_grad():
             step_observation = {
@@ -185,11 +186,29 @@ class Trainer:
             if not self.deterministic
             else actor_critic_output.distributions.mode()
         )
-        if self.teacher_forcing is not None and self.teacher_forcing() > 0:
-            raise NotImplementedError()
-            # teacher_forcing_mask = torch.bernoulli(actions.shape, p=self.teacher_forcing())
-            # teacher_forcing_mask *= step_observation["expert_actions"]
-            # actions = teacher_forcing_mask * step_observation["expert_actions"] + (1-teacher_forcing_mask)
+        if (
+            self.teacher_forcing is not None
+            and self.teacher_forcing(self.rollout_count) > 0
+        ):
+            tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
+            expert_actions = (
+                step_observation["expert_action"].view(-1, 2)[:, 0].view(*tf_mask_shape)
+            )
+            expert_action_exists_mask = (
+                step_observation["expert_action"].view(-1, 2)[:, 1].view(*tf_mask_shape)
+            )
+            teacher_forcing_mask = (
+                torch.distributions.bernoulli.Bernoulli(
+                    torch.tensor(self.teacher_forcing(self.rollout_count))
+                )
+                .sample(tf_mask_shape)
+                .long()
+                .to(self.device)
+            ) * expert_action_exists_mask
+            actions = (
+                teacher_forcing_mask * expert_actions
+                + (1 - teacher_forcing_mask) * actions
+            )
 
         outputs = self.vector_tasks.step([a[0].item() for a in actions])
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
@@ -214,8 +233,8 @@ class Trainer:
         )
 
     def initialize_rollouts(self, rollouts):
-        print("initialize rollouts")
-        observations = self.vector_tasks.next_task()
+        # print("initialize rollouts")
+        observations = self.vector_tasks.get_observations()
         batch = batch_observations(observations)
 
         rollouts.insert_initial_observations(batch)
@@ -224,7 +243,7 @@ class Trainer:
         self.initialize_rollouts(rollouts)
 
         while self.rollout_count < self.num_rollouts:
-            print("new rollout")
+            # print("new rollout")
             for step in range(self.steps_in_rollout):
                 self.collect_rollout_step(rollouts)
 
@@ -247,9 +266,6 @@ class Trainer:
             self.update(rollouts)
 
             rollouts.after_update()
-
-            if self.teacher_forcing is not None:
-                self.teacher_forcing.step(self.rollout_count)
 
             self.rollout_count += 1
 

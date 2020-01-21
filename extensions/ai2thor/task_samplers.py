@@ -69,19 +69,21 @@ class ObjectNavTaskSampler(TaskSampler):
         return True
 
     def next_task(self) -> ObjectNavTask:
-        print("creating next task")
+        # print("creating next task")
+
         scene = random.choice(self.scenes)
 
         if self.env is not None:
-            print("resetting env")
-            self.env.reset(scene)
+            # print("resetting env")
+            if scene != self.env.scene_name:
+                self.env.reset(scene)
         else:
-            print("creating env")
+            # print("creating env")
             self.env = self._create_environment()
-            print("starting env")
+            # print("starting env")
             self.env.start(scene_name=scene)
 
-        print("env up and ready")
+        # print("env up and ready")
 
         self.env.randomize_agent_location()
 

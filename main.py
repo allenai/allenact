@@ -83,7 +83,7 @@ def run_pipeline(
             models_folder=os.path.join(output_dir, "models"),
             save_interval=10000,
             pipeline_stage=sit,
-            teacher_forcing=None,
+            teacher_forcing=stage.get("teacher_forcing"),
             device=device,
         )
 

@@ -33,6 +33,7 @@ CLOSE_COMMAND = "close"
 OBSERVATION_SPACE_COMMAND = "observation_space"
 ACTION_SPACE_COMMAND = "action_space"
 CALL_COMMAND = "call"
+ATTR_COMMAND = "attr"
 # EPISODE_COMMAND = "current_episode"
 
 
@@ -129,16 +130,16 @@ class VectorSampledTasks:
             ],
         )
 
-        print("created workers")
+        # print("created workers")
 
         self._is_closed = False
 
-        print("calling obs space")
+        # print("calling obs space")
 
         for write_fn in self._connection_write_fns:
             write_fn((OBSERVATION_SPACE_COMMAND, None))
 
-        print("reading obs space")
+        # print("reading obs space")
 
         observation_spaces = [read_fn() for read_fn in self._connection_read_fns]
 
@@ -184,9 +185,8 @@ class VectorSampledTasks:
         """process worker for creating and interacting with the
         Tasks/TaskSampler."""
         task_sampler = make_sampler_fn(**sampler_fn_args)
-        print("created task sampler")
+        # print("created task sampler")
         current_task = task_sampler.next_task()
-        print("created task")
 
         if parent_pipe is not None:
             parent_pipe.close()
@@ -221,9 +221,9 @@ class VectorSampledTasks:
                     command == OBSERVATION_SPACE_COMMAND
                     or command == ACTION_SPACE_COMMAND
                 ):
-                    print("got space command")
+                    # print("got space command")
                     res = getattr(current_task, command)
-                    print("computed res %s" % res)
+                    # print("computed res %s" % res)
                     connection_write_fn(res)
 
                 elif command == CALL_COMMAND:
@@ -232,6 +232,11 @@ class VectorSampledTasks:
                         result = getattr(current_task, function_name)()
                     else:
                         result = getattr(current_task, function_name)(*function_args)
+                    connection_write_fn(result)
+
+                elif command == ATTR_COMMAND:
+                    property_name = data
+                    result = getattr(current_task, property_name)
                     connection_write_fn(result)
 
                 # TODO: update CALL_COMMAND for getting attribute like this
@@ -268,7 +273,7 @@ class VectorSampledTasks:
         ):
             # print(id, stuff)
             worker_conn, parent_conn, sampler_fn_args = stuff
-            print(id, sampler_fn_args)
+            # print(id, sampler_fn_args)
             # noinspection PyUnresolvedReferences
             ps = self._mp_ctx.Process(
                 target=self._task_sampling_loop_worker,
@@ -316,6 +321,13 @@ class VectorSampledTasks:
             results.append(read_fn())
         self._is_waiting = False
         return results
+
+    def get_observations(self):
+        """Get observations for all unpaused tasks.
+
+        @return: list of observations for each of the unpaused tasks.
+        """
+        return self.call(["get_observations"] * self.num_unpaused_tasks,)
 
     def next_task_at(self, index_process: int) -> List[RLStepResult]:
         """Move to the the next Task from the TaskSampler in index_process
@@ -436,7 +448,9 @@ class VectorSampledTasks:
         return result
 
     def call(
-        self, function_names: List[str], function_args_list: Optional[List[Any]] = None
+        self,
+        function_names: Union[str, List[str]],
+        function_args_list: Optional[List[Any]] = None,
     ) -> List[Any]:
         """Calls a list of functions (which are passed by name) on the
         corresponding task (by index).
@@ -447,12 +461,51 @@ class VectorSampledTasks:
         @return: list of results of calling the functions.
         """
         self._is_waiting = True
+
+        if isinstance(function_names, str):
+            function_names = [function_names] * self.num_unpaused_tasks
+
         if function_args_list is None:
             function_args_list = [None] * len(function_names)
         assert len(function_names) == len(function_args_list)
         func_args = zip(function_names, function_args_list)
         for write_fn, func_args_on in zip(self._connection_write_fns, func_args):
             write_fn((CALL_COMMAND, func_args_on))
+        results = []
+        for read_fn in self._connection_read_fns:
+            results.append(read_fn())
+        self._is_waiting = False
+        return results
+
+    def attr_at(self, index: int, attr_name: str) -> Any:
+        """Gets the attribute (specified by name) on the selected task and
+        returns it.
+
+        @param index: which task to call the function on.
+        @param attr_name: the name of the function to call on the task.
+        @return: result of calling the function.
+        """
+        self._is_waiting = True
+        self._connection_write_fns[index]((ATTR_COMMAND, attr_name))
+        result = self._connection_read_fns[index]()
+        self._is_waiting = False
+        return result
+
+    def attr(self, attr_names: Union[List[str], str]) -> List[Any]:
+        """Gets the attributes (specified by name) on the tasks.
+
+        @param attr_names: the name of the functions to call on the tasks.
+        @param function_args_list: list of function args for each function.
+            If provided, len(function_args_list) should be as long as  len(function_names).
+        @return: list of results of calling the functions.
+        """
+        self._is_waiting = True
+
+        if isinstance(attr_names, str):
+            attr_names = [attr_names] * self.num_unpaused_tasks
+
+        for write_fn, attr_name in zip(self._connection_write_fns, attr_names):
+            write_fn((ATTR_COMMAND, attr_name))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
@@ -512,7 +565,7 @@ class ThreadedVectorSampledTasks(VectorSampledTasks):
         for id, stuff in enumerate(
             zip(parent_read_queues, parent_write_queues, sampler_fn_args)
         ):
-            print(id, stuff)
+            # print(id, stuff)
             parent_read_queue, parent_write_queue, sampler_fn_args = stuff
             thread = Thread(
                 target=self._task_sampling_loop_worker,
