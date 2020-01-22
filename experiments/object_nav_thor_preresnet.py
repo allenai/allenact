@@ -9,7 +9,7 @@ from torchvision import models
 import copy
 
 from configs.losses import algo_defaults
-from configs.util import Builder
+from configs.util import Builder, recursive_update
 from extensions.ai2thor.models.object_nav_models import ObjectNavBaselineActorCritic
 from extensions.ai2thor.sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from extensions.ai2thor.preprocessors import ResnetPreProcessorThor
@@ -21,22 +21,21 @@ from onpolicy_sync.losses.imitation import Imitation
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.sensor import SensorSuite, ExpertActionSensor
 from rl_base.task import TaskSampler
+from experiments.object_nav_thor import ObjectNavThorExperimentConfig as Base
 
 
-class ObjectNavThorPreResnetExperimentConfig(ExperimentConfig):
+class ObjectNavThorPreResnetExperimentConfig(Base):
     """An object navigation experiment in THOR."""
 
     OBJECT_TYPES = sorted(["Cup", "Television", "Tomato"])
-
-    SCREEN_SIZE = 224
 
     GPUS = None if not torch.cuda.is_available() else [0]
 
     SENSORS = [
         RGBSensorThor(
             {
-                "height": SCREEN_SIZE,
-                "width": SCREEN_SIZE,
+                "height": Base.SCREEN_SIZE,
+                "width": Base.SCREEN_SIZE,
                 "use_resnet_normalization": True,
             }
         ),
@@ -49,8 +48,8 @@ class ObjectNavThorPreResnetExperimentConfig(ExperimentConfig):
             ResnetPreProcessorThor,
             {
                 "config": {
-                    "input_height": SCREEN_SIZE,
-                    "input_width": SCREEN_SIZE,
+                    "input_height": Base.SCREEN_SIZE,
+                    "input_width": Base.SCREEN_SIZE,
                     "output_width": 7,
                     "output_height": 7,
                     "output_dims": 512,
@@ -65,8 +64,8 @@ class ObjectNavThorPreResnetExperimentConfig(ExperimentConfig):
     ]
 
     ENV_ARGS = {
-        "player_screen_height": SCREEN_SIZE,
-        "player_screen_width": SCREEN_SIZE,
+        "player_screen_height": Base.SCREEN_SIZE,
+        "player_screen_width": Base.SCREEN_SIZE,
         "quality": "Very Low",
     }
 
@@ -78,6 +77,7 @@ class ObjectNavThorPreResnetExperimentConfig(ExperimentConfig):
 
     @classmethod
     def training_pipeline(cls, **kwargs):
+        inherited = super().training_pipeline()
         dagger_steps = 1000
         ppo_steps = 10
         nprocesses = 2
@@ -86,7 +86,7 @@ class ObjectNavThorPreResnetExperimentConfig(ExperimentConfig):
         update_repeats = 2
         num_steps = 4
         gpu_ids = cls.GPUS
-        return {
+        override = {
             "optimizer": Builder(optim.Adam, dict(lr=lr)),
             "nprocesses": nprocesses,
             "num_mini_batch": num_mini_batch,
@@ -108,68 +108,25 @@ class ObjectNavThorPreResnetExperimentConfig(ExperimentConfig):
                 {"losses": ["ppo_loss"], "end_criterion": ppo_steps},
             ],
         }
+        return recursive_update(inherited, override)
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return ObjectNavBaselineActorCritic(
             action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
-            observation_space=SensorSuite(cls.SENSORS).observation_spaces,
+            observation_space=SensorSuite(
+                [
+                    sensor() if isinstance(sensor, Builder) else sensor
+                    for sensor in cls.SENSORS
+                ]
+            ).observation_spaces,
             goal_sensor_uuid="goal_object_type_ind",
             hidden_size=512,
             object_type_embedding_dim=8,
-        )
-
-    @staticmethod
-    def make_sampler_fn(**kwargs) -> TaskSampler:
-        return ObjectNavTaskSampler(**kwargs)
-
-    @staticmethod
-    def _partition_inds(n: int, num_parts: int):
-        return np.round(np.linspace(0, n, num_parts + 1, endpoint=True)).astype(
-            np.int32
         )
 
     @classmethod
     def _process_to_device(cls, n: int) -> torch.device:
         return torch.device(
             "cpu" if len(cls.GPUS) == 0 else "cuda:%d" % cls.GPUS[(n % len(cls.GPUS))]
-        )
-
-    def _get_sampler_args_for_scene_split(
-        self, scenes: List[str], process_ind: int, total_processes: int
-    ) -> Dict[str, Any]:
-        assert total_processes <= len(scenes), "More processes than scenes."
-        inds = self._partition_inds(len(scenes), total_processes)
-
-        return {
-            "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
-            "object_types": self.OBJECT_TYPES,
-            "sensors": self.SENSORS,
-            "env_args": self.ENV_ARGS,
-            "max_steps": self.MAX_STEPS,
-            "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
-        }
-
-    def train_task_sampler_args(
-        self, process_ind: int, total_processes: int
-    ) -> Dict[str, Any]:
-        all_train_scenes = ["FloorPlan{}".format(i) for i in range(1, 21)]
-        return self._get_sampler_args_for_scene_split(
-            all_train_scenes, process_ind, total_processes
-        )
-
-    def valid_task_sampler_args(
-        self, process_ind: int, total_processes: int
-    ) -> Dict[str, Any]:
-        all_valid_scenes = ["FloorPlan{}".format(i) for i in range(21, 26)]
-        return self._get_sampler_args_for_scene_split(
-            all_valid_scenes, process_ind, total_processes
-        )
-
-    def test_task_sampler_args(
-        self, process_ind: int, total_processes: int
-    ) -> Dict[str, Any]:
-        all_test_scenes = ["FloorPlan{}".format(i) for i in range(26, 31)]
-        return self._get_sampler_args_for_scene_split(
-            all_test_scenes, process_ind, total_processes
         )

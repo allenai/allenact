@@ -85,6 +85,8 @@ class Trainer:
 
         self.total_updates = 0
         self.pipeline_stage = 0
+        self.rollout_count = 0
+        self.backprop_count = 0
 
         self.save_interval = train_pipeline["save_interval"]
         self.log_interval = train_pipeline["log_interval"]
@@ -131,7 +133,6 @@ class Trainer:
 
         while len(self.tracker):
             info = self.tracker.popleft()
-            # print(info)
             cscalars = {}
             for loss in info["losses"]:
                 lossname = loss[:-5] if loss.endswith("_loss") else loss
@@ -142,10 +143,8 @@ class Trainer:
             self.scalars.add_scalars(cscalars)
 
         while not self.vector_tasks.metrics_out_queue.empty():
-            # process metrics without blocking
             try:
                 metric = self.vector_tasks.metrics_out_queue.get_nowait()
-                # print(metric)
                 self.scalars.add_scalars(metric)
             except queue.Empty:
                 pass
