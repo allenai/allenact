@@ -3,13 +3,22 @@ import copy
 import collections.abc
 
 
-def recursive_update(d, u):
-    for k, v in u.items():
+def recursive_update(original: Dict[Any, Any], update: Dict[Any, Any]):
+    r"""Recursively updates original dictionary with entries form update dict.
+
+    Args:
+        original:  Original dictionary to be updated.
+        update:    Dictionary with additional or replacement entries
+
+    Returns:
+        Updated original dictionary.
+    """
+    for k, v in update.items():
         if isinstance(v, collections.abc.Mapping):
-            d[k] = recursive_update(d.get(k, {}), v)
+            original[k] = recursive_update(original.get(k, {}), v)
         else:
-            d[k] = v
-    return d
+            original[k] = v
+    return original
 
 
 class Builder(NamedTuple):
