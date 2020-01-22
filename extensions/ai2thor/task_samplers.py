@@ -77,23 +77,15 @@ class ObjectNavTaskSampler(TaskSampler):
     def sample_scene(self):
         if self.scene_period == 0:
             self.scene_id = random.randint(0, len(self.scenes) - 1)
-            print("random scene", self.scene_id, self.scene_order[self.scene_id])
         elif self.scene_counter == self.scene_period:
             self.scene_counter = 1
             if self.scene_id == len(self.scene_order) - 1:
                 self.scene_id = 0
                 random.shuffle(self.scene_order)
-                print("randomizing scene order", self.scene_order)
             else:
                 self.scene_id += 1
-                print(
-                    "switching to next scene",
-                    self.scene_id,
-                    self.scene_order[self.scene_id],
-                )
         else:
             self.scene_counter += 1
-            print("staying in scene", self.scene_id, self.scene_order[self.scene_id])
 
         return self.scenes[self.scene_order[self.scene_id]]
 
