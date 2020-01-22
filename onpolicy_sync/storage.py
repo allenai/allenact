@@ -73,11 +73,12 @@ class RolloutStorage:
         self.masks = self.masks.to(device)
 
     def _preprocess_observations(self, batched_observations):
+        if self.observation_set is None:
+            return batched_observations
         return self.observation_set.get_observations(batched_observations)
 
     def insert_initial_observations(self, observations):
-        if self.observation_set is not None:
-            observations = self._preprocess_observations(observations)
+        observations = self._preprocess_observations(observations)
 
         for sensor in observations:
             if sensor not in self.observations:
@@ -109,8 +110,7 @@ class RolloutStorage:
     ):
         assert len(args) == 0
 
-        if self.observation_set is not None:
-            observations = self._preprocess_observations(observations)
+        observations = self._preprocess_observations(observations)
 
         for sensor in observations:
             if sensor not in self.observations:
