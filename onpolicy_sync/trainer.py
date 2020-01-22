@@ -26,9 +26,16 @@ class Trainer:
         train_pipeline = self.train_pipeline
 
         self.device = "cpu"
-        if torch.cuda.is_available() and len(train_pipeline["gpu_ids"]) > 0:
-            self.device = "cuda:%d" % train_pipeline["gpu_ids"][0]
-            torch.cuda.set_device(self.device)
+        if len(train_pipeline["gpu_ids"]) > 0:
+            if not torch.cuda.is_available():
+                print(
+                    "Warning: no CUDA devices available for gpu ids {}".format(
+                        train_pipeline["gpu_ids"]
+                    )
+                )
+            else:
+                self.device = "cuda:%d" % train_pipeline["gpu_ids"][0]
+                torch.cuda.set_device(self.device)
 
         self.observation_set = None
         if "observation_set" in train_pipeline:
@@ -125,9 +132,9 @@ class Trainer:
         if len(self.tracker) < self.log_interval:
             return
 
-        while len(self.tracker):
+        while len(self.tracker) != 0:
             info = self.tracker.popleft()
-            cscalars = {}
+            cscalars = {"total_loss": info["total_loss"]}
             for loss in info["losses"]:
                 lossname = loss[:-5] if loss.endswith("_loss") else loss
                 for scalar in info["losses"][loss]:
@@ -198,6 +205,7 @@ class Trainer:
 
                     info["losses"][loss_name] = current_info
                 assert total_loss is not None, "No losses specified?"
+                info["total_loss"] = total_loss.item()
                 self.tracker.append(info)
 
                 # print(info)
