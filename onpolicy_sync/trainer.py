@@ -88,6 +88,7 @@ class Trainer:
         self.pipeline_stage = 0
         self.rollout_count = 0
         self.backprop_count = 0
+        self.last_log = 0
 
         self.save_interval = train_pipeline["save_interval"]
         self.log_interval = train_pipeline["log_interval"]
@@ -129,9 +130,6 @@ class Trainer:
         ]
 
     def log(self):
-        if len(self.tracker) < self.log_interval:
-            return
-
         while len(self.tracker) != 0:
             info = self.tracker.popleft()
             if "total_loss" in info:
@@ -326,7 +324,9 @@ class Trainer:
 
             rollouts.after_update()
 
-            self.log()
+            if self.rollout_count - self.last_log >= self.log_interval:
+                self.log()
+                self.last_log = self.rollout_count
 
             self.rollout_count += 1
 
@@ -340,6 +340,7 @@ class Trainer:
                 and self.models_folder != ""
             ):
                 self.checkpoint_save()
+                self.log()
 
     def setup_stage(
         self,
@@ -416,6 +417,8 @@ class Trainer:
             self.checkpoint_load(checkpoint_file_name)
 
         for stage in self.train_pipeline["pipeline"]:
+            self.last_log = self.rollout_count - self.log_interval
+
             stage_limit = stage["end_criterion"]
             stage_losses, stage_weights = self._load_losses(stage)
 

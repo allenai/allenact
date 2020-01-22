@@ -69,8 +69,8 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         num_mini_batch = 1
         update_repeats = 2
         num_steps = 16
-        save_interval = 10
-        log_interval = 2
+        save_interval = 100
+        log_interval = 5
         gpu_ids = None if not torch.cuda.is_available() else [0]
         gamma = 0.99
         use_gae = True
