@@ -9,12 +9,10 @@ import torch.nn as nn
 import torch.distributions
 from tensorboardX import SummaryWriter
 
-from imitation.utils import LinearDecay
+from onpolicy_sync.utils import LinearDecay
 from rl_base.common import Loss
 from onpolicy_sync.vector_task import VectorSampledTasks
-from onpolicy_sync.policy import ActorCriticModel
 from onpolicy_sync.utils import batch_observations, ScalarMeanTracker
-from rl_base.distributions import CategoricalDistr
 from rl_base.experiment_config import ExperimentConfig
 from configs.util import Builder
 from rl_base.preprocessor import ObservationSet

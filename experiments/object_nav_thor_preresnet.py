@@ -15,7 +15,7 @@ from extensions.ai2thor.sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from extensions.ai2thor.preprocessors import ResnetPreProcessorThor
 from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
 from extensions.ai2thor.tasks import ObjectNavTask
-from imitation.utils import LinearDecay
+from onpolicy_sync.utils import LinearDecay
 from onpolicy_sync.losses import PPO
 from onpolicy_sync.losses.imitation import Imitation
 from rl_base.experiment_config import ExperimentConfig
