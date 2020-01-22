@@ -67,8 +67,16 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         num_mini_batch = 1
         update_repeats = 2
         num_steps = 16
+        save_interval = 10
+        log_interval = 2
         gpu_ids = None if not torch.cuda.is_available() else [0]
+        gamma = 0.99
+        use_gae = True
+        gae_lambda = 1.0
+        max_grad_norm = 0.5
         return {
+            "save_interval": save_interval,
+            "log_interval": log_interval,
             "optimizer": Builder(optim.Adam, dict(lr=lr)),
             "nprocesses": nprocesses,
             "num_mini_batch": num_mini_batch,
@@ -77,6 +85,10 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "gpu_ids": gpu_ids,
             "imitation_loss": Builder(Imitation,),
             "ppo_loss": Builder(PPO, dict(), default=algo_defaults["ppo_loss"],),
+            "gamma": gamma,
+            "use_gae": use_gae,
+            "gae_lambda": gae_lambda,
+            "max_grad_norm": max_grad_norm,
             "pipeline": [
                 {
                     "losses": ["imitation_loss", "ppo_loss"],

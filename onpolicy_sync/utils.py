@@ -86,3 +86,24 @@ def _to_tensor(v):
         return torch.tensor(
             v, dtype=torch.int64 if isinstance(v, numbers.Integral) else torch.float
         )
+
+
+class ScalarMeanTracker(object):
+    def __init__(self) -> None:
+        self._sums = {}
+        self._counts = {}
+
+    def add_scalars(self, scalars):
+        for k in scalars:
+            if k not in self._sums:
+                self._sums[k] = scalars[k]
+                self._counts[k] = 1
+            else:
+                self._sums[k] += scalars[k]
+                self._counts[k] += 1
+
+    def pop_and_reset(self):
+        means = {k: self._sums[k] / self._counts[k] for k in self._sums}
+        self._sums = {}
+        self._counts = {}
+        return means
