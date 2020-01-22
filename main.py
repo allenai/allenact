@@ -1,16 +1,18 @@
 from onpolicy_sync.arguments import get_args
 from onpolicy_sync.trainer import Trainer
+import importlib
+
+
+def load_config(args):
+    module, configclass = args.experiment_config_class.rsplit(".", 1)
+    module = importlib.import_module(".".join([args.experiment_base, module]))
+    return getattr(module, configclass)()
 
 
 def main():
     args = get_args()
-    if args.experiment == "object_nav_thor":
-        from experiments.object_nav_thor import ObjectNavThorExperimentConfig as Config
-    elif args.experiment == "object_nav_thor_preresnet":
-        from experiments.object_nav_thor_preresnet import (
-            ObjectNavThorPreResnetExperimentConfig as Config,
-        )
-    Trainer(Config(), args.output_dir).run_pipeline(args.checkpoint)
+
+    Trainer(load_config(args), args.output_dir).run_pipeline(args.checkpoint)
 
 
 if __name__ == "__main__":
