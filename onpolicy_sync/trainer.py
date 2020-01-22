@@ -48,13 +48,9 @@ class Trainer:
                     else:
                         all_preprocessors.append(observation)
                     preprocessor_ids.append(all_preprocessors[-1].uuid)
-            print(
-                "sensors in obs", sensor_ids, "preprocessors in obs", preprocessor_ids
-            )
             self.observation_set = ObservationSet(
                 sensor_ids, preprocessor_ids, all_preprocessors
             )
-            print("created observation set")
 
         self.actor_critic = config.create_model().to(self.device)
 
