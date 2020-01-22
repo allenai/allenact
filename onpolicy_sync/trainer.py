@@ -134,13 +134,16 @@ class Trainer:
 
         while len(self.tracker) != 0:
             info = self.tracker.popleft()
-            cscalars = {"total_loss": info["total_loss"]}
-            for loss in info["losses"]:
-                lossname = loss[:-5] if loss.endswith("_loss") else loss
-                for scalar in info["losses"][loss]:
-                    cscalars["/".join([lossname, scalar])] = info["losses"][loss][
-                        scalar
-                    ]
+            if "total_loss" in info:
+                cscalars = {"total_loss": info["total_loss"]}
+                for loss in info["losses"]:
+                    lossname = loss[:-5] if loss.endswith("_loss") else loss
+                    for scalar in info["losses"][loss]:
+                        cscalars["/".join([lossname, scalar])] = info["losses"][loss][
+                            scalar
+                        ]
+            elif "teacher_ratio" in info:
+                cscalars = {"teacher_ratio": info["teacher_ratio"]}
             self.scalars.add_scalars(cscalars)
 
         while not self.vector_tasks.metrics_out_queue.empty():
@@ -261,6 +264,10 @@ class Trainer:
                 teacher_forcing_mask * expert_actions
                 + (1 - teacher_forcing_mask) * actions
             )
+            teacher_force_info = {
+                "teacher_ratio": teacher_forcing_mask.sum().item() / actions.nelement()
+            }
+            self.tracker.append(teacher_force_info)
 
         outputs = self.vector_tasks.step([a[0].item() for a in actions])
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
