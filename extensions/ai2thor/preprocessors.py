@@ -2,6 +2,7 @@ import typing
 from typing import Dict, Any, Callable, List
 
 import torch
+import torch.nn as nn
 from torchvision import models
 import numpy as np
 import gym
@@ -9,13 +10,14 @@ import gym
 from rl_base.preprocessor import Preprocessor
 
 
-class ResNetEmbedder:
+class ResNetEmbedder(nn.Module):
     def __init__(self, resnet, pool=True):
+        super().__init__()
         self.model = resnet
         self.pool = pool
-        self.model.eval()
+        self.eval()
 
-    def __call__(self, x):
+    def forward(self, x):
         with torch.no_grad():
             x = self.model.conv1(x)
             x = self.model.bn1(x)
@@ -39,30 +41,25 @@ class ResnetPreProcessorThor(Preprocessor):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
-        def f(x, k, default):
+        def f(x, k):
+            assert k in x, "{} must be set in ResnetPreProcessorThor".format(k)
+            return x[k]
+
+        def optf(x, k, default):
             return x[k] if k in x else default
 
-        self.input_height: int = f(config, "input_height", None)
-        self.input_width: int = f(config, "input_width", None)
-        self.output_height: int = f(config, "output_height", None)
-        self.output_width: int = f(config, "output_width", None)
-        self.output_dims: int = f(config, "output_dims", None)
-        self.model: Callable = f(config, "torchvision_resnet_model", models.resnet18)
-        self.device: str = f(config, "device", "cpu")
-
-        assert (
-            (self.input_height is not None)
-            and (self.input_width is not None)
-            and (self.output_height is not None)
-            and (self.output_width is not None)
-            and (self.output_dims is not None)
-        ), (
-            "In ResnetSensorThor's config, "
-            "input and output heights and widths and output dims must be set."
+        self.input_height: int = f(config, "input_height")
+        self.input_width: int = f(config, "input_width")
+        self.output_height: int = f(config, "output_height")
+        self.output_width: int = f(config, "output_width")
+        self.output_dims: int = f(config, "output_dims")
+        self.make_model: Callable[[], models.ResNet] = optf(
+            config, "torchvision_resnet_model", models.resnet18
         )
+        self.device: torch.device = optf(config, "device", "cpu")
 
         self.resnet = ResNetEmbedder(
-            self.model(pretrained=True).to(self.device), pool=True
+            self.make_model(pretrained=True).to(self.device), pool=False
         )
 
         low = -np.inf
