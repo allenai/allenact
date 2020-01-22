@@ -1,12 +1,13 @@
 from typing import Dict, Any, List
 from collections import OrderedDict
+import abc
 
 import gym
 from gym.spaces import Dict as SpaceDict
 import networkx as nx
 
 
-class Preprocessor:
+class Preprocessor(abc.ABC):
     """Represents a preprocessor that transforms data from a sensor or another preprocessor
     to the input of agents or other preprocessors.
     The user of this class needs to implement the process method and
@@ -28,6 +29,7 @@ class Preprocessor:
         self.uuid = self._get_uuid()
         self.input_uuids = self._get_input_uuids()
 
+    @abc.abstractmethod
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         """The unique ID of the preprocessor.
 
@@ -36,6 +38,7 @@ class Preprocessor:
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
     def _get_input_uuids(self, *args: Any, **kwargs: Any) -> List[str]:
         """The unique IDs of the input sensors and preprocessors.
 
@@ -44,10 +47,12 @@ class Preprocessor:
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
     def _get_observation_space(self) -> gym.Space:
         """The output observation space of the sensor."""
         raise NotImplementedError()
 
+    @abc.abstractmethod
     def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:
         """Returns processed observations from sensors or other preprocessors.
 
