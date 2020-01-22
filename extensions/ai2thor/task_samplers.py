@@ -18,6 +18,7 @@ class ObjectNavTaskSampler(TaskSampler):
         max_steps: int,
         env_args: Dict[str, Any],
         action_space: gym.Space,
+        scene_period: Optional[int] = None,
         *args,
         **kwargs
     ) -> None:
@@ -29,6 +30,11 @@ class ObjectNavTaskSampler(TaskSampler):
         self.sensors = sensors
         self.max_steps = max_steps
         self._action_sapce = action_space
+        self.scene_period = scene_period or 0  # default makes a random choice
+        self.scene_counter = 0
+        self.scene_order = list(range(len(self.scenes)))
+        random.shuffle(self.scene_order)
+        self.scene_id = 0
 
         self._last_sampled_task: Optional[ObjectNavTask] = None
 
@@ -68,10 +74,32 @@ class ObjectNavTaskSampler(TaskSampler):
         """
         return True
 
+    def sample_scene(self):
+        if self.scene_period == 0:
+            self.scene_id = random.randint(0, len(self.scenes) - 1)
+            print("random scene", self.scene_id, self.scene_order[self.scene_id])
+        elif self.scene_counter == self.scene_period:
+            self.scene_counter = 1
+            if self.scene_id == len(self.scene_order) - 1:
+                self.scene_id = 0
+                random.shuffle(self.scene_order)
+                print("randomizing scene order", self.scene_order)
+            else:
+                self.scene_id += 1
+                print(
+                    "switching to next scene",
+                    self.scene_id,
+                    self.scene_order[self.scene_id],
+                )
+        else:
+            self.scene_counter += 1
+            print("staying in scene", self.scene_id, self.scene_order[self.scene_id])
+
+        return self.scenes[self.scene_order[self.scene_id]]
+
     def next_task(self) -> ObjectNavTask:
         # print("creating next task")
-
-        scene = random.choice(self.scenes)
+        scene = self.sample_scene()
 
         if self.env is not None:
             # print("resetting env")

@@ -54,6 +54,8 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
 
     MAX_STEPS = 128
 
+    SCENE_PERIOD = 10
+
     @classmethod
     def tag(cls):
         return "ObjectNav"
@@ -124,7 +126,15 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
     def _get_sampler_args_for_scene_split(
         self, scenes: List[str], process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
-        if total_processes > len(scenes):
+        if len(scenes) % total_processes != 0:
+            print(
+                "Warning: oversampling some of the scenes to feed all processes. You can avoid this by setting a number of workers divisor of the number of scenes"
+            )
+        if total_processes > len(scenes):  # oversample some scenes -> bias
+            if total_processes % len(scenes) != 0:
+                print(
+                    "Warning: oversampling some of the scenes to feed all processes. You can avoid this by setting a number of workers divisible by the number of scenes"
+                )
             scenes = scenes * int(ceil(total_processes / len(scenes)))
             scenes = scenes[: total_processes * (len(scenes) // total_processes)]
         inds = self._partition_inds(len(scenes), total_processes)
@@ -136,6 +146,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            "scene_period": self.SCENE_PERIOD,
         }
 
     def train_task_sampler_args(
