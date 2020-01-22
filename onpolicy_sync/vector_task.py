@@ -190,7 +190,7 @@ class VectorSampledTasks:
 
         if parent_pipe is not None:
             parent_pipe.close()
-            print("closed parent pipe (?)")
+            # print("closed parent pipe (?)")
         try:
             command, data = connection_read_fn()
             while command != CLOSE_COMMAND:
