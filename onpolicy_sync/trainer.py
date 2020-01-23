@@ -2,6 +2,8 @@ from typing import Optional, Any, Dict, Union
 import os
 from collections import deque
 import queue
+import time
+import shutil
 
 import torch.optim
 import torch
@@ -81,6 +83,17 @@ class Trainer:
         self.models_folder = os.path.join(output_dir, "models")
         os.makedirs(self.models_folder, exist_ok=True)
 
+        self.configs_folder = os.path.join(output_dir, "configs")
+        os.makedirs(self.configs_folder, exist_ok=True)
+        for file in config._loaded_config_src_files:
+            parts = config._loaded_config_src_files[file].split(".")
+            src_file = os.path.sep.join(parts) + ".py"
+            dst_file = (
+                os.path.join(self.configs_folder, os.path.join(*parts[1:])) + ".py"
+            )
+            os.makedirs(os.path.dirname(dst_file), exist_ok=True)
+            shutil.copy(src_file, dst_file)
+
         self.log_writer = SummaryWriter(log_dir=output_dir)
         self.scalars = ScalarMeanTracker()
 
@@ -92,6 +105,8 @@ class Trainer:
         self.total_steps = 0
         self.last_log = 0
 
+        self.experiment_name = config.tag()
+
         self.save_interval = train_pipeline["save_interval"]
         self.log_interval = train_pipeline["log_interval"]
         self.num_processes = train_pipeline["nprocesses"]
@@ -101,8 +116,12 @@ class Trainer:
 
         model_path = os.path.join(
             self.models_folder,
-            "model_stage_%02d_%010d.pt"
-            % (self.pipeline_stage, self.total_steps + self.step_count),
+            "exp_{}__time_{}__stage_{}__steps_{}.pt".format(
+                self.experiment_name,
+                self.local_start_time_str,
+                self.pipeline_stage,
+                self.total_steps + self.step_count,
+            ),
         )
         torch.save(
             {
@@ -112,6 +131,7 @@ class Trainer:
                 "rollout_count": self.rollout_count,
                 "backprop_count": self.backprop_count,
                 "step_count": self.step_count,
+                "local_start_time_str": self.local_start_time_str,
                 "optimizer_state_dict": self.optimizer.state_dict(),
                 "model_state_dict": self.actor_critic.state_dict(),
             },
@@ -132,6 +152,7 @@ class Trainer:
         self.pipeline_stage = ckpt["pipeline_stage"]
         self.total_updates = ckpt["total_updates"]
         self.total_steps = ckpt["total_steps"]
+        self.local_start_time_str = ckpt["local_start_time_str"]
         self.train_pipeline["pipeline"] = self.train_pipeline["pipeline"][
             self.pipeline_stage :
         ]
@@ -437,6 +458,10 @@ class Trainer:
         return stage[field] if field in stage else self.train_pipeline[field]
 
     def run_pipeline(self, checkpoint_file_name: Optional[str] = None):
+        start_time = time.time()
+        self.local_start_time_str = time.strftime(
+            "%Y-%m-%d_%H-%M-%S", time.localtime(start_time)
+        )
         if checkpoint_file_name is not None:
             self.checkpoint_load(checkpoint_file_name)
 
