@@ -467,7 +467,7 @@ class Trainer:
             self.checkpoint_load(checkpoint_file_name)
 
         for stage in self.train_pipeline["pipeline"]:
-            self.last_log = self.rollout_count - self.log_interval
+            self.last_log = self.step_count - self.log_interval
 
             stage_limit = stage["end_criterion"]
             stage_losses, stage_weights = self._load_losses(stage)
