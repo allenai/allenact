@@ -166,9 +166,9 @@ class TaskSampler(abc.ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def next_task(self) -> Task:
+    def next_task(self) -> Optional[Task]:
         """
-        @return: the next Task in the sampler's stream.
+        @return: the next Task in the sampler's stream if a next task does exist.
         """
         raise NotImplementedError()
 

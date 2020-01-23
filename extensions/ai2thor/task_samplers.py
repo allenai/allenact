@@ -19,6 +19,7 @@ class ObjectNavTaskSampler(TaskSampler):
         env_args: Dict[str, Any],
         action_space: gym.Space,
         scene_period: Optional[int] = None,
+        max_tasks: Optional[int] = None,
         *args,
         **kwargs
     ) -> None:
@@ -30,11 +31,13 @@ class ObjectNavTaskSampler(TaskSampler):
         self.sensors = sensors
         self.max_steps = max_steps
         self._action_sapce = action_space
+
         self.scene_period = scene_period or 0  # default makes a random choice
         self.scene_counter = 0
         self.scene_order = list(range(len(self.scenes)))
         random.shuffle(self.scene_order)
         self.scene_id = 0
+        self.max_tasks = max_tasks
 
         self._last_sampled_task: Optional[ObjectNavTask] = None
 
@@ -52,7 +55,7 @@ class ObjectNavTaskSampler(TaskSampler):
         """
         @return: Number of total tasks remaining that can be sampled. Can be float('inf').
         """
-        return float("inf")
+        return float("inf") if self.max_tasks is None else self.max_tasks
 
     @property
     def total_unique(self) -> Union[int, float, None]:
@@ -76,21 +79,32 @@ class ObjectNavTaskSampler(TaskSampler):
 
     def sample_scene(self):
         if self.scene_period == 0:
+            # Random scene
             self.scene_id = random.randint(0, len(self.scenes) - 1)
         elif self.scene_counter == self.scene_period:
-            self.scene_counter = 1
             if self.scene_id == len(self.scene_order) - 1:
-                self.scene_id = 0
+                # Randomize scene order for next iteration
                 random.shuffle(self.scene_order)
+                # Move to next scene
+                self.scene_id = 0
             else:
+                # Move to next scene
                 self.scene_id += 1
+            # Reset scene counter
+            self.scene_counter = 1
         else:
+            # Stay in current scene
             self.scene_counter += 1
+
+        if self.max_tasks is not None:
+            self.max_tasks -= 1
 
         return self.scenes[self.scene_order[self.scene_id]]
 
-    def next_task(self) -> ObjectNavTask:
-        # print("creating next task")
+    def next_task(self) -> Optional[ObjectNavTask]:
+        if self.max_tasks is not None and len(self) == 0:
+            return None
+
         scene = self.sample_scene()
 
         if self.env is not None:

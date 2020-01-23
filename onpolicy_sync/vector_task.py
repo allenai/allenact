@@ -203,9 +203,12 @@ class VectorSampledTasks:
 
                         if auto_resample_when_done:
                             current_task = task_sampler.next_task()
-                            step_result = step_result.clone(
-                                {"observation": current_task.get_observations()}
-                            )
+                            if current_task is None:
+                                step_result = step_result.clone({"observation": None})
+                            else:
+                                step_result = step_result.clone(
+                                    {"observation": current_task.get_observations()}
+                                )
 
                     connection_write_fn(step_result)
 
