@@ -159,8 +159,8 @@ class Trainer:
 
     def log(self):
         while len(self.tracker) != 0:
-            info = self.tracker.popleft()
-            if "total_loss" in info:
+            pkgtype, info = self.tracker.popleft()
+            if pkgtype == "update_package":
                 cscalars = {"total_loss": info["total_loss"]}
                 for loss in info["losses"]:
                     lossname = loss[:-5] if loss.endswith("_loss") else loss
@@ -168,8 +168,11 @@ class Trainer:
                         cscalars["/".join([lossname, scalar])] = info["losses"][loss][
                             scalar
                         ]
-            elif "teacher_ratio" in info:
+            elif pkgtype == "teacher_package":
                 cscalars = info
+            else:
+                print("WARNING: Unknown info package {}".format(info))
+                continue
             self.scalars.add_scalars(cscalars)
 
         while not self.vector_tasks.metrics_out_queue.empty():
@@ -235,9 +238,7 @@ class Trainer:
                     info["losses"][loss_name] = current_info
                 assert total_loss is not None, "No losses specified?"
                 info["total_loss"] = total_loss.item()
-                self.tracker.append(info)
-
-                # print(info)
+                self.tracker.append(("update_package", info))
 
                 total_loss.backward()
                 nn.utils.clip_grad_norm_(
@@ -299,7 +300,7 @@ class Trainer:
                 "teacher_ratio": teacher_forcing_mask.sum().item() / actions.nelement(),
                 "teacher_enforcing": self.teacher_forcing(self.step_count),
             }
-            self.tracker.append(teacher_force_info)
+            self.tracker.append(("teacher_package", teacher_force_info))
 
         self.step_count += actions.nelement()
 
