@@ -10,10 +10,7 @@ def get_args():
         help="experiment configuration base folder, defaults to experiments",
     )
     parser.add_argument(
-        "--experiment_config_class",
-        default="object_nav_thor.ObjectNavThorExperimentConfig",
-        type=str,
-        help="experiment configuration class",
+        "--experiment", default="object_nav_thor", type=str, help="experiment name",
     )
     parser.add_argument(
         "--output_dir", default="", type=str, help="required experiment output folder",

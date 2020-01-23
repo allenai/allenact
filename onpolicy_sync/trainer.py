@@ -2,6 +2,8 @@ from typing import Optional, Any, Dict, Union
 import os
 from collections import deque
 import queue
+import time
+import shutil
 
 import torch.optim
 import torch
@@ -81,6 +83,17 @@ class Trainer:
         self.models_folder = os.path.join(output_dir, "models")
         os.makedirs(self.models_folder, exist_ok=True)
 
+        self.configs_folder = os.path.join(output_dir, "configs")
+        os.makedirs(self.configs_folder, exist_ok=True)
+        for file in config._loaded_config_src_files:
+            parts = config._loaded_config_src_files[file].split(".")
+            src_file = os.path.sep.join(parts) + ".py"
+            dst_file = (
+                os.path.join(self.configs_folder, os.path.join(*parts[1:])) + ".py"
+            )
+            os.makedirs(os.path.dirname(dst_file), exist_ok=True)
+            shutil.copy(src_file, dst_file)
+
         self.log_writer = SummaryWriter(log_dir=output_dir)
         self.scalars = ScalarMeanTracker()
 
@@ -88,6 +101,11 @@ class Trainer:
         self.pipeline_stage = 0
         self.rollout_count = 0
         self.backprop_count = 0
+        self.step_count = 0
+        self.total_steps = 0
+        self.last_log = 0
+
+        self.experiment_name = config.tag()
 
         self.save_interval = train_pipeline["save_interval"]
         self.log_interval = train_pipeline["log_interval"]
@@ -98,14 +116,22 @@ class Trainer:
 
         model_path = os.path.join(
             self.models_folder,
-            "model_stage_%02d_%010d.pt" % (self.pipeline_stage, self.rollout_count),
+            "exp_{}__time_{}__stage_{}__steps_{}.pt".format(
+                self.experiment_name,
+                self.local_start_time_str,
+                self.pipeline_stage,
+                self.total_steps + self.step_count,
+            ),
         )
         torch.save(
             {
                 "total_updates": self.total_updates,
+                "total_steps": self.total_steps,
                 "pipeline_stage": self.pipeline_stage,
                 "rollout_count": self.rollout_count,
                 "backprop_count": self.backprop_count,
+                "step_count": self.step_count,
+                "local_start_time_str": self.local_start_time_str,
                 "optimizer_state_dict": self.optimizer.state_dict(),
                 "model_state_dict": self.actor_critic.state_dict(),
             },
@@ -120,27 +146,33 @@ class Trainer:
 
         self.actor_critic.load_state_dict(ckpt["model_state_dict"])
         self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+        self.step_count = ckpt["step_count"]
         self.backprop_count = ckpt["backprop_count"]
         self.rollout_count = ckpt["rollout_count"]
         self.pipeline_stage = ckpt["pipeline_stage"]
         self.total_updates = ckpt["total_updates"]
+        self.total_steps = ckpt["total_steps"]
+        self.local_start_time_str = ckpt["local_start_time_str"]
         self.train_pipeline["pipeline"] = self.train_pipeline["pipeline"][
             self.pipeline_stage :
         ]
 
     def log(self):
-        if len(self.tracker) < self.log_interval:
-            return
-
         while len(self.tracker) != 0:
-            info = self.tracker.popleft()
-            cscalars = {"total_loss": info["total_loss"]}
-            for loss in info["losses"]:
-                lossname = loss[:-5] if loss.endswith("_loss") else loss
-                for scalar in info["losses"][loss]:
-                    cscalars["/".join([lossname, scalar])] = info["losses"][loss][
-                        scalar
-                    ]
+            pkgtype, info = self.tracker.popleft()
+            if pkgtype == "update_package":
+                cscalars = {"total_loss": info["total_loss"]}
+                for loss in info["losses"]:
+                    lossname = loss[:-5] if loss.endswith("_loss") else loss
+                    for scalar in info["losses"][loss]:
+                        cscalars["/".join([lossname, scalar])] = info["losses"][loss][
+                            scalar
+                        ]
+            elif pkgtype == "teacher_package":
+                cscalars = info
+            else:
+                print("WARNING: Unknown info package {}".format(info))
+                continue
             self.scalars.add_scalars(cscalars)
 
         while not self.vector_tasks.metrics_out_queue.empty():
@@ -153,7 +185,7 @@ class Trainer:
         tracked_means = self.scalars.pop_and_reset()
         for k in tracked_means:
             self.log_writer.add_scalar(
-                "train/" + k, tracked_means[k], self.total_updates + self.rollout_count
+                "train/" + k, tracked_means[k], self.total_steps + self.step_count
             )
 
     def update(self, rollouts) -> None:
@@ -206,9 +238,7 @@ class Trainer:
                     info["losses"][loss_name] = current_info
                 assert total_loss is not None, "No losses specified?"
                 info["total_loss"] = total_loss.item()
-                self.tracker.append(info)
-
-                # print(info)
+                self.tracker.append(("update_package", info))
 
                 total_loss.backward()
                 nn.utils.clip_grad_norm_(
@@ -216,6 +246,11 @@ class Trainer:
                 )
                 self.optimizer.step()
                 self.backprop_count += 1
+
+    def _preprocess_observations(self, batched_observations):
+        if self.observation_set is None:
+            return batched_observations
+        return self.observation_set.get_observations(batched_observations)
 
     def collect_rollout_step(self, rollouts):
         # print("new rollout step")
@@ -240,7 +275,7 @@ class Trainer:
         )
         if (
             self.teacher_forcing is not None
-            and self.teacher_forcing(self.rollout_count) > 0
+            and self.teacher_forcing(self.step_count) > 0
         ):
             tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
             expert_actions = (
@@ -251,7 +286,7 @@ class Trainer:
             )
             teacher_forcing_mask = (
                 torch.distributions.bernoulli.Bernoulli(
-                    torch.tensor(self.teacher_forcing(self.rollout_count))
+                    torch.tensor(self.teacher_forcing(self.step_count))
                 )
                 .sample(tf_mask_shape)
                 .long()
@@ -261,6 +296,13 @@ class Trainer:
                 teacher_forcing_mask * expert_actions
                 + (1 - teacher_forcing_mask) * actions
             )
+            teacher_force_info = {
+                "teacher_ratio": teacher_forcing_mask.sum().item() / actions.nelement(),
+                "teacher_enforcing": self.teacher_forcing(self.step_count),
+            }
+            self.tracker.append(("teacher_package", teacher_force_info))
+
+        self.step_count += actions.nelement()
 
         outputs = self.vector_tasks.step([a[0].item() for a in actions])
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
@@ -275,7 +317,7 @@ class Trainer:
         )
 
         rollouts.insert(
-            batch,
+            self._preprocess_observations(batch),
             recurrent_hidden_states,
             actions,
             actor_critic_output.distributions.log_probs(actions),
@@ -289,7 +331,7 @@ class Trainer:
         observations = self.vector_tasks.get_observations()
         batch = batch_observations(observations)
 
-        rollouts.insert_initial_observations(batch)
+        rollouts.insert_initial_observations(self._preprocess_observations(batch))
 
     def train(self, rollouts):
         self.initialize_rollouts(rollouts)
@@ -319,7 +361,12 @@ class Trainer:
 
             rollouts.after_update()
 
-            self.log()
+            if (
+                self.step_count - self.last_log >= self.log_interval
+                or self.rollout_count == self.num_rollouts
+            ):
+                self.log()
+                self.last_log = self.step_count
 
             self.rollout_count += 1
 
@@ -360,7 +407,14 @@ class Trainer:
         self.num_rollouts = (
             int(self.stage_task_steps) // self.steps_in_rollout
         ) // self.num_processes
-        print("Using %d rollouts" % self.num_rollouts)
+        print(
+            "Using %d rollouts, %d steps (from %d)"
+            % (
+                self.num_rollouts,
+                self.num_rollouts * self.num_processes * self.steps_in_rollout,
+                self.stage_task_steps,
+            )
+        )
 
         self.gamma = gamma
         self.use_gae = use_gae
@@ -405,10 +459,16 @@ class Trainer:
         return stage[field] if field in stage else self.train_pipeline[field]
 
     def run_pipeline(self, checkpoint_file_name: Optional[str] = None):
+        start_time = time.time()
+        self.local_start_time_str = time.strftime(
+            "%Y-%m-%d_%H-%M-%S", time.localtime(start_time)
+        )
         if checkpoint_file_name is not None:
             self.checkpoint_load(checkpoint_file_name)
 
         for stage in self.train_pipeline["pipeline"]:
+            self.last_log = self.step_count - self.log_interval
+
             stage_limit = stage["end_criterion"]
             stage_losses, stage_weights = self._load_losses(stage)
 
@@ -432,7 +492,6 @@ class Trainer:
                     self.num_processes,
                     self.actor_critic.action_space,
                     self.actor_critic.recurrent_hidden_state_size,
-                    observation_set=self.observation_set,
                 )
             )
 
@@ -441,3 +500,5 @@ class Trainer:
 
             self.rollout_count = 0
             self.backprop_count = 0
+            self.total_steps += self.step_count
+            self.step_count = 0

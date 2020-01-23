@@ -67,13 +67,14 @@ class ResnetPreProcessorThor(Preprocessor):
         shape = (self.output_dims, self.output_height, self.output_width)
         self.observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
 
+        assert (
+            len(self.config["input_uuids"]) == 1
+        ), "preprocessor can only consume one observation"
+
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "resnet_thor"
 
     def _get_input_uuids(self, *args: Any, **kwargs: Any) -> List[str]:
-        assert (
-            len(self.config["input_uuids"]) == 1
-        ), "preprocessor can only consume one observation"
         return self.config["input_uuids"]
 
     def _get_observation_space(self) -> gym.spaces.Box:
