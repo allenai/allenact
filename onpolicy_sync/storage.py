@@ -25,7 +25,6 @@ class RolloutStorage:
         action_space,
         recurrent_hidden_state_size,
         num_recurrent_layers=1,
-        observation_set: Optional[ObservationSet] = None,
     ):
         self.observations = {}
 
@@ -54,8 +53,6 @@ class RolloutStorage:
 
         self.masks = torch.ones(num_steps + 1, num_processes, 1)
 
-        self.observation_set = observation_set
-
         self.num_steps = num_steps
         self.step = 0
 
@@ -72,14 +69,7 @@ class RolloutStorage:
         self.prev_actions = self.prev_actions.to(device)
         self.masks = self.masks.to(device)
 
-    def _preprocess_observations(self, batched_observations):
-        if self.observation_set is None:
-            return batched_observations
-        return self.observation_set.get_observations(batched_observations)
-
     def insert_initial_observations(self, observations):
-        observations = self._preprocess_observations(observations)
-
         for sensor in observations:
             if sensor not in self.observations:
                 self.observations[sensor] = (
@@ -109,8 +99,6 @@ class RolloutStorage:
         *args,
     ):
         assert len(args) == 0
-
-        observations = self._preprocess_observations(observations)
 
         for sensor in observations:
             if sensor not in self.observations:

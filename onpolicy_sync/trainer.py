@@ -225,6 +225,11 @@ class Trainer:
                 self.optimizer.step()
                 self.backprop_count += 1
 
+    def _preprocess_observations(self, batched_observations):
+        if self.observation_set is None:
+            return batched_observations
+        return self.observation_set.get_observations(batched_observations)
+
     def collect_rollout_step(self, rollouts):
         # print("new rollout step")
         # sample actions
@@ -290,7 +295,7 @@ class Trainer:
         )
 
         rollouts.insert(
-            batch,
+            self._preprocess_observations(batch),
             recurrent_hidden_states,
             actions,
             actor_critic_output.distributions.log_probs(actions),
@@ -304,7 +309,7 @@ class Trainer:
         observations = self.vector_tasks.get_observations()
         batch = batch_observations(observations)
 
-        rollouts.insert_initial_observations(batch)
+        rollouts.insert_initial_observations(self._preprocess_observations(batch))
 
     def train(self, rollouts):
         self.initialize_rollouts(rollouts)
@@ -461,7 +466,6 @@ class Trainer:
                     self.num_processes,
                     self.actor_critic.action_space,
                     self.actor_critic.recurrent_hidden_state_size,
-                    observation_set=self.observation_set,
                 )
             )
 
