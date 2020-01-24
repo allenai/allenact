@@ -221,9 +221,9 @@ class VectorSampledTasks:
                     command == OBSERVATION_SPACE_COMMAND
                     or command == ACTION_SPACE_COMMAND
                 ):
-                    # print("got space command")
+                    print("got space command")
                     res = getattr(current_task, command)
-                    # print("computed res %s" % res)
+                    print("computed res %s" % res)
                     connection_write_fn(res)
 
                 elif command == CALL_COMMAND:

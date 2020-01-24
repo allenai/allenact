@@ -9,7 +9,7 @@ import torch.optim as optim
 
 from configs.losses import algo_defaults
 from configs.util import Builder
-from extensions.ai2thor.models.object_nav_models import ObjectNavBaselineActorCritic
+from models.object_nav_models import ObjectNavBaselineActorCritic
 from extensions.ai2thor.sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
 from extensions.ai2thor.tasks import ObjectNavTask

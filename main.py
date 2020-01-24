@@ -81,7 +81,7 @@ def run_pipeline(
             max_grad_norm=0.5,
             tracker=info,
             models_folder=os.path.join(output_dir, "models"),
-            save_interval=10000,
+            save_interval=10,
             pipeline_stage=sit,
             teacher_forcing=stage.get("teacher_forcing"),
             device=device,
@@ -112,6 +112,8 @@ def main():
     args = get_args()
     if args.experiment == "object_nav_thor":
         from experiments.object_nav_thor import ObjectNavThorExperimentConfig as Config
+    elif args.experiment == "point_nav_habitat":
+        from experiments.point_nav import PointNavHabitatGibsonExperimentConfig as Config
     run_pipeline(Config(), args.output_dir, args.checkpoint)
 
 
