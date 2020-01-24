@@ -9,7 +9,7 @@ class Flatten(nn.Module):
 
 
 class SimpleCNN(nn.Module):
-    r"""A Simple 3-Conv CNN followed by a fully connected layer
+    """A Simple 3-Conv CNN followed by a fully connected layer
 
     Takes in observations and produces an embedding of the rgb and/or depth components
 
@@ -93,7 +93,7 @@ class SimpleCNN(nn.Module):
         self.layer_init()
 
     def _conv_output_dim(self, dimension, padding, dilation, kernel_size, stride):
-        r"""Calculates the output height and width based on the input
+        """Calculates the output height and width based on the input
         height and width to the convolution layer.
 
         ref: https://pytorch.org/docs/master/nn.html#torch.nn.Conv2d
@@ -159,15 +159,14 @@ class RNNStateEncoder(nn.Module):
         rnn_type: str = "GRU",
         trainable_masked_hidden_state: bool = False,
     ):
-        r"""An RNN for encoding the state in RL.
+        """An RNN for encoding the state in RL.
 
         Supports masking the hidden state during various timesteps in the forward lass
 
-        Args:
-            input_size: The input size of the RNN
-            hidden_size: The hidden size
-            num_layers: The number of recurrent layers
-            rnn_type: The RNN cell type.  Must be GRU or LSTM
+        @param: input_size: The input size of the RNN
+        @param: hidden_size: The hidden size
+        @param: num_layers: The number of recurrent layers
+        @param: rnn_type: The RNN cell type.  Must be GRU or LSTM
         """
 
         super().__init__()
@@ -234,7 +233,7 @@ class RNNStateEncoder(nn.Module):
         return hidden_states
 
     def single_forward(self, x, hidden_states, masks):
-        r"""Forward for a non-sequence input
+        """Forward for a non-sequence input
         """
         hidden_states = self._unpack_hidden(hidden_states)
         x, hidden_states = self.rnn(
@@ -245,13 +244,12 @@ class RNNStateEncoder(nn.Module):
         return x, hidden_states
 
     def seq_forward(self, x, hidden_states, masks):
-        r"""Forward for a sequence of length T
+        """Forward for a sequence of length T
 
-        Args:
-            x: (T, N, -1) Tensor that has been flattened to (T * N, -1)
-            hidden_states: The starting hidden state.
-            masks: The masks to be applied to hidden state at every timestep.
-                A (T, N) tensor flatten to (T * N)
+        @param: (T, N, -1) Tensor that has been flattened to (T * N, -1)
+        @param: hidden_states: The starting hidden state.
+        @param: masks: The masks to be applied to hidden state at every timestep.
+            A (T, N) tensor flatten to (T * N)
         """
         # x is a (T, N, -1) tensor flattened to (T * N, -1)
         n = hidden_states.size(1)

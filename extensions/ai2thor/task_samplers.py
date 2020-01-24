@@ -55,7 +55,7 @@ class ObjectNavTaskSampler(TaskSampler):
         return float("inf")
 
     @property
-    def total_unique(self) -> Union[int, float, None]:
+    def total_unique(self) -> Optional[Union[int, float]]:
         return None
 
     @property
