@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath("../.."))
 # -- Project information -----------------------------------------------------
 
 project = "Embodied RL"
-copyright = "2020, Jordi Salvador and Luca Weihs"
+copyright = "2020, Allen Institute for Artificial Intelligence"
 author = "Jordi Salvador and Luca Weihs"
 
 master_doc = "index"
