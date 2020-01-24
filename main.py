@@ -40,6 +40,7 @@ def load_config(args):
     config._loaded_config_src_files = config_source(args)
     return config
 
+
 def main():
     args = get_args()
     Trainer(load_config(args), args.output_dir).run_pipeline(args.checkpoint)

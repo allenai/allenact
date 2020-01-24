@@ -28,7 +28,7 @@ class Trainer:
         train_pipeline = self.train_pipeline
 
         self.device = "cpu"
-        if len(train_pipeline["gpu_ids"]) > 0:
+        if train_pipeline["gpu_ids"] is not None and len(train_pipeline["gpu_ids"]) > 0:
             if not torch.cuda.is_available():
                 print(
                     "Warning: no CUDA devices available for gpu ids {}".format(

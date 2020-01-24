@@ -110,10 +110,10 @@ class PointNavTask(Task[HabitatTask]):
             self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
 
-            if (
-                not self.last_action_success
-            ) and self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE is not None:
-                self.env.update_graph_with_failed_action(failed_action=action_str)
+            # if (
+            #     not self.last_action_success
+            # ) and self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE is not None:
+            #     self.env.update_graph_with_failed_action(failed_action=action_str)
 
         step_result = RLStepResult(
             observation=self.get_observations(),
