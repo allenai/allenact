@@ -1,6 +1,13 @@
 extensions package
 ==================
 
+Subpackages
+-----------
+
+.. toctree::
+
+    extensions.ai2thor
+
 Module contents
 ---------------
 

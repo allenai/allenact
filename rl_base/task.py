@@ -99,7 +99,8 @@ class Task(Generic[EnvType]):
     @classmethod
     @abstractmethod
     def action_names(cls) -> Tuple[str, ...]:
-        """
+        """A tuple of action names.
+
         @return: tuple of (ordered) action names so that taking action
             running `task.step(i)` corresponds to taking action task.action_names()[i].
         """
@@ -120,14 +121,14 @@ class Task(Generic[EnvType]):
     def metrics(self) -> Dict[str, Any]:
         """Computes metrics related to the task after the task's completion.
 
-        @return: a dictionary where every key is a string (the metric's
+        @return: A dictionary where every key is a string (the metric's
             name) and the value is the value of the metric.
         """
         return {}
 
     def query_expert(self) -> Tuple[Any, bool]:
         """
-        @return: a tuple (x, y) where x is the expert action (or policy) and y is False \
+        @return: A tuple (x, y) where x is the expert action (or policy) and y is False \
             if the expert could not determine the optimal action (otherwise True). Here y \
             is used for masking. Even when y is False, x should still lie in the space of \
             possible values (e.g. if x is the expert policy then x should be the correct length, \
@@ -150,8 +151,9 @@ class TaskSampler(abc.ABC):
 
     @property
     @abstractmethod
-    def total_unique(self) -> Union[int, float, None]:
-        """
+    def total_unique(self) -> Optional[Union[int, float]]:
+        """Total unique tasks.
+
         @return: Total number of *unique* tasks that can be sampled. Can be
             float('inf') or, if the total unique is not known, None.
         """
@@ -183,7 +185,9 @@ class TaskSampler(abc.ABC):
     @property
     @abstractmethod
     def all_observation_spaces_equal(self) -> bool:
-        """
+        """Checks if all observation spaces of tasks that can be sampled are
+        equal.
+
         @return: True if all Tasks that can be sampled by this sampler have the
             same observation space. Otherwise False.
         """

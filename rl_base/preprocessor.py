@@ -8,10 +8,10 @@ import networkx as nx
 
 
 class Preprocessor(abc.ABC):
-    """Represents a preprocessor that transforms data from a sensor or another preprocessor
-    to the input of agents or other preprocessors.
-    The user of this class needs to implement the process method and
-    the user is also required to set the below attributes:
+    """Represents a preprocessor that transforms data from a sensor or another
+    preprocessor to the input of agents or other preprocessors. The user of
+    this class needs to implement the process method and the user is also
+    required to set the below attributes:
 
     Attributes:
         config: configuration information for the preprocessor.
@@ -63,8 +63,8 @@ class Preprocessor(abc.ABC):
 
 
 class PreprocessorGraph:
-    """Represents a graph of preprocessors, with each preprocessor being identified through a
-    unique id.
+    """Represents a graph of preprocessors, with each preprocessor being
+    identified through a unique id.
 
     Attributes:
         preprocessors: list containing preprocessors with required input uuids, output uuid of each
@@ -126,8 +126,8 @@ class PreprocessorGraph:
 
 
 class ObservationSet:
-    """Represents a list of source_ids, corresponding to sensors and preprocessors, with each source being identified through a
-    unique id.
+    """Represents a list of source_ids, corresponding to sensors and
+    preprocessors, with each source being identified through a unique id.
 
     Attributes:
         sensors: list containing sensor and preprocessor ids for the environment, uuid of each

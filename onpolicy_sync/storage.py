@@ -14,9 +14,7 @@ from rl_base.preprocessor import ObservationSet
 
 
 class RolloutStorage:
-    r"""Class for storing rollout information for RL trainers.
-
-    """
+    """Class for storing rollout information for RL trainers."""
 
     def __init__(
         self,
@@ -248,7 +246,7 @@ class RolloutStorage:
 
     @staticmethod
     def _flatten_helper(t: int, n: int, tensor: torch.Tensor) -> torch.Tensor:
-        r"""Given a tensor of size (t, n, ..), flatten it to size (t*n, ...).
+        """Given a tensor of size (t, n, ..), flatten it to size (t*n, ...).
 
         Args:
             t: first dimension of tensor.

@@ -58,7 +58,7 @@ class ObjectNavTaskSampler(TaskSampler):
         return float("inf") if self.max_tasks is None else self.max_tasks
 
     @property
-    def total_unique(self) -> Union[int, float, None]:
+    def total_unique(self) -> Optional[Union[int, float]]:
         return None
 
     @property

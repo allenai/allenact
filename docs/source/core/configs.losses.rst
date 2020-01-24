@@ -1,19 +1,19 @@
-configs\.losses package
-=======================
+configs.losses package
+======================
 
 Submodules
 ----------
 
-configs\.losses\.a2c\_config module
------------------------------------
+configs.losses.a2c\_config module
+---------------------------------
 
 .. automodule:: configs.losses.a2c_config
     :members:
     :undoc-members:
     :show-inheritance:
 
-configs\.losses\.ppo\_config module
------------------------------------
+configs.losses.ppo\_config module
+---------------------------------
 
 .. automodule:: configs.losses.ppo_config
     :members:

@@ -16,6 +16,7 @@ guzzle-sphinx-theme = "*"
 sphinx-autodoc-typehints = "*"
 docstr-coverage = "*"
 setuptools = "==41.0.0"
+recommonmark = "*"
 
 [packages]
 gym = "*"
