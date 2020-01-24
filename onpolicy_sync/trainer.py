@@ -19,6 +19,17 @@ from rl_base.experiment_config import ExperimentConfig
 from configs.util import Builder
 from rl_base.preprocessor import ObservationSet
 from onpolicy_sync.storage import RolloutStorage
+from onpolicy_sync.evaluator import evaluate
+
+
+try:
+    # Use torch.multiprocessing if we can.
+    # We have yet to find a reason to not use it and
+    # you are required to use it when sending a torch.Tensor
+    # between processes
+    import torch.multiprocessing as mp
+except ImportError:
+    import multiprocessing as mp
 
 
 class Trainer:
@@ -67,9 +78,16 @@ class Trainer:
                 params=[p for p in self.actor_critic.parameters() if p.requires_grad]
             )
 
+        devices = (
+            train_pipeline["sampler_devices"]
+            if "sampler_devices" in train_pipeline
+            else train_pipeline["gpu_ids"]
+        )
         sampler_fn_args = [
             config.train_task_sampler_args(
-                process_ind=it, total_processes=train_pipeline["nprocesses"]
+                process_ind=it,
+                total_processes=train_pipeline["nprocesses"],
+                devices=devices,
             )
             for it in range(train_pipeline["nprocesses"])
         ]
@@ -80,6 +98,7 @@ class Trainer:
 
         self.tracker = deque()
 
+        self.output_dir = output_dir
         self.models_folder = os.path.join(output_dir, "models")
         os.makedirs(self.models_folder, exist_ok=True)
 
@@ -111,7 +130,12 @@ class Trainer:
         self.log_interval = train_pipeline["log_interval"]
         self.num_processes = train_pipeline["nprocesses"]
 
-    def checkpoint_save(self) -> None:
+        self.config = config
+
+        self.eval_process = None
+        self.eval_mp_ctx = mp.get_context("spawn")
+
+    def checkpoint_save(self) -> str:
         os.makedirs(self.models_folder, exist_ok=True)
 
         model_path = os.path.join(
@@ -137,6 +161,7 @@ class Trainer:
             },
             model_path,
         )
+        return model_path
 
     def checkpoint_load(self, ckpt: Union[str, Dict[str, Any]]) -> None:
         if isinstance(ckpt, str):
@@ -189,7 +214,6 @@ class Trainer:
             )
 
     def update(self, rollouts) -> None:
-        # print("new update")
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
 
         for e in range(self.update_epochs):
@@ -198,19 +222,11 @@ class Trainer:
             )
 
             for bit, batch in enumerate(data_generator):
-                batch = {
-                    k: batch[k].to(self.device) if k != "observations" else batch[k]
-                    for k in batch
-                }
-                # Reshape to do in a single forward pass for all steps
-                batch["observations"] = {
-                    k: v.to(self.device) for k, v in batch["observations"].items()
-                }
                 actor_critic_output, hidden_states = self.actor_critic(
                     batch["observations"],
-                    batch["recurrent_hidden_states"].to(self.device),
-                    batch["prev_actions"].to(self.device),
-                    batch["masks"].to(self.device),
+                    batch["recurrent_hidden_states"],
+                    batch["prev_actions"],
+                    batch["masks"],
                 )
 
                 info = dict(
@@ -252,20 +268,44 @@ class Trainer:
             return batched_observations
         return self.observation_set.get_observations(batched_observations)
 
+    def apply_teacher_forcing(self, actions, step_observation):
+        tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
+        expert_actions = (
+            step_observation["expert_action"].view(-1, 2)[:, 0].view(*tf_mask_shape)
+        )
+        expert_action_exists_mask = (
+            step_observation["expert_action"].view(-1, 2)[:, 1].view(*tf_mask_shape)
+        )
+        teacher_forcing_mask = (
+            torch.distributions.bernoulli.Bernoulli(
+                torch.tensor(self.teacher_forcing(self.step_count))
+            )
+            .sample(tf_mask_shape)
+            .long()
+            .to(self.device)
+        ) * expert_action_exists_mask
+        actions = (
+            teacher_forcing_mask * expert_actions + (1 - teacher_forcing_mask) * actions
+        )
+        teacher_force_info = {
+            "teacher_ratio": teacher_forcing_mask.sum().item() / actions.nelement(),
+            "teacher_enforcing": self.teacher_forcing(self.step_count),
+        }
+        self.tracker.append(("teacher_package", teacher_force_info))
+        return actions
+
     def collect_rollout_step(self, rollouts):
-        # print("new rollout step")
         # sample actions
         with torch.no_grad():
             step_observation = {
-                k: v[rollouts.step].to(self.device)
-                for k, v in rollouts.observations.items()
+                k: v[rollouts.step] for k, v in rollouts.observations.items()
             }
 
             actor_critic_output, recurrent_hidden_states = self.actor_critic(
                 step_observation,
-                rollouts.recurrent_hidden_states[rollouts.step].to(self.device),
-                rollouts.prev_actions[rollouts.step].to(self.device),
-                rollouts.masks[rollouts.step].to(self.device),
+                rollouts.recurrent_hidden_states[rollouts.step],
+                rollouts.prev_actions[rollouts.step],
+                rollouts.masks[rollouts.step],
             )
 
         actions = (
@@ -273,47 +313,27 @@ class Trainer:
             if not self.deterministic
             else actor_critic_output.distributions.mode()
         )
+
         if (
             self.teacher_forcing is not None
             and self.teacher_forcing(self.step_count) > 0
         ):
-            tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
-            expert_actions = (
-                step_observation["expert_action"].view(-1, 2)[:, 0].view(*tf_mask_shape)
-            )
-            expert_action_exists_mask = (
-                step_observation["expert_action"].view(-1, 2)[:, 1].view(*tf_mask_shape)
-            )
-            teacher_forcing_mask = (
-                torch.distributions.bernoulli.Bernoulli(
-                    torch.tensor(self.teacher_forcing(self.step_count))
-                )
-                .sample(tf_mask_shape)
-                .long()
-                .to(self.device)
-            ) * expert_action_exists_mask
-            actions = (
-                teacher_forcing_mask * expert_actions
-                + (1 - teacher_forcing_mask) * actions
-            )
-            teacher_force_info = {
-                "teacher_ratio": teacher_forcing_mask.sum().item() / actions.nelement(),
-                "teacher_enforcing": self.teacher_forcing(self.step_count),
-            }
-            self.tracker.append(("teacher_package", teacher_force_info))
+            actions = self.apply_teacher_forcing(actions, step_observation)
 
         self.step_count += actions.nelement()
 
         outputs = self.vector_tasks.step([a[0].item() for a in actions])
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
 
-        batch = batch_observations(observations)
-        rewards = torch.tensor(rewards, dtype=torch.float)
+        batch = batch_observations(observations, device=self.device)
+        rewards = torch.tensor(rewards, dtype=torch.float, device=self.device)
         rewards = rewards.unsqueeze(1)
 
         # If done then clean the history of observations.
         masks = torch.tensor(
-            [[0.0] if done else [1.0] for done in dones], dtype=torch.float32
+            [[0.0] if done else [1.0] for done in dones],
+            dtype=torch.float32,
+            device=self.device,
         )
 
         rollouts.insert(
@@ -327,30 +347,28 @@ class Trainer:
         )
 
     def initialize_rollouts(self, rollouts):
-        # print("initialize rollouts")
         observations = self.vector_tasks.get_observations()
-        batch = batch_observations(observations)
+        batch = batch_observations(observations, device=self.device)
 
         rollouts.insert_initial_observations(self._preprocess_observations(batch))
+
+        rollouts.to(self.device)
 
     def train(self, rollouts):
         self.initialize_rollouts(rollouts)
 
         while self.rollout_count < self.num_rollouts:
-            # print("new rollout")
             for step in range(self.steps_in_rollout):
                 self.collect_rollout_step(rollouts)
 
             with torch.no_grad():
-                step_observation = {
-                    k: v[-1].to(self.device) for k, v in rollouts.observations.items()
-                }
+                step_observation = {k: v[-1] for k, v in rollouts.observations.items()}
 
                 actor_critic_output, _ = self.actor_critic(
                     step_observation,
-                    rollouts.recurrent_hidden_states[-1].to(self.device),
-                    rollouts.prev_actions[-1].to(self.device),
-                    rollouts.masks[-1].to(self.device),
+                    rollouts.recurrent_hidden_states[-1],
+                    rollouts.prev_actions[-1],
+                    rollouts.masks[-1],
                 )
 
             rollouts.compute_returns(
@@ -374,12 +392,25 @@ class Trainer:
             if (
                 self.save_interval > 0
                 and (
-                    self.rollout_count % self.save_interval == 0
+                    self.step_count % self.save_interval == 0
                     or self.rollout_count == self.num_rollouts
                 )
                 and self.models_folder != ""
             ):
-                self.checkpoint_save()
+                model_path = self.checkpoint_save()
+
+                if self.eval_process is not None and self.eval_process.is_alive():
+                    print("Skipping eval - still busy")
+                    pass
+                else:
+                    print("Starting eval")
+                    if self.eval_process is not None:
+                        self.eval_process.join()
+                    self.eval_process = self.eval_mp_ctx.Process(
+                        target=evaluate,
+                        args=(self.config, self.output_dir, model_path),
+                    )
+                    self.eval_process.start()
 
     def setup_stage(
         self,
@@ -502,3 +533,5 @@ class Trainer:
             self.backprop_count = 0
             self.total_steps += self.step_count
             self.step_count = 0
+
+        self.log_writer.close()

@@ -8,7 +8,7 @@ import torch.optim as optim
 from torchvision import models
 import copy
 
-from configs.losses import algo_defaults
+from configs.losses import PPOConfig
 from configs.util import Builder, recursive_update
 from extensions.ai2thor.models.object_nav_models import ObjectNavBaselineActorCritic
 from extensions.ai2thor.sensors import RGBSensorThor, GoalObjectTypeThorSensor
@@ -93,7 +93,7 @@ class ObjectNavThorPreResnetExperimentConfig(Base):
             "num_steps": num_steps,
             "gpu_ids": gpu_ids,
             "imitation_loss": Builder(Imitation,),
-            "ppo_loss": Builder(PPO, dict(), default=algo_defaults["ppo_loss"],),
+            "ppo_loss": Builder(PPO, dict(), default=PPOConfig,),
             "observation_set": cls.OBSERVATIONS,
             "pipeline": [{"losses": ["ppo_loss"], "end_criterion": ppo_steps},],
         }

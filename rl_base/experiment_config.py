@@ -1,5 +1,5 @@
 import abc
-from typing import Dict, Any, Callable
+from typing import Dict, Any, Optional, List
 from rl_base.task import TaskSampler
 
 import torch.nn as nn
@@ -19,16 +19,16 @@ class ExperimentConfig(abc.ABC):
         raise NotImplementedError
 
     def train_task_sampler_args(
-        self, process_ind: int, total_processes: int
+        self, process_ind: int, total_processes: int, devices: Optional[List[int]]
     ) -> Dict[str, Any]:
         raise NotImplementedError()
 
     def valid_task_sampler_args(
-        self, process_ind: int, total_processes: int
+        self, process_ind: int, total_processes: int, devices: Optional[List[int]]
     ) -> Dict[str, Any]:
         raise NotImplementedError()
 
     def test_task_sampler_args(
-        self, process_ind: int, total_processes: int
+        self, process_ind: int, total_processes: int, devices: Optional[List[int]]
     ) -> Dict[str, Any]:
         raise NotImplementedError()

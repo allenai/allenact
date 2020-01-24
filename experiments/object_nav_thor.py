@@ -1,5 +1,5 @@
 from math import ceil
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 import gym
 import numpy as np
@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from configs.losses import algo_defaults
+from configs.losses import PPOConfig
 from configs.util import Builder
 from extensions.ai2thor.models.object_nav_models import ObjectNavBaselineActorCritic
 from extensions.ai2thor.sensors import RGBSensorThor, GoalObjectTypeThorSensor
@@ -56,6 +56,8 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
 
     SCENE_PERIOD = 10
 
+    VALID_SAMPLES_IN_SCENE = 2
+
     @classmethod
     def tag(cls):
         return "ObjectNav"
@@ -65,14 +67,14 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         dagger_steps = 3e4
         ppo_steps = 3e4
         ppo_steps2 = 1e6
-        nprocesses = 16
+        nprocesses = 4
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 2
         num_steps = 16
         save_interval = 100
         log_interval = 2 * num_steps * nprocesses
-        gpu_ids = None if not torch.cuda.is_available() else [0]
+        gpu_ids = [] if not torch.cuda.is_available() else [1]
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0
@@ -87,7 +89,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "num_steps": num_steps,
             "gpu_ids": gpu_ids,
             "imitation_loss": Builder(Imitation,),
-            "ppo_loss": Builder(PPO, dict(), default=algo_defaults["ppo_loss"],),
+            "ppo_loss": Builder(PPO, dict(), default=PPOConfig,),
             "gamma": gamma,
             "use_gae": use_gae,
             "gae_lambda": gae_lambda,
@@ -103,6 +105,15 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
                 {"losses": ["ppo_loss", "imitation_loss"], "end_criterion": ppo_steps,},
                 {"losses": ["ppo_loss"], "end_criterion": ppo_steps2,},
             ],
+        }
+
+    @classmethod
+    def evaluation_params(cls, **kwargs):
+        nprocesses = 5
+        gpu_ids = [] if not torch.cuda.is_available() else [2]
+        return {
+            "nprocesses": nprocesses,
+            "gpu_ids": gpu_ids,
         }
 
     @classmethod
@@ -148,26 +159,43 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
-            "scene_period": self.SCENE_PERIOD,
         }
 
     def train_task_sampler_args(
-        self, process_ind: int, total_processes: int
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]] = None,
     ) -> Dict[str, Any]:
-        return self._get_sampler_args_for_scene_split(
+        res = self._get_sampler_args_for_scene_split(
             self.TRAIN_SCENES, process_ind, total_processes
         )
+        res["scene_period"] = self.SCENE_PERIOD
+        res["env_args"]["x_display"] = (
+            "0.%d" % devices[0] if len(devices) >= 0 else None
+        )
+        return res
 
     def valid_task_sampler_args(
-        self, process_ind: int, total_processes: int
+        self, process_ind: int, total_processes: int, devices: Optional[List[int]]
     ) -> Dict[str, Any]:
-        return self._get_sampler_args_for_scene_split(
+        res = self._get_sampler_args_for_scene_split(
             self.VALID_SCENES, process_ind, total_processes
         )
+        res["scene_period"] = self.VALID_SAMPLES_IN_SCENE
+        res["max_tasks"] = self.VALID_SAMPLES_IN_SCENE * len(res["scenes"])
+        res["env_args"]["x_display"] = (
+            "0.%d" % devices[0] if len(devices) >= 0 else None
+        )
+        return res
 
     def test_task_sampler_args(
-        self, process_ind: int, total_processes: int
+        self, process_ind: int, total_processes: int, devices: Optional[List[int]]
     ) -> Dict[str, Any]:
-        return self._get_sampler_args_for_scene_split(
+        res = self._get_sampler_args_for_scene_split(
             self.TEST_SCENSE, process_ind, total_processes
         )
+        res["env_args"]["x_display"] = (
+            "0.%d" % devices[0] if len(devices) >= 0 else None
+        )
+        return res

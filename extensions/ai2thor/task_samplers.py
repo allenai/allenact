@@ -102,7 +102,7 @@ class ObjectNavTaskSampler(TaskSampler):
         return self.scenes[self.scene_order[self.scene_id]]
 
     def next_task(self) -> Optional[ObjectNavTask]:
-        if self.max_tasks is not None and len(self) == 0:
+        if self.max_tasks is not None and self.max_tasks == 0:
             return None
 
         scene = self.sample_scene()
