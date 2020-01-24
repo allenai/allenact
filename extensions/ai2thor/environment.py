@@ -37,8 +37,6 @@ class AI2ThorEnvironment(object):
         always_return_visible_range: bool = False,
         simplify_physics: bool = False,
     ) -> None:
-        print("env constructor")
-        # self.controller = Controller()
         self._start_player_screen_width = player_screen_width
         self._start_player_screen_height = player_screen_height
         self.x_display = x_display
@@ -54,7 +52,6 @@ class AI2ThorEnvironment(object):
         else:
             print("ERROR: high resolution not supported")
 
-        print("created controller")
         self.controller.local_executable_path = local_thor_build
         self.controller.docker_enabled = docker_enabled
         self._initially_reachable_points: Optional[List[Dict]] = None

@@ -5,21 +5,21 @@ import torch
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from collections import defaultdict
+from typing import Optional
 
+from collections import defaultdict
 import torch
+
+from rl_base.preprocessor import ObservationSet
 
 
 class RolloutStorage:
-    r"""Class for storing rollout information for RL trainers.
-
-    """
+    """Class for storing rollout information for RL trainers."""
 
     def __init__(
         self,
         num_steps,
         num_processes,
-        observation_space,
         action_space,
         recurrent_hidden_state_size,
         num_recurrent_layers=1,
@@ -246,7 +246,7 @@ class RolloutStorage:
 
     @staticmethod
     def _flatten_helper(t: int, n: int, tensor: torch.Tensor) -> torch.Tensor:
-        r"""Given a tensor of size (t, n, ..), flatten it to size (t*n, ...).
+        """Given a tensor of size (t, n, ..), flatten it to size (t*n, ...).
 
         Args:
             t: first dimension of tensor.

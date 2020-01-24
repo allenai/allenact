@@ -13,7 +13,7 @@ from models.object_nav_models import ObjectNavBaselineActorCritic
 from extensions.ai2thor.sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
 from extensions.ai2thor.tasks import ObjectNavTask
-from imitation.utils import LinearDecay
+from onpolicy_sync.utils import LinearDecay
 from onpolicy_sync.losses import PPO
 from onpolicy_sync.losses.imitation import Imitation
 from rl_base.experiment_config import ExperimentConfig
@@ -54,21 +54,32 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
 
     MAX_STEPS = 128
 
+    SCENE_PERIOD = 10
+
     @classmethod
     def tag(cls):
         return "ObjectNav"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        dagger_steps = 1e4
-        ppo_steps = 1e6
-        nprocesses = 4
+        dagger_steps = 3e4
+        ppo_steps = 3e4
+        ppo_steps2 = 1e6
+        nprocesses = 16
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 2
         num_steps = 16
+        save_interval = 100
+        log_interval = 2 * num_steps * nprocesses
         gpu_ids = None if not torch.cuda.is_available() else [0]
+        gamma = 0.99
+        use_gae = True
+        gae_lambda = 1.0
+        max_grad_norm = 0.5
         return {
+            "save_interval": save_interval,
+            "log_interval": log_interval,
             "optimizer": Builder(optim.Adam, dict(lr=lr)),
             "nprocesses": nprocesses,
             "num_mini_batch": num_mini_batch,
@@ -77,15 +88,20 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "gpu_ids": gpu_ids,
             "imitation_loss": Builder(Imitation,),
             "ppo_loss": Builder(PPO, dict(), default=algo_defaults["ppo_loss"],),
+            "gamma": gamma,
+            "use_gae": use_gae,
+            "gae_lambda": gae_lambda,
+            "max_grad_norm": max_grad_norm,
             "pipeline": [
                 {
                     "losses": ["imitation_loss", "ppo_loss"],
                     "teacher_forcing": LinearDecay(
-                        startp=1, endp=1e-6, steps=dagger_steps
+                        startp=1.0, endp=0.0, steps=dagger_steps,
                     ),
                     "end_criterion": dagger_steps,
                 },
-                {"losses": ["ppo_loss", "imitation_loss"], "end_criterion": ppo_steps},
+                {"losses": ["ppo_loss", "imitation_loss"], "end_criterion": ppo_steps,},
+                {"losses": ["ppo_loss"], "end_criterion": ppo_steps2,},
             ],
         }
 
@@ -112,7 +128,15 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
     def _get_sampler_args_for_scene_split(
         self, scenes: List[str], process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
-        if total_processes > len(scenes):
+        if len(scenes) % total_processes != 0:
+            print(
+                "Warning: oversampling some of the scenes to feed all processes. You can avoid this by setting a number of workers divisor of the number of scenes"
+            )
+        if total_processes > len(scenes):  # oversample some scenes -> bias
+            if total_processes % len(scenes) != 0:
+                print(
+                    "Warning: oversampling some of the scenes to feed all processes. You can avoid this by setting a number of workers divisible by the number of scenes"
+                )
             scenes = scenes * int(ceil(total_processes / len(scenes)))
             scenes = scenes[: total_processes * (len(scenes) // total_processes)]
         inds = self._partition_inds(len(scenes), total_processes)
@@ -124,6 +148,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            "scene_period": self.SCENE_PERIOD,
         }
 
     def train_task_sampler_args(

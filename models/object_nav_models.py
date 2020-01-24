@@ -34,12 +34,8 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
             self.recurrent_hidden_state_size,
         )
 
-        self.actor = LinearActorHead(
-            self.recurrent_hidden_state_size, action_space.n
-        )
-        self.critic = LinearCriticHead(
-            self.recurrent_hidden_state_size
-        )
+        self.actor = LinearActorHead(self.recurrent_hidden_state_size, action_space.n)
+        self.critic = LinearCriticHead(self.recurrent_hidden_state_size)
 
         self.object_type_embedding = nn.Embedding(
             num_embeddings=self._n_object_types,

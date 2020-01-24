@@ -70,20 +70,19 @@ class VectorSampledTasks:
     process samples another task from its task sampler. All the tasks are
     synchronized (for step and new_task methods).
 
-    Attributes:
-        make_sampler_fn: function which creates a single TaskSampler.
-        sampler_fn_args: sequence of dictionaries describing the args
-            to pass to make_sampler_fn on each individual process.
-        auto_resample_when_done: automatically sample a new Task from the TaskSampler when
-            the Task completes. If False, a new Task will not be resampled until all
-            Tasks on all processes have completed. This functionality is provided for seamless training
-            of vectorized Tasks.
-        multiprocessing_start_method: the multiprocessing method used to
-            spawn worker processes. Valid methods are
-            ``{'spawn', 'forkserver', 'fork'}`` ``'forkserver'`` is the
-            recommended method as it works well with CUDA. If
-            ``'fork'`` is used, the subproccess  must be started before
-            any other GPU useage.
+    @ivar: make_sampler_fn: function which creates a single TaskSampler.
+    @ivar: sampler_fn_args: sequence of dictionaries describing the args
+        to pass to make_sampler_fn on each individual process.
+    @ivar: auto_resample_when_done: automatically sample a new Task from the TaskSampler when
+        the Task completes. If False, a new Task will not be resampled until all
+        Tasks on all processes have completed. This functionality is provided for seamless training
+        of vectorized Tasks.
+    @ivar: multiprocessing_start_method: the multiprocessing method used to
+        spawn worker processes. Valid methods are
+        ``{'spawn', 'forkserver', 'fork'}`` ``'forkserver'`` is the
+        recommended method as it works well with CUDA. If
+        ``'fork'`` is used, the subproccess  must be started before
+        any other GPU useage.
     """
 
     observation_space: SpaceDict
@@ -190,7 +189,7 @@ class VectorSampledTasks:
 
         if parent_pipe is not None:
             parent_pipe.close()
-            print("closed parent pipe (?)")
+            # print("closed parent pipe (?)")
         try:
             command, data = connection_read_fn()
             while command != CLOSE_COMMAND:

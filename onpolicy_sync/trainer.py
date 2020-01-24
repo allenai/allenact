@@ -1,120 +1,203 @@
-from imitation.utils import LinearDecay
-from rl_base.common import Loss
-from typing import Optional, Any, Dict
-from onpolicy_sync.vector_task import VectorSampledTasks
-from onpolicy_sync.policy import ActorCriticModel
+from typing import Optional, Any, Dict, Union
+import os
+from collections import deque
+import queue
+import time
+import shutil
+
 import torch.optim
 import torch
 import torch.nn as nn
-from onpolicy_sync.utils import batch_observations
-import os
-from rl_base.distributions import CategoricalDistr
 import torch.distributions
+from tensorboardX import SummaryWriter
+
+from onpolicy_sync.utils import LinearDecay
+from rl_base.common import Loss
+from onpolicy_sync.vector_task import VectorSampledTasks
+from onpolicy_sync.utils import batch_observations, ScalarMeanTracker
+from rl_base.experiment_config import ExperimentConfig
+from configs.util import Builder
+from rl_base.preprocessor import ObservationSet
+from onpolicy_sync.storage import RolloutStorage
 
 
 class Trainer:
-    def __init__(
-        self,
-        vector_tasks: VectorSampledTasks,
-        actor_critic: ActorCriticModel[CategoricalDistr],
-        losses: Dict[str, Loss],
-        loss_weights: Dict[str, float],
-        optimizer: torch.optim.Optimizer,
-        steps_in_rollout: int,
-        stage_task_steps: int,
-        update_epochs: int,
-        update_mini_batches: int,
-        num_processes: int,
-        gamma: float,
-        use_gae: bool,
-        gae_lambda: float,
-        max_grad_norm: float,
-        tracker: Any,
-        models_folder: str,
-        save_interval: int,
-        pipeline_stage: int,
-        device: str,
-        teacher_forcing: Optional[LinearDecay] = None,
-        deterministic: bool = False,
-    ):
-        self.vector_tasks = vector_tasks
-        self.actor_critic = actor_critic
+    def __init__(self, config: ExperimentConfig, output_dir: str):
+        self.train_pipeline = config.training_pipeline()
 
-        self.losses = losses
-        self.loss_weights = loss_weights
-        self.optimizer = optimizer
+        train_pipeline = self.train_pipeline
 
-        self.stage_task_steps = stage_task_steps
-        self.steps_in_rollout = steps_in_rollout
-        self.update_epochs = update_epochs
-        self.update_mini_batches = update_mini_batches
-        self.num_processes = num_processes
+        self.device = "cpu"
+        if len(train_pipeline["gpu_ids"]) > 0:
+            if not torch.cuda.is_available():
+                print(
+                    "Warning: no CUDA devices available for gpu ids {}".format(
+                        train_pipeline["gpu_ids"]
+                    )
+                )
+            else:
+                self.device = "cuda:%d" % train_pipeline["gpu_ids"][0]
+                torch.cuda.set_device(self.device)
 
-        self.num_rollouts = (
-            int(self.stage_task_steps) // self.steps_in_rollout
-        ) // self.num_processes
+        self.observation_set = None
+        if "observation_set" in train_pipeline:
+            all_preprocessors = []
+            sensor_ids = []
+            preprocessor_ids = []
+            for observation in train_pipeline["observation_set"]:
+                if isinstance(observation, str):
+                    sensor_ids.append(observation)
+                else:
+                    if isinstance(observation, Builder):
+                        all_preprocessors.append(
+                            observation(config={"device": self.device})
+                        )
+                    else:
+                        all_preprocessors.append(observation)
+                    preprocessor_ids.append(all_preprocessors[-1].uuid)
+            self.observation_set = ObservationSet(
+                sensor_ids, preprocessor_ids, all_preprocessors
+            )
 
-        print("Using %d rollouts" % self.num_rollouts)
+        self.actor_critic = config.create_model().to(self.device)
 
-        self.gamma = gamma
-        self.use_gae = use_gae
-        self.gae_lambda = gae_lambda
+        self.optimizer = train_pipeline["optimizer"]
+        if isinstance(self.optimizer, Builder):
+            self.optimizer = self.optimizer(
+                params=[p for p in self.actor_critic.parameters() if p.requires_grad]
+            )
 
-        self.max_grad_norm = max_grad_norm
+        sampler_fn_args = [
+            config.train_task_sampler_args(
+                process_ind=it, total_processes=train_pipeline["nprocesses"]
+            )
+            for it in range(train_pipeline["nprocesses"])
+        ]
 
-        self.tracker = tracker
+        self.vector_tasks = VectorSampledTasks(
+            make_sampler_fn=config.make_sampler_fn, sampler_fn_args=sampler_fn_args
+        )
 
-        self.teacher_forcing = teacher_forcing
+        self.tracker = deque()
 
-        self.models_folder = models_folder
-        self.save_interval = save_interval
+        self.models_folder = os.path.join(output_dir, "models")
+        os.makedirs(self.models_folder, exist_ok=True)
 
-        self.pipeline_stage = pipeline_stage
+        self.configs_folder = os.path.join(output_dir, "configs")
+        os.makedirs(self.configs_folder, exist_ok=True)
+        for file in config._loaded_config_src_files:
+            parts = config._loaded_config_src_files[file].split(".")
+            src_file = os.path.sep.join(parts) + ".py"
+            dst_file = (
+                os.path.join(self.configs_folder, os.path.join(*parts[1:])) + ".py"
+            )
+            os.makedirs(os.path.dirname(dst_file), exist_ok=True)
+            shutil.copy(src_file, dst_file)
 
-        self.deterministic = deterministic
+        self.log_writer = SummaryWriter(log_dir=output_dir)
+        self.scalars = ScalarMeanTracker()
 
-        self.device = device
-
+        self.total_updates = 0
+        self.pipeline_stage = 0
         self.rollout_count = 0
         self.backprop_count = 0
+        self.step_count = 0
+        self.total_steps = 0
+        self.last_log = 0
+
+        self.experiment_name = config.tag()
+
+        self.save_interval = train_pipeline["save_interval"]
+        self.log_interval = train_pipeline["log_interval"]
+        self.num_processes = train_pipeline["nprocesses"]
 
     def checkpoint_save(self) -> None:
         os.makedirs(self.models_folder, exist_ok=True)
 
         model_path = os.path.join(
             self.models_folder,
-            "model_stage_%02d_%010d.pt" % (self.pipeline_stage, self.rollout_count),
+            "exp_{}__time_{}__stage_{}__steps_{}.pt".format(
+                self.experiment_name,
+                self.local_start_time_str,
+                self.pipeline_stage,
+                self.total_steps + self.step_count,
+            ),
         )
         torch.save(
             {
+                "total_updates": self.total_updates,
+                "total_steps": self.total_steps,
                 "pipeline_stage": self.pipeline_stage,
                 "rollout_count": self.rollout_count,
                 "backprop_count": self.backprop_count,
-                "model_state_dict": self.actor_critic.state_dict(),
+                "step_count": self.step_count,
+                "local_start_time_str": self.local_start_time_str,
                 "optimizer_state_dict": self.optimizer.state_dict(),
+                "model_state_dict": self.actor_critic.state_dict(),
             },
             model_path,
         )
 
-    def checkpoint_load(self, ckpt_dict: Dict[str, Any]) -> None:
-        self.actor_critic.load_state_dict(ckpt_dict["model_state_dict"])
-        self.rollout_count = ckpt_dict["rollout_count"]
-        self.backprop_count = ckpt_dict["backprop_count"]
-        self.optimizer.load_state_dict(ckpt_dict["optimizer_state_dict"])
+    def checkpoint_load(self, ckpt: Union[str, Dict[str, Any]]) -> None:
+        if isinstance(ckpt, str):
+            print("Loading checkpoint from %s" % ckpt)
+            # Map location CPU is almost always better than mapping to a CUDA device.
+            ckpt = torch.load(ckpt, map_location="cpu")
+
+        self.actor_critic.load_state_dict(ckpt["model_state_dict"])
+        self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+        self.step_count = ckpt["step_count"]
+        self.backprop_count = ckpt["backprop_count"]
+        self.rollout_count = ckpt["rollout_count"]
+        self.pipeline_stage = ckpt["pipeline_stage"]
+        self.total_updates = ckpt["total_updates"]
+        self.total_steps = ckpt["total_steps"]
+        self.local_start_time_str = ckpt["local_start_time_str"]
+        self.train_pipeline["pipeline"] = self.train_pipeline["pipeline"][
+            self.pipeline_stage :
+        ]
+
+    def log(self):
+        while len(self.tracker) != 0:
+            pkgtype, info = self.tracker.popleft()
+            if pkgtype == "update_package":
+                cscalars = {"total_loss": info["total_loss"]}
+                for loss in info["losses"]:
+                    lossname = loss[:-5] if loss.endswith("_loss") else loss
+                    for scalar in info["losses"][loss]:
+                        cscalars["/".join([lossname, scalar])] = info["losses"][loss][
+                            scalar
+                        ]
+            elif pkgtype == "teacher_package":
+                cscalars = info
+            else:
+                print("WARNING: Unknown info package {}".format(info))
+                continue
+            self.scalars.add_scalars(cscalars)
+
+        while not self.vector_tasks.metrics_out_queue.empty():
+            try:
+                metric = self.vector_tasks.metrics_out_queue.get_nowait()
+                self.scalars.add_scalars(metric)
+            except queue.Empty:
+                pass
+
+        tracked_means = self.scalars.pop_and_reset()
+        for k in tracked_means:
+            self.log_writer.add_scalar(
+                "train/" + k, tracked_means[k], self.total_steps + self.step_count
+            )
 
     def update(self, rollouts) -> None:
         # print("new update")
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
 
         for e in range(self.update_epochs):
-            # print("new epoch")
             data_generator = rollouts.recurrent_generator(
                 advantages, self.update_mini_batches
             )
 
             for bit, batch in enumerate(data_generator):
-                # print("new batch")
-
                 batch = {
                     k: batch[k].to(self.device) if k != "observations" else batch[k]
                     for k in batch
@@ -131,16 +214,16 @@ class Trainer:
                 )
 
                 info = dict(
+                    total_updates=self.total_updates,
                     backprop_count=self.backprop_count,
                     rollout_count=self.rollout_count,
                     epoch=e,
                     batch=bit,
-                    losses=[],
+                    losses={},
                 )
                 self.optimizer.zero_grad()
                 total_loss: Optional[torch.FloatTensor] = None
                 for loss_name in self.losses:
-                    # print("new loss")
                     loss, loss_weight = (
                         self.losses[loss_name],
                         self.loss_weights[loss_name],
@@ -152,11 +235,10 @@ class Trainer:
                     else:
                         total_loss += loss_weight * current_loss
 
-                    current_info["name"] = loss_name
-                    current_info["weight"] = loss_weight
-                    info["losses"].append(current_info)
+                    info["losses"][loss_name] = current_info
                 assert total_loss is not None, "No losses specified?"
-                self.tracker.append(info)
+                info["total_loss"] = total_loss.item()
+                self.tracker.append(("update_package", info))
 
                 total_loss.backward()
                 nn.utils.clip_grad_norm_(
@@ -164,6 +246,11 @@ class Trainer:
                 )
                 self.optimizer.step()
                 self.backprop_count += 1
+
+    def _preprocess_observations(self, batched_observations):
+        if self.observation_set is None:
+            return batched_observations
+        return self.observation_set.get_observations(batched_observations)
 
     def collect_rollout_step(self, rollouts):
         # print("new rollout step")
@@ -188,7 +275,7 @@ class Trainer:
         )
         if (
             self.teacher_forcing is not None
-            and self.teacher_forcing(self.rollout_count) > 0
+            and self.teacher_forcing(self.step_count) > 0
         ):
             tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
             expert_actions = (
@@ -199,7 +286,7 @@ class Trainer:
             )
             teacher_forcing_mask = (
                 torch.distributions.bernoulli.Bernoulli(
-                    torch.tensor(self.teacher_forcing(self.rollout_count))
+                    torch.tensor(self.teacher_forcing(self.step_count))
                 )
                 .sample(tf_mask_shape)
                 .long()
@@ -209,6 +296,13 @@ class Trainer:
                 teacher_forcing_mask * expert_actions
                 + (1 - teacher_forcing_mask) * actions
             )
+            teacher_force_info = {
+                "teacher_ratio": teacher_forcing_mask.sum().item() / actions.nelement(),
+                "teacher_enforcing": self.teacher_forcing(self.step_count),
+            }
+            self.tracker.append(("teacher_package", teacher_force_info))
+
+        self.step_count += actions.nelement()
 
         outputs = self.vector_tasks.step([a[0].item() for a in actions])
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
@@ -223,7 +317,7 @@ class Trainer:
         )
 
         rollouts.insert(
-            batch,
+            self._preprocess_observations(batch),
             recurrent_hidden_states,
             actions,
             actor_critic_output.distributions.log_probs(actions),
@@ -237,7 +331,7 @@ class Trainer:
         observations = self.vector_tasks.get_observations()
         batch = batch_observations(observations)
 
-        rollouts.insert_initial_observations(batch)
+        rollouts.insert_initial_observations(self._preprocess_observations(batch))
 
     def train(self, rollouts):
         self.initialize_rollouts(rollouts)
@@ -267,6 +361,13 @@ class Trainer:
 
             rollouts.after_update()
 
+            if (
+                self.step_count - self.last_log >= self.log_interval
+                or self.rollout_count == self.num_rollouts
+            ):
+                self.log()
+                self.last_log = self.step_count
+
             self.rollout_count += 1
 
             # save for every interval-th episode or for the last epoch
@@ -279,3 +380,125 @@ class Trainer:
                 and self.models_folder != ""
             ):
                 self.checkpoint_save()
+
+    def setup_stage(
+        self,
+        losses: Dict[str, Loss],
+        loss_weights: Dict[str, float],
+        steps_in_rollout: int,
+        stage_task_steps: int,
+        update_epochs: int,
+        update_mini_batches: int,
+        gamma: float,
+        use_gae: bool,
+        gae_lambda: float,
+        max_grad_norm: float,
+        teacher_forcing: Optional[LinearDecay] = None,
+        deterministic: bool = False,
+    ):
+        self.losses = losses
+        self.loss_weights = loss_weights
+
+        self.stage_task_steps = stage_task_steps
+        self.steps_in_rollout = steps_in_rollout
+        self.update_epochs = update_epochs
+        self.update_mini_batches = update_mini_batches
+
+        self.num_rollouts = (
+            int(self.stage_task_steps) // self.steps_in_rollout
+        ) // self.num_processes
+        print(
+            "Using %d rollouts, %d steps (from %d)"
+            % (
+                self.num_rollouts,
+                self.num_rollouts * self.num_processes * self.steps_in_rollout,
+                self.stage_task_steps,
+            )
+        )
+
+        self.gamma = gamma
+        self.use_gae = use_gae
+        self.gae_lambda = gae_lambda
+
+        self.max_grad_norm = max_grad_norm
+
+        self.teacher_forcing = teacher_forcing
+
+        self.deterministic = deterministic
+
+    def _get_loss(self, current_loss):
+        assert current_loss in self.train_pipeline, "undefined referenced loss"
+        if isinstance(self.train_pipeline[current_loss], Builder):
+            return self.train_pipeline[current_loss](optimizer=self.optimizer)
+        else:
+            return self.train_pipeline[current_loss]
+
+    def _load_losses(self, stage):
+        stage_losses = dict()
+        for current_loss in stage["losses"]:
+            stage_losses[current_loss] = self._get_loss(current_loss)
+
+        stage_weights = {name: 1.0 for name in stage["losses"]}
+        for current_loss in self.train_pipeline.get("loss_weights", []):
+            if current_loss in stage_losses:
+                stage_weights[current_loss] = self.train_pipeline["loss_weights"][
+                    current_loss
+                ]
+        for current_loss in stage.get("loss_weights", []):
+            assert current_loss in stage_losses, (
+                "missing loss definition for weight %s" % current_loss
+            )
+            stage_weights[current_loss] = stage["loss_weights"][current_loss]
+
+        return stage_losses, stage_weights
+
+    def _stage_value(self, stage, field):
+        assert field in stage or field in self.train_pipeline, (
+            "missing value for %s" % field
+        )
+        return stage[field] if field in stage else self.train_pipeline[field]
+
+    def run_pipeline(self, checkpoint_file_name: Optional[str] = None):
+        start_time = time.time()
+        self.local_start_time_str = time.strftime(
+            "%Y-%m-%d_%H-%M-%S", time.localtime(start_time)
+        )
+        if checkpoint_file_name is not None:
+            self.checkpoint_load(checkpoint_file_name)
+
+        for stage in self.train_pipeline["pipeline"]:
+            self.last_log = self.step_count - self.log_interval
+
+            stage_limit = stage["end_criterion"]
+            stage_losses, stage_weights = self._load_losses(stage)
+
+            self.setup_stage(
+                losses=stage_losses,
+                loss_weights=stage_weights,
+                steps_in_rollout=self._stage_value(stage, "num_steps"),
+                stage_task_steps=stage_limit,
+                update_epochs=self._stage_value(stage, "update_repeats"),
+                update_mini_batches=self._stage_value(stage, "num_mini_batch"),
+                gamma=self._stage_value(stage, "gamma"),
+                use_gae=self._stage_value(stage, "use_gae"),
+                gae_lambda=self._stage_value(stage, "gae_lambda"),
+                max_grad_norm=self._stage_value(stage, "max_grad_norm"),
+                teacher_forcing=stage.get("teacher_forcing"),
+            )
+
+            self.train(
+                RolloutStorage(
+                    self.steps_in_rollout,
+                    self.num_processes,
+                    self.actor_critic.action_space,
+                    self.actor_critic.recurrent_hidden_state_size,
+                )
+            )
+
+            self.total_updates += self.num_rollouts
+            self.pipeline_stage += 1
+
+            self.rollout_count = 0
+            self.backprop_count = 0
+            self.total_steps += self.step_count
+            self.step_count = 0

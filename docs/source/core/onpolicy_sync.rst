@@ -11,56 +11,56 @@ Subpackages
 Submodules
 ----------
 
-onpolicy\_sync\.arguments module
---------------------------------
+onpolicy\_sync.arguments module
+-------------------------------
 
 .. automodule:: onpolicy_sync.arguments
     :members:
     :undoc-members:
     :show-inheritance:
 
-onpolicy\_sync\.envs module
----------------------------
+onpolicy\_sync.envs module
+--------------------------
 
 .. automodule:: onpolicy_sync.envs
     :members:
     :undoc-members:
     :show-inheritance:
 
-onpolicy\_sync\.policy module
------------------------------
+onpolicy\_sync.policy module
+----------------------------
 
 .. automodule:: onpolicy_sync.policy
     :members:
     :undoc-members:
     :show-inheritance:
 
-onpolicy\_sync\.storage module
-------------------------------
+onpolicy\_sync.storage module
+-----------------------------
 
 .. automodule:: onpolicy_sync.storage
     :members:
     :undoc-members:
     :show-inheritance:
 
-onpolicy\_sync\.trainer module
-------------------------------
+onpolicy\_sync.trainer module
+-----------------------------
 
 .. automodule:: onpolicy_sync.trainer
     :members:
     :undoc-members:
     :show-inheritance:
 
-onpolicy\_sync\.utils module
-----------------------------
+onpolicy\_sync.utils module
+---------------------------
 
 .. automodule:: onpolicy_sync.utils
     :members:
     :undoc-members:
     :show-inheritance:
 
-onpolicy\_sync\.vector\_task module
------------------------------------
+onpolicy\_sync.vector\_task module
+----------------------------------
 
 .. automodule:: onpolicy_sync.vector_task
     :members:
