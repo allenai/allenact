@@ -4,7 +4,7 @@ import collections.abc
 
 
 def recursive_update(original: Dict[Any, Any], update: Dict[Any, Any]):
-    r"""Recursively updates original dictionary with entries form update dict.
+    """Recursively updates original dictionary with entries form update dict.
 
     Args:
         original:  Original dictionary to be updated.

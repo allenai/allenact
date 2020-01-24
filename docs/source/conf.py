@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath("../.."))
 # -- Project information -----------------------------------------------------
 
 project = "Embodied RL"
-copyright = "2020, Jordi Salvador and Luca Weihs"
+copyright = "2020, Allen Institute for Artificial Intelligence"
 author = "Jordi Salvador and Luca Weihs"
 
 master_doc = "index"
@@ -35,12 +35,18 @@ extensions = [
     "sphinx_epytext",
     "sphinx.ext.todo",
     "sphinx.ext.githubpages",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.ifconfig",
+    "sphinx.ext.viewcode",
+    "recommonmark",
 ]
 
 always_document_param_types = True  # passed to sphinx_autodoc_typehints
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
+
+source_suffix = [".rst", ".md"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.

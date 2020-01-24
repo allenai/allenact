@@ -3,17 +3,29 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Embodied RL's documentation!
+:github_url: https://github.com/allenai/embodied-rl
+
+Embodied-RL documentation
 =======================================
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Overview
+
+   Quick start <overview/quick-start>
+   Main data structures <overview/data-structures>
+   Changing rewards and losses <overview/changing-rewards-and-losses>
+   Defining a new model <overview/defining-a-new-model>
+   Defining a new task <overview/defining-a-new-task>
+
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
 
-Indices and tables
+Indices
 ==================
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`

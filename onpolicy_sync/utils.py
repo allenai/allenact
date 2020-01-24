@@ -51,7 +51,7 @@ def cleanup_log_dir(log_dir):
 def batch_observations(
     observations: List[Dict], device: Optional[torch.device] = None
 ) -> Dict[str, torch.Tensor]:
-    r"""Transpose a batch of observation dicts to a dict of batched
+    """Transpose a batch of observation dicts to a dict of batched
     observations.
 
     Args:

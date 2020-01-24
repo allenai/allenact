@@ -22,10 +22,11 @@ class Sensor(Generic[EnvType]):
     the user is also required to set the below attributes:
 
     Attributes:
-        config: configuration information for the sensor.
-        uuid: universally unique id.
-        observation_space: ``gym.Space`` object corresponding to observation of
-            sensor.
+
+    @ivar: config: configuration information for the sensor.
+    @ivar: uuid: universally unique id.
+    @ivar: observation_space: ``gym.Space`` object corresponding to observation of
+        sensor.
     """
 
     config: Dict[str, Any]

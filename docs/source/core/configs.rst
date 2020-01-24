@@ -7,12 +7,13 @@ Subpackages
 .. toctree::
 
     configs.losses
+    configs.models
 
 Submodules
 ----------
 
-configs\.util module
---------------------
+configs.util module
+-------------------
 
 .. automodule:: configs.util
     :members:
