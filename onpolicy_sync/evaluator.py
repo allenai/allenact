@@ -144,12 +144,14 @@ class Evaluator:
         outputs = self.vector_tasks.step([a[0].item() for a in actions])
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
 
-        rewards = torch.tensor(rewards, dtype=torch.float)
+        rewards = torch.tensor(rewards, dtype=torch.float, device=self.device)
         rewards = rewards.unsqueeze(1)
 
         # If done then clean the history of observations.
         masks = torch.tensor(
-            [[0.0] if done else [1.0] for done in dones], dtype=torch.float32
+            [[0.0] if done else [1.0] for done in dones],
+            dtype=torch.float32,
+            device=self.device,
         )
 
         npaused, keep, batch = self.remove_paused(observations)
@@ -172,8 +174,8 @@ class Evaluator:
         observations = self.vector_tasks.get_observations()
         npaused, keep, batch = self.remove_paused(observations)
         rollouts.reshape(keep)
-        rollouts.insert_initial_observations(self._preprocess_observations(batch))
         rollouts.to(self.device)
+        rollouts.insert_initial_observations(self._preprocess_observations(batch))
         return npaused
 
     def remove_paused(self, observations):
@@ -206,6 +208,7 @@ class Evaluator:
         steps = 0
         while num_paused < self.num_processes:
             num_paused += self.collect_rollout_step(rollouts)
+            rollouts.after_update()
             steps += 1
 
         self.log()

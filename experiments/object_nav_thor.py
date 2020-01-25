@@ -29,8 +29,10 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
     TRAIN_SCENES = [
         "FloorPlan1_physics"
     ]  # ["FloorPlan{}".format(i) for i in range(1, 21)]
-    VALID_SCENES = ["FloorPlan{}_physics".format(i) for i in range(21, 26)]
-    TEST_SCENSE = ["FloorPlan{}_physics".format(i) for i in range(26, 31)]
+    VALID_SCENES = [
+        "FloorPlan1_physics"
+    ]  # ["FloorPlan{}_physics".format(i) for i in range(21, 26)]
+    TEST_SCENES = ["FloorPlan{}_physics".format(i) for i in range(26, 31)]
 
     SCREEN_SIZE = 224
 
@@ -56,7 +58,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
 
     SCENE_PERIOD = 10
 
-    VALID_SAMPLES_IN_SCENE = 2
+    VALID_SAMPLES_IN_SCENE = 5
 
     @classmethod
     def tag(cls):
@@ -70,11 +72,11 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         nprocesses = 4
         lr = 2.5e-4
         num_mini_batch = 1
-        update_repeats = 2
+        update_repeats = 3
         num_steps = 16
-        save_interval = 100
         log_interval = 2 * num_steps * nprocesses
-        gpu_ids = [] if not torch.cuda.is_available() else [1]
+        save_interval = 2 * log_interval
+        gpu_ids = [] if not torch.cuda.is_available() else [0]
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0
@@ -109,8 +111,8 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
 
     @classmethod
     def evaluation_params(cls, **kwargs):
-        nprocesses = 5
-        gpu_ids = [] if not torch.cuda.is_available() else [2]
+        nprocesses = 4
+        gpu_ids = [] if not torch.cuda.is_available() else [1]
         return {
             "nprocesses": nprocesses,
             "gpu_ids": gpu_ids,
@@ -139,10 +141,6 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
     def _get_sampler_args_for_scene_split(
         self, scenes: List[str], process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
-        if len(scenes) % total_processes != 0:
-            print(
-                "Warning: oversampling some of the scenes to feed all processes. You can avoid this by setting a number of workers divisor of the number of scenes"
-            )
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
                 print(
@@ -150,6 +148,11 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
                 )
             scenes = scenes * int(ceil(total_processes / len(scenes)))
             scenes = scenes[: total_processes * (len(scenes) // total_processes)]
+        else:
+            if len(scenes) % total_processes != 0:
+                print(
+                    "Warning: oversampling some of the scenes to feed all processes. You can avoid this by setting a number of workers divisor of the number of scenes"
+                )
         inds = self._partition_inds(len(scenes), total_processes)
 
         return {
@@ -171,9 +174,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             self.TRAIN_SCENES, process_ind, total_processes
         )
         res["scene_period"] = self.SCENE_PERIOD
-        res["env_args"]["x_display"] = (
-            "0.%d" % devices[0] if len(devices) >= 0 else None
-        )
+        res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
         return res
 
     def valid_task_sampler_args(
@@ -184,18 +185,14 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         )
         res["scene_period"] = self.VALID_SAMPLES_IN_SCENE
         res["max_tasks"] = self.VALID_SAMPLES_IN_SCENE * len(res["scenes"])
-        res["env_args"]["x_display"] = (
-            "0.%d" % devices[0] if len(devices) >= 0 else None
-        )
+        res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
         return res
 
     def test_task_sampler_args(
         self, process_ind: int, total_processes: int, devices: Optional[List[int]]
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.TEST_SCENSE, process_ind, total_processes
+            self.TEST_SCENES, process_ind, total_processes
         )
-        res["env_args"]["x_display"] = (
-            "0.%d" % devices[0] if len(devices) >= 0 else None
-        )
+        res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
         return res
