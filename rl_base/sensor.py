@@ -100,7 +100,8 @@ class SensorSuite(Generic[EnvType]):
     def get_observations(
         self, env: EnvType, task: Optional["Task[EnvType]"], *args: Any, **kwargs: Any
     ) -> Dict[str, Any]:
-        """
+        """Get all observations corresponding to the sensors in the suite.
+
         # Attributes
 
         env : The environment from which to get the observation.

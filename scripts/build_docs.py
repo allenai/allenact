@@ -12,17 +12,19 @@ exclude_files = [
     "README.md",
     "version.py",
     "run.py",
-    "setup.py"
+    "setup.py",
 ]
 
 
 def render_file(
     relative_src_path: str, src_file: str, to_file: str, modifier="++"
 ) -> None:
-    """
-    Shells out to pydocmd, which creates a .md file from the docstrings of python functions and classes in
-    the file we specify. The modifer specifies the depth at which to generate docs for classes and functions
-    in the file. More information here: https://pypi.org/project/pydoc-markdown/
+    """Shells out to pydocmd, which creates a .md file from the docstrings of
+    python functions and classes in the file we specify.
+
+    The modifer specifies the depth at which to generate docs for
+    classes and functions in the file. More information here:
+    https://pypi.org/project/pydoc-markdown/
     """
     relative_src_namespace = relative_src_path.replace("/", ".")
     src_base = src_file.replace(".py", "")
@@ -43,9 +45,7 @@ def render_file(
 def build_docs_for_file(
     relative_path: str, file_name: str, docs_dir: str
 ) -> Dict[str, str]:
-    """
-    Build docs for an individual python file.
-    """
+    """Build docs for an individual python file."""
     clean_filename = file_name.replace(".py", "")
     markdown_filename = f"{clean_filename}.md"
 
@@ -59,7 +59,9 @@ def build_docs_for_file(
 def build_docs(base_dir: str, root_path: str, docs_dir: str):
 
     ignore_rel_dirs = ["docs", "scripts", "experiments"]
-    ignore_abs_dirs = [os.path.abspath(os.path.join(base_dir, rel_dir)) for rel_dir in ignore_rel_dirs]
+    ignore_abs_dirs = [
+        os.path.abspath(os.path.join(base_dir, rel_dir)) for rel_dir in ignore_rel_dirs
+    ]
 
     nav_root = []
 

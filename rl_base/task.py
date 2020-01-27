@@ -59,7 +59,8 @@ class Task(Generic[EnvType]):
     @property
     @abstractmethod
     def action_space(self) -> gym.Space:
-        """
+        """Task's action space.
+
         # Returns
 
         The action space for the task.
