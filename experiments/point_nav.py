@@ -41,7 +41,7 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
 
     CONFIG = habitat.get_config()
     CONFIG.defrost()
-    CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
+    CONFIG.DATASET.SCENES_DIR = '../habitat-api/data/scene_datasets/'
     CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
     CONFIG.SIMULATOR.SEMANTIC_SENSOR.WIDTH = SCREEN_SIZE
     CONFIG.SIMULATOR.SEMANTIC_SENSOR.HEIGHT = SCREEN_SIZE
