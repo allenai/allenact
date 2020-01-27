@@ -21,9 +21,9 @@ from extensions.habitat.sensors import RGBSensorHabitat, TargetCoordinatesSensor
 class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
     """A Point Navigation experiment configuraqtion in Habitat"""
 
-    TRAIN_SCENES = "../habitat-api/data/datasets/pointnav/habitat-test-scenes/v1/train/train.json.gz"
-    VALID_SCENES = "../habitat-api/data/datasets/pointnav/habitat-test-scenes/v1/val/val.json.gz"
-    TEST_SCENES = "../habitat-api/data/datasets/pointnav/habitat-test-scenes/v1/test/test.json.gz"
+    TRAIN_SCENES = "habitat/habitat-api/data/datasets/pointnav/habitat-test-scenes/v1/train/train.json.gz"
+    VALID_SCENES = "habitat/habitat-api/data/datasets/pointnav/habitat-test-scenes/v1/val/val.json.gz"
+    TEST_SCENES = "habitat/habitat-api/data/datasets/pointnav/habitat-test-scenes/v1/test/test.json.gz"
 
     SCREEN_SIZE = 224
     MAX_STEPS = 128
@@ -41,7 +41,7 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
 
     CONFIG = habitat.get_config()
     CONFIG.defrost()
-    CONFIG.DATASET.SCENES_DIR = '../habitat-api/data/scene_datasets/'
+    CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
     CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
     CONFIG.SIMULATOR.SEMANTIC_SENSOR.WIDTH = SCREEN_SIZE
     CONFIG.SIMULATOR.SEMANTIC_SENSOR.HEIGHT = SCREEN_SIZE
