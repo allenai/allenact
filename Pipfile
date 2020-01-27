@@ -17,6 +17,9 @@ sphinx-autodoc-typehints = "*"
 docstr-coverage = "*"
 setuptools = "==41.0.0"
 recommonmark = "*"
+ruamel-yaml = "*"
+pydoc-markdown = "*"
+mkdocs-material = "*"
 
 [packages]
 gym = "*"

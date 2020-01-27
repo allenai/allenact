@@ -40,8 +40,10 @@ class Sensor(Generic[EnvType]):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         """The unique ID of the sensor.
 
-        @param args: extra args.
-        @param kwargs: extra kwargs.
+        # Parameters
+
+        args : extra args.
+        kwargs : extra kwargs.
         """
         raise NotImplementedError()
 
@@ -99,7 +101,14 @@ class SensorSuite(Generic[EnvType]):
         self, env: EnvType, task: Optional["Task[EnvType]"], *args: Any, **kwargs: Any
     ) -> Dict[str, Any]:
         """
-        @return: collect data from all sensors and return it packaged inside a Dict.
+        # Attributes
+
+        env : The environment from which to get the observation.
+        task : (Optionally) the task from which to get the observation.
+
+        # Returns
+
+        Data from all sensors packaged inside a Dict.
         """
         return {
             uuid: sensor.get_observation(env=env, task=task, *args, **kwargs)

@@ -1,0 +1,84 @@
+site_name: EmbodiedRL
+site_description: EmbodiedRL is a ..
+site_url: https://github.com/allenai/embodied-rl
+
+theme:
+  name: material
+  palette:
+    primary: blue
+    accent: grey
+  logo: img/PriorLogo_CircleOnly.svg
+  favicon: img/PriorLogo_CircleOnly.svg
+  highlightjs: true
+  hljs_languages:
+  - python
+  - typescript
+  - json
+
+
+repo_name: allenai/embodied-rl
+repo_url: https://github.com/allenai/embodied-rl
+edit_uri: edit/master/docs/
+
+nav:
+- EmbodiedRL: README.md
+- Overview:
+  - Quick-start: overview/quick-start.md
+  - Primary data structures: overview/data-structures.md
+  - Changing rewards and losses: overview/changing-rewards-and-losses.md
+  - Defining a new model: overview/defining-a-new-model.md
+  - Defining a new task: overview/defining-a-new-task.md
+- Errata:
+  - Generating documentation: errata/generating-documentation.md
+#  - Walk Through:
+- Roadmap: ROADMAP.md
+- Contributing: CONTRIBUTING.md
+- Licence: LICENSE.md
+- API:
+  - configs:
+    - losses:
+      - ppo_config: api/configs/losses/ppo_config.md
+      - a2c_config: api/configs/losses/a2c_config.md
+    - util: api/configs/util.md
+  - extensions:
+    - ai2thor:
+      - tasks: api/extensions/ai2thor/tasks.md
+      - misc_util: api/extensions/ai2thor/misc_util.md
+      - sensors: api/extensions/ai2thor/sensors.md
+      - constants: api/extensions/ai2thor/constants.md
+      - models:
+        - object_nav_models: api/extensions/ai2thor/models/object_nav_models.md
+        - basic_models: api/extensions/ai2thor/models/basic_models.md
+      - task_samplers: api/extensions/ai2thor/task_samplers.md
+      - preprocessors: api/extensions/ai2thor/preprocessors.md
+      - environment: api/extensions/ai2thor/environment.md
+  - main: api/main.md
+  - onpolicy_sync:
+    - losses:
+      - a2c_acktr: api/onpolicy_sync/losses/a2c_acktr.md
+      - imitation: api/onpolicy_sync/losses/imitation.md
+      - abstract_loss: api/onpolicy_sync/losses/abstract_loss.md
+      - ppo: api/onpolicy_sync/losses/ppo.md
+      - kfac: api/onpolicy_sync/losses/kfac.md
+    - envs: api/onpolicy_sync/envs.md
+    - arguments: api/onpolicy_sync/arguments.md
+    - policy: api/onpolicy_sync/policy.md
+    - utils: api/onpolicy_sync/utils.md
+    - vector_task: api/onpolicy_sync/vector_task.md
+    - storage: api/onpolicy_sync/storage.md
+    - trainer: api/onpolicy_sync/trainer.md
+  - rl_base:
+    - experiment_config: api/rl_base/experiment_config.md
+    - task: api/rl_base/task.md
+    - sensor: api/rl_base/sensor.md
+    - preprocessor: api/rl_base/preprocessor.md
+    - distributions: api/rl_base/distributions.md
+    - common: api/rl_base/common.md
+markdown_extensions:
+- toc:
+    permalink: '#'
+- markdown.extensions.codehilite:
+    guess_lang: true
+- admonition
+- codehilite
+- extra

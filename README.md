@@ -7,6 +7,7 @@ library of Ilya Kostrikov and uses some data structures from FAIR's
 [habitat-api](https://github.com/facebookresearch/habitat-api).
 
 Currently, two RL algorithms are implemented
+
 * Advantage Actor Critic (A2C) - synchronized [A3C](https://arxiv.org/pdf/1602.01783v1.pdf)
 * [Proximal Policy Optimization (PPO)](https://arxiv.org/pdf/1707.06347.pdf)
 

@@ -60,7 +60,9 @@ class Task(Generic[EnvType]):
     @abstractmethod
     def action_space(self) -> gym.Space:
         """
-        @return: the action space for the task.
+        # Returns
+
+        The action space for the task.
         """
         raise NotImplementedError()
 
