@@ -38,15 +38,19 @@ RUN ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 RUN cmake --version
 
 # Conda environment
-RUN conda create -n habitat python=3.6
+RUN conda create -n embodied-rl python=3.6
 
 # Setup habtiat-sim
 RUN git clone https://github.com/facebookresearch/habitat-sim.git
-RUN /bin/bash -c ". activate habitat; cd habitat-sim; git checkout 62bc01be8cbc148eb099e96fa0b123e16b21f95f; python setup.py install --headless"
+RUN /bin/bash -c ". activate embodied-rl; cd habitat-sim; git checkout 62bc01be8cbc148eb099e96fa0b123e16b21f95f; python setup.py install --headless"
 
 # Install challenge specific habitat-api
-RUN git clone https://github.com/facebookresearch/habitat-api.git
-RUN /bin/bash -c ". activate habitat; cd habitat-api; git checkout 0985c6ffd17557150488d238d79574c60612faa9; pip install -e ."
+RUN git clone https://github.com/klemenkotar/habitat-api.git
+RUN /bin/bash -c ". activate embodied-rl; cd habitat-api; git checkout e6851021990ec43350fdbcd2862321c67ebbe512; pip install -e ."
+
+# Install embodied-rl and thor
+RUN git clone https://github.com/klemenkotar/embodied-rl.git
+RUN /bin/bash -c ". activate embodied-rl; cd embodied-rl; git checkout ab1a7ef4196ac6e19aef3d317ad54ed852550796; pip install -r requirements.txt"
 
 # Silence habitat-sim logs
 ENV GLOG_minloglevel=2
