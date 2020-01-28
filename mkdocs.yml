@@ -55,11 +55,11 @@ nav:
   - main: api/main.md
   - onpolicy_sync:
     - losses:
-      - a2c_acktr: api/onpolicy_sync/losses/a2c_acktr.md
       - imitation: api/onpolicy_sync/losses/imitation.md
       - abstract_loss: api/onpolicy_sync/losses/abstract_loss.md
       - ppo: api/onpolicy_sync/losses/ppo.md
       - kfac: api/onpolicy_sync/losses/kfac.md
+      - a2cacktr: api/onpolicy_sync/losses/a2cacktr.md
     - envs: api/onpolicy_sync/envs.md
     - arguments: api/onpolicy_sync/arguments.md
     - policy: api/onpolicy_sync/policy.md

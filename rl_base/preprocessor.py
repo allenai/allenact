@@ -33,8 +33,10 @@ class Preprocessor(abc.ABC):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         """The unique ID of the preprocessor.
 
-        @param args: extra args.
-        @param kwargs: extra kwargs.
+        # Parameters
+
+        args : extra args.
+        kwargs : extra kwargs.
         """
         raise NotImplementedError()
 
@@ -42,8 +44,10 @@ class Preprocessor(abc.ABC):
     def _get_input_uuids(self, *args: Any, **kwargs: Any) -> List[str]:
         """The unique IDs of the input sensors and preprocessors.
 
-        @param args: extra args.
-        @param kwargs: extra kwargs.
+        # Parameters
+
+        args : extra args.
+        kwargs : extra kwargs.
         """
         raise NotImplementedError()
 
@@ -56,8 +60,13 @@ class Preprocessor(abc.ABC):
     def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:
         """Returns processed observations from sensors or other preprocessors.
 
-        @param obs: dict with available observations and processed observations.
-        @return: processed observation.
+        # Parameters
+
+        obs : Dict with available observations and processed observations.
+
+        # Returns
+
+        Processed observation.
         """
         raise NotImplementedError()
 
@@ -66,17 +75,21 @@ class PreprocessorGraph:
     """Represents a graph of preprocessors, with each preprocessor being
     identified through a unique id.
 
-    Attributes:
-        preprocessors: list containing preprocessors with required input uuids, output uuid of each
-            sensor must be unique.
+    # Attributes
+
+    preprocessors : List containing preprocessors with required input uuids, output uuid of each
+        sensor must be unique.
     """
 
     preprocessors: Dict[str, Preprocessor]
     observation_spaces: SpaceDict
 
     def __init__(self, preprocessors: List[Preprocessor],) -> None:
-        """
-        @param preprocessors: the preprocessors that will be included in the graph.
+        """Initializer.
+
+        # Parameters
+
+        preprocessors : The preprocessors that will be included in the graph.
         """
         self.preprocessors = OrderedDict()
         spaces: OrderedDict[str, gym.Space] = OrderedDict()
@@ -106,16 +119,24 @@ class PreprocessorGraph:
     def get(self, uuid: str) -> Preprocessor:
         """Return preprocessor with the given `uuid`.
 
-        @param uuid: the unique id of the preprocessor
-        @return: the preprocessor with unique id `uuid`.
+        # Parameters
+
+        uuid : The unique id of the preprocessor.
+
+        # Returns
+
+        The preprocessor with unique id `uuid`.
         """
         return self.preprocessors[uuid]
 
     def get_observations(
         self, obs: Dict[str, Any], *args: Any, **kwargs: Any
     ) -> Dict[str, Any]:
-        """
-        @return: collect observations processed from all sensors and return it packaged inside a Dict.
+        """Get processed observations.
+
+        # Returns
+
+        Collect observations processed from all sensors and return it packaged inside a Dict.
         """
 
         for uuid in self.compute_order:
@@ -129,10 +150,11 @@ class ObservationSet:
     """Represents a list of source_ids, corresponding to sensors and
     preprocessors, with each source being identified through a unique id.
 
-    Attributes:
-        source_ids: list containing sensor and preprocessor ids for the environment, uuid of each
-            source must be unique.
-        graph: computation graph for preprocessors
+    # Attributes
+
+    source_ids: List containing sensor and preprocessor ids for the environment, uuid of each
+        source must be unique.
+    graph: Computation graph for preprocessors.
     """
 
     source_ids: List[str]
@@ -141,9 +163,12 @@ class ObservationSet:
     def __init__(
         self, source_ids: List[str], all_preprocessors: List[Preprocessor],
     ) -> None:
-        """
-        @param source_ids: the sensors and preprocessors that will be included in the set.
-        @param all_preprocessors: the entire list of preprocessors to be executed
+        """Initializer.
+
+        # Parameters
+
+        source_ids : the sensors and preprocessors that will be included in the set.
+        all_preprocessors : the entire list of preprocessors to be executed.
         """
 
         self.graph = PreprocessorGraph(all_preprocessors)
@@ -156,16 +181,24 @@ class ObservationSet:
     def get(self, uuid: str) -> Preprocessor:
         """Return preprocessor with the given `uuid`.
 
-        @param uuid: the unique id of the preprocessor
-        @return: the preprocessor with unique id `uuid`.
+        # Parameters
+
+        uuid : The unique id of the preprocessor.
+
+        # Returns
+
+        The preprocessor with unique id `uuid`.
         """
         return self.graph.get(uuid)
 
     def get_observations(
         self, obs: Dict[str, Any], *args: Any, **kwargs: Any
     ) -> Dict[str, Any]:
-        """
-        @return: collect observations from all sources and return them packaged inside a Dict.
+        """Get all observations within a dictionary.
+
+        # Returns
+
+        Collect observations from all sources and return them packaged inside a Dict.
         """
         obs = self.graph.get_observations(obs)
         return OrderedDict([(k, obs[k]) for k in self.source_ids])

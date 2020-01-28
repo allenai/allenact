@@ -103,7 +103,9 @@ class Task(Generic[EnvType]):
     def action_names(cls) -> Tuple[str, ...]:
         """A tuple of action names.
 
-        @return: tuple of (ordered) action names so that taking action
+        # Returns
+
+        Tuple of (ordered) action names so that taking action
             running `task.step(i)` corresponds to taking action task.action_names()[i].
         """
         raise NotImplementedError()
@@ -123,14 +125,19 @@ class Task(Generic[EnvType]):
     def metrics(self) -> Dict[str, Any]:
         """Computes metrics related to the task after the task's completion.
 
-        @return: A dictionary where every key is a string (the metric's
+        # Returns
+
+        A dictionary where every key is a string (the metric's
             name) and the value is the value of the metric.
         """
         return {}
 
     def query_expert(self) -> Tuple[Any, bool]:
-        """
-        @return: A tuple (x, y) where x is the expert action (or policy) and y is False \
+        """Query the expert policy for this task.
+
+        # Returns
+
+         A tuple (x, y) where x is the expert action (or policy) and y is False \
             if the expert could not determine the optimal action (otherwise True). Here y \
             is used for masking. Even when y is False, x should still lie in the space of \
             possible values (e.g. if x is the expert policy then x should be the correct length, \
@@ -148,8 +155,11 @@ class TaskSampler(abc.ABC):
     @property
     @abstractmethod
     def __len__(self) -> Union[int, float]:
-        """
-        @return: Number of total tasks remaining that can be sampled. Can be
+        """Length.
+
+        # Returns
+
+        Number of total tasks remaining that can be sampled. Can be
             float('inf').
         """
         raise NotImplementedError()
@@ -159,7 +169,9 @@ class TaskSampler(abc.ABC):
     def total_unique(self) -> Optional[Union[int, float]]:
         """Total unique tasks.
 
-        @return: Total number of *unique* tasks that can be sampled. Can be
+        # Returns
+
+        Total number of *unique* tasks that can be sampled. Can be
             float('inf') or, if the total unique is not known, None.
         """
         raise NotImplementedError()
@@ -167,15 +179,21 @@ class TaskSampler(abc.ABC):
     @property
     @abstractmethod
     def last_sampled_task(self) -> Optional[Task]:
-        """
-        @return: the most recently sampled Task.
+        """Get the most recently sampled Task.
+
+        # Returns
+
+        The most recently sampled Task.
         """
         raise NotImplementedError()
 
     @abstractmethod
     def next_task(self) -> Optional[Task]:
-        """
-        @return: the next Task in the sampler's stream if a next task does exist.
+        """Get the next task in the sampler's stream.
+
+        # Returns
+
+        The next Task in the sampler's stream if a next task exists. Otherwise None.
         """
         raise NotImplementedError()
 
@@ -193,7 +211,9 @@ class TaskSampler(abc.ABC):
         """Checks if all observation spaces of tasks that can be sampled are
         equal.
 
-        @return: True if all Tasks that can be sampled by this sampler have the
+        # Returns
+
+        True if all Tasks that can be sampled by this sampler have the
             same observation space. Otherwise False.
         """
         raise NotImplementedError()
