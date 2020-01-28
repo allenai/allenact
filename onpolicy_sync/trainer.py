@@ -19,84 +19,73 @@ from rl_base.experiment_config import ExperimentConfig
 from configs.util import Builder
 from rl_base.preprocessor import ObservationSet
 from onpolicy_sync.storage import RolloutStorage
-from onpolicy_sync.evaluator import evaluate
+import torch.multiprocessing as mp
 
 
-try:
-    # Use torch.multiprocessing if we can.
-    # We have yet to find a reason to not use it and
-    # you are required to use it when sending a torch.Tensor
-    # between processes
-    import torch.multiprocessing as mp
-except ImportError:
-    import multiprocessing as mp
+def validate(
+    config: ExperimentConfig,
+    output_dir: str,
+    read_from_parent: mp.Queue,
+    write_to_parent: mp.Queue,
+):
+    evaluator = Trainer(config, output_dir, mode="valid")
+    evaluator.process_checkpoints(read_from_parent, write_to_parent)
 
 
 class Trainer:
-    def __init__(self, config: ExperimentConfig, output_dir: str):
-        self.train_pipeline = config.training_pipeline()
+    def __init__(self, config: ExperimentConfig, output_dir: str, mode: str = "train"):
+        self.mode = mode.lower()
+        assert self.mode in [
+            "train",
+            "valid",
+            "test",
+        ], "Only train, valid, test modes supported"
 
-        train_pipeline = self.train_pipeline
+        self.params = self.get_params(config)
 
         self.device = "cpu"
-        if len(train_pipeline["gpu_ids"]) > 0:
+        if len(self.params["gpu_ids"]) > 0:
             if not torch.cuda.is_available():
                 print(
                     "Warning: no CUDA devices available for gpu ids {}".format(
-                        train_pipeline["gpu_ids"]
+                        self.params["gpu_ids"]
                     )
                 )
             else:
-                self.device = "cuda:%d" % train_pipeline["gpu_ids"][0]
+                self.device = "cuda:%d" % self.params["gpu_ids"][0]
                 torch.cuda.set_device(self.device)
 
         self.observation_set = None
-        if "observation_set" in train_pipeline:
+        if "preprocessors" in self.params and "observation_set" in self.params:
             all_preprocessors = []
-            sensor_ids = []
-            preprocessor_ids = []
-            for observation in train_pipeline["observation_set"]:
-                if isinstance(observation, str):
-                    sensor_ids.append(observation)
+            for preprocessor in self.params["preprocessors"]:
+                if isinstance(preprocessor, Builder):
+                    all_preprocessors.append(
+                        preprocessor(config={"device": self.device})
+                    )
                 else:
-                    if isinstance(observation, Builder):
-                        all_preprocessors.append(
-                            observation(config={"device": self.device})
-                        )
-                    else:
-                        all_preprocessors.append(observation)
-                    preprocessor_ids.append(all_preprocessors[-1].uuid)
+                    all_preprocessors.append(preprocessor)
+
             self.observation_set = ObservationSet(
-                sensor_ids, preprocessor_ids, all_preprocessors
+                self.params["observation_set"], all_preprocessors
             )
 
         self.actor_critic = config.create_model().to(self.device)
 
-        self.optimizer = train_pipeline["optimizer"]
-        if isinstance(self.optimizer, Builder):
-            self.optimizer = self.optimizer(
-                params=[p for p in self.actor_critic.parameters() if p.requires_grad]
-            )
-
-        devices = (
-            train_pipeline["sampler_devices"]
-            if "sampler_devices" in train_pipeline
-            else train_pipeline["gpu_ids"]
-        )
-        sampler_fn_args = [
-            config.train_task_sampler_args(
-                process_ind=it,
-                total_processes=train_pipeline["nprocesses"],
-                devices=devices,
-            )
-            for it in range(train_pipeline["nprocesses"])
-        ]
+        self.optimizer = None
+        if "optimizer" in self.params:
+            self.optimizer = self.params["optimizer"]
+            if isinstance(self.optimizer, Builder):
+                self.optimizer = self.optimizer(
+                    params=[
+                        p for p in self.actor_critic.parameters() if p.requires_grad
+                    ]
+                )
 
         self.vector_tasks = VectorSampledTasks(
-            make_sampler_fn=config.make_sampler_fn, sampler_fn_args=sampler_fn_args
+            make_sampler_fn=config.make_sampler_fn,
+            sampler_fn_args=self.get_sampler_fn_args(config),
         )
-
-        self.tracker = deque()
 
         self.output_dir = output_dir
         self.models_folder = os.path.join(output_dir, "models")
@@ -104,16 +93,18 @@ class Trainer:
 
         self.configs_folder = os.path.join(output_dir, "configs")
         os.makedirs(self.configs_folder, exist_ok=True)
-        for file in config._loaded_config_src_files:
-            parts = config._loaded_config_src_files[file].split(".")
-            src_file = os.path.sep.join(parts) + ".py"
-            dst_file = (
-                os.path.join(self.configs_folder, os.path.join(*parts[1:])) + ".py"
-            )
-            os.makedirs(os.path.dirname(dst_file), exist_ok=True)
-            shutil.copy(src_file, dst_file)
+        if mode == "train":
+            for file in config._loaded_config_src_files:
+                parts = config._loaded_config_src_files[file].split(".")
+                src_file = os.path.sep.join(parts) + ".py"
+                dst_file = (
+                    os.path.join(self.configs_folder, os.path.join(*parts[1:])) + ".py"
+                )
+                os.makedirs(os.path.dirname(dst_file), exist_ok=True)
+                shutil.copy(src_file, dst_file)
 
-        self.log_writer = SummaryWriter(log_dir=output_dir)
+        self.log_writer = None
+
         self.scalars = ScalarMeanTracker()
 
         self.total_updates = 0
@@ -126,14 +117,57 @@ class Trainer:
 
         self.experiment_name = config.tag()
 
-        self.save_interval = train_pipeline["save_interval"]
-        self.log_interval = train_pipeline["log_interval"]
-        self.num_processes = train_pipeline["nprocesses"]
+        self.save_interval = self.params["save_interval"]
+        self.log_interval = self.params["log_interval"]
+        self.num_processes = self.params["nprocesses"]
 
         self.config = config
 
-        self.eval_process = None
-        self.eval_mp_ctx = mp.get_context("spawn")
+        self.write_to_eval = None
+        if self.mode == "train":
+            self.mp_ctx = self.vector_tasks.mp_ctx
+            self.write_to_eval = self.mp_ctx.Queue()
+            self.eval_process = self.mp_ctx.Process(
+                target=validate,
+                args=(
+                    self.config,
+                    self.output_dir,
+                    self.write_to_eval,
+                    self.vector_tasks.metrics_out_queue,
+                ),
+            )
+            self.eval_process.start()
+
+    def get_params(self, config: ExperimentConfig):
+        if self.mode == "train":
+            return config.training_pipeline()
+        elif self.mode == "valid":
+            return config.evaluation_params()
+        elif self.mode == "test":
+            return config.evaluation_params()
+
+    def get_sampler_fn_args(self, config: ExperimentConfig):
+        devices = (
+            self.params["sampler_devices"]
+            if "sampler_devices" in self.params
+            else self.params["gpu_ids"]
+        )
+
+        if self.mode == "train":
+            fn = config.train_task_sampler_args
+        elif self.mode == "valid":
+            fn = config.valid_task_sampler_args
+        elif self.mode == "test":
+            fn = config.test_task_sampler_args
+
+        return [
+            fn(
+                process_ind=it,
+                total_processes=self.params["nprocesses"],
+                devices=devices,
+            )
+            for it in range(self.params["nprocesses"])
+        ]
 
     def checkpoint_save(self) -> str:
         os.makedirs(self.models_folder, exist_ok=True)
@@ -170,36 +204,19 @@ class Trainer:
             ckpt = torch.load(ckpt, map_location="cpu")
 
         self.actor_critic.load_state_dict(ckpt["model_state_dict"])
-        self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
         self.step_count = ckpt["step_count"]
-        self.backprop_count = ckpt["backprop_count"]
-        self.rollout_count = ckpt["rollout_count"]
-        self.pipeline_stage = ckpt["pipeline_stage"]
-        self.total_updates = ckpt["total_updates"]
         self.total_steps = ckpt["total_steps"]
-        self.local_start_time_str = ckpt["local_start_time_str"]
-        self.train_pipeline["pipeline"] = self.train_pipeline["pipeline"][
-            self.pipeline_stage :
-        ]
 
-    def log(self):
-        while len(self.tracker) != 0:
-            pkgtype, info = self.tracker.popleft()
-            if pkgtype == "update_package":
-                cscalars = {"total_loss": info["total_loss"]}
-                for loss in info["losses"]:
-                    lossname = loss[:-5] if loss.endswith("_loss") else loss
-                    for scalar in info["losses"][loss]:
-                        cscalars["/".join([lossname, scalar])] = info["losses"][loss][
-                            scalar
-                        ]
-            elif pkgtype == "teacher_package":
-                cscalars = info
-            else:
-                print("WARNING: Unknown info package {}".format(info))
-                continue
-            self.scalars.add_scalars(cscalars)
+        if self.mode == "train":
+            self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+            self.backprop_count = ckpt["backprop_count"]
+            self.rollout_count = ckpt["rollout_count"]
+            self.pipeline_stage = ckpt["pipeline_stage"]
+            self.total_updates = ckpt["total_updates"]
+            self.local_start_time_str = ckpt["local_start_time_str"]
+            self.params["pipeline"] = self.params["pipeline"][self.pipeline_stage :]
 
+    def process_valid_metrics(self):
         while not self.vector_tasks.metrics_out_queue.empty():
             try:
                 metric = self.vector_tasks.metrics_out_queue.get_nowait()
@@ -207,11 +224,47 @@ class Trainer:
             except queue.Empty:
                 pass
 
+        return self.scalars.pop_and_reset()
+
+    def log(self):
+        valid_metrics = None
+        while not self.vector_tasks.metrics_out_queue.empty():
+            try:
+                metric = self.vector_tasks.metrics_out_queue.get_nowait()
+                if isinstance(metric, tuple):
+                    pkg_type, info = metric
+                    if pkg_type == "valid_metrics":
+                        valid_metrics = {k: v for k, v in info.items()}
+                    else:
+                        if pkg_type == "update_package":
+                            cscalars = {"total_loss": info["total_loss"]}
+                            for loss in info["losses"]:
+                                lossname = loss[:-5] if loss.endswith("_loss") else loss
+                                for scalar in info["losses"][loss]:
+                                    cscalars["/".join([lossname, scalar])] = info[
+                                        "losses"
+                                    ][loss][scalar]
+                        elif pkg_type == "teacher_package":
+                            cscalars = {k: v for k, v in info.items()}
+                        else:
+                            print("WARNING: Unknown info package {}".format(info))
+                        self.scalars.add_scalars(cscalars)
+                else:
+                    self.scalars.add_scalars(metric)
+            except queue.Empty:
+                pass
+
         tracked_means = self.scalars.pop_and_reset()
         for k in tracked_means:
             self.log_writer.add_scalar(
-                "train/" + k, tracked_means[k], self.total_steps + self.step_count
+                "train/" + k, tracked_means[k], self.total_steps + self.step_count,
             )
+
+        if valid_metrics is not None:
+            for k in valid_metrics:
+                self.log_writer.add_scalar(
+                    "valid/" + k, valid_metrics[k][0], valid_metrics[k][1],
+                )
 
     def update(self, rollouts) -> None:
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
@@ -254,7 +307,7 @@ class Trainer:
                     info["losses"][loss_name] = current_info
                 assert total_loss is not None, "No losses specified?"
                 info["total_loss"] = total_loss.item()
-                self.tracker.append(("update_package", info))
+                self.vector_tasks.metrics_out_queue.put(("update_package", info))
 
                 total_loss.backward()
                 nn.utils.clip_grad_norm_(
@@ -287,12 +340,11 @@ class Trainer:
         actions = (
             teacher_forcing_mask * expert_actions + (1 - teacher_forcing_mask) * actions
         )
-        teacher_force_info = {
-            "teacher_ratio": teacher_forcing_mask.sum().item() / actions.nelement(),
-            "teacher_enforcing": self.teacher_forcing(self.step_count),
-        }
-        self.tracker.append(("teacher_package", teacher_force_info))
-        return actions
+
+        return (
+            actions,
+            {"teacher_forcing_mask": teacher_forcing_mask},
+        )
 
     def collect_rollout_step(self, rollouts):
         # sample actions
@@ -318,14 +370,23 @@ class Trainer:
             self.teacher_forcing is not None
             and self.teacher_forcing(self.step_count) > 0
         ):
-            actions = self.apply_teacher_forcing(actions, step_observation)
+            actions, enforce_info = self.apply_teacher_forcing(
+                actions, step_observation
+            )
+            teacher_force_info = {
+                "teacher_ratio": enforce_info["teacher_forcing_mask"].sum().item()
+                / actions.nelement(),
+                "teacher_enforcing": self.teacher_forcing(self.step_count),
+            }
+            self.vector_tasks.metrics_out_queue.put(
+                ("teacher_package", teacher_force_info)
+            )
 
         self.step_count += actions.nelement()
 
         outputs = self.vector_tasks.step([a[0].item() for a in actions])
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
 
-        batch = batch_observations(observations, device=self.device)
         rewards = torch.tensor(rewards, dtype=torch.float, device=self.device)
         rewards = rewards.unsqueeze(1)
 
@@ -336,23 +397,45 @@ class Trainer:
             device=self.device,
         )
 
+        npaused, keep, batch = self.remove_paused(observations)
+
+        rollouts.reshape(keep)
+
         rollouts.insert(
             self._preprocess_observations(batch),
-            recurrent_hidden_states,
-            actions,
-            actor_critic_output.distributions.log_probs(actions),
-            actor_critic_output.values,
-            rewards,
-            masks,
+            recurrent_hidden_states[:, keep],
+            actions[keep],
+            actor_critic_output.distributions.log_probs(actions)[keep],
+            actor_critic_output.values[keep],
+            rewards[keep],
+            masks[keep],
         )
+
+        return npaused
+
+    def remove_paused(self, observations):
+        paused, keep, running = [], [], []
+        for it, obs in enumerate(observations):
+            if obs is None:
+                paused.append(it)
+            else:
+                keep.append(it)
+                running.append(obs)
+
+        for p in reversed(paused):
+            self.vector_tasks.pause_at(p)
+
+        batch = batch_observations(running, device=self.device)
+
+        return len(paused), keep, batch
 
     def initialize_rollouts(self, rollouts):
         observations = self.vector_tasks.get_observations()
-        batch = batch_observations(observations, device=self.device)
-
-        rollouts.insert_initial_observations(self._preprocess_observations(batch))
-
+        npaused, keep, batch = self.remove_paused(observations)
+        rollouts.reshape(keep)
         rollouts.to(self.device)
+        rollouts.insert_initial_observations(self._preprocess_observations(batch))
+        return npaused
 
     def train(self, rollouts):
         self.initialize_rollouts(rollouts)
@@ -398,19 +481,7 @@ class Trainer:
                 and self.models_folder != ""
             ):
                 model_path = self.checkpoint_save()
-
-                if self.eval_process is not None and self.eval_process.is_alive():
-                    print("Skipping eval - still busy")
-                    pass
-                else:
-                    print("Starting eval")
-                    if self.eval_process is not None:
-                        self.eval_process.join()
-                    self.eval_process = self.eval_mp_ctx.Process(
-                        target=evaluate,
-                        args=(self.config, self.output_dir, model_path),
-                    )
-                    self.eval_process.start()
+                self.write_to_eval.put(("eval", model_path))
 
     def setup_stage(
         self,
@@ -458,11 +529,11 @@ class Trainer:
         self.deterministic = deterministic
 
     def _get_loss(self, current_loss):
-        assert current_loss in self.train_pipeline, "undefined referenced loss"
-        if isinstance(self.train_pipeline[current_loss], Builder):
-            return self.train_pipeline[current_loss](optimizer=self.optimizer)
+        assert current_loss in self.params, "undefined referenced loss"
+        if isinstance(self.params[current_loss], Builder):
+            return self.params[current_loss](optimizer=self.optimizer)
         else:
-            return self.train_pipeline[current_loss]
+            return self.params[current_loss]
 
     def _load_losses(self, stage):
         stage_losses = dict()
@@ -470,11 +541,9 @@ class Trainer:
             stage_losses[current_loss] = self._get_loss(current_loss)
 
         stage_weights = {name: 1.0 for name in stage["losses"]}
-        for current_loss in self.train_pipeline.get("loss_weights", []):
+        for current_loss in self.params.get("loss_weights", []):
             if current_loss in stage_losses:
-                stage_weights[current_loss] = self.train_pipeline["loss_weights"][
-                    current_loss
-                ]
+                stage_weights[current_loss] = self.params["loss_weights"][current_loss]
         for current_loss in stage.get("loss_weights", []):
             assert current_loss in stage_losses, (
                 "missing loss definition for weight %s" % current_loss
@@ -484,12 +553,12 @@ class Trainer:
         return stage_losses, stage_weights
 
     def _stage_value(self, stage, field):
-        assert field in stage or field in self.train_pipeline, (
-            "missing value for %s" % field
-        )
-        return stage[field] if field in stage else self.train_pipeline[field]
+        assert field in stage or field in self.params, "missing value for %s" % field
+        return stage[field] if field in stage else self.params[field]
 
     def run_pipeline(self, checkpoint_file_name: Optional[str] = None):
+        self.log_writer = SummaryWriter(log_dir=self.output_dir)
+
         start_time = time.time()
         self.local_start_time_str = time.strftime(
             "%Y-%m-%d_%H-%M-%S", time.localtime(start_time)
@@ -497,7 +566,7 @@ class Trainer:
         if checkpoint_file_name is not None:
             self.checkpoint_load(checkpoint_file_name)
 
-        for stage in self.train_pipeline["pipeline"]:
+        for stage in self.params["pipeline"]:
             self.last_log = self.step_count - self.log_interval
 
             stage_limit = stage["end_criterion"]
@@ -534,4 +603,73 @@ class Trainer:
             self.total_steps += self.step_count
             self.step_count = 0
 
-        self.log_writer.close()
+        self.close()
+
+    def process_checkpoints(
+        self,
+        read_from_parent: mp.Queue,
+        write_to_parent: mp.Queue,
+        deterministic: bool = True,
+    ):
+        self.deterministic = deterministic
+        self.teacher_forcing = None
+
+        try:
+            while True:
+                while not read_from_parent.empty():
+                    try:
+                        command, data = read_from_parent.get_nowait()
+                    except queue.Empty:
+                        pass
+                if command == "eval":
+                    scalars = self.run_eval(checkpoint_file_name=data)
+                    write_to_parent.put(("valid_metrics", scalars))
+                elif command == "close":
+                    self.close()
+                else:
+                    raise NotImplementedError()
+        except KeyboardInterrupt:
+            print("Eval KeyboardInterrupt - closing")
+            self.close()
+
+    def run_eval(self, checkpoint_file_name: str, rollout_steps=1):
+        self.checkpoint_load(checkpoint_file_name)
+
+        rollouts = RolloutStorage(
+            rollout_steps,
+            self.num_processes,
+            self.actor_critic.action_space,
+            self.actor_critic.recurrent_hidden_state_size,
+        )
+
+        num_paused = self.initialize_rollouts(rollouts)
+        steps = 0
+        while num_paused < self.num_processes:
+            num_paused += self.collect_rollout_step(rollouts)
+            steps += 1
+            if steps % rollout_steps == 0:
+                rollouts.after_update()
+
+        self.vector_tasks.resume_all()
+        self.vector_tasks.reset_all()
+
+        return {
+            k: (v, self.total_steps + self.step_count)
+            for k, v in self.process_valid_metrics().items()
+        }
+
+    def close(self):
+        if self.write_to_eval is not None:
+            self.write_to_eval.put(("close",))
+        self.vector_tasks.close()
+        if self.log_writer is not None:
+            self.log_writer.close()
+
+    def __del__(self):
+        self.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()

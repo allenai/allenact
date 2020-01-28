@@ -33,11 +33,8 @@ class ObjectNavTaskSampler(TaskSampler):
         self._action_sapce = action_space
 
         self.scene_period = scene_period or 0  # default makes a random choice
-        self.scene_counter = 0
-        self.scene_order = list(range(len(self.scenes)))
-        random.shuffle(self.scene_order)
-        self.scene_id = 0
-        self.max_tasks = max_tasks
+        self.reset_tasks = max_tasks
+        self.reset()
 
         self._last_sampled_task: Optional[ObjectNavTask] = None
 
@@ -102,22 +99,17 @@ class ObjectNavTaskSampler(TaskSampler):
         return self.scenes[self.scene_order[self.scene_id]]
 
     def next_task(self) -> Optional[ObjectNavTask]:
-        if self.max_tasks is not None and self.max_tasks == 0:
+        if self.max_tasks is not None and self.max_tasks <= 0:
             return None
 
         scene = self.sample_scene()
 
         if self.env is not None:
-            # print("resetting env")
             if scene != self.env.scene_name:
                 self.env.reset(scene)
         else:
-            # print("creating env")
             self.env = self._create_environment()
-            # print("starting env")
             self.env.start(scene_name=scene)
-
-        # print("env up and ready")
 
         self.env.randomize_agent_location()
 
@@ -145,3 +137,10 @@ class ObjectNavTaskSampler(TaskSampler):
             action_space=self._action_sapce,
         )
         return self._last_sampled_task
+
+    def reset(self):
+        self.scene_counter = 0
+        self.scene_order = list(range(len(self.scenes)))
+        random.shuffle(self.scene_order)
+        self.scene_id = 0
+        self.max_tasks = self.reset_tasks

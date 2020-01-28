@@ -192,3 +192,9 @@ class TaskSampler(abc.ABC):
             same observation space. Otherwise False.
         """
         raise NotImplementedError()
+
+    @abstractmethod
+    def reset(self) -> None:
+        """Resets all tasks to their original state.  # TODO: seeds!
+        """
+        raise NotImplementedError()

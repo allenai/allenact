@@ -7,7 +7,15 @@ import torch.nn as nn
 
 class ExperimentConfig(abc.ABC):
     @classmethod
+    def tag(cls) -> str:
+        raise NotImplementedError()
+
+    @classmethod
     def training_pipeline(cls, **kwargs):
+        raise NotImplementedError()
+
+    @classmethod
+    def evaluation_params(cls, **kwargs):
         raise NotImplementedError()
 
     @classmethod

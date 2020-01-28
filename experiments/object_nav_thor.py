@@ -111,12 +111,14 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
 
     @classmethod
     def evaluation_params(cls, **kwargs):
-        nprocesses = 4
+        nprocesses = 2
         gpu_ids = [] if not torch.cuda.is_available() else [1]
-        return {
-            "nprocesses": nprocesses,
-            "gpu_ids": gpu_ids,
-        }
+        res = cls.training_pipeline()
+        del res["pipeline"]
+        del res["optimizer"]
+        res["nprocesses"] = nprocesses
+        res["gpu_ids"] = gpu_ids
+        return res
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
