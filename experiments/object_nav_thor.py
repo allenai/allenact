@@ -65,14 +65,14 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         dagger_steps = 3e4
         ppo_steps = 3e4
         ppo_steps2 = 1e6
-        nprocesses = 16
+        nprocesses = 4
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 2
         num_steps = 16
         save_interval = 100
         log_interval = 2 * num_steps * nprocesses
-        gpu_ids = None if not torch.cuda.is_available() else [0]
+        gpu_ids = [] if not torch.cuda.is_available() else [0]
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0

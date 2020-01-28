@@ -40,10 +40,10 @@ class ObjectNavTaskSampler(TaskSampler):
 
     def _create_environment(self) -> AI2ThorEnvironment:
         env = AI2ThorEnvironment(
-            **self.env_args,
             make_agents_visible=False,
             object_open_speed=0.05,
             restrict_to_initially_reachable_points=True,
+            **self.env_args,
         )
         return env
 

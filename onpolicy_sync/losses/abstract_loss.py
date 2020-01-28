@@ -1,5 +1,5 @@
 import abc
-from typing import Dict, Union
+from typing import Dict, Union, Tuple
 
 import torch
 
@@ -12,11 +12,11 @@ class AbstractActorCriticLoss(Loss):
         pass
 
     @abc.abstractmethod
-    def loss(
+    def loss(  # type: ignore
         self,
         batch: Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]],
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
         **kwargs,
-    ):
+    ) -> Tuple[torch.FloatTensor, Dict[str, float]]:
         raise NotImplementedError()

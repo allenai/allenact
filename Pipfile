@@ -20,6 +20,9 @@ recommonmark = "*"
 ruamel-yaml = "*"
 pydoc-markdown = "*"
 mkdocs-material = "*"
+mypy = "*"
+flake8 = "*"
+pre-commit = "*"
 
 [packages]
 gym = "*"

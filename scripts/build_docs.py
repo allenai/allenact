@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from subprocess import check_output
-from typing import Dict
+from typing import Dict, Union
 
 from ruamel.yaml import YAML
 
@@ -56,7 +56,10 @@ def build_docs_for_file(
     return {os.path.basename(clean_filename): nav_path}
 
 
-def build_docs(base_dir: str, root_path: str, docs_dir: str):
+def build_docs(
+    base_dir: Union[Path, str], root_path: Union[Path, str], docs_dir: Union[Path, str]
+):
+    base_dir, root_path, docs_dir = str(base_dir), str(root_path), str(docs_dir)
 
     ignore_rel_dirs = ["docs", "scripts", "experiments"]
     ignore_abs_dirs = [

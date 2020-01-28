@@ -8,7 +8,7 @@ environment."""
 
 import abc
 from abc import abstractmethod
-from typing import Dict, Any, Tuple, Generic, Union, List, Optional
+from typing import Dict, Any, Tuple, Generic, Union, List, Optional, TypeVar
 
 import gym
 import numpy as np
@@ -30,7 +30,7 @@ class Task(Generic[EnvType]):
     """
 
     env: EnvType
-    sensor_suite: SensorSuite[EnvType]
+    sensor_suite: SensorSuite[EnvType, "Task"]
     task_info: Dict[str, Any]
     max_steps: int
     observation_space: SpaceDict
@@ -138,6 +138,9 @@ class Task(Generic[EnvType]):
             sum to 1, and have non-negative entries).
         """
         raise NotImplementedError()
+
+
+SubTaskType = TypeVar("SubTaskType", bound=Task)
 
 
 class TaskSampler(abc.ABC):

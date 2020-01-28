@@ -9,6 +9,7 @@ import torch.optim
 import torch
 import torch.nn as nn
 import torch.distributions
+import typing
 from tensorboardX import SummaryWriter
 
 from onpolicy_sync.utils import LinearDecay
@@ -22,7 +23,12 @@ from onpolicy_sync.storage import RolloutStorage
 
 
 class Trainer:
-    def __init__(self, config: ExperimentConfig, output_dir: str):
+    def __init__(
+        self,
+        config: ExperimentConfig,
+        loaded_config_src_files: Dict[str, str],
+        output_dir: str,
+    ):
         self.train_pipeline = config.training_pipeline()
 
         train_pipeline = self.train_pipeline
@@ -37,7 +43,7 @@ class Trainer:
                 )
             else:
                 self.device = "cuda:%d" % train_pipeline["gpu_ids"][0]
-                torch.cuda.set_device(self.device)
+                torch.cuda.set_device(self.device)  # type: ignore
 
         self.observation_set = None
         if "observation_set" in train_pipeline:
@@ -78,15 +84,15 @@ class Trainer:
             make_sampler_fn=config.make_sampler_fn, sampler_fn_args=sampler_fn_args
         )
 
-        self.tracker = deque()
+        self.tracker: deque = deque()
 
         self.models_folder = os.path.join(output_dir, "models")
         os.makedirs(self.models_folder, exist_ok=True)
 
         self.configs_folder = os.path.join(output_dir, "configs")
         os.makedirs(self.configs_folder, exist_ok=True)
-        for file in config._loaded_config_src_files:
-            parts = config._loaded_config_src_files[file].split(".")
+        for file in loaded_config_src_files:
+            parts = loaded_config_src_files[file].split(".")
             src_file = os.path.sep.join(parts) + ".py"
             dst_file = (
                 os.path.join(self.configs_folder, os.path.join(*parts[1:])) + ".py"
@@ -144,14 +150,21 @@ class Trainer:
             # Map location CPU is almost always better than mapping to a CUDA device.
             ckpt = torch.load(ckpt, map_location="cpu")
 
+        ckpt = typing.cast(
+            Dict[
+                str, Union[Dict[str, Any], torch.Tensor, float, int, str, typing.List]
+            ],
+            ckpt,
+        )
+
         self.actor_critic.load_state_dict(ckpt["model_state_dict"])
         self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-        self.step_count = ckpt["step_count"]
-        self.backprop_count = ckpt["backprop_count"]
-        self.rollout_count = ckpt["rollout_count"]
-        self.pipeline_stage = ckpt["pipeline_stage"]
-        self.total_updates = ckpt["total_updates"]
-        self.total_steps = ckpt["total_steps"]
+        self.step_count = ckpt["step_count"]  # type: ignore
+        self.backprop_count = ckpt["backprop_count"]  # type: ignore
+        self.rollout_count = ckpt["rollout_count"]  # type: ignore
+        self.pipeline_stage = ckpt["pipeline_stage"]  # type: ignore
+        self.total_updates = ckpt["total_updates"]  # type: ignore
+        self.total_steps = ckpt["total_steps"]  # type: ignore
         self.local_start_time_str = ckpt["local_start_time_str"]
         self.train_pipeline["pipeline"] = self.train_pipeline["pipeline"][
             self.pipeline_stage :
@@ -213,7 +226,7 @@ class Trainer:
                     batch["masks"].to(self.device),
                 )
 
-                info = dict(
+                info: Dict[str, Any] = dict(
                     total_updates=self.total_updates,
                     backprop_count=self.backprop_count,
                     rollout_count=self.rollout_count,
@@ -233,7 +246,7 @@ class Trainer:
                     if total_loss is None:
                         total_loss = loss_weight * current_loss
                     else:
-                        total_loss += loss_weight * current_loss
+                        total_loss = total_loss + loss_weight * current_loss
 
                     info["losses"][loss_name] = current_info
                 assert total_loss is not None, "No losses specified?"
