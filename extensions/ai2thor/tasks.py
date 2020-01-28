@@ -1,3 +1,4 @@
+import abc
 import warnings
 import random
 from typing import Tuple, List, Dict, Any, Optional
@@ -20,7 +21,7 @@ from rl_base.sensor import Sensor
 from rl_base.task import Task
 
 
-class AI2ThorTask(Task[AI2ThorEnvironment]):
+class AI2ThorTask(Task[AI2ThorEnvironment], abc.ABC):
     def __init__(
         self,
         env: AI2ThorEnvironment,

@@ -30,7 +30,7 @@ class Task(Generic[EnvType]):
     """
 
     env: EnvType
-    sensor_suite: SensorSuite[EnvType, "Task"]
+    sensor_suite: SensorSuite[EnvType]
     task_info: Dict[str, Any]
     max_steps: int
     observation_space: SpaceDict
@@ -41,7 +41,6 @@ class Task(Generic[EnvType]):
         sensors: List[Sensor],
         task_info: Dict[str, Any],
         max_steps: int,
-        action_space: gym.Space,
         **kwargs
     ) -> None:
         self.env = env

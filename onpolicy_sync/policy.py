@@ -7,6 +7,7 @@ import abc
 import typing
 
 import gym
+import torch
 from torch import nn as nn
 
 from rl_base.common import DistributionType, ActorCriticOutput
@@ -50,6 +51,7 @@ class LinearActorHead(nn.Module):
         nn.init.orthogonal_(self.linear.weight, gain=0.01)
         nn.init.constant_(self.linear.bias, 0)
 
-    def forward(self, x):
+    def forward(self, x: torch.FloatTensor):
         x = self.linear(x)
+        # noinspection PyArgumentList
         return CategoricalDistr(logits=x)

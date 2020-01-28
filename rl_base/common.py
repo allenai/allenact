@@ -43,6 +43,7 @@ class ActorCriticOutput(tuple, typing.Generic[DistributionType]):
     values: torch.FloatTensor
     extras: Dict[str, Any]
 
+    # noinspection PyTypeChecker
     def __new__(
         cls,
         distributions: DistributionType,

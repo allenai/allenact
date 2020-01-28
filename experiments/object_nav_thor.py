@@ -66,9 +66,9 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        dagger_steps = 3e4
-        ppo_steps = 3e4
-        ppo_steps2 = 1e6
+        dagger_steps = int(3e4)
+        ppo_steps = int(3e4)
+        ppo_steps2 = int(1e6)
         nprocesses = 3
         lr = 2.5e-4
         num_mini_batch = 1
@@ -150,14 +150,16 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
                 print(
-                    "Warning: oversampling some of the scenes to feed all processes. You can avoid this by setting a number of workers divisible by the number of scenes"
+                    "Warning: oversampling some of the scenes to feed all processes."
+                    " You can avoid this by setting a number of workers divisible by the number of scenes"
                 )
             scenes = scenes * int(ceil(total_processes / len(scenes)))
             scenes = scenes[: total_processes * (len(scenes) // total_processes)]
         else:
             if len(scenes) % total_processes != 0:
                 print(
-                    "Warning: oversampling some of the scenes to feed all processes. You can avoid this by setting a number of workers divisor of the number of scenes"
+                    "Warning: oversampling some of the scenes to feed all processes."
+                    " You can avoid this by setting a number of workers divisor of the number of scenes"
                 )
         inds = self._partition_inds(len(scenes), total_processes)
 

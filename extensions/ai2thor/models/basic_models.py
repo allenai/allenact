@@ -92,7 +92,8 @@ class SimpleCNN(nn.Module):
 
         self.layer_init()
 
-    def _conv_output_dim(self, dimension, padding, dilation, kernel_size, stride):
+    @staticmethod
+    def _conv_output_dim(dimension, padding, dilation, kernel_size, stride):
         """Calculates the output height and width based on the input
         height and width to the convolution layer.
 

@@ -1,26 +1,26 @@
-from typing import Optional, Any, Dict, Union
 import os
-from collections import deque
 import queue
-import time
 import shutil
-
-import torch.optim
-import torch
-import torch.nn as nn
-import torch.distributions
+import time
 import typing
+from typing import Optional, Any, Dict, Union
+
+import torch
+import torch.distributions
+import torch.multiprocessing as mp
+import torch.nn as nn
+import torch.optim
 from tensorboardX import SummaryWriter
 
-from onpolicy_sync.utils import LinearDecay
-from rl_base.common import Loss
-from onpolicy_sync.vector_task import VectorSampledTasks
-from onpolicy_sync.utils import batch_observations, ScalarMeanTracker
-from rl_base.experiment_config import ExperimentConfig
+
 from configs.util import Builder
-from rl_base.preprocessor import ObservationSet
 from onpolicy_sync.storage import RolloutStorage
-import torch.multiprocessing as mp
+from onpolicy_sync.utils import LinearDecay
+from onpolicy_sync.utils import batch_observations, ScalarMeanTracker
+from onpolicy_sync.vector_task import VectorSampledTasks
+from rl_base.common import Loss
+from rl_base.experiment_config import ExperimentConfig
+from rl_base.preprocessor import ObservationSet
 
 
 def validate(
@@ -141,6 +141,24 @@ class Trainer:
         self.total_steps = 0
         self.last_log = 0
 
+        # Fields defined when running setup_stage.
+        # TODO: Lets encapsulate these better, perhaps in named
+        #   tuple like data structure with sensible defaults.
+        self.losses: Optional[Dict[str, Loss]] = None
+        self.loss_weights: Optional[Dict[str, float]] = None
+        self.stage_task_steps: Optional[int] = None
+        self.steps_in_rollout: Optional[int] = None
+        self.update_epochs: Optional[int] = None
+        self.update_mini_batches: Optional[int] = None
+        self.num_rollouts: Optional[int] = None
+        self.gamma: Optional[float] = None
+        self.use_gae: Optional[bool] = None
+        self.gae_lambda: Optional[float] = None
+        self.max_grad_norm: Optional[float] = None
+        self.teacher_forcing: Optional[LinearDecay] = None
+        self.deterministic: Optional[bool] = None
+        self.local_start_time_str: Optional[str] = None
+
         self.experiment_name = config.tag()
 
         self.save_interval = self.params["save_interval"]
@@ -187,6 +205,10 @@ class Trainer:
             fn = config.valid_task_sampler_args
         elif self.mode == "test":
             fn = config.test_task_sampler_args
+        else:
+            raise NotImplementedError(
+                "self.mode must be one of `train`, `valid` or `test`."
+            )
 
         return [
             fn(
@@ -250,7 +272,7 @@ class Trainer:
             self.rollout_count = ckpt["rollout_count"]  # type: ignore
             self.pipeline_stage = ckpt["pipeline_stage"]  # type: ignore
             self.total_updates = ckpt["total_updates"]  # type: ignore
-            self.local_start_time_str = ckpt["local_start_time_str"]
+            self.local_start_time_str = typing.cast(str, ckpt["local_start_time_str"])
             self.params["pipeline"] = self.params["pipeline"][self.pipeline_stage :]
 
     def process_valid_metrics(self):
@@ -273,6 +295,7 @@ class Trainer:
                     if pkg_type == "valid_metrics":
                         valid_metrics = {k: v for k, v in info.items()}
                     else:
+                        cscalars: Optional[Dict[str, Union[float, int]]] = None
                         if pkg_type == "update_package":
                             cscalars = {"total_loss": info["total_loss"]}
                             for loss in info["losses"]:
@@ -285,7 +308,9 @@ class Trainer:
                             cscalars = {k: v for k, v in info.items()}
                         else:
                             print("WARNING: Unknown info package {}".format(info))
-                        self.scalars.add_scalars(cscalars)
+
+                        if cscalars is not None:
+                            self.scalars.add_scalars(cscalars)
                 else:
                     self.scalars.add_scalars(metric)
             except queue.Empty:
@@ -653,6 +678,8 @@ class Trainer:
 
         try:
             new_data = False
+            command: Optional[str] = None
+            data: Any = None
             while True:
                 while (not new_data) or (not read_from_parent.empty()):
                     try:

@@ -36,12 +36,14 @@ def render_file(
 
     args = ["pydocmd", "simple", namespace]
     call_result = check_output(args, env=os.environ).decode("utf-8")
+    # noinspection PyShadowingNames
     with open(to_file, "w") as f:
         f.write(call_result)
 
     print(f"Built docs for {src_file}: {to_file}")
 
 
+# noinspection PyShadowingNames
 def build_docs_for_file(
     relative_path: str, file_name: str, docs_dir: str
 ) -> Dict[str, str]:
@@ -56,6 +58,7 @@ def build_docs_for_file(
     return {os.path.basename(clean_filename): nav_path}
 
 
+# noinspection PyShadowingNames
 def build_docs(
     base_dir: Union[Path, str], root_path: Union[Path, str], docs_dir: Union[Path, str]
 ):
