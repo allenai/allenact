@@ -24,11 +24,11 @@ class Sensor(Generic[EnvType, SubTaskType]):
     The user of this class needs to implement the get_observation method and
     the user is also required to set the below attributes:
 
-    Attributes:
+    # Attributes
 
-    @ivar: config: configuration information for the sensor.
-    @ivar: uuid: universally unique id.
-    @ivar: observation_space: ``gym.Space`` object corresponding to observation of
+    config : configuration information for the sensor.
+    uuid : universally unique id.
+    observation_space : ``gym.Space`` object corresponding to observation of
         sensor.
     """
 
@@ -59,9 +59,14 @@ class Sensor(Generic[EnvType, SubTaskType]):
     ) -> Any:
         """Returns observations from the environment (or task).
 
-        @param env: the environment the sensor is used upon.
-        @param task: (optionally) a Task from which the sensor should get data.
-        @return: current observation for Sensor.
+        # Parameters
+
+        env : The environment the sensor is used upon.
+        task : (Optionally) a Task from which the sensor should get data.
+
+        # Returns
+
+        Current observation for Sensor.
         """
         raise NotImplementedError()
 
@@ -70,17 +75,21 @@ class SensorSuite(Generic[EnvType]):
     """Represents a set of sensors, with each sensor being identified through a
     unique id.
 
-    Attributes:
-        sensors: list containing sensors for the environment, uuid of each
-            sensor must be unique.
+    # Attributes
+
+    sensors: list containing sensors for the environment, uuid of each
+        sensor must be unique.
     """
 
     sensors: Dict[str, Sensor[EnvType, Any]]
     observation_spaces: SpaceDict
 
     def __init__(self, sensors: List[Sensor]) -> None:
-        """
-        @param sensors: the sensors that will be included in the suite.
+        """Initializer.
+
+        # Parameters
+
+        param sensors: the sensors that will be included in the suite.
         """
         self.sensors = OrderedDict()
         spaces: OrderedDict[str, gym.Space] = OrderedDict()
@@ -95,8 +104,13 @@ class SensorSuite(Generic[EnvType]):
     def get(self, uuid: str) -> Sensor:
         """Return sensor with the given `uuid`.
 
-        @param uuid: the unique id of the sensor
-        @return: the sensor with unique id `uuid`.
+        # Parameters
+
+        uuid : The unique id of the sensor
+
+        # Returns
+
+        The sensor with unique id `uuid`.
         """
         return self.sensors[uuid]
 

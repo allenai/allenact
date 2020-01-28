@@ -41,9 +41,14 @@ RESET_COMMAND = "reset"
 def tile_images(images: List[np.ndarray]) -> np.ndarray:
     """Tile multiple images into single image.
 
-    @param images: list of images where each image has dimension
+    # Parameters
+
+    images : list of images where each image has dimension
         (height x width x channels)
-    @return: tiled image (new_height x width x channels)
+
+    # Returns
+
+    Tiled image (new_height x width x channels).
     """
     assert len(images) > 0, "empty list of images"
     np_images = np.asarray(images)
@@ -71,14 +76,16 @@ class VectorSampledTasks:
     process samples another task from its task sampler. All the tasks are
     synchronized (for step and new_task methods).
 
-    @ivar: make_sampler_fn: function which creates a single TaskSampler.
-    @ivar: sampler_fn_args: sequence of dictionaries describing the args
+    # Attributes
+
+    make_sampler_fn : function which creates a single TaskSampler.
+    sampler_fn_args : sequence of dictionaries describing the args
         to pass to make_sampler_fn on each individual process.
-    @ivar: auto_resample_when_done: automatically sample a new Task from the TaskSampler when
+    auto_resample_when_done : automatically sample a new Task from the TaskSampler when
         the Task completes. If False, a new Task will not be resampled until all
         Tasks on all processes have completed. This functionality is provided for seamless training
         of vectorized Tasks.
-    @ivar: multiprocessing_start_method: the multiprocessing method used to
+    multiprocessing_start_method : the multiprocessing method used to
         spawn worker processes. Valid methods are
         ``{'spawn', 'forkserver', 'fork'}`` ``'forkserver'`` is the
         recommended method as it works well with CUDA. If
@@ -158,16 +165,22 @@ class VectorSampledTasks:
         self._paused: List[Tuple[int, Callable, Callable, mp.Process]] = []
 
     @property
-    def num_unpaused_tasks(self):
-        """
-        @return: number of individual unpaused processes.
+    def num_unpaused_tasks(self) -> int:
+        """Number of unpaused processes.
+
+        # Returns
+
+        Number of unpaused processes.
         """
         return self._num_processes - len(self._paused)
 
     @property
     def mp_ctx(self):
-        """
-        @return: multiprocessing context.
+        """Get the multiprocessing process used by the vector task.
+
+        # Returns
+
+        The multiprocessing context.
         """
         return self._mp_ctx
 
@@ -314,7 +327,9 @@ class VectorSampledTasks:
     def next_task(self):
         """Move to the the next Task for all TaskSamplers.
 
-        @return: list of initial observations for each of the new tasks.
+        # Returns
+
+        List of initial observations for each of the new tasks.
         """
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
@@ -328,7 +343,9 @@ class VectorSampledTasks:
     def get_observations(self):
         """Get observations for all unpaused tasks.
 
-        @return: list of observations for each of the unpaused tasks.
+        # Returns
+
+        List of observations for each of the unpaused tasks.
         """
         return self.call(["get_observations"] * self.num_unpaused_tasks,)
 
@@ -336,8 +353,13 @@ class VectorSampledTasks:
         """Move to the the next Task from the TaskSampler in index_process
         process in the vector.
 
-        @param index_process: index of the process to be reset
-        @return: list of length one containing the observations the newly sampled task.
+        # Parameters
+
+        index_process : Index of the process to be reset.
+
+        # Returns
+
+        List of length one containing the observations the newly sampled task.
         """
         self._is_waiting = True
         self._connection_write_fns[index_process]((NEXT_TASK_COMMAND, None))
@@ -348,9 +370,14 @@ class VectorSampledTasks:
     def step_at(self, index_process: int, action: int) -> List[RLStepResult]:
         """Step in the index_process task in the vector.
 
-        @param index_process: index of the process to be reset
-        @param action: the action to take
-        @return: list containing the output of step method on the task in the indexed process.
+        # Parameters
+
+        index_process : Index of the process to be reset.
+        action : The action to take.
+
+        # Returns
+
+        List containing the output of step method on the task in the indexed process.
         """
         self._is_waiting = True
         self._connection_write_fns[index_process]((STEP_COMMAND, action))
@@ -361,7 +388,9 @@ class VectorSampledTasks:
     def async_step(self, actions: List[int]) -> None:
         """Asynchronously step in the vectorized Tasks.
 
-        @param actions: actions to be performed in the vectorized Tasks.
+        # Parameters
+
+        actions : actions to be performed in the vectorized Tasks.
         """
         self._is_waiting = True
         for write_fn, action in zip(self._connection_write_fns, actions):
@@ -378,8 +407,13 @@ class VectorSampledTasks:
     def step(self, actions: List[int]):
         """Perform actions in the vectorized tasks.
 
-        @param actions: list of size _num_processes containing action to be taken in each task.
-        @return: list of outputs from the step method of tasks.
+        # Parameters
+
+        actions: List of size _num_processes containing action to be taken in each task.
+
+        # Returns
+
+        List of outputs from the step method of tasks.
         """
         self.async_step(actions)
         return self.wait_step()
@@ -421,7 +455,9 @@ class VectorSampledTasks:
         when only some are active (for example during the last samples of
         running eval).
 
-        @param index: which process to pause. All indexes after this
+        # Parameters
+
+        index : which process to pause. All indexes after this
             one will be shifted down by one.
         """
         if self._is_waiting:
@@ -446,10 +482,15 @@ class VectorSampledTasks:
         """Calls a function (which is passed by name) on the selected task and
         returns the result.
 
-        @param index: which task to call the function on.
-        @param function_name: the name of the function to call on the task.
-        @param function_args: optional function args.
-        @return: result of calling the function.
+        # Parameters
+
+        index : Which task to call the function on.
+        function_name : The name of the function to call on the task.
+        function_args : Optional function args.
+
+        # Returns
+
+        Result of calling the function.
         """
         self._is_waiting = True
         self._connection_write_fns[index](
@@ -467,10 +508,15 @@ class VectorSampledTasks:
         """Calls a list of functions (which are passed by name) on the
         corresponding task (by index).
 
-        @param function_names: the name of the functions to call on the tasks.
-        @param function_args_list: list of function args for each function.
+        # Parameters
+
+        function_names : The name of the functions to call on the tasks.
+        function_args_list : List of function args for each function.
             If provided, len(function_args_list) should be as long as  len(function_names).
-        @return: list of results of calling the functions.
+
+        # Returns
+
+        List of results of calling the functions.
         """
         self._is_waiting = True
 
@@ -493,9 +539,14 @@ class VectorSampledTasks:
         """Gets the attribute (specified by name) on the selected task and
         returns it.
 
-        @param index: which task to call the function on.
-        @param attr_name: the name of the function to call on the task.
-        @return: result of calling the function.
+        # Parameters
+
+        index : Which task to call the function on.
+        attr_name : The name of the function to call on the task.
+
+        # Returns
+
+         Result of calling the function.
         """
         self._is_waiting = True
         self._connection_write_fns[index]((ATTR_COMMAND, attr_name))
@@ -506,8 +557,13 @@ class VectorSampledTasks:
     def attr(self, attr_names: Union[List[str], str]) -> List[Any]:
         """Gets the attributes (specified by name) on the tasks.
 
-        @param attr_names: the name of the functions to call on the tasks.
-        @return: list of results of calling the functions.
+        # Parameters
+
+        attr_names : The name of the functions to call on the tasks.
+
+        # Returns
+
+        List of results of calling the functions.
         """
         self._is_waiting = True
 

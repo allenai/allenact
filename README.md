@@ -11,43 +11,64 @@ Currently, two RL algorithms are implemented
 * Advantage Actor Critic (A2C) - synchronized [A3C](https://arxiv.org/pdf/1602.01783v1.pdf)
 * [Proximal Policy Optimization (PPO)](https://arxiv.org/pdf/1707.06347.pdf)
 
-## Requirements
+## Table of contents
 
-This library has been tested only in Python 3.6. In order to install requirements, we
- recommend creating a new virtual environment and then running the following command:
+   1. [Why?](#motivation)
+   1. [Installation](#installation)
+   1. [Contributions](#contributions)
+   1. [Citiation](#citation)
+
+## Why?
+
+
+
+## Installation
+
+Begin by cloning this repository to your local machine and moving into the top-level directory
 
 ```bash
-pip install -r requirements.txt
+git clone git@github.com:allenai/embodied-rl.git
+cd embodied-rl
 ```
 
-Alternatively (*recommended*), if you use [pipenv](https://pipenv.kennethreitz.org/en/latest/):
+This library has been tested only in python 3.6, the following assumes you have a working
+version of python 3.6 installed locally. In order to install requirements we recommend
+using [pipenv](https://pipenv.kennethreitz.org/en/latest/) but also include instructions if
+you would prefer to simply install things directly using pip.
+
+### Installing requirements with `pipenv` (*recommended*)
+
+If you have already installed [pipenv](https://pipenv.kennethreitz.org/en/latest/), you may
+simply run the following command to install all requirements.
 
 ```bash
 pipenv install --skip-lock --dev
 ```
 
+### Installing requirements with `pip`
+
+Note: *do not* run the following if you have already installed requirements with `pipenv`
+as above. If you prefer using `pip`, you may install all requirements as follows
+
+```bash
+pip install -r requirements.txt
+```
+
+Depending on your machine configuration, you may need to use `pip3` instead of `pip` in the
+above.
+
+
 ## Contributions
 
-### Setting up pre-commit hooks
-
-Assuming you have installed all of the above requirements, you can install our recommended
-pre-commit hooks by running (from this project's root directory)
-```
-pre-commit install
-```
-After running the above, each time you run `git commit ...` a set of pre-commit checks will
-be run. These include basic type-checking and auto-formatting (via
-[black](https://black.readthedocs.io/en/stable/)). If your code passes these checks, the 
-commit will succeed, otherwise it will provide error messages directing you to problem
-areas. 
-
-### Updating, adding, or removing packages
-
-We recommend using [pipenv](https://pipenv.kennethreitz.org/en/latest/) to keep track
-of dependencies, ensure reproducibility, and keep things synchronized. If you have
-modified any installed packages please run:
-```bash
-pipenv run pipenv-setup sync --pipfile # Syncs packages to setup.py
-pipenv run pip freeze > requirements.txt # Syncs packages to requirements.py
-``` 
-before submitting a pull request.
+We in the Perceptural Reasoning and Interaction Research (PRIOR) group at the
+ Allen Institute for AI (AI2, @allenai) welcome contributions from the greater community. If
+ you would like to make such a contributions we recommend first submitting an 
+ [issue](https://github.com/allenai/embodied-rl/issues) describing your proposed improvement.
+ Doing so can ensure we can validate your suggestions before you spend a great deal of time
+ upon them. Small (or validated) improvements and bug fixes should be made via a pull request
+ from your fork of this repository.
+ 
+All code in this repository is subject to formatting, documentation, and type-annotation
+guidelines. For more details, please see the our [contribution guidelines](./CONTRIBUTING.md).   
+  
+## Citiation
