@@ -35,6 +35,7 @@ ACTION_SPACE_COMMAND = "action_space"
 CALL_COMMAND = "call"
 ATTR_COMMAND = "attr"
 # EPISODE_COMMAND = "current_episode"
+RESET_COMMAND = "reset"
 
 
 def tile_images(images: List[np.ndarray]) -> np.ndarray:
@@ -129,16 +130,10 @@ class VectorSampledTasks:
             ],
         )
 
-        # print("created workers")
-
         self._is_closed = False
-
-        # print("calling obs space")
 
         for write_fn in self._connection_write_fns:
             write_fn((OBSERVATION_SPACE_COMMAND, None))
-
-        # print("reading obs space")
 
         observation_spaces = [read_fn() for read_fn in self._connection_read_fns]
 
@@ -169,6 +164,13 @@ class VectorSampledTasks:
         """
         return self._num_processes - len(self._paused)
 
+    @property
+    def mp_ctx(self):
+        """
+        @return: multiprocessing context.
+        """
+        return self._mp_ctx
+
     @staticmethod
     def _task_sampling_loop_worker(
         worker_id: int,
@@ -184,12 +186,10 @@ class VectorSampledTasks:
         """process worker for creating and interacting with the
         Tasks/TaskSampler."""
         task_sampler = make_sampler_fn(**sampler_fn_args)
-        # print("created task sampler")
         current_task = task_sampler.next_task()
 
         if parent_pipe is not None:
             parent_pipe.close()
-            # print("closed parent pipe (?)")
         try:
             command, data = connection_read_fn()
             while command != CLOSE_COMMAND:
@@ -202,9 +202,12 @@ class VectorSampledTasks:
 
                         if auto_resample_when_done:
                             current_task = task_sampler.next_task()
-                            step_result = step_result.clone(
-                                {"observation": current_task.get_observations()}
-                            )
+                            if current_task is None:
+                                step_result = step_result.clone({"observation": None})
+                            else:
+                                step_result = step_result.clone(
+                                    {"observation": current_task.get_observations()}
+                                )
 
                     connection_write_fn(step_result)
 
@@ -220,9 +223,7 @@ class VectorSampledTasks:
                     command == OBSERVATION_SPACE_COMMAND
                     or command == ACTION_SPACE_COMMAND
                 ):
-                    # print("got space command")
                     res = getattr(current_task, command)
-                    # print("computed res %s" % res)
                     connection_write_fn(res)
 
                 elif command == CALL_COMMAND:
@@ -241,6 +242,10 @@ class VectorSampledTasks:
                 # TODO: update CALL_COMMAND for getting attribute like this
                 # elif command == EPISODE_COMMAND:
                 #     connection_write_fn(current_task.current_episode)
+                elif command == RESET_COMMAND:
+                    task_sampler.reset()
+                    current_task = task_sampler.next_task()
+                    connection_write_fn("done")
                 else:
                     raise NotImplementedError()
 
@@ -270,10 +275,7 @@ class VectorSampledTasks:
         for id, stuff in enumerate(
             zip(worker_connections, parent_connections, sampler_fn_args)
         ):
-            # print(id, stuff)
             worker_conn, parent_conn, sampler_fn_args = stuff  # type: ignore
-            # print(id, sampler_fn_args)
-            # noinspection PyUnresolvedReferences
             ps = self._mp_ctx.Process(  # type: ignore
                 target=self._task_sampling_loop_worker,
                 args=(
@@ -379,6 +381,15 @@ class VectorSampledTasks:
         """
         self.async_step(actions)
         return self.wait_step()
+
+    def reset_all(self):
+        """Reset all task samplers to their initial state."""
+        self._is_waiting = True
+        for write_fn in self._connection_write_fns:
+            write_fn((RESET_COMMAND, ""))
+        for read_fn in self._connection_read_fns:
+            read_fn()
+        self._is_waiting = False
 
     def close(self) -> None:
         if self._is_closed:
@@ -564,7 +575,6 @@ class ThreadedVectorSampledTasks(VectorSampledTasks):
         for id, stuff in enumerate(
             zip(parent_read_queues, parent_write_queues, sampler_fn_args)
         ):
-            # print(id, stuff)
             parent_read_queue, parent_write_queue, sampler_fn_args = stuff  # type: ignore
             thread = Thread(
                 target=self._task_sampling_loop_worker,

@@ -32,7 +32,6 @@ class PPO(AbstractActorCriticLoss):
         **kwargs
     ):
         actions = typing.cast(torch.LongTensor, batch["actions"])
-        # print(actor_critic_output)
         values = actor_critic_output.values
         dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy().mean()
         action_log_probs = actor_critic_output.distributions.log_probs(actions)

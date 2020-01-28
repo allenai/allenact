@@ -130,30 +130,28 @@ class ObservationSet:
     preprocessors, with each source being identified through a unique id.
 
     Attributes:
-        sensors: list containing sensor and preprocessor ids for the environment, uuid of each
+        source_ids: list containing sensor and preprocessor ids for the environment, uuid of each
             source must be unique.
+        graph: computation graph for preprocessors
     """
 
     source_ids: List[str]
     graph: PreprocessorGraph
 
     def __init__(
-        self,
-        sensor_ids: List[str],
-        preprocessor_ids: List[str],
-        all_preprocessors: List[Preprocessor],
+        self, source_ids: List[str], all_preprocessors: List[Preprocessor],
     ) -> None:
         """
-        @param sensor_ids: the sensors that will be included in the set.
-        @param preprocessor_ids: the sensors that will be included in the set.
+        @param source_ids: the sensors and preprocessors that will be included in the set.
+        @param all_preprocessors: the entire list of preprocessors to be executed
         """
 
         self.graph = PreprocessorGraph(all_preprocessors)
 
-        self.source_ids = []
-        for uuid in sensor_ids + preprocessor_ids:
-            assert uuid not in self.source_ids, "'{}' is duplicated uuid".format(uuid)
-            self.source_ids.append(uuid)
+        self.source_ids = source_ids
+        assert len(set(self.source_ids)) == len(
+            self.source_ids
+        ), "No duplicated uuids allowed"
 
     def get(self, uuid: str) -> Preprocessor:
         """Return preprocessor with the given `uuid`.

@@ -1,5 +1,5 @@
 from math import ceil
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 import gym
 import numpy as np
@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from configs.losses import algo_defaults
+from configs.losses import PPOConfig
 from configs.util import Builder
 from extensions.ai2thor.models.object_nav_models import ObjectNavBaselineActorCritic
 from extensions.ai2thor.sensors import RGBSensorThor, GoalObjectTypeThorSensor
@@ -29,8 +29,10 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
     TRAIN_SCENES = [
         "FloorPlan1_physics"
     ]  # ["FloorPlan{}".format(i) for i in range(1, 21)]
-    VALID_SCENES = ["FloorPlan{}_physics".format(i) for i in range(21, 26)]
-    TEST_SCENSE = ["FloorPlan{}_physics".format(i) for i in range(26, 31)]
+    VALID_SCENES = [
+        "FloorPlan1_physics"
+    ]  # ["FloorPlan{}_physics".format(i) for i in range(21, 26)]
+    TEST_SCENES = ["FloorPlan{}_physics".format(i) for i in range(26, 31)]
 
     SCREEN_SIZE = 224
 
@@ -56,6 +58,8 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
 
     SCENE_PERIOD = 10
 
+    VALID_SAMPLES_IN_SCENE = 5
+
     @classmethod
     def tag(cls):
         return "ObjectNav"
@@ -65,13 +69,13 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         dagger_steps = 3e4
         ppo_steps = 3e4
         ppo_steps2 = 1e6
-        nprocesses = 4
+        nprocesses = 3
         lr = 2.5e-4
         num_mini_batch = 1
-        update_repeats = 2
+        update_repeats = 3
         num_steps = 16
-        save_interval = 100
         log_interval = 2 * num_steps * nprocesses
+        save_interval = 2 * log_interval
         gpu_ids = [] if not torch.cuda.is_available() else [0]
         gamma = 0.99
         use_gae = True
@@ -87,7 +91,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "num_steps": num_steps,
             "gpu_ids": gpu_ids,
             "imitation_loss": Builder(Imitation,),
-            "ppo_loss": Builder(PPO, dict(), default=algo_defaults["ppo_loss"],),
+            "ppo_loss": Builder(PPO, dict(), default=PPOConfig,),
             "gamma": gamma,
             "use_gae": use_gae,
             "gae_lambda": gae_lambda,
@@ -104,6 +108,17 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
                 {"losses": ["ppo_loss"], "end_criterion": ppo_steps2,},
             ],
         }
+
+    @classmethod
+    def evaluation_params(cls, **kwargs):
+        nprocesses = 1
+        gpu_ids = [] if not torch.cuda.is_available() else [1]
+        res = cls.training_pipeline()
+        del res["pipeline"]
+        del res["optimizer"]
+        res["nprocesses"] = nprocesses
+        res["gpu_ids"] = gpu_ids
+        return res
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
@@ -128,10 +143,6 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
     def _get_sampler_args_for_scene_split(
         self, scenes: List[str], process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
-        if len(scenes) % total_processes != 0:
-            print(
-                "Warning: oversampling some of the scenes to feed all processes. You can avoid this by setting a number of workers divisor of the number of scenes"
-            )
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
                 print(
@@ -139,6 +150,11 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
                 )
             scenes = scenes * int(ceil(total_processes / len(scenes)))
             scenes = scenes[: total_processes * (len(scenes) // total_processes)]
+        else:
+            if len(scenes) % total_processes != 0:
+                print(
+                    "Warning: oversampling some of the scenes to feed all processes. You can avoid this by setting a number of workers divisor of the number of scenes"
+                )
         inds = self._partition_inds(len(scenes), total_processes)
 
         return {
@@ -148,26 +164,37 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
-            "scene_period": self.SCENE_PERIOD,
         }
 
     def train_task_sampler_args(
-        self, process_ind: int, total_processes: int
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]] = None,
     ) -> Dict[str, Any]:
-        return self._get_sampler_args_for_scene_split(
+        res = self._get_sampler_args_for_scene_split(
             self.TRAIN_SCENES, process_ind, total_processes
         )
+        res["scene_period"] = self.SCENE_PERIOD
+        res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
+        return res
 
     def valid_task_sampler_args(
-        self, process_ind: int, total_processes: int
+        self, process_ind: int, total_processes: int, devices: Optional[List[int]]
     ) -> Dict[str, Any]:
-        return self._get_sampler_args_for_scene_split(
+        res = self._get_sampler_args_for_scene_split(
             self.VALID_SCENES, process_ind, total_processes
         )
+        res["scene_period"] = self.VALID_SAMPLES_IN_SCENE
+        res["max_tasks"] = self.VALID_SAMPLES_IN_SCENE * len(res["scenes"])
+        res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
+        return res
 
     def test_task_sampler_args(
-        self, process_ind: int, total_processes: int
+        self, process_ind: int, total_processes: int, devices: Optional[List[int]]
     ) -> Dict[str, Any]:
-        return self._get_sampler_args_for_scene_split(
-            self.TEST_SCENSE, process_ind, total_processes
+        res = self._get_sampler_args_for_scene_split(
+            self.TEST_SCENES, process_ind, total_processes
         )
+        res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
+        return res

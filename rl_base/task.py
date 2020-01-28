@@ -174,9 +174,9 @@ class TaskSampler(abc.ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def next_task(self) -> Task:
+    def next_task(self) -> Optional[Task]:
         """
-        @return: the next Task in the sampler's stream.
+        @return: the next Task in the sampler's stream if a next task does exist.
         """
         raise NotImplementedError()
 
@@ -196,5 +196,13 @@ class TaskSampler(abc.ABC):
 
         @return: True if all Tasks that can be sampled by this sampler have the
             same observation space. Otherwise False.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def reset(self) -> None:
+        """Resets all tasks to their original state.
+
+        # TODO: seeds!
         """
         raise NotImplementedError()
