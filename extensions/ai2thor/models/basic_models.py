@@ -164,10 +164,12 @@ class RNNStateEncoder(nn.Module):
 
         Supports masking the hidden state during various timesteps in the forward lass
 
-        @param: input_size: The input size of the RNN
-        @param: hidden_size: The hidden size
-        @param: num_layers: The number of recurrent layers
-        @param: rnn_type: The RNN cell type.  Must be GRU or LSTM
+        # Parameters
+
+        input_size : The input size of the RNN
+        hidden_size : The hidden size
+        num_layers : The number of recurrent layers
+        rnn_type : The RNN cell type.  Must be GRU or LSTM
         """
 
         super().__init__()
@@ -247,10 +249,12 @@ class RNNStateEncoder(nn.Module):
     def seq_forward(self, x, hidden_states, masks):
         """Forward for a sequence of length T
 
-        @param: (T, N, -1) Tensor that has been flattened to (T * N, -1)
-        @param: hidden_states: The starting hidden state.
-        @param: masks: The masks to be applied to hidden state at every timestep.
-            A (T, N) tensor flatten to (T * N)
+        # Parameters
+
+        x : (T, N, -1) Tensor that has been flattened to (T * N, -1)
+        hidden_states : The starting hidden state.
+        masks : A (T, N) tensor flatten to (T * N).
+            The masks to be applied to hidden state at every timestep.
         """
         # x is a (T, N, -1) tensor flattened to (T * N, -1)
         n = hidden_states.size(1)

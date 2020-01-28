@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 from subprocess import check_output
 from typing import Dict, Union
@@ -107,6 +108,17 @@ def build_docs(
 
 
 if __name__ == "__main__":
+    print("Copying README.md file to docs.")
+    shutil.copy("README.md", "docs/README.md")
+
+    print("Copying LICENSE file to docs.")
+    shutil.copy("LICENSE", "docs/LICENSE.md")
+
+    print("Copying ROADMAP.md file to docs.")
+    shutil.copy("ROADMAP.md", "docs/ROADMAP.md")
+
+    print("Copying CONTRIBUTING.md file to docs.")
+    shutil.copy("CONTRIBUTING.md", "docs/CONTRIBUTING.md")
 
     print("Building the docs.")
     parent_folder_path = Path(__file__).parent.parent
