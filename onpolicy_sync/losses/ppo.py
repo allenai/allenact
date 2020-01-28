@@ -1,6 +1,7 @@
 from typing import Dict, Union
 
 import torch
+import typing
 
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from rl_base.common import ActorCriticOutput
@@ -23,14 +24,14 @@ class PPO(AbstractActorCriticLoss):
         self.entropy_coef = entropy_coef
         self.use_clipped_value_loss = use_clipped_value_loss
 
-    def loss(
+    def loss(  # type: ignore
         self,
         batch: Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]],
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
         **kwargs
     ):
-        actions = batch["actions"]
+        actions = typing.cast(torch.LongTensor, batch["actions"])
         values = actor_critic_output.values
         dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy().mean()
         action_log_probs = actor_critic_output.distributions.log_probs(actions)
@@ -51,7 +52,12 @@ class PPO(AbstractActorCriticLoss):
             value_losses_clipped = (value_pred_clipped - batch["returns"]).pow(2)
             value_loss = 0.5 * torch.max(value_losses, value_losses_clipped).mean()
         else:
-            value_loss = 0.5 * (batch["returns"] - values).pow(2).mean()
+            value_loss = (
+                0.5
+                * (typing.cast(torch.FloatTensor, batch["returns"]) - values)
+                .pow(2)
+                .mean()
+            )
 
         total_loss = (
             value_loss * self.value_loss_coef

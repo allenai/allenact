@@ -8,7 +8,7 @@ environment."""
 
 import abc
 from abc import abstractmethod
-from typing import Dict, Any, Tuple, Generic, Union, List, Optional
+from typing import Dict, Any, Tuple, Generic, Union, List, Optional, TypeVar
 
 import gym
 import numpy as np
@@ -30,7 +30,7 @@ class Task(Generic[EnvType]):
     """
 
     env: EnvType
-    sensor_suite: SensorSuite[EnvType]
+    sensor_suite: SensorSuite[EnvType, "Task"]
     task_info: Dict[str, Any]
     max_steps: int
     observation_space: SpaceDict
@@ -59,8 +59,11 @@ class Task(Generic[EnvType]):
     @property
     @abstractmethod
     def action_space(self) -> gym.Space:
-        """
-        @return: the action space for the task.
+        """Task's action space.
+
+        # Returns
+
+        The action space for the task.
         """
         raise NotImplementedError()
 
@@ -137,6 +140,9 @@ class Task(Generic[EnvType]):
         raise NotImplementedError()
 
 
+SubTaskType = TypeVar("SubTaskType", bound=Task)
+
+
 class TaskSampler(abc.ABC):
     """Abstract class defining a how new tasks are sampled."""
 
@@ -195,6 +201,8 @@ class TaskSampler(abc.ABC):
 
     @abstractmethod
     def reset(self) -> None:
-        """Resets all tasks to their original state.  # TODO: seeds!
+        """Resets all tasks to their original state.
+
+        # TODO: seeds!
         """
         raise NotImplementedError()

@@ -84,7 +84,7 @@ class SplitBias(nn.Module):
         return x
 
 
-class KFACOptimizer(optim.Optimizer):
+class KFACOptimizer(optim.Optimizer):  # type: ignore
     def __init__(
         self,
         model,

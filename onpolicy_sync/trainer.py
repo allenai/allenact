@@ -9,6 +9,7 @@ import torch.optim
 import torch
 import torch.nn as nn
 import torch.distributions
+import typing
 from tensorboardX import SummaryWriter
 
 from onpolicy_sync.utils import LinearDecay
@@ -28,12 +29,18 @@ def validate(
     read_from_parent: mp.Queue,
     write_to_parent: mp.Queue,
 ):
-    evaluator = Trainer(config, output_dir, mode="valid")
+    evaluator = Trainer(config, None, output_dir, mode="valid")
     evaluator.process_checkpoints(read_from_parent, write_to_parent)
 
 
 class Trainer:
-    def __init__(self, config: ExperimentConfig, output_dir: str, mode: str = "train"):
+    def __init__(
+        self,
+        config: ExperimentConfig,
+        loaded_config_src_files: Optional[Dict[str, str]],
+        output_dir: str,
+        mode: str = "train",
+    ):
         self.mode = mode.lower()
         assert self.mode in [
             "train",
@@ -53,7 +60,7 @@ class Trainer:
                 )
             else:
                 self.device = "cuda:%d" % self.params["gpu_ids"][0]
-                torch.cuda.set_device(self.device)
+                torch.cuda.set_device(self.device)  # type: ignore
 
         self.observation_set = None
         if "preprocessors" in self.params and "observation_set" in self.params:
@@ -94,8 +101,8 @@ class Trainer:
         self.configs_folder = os.path.join(output_dir, "configs")
         os.makedirs(self.configs_folder, exist_ok=True)
         if mode == "train":
-            for file in config._loaded_config_src_files:
-                parts = config._loaded_config_src_files[file].split(".")
+            for file in loaded_config_src_files:
+                parts = loaded_config_src_files[file].split(".")
                 src_file = os.path.sep.join(parts) + ".py"
                 dst_file = (
                     os.path.join(self.configs_folder, os.path.join(*parts[1:])) + ".py"
@@ -203,16 +210,23 @@ class Trainer:
             # Map location CPU is almost always better than mapping to a CUDA device.
             ckpt = torch.load(ckpt, map_location="cpu")
 
+        ckpt = typing.cast(
+            Dict[
+                str, Union[Dict[str, Any], torch.Tensor, float, int, str, typing.List]
+            ],
+            ckpt,
+        )
+
         self.actor_critic.load_state_dict(ckpt["model_state_dict"])
-        self.step_count = ckpt["step_count"]
-        self.total_steps = ckpt["total_steps"]
+        self.step_count = ckpt["step_count"]  # type: ignore
+        self.total_steps = ckpt["total_steps"]  # type: ignore
 
         if self.mode == "train":
             self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-            self.backprop_count = ckpt["backprop_count"]
-            self.rollout_count = ckpt["rollout_count"]
-            self.pipeline_stage = ckpt["pipeline_stage"]
-            self.total_updates = ckpt["total_updates"]
+            self.backprop_count = ckpt["backprop_count"]  # type: ignore
+            self.rollout_count = ckpt["rollout_count"]  # type: ignore
+            self.pipeline_stage = ckpt["pipeline_stage"]  # type: ignore
+            self.total_updates = ckpt["total_updates"]  # type: ignore
             self.local_start_time_str = ckpt["local_start_time_str"]
             self.params["pipeline"] = self.params["pipeline"][self.pipeline_stage :]
 
@@ -282,7 +296,7 @@ class Trainer:
                     batch["masks"],
                 )
 
-                info = dict(
+                info: Dict[str, Any] = dict(
                     total_updates=self.total_updates,
                     backprop_count=self.backprop_count,
                     rollout_count=self.rollout_count,
@@ -302,7 +316,7 @@ class Trainer:
                     if total_loss is None:
                         total_loss = loss_weight * current_loss
                     else:
-                        total_loss += loss_weight * current_loss
+                        total_loss = total_loss + loss_weight * current_loss
 
                     info["losses"][loss_name] = current_info
                 assert total_loss is not None, "No losses specified?"
@@ -615,12 +629,15 @@ class Trainer:
         self.teacher_forcing = None
 
         try:
+            new_data = False
             while True:
-                while not read_from_parent.empty():
+                while (not new_data) or (not read_from_parent.empty()):
                     try:
                         command, data = read_from_parent.get_nowait()
+                        new_data = True
                     except queue.Empty:
                         pass
+
                 if command == "eval":
                     scalars = self.run_eval(checkpoint_file_name=data)
                     write_to_parent.put(("valid_metrics", scalars))
@@ -628,6 +645,8 @@ class Trainer:
                     self.close()
                 else:
                     raise NotImplementedError()
+
+                new_data = False
         except KeyboardInterrupt:
             print("Eval KeyboardInterrupt - closing")
             self.close()

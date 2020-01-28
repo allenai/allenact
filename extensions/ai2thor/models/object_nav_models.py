@@ -23,7 +23,7 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
 
         self.goal_sensor_uuid = goal_sensor_uuid
         self._n_object_types = self.observation_space.spaces[self.goal_sensor_uuid].n
-        self.recurrent_hidden_state_size = hidden_size
+        self._hidden_size = hidden_size
         self.object_type_embedding_size = object_type_embedding_dim
 
         self.visual_encoder = SimpleCNN(self.observation_space, hidden_size)
@@ -45,6 +45,10 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         self.train()
 
     @property
+    def recurrent_hidden_state_size(self):
+        return self._hidden_size
+
+    @property
     def output_size(self):
         return self.recurrent_hidden_state_size
 
@@ -60,9 +64,6 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         return self.object_type_embedding(
             observations[self.goal_sensor_uuid].to(torch.int64)
         )
-
-    def recurrent_hidden_state_size(self):
-        return self._hidden_size
 
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
         target_encoding = self.get_object_type_encoding(observations)

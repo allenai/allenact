@@ -3,7 +3,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+import abc
 import typing
 
 import gym
@@ -21,9 +21,12 @@ class ActorCriticModel(nn.Module, typing.Generic[DistributionType]):
         self.dim_actions = action_space.n
         self.observation_space = observation_space
 
+    @property
+    @abc.abstractmethod
     def recurrent_hidden_state_size(self):
         raise NotImplementedError
 
+    @abc.abstractmethod
     def forward(self, *args, **kwargs) -> ActorCriticOutput:
         raise NotImplementedError
 

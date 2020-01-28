@@ -1,6 +1,7 @@
 from typing import Dict, Union
 
 import torch
+import typing
 
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from rl_base.common import ActorCriticOutput
@@ -8,15 +9,16 @@ from rl_base.distributions import CategoricalDistr
 
 
 class Imitation(AbstractActorCriticLoss):
-    def loss(
+    def loss(  # type: ignore
         self,
         batch: Dict[str, Union[Dict[str, torch.Tensor], torch.Tensor]],
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
         **kwargs
     ):
-        if "expert_action" in batch["observations"]:
-            expert_actions_and_mask = batch["observations"]["expert_action"]
+        observations = typing.cast(Dict[str, torch.Tensor], batch["observations"])
+        if "expert_action" in observations:
+            expert_actions_and_mask = observations["expert_action"]
             assert expert_actions_and_mask.shape[-1] == 2
             expert_actions_and_mask_reshaped = expert_actions_and_mask.view(-1, 2)
 
@@ -35,9 +37,11 @@ class Imitation(AbstractActorCriticLoss):
 
             total_loss = -(
                 expert_actions_masks
-                * actor_critic_output.distributions.log_probs(expert_actions)
+                * actor_critic_output.distributions.log_probs(
+                    typing.cast(torch.LongTensor, expert_actions)
+                )
             ).sum() / torch.clamp(expert_successes, min=1)
-        elif "expert_policy" in batch["observations"]:
+        elif "expert_policy" in observations:
             raise NotImplementedError()
             # expert_policies = batch["observations"]["expert_policy"]
             # total_loss = (

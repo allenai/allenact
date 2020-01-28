@@ -24,7 +24,7 @@ try:
     # between processes
     import torch.multiprocessing as mp
 except ImportError:
-    import multiprocessing as mp
+    import multiprocessing as mp  # type: ignore
 
 STEP_COMMAND = "step"
 NEXT_TASK_COMMAND = "next_task"
@@ -155,7 +155,7 @@ class VectorSampledTasks:
         for write_fn in self._connection_write_fns:
             write_fn((ACTION_SPACE_COMMAND, None))
         self.action_spaces = [read_fn() for read_fn in self._connection_read_fns]
-        self._paused = []
+        self._paused: List[Tuple[int, Callable, Callable, mp.Process]] = []
 
     @property
     def num_unpaused_tasks(self):
@@ -275,8 +275,8 @@ class VectorSampledTasks:
         for id, stuff in enumerate(
             zip(worker_connections, parent_connections, sampler_fn_args)
         ):
-            worker_conn, parent_conn, sampler_fn_args = stuff
-            ps = self._mp_ctx.Process(
+            worker_conn, parent_conn, sampler_fn_args = stuff  # type: ignore
+            ps = self._mp_ctx.Process(  # type: ignore
                 target=self._task_sampling_loop_worker,
                 args=(
                     id,
@@ -343,7 +343,7 @@ class VectorSampledTasks:
         self._is_waiting = False
         return results
 
-    def step_at(self, index_process: int, action: int) -> [RLStepResult]:
+    def step_at(self, index_process: int, action: int) -> List[RLStepResult]:
         """Step in the index_process task in the vector.
 
         @param index_process: index of the process to be reset
@@ -383,8 +383,7 @@ class VectorSampledTasks:
         return self.wait_step()
 
     def reset_all(self):
-        """Reset all task samplers to their initial state.
-        """
+        """Reset all task samplers to their initial state."""
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
             write_fn((RESET_COMMAND, ""))
@@ -576,7 +575,7 @@ class ThreadedVectorSampledTasks(VectorSampledTasks):
         for id, stuff in enumerate(
             zip(parent_read_queues, parent_write_queues, sampler_fn_args)
         ):
-            parent_read_queue, parent_write_queue, sampler_fn_args = stuff
+            parent_read_queue, parent_write_queue, sampler_fn_args = stuff  # type: ignore
             thread = Thread(
                 target=self._task_sampling_loop_worker,
                 args=(

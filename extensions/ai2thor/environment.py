@@ -13,6 +13,7 @@ from typing import Tuple, Dict, List, Set, Union, Any, Optional, Mapping, NamedT
 import ai2thor.server
 import networkx as nx
 import numpy as np
+import typing
 from ai2thor.controller import Controller
 
 from extensions.ai2thor.constants import VISIBILITY_DISTANCE, FOV
@@ -55,7 +56,7 @@ class AI2ThorEnvironment(object):
         self.controller.local_executable_path = local_thor_build
         self.controller.docker_enabled = docker_enabled
         self._initially_reachable_points: Optional[List[Dict]] = None
-        self._initially_reachable_points_set: Optional[Set[Dict]] = None
+        self._initially_reachable_points_set: Optional[Set[Tuple[float, float]]] = None
         self._started = True
         self._offset: Optional[Tuple[int, int]] = None
         self.move_mag: Optional[float] = None
@@ -355,7 +356,7 @@ class AI2ThorEnvironment(object):
                     "10 attempts. Forcing the action."
                 ).format(self.scene_name, seed, partial_position)
             )
-            self.teleport_agent_to(**{**state, **partial_position}, force_action=True)
+            self.teleport_agent_to(**{**state, **partial_position}, force_action=True)  # type: ignore
             assert self.last_action_success
 
         assert state is not None
@@ -465,7 +466,7 @@ class AI2ThorEnvironment(object):
         }
         return location
 
-    def _agent_location_to_tuple(self, p):
+    def _agent_location_to_tuple(self, p: Dict[str, float]) -> Tuple[float, float]:
         return (round(p["x"], 2), round(p["z"], 2))
 
     def get_flat_surface_grid(self, grid_size: int) -> np.ndarray:
@@ -593,7 +594,7 @@ class AI2ThorEnvironment(object):
     def step(
         self, action_dict: Dict[str, Union[str, int, float]]
     ) -> ai2thor.server.Event:
-        action = action_dict["action"]
+        action = typing.cast(str, action_dict["action"])
 
         skip_render = "renderImage" in action_dict and not action_dict["renderImage"]
         last_frame: Optional[np.ndarray] = None
@@ -616,7 +617,7 @@ class AI2ThorEnvironment(object):
                     self.get_agent_location()
                 )
                 if end_location_tuple not in self.initially_reachable_points_set:
-                    self.teleport_agent_to(**start_location, force_action=True)
+                    self.teleport_agent_to(**start_location, force_action=True)  # type: ignore
                     self.last_action = action
                     self.last_action_success = False
                     self.last_event.metadata[
@@ -627,7 +628,7 @@ class AI2ThorEnvironment(object):
             self.controller.step(action_dict)
             metadata = self.last_event.metadata
             if self.position_dist(last_position, self.get_agent_location()) > 0.001:
-                self.teleport_agent_to(**last_position, force_action=True)
+                self.teleport_agent_to(**last_position, force_action=True)  # type: ignore
                 warnings.warn(
                     "In scene {}, after randomization of hide and seek objects, agent moved.".format(
                         self.scene_name
@@ -1033,477 +1034,3 @@ class AI2ThorEnvironment(object):
             return nx.shortest_path_length(self.graph, source_state_key, goal_state_key)
         except nx.NetworkXNoPath as _:
             return float("inf")
-
-
-class AI2ThorEnvironmentMapSettings(NamedTuple):
-    reachable: bool
-    views: bool
-    interactions: bool
-    openable: bool
-    cleared_fog: bool
-    reveal_map_on_visit: bool = False
-    reveal_map_shape: Tuple[int, int] = (4, 3)
-    scene_bounds_from_reachable: bool = False
-    map_padding: int = 3
-    verbose: bool = True
-
-
-def channels_given_environment_map_settings(settings: AI2ThorEnvironmentMapSettings):
-    channels = 0
-    channels += 1 if settings.reachable else 0
-    channels += 4 if settings.views else 0
-    channels += 12 if settings.interactions else 0
-    channels += 12 if settings.openable else 0
-    channels += 1 if settings.cleared_fog else 0
-    return channels
-
-
-class AI2ThorEnvironmentMap(object):
-    def __init__(
-        self,
-        env: AI2ThorEnvironment,
-        reveal_map_on_visit,
-        reveal_map_shape: Tuple[int, int],
-        scene_bounds_from_reachable: bool,
-        map_padding: int = 3,
-        verbose: bool = True,
-    ) -> None:
-        self.env = env
-        self.reveal_map_on_visit = reveal_map_on_visit
-        self.reveal_map_shape = reveal_map_shape
-        self.verbose = verbose
-        if reveal_map_shape[1] % 2 != 1 and reveal_map_shape != (0, 0):
-            raise Exception(
-                "reveal_map_shape must have an odd second element or equal (0,0)."
-            )
-
-        if scene_bounds_from_reachable:
-            xs = [p["x"] for p in env.initially_reachable_points]
-            zs = [p["z"] for p in env.initially_reachable_points]
-            min_pos = {"x": min(*xs), "z": min(*zs)}
-            max_pos = {"x": max(*xs), "z": max(*zs)}
-            offset = env.grid_size * map_padding
-        else:
-            env.step({"action": "GetSceneBounds"})
-            min_pos, max_pos = env.last_event.metadata["reachablePositions"]
-            offset = env.grid_size * map_padding
-
-        n = 1.0 / env.grid_size
-        if abs(n - int(n)) > 0.0001:
-            raise RuntimeError("Inverse of environment grid size must be an integer.")
-        x_min = math.floor(n * (min_pos["x"] - offset)) / n
-        x_max = math.ceil(n * (max_pos["x"] + offset)) / n
-        z_min = math.floor(n * (min_pos["z"] - offset)) / n
-        z_max = math.ceil(n * (max_pos["z"] + offset)) / n
-
-        self.x_vals = list(np.linspace(x_min, x_max, round(1 + (x_max - x_min) * 4)))
-        self.z_vals = list(
-            reversed(np.linspace(z_min, z_max, round(1 + (z_max - z_min) * 4)))
-        )
-        self.x_val_to_index = {x: i for i, x in enumerate(self.x_vals)}
-        self.z_val_to_index = {z: i for i, z in enumerate(self.z_vals)}
-
-        # Reachability
-        self.reachable_map_shape = (1, len(self.z_vals), len(self.x_vals))
-        self.reachable_map = np.zeros(self.reachable_map_shape)
-        for p in env.initially_reachable_points:
-            x, z, rotation = self._clean_location(p)
-            row_col = self.xz_to_row_col(x, z)
-            if row_col is None:
-                warnings.warn(
-                    "In scene {}, position {} is initially reachable but not on the map!\nCurrent position: {}".format(
-                        env.scene_name, p, env.get_agent_location()
-                    )
-                )
-                continue
-            row, col = self.xz_to_row_col(x, z)
-            self.reachable_map[0, row, col] = 1.0
-
-        # Viewed from rotation
-        self.view_map_shape = (1, len(self.z_vals), len(self.x_vals))
-        self.view_maps = [np.zeros(self.view_map_shape) for _ in range(4)]
-
-        # Number of interactions with objects at height (<1m, 1m-1.5m, >1.5m) for each position/rotation
-        self.interaction_map_shape = (3, len(self.z_vals), len(self.x_vals))
-        self.interaction_maps = [np.zeros(self.interaction_map_shape) for _ in range(4)]
-
-        # Number of (openable) objects open at location
-        # Number of (openable) objects closed at location
-        # Number of (openable) objects never opened at location (i.e. left to be explored)
-        self.openable_objects_map_shape = (3, len(self.z_vals), len(self.x_vals))
-        self.openable_objects_map = np.zeros(self.openable_objects_map_shape)
-        openable_objects_on_map_dict = None
-        if os.path.exists("resources/openable_objects_maps.json"):
-            with open("resources/openable_objects_maps.json", "r") as f:
-                openable_objects_on_map_dict = json.load(f)
-        if (
-            openable_objects_on_map_dict is None
-            or self.env.scene_name not in openable_objects_on_map_dict
-        ):
-            if verbose:
-                warnings.warn(
-                    "No openable objects map data, proceeding with no object data."
-                )
-            openable_objects_on_map = {"map": [], "x_vals": [], "z_vals": []}
-        else:
-            openable_objects_on_map = openable_objects_on_map_dict[self.env.scene_name]
-        (
-            self.openable_object_id_to_locations,
-            self.open_objects,
-            self.has_been_opened,
-        ) = self._initialize_openable_objects_on_map_info(
-            openable_objects_on_map["map"],
-            openable_objects_on_map["x_vals"],
-            openable_objects_on_map["z_vals"],
-        )
-
-        # Fog
-        self.fog_mask = np.zeros(self.reachable_map_shape)
-
-        # Remember the visited locations and the agent start position
-        self.visited_locations_set: Set[Tuple[int, int, int]] = set()
-        self.ordered_visited_locations_list: List[Tuple[int, int, int]] = []
-        self.agent_standing_list: List[bool] = []
-
-        self.agent_start_position = self.agent_xz_to_row_col() + (
-            int(self.env.get_agent_location()["rotation"]),
-        )
-
-        # Update the map
-        self.update()
-
-    def _initialize_openable_objects_on_map_info(
-        self, openable_objects_on_map, x_vals, z_vals
-    ):
-        openable_objects = self.env.all_objects_with_properties({"openable": True})
-        openable_object_ids = set(map(lambda o: o["objectId"], openable_objects))
-
-        openable_object_ids_in_memory = set()
-        object_id_to_locations = {}
-        good_object_ids = set()
-        for j, x in enumerate(x_vals):
-            for i, z in enumerate(z_vals):
-                row_col = self.xz_to_row_col(x, z)
-                if row_col is not None:
-                    row, col = row_col
-                    for object_id in openable_objects_on_map[i][j]:
-                        openable_object_ids_in_memory.add(object_id)
-                        if object_id in openable_object_ids:
-                            good_object_ids.add(object_id)
-                            if object_id in object_id_to_locations:
-                                object_id_to_locations[object_id].append((row, col))
-                            else:
-                                object_id_to_locations[object_id] = [(row, col)]
-
-        should_but_dont = openable_object_ids_in_memory - openable_object_ids
-        do_but_shouldnt = openable_object_ids - openable_object_ids_in_memory
-        if self.verbose and len(should_but_dont) != 0:
-            warnings.warn(
-                "The openable objects {}, in scene {}, should be openable/exist but dont.".format(
-                    should_but_dont, self.env.scene_name
-                )
-            )
-        # if len(do_but_shouldnt) != 0:
-        #     warnings.warn(
-        #         "The openable objects {}, in scene {}, dont exist in the resource file.".format(
-        #             do_but_shouldnt, self.env.scene_name
-        #         )
-        #     )
-
-        has_been_opened = set()
-        open_objects = set()
-        for o in openable_objects:
-            if o["isOpen"]:
-                open_objects.add(o["objectId"])
-                has_been_opened.add(o["objectId"])
-                if o["objectId"] in good_object_ids:
-                    for row, col in object_id_to_locations[o["objectId"]]:
-                        self.openable_objects_map[0, row, col] += 1.0
-            elif o["objectId"] in good_object_ids:
-                for row, col in object_id_to_locations[o["objectId"]]:
-                    self.openable_objects_map[1, row, col] += 1.0
-                    self.openable_objects_map[2, row, col] += 1.0
-
-        return object_id_to_locations, open_objects, has_been_opened
-
-    @staticmethod
-    def _ind_of_closest(needle: float, haystack: np.array) -> int:
-        return int(np.argmin(np.abs(haystack - needle)))
-
-    def agent_xz_to_row_col(self):
-        agent_location = self.env.get_agent_location()
-        x, z, rotation = self._clean_location(agent_location)
-        agent_row_col = self.xz_to_row_col(x, z)
-
-        if agent_row_col is not None:
-            return agent_row_col
-        else:
-            desired_location = copy.deepcopy(agent_location)
-            reachable_points = [
-                (self.x_vals[col], self.z_vals[row])
-                for row, col in zip(*np.where(self.reachable_map != 0)[1:])
-            ]
-
-            reachable_points = sorted(
-                reachable_points, key=lambda xz: abs(xz[0] - x) + abs(xz[1] - z)
-            )
-
-            # Thor behaves weirdly when the agent gets off of the grid and you
-            # try to teleport the agent back to the closest grid location. To
-            # get around this we first teleport the agent to random location
-            # and then back to where it should be.
-            for point in self.env.initially_reachable_points:
-                if abs(x - point["x"]) > 0.1 or abs(z - point["z"]) > 0.1:
-                    self.env.teleport_agent_to(rotation=0, horizon=30, **point)
-                    if self.env.last_action_success:
-                        break
-
-            for p in reachable_points:
-                desired_location["x"] = p[0]
-                desired_location["z"] = p[1]
-                self.env.teleport_agent_to(**desired_location)
-                if self.env.last_action_success:
-                    break
-
-            teleport_forced = False
-            if not self.env.last_action_success:
-                desired_location["x"] = reachable_points[0][0]
-                desired_location["z"] = reachable_points[0][1]
-                self.env.teleport_agent_to(**desired_location, force_action=True)
-                teleport_forced = True
-
-            new_agent_location = self.env.get_agent_location()
-            warnings.warn(
-                (
-                    "In {}, at location (x,z)=({},{}) which is not on grid;"
-                    " attempting to correct this: agent teleported to (x,z)=({},{}).\n"
-                    "Teleportation {} forced."
-                ).format(
-                    self.env.scene_name,
-                    x,
-                    z,
-                    new_agent_location["x"],
-                    new_agent_location["z"],
-                    "was" if teleport_forced else "wasn't",
-                )
-            )
-            return self.agent_xz_to_row_col()
-
-    def xz_to_row_col(self, x, z):
-        x = round(x, 2)
-        z = round(z, 2)
-
-        z_ind = self.z_val_to_index.get(z)
-        x_ind = self.x_val_to_index.get(x)
-
-        if z_ind is None or z_ind is None:
-            return None
-
-        return z_ind, x_ind
-
-    @staticmethod
-    def _clean_location(location) -> Tuple[float, float, int]:
-        return (
-            round(location["x"], 2),
-            round(location["z"], 2),
-            0 if "rotation" not in location else round(location["rotation"]) % 360,
-        )
-
-    def _reorder_maps_given_rotation(self, view_maps, rotation):
-        rotation = rotation % 360
-
-        if rotation == 0:
-            return np.concatenate(tuple(view_maps), axis=0)
-        elif rotation == 90:
-            return np.concatenate(tuple(view_maps[i] for i in [1, 2, 3, 0]), axis=0)
-        elif rotation == 180:
-            return np.concatenate(tuple(view_maps[i] for i in [2, 3, 0, 1]), axis=0)
-        elif rotation == 270:
-            return np.concatenate(tuple(view_maps[i] for i in [3, 0, 1, 2]), axis=0)
-        else:
-            raise NotImplementedError("Rotation must be in 0, 90, 180, 270")
-
-    def update(self):
-        agent_location = self.env.get_agent_location()
-        _, _, rotation = self._clean_location(agent_location)
-        agent_row, agent_col = self.agent_xz_to_row_col()
-        self.visited_locations_set.add((agent_row, agent_col, rotation))
-        self.ordered_visited_locations_list.append((agent_row, agent_col, rotation))
-        self.agent_standing_list.append(agent_location["standing"])
-
-        # Updating the reachability and fog maps
-        self.fog_mask[0, agent_row, agent_col] = 1.0
-        self.view_maps[rotation // 90][0, agent_row, agent_col] = 1.0
-        if self.reveal_map_shape[0] != 0 and self.reveal_map_shape[1] != 0:
-            if rotation == 0:
-                self.fog_mask[
-                    0,
-                    (agent_row - self.reveal_map_shape[0]) : agent_row,
-                    (agent_col - self.reveal_map_shape[1] // 2) : (
-                        agent_col + 1 + self.reveal_map_shape[1] // 2
-                    ),
-                ] = 1.0
-            elif rotation == 90:
-                self.fog_mask[
-                    0,
-                    (agent_row - self.reveal_map_shape[1] // 2) : (
-                        agent_row + 1 + self.reveal_map_shape[1] // 2
-                    ),
-                    (agent_col + 1) : (agent_col + 1 + self.reveal_map_shape[0]),
-                ] = 1.0
-            elif rotation == 180:
-                self.fog_mask[
-                    0,
-                    (agent_row + 1) : (agent_row + 1 + self.reveal_map_shape[0]),
-                    (agent_col - self.reveal_map_shape[1] // 2) : (
-                        agent_col + 1 + self.reveal_map_shape[1] // 2
-                    ),
-                ] = 1.0
-            elif rotation == 270:
-                self.fog_mask[
-                    0,
-                    (agent_row - self.reveal_map_shape[1] // 2) : (
-                        agent_row + 1 + self.reveal_map_shape[1] // 2
-                    ),
-                    (agent_col - self.reveal_map_shape[0]) : agent_col,
-                ] = 1.0
-            else:
-                raise NotImplementedError("Rotation must be in 0, 90, 180, 270")
-
-        # Updating the open object map
-        for o in self.env.all_objects_with_properties({"openable": True}):
-            oid = o["objectId"]
-            open = o["isOpen"]
-            opened = open and oid not in self.open_objects
-            closed = not open and oid in self.open_objects
-            changed = opened or closed
-            if opened:
-                self.open_objects.add(oid)
-                has_been_opened_update = 1 if oid not in self.has_been_opened else 0
-                self.has_been_opened.add(oid)
-                if oid in self.openable_object_id_to_locations:
-                    for row, col in self.openable_object_id_to_locations[oid]:
-                        self.openable_objects_map[0, row, col] += 1
-                        self.openable_objects_map[1, row, col] -= 1
-                        self.openable_objects_map[2, row, col] -= has_been_opened_update
-            elif closed:
-                self.open_objects.remove(oid)
-                if oid in self.openable_object_id_to_locations:
-                    for row, col in self.openable_object_id_to_locations[oid]:
-                        self.openable_objects_map[0, row, col] -= 1
-                        self.openable_objects_map[1, row, col] += 1
-
-            if changed:
-                o_y = o["position"]["y"]
-                update_ind = (o_y > 1.0) + (o_y > 1.5)
-                self.interaction_maps[rotation // 90][
-                    update_ind, agent_row, agent_col
-                ] += 1
-
-    def absolute_row_col_to_relative(
-        self, absolute_row: int, absolute_col: int, rotation: int
-    ):
-        nrow = self.reachable_map_shape[1]
-        ncol = self.reachable_map_shape[2]
-
-        rotation = rotation % 360
-        if rotation == 0:
-            relative_row = absolute_row
-            relative_col = absolute_col
-        elif rotation == 90:
-            relative_row = (ncol - 1) - absolute_col
-            relative_col = absolute_row
-        elif rotation == 180:
-            relative_row = (nrow - 1) - absolute_row
-            relative_col = (ncol - 1) - absolute_col
-        elif rotation == 270:
-            relative_row = absolute_col
-            relative_col = (nrow - 1) - absolute_row
-        else:
-            raise ValueError("Rotation must be one of 0, 90, 180, or 270")
-
-        return (relative_row, relative_col)
-
-    def agent_position(self):
-        absolute_row, absolute_col = self.agent_xz_to_row_col()
-        x, z, rotation = self._clean_location(self.env.get_agent_location())
-
-        nrow = self.reachable_map_shape[1]
-        ncol = self.reachable_map_shape[2]
-
-        rotation = rotation % 360
-        if rotation == 0:
-            ego_row = absolute_row
-            ego_col = absolute_col
-        elif rotation == 90:
-            ego_row = (ncol - 1) - absolute_col
-            ego_col = absolute_row
-        elif rotation == 180:
-            ego_row = (nrow - 1) - absolute_row
-            ego_col = (ncol - 1) - absolute_col
-        elif rotation == 270:
-            ego_row = absolute_col
-            ego_col = (nrow - 1) - absolute_row
-        else:
-            raise ValueError("Rotation must be one of 0, 90, 180, or 270")
-
-        return {
-            "x": x,
-            "z": z,
-            "rotation": rotation,
-            "absolute_row": absolute_row,
-            "absolute_col": absolute_col,
-            "ego_row": ego_row,
-            "ego_col": ego_col,
-        }
-
-    # NOTE: Rotation here is in the counter clockwise direction (so the new map is
-    # from the perspective of an agent facing 'rotation')
-    def numpy(
-        self,
-        rotation: int,
-        reachable=True,
-        views=True,
-        interactions=True,
-        openable=True,
-        cleared_fog=True,
-    ):
-        if not np.any([reachable, views, interactions, openable]):
-            map = np.zeros((0,) + self.reachable_map.shape)
-        else:
-            # This order is important!
-            map = np.concatenate(
-                (tuple() if not reachable else (self.reachable_map,))
-                + (
-                    tuple()
-                    if not views
-                    else (self._reorder_maps_given_rotation(self.view_maps, rotation),)
-                )
-                + (
-                    tuple()
-                    if not interactions
-                    else (
-                        self._reorder_maps_given_rotation(
-                            self.interaction_maps, rotation
-                        ),
-                    )
-                )
-                + (tuple() if not openable else (self.openable_objects_map,))
-                + (tuple() if not cleared_fog else (self.fog_mask,)),
-                axis=0,
-            )
-            if self.reveal_map_on_visit:
-                map = map * self.fog_mask
-
-        if rotation == 0:
-            pass
-        elif rotation == 90:
-            map = np.transpose(map, (0, 2, 1))[:, ::-1, :].copy()
-        elif rotation == 180:
-            map = map[:, ::-1, ::-1].copy()
-        elif rotation == 270:
-            map = np.transpose(map, (0, 2, 1))[:, :, ::-1].copy()
-        else:
-            raise ValueError("Rotation must be in 0, 90, 180, 270")
-
-        return map

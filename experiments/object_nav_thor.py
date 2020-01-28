@@ -69,7 +69,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         dagger_steps = 3e4
         ppo_steps = 3e4
         ppo_steps2 = 1e6
-        nprocesses = 4
+        nprocesses = 3
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 3
@@ -111,7 +111,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
 
     @classmethod
     def evaluation_params(cls, **kwargs):
-        nprocesses = 2
+        nprocesses = 1
         gpu_ids = [] if not torch.cuda.is_available() else [1]
         res = cls.training_pipeline()
         del res["pipeline"]

@@ -20,7 +20,7 @@ class CategoricalDistr(Distr):
     def sample(self, sample_shape=torch.Size()):
         return super().sample(sample_shape).unsqueeze(-1)
 
-    def log_probs(self, actions: torch.LongTensor):
+    def log_probs(self, actions: torch.LongTensor) -> torch.FloatTensor:
         return (
             super()
             .log_prob(actions.squeeze(-1))
