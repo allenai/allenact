@@ -32,7 +32,11 @@ class ObjectNavTaskSampler(TaskSampler):
         self.max_steps = max_steps
         self._action_sapce = action_space
 
+        self.scene_counter: Optional[int] = None
+        self.scene_order: Optional[List[str]] = None
+        self.scene_id: Optional[int] = None
         self.scene_period = scene_period or 0  # default makes a random choice
+        self.max_tasks: Optional[int] = None
         self.reset_tasks = max_tasks
         self.reset()
 
@@ -96,7 +100,7 @@ class ObjectNavTaskSampler(TaskSampler):
         if self.max_tasks is not None:
             self.max_tasks -= 1
 
-        return self.scenes[self.scene_order[self.scene_id]]
+        return self.scenes[int(self.scene_order[self.scene_id])]
 
     def next_task(self) -> Optional[ObjectNavTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:

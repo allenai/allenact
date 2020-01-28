@@ -1,10 +1,14 @@
+import abc
 import os
 
 import gym
 from gym.spaces.box import Box
 
 try:
+    # noinspection PyPackageRequirements,PyUnresolvedReferences
     from baselines import bench
+
+    # noinspection PyPackageRequirements,PyUnresolvedReferences
     from baselines.common.atari_wrappers import make_atari, wrap_deepmind
 
     BASELINES_IMPORTED = True
@@ -17,6 +21,7 @@ except ImportError:
     pass
 
 try:
+    # noinspection PyPackageRequirements
     import roboschool
 except ImportError:
     pass
@@ -39,6 +44,7 @@ def make_env(env_id, seed, rank, log_dir, allow_early_resets):
         else:
             env = gym.make(env_id)
 
+        # noinspection PyUnresolvedReferences
         is_atari = hasattr(gym.envs, "atari") and isinstance(
             env.unwrapped, gym.envs.atari.atari_env.AtariEnv
         )
@@ -46,8 +52,6 @@ def make_env(env_id, seed, rank, log_dir, allow_early_resets):
             env = make_atari(env_id)
 
         env.seed(seed + rank)
-
-        obs_shape = env.observation_space.shape
 
         if str(env.__class__.__name__).find("TimeLimit") >= 0:
             env = TimeLimitMask(env)
@@ -83,6 +87,7 @@ def make_env(env_id, seed, rank, log_dir, allow_early_resets):
 class TimeLimitMask(gym.Wrapper):
     def step(self, action):
         obs, rew, done, info = self.env.step(action)
+        # noinspection PyProtectedMember
         if done and self.env._max_episode_steps == self.env._elapsed_steps:
             info["bad_transition"] = True
 
@@ -95,19 +100,20 @@ class TimeLimitMask(gym.Wrapper):
 # Can be used to test recurrent policies for Reacher-v2
 class MaskGoal(gym.ObservationWrapper):
     def observation(self, observation):
+        # noinspection PyProtectedMember
         if self.env._elapsed_steps > 0:
             observation[-2:] = 0
         return observation
 
 
-class TransposeObs(gym.ObservationWrapper):
+class TransposeObs(gym.ObservationWrapper, abc.ABC):
     def __init__(self, env=None):
         """Transpose observation space (base class)"""
         super(TransposeObs, self).__init__(env)
 
 
 class TransposeImage(TransposeObs):
-    def __init__(self, env=None, op=[2, 0, 1]):
+    def __init__(self, env=None, op=(2, 0, 1)):
         """Transpose observation space for images."""
         super(TransposeImage, self).__init__(env)
         assert len(op) == 3, f"Error: Operation, {str(op)}, must be dim3"

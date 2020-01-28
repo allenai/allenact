@@ -2,18 +2,17 @@
 
 import copy
 import functools
-import json
 import math
 import os
 import random
 import sys
+import typing
 import warnings
-from typing import Tuple, Dict, List, Set, Union, Any, Optional, Mapping, NamedTuple
+from typing import Tuple, Dict, List, Set, Union, Any, Optional, Mapping
 
 import ai2thor.server
 import networkx as nx
 import numpy as np
-import typing
 from ai2thor.controller import Controller
 
 from extensions.ai2thor.constants import VISIBILITY_DISTANCE, FOV
@@ -374,6 +373,7 @@ class AI2ThorEnvironment(object):
             self.step({"action": "MaskObject", "objectId": object_id})
             if hide_transparent:
                 self.step({"action": "HideTranslucentObjects"})
+        # noinspection PyShadowingBuiltins
         filter = np.array([[[255, 0, 255]]])
         object_pixels = 1 * np.all(self.current_frame == filter, axis=2)
         if hide_all:
@@ -395,8 +395,8 @@ class AI2ThorEnvironment(object):
             m = n // num_parts
             parts = [m] * num_parts
             num_extra = n % num_parts
-            for i in range(num_extra):
-                parts[i] += 1
+            for k in range(num_extra):
+                parts[k] += 1
             return parts
 
         object_pixels = self.object_pixels_in_frame(
@@ -466,7 +466,8 @@ class AI2ThorEnvironment(object):
         }
         return location
 
-    def _agent_location_to_tuple(self, p: Dict[str, float]) -> Tuple[float, float]:
+    @staticmethod
+    def _agent_location_to_tuple(p: Dict[str, float]) -> Tuple[float, float]:
         return (round(p["x"], 2), round(p["z"], 2))
 
     def get_flat_surface_grid(self, grid_size: int) -> np.ndarray:
@@ -705,12 +706,14 @@ class AI2ThorEnvironment(object):
                     closest = o
         return closest
 
-    def closest_visible_object_of_type(self, type: str) -> Optional[Dict[str, Any]]:
-        properties = {"visible": True, "objectType": type}
+    def closest_visible_object_of_type(
+        self, object_type: str
+    ) -> Optional[Dict[str, Any]]:
+        properties = {"visible": True, "objectType": object_type}
         return self.closest_object_with_properties(properties)
 
-    def closest_object_of_type(self, type: str) -> Optional[Dict[str, Any]]:
-        properties = {"objectType": type}
+    def closest_object_of_type(self, object_type: str) -> Optional[Dict[str, Any]]:
+        properties = {"objectType": object_type}
         return self.closest_object_with_properties(properties)
 
     def closest_reachable_point_to_position(
@@ -859,22 +862,24 @@ class AI2ThorEnvironment(object):
                     points.append(p)
         return points
 
-    def location_for_key(self, key, y_value=0.0):
+    @staticmethod
+    def location_for_key(key, y_value=0.0):
         x, z, rot, hor = key
         loc = dict(x=x, y=y_value, z=z, rotation=rot, horizon=hor)
         return loc
 
-    def get_key(self, input: Dict[str, Any]) -> Tuple[float, float, int, int]:
-        if "x" in input:
-            x = input["x"]
-            z = input["z"]
-            rot = input["rotation"]
-            hor = input["horizon"]
+    @staticmethod
+    def get_key(input_dict: Dict[str, Any]) -> Tuple[float, float, int, int]:
+        if "x" in input_dict:
+            x = input_dict["x"]
+            z = input_dict["z"]
+            rot = input_dict["rotation"]
+            hor = input_dict["horizon"]
         else:
-            x = input["position"]["x"]
-            z = input["position"]["z"]
-            rot = input["rotation"]["y"]
-            hor = input["cameraHorizon"]
+            x = input_dict["position"]["x"]
+            z = input_dict["position"]["z"]
+            rot = input_dict["rotation"]["y"]
+            hor = input_dict["cameraHorizon"]
 
         return (
             round(x, 2),
@@ -998,6 +1003,7 @@ class AI2ThorEnvironment(object):
     def shortest_state_path(self, source_state_key, goal_state_key):
         self._check_contains_key(source_state_key)
         self._check_contains_key(goal_state_key)
+        # noinspection PyBroadException
         try:
             path = nx.shortest_path(self.graph, source_state_key, goal_state_key)
             return path
