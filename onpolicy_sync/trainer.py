@@ -82,21 +82,13 @@ class Trainer:
                     torch.backends.cudnn.enabled = False
 
         self.observation_set = None
-        if "preprocessors" in self.params and "observation_set" in self.params:
-            all_preprocessors = []
-            for preprocessor in self.params["preprocessors"]:
-                if isinstance(preprocessor, Builder):
-                    all_preprocessors.append(
-                        preprocessor(config={"device": self.device})
-                    )
-                else:
-                    all_preprocessors.append(preprocessor)
-
-            self.observation_set = ObservationSet(
-                self.params["observation_set"], all_preprocessors
-            )
-
-        self.actor_critic = config.create_model().to(self.device)
+        if "observation_set" in self.params:
+            self.observation_set = self.params["observation_set"].to(self.device)
+            self.actor_critic = config.create_model(
+                observation_set=self.observation_set
+            ).to(self.device)
+        else:
+            self.actor_critic = config.create_model().to(self.device)
 
         self.optimizer = None
         if "optimizer" in self.params:
