@@ -272,6 +272,7 @@ class VectorSampledTasks:
         # for worker_conn, parent_conn, sampler_fn_args in zip(
         #     worker_connections, parent_connections, sampler_fn_args
         # ):
+        # noinspection PyShadowingBuiltins
         for id, stuff in enumerate(
             zip(worker_connections, parent_connections, sampler_fn_args)
         ):
@@ -505,8 +506,6 @@ class VectorSampledTasks:
         """Gets the attributes (specified by name) on the tasks.
 
         @param attr_names: the name of the functions to call on the tasks.
-        @param function_args_list: list of function args for each function.
-            If provided, len(function_args_list) should be as long as  len(function_names).
         @return: list of results of calling the functions.
         """
         self._is_waiting = True
@@ -572,6 +571,7 @@ class ThreadedVectorSampledTasks(VectorSampledTasks):
             *[(Queue(), Queue()) for _ in range(self._num_processes)]
         )
         self._workers = []
+        # noinspection PyShadowingBuiltins
         for id, stuff in enumerate(
             zip(parent_read_queues, parent_write_queues, sampler_fn_args)
         ):

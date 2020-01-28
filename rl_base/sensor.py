@@ -12,7 +12,7 @@ from gym.spaces import Dict as SpaceDict
 from rl_base.common import EnvType
 
 if TYPE_CHECKING:
-    from rl_base.task import Task, SubTaskType
+    from rl_base.task import SubTaskType
 else:
     SubTaskType = TypeVar("SubTaskType", bound="Task")
 
@@ -66,7 +66,7 @@ class Sensor(Generic[EnvType, SubTaskType]):
         raise NotImplementedError()
 
 
-class SensorSuite(Generic[EnvType, SubTaskType]):
+class SensorSuite(Generic[EnvType]):
     """Represents a set of sensors, with each sensor being identified through a
     unique id.
 
@@ -75,7 +75,7 @@ class SensorSuite(Generic[EnvType, SubTaskType]):
             sensor must be unique.
     """
 
-    sensors: Dict[str, Sensor[EnvType, SubTaskType]]
+    sensors: Dict[str, Sensor[EnvType, Any]]
     observation_spaces: SpaceDict
 
     def __init__(self, sensors: List[Sensor]) -> None:

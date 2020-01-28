@@ -1,3 +1,5 @@
+import abc
+
 import torch
 import torch.nn as nn
 from torch.distributions.utils import lazy_property
@@ -9,13 +11,23 @@ Modify standard PyTorch distributions so they are compatible with this code.
 """
 
 
-class Distr(torch.distributions.Categorical):
+class Distr(torch.distributions.Categorical, abc.ABC):
+    @abc.abstractmethod
     def log_probs(self, actions: torch.LongTensor):
         raise NotImplementedError()
 
 
 class CategoricalDistr(Distr):
     """A categorical distribution."""
+
+    def rsample(self, sample_shape=torch.Size()):
+        raise NotImplementedError()
+
+    def cdf(self, value):
+        raise Exception("CDF is not defined for categorical distributions.")
+
+    def icdf(self, value):
+        raise Exception("Inverse CDF is not defined for categorical distributions.")
 
     def sample(self, sample_shape=torch.Size()):
         return super().sample(sample_shape).unsqueeze(-1)
@@ -70,9 +82,8 @@ class DiagGaussian(nn.Module):
     def __init__(self, num_inputs, num_outputs):
         super(DiagGaussian, self).__init__()
 
-        init_ = lambda m: init(
-            m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0)
-        )
+        def init_(m):
+            return init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
 
         self.fc_mean = init_(nn.Linear(num_inputs, num_outputs))
         self.logstd = AddBias(torch.zeros(num_outputs))
@@ -93,9 +104,8 @@ class Bernoulli(nn.Module):
     def __init__(self, num_inputs, num_outputs):
         super(Bernoulli, self).__init__()
 
-        init_ = lambda m: init(
-            m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0)
-        )
+        def init_(m):
+            return init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
 
         self.linear = init_(nn.Linear(num_inputs, num_outputs))
 

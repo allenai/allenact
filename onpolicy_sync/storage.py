@@ -4,6 +4,7 @@
 
 from collections import defaultdict
 import torch
+import typing
 
 
 class RolloutStorage:
@@ -93,6 +94,7 @@ class RolloutStorage:
 
         for sensor in observations:
             if sensor not in self.observations:
+                # noinspection PyTypeChecker
                 self.observations[sensor] = (
                     torch.zeros_like(observations[sensor])
                     .unsqueeze(0)
@@ -202,6 +204,7 @@ class RolloutStorage:
 
             # These are all tensors of size (T, N, -1)
             for sensor in observations_batch:
+                # noinspection PyTypeChecker
                 observations_batch[sensor] = torch.stack(observations_batch[sensor], 1)
 
             actions_batch = torch.stack(actions_batch, 1)
@@ -220,8 +223,11 @@ class RolloutStorage:
 
             # Flatten the (T, N, ...) tensors to (T * N, ...)
             for sensor in observations_batch:
+                # noinspection PyTypeChecker
                 observations_batch[sensor] = self._flatten_helper(
-                    T, N, observations_batch[sensor]
+                    t=T,
+                    n=N,
+                    tensor=typing.cast(torch.Tensor, observations_batch[sensor]),
                 )
 
             actions_batch = self._flatten_helper(T, N, actions_batch)

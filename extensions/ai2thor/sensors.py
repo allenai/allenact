@@ -62,7 +62,9 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment, AI2ThorTask]):
         self.scaler = (
             None
             if self.width is None
-            else ScaleBothSides(width=self.width, height=self.height)
+            else ScaleBothSides(
+                width=typing.cast(int, self.width), height=typing.cast(int, self.height)
+            )
         )
 
         self.to_pil = transforms.ToPILImage()

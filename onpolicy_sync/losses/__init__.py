@@ -1,2 +1,2 @@
-from .a2c_acktr import A2C_ACKTR
+from .a2cacktr import A2CACKTR
 from .ppo import PPO

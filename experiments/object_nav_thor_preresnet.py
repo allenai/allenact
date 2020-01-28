@@ -1,27 +1,20 @@
-from typing import Dict, Any, List
+from typing import List
 
 import gym
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import models
-import copy
 
 from configs.losses import PPOConfig
 from configs.util import Builder, recursive_update
+from experiments.object_nav_thor import ObjectNavThorExperimentConfig as Base
 from extensions.ai2thor.models.object_nav_models import ObjectNavBaselineActorCritic
 from extensions.ai2thor.sensors import RGBSensorThor, GoalObjectTypeThorSensor
-from extensions.ai2thor.preprocessors import ResnetPreProcessorThor
-from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
 from extensions.ai2thor.tasks import ObjectNavTask
-from onpolicy_sync.utils import LinearDecay
 from onpolicy_sync.losses import PPO
 from onpolicy_sync.losses.imitation import Imitation
-from rl_base.experiment_config import ExperimentConfig
+from rl_base.preprocessor import Preprocessor
 from rl_base.sensor import SensorSuite, ExpertActionSensor
-from rl_base.task import TaskSampler
-from experiments.object_nav_thor import ObjectNavThorExperimentConfig as Base
 
 
 class ObjectNavThorPreResnetExperimentConfig(Base):
@@ -43,6 +36,7 @@ class ObjectNavThorPreResnetExperimentConfig(Base):
         ExpertActionSensor({"nactions": 6}),
     ]
 
+    PREPROCESSORS: List[Preprocessor] = []
     # PREPROCESSORS = [
     #     Builder(
     #         ResnetPreProcessorThor,
