@@ -40,17 +40,22 @@ RUN cmake --version
 # Conda environment
 RUN conda create -n embodied-rl python=3.6
 
+# Grab embodied-rl code and make folder for habitat
+RUN git clone https://klemenkotar:PASSWORD@github.com/klemenkotar/embodied-rl.git
+RUN cd embodied-rl && mkdir habitat
+
 # Setup habtiat-sim
-RUN git clone https://github.com/facebookresearch/habitat-sim.git
-RUN /bin/bash -c ". activate embodied-rl; cd habitat-sim; git checkout 62bc01be8cbc148eb099e96fa0b123e16b21f95f; python setup.py install --headless"
+RUN cd embodied-rl/habitat && git clone https://github.com/facebookresearch/habitat-sim.git
+RUN /bin/bash -c ". activate embodied-rl; cd embodied-rl/habitat/habitat-sim; git checkout 62bc01be8cbc148eb099e96fa0b123e16b21f95f; python setup.py install --headless"
 
 # Install challenge specific habitat-api
-RUN git clone https://github.com/klemenkotar/habitat-api.git
-RUN /bin/bash -c ". activate embodied-rl; cd habitat-api; git checkout e6851021990ec43350fdbcd2862321c67ebbe512; pip install -e ."
+RUN cd embodied-rl/habitat && git clone https://github.com/klemenkotar/habitat-api.git
+RUN /bin/bash -c ". activate embodied-rl; cd embodied-rl/habitat/habitat-api; git checkout e6851021990ec43350fdbcd2862321c67ebbe512; pip install -e ."
 
 # Install embodied-rl and thor
-RUN git clone https://github.com/klemenkotar/embodied-rl.git
 RUN /bin/bash -c ". activate embodied-rl; cd embodied-rl; git checkout ab1a7ef4196ac6e19aef3d317ad54ed852550796; pip install -r requirements.txt"
+
+RUN export PYTHONPATH=$PYTHONPATH:/embodied-rl/habitat/habitat-sim/
 
 # Silence habitat-sim logs
 ENV GLOG_minloglevel=2
