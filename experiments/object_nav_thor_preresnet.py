@@ -8,7 +8,7 @@ import torch.optim as optim
 from torchvision import models
 import copy
 
-from configs.losses import algo_defaults
+from configs.losses import PPOConfig
 from configs.util import Builder, recursive_update
 from extensions.ai2thor.models.object_nav_models import ObjectNavBaselineActorCritic
 from extensions.ai2thor.sensors import RGBSensorThor, GoalObjectTypeThorSensor
@@ -43,22 +43,26 @@ class ObjectNavThorPreResnetExperimentConfig(Base):
         ExpertActionSensor({"nactions": 6}),
     ]
 
+    # PREPROCESSORS = [
+    #     Builder(
+    #         ResnetPreProcessorThor,
+    #         {
+    #             "config": {
+    #                 "input_height": Base.SCREEN_SIZE,
+    #                 "input_width": Base.SCREEN_SIZE,
+    #                 "output_width": 7,
+    #                 "output_height": 7,
+    #                 "output_dims": 512,
+    #                 "torchvision_resnet_model": models.resnet18,
+    #                 "input_uuids": ["rgb"],
+    #                 "output_uuid": "resnet",
+    #             }
+    #         },
+    #     ),
+    # ]
+
     OBSERVATIONS = [
-        # Builder(
-        #     ResnetPreProcessorThor,
-        #     {
-        #         "config": {
-        #             "input_height": Base.SCREEN_SIZE,
-        #             "input_width": Base.SCREEN_SIZE,
-        #             "output_width": 7,
-        #             "output_height": 7,
-        #             "output_dims": 512,
-        #             "torchvision_resnet_model": models.resnet18,
-        #             "input_uuids": ["rgb"],
-        #             "output_uuid": "resnet",
-        #         }
-        #     },
-        # ),
+        # "resnet",
         "goal_object_type_ind",
         "rgb",
     ]
@@ -93,7 +97,8 @@ class ObjectNavThorPreResnetExperimentConfig(Base):
             "num_steps": num_steps,
             "gpu_ids": gpu_ids,
             "imitation_loss": Builder(Imitation,),
-            "ppo_loss": Builder(PPO, dict(), default=algo_defaults["ppo_loss"],),
+            "ppo_loss": Builder(PPO, dict(), default=PPOConfig,),
+            "preprocessors": cls.PREPROCESSORS,
             "observation_set": cls.OBSERVATIONS,
             "pipeline": [{"losses": ["ppo_loss"], "end_criterion": ppo_steps},],
         }
