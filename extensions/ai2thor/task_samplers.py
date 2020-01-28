@@ -20,6 +20,7 @@ class ObjectNavTaskSampler(TaskSampler):
         action_space: gym.Space,
         scene_period: Optional[int] = None,
         max_tasks: Optional[int] = None,
+        seed: Optional[int] = None,
         *args,
         **kwargs
     ) -> None:
@@ -37,6 +38,10 @@ class ObjectNavTaskSampler(TaskSampler):
         self.reset()
 
         self._last_sampled_task: Optional[ObjectNavTask] = None
+
+        self.seed = seed
+        if self.seed is not None:
+            random.seed(seed)
 
     def _create_environment(self) -> AI2ThorEnvironment:
         env = AI2ThorEnvironment(

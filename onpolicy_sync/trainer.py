@@ -28,8 +28,12 @@ def validate(
     output_dir: str,
     read_from_parent: mp.Queue,
     write_to_parent: mp.Queue,
+    seed: Optional[int] = None,
+    disable_cudnn: bool = False,
 ):
-    evaluator = Trainer(config, None, output_dir, mode="valid")
+    evaluator = Trainer(
+        config, None, output_dir, mode="valid", seed=seed, disable_cudnn=disable_cudnn,
+    )
     evaluator.process_checkpoints(read_from_parent, write_to_parent)
 
 
@@ -39,8 +43,12 @@ class Trainer:
         config: ExperimentConfig,
         loaded_config_src_files: Optional[Dict[str, str]],
         output_dir: str,
+        seed: Optional[int] = None,
         mode: str = "train",
+        disable_cudnn: bool = False,
     ):
+        self.disable_cudnn = disable_cudnn
+        self.seed = seed
         self.mode = mode.lower()
         assert self.mode in [
             "train",
@@ -61,6 +69,17 @@ class Trainer:
             else:
                 self.device = "cuda:%d" % self.params["gpu_ids"][0]
                 torch.cuda.set_device(self.device)  # type: ignore
+
+        if self.seed is not None:
+            torch.manual_seed(seed)
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed(seed)
+                torch.cuda.manual_seed_all(seed)
+
+                if self.disable_cudnn:
+                    # torch.backends.cudnn.deterministic = True
+                    # torch.backends.cudnn.benchmark = False
+                    torch.backends.cudnn.enabled = False
 
         self.observation_set = None
         if "preprocessors" in self.params and "observation_set" in self.params:
@@ -141,6 +160,8 @@ class Trainer:
                     self.output_dir,
                     self.write_to_eval,
                     self.vector_tasks.metrics_out_queue,
+                    self.seed,
+                    self.disable_cudnn,
                 ),
             )
             self.eval_process.start()
@@ -172,6 +193,7 @@ class Trainer:
                 process_ind=it,
                 total_processes=self.params["nprocesses"],
                 devices=devices,
+                seed=self.seed,
             )
             for it in range(self.params["nprocesses"])
         ]
@@ -181,11 +203,12 @@ class Trainer:
 
         model_path = os.path.join(
             self.models_folder,
-            "exp_{}__time_{}__stage_{}__steps_{}.pt".format(
+            "exp_{}__time_{}__stage_{}__steps_{}__seed_{}.pt".format(
                 self.experiment_name,
                 self.local_start_time_str,
                 self.pipeline_stage,
                 self.total_steps + self.step_count,
+                self.seed,
             ),
         )
         torch.save(
@@ -678,11 +701,28 @@ class Trainer:
         }
 
     def close(self):
-        if self.write_to_eval is not None:
-            self.write_to_eval.put(("close",))
-        self.vector_tasks.close()
-        if self.log_writer is not None:
-            self.log_writer.close()
+        queue = getattr(self, "write_to_eval", None)
+        if queue is not None:
+            queue.put(("close",))
+            self.write_to_eval = None
+        eval = getattr(self, "eval_process", None)
+        if eval is not None:
+            eval.join()
+        log_writer = getattr(self, "log_writer", None)
+        if log_writer is not None:
+            log_writer.close()
+            self.log_writer = None
+        queue = getattr(self, "write_to_eval", None)
+        if queue is not None:
+            queue.put(("close",))
+            self.write_to_eval = None
+        tasks = getattr(self, "vector_tasks", None)
+        if tasks is not None:
+            tasks.close()
+            self.vector_tasks = None
+        eval = getattr(self, "eval_process", None)
+        if eval is not None:
+            eval.join()
 
     def __del__(self):
         self.close()

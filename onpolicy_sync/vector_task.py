@@ -185,6 +185,7 @@ class VectorSampledTasks:
     ) -> None:
         """process worker for creating and interacting with the
         Tasks/TaskSampler."""
+
         task_sampler = make_sampler_fn(**sampler_fn_args)
         current_task = task_sampler.next_task()
 
