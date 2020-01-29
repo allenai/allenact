@@ -26,7 +26,7 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
     TEST_SCENES = "/habitat-api/data/datasets/pointnav/habitat-test-scenes/v1/test/test.json.gz"
 
     SCREEN_SIZE = 224
-    MAX_STEPS = 128
+    MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.2
 
     SENSORS = [

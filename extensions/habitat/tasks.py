@@ -145,11 +145,11 @@ class PointNavTask(Task[HabitatTask]):
         reward += delta_distance_reward
         self.last_geodesic_distance = geodesic_distance
 
-        if not self.last_action_success:
-            reward += -0.1
+        # if not self.last_action_success:
+        #     reward += -0.1
 
         if self._took_end_action:
-            reward += 1.0 if self._success else -1.0
+            reward += 10.0 if self._success else 0.0
 
         return float(reward)
 
