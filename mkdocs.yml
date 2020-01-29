@@ -24,7 +24,7 @@ nav:
 - EmbodiedRL: README.md
 - Overview:
   - Quick-start: overview/quick-start.md
-  - Primary data structures: overview/data-structures.md
+  - Primary abstractions: overview/abstractions.md
   - Changing rewards and losses: overview/changing-rewards-and-losses.md
   - Defining a new model: overview/defining-a-new-model.md
   - Defining a new task: overview/defining-a-new-task.md

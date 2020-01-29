@@ -71,6 +71,29 @@ class AI2ThorTask(Task[AI2ThorEnvironment], abc.ABC):
 
 
 class ObjectNavTask(Task[AI2ThorEnvironment]):
+    """Defines the object navigation task in AI2-THOR.
+
+    In object navigation an agent is randomly initialized into an AI2-THOR scene and must
+    find an object of a given type (e.g. tomato, television, etc). An object is considered
+    found if the agent takes an `End` action and the object is visible to the agent (see
+    [here](https://ai2thor.allenai.org/documentation/concepts) for a definition of visibiliy
+    in AI2-THOR).
+
+    The actions available to an agent in this task are:
+
+    1. Move ahead
+        * Moves agent ahead by 0.25 meters.
+    1. Rotate left / rotate right
+        * Rotates the agent by 90 degrees counter-clockwise / clockwise.
+    1. Look down / look up
+        * Changes agent view angle by 30 degrees up or down. An agent cannot look more than 30
+          degrees above horizontal or less than 60 degrees below horizontal.
+
+    1. End
+        * Ends the task and the agent receives a positive reward if the object type is visible to the agent,
+        otherwise it receives a negative reward.
+    """
+
     _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT, LOOK_DOWN, LOOK_UP, END)
 
     _CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE: Dict[

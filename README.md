@@ -34,12 +34,13 @@ could not find a package delivering all of the following features, each of which
    able to define many tasks for a single environment; for instance, the [AI2-THOR](https://ai2thor.allenai.org/)
    environment has been used with tasks such as
    
-   * [semantic/object navigation](https://arxiv.org/abs/1810.06543),
-   * [interactive question answering](https://arxiv.org/abs/1712.03316),
-   * [multi-agent furniture lifting](https://prior.allenai.org/projects/two-body-problem), and
-   * [adversarial hide-and-seek](https://arxiv.org/abs/1912.08195).
+    * [semantic/object navigation](https://arxiv.org/abs/1810.06543),
+    * [interactive question answering](https://arxiv.org/abs/1712.03316),
+    * [multi-agent furniture lifting](https://prior.allenai.org/projects/two-body-problem), and
+    * [adversarial hide-and-seek](https://arxiv.org/abs/1912.08195).
    
-   We have designed `embodied-rl` to easily support a wide variety of tasks designed for individual environments. 
+   We have designed `embodied-rl` to easily support a wide variety of tasks designed for individual environments.
+    
 1. *First-class pytorch support*: while many well-developed libraries exist for reinforcement learning in 
    tensorflow we prefer the abstractions and design provided by pytorch.
 1. *Configuration as code*: defining experiments using yaml configuation files is a perplexing standard. We have found
@@ -99,4 +100,18 @@ We in the Perceptural Reasoning and Interaction Research (PRIOR) group at the
 All code in this repository is subject to formatting, documentation, and type-annotation
 guidelines. For more details, please see the our [contribution guidelines](./CONTRIBUTING.md).   
   
-## Citiation
+## Citation
+
+If you use this work, please cite:
+
+```text
+@misc{embodied-rl,
+  author = {Jordi Salvador and Luca Weihs},
+  title = {A Python Package for Embodied Reinforcement Learning},
+  year = {2020},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/allenai/embodied-rl}},
+}
+
+```
