@@ -58,7 +58,7 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 2
-        num_steps = 16
+        num_steps = 128
         save_interval = 100
         log_interval = 2 * num_steps * nprocesses
         gpu_ids = None if not torch.cuda.is_available() else [0]
@@ -95,7 +95,7 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
-            embed_coordinates=True,
+            embed_coordinates=False,
             coordinate_dims=2,
         )
 

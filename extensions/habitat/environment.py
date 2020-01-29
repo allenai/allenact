@@ -34,7 +34,7 @@ class HabitatEnvironment(object):
         self,
         action_dict: Dict[str, Union[str, int, float]]
     ) -> Observations:
-        obs = self.env.step(action_dict)
+        obs = self.env.step(action_dict["action"])
         self._current_frame = obs
         return obs
 

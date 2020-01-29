@@ -84,6 +84,7 @@ class PointNavTask(Task[HabitatTask]):
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
+        self.last_geodesic_distance = self.env.get_current_episode().info['geodesic_distance']
 
     @property
     def action_space(self):
@@ -134,12 +135,18 @@ class PointNavTask(Task[HabitatTask]):
         #     source_state=current_location, goal_state=target
         # )
         geodesic_distance = self.env.get_current_episode().info['geodesic_distance']
-        print("GEODESIC DISTANCE:", geodesic_distance)
         # TODO: Plug in actual distance here!
+        if geodesic_distance < 1.0:
+            print("DONE!!")
         return geodesic_distance < 1.0
 
     def judge(self) -> float:
         reward = -0.01
+
+        geodesic_distance = self.env.get_current_episode().info['geodesic_distance']
+        delta_distance_reward = self.last_geodesic_distance - geodesic_distance
+        reward += delta_distance_reward
+        self.last_geodesic_distance = geodesic_distance
 
         if not self.last_action_success:
             reward += -0.1
