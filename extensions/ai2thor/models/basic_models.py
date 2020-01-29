@@ -9,7 +9,7 @@ class Flatten(nn.Module):
 
 
 class SimpleCNN(nn.Module):
-    """A Simple 3-Conv CNN followed by a fully connected layer
+    """A Simple 3-Conv CNN followed by a fully connected layer.
 
     Takes in observations and produces an embedding of the rgb and/or depth components
 
@@ -94,8 +94,8 @@ class SimpleCNN(nn.Module):
 
     @staticmethod
     def _conv_output_dim(dimension, padding, dilation, kernel_size, stride):
-        """Calculates the output height and width based on the input
-        height and width to the convolution layer.
+        """Calculates the output height and width based on the input height and
+        width to the convolution layer.
 
         ref: https://pytorch.org/docs/master/nn.html#torch.nn.Conv2d
         """
@@ -236,8 +236,7 @@ class RNNStateEncoder(nn.Module):
         return hidden_states
 
     def single_forward(self, x, hidden_states, masks):
-        """Forward for a non-sequence input
-        """
+        """Forward for a non-sequence input."""
         hidden_states = self._unpack_hidden(hidden_states)
         x, hidden_states = self.rnn(
             x.unsqueeze(0), self._mask_hidden(hidden_states, masks.unsqueeze(0))
@@ -247,7 +246,7 @@ class RNNStateEncoder(nn.Module):
         return x, hidden_states
 
     def seq_forward(self, x, hidden_states, masks):
-        """Forward for a sequence of length T
+        """Forward for a sequence of length T.
 
         # Parameters
 

@@ -39,6 +39,11 @@ def render_file(
     call_result = check_output(args, env=os.environ).decode("utf-8")
     # noinspection PyShadowingNames
     with open(to_file, "w") as f:
+        doc_split = call_result.split("\n")
+        github_path = "https://github.com/allenai/embodied-rl/tree/master/"
+        path = github_path + doc_split[0].replace("# ", "").replace(".", "/") + ".py"
+        mdlink = "[[source]]({})".format(path)
+        call_result = "\n".join([doc_split[0] + " " + mdlink] + doc_split[1:])
         f.write(call_result)
 
     print(f"Built docs for {src_file}: {to_file}")

@@ -13,13 +13,42 @@ Currently, two RL algorithms are implemented
 
 ## Table of contents
 
-   1. [Why?](#motivation)
-   1. [Installation](#installation)
-   1. [Contributions](#contributions)
-   1. [Citiation](#citation)
+1. [Why embodied-rl?](#why)
+1. [Installation](#installation)
+1. [Contributions](#contributions)
+1. [Citiation](#citation)
 
-## Why?
+## Why `embodied-rl`?
 
+There are an increasingly 
+[large collection](https://winderresearch.com/a-comparison-of-reinforcement-learning-frameworks-dopamine-rllib-keras-rl-coach-trfl-tensorforce-coach-and-more/) 
+of deep reinforcement learning packages and so it is natural to question why we introduce another framework
+reproducing many of the same algorithms and ideas. After performing of survey of existing frameworks we
+could not find a package delivering all of the following features, each of which we considered critical.
+
+1. *Decoupled tasks and environments*: a large portion of existing RL frameworks organize themselves using abstractions 
+   from the OpenAI gym. These abstractions center around the `Env` class which encasulates an agent's environment,
+   how it interacts with that environment, and the rewards received by the agent when taking actions. This 
+   is an excellent abstraction when an environment is intimiately tied to a single task (e.g. with Atari games
+   where the environment is a single game with a single goal). In embodied AI research, however, it is important to be 
+   able to define many tasks for a single environment; for instance, the [AI2-THOR](https://ai2thor.allenai.org/)
+   environment has been used with tasks such as
+   
+    * [semantic/object navigation](https://arxiv.org/abs/1810.06543),
+    * [interactive question answering](https://arxiv.org/abs/1712.03316),
+    * [multi-agent furniture lifting](https://prior.allenai.org/projects/two-body-problem), and
+    * [adversarial hide-and-seek](https://arxiv.org/abs/1912.08195).
+   
+   We have designed `embodied-rl` to easily support a wide variety of tasks designed for individual environments.
+    
+1. *First-class pytorch support*: while many well-developed libraries exist for reinforcement learning in 
+   tensorflow we prefer the abstractions and design provided by pytorch.
+1. *Configuration as code*: defining experiments using yaml configuation files is a perplexing standard. We have found
+   such configuration files to be restrictive, brittle, and difficult to debug. In `embodied-rl` experiments are 
+   defined using python classes, if you know how to extend an abstract python class then you know how to define an
+   experiment.
+1. *Type checking and documentation*: we have put significant effort into providing extensive documentation and type
+   annotations throughout our codebase.
 
 
 ## Installation
@@ -34,12 +63,12 @@ cd embodied-rl
 This library has been tested only in python 3.6, the following assumes you have a working
 version of python 3.6 installed locally. In order to install requirements we recommend
 using [pipenv](https://pipenv.kennethreitz.org/en/latest/) but also include instructions if
-you would prefer to simply install things directly using pip.
+you would prefer to install things directly using pip.
 
 ### Installing requirements with `pipenv` (*recommended*)
 
 If you have already installed [pipenv](https://pipenv.kennethreitz.org/en/latest/), you may
-simply run the following command to install all requirements.
+run the following to install all requirements.
 
 ```bash
 pipenv install --skip-lock --dev
@@ -71,4 +100,18 @@ We in the Perceptural Reasoning and Interaction Research (PRIOR) group at the
 All code in this repository is subject to formatting, documentation, and type-annotation
 guidelines. For more details, please see the our [contribution guidelines](./CONTRIBUTING.md).   
   
-## Citiation
+## Citation
+
+If you use this work, please cite:
+
+```text
+@misc{embodied-rl,
+  author = {Jordi Salvador and Luca Weihs},
+  title = {A Python Package for Embodied Reinforcement Learning},
+  year = {2020},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/allenai/embodied-rl}},
+}
+
+```

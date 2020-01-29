@@ -1,21 +1,8 @@
 # Quick start
 
+Assuming you have installed all of the requirements 
 
 ```python
 
-```
-
-
-## Citation
-
-If you use this work, please cite:
-
-```text
-@article{,
-  title =   {},
-  author =  {},
-  journal = {},
-  year =    {}
-}
 ```
 
