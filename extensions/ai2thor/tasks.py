@@ -88,7 +88,6 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
     1. Look down / look up
         * Changes agent view angle by 30 degrees up or down. An agent cannot look more than 30
           degrees above horizontal or less than 60 degrees below horizontal.
-
     1. End
         * Ends the task and the agent receives a positive reward if the object type is visible to the agent,
         otherwise it receives a negative reward.

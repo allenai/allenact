@@ -9,6 +9,8 @@ from rl_base.distributions import CategoricalDistr
 
 
 class PPO(AbstractActorCriticLoss):
+    """Implementation of the Proximal Policy Optimization loss."""
+
     def __init__(
         self,
         clip_param,

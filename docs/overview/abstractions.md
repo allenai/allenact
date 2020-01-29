@@ -6,19 +6,36 @@ abstractions are described in plain language below. Each of the below sections e
 
 ## Task
  
-See the [abstract Task class](/api/rl_base/task/#task) and an [example implementation](/api/extensions/ai2thor/tasks/#objectnavtask).
+See the [abstract `Task` class](/api/rl_base/task/#task) 
+and an [example implementation](/api/extensions/ai2thor/tasks/#objectnavtask).
 
-## Sensor [(link)](/api/rl_base/sensor/#sensor)
+## Sensor
 
-## Task sampler [(link)](/api/rl_base/task/#tasksampler)
+See the [abstract `Sensor` class](/api/rl_base/sensor/#sensor) 
+and an [example implementation](/api/extensions/ai2thor/tasks/#objectnavtask).
 
-## Actor critic model [(link)](/api/onpolicy_sync/policy/#actorcriticmodel)
+## Task sampler
 
-## Actor critic loss [(link)](AbstractActorCriticLoss)
+See the [abstract `TaskSampler` class](/api/rl_base/task/#tasksampler) 
+and an [example implementation](/api/extensions/ai2thor/task_samplers/#objectnavtasksampler).
+
+## Actor critic model
+
+See the [abstract `ActorCriticModel` class](/api/onpolicy_sync/policy/#actorcriticmodel) 
+and an [example implementation](/api/extensions/ai2thor/task_samplers/#objectnavtasksampler).
+
+## Actor critic loss
+
+See the [abstract `AbstractActorCriticLoss` class](/api/onpolicy_sync/policy/#actorcriticmodel) 
+and an [example implementation](/api/onpolicy_sync/losses/ppo/#ppo).
 
 ## Preprocessor
 
+See the [abstract `Preprocessor` class](/api/rl_base/preprocessor/#preprocessor) 
+and an [example implementation](/api/extensions/ai2thor/preprocessors/#resnetpreprocessorthor).
+
 ## Rollout storage
 
+See the [`RolloutStorage` class](/api/onpolicy_sync/storage/#rolloutstorage).
 ```python
 ```
