@@ -134,6 +134,7 @@ class PointNavTask(Task[HabitatTask]):
         #     source_state=current_location, goal_state=target
         # )
         geodesic_distance = self.env.get_current_episode().info['geodesic_distance']
+        print("GEODESIC DISTANCE:", geodesic_distance)
         # TODO: Plug in actual distance here!
         return geodesic_distance < 1.0
 
