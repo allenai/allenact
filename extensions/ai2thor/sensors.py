@@ -30,7 +30,7 @@ class ScaleBothSides(object):
         return img.resize((self.width, self.height), self.interpolation)
 
 
-class RGBSensorThor(Sensor[AI2ThorEnvironment]):
+class RGBSensorThor(Sensor[AI2ThorEnvironment, AI2ThorTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
@@ -62,7 +62,9 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment]):
         self.scaler = (
             None
             if self.width is None
-            else ScaleBothSides(width=self.width, height=self.height)
+            else ScaleBothSides(
+                width=typing.cast(int, self.width), height=typing.cast(int, self.height)
+            )
         )
 
         self.to_pil = transforms.ToPILImage()

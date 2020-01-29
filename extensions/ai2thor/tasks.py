@@ -1,3 +1,4 @@
+import abc
 import warnings
 import random
 from typing import Tuple, List, Dict, Any, Optional
@@ -20,7 +21,7 @@ from rl_base.sensor import Sensor
 from rl_base.task import Task
 
 
-class AI2ThorTask(Task[AI2ThorEnvironment]):
+class AI2ThorTask(Task[AI2ThorEnvironment], abc.ABC):
     def __init__(
         self,
         env: AI2ThorEnvironment,
@@ -73,7 +74,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
     _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT, LOOK_DOWN, LOOK_UP, END)
 
     _CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE: Dict[
-        Tuple[str, str], Tuple[float, float, int, int]
+        Tuple[str, str], List[Tuple[float, float, int, int]]
     ] = {}
 
     def __init__(
@@ -84,13 +85,14 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         max_steps: int,
         **kwargs
     ) -> None:
-        # print("task info in objectnavtask %s" % task_info)
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
-        self._subsampled_locations_from_which_obj_visible = None
+        self._subsampled_locations_from_which_obj_visible: Optional[
+            List[Tuple[float, float, int, int]]
+        ] = None
 
     @property
     def action_space(self):
@@ -166,7 +168,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
             key = (self.env.scene_name, target)
             if self._subsampled_locations_from_which_obj_visible is None:
                 if key not in self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE:
-                    obj_ids = []
+                    obj_ids: List[str] = []
                     obj_ids.extend(
                         o["objectId"]
                         for o in self.env.last_event.metadata["objects"]
@@ -175,7 +177,9 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
 
                     assert len(obj_ids) != 0, "No objects to get an expert path to."
 
-                    locations_from_which_object_is_visible = []
+                    locations_from_which_object_is_visible: List[
+                        Tuple[float, float, int, int]
+                    ] = []
                     y = self.env.last_event.metadata["agent"]["position"]["y"]
                     positions_to_check_interactionable_from = [
                         {"x": x, "y": y, "z": z}

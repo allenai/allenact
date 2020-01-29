@@ -33,7 +33,7 @@ class RLStepResult(typing.NamedTuple):
             done=self.done if other.done is None else other.done,
             info={
                 **(self.info if self.info is not None else {}),
-                **(other if other is not None else {}),
+                **(other.info if other is not None else {}),
             },
         )
 
@@ -43,6 +43,7 @@ class ActorCriticOutput(tuple, typing.Generic[DistributionType]):
     values: torch.FloatTensor
     extras: Dict[str, Any]
 
+    # noinspection PyTypeChecker
     def __new__(
         cls,
         distributions: DistributionType,

@@ -1,13 +1,18 @@
+from typing import Dict, Tuple
+
 from onpolicy_sync.arguments import get_args
 from onpolicy_sync.trainer import Trainer
 import inspect
 import importlib
 
+from rl_base.experiment_config import ExperimentConfig
 
-def config_source(args):
+
+def config_source(args) -> Dict[str, str]:
     module_path = "{}.{}".format(args.experiment_base, args.experiment)
     valid_folders = {"experiments", args.experiment_base}
-    modules, res = [module_path], {}
+    modules = [module_path]
+    res: Dict[str, str] = {}
     while len(modules) > 0:
         new_modules = []
         for module_path in modules:
@@ -23,7 +28,7 @@ def config_source(args):
     return res
 
 
-def load_config(args):
+def load_config(args) -> Tuple[ExperimentConfig, Dict[str, str]]:
     module_path = "{}.{}".format(args.experiment_base, args.experiment)
     module = importlib.import_module(module_path)
 
@@ -37,13 +42,18 @@ def load_config(args):
     ), "Too many or two few experiments defined in {}".format(module_path)
 
     config = experiments[0]()
-    config._loaded_config_src_files = config_source(args)
-    return config
+    loaded_config_src_files = config_source(args)
+    return config, loaded_config_src_files
 
 
 def main():
     args = get_args()
+<<<<<<< HEAD
     Trainer(load_config(args), args.output_dir).run_pipeline(args.checkpoint)
+=======
+
+    Trainer(*load_config(args), args.output_dir).run_pipeline(args.checkpoint)
+>>>>>>> 47dba21b93b0f6afaec0150193aa5d1051bc86d6
 
 
 if __name__ == "__main__":
