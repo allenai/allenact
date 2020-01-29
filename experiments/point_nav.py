@@ -42,8 +42,6 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
     CONFIG = habitat.get_config()
     CONFIG.defrost()
     CONFIG.DATASET.SCENES_DIR = '/habitat-api/data/scene_datasets/'
-    CONFIG.DATASET.MP3DEQAV1.DATA_PATH = '/habitat-api/data/datasets/eqa/mp3d/v1/{split}/{split}.json.gz'
-    CONFIG.DATASET.POINTNAVV1.DATA_PATH = '/habitat-api/data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz'
     CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
     CONFIG.SIMULATOR.SEMANTIC_SENSOR.WIDTH = SCREEN_SIZE
     CONFIG.SIMULATOR.SEMANTIC_SENSOR.HEIGHT = SCREEN_SIZE
