@@ -17,6 +17,7 @@ class PointNavTaskSampler(TaskSampler):
         sensors: List[Sensor],
         max_steps: int,
         action_space: gym.Space,
+        distance_to_goal: float,
         *args,
         **kwargs
     ) -> None:
@@ -26,6 +27,7 @@ class PointNavTaskSampler(TaskSampler):
         self.max_steps = max_steps
         self._action_space = action_space
         self.env_config = env_config
+        self.distance_to_goal = distance_to_goal
 
         self._last_sampled_task: Optional[PointNavTask] = None
 
@@ -75,7 +77,8 @@ class PointNavTaskSampler(TaskSampler):
         target = ep_info.goals[0].position
 
         task_info = {
-            "target": target
+            "target": target,
+            "distance_to_goal": self.distance_to_goal
         }
 
         self._last_sampled_task = PointNavTask(

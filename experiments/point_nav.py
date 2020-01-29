@@ -27,6 +27,7 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
 
     SCREEN_SIZE = 224
     MAX_STEPS = 128
+    DISTANCE_TO_GOAL = 0.2
 
     SENSORS = [
         RGBSensorHabitat(
@@ -54,7 +55,7 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
     @classmethod
     def training_pipeline(cls, **kwargs):
         ppo_steps = 1e8
-        nprocesses = 8
+        nprocesses = 1
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 2
@@ -112,6 +113,7 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "distance_to_goal": self.DISTANCE_TO_GOAL
         }
 
     def train_task_sampler_args(

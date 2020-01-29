@@ -38,12 +38,14 @@ class HabitatEnvironment(object):
         self._current_frame = obs
         return obs
 
-    def get_geodesic_distance(
-        self,
-        source_state_key: List[float],
-        goal_state_key: List[float],
-    ) -> float:
-        return self.env.sim.geodesic_distance(source_state_key, goal_state_key)
+    def get_geodesic_distance(self) -> float:
+        curr = self.get_location()
+        # print("Curr:", curr)
+        # print("info", self.get_current_episode())
+        goal = self.get_current_episode().goals[0].position
+        # print("Goal:", goal.__dict__)
+        # exit()
+        return self.env.sim.geodesic_distance(curr, goal)
 
     def get_location(self) -> AgentState:
         return self.env.sim.get_agent_state().position
