@@ -158,6 +158,7 @@ class Trainer:
         self.deterministic_cudnn: Optional[bool] = None
         self.local_start_time_str: Optional[str] = None
         self.deterministic_agent: Optional[bool] = None
+        self.eval_process: Optional[mp.Process] = None
 
         self.experiment_name = config.tag()
 
@@ -526,51 +527,60 @@ class Trainer:
         return npaused
 
     def train(self, rollouts):
-        self.initialize_rollouts(rollouts)
+        try:
+            self.initialize_rollouts(rollouts)
 
-        while self.rollout_count < self.num_rollouts:
-            for step in range(self.steps_in_rollout):
-                self.collect_rollout_step(rollouts)
+            while self.rollout_count < self.num_rollouts:
+                for step in range(self.steps_in_rollout):
+                    self.collect_rollout_step(rollouts)
 
-            with torch.no_grad():
-                step_observation = {k: v[-1] for k, v in rollouts.observations.items()}
+                with torch.no_grad():
+                    step_observation = {
+                        k: v[-1] for k, v in rollouts.observations.items()
+                    }
 
-                actor_critic_output, _ = self.actor_critic(
-                    step_observation,
-                    rollouts.recurrent_hidden_states[-1],
-                    rollouts.prev_actions[-1],
-                    rollouts.masks[-1],
+                    actor_critic_output, _ = self.actor_critic(
+                        step_observation,
+                        rollouts.recurrent_hidden_states[-1],
+                        rollouts.prev_actions[-1],
+                        rollouts.masks[-1],
+                    )
+
+                rollouts.compute_returns(
+                    actor_critic_output.values,
+                    self.use_gae,
+                    self.gamma,
+                    self.gae_lambda,
                 )
 
-            rollouts.compute_returns(
-                actor_critic_output.values, self.use_gae, self.gamma, self.gae_lambda,
-            )
+                self.update(rollouts)
 
-            self.update(rollouts)
+                rollouts.after_update()
 
-            rollouts.after_update()
-
-            if (
-                self.step_count - self.last_log >= self.log_interval
-                or self.rollout_count == self.num_rollouts
-            ):
-                self.log()
-                self.last_log = self.step_count
-
-            self.rollout_count += 1
-
-            # save for every interval-th episode or for the last epoch
-            if (
-                self.save_interval > 0
-                and (
-                    self.step_count % self.save_interval == 0
+                if (
+                    self.step_count - self.last_log >= self.log_interval
                     or self.rollout_count == self.num_rollouts
-                )
-                and self.models_folder != ""
-            ):
-                model_path = self.checkpoint_save()
-                if self.write_to_eval is not None:
-                    self.write_to_eval.put(("eval", model_path))
+                ):
+                    self.log()
+                    self.last_log = self.step_count
+
+                self.rollout_count += 1
+
+                # save for every interval-th episode or for the last epoch
+                if (
+                    self.save_interval > 0
+                    and (
+                        self.step_count % self.save_interval == 0
+                        or self.rollout_count == self.num_rollouts
+                    )
+                    and self.models_folder != ""
+                ):
+                    model_path = self.checkpoint_save()
+                    if self.write_to_eval is not None:
+                        self.write_to_eval.put(("eval", model_path))
+        except KeyboardInterrupt:
+            print("Trainer KeyboardInterrupt - closing")
+            self.close()
 
     def setup_stage(
         self,
@@ -718,15 +728,12 @@ class Trainer:
                 if command == "eval":
                     scalars = self.run_eval(checkpoint_file_name=data)
                     write_to_parent.put(("valid_metrics", scalars))
-                elif command == "close":
-                    self.close()
                 else:
                     raise NotImplementedError()
 
                 new_data = False
         except KeyboardInterrupt:
-            print("Eval KeyboardInterrupt - closing")
-            self.close()
+            print("Eval KeyboardInterrupt")
 
     def run_eval(self, checkpoint_file_name: str, rollout_steps=1):
         self.checkpoint_load(checkpoint_file_name)
@@ -755,21 +762,14 @@ class Trainer:
         }
 
     def close(self):
-        queue = getattr(self, "write_to_eval", None)
-        if queue is not None:
-            queue.put(("close",))
-            self.write_to_eval = None
         eval = getattr(self, "eval_process", None)
         if eval is not None:
             eval.join()
+            self.eval_process = None
         log_writer = getattr(self, "log_writer", None)
         if log_writer is not None:
             log_writer.close()
             self.log_writer = None
-        tasks = getattr(self, "vector_tasks", None)
-        if tasks is not None:
-            tasks.close()
-            self.vector_tasks = None
 
     def __del__(self):
         self.close()
