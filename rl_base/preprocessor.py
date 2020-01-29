@@ -16,10 +16,10 @@ class Preprocessor(abc.ABC):
     this class needs to implement the process method and the user is also
     required to set the below attributes:
 
-    Attributes:
-        config: configuration information for the preprocessor.
-        uuid: universally unique id.
-        observation_space: ``gym.Space`` object corresponding to processed observation spaces.
+    # Attributes:
+        config : Configuration information for the preprocessor.
+        uuid : Universally unique id.
+        observation_space : ``gym.Space`` object corresponding to processed observation spaces.
     """
 
     config: Dict[str, Any]
@@ -163,10 +163,10 @@ class ObservationSet:
 
     # Attributes
 
-    source_ids: List containing sensor and preprocessor ids for the environment, uuid of each
+    source_ids : List containing sensor and preprocessor ids for the environment, uuid of each
         source must be unique.
-    graph: Computation graph for preprocessors.
-    observation_spaces: observation spaces of the sources
+    graph : Computation graph for preprocessors.
+    observation_spaces : Observation spaces of the sources.
     """
 
     source_ids: List[str]
@@ -183,9 +183,9 @@ class ObservationSet:
 
         # Parameters
 
-        source_ids : the sensors and preprocessors that will be included in the set.
-        all_preprocessors : the entire list of preprocessors to be executed.
-        all_sensors: the entire list of sensors
+        source_ids : The sensors and preprocessors that will be included in the set.
+        all_preprocessors : The entire list of preprocessors to be executed.
+        all_sensors : The entire list of sensors.
         """
 
         self.graph = PreprocessorGraph(all_preprocessors)
