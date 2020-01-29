@@ -1,6 +1,6 @@
-MOVE_AHEAD = "move_forward"
-ROTATE_LEFT = "look_left"
-ROTATE_RIGHT = "look_right"
+MOVE_AHEAD = 0
+ROTATE_LEFT = 1
+ROTATE_RIGHT = 2
 LOOK_DOWN = "LookDown"
 LOOK_UP = "LookUp"
-END = "stop"
+END = 3
