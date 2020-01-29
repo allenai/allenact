@@ -38,6 +38,8 @@ class ResNetEmbedder(nn.Module):
 
 
 class ResnetPreProcessorThor(Preprocessor):
+    """Preprocess RGB image using a ResNet model."""
+
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 

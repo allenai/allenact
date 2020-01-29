@@ -220,8 +220,7 @@ class TaskSampler(abc.ABC):
 
     @abstractmethod
     def reset(self) -> None:
-        """Resets all tasks to their original state.
-        """
+        """Resets all tasks to their original state."""
         raise NotImplementedError()
 
     @abstractmethod
@@ -230,6 +229,6 @@ class TaskSampler(abc.ABC):
 
         # Parameters
 
-        seed: new seed
+        seed : New seed.
         """
         raise NotImplementedError()

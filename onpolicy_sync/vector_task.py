@@ -423,7 +423,8 @@ class VectorSampledTasks:
         return self.wait_step()
 
     def reset_all(self):
-        """Reset all task samplers to their initial state (except for the RNG seed)."""
+        """Reset all task samplers to their initial state (except for the RNG
+        seed)."""
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
             write_fn((RESET_COMMAND, ""))

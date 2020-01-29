@@ -11,6 +11,8 @@ from gym.spaces.dict import Dict as SpaceDict
 
 
 class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
+    """Baseline actor critic model for object-navigation in AI2-THOR."""
+
     def __init__(
         self,
         action_space: gym.spaces.Discrete,
