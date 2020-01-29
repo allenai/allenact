@@ -36,6 +36,7 @@ CALL_COMMAND = "call"
 ATTR_COMMAND = "attr"
 # EPISODE_COMMAND = "current_episode"
 RESET_COMMAND = "reset"
+SEED_COMMAND = "seed"
 
 
 def tile_images(images: List[np.ndarray]) -> np.ndarray:
@@ -198,6 +199,7 @@ class VectorSampledTasks:
     ) -> None:
         """process worker for creating and interacting with the
         Tasks/TaskSampler."""
+
         task_sampler = make_sampler_fn(**sampler_fn_args)
         current_task = task_sampler.next_task()
 
@@ -258,6 +260,9 @@ class VectorSampledTasks:
                 elif command == RESET_COMMAND:
                     task_sampler.reset()
                     current_task = task_sampler.next_task()
+                    connection_write_fn("done")
+                elif command == SEED_COMMAND:
+                    task_sampler.set_seed(data)
                     connection_write_fn("done")
                 else:
                     raise NotImplementedError()
@@ -418,10 +423,25 @@ class VectorSampledTasks:
         return self.wait_step()
 
     def reset_all(self):
-        """Reset all task samplers to their initial state."""
+        """Reset all task samplers to their initial state (except for the RNG
+        seed)."""
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
             write_fn((RESET_COMMAND, ""))
+        for read_fn in self._connection_read_fns:
+            read_fn()
+        self._is_waiting = False
+
+    def set_seeds(self, seeds: List[int]):
+        """Sets new tasks' RNG seeds.
+
+        # Parameters
+
+        seeds: List of size _num_processes containing new RNG seeds.
+        """
+        self._is_waiting = True
+        for write_fn, seed in zip(self._connection_write_fns, seeds):
+            write_fn((SEED_COMMAND, seed))
         for read_fn in self._connection_read_fns:
             read_fn()
         self._is_waiting = False
