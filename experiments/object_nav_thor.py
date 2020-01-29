@@ -19,6 +19,7 @@ from onpolicy_sync.losses.imitation import Imitation
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.sensor import SensorSuite, ExpertActionSensor
 from rl_base.task import TaskSampler
+import random
 
 
 class ObjectNavThorExperimentConfig(ExperimentConfig):
@@ -141,7 +142,12 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         )
 
     def _get_sampler_args_for_scene_split(
-        self, scenes: List[str], process_ind: int, total_processes: int
+        self,
+        scenes: List[str],
+        process_ind: int,
+        total_processes: int,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
@@ -166,6 +172,8 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            "seed": seeds[process_ind] if seeds is not None else None,
+            "deterministic_cudnn": deterministic_cudnn,
         }
 
     def train_task_sampler_args(
@@ -173,19 +181,34 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         process_ind: int,
         total_processes: int,
         devices: Optional[List[int]] = None,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.TRAIN_SCENES, process_ind, total_processes
+            self.TRAIN_SCENES,
+            process_ind,
+            total_processes,
+            seeds=seeds,
+            deterministic_cudnn=deterministic_cudnn,
         )
         res["scene_period"] = self.SCENE_PERIOD
         res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
         return res
 
     def valid_task_sampler_args(
-        self, process_ind: int, total_processes: int, devices: Optional[List[int]]
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]],
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.VALID_SCENES, process_ind, total_processes
+            self.VALID_SCENES,
+            process_ind,
+            total_processes,
+            seeds=seeds,
+            deterministic_cudnn=deterministic_cudnn,
         )
         res["scene_period"] = self.VALID_SAMPLES_IN_SCENE
         res["max_tasks"] = self.VALID_SAMPLES_IN_SCENE * len(res["scenes"])
@@ -193,10 +216,19 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         return res
 
     def test_task_sampler_args(
-        self, process_ind: int, total_processes: int, devices: Optional[List[int]]
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]],
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.TEST_SCENES, process_ind, total_processes
+            self.TEST_SCENES,
+            process_ind,
+            total_processes,
+            seeds=seeds,
+            deterministic_cudnn=deterministic_cudnn,
         )
         res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
         return res

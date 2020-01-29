@@ -3,7 +3,8 @@ import queue
 import shutil
 import time
 import typing
-from typing import Optional, Any, Dict, Union
+from typing import Optional, Any, Dict, Union, List, Tuple
+import random
 
 import torch
 import torch.distributions
@@ -12,15 +13,18 @@ import torch.nn as nn
 import torch.optim
 from tensorboardX import SummaryWriter
 
-
 from configs.util import Builder
 from onpolicy_sync.storage import RolloutStorage
-from onpolicy_sync.utils import LinearDecay
-from onpolicy_sync.utils import batch_observations, ScalarMeanTracker
+from onpolicy_sync.utils import (
+    LinearDecay,
+    batch_observations,
+    ScalarMeanTracker,
+    set_deterministic_cudnn,
+    set_seed,
+)
 from onpolicy_sync.vector_task import VectorSampledTasks
 from rl_base.common import Loss
 from rl_base.experiment_config import ExperimentConfig
-from rl_base.preprocessor import ObservationSet
 
 
 def validate(
@@ -28,8 +32,17 @@ def validate(
     output_dir: str,
     read_from_parent: mp.Queue,
     write_to_parent: mp.Queue,
+    seed: Optional[int] = None,
+    deterministic_cudnn: bool = False,
 ):
-    evaluator = Trainer(config, None, output_dir, mode="valid")
+    evaluator = Trainer(
+        config,
+        None,
+        output_dir,
+        mode="valid",
+        seed=seed,
+        deterministic_cudnn=deterministic_cudnn,
+    )
     evaluator.process_checkpoints(read_from_parent, write_to_parent)
 
 
@@ -37,10 +50,14 @@ class Trainer:
     def __init__(
         self,
         config: ExperimentConfig,
-        loaded_config_src_files: Optional[Dict[str, str]],
+        loaded_config_src_files: Optional[Dict[str, Tuple[str, str]]],
         output_dir: str,
+        seed: Optional[int] = None,
         mode: str = "train",
+        deterministic_cudnn: bool = False,
     ):
+        self.deterministic_cudnn = deterministic_cudnn
+        self.seed = seed
         self.mode = mode.lower()
         assert self.mode in [
             "train",
@@ -62,22 +79,22 @@ class Trainer:
                 self.device = "cuda:%d" % self.params["gpu_ids"][0]
                 torch.cuda.set_device(self.device)  # type: ignore
 
+        if self.deterministic_cudnn:
+            set_deterministic_cudnn()
+
+        seeds: Optional[List[int]] = None
+        if self.seed is not None:
+            set_seed(self.seed)
+            seeds = self.worker_seeds(self.params["nprocesses"])
+
         self.observation_set = None
-        if "preprocessors" in self.params and "observation_set" in self.params:
-            all_preprocessors = []
-            for preprocessor in self.params["preprocessors"]:
-                if isinstance(preprocessor, Builder):
-                    all_preprocessors.append(
-                        preprocessor(config={"device": self.device})
-                    )
-                else:
-                    all_preprocessors.append(preprocessor)
-
-            self.observation_set = ObservationSet(
-                self.params["observation_set"], all_preprocessors
-            )
-
-        self.actor_critic = config.create_model().to(self.device)
+        if "observation_set" in self.params:
+            self.observation_set = self.params["observation_set"].to(self.device)
+            self.actor_critic = config.create_model(
+                observation_set=self.observation_set
+            ).to(self.device)
+        else:
+            self.actor_critic = config.create_model().to(self.device)
 
         self.optimizer = None
         if "optimizer" in self.params:
@@ -91,19 +108,20 @@ class Trainer:
 
         self.vector_tasks = VectorSampledTasks(
             make_sampler_fn=config.make_sampler_fn,
-            sampler_fn_args=self.get_sampler_fn_args(config),
+            sampler_fn_args=self.get_sampler_fn_args(config, seeds),
         )
 
         self.output_dir = output_dir
         self.models_folder = os.path.join(output_dir, "models")
         os.makedirs(self.models_folder, exist_ok=True)
 
-        self.configs_folder = os.path.join(output_dir, "configs")
+        self.configs_folder = os.path.join(output_dir, "used_configs")
         os.makedirs(self.configs_folder, exist_ok=True)
         if mode == "train":
             for file in loaded_config_src_files:
-                parts = loaded_config_src_files[file].split(".")
-                src_file = os.path.sep.join(parts) + ".py"
+                base, module = loaded_config_src_files[file]
+                parts = module.split(".")
+                src_file = os.path.sep.join([base] + parts) + ".py"
                 dst_file = (
                     os.path.join(self.configs_folder, os.path.join(*parts[1:])) + ".py"
                 )
@@ -137,8 +155,9 @@ class Trainer:
         self.gae_lambda: Optional[float] = None
         self.max_grad_norm: Optional[float] = None
         self.teacher_forcing: Optional[LinearDecay] = None
-        self.deterministic: Optional[bool] = None
+        self.deterministic_cudnn: Optional[bool] = None
         self.local_start_time_str: Optional[str] = None
+        self.deterministic_agent: Optional[bool] = None
 
         self.experiment_name = config.tag()
 
@@ -159,9 +178,15 @@ class Trainer:
                     self.output_dir,
                     self.write_to_eval,
                     self.vector_tasks.metrics_out_queue,
+                    self.seed,
+                    self.deterministic_cudnn,
                 ),
             )
             self.eval_process.start()
+
+    @staticmethod
+    def worker_seeds(nprocesses: int):
+        return [random.randint(0, 2 ** (31) - 1) for _ in range(nprocesses)]
 
     def get_params(self, config: ExperimentConfig):
         if self.mode == "train":
@@ -171,7 +196,9 @@ class Trainer:
         elif self.mode == "test":
             return config.evaluation_params()
 
-    def get_sampler_fn_args(self, config: ExperimentConfig):
+    def get_sampler_fn_args(
+        self, config: ExperimentConfig, seeds: Optional[List[int]] = None
+    ):
         devices = (
             self.params["sampler_devices"]
             if "sampler_devices" in self.params
@@ -194,6 +221,8 @@ class Trainer:
                 process_ind=it,
                 total_processes=self.params["nprocesses"],
                 devices=devices,
+                seeds=seeds,
+                deterministic_cudnn=self.deterministic_cudnn,
             )
             for it in range(self.params["nprocesses"])
         ]
@@ -201,29 +230,41 @@ class Trainer:
     def checkpoint_save(self) -> str:
         os.makedirs(self.models_folder, exist_ok=True)
 
+        if self.seed is not None:
+            self.seed = self.worker_seeds(1)[0]
+            set_seed(self.seed)
+
+            seeds = self.worker_seeds(self.num_processes)
+            self.vector_tasks.set_seeds(seeds)
+
         model_path = os.path.join(
             self.models_folder,
-            "exp_{}__time_{}__stage_{}__steps_{}.pt".format(
+            "exp_{}__time_{}__stage_{}__steps_{}__seed_{}.pt".format(
                 self.experiment_name,
                 self.local_start_time_str,
                 self.pipeline_stage,
                 self.total_steps + self.step_count,
+                self.seed,
             ),
         )
-        torch.save(
-            {
-                "total_updates": self.total_updates,
-                "total_steps": self.total_steps,
-                "pipeline_stage": self.pipeline_stage,
-                "rollout_count": self.rollout_count,
-                "backprop_count": self.backprop_count,
-                "step_count": self.step_count,
-                "local_start_time_str": self.local_start_time_str,
-                "optimizer_state_dict": self.optimizer.state_dict(),
-                "model_state_dict": self.actor_critic.state_dict(),
-            },
-            model_path,
-        )
+
+        save_dict = {
+            "total_updates": self.total_updates,
+            "total_steps": self.total_steps,
+            "pipeline_stage": self.pipeline_stage,
+            "rollout_count": self.rollout_count,
+            "backprop_count": self.backprop_count,
+            "step_count": self.step_count,
+            "local_start_time_str": self.local_start_time_str,
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "model_state_dict": self.actor_critic.state_dict(),
+            "trainer_seed": self.seed,
+        }
+
+        if self.seed is not None:
+            save_dict["worker_seeds"] = seeds
+
+        torch.save(save_dict, model_path)
         return model_path
 
     def checkpoint_load(self, ckpt: Union[str, Dict[str, Any]]) -> None:
@@ -251,6 +292,14 @@ class Trainer:
             self.total_updates = ckpt["total_updates"]  # type: ignore
             self.local_start_time_str = typing.cast(str, ckpt["local_start_time_str"])
             self.params["pipeline"] = self.params["pipeline"][self.pipeline_stage :]
+            self.seed = ckpt["trainer_seed"]
+            if self.seed is not None:
+                set_seed(self.seed)
+                seeds = self.worker_seeds(self.num_processes)
+                assert (
+                    seeds == ckpt["worker_seeds"]
+                ), "worker seeds not matching stored seeds"
+                self.vector_tasks.set_seeds(seeds)
 
     def process_valid_metrics(self):
         while not self.vector_tasks.metrics_out_queue.empty():
@@ -401,7 +450,7 @@ class Trainer:
 
         actions = (
             actor_critic_output.distributions.sample()
-            if not self.deterministic
+            if not self.deterministic_agent
             else actor_critic_output.distributions.mode()
         )
 
@@ -520,7 +569,8 @@ class Trainer:
                 and self.models_folder != ""
             ):
                 model_path = self.checkpoint_save()
-                self.write_to_eval.put(("eval", model_path))
+                if self.write_to_eval is not None:
+                    self.write_to_eval.put(("eval", model_path))
 
     def setup_stage(
         self,
@@ -535,7 +585,7 @@ class Trainer:
         gae_lambda: float,
         max_grad_norm: float,
         teacher_forcing: Optional[LinearDecay] = None,
-        deterministic: bool = False,
+        deterministic_agent: bool = False,
     ):
         self.losses = losses
         self.loss_weights = loss_weights
@@ -565,7 +615,7 @@ class Trainer:
 
         self.teacher_forcing = teacher_forcing
 
-        self.deterministic = deterministic
+        self.deterministic_agent = deterministic_agent
 
     def _get_loss(self, current_loss):
         assert current_loss in self.params, "undefined referenced loss"
@@ -648,9 +698,9 @@ class Trainer:
         self,
         read_from_parent: mp.Queue,
         write_to_parent: mp.Queue,
-        deterministic: bool = True,
+        deterministic_agent: bool = True,
     ):
-        self.deterministic = deterministic
+        self.deterministic_agent = deterministic_agent
         self.teacher_forcing = None
 
         try:
@@ -705,11 +755,21 @@ class Trainer:
         }
 
     def close(self):
-        if self.write_to_eval is not None:
-            self.write_to_eval.put(("close",))
-        self.vector_tasks.close()
-        if self.log_writer is not None:
-            self.log_writer.close()
+        queue = getattr(self, "write_to_eval", None)
+        if queue is not None:
+            queue.put(("close",))
+            self.write_to_eval = None
+        eval = getattr(self, "eval_process", None)
+        if eval is not None:
+            eval.join()
+        log_writer = getattr(self, "log_writer", None)
+        if log_writer is not None:
+            log_writer.close()
+            self.log_writer = None
+        tasks = getattr(self, "vector_tasks", None)
+        if tasks is not None:
+            tasks.close()
+            self.vector_tasks = None
 
     def __del__(self):
         self.close()

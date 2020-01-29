@@ -221,7 +221,15 @@ class TaskSampler(abc.ABC):
     @abstractmethod
     def reset(self) -> None:
         """Resets all tasks to their original state.
+        """
+        raise NotImplementedError()
 
-        # TODO: seeds!
+    @abstractmethod
+    def set_seed(self, seed: int) -> None:
+        """Sets new RNG seed.
+
+        # Parameters
+
+        seed: new seed
         """
         raise NotImplementedError()

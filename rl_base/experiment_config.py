@@ -31,16 +31,31 @@ class ExperimentConfig(abc.ABC):
         raise NotImplementedError
 
     def train_task_sampler_args(
-        self, process_ind: int, total_processes: int, devices: Optional[List[int]]
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]],
+        seeds: Optional[List[int]],
+        deterministic_cudnn: bool,
     ) -> Dict[str, Any]:
         raise NotImplementedError()
 
     def valid_task_sampler_args(
-        self, process_ind: int, total_processes: int, devices: Optional[List[int]]
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]],
+        seeds: Optional[List[int]],
+        deterministic_cudnn: bool,
     ) -> Dict[str, Any]:
         raise NotImplementedError()
 
     def test_task_sampler_args(
-        self, process_ind: int, total_processes: int, devices: Optional[List[int]]
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]],
+        seeds: Optional[List[int]],
+        deterministic_cudnn: bool,
     ) -> Dict[str, Any]:
         raise NotImplementedError()

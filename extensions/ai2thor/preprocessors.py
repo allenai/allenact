@@ -71,6 +71,10 @@ class ResnetPreProcessorThor(Preprocessor):
             len(self.config["input_uuids"]) == 1
         ), "preprocessor can only consume one observation"
 
+    def to(self, device: torch.device) -> "ResnetPreProcessorThor":
+        self.resnet = self.resnet.to(device)
+        return self
+
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "resnet_thor"
 

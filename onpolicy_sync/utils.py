@@ -1,6 +1,7 @@
 import glob
 import numbers
 import os
+import random
 
 import torch
 import torch.nn as nn
@@ -118,3 +119,15 @@ class LinearDecay:
     def __call__(self, epoch: int) -> float:
         epoch = max(min(epoch, self.steps), 0)
         return self.startp + (self.endp - self.startp) * (epoch / float(self.steps))
+
+
+def set_deterministic_cudnn():
+    if torch.cuda.is_available():
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+
+def set_seed(seed: int):
+    torch.manual_seed(seed)  # seeds the RNG for all devices (CPU and GPUs)
+    random.seed(seed)
+    np.random.seed(seed)
