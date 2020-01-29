@@ -32,13 +32,22 @@ def get_args():
         type=str,
         help="optional checkpoint file name to resume training",
     )
+    # parser.add_argument(
+    #     "-d",
+    #     "--disable_cudnn",
+    #     required=False,
+    #     default=False,
+    #     type=bool,
+    #     help="disables CUDNN",
+    # )
     parser.add_argument(
         "-d",
         "--disable_cudnn",
+        dest="disable_cudnn",
+        action="store_true",
         required=False,
-        default=False,
-        type=bool,
         help="disables CUDNN",
     )
+    parser.set_defaults(disable_cudnn=False)
 
     return parser.parse_args()

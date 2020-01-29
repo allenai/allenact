@@ -35,7 +35,7 @@ class ExperimentConfig(abc.ABC):
         process_ind: int,
         total_processes: int,
         devices: Optional[List[int]],
-        seed: Optional[int],
+        seeds: Optional[List[int]],
     ) -> Dict[str, Any]:
         raise NotImplementedError()
 
@@ -44,7 +44,7 @@ class ExperimentConfig(abc.ABC):
         process_ind: int,
         total_processes: int,
         devices: Optional[List[int]],
-        seed: Optional[int],
+        seeds: Optional[List[int]],
     ) -> Dict[str, Any]:
         raise NotImplementedError()
 
@@ -53,6 +53,6 @@ class ExperimentConfig(abc.ABC):
         process_ind: int,
         total_processes: int,
         devices: Optional[List[int]],
-        seed: Optional[int],
+        seeds: Optional[List[int]],
     ) -> Dict[str, Any]:
         raise NotImplementedError()

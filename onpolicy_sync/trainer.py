@@ -3,7 +3,8 @@ import queue
 import shutil
 import time
 import typing
-from typing import Optional, Any, Dict, Union
+from typing import Optional, Any, Dict, Union, List, Tuple
+import random
 
 import torch
 import torch.distributions
@@ -11,6 +12,7 @@ import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.optim
 from tensorboardX import SummaryWriter
+import numpy as np
 
 
 from configs.util import Builder
@@ -20,7 +22,6 @@ from onpolicy_sync.utils import batch_observations, ScalarMeanTracker
 from onpolicy_sync.vector_task import VectorSampledTasks
 from rl_base.common import Loss
 from rl_base.experiment_config import ExperimentConfig
-from rl_base.preprocessor import ObservationSet
 
 
 def validate(
@@ -41,7 +42,7 @@ class Trainer:
     def __init__(
         self,
         config: ExperimentConfig,
-        loaded_config_src_files: Optional[Dict[str, str]],
+        loaded_config_src_files: Optional[Dict[str, Tuple[str, str]]],
         output_dir: str,
         seed: Optional[int] = None,
         mode: str = "train",
@@ -70,8 +71,12 @@ class Trainer:
                 self.device = "cuda:%d" % self.params["gpu_ids"][0]
                 torch.cuda.set_device(self.device)  # type: ignore
 
+        seeds: Optional[List[int]] = None
         if self.seed is not None:
             torch.manual_seed(seed)
+            random.seed(seed)
+            np.random.seed(seed)
+
             if torch.cuda.is_available():
                 torch.cuda.manual_seed(seed)
                 torch.cuda.manual_seed_all(seed)
@@ -80,6 +85,13 @@ class Trainer:
                     # torch.backends.cudnn.deterministic = True
                     # torch.backends.cudnn.benchmark = False
                     torch.backends.cudnn.enabled = False
+                    print("cudnn enabled", torch.backends.cudnn.enabled)
+
+            random.seed(self.seed)
+            seeds = [
+                random.randint(0, 2 ** (31) - 1)
+                for _ in range(self.params["nprocesses"])
+            ]
 
         self.observation_set = None
         if "observation_set" in self.params:
@@ -102,19 +114,20 @@ class Trainer:
 
         self.vector_tasks = VectorSampledTasks(
             make_sampler_fn=config.make_sampler_fn,
-            sampler_fn_args=self.get_sampler_fn_args(config),
+            sampler_fn_args=self.get_sampler_fn_args(config, seeds),
         )
 
         self.output_dir = output_dir
         self.models_folder = os.path.join(output_dir, "models")
         os.makedirs(self.models_folder, exist_ok=True)
 
-        self.configs_folder = os.path.join(output_dir, "configs")
+        self.configs_folder = os.path.join(output_dir, "used_configs")
         os.makedirs(self.configs_folder, exist_ok=True)
         if mode == "train":
             for file in loaded_config_src_files:
-                parts = loaded_config_src_files[file].split(".")
-                src_file = os.path.sep.join(parts) + ".py"
+                base, module = loaded_config_src_files[file]
+                parts = module.split(".")
+                src_file = os.path.sep.join([base] + parts) + ".py"
                 dst_file = (
                     os.path.join(self.configs_folder, os.path.join(*parts[1:])) + ".py"
                 )
@@ -184,7 +197,9 @@ class Trainer:
         elif self.mode == "test":
             return config.evaluation_params()
 
-    def get_sampler_fn_args(self, config: ExperimentConfig):
+    def get_sampler_fn_args(
+        self, config: ExperimentConfig, seeds: Optional[List[int]] = None
+    ):
         devices = (
             self.params["sampler_devices"]
             if "sampler_devices" in self.params
@@ -207,7 +222,7 @@ class Trainer:
                 process_ind=it,
                 total_processes=self.params["nprocesses"],
                 devices=devices,
-                seed=self.seed,
+                seeds=seeds,
             )
             for it in range(self.params["nprocesses"])
         ]
@@ -731,17 +746,10 @@ class Trainer:
         if log_writer is not None:
             log_writer.close()
             self.log_writer = None
-        queue = getattr(self, "write_to_eval", None)
-        if queue is not None:
-            queue.put(("close",))
-            self.write_to_eval = None
         tasks = getattr(self, "vector_tasks", None)
         if tasks is not None:
             tasks.close()
             self.vector_tasks = None
-        eval = getattr(self, "eval_process", None)
-        if eval is not None:
-            eval.join()
 
     def __del__(self):
         self.close()

@@ -19,6 +19,7 @@ from onpolicy_sync.losses.imitation import Imitation
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.sensor import SensorSuite, ExpertActionSensor
 from rl_base.task import TaskSampler
+import random
 
 
 class ObjectNavThorExperimentConfig(ExperimentConfig):
@@ -145,7 +146,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         scenes: List[str],
         process_ind: int,
         total_processes: int,
-        seed: Optional[int] = None,
+        seeds: Optional[List[int]] = None,
     ) -> Dict[str, Any]:
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
@@ -170,7 +171,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
-            "seed": (seed + process_ind) if seed is not None else None,
+            "seed": seeds[process_ind] if seeds is not None else None,
         }
 
     def train_task_sampler_args(
@@ -178,10 +179,10 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         process_ind: int,
         total_processes: int,
         devices: Optional[List[int]] = None,
-        seed: Optional[int] = None,
+        seeds: Optional[List[int]] = None,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.TRAIN_SCENES, process_ind, total_processes, seed=seed
+            self.TRAIN_SCENES, process_ind, total_processes, seeds=seeds
         )
         res["scene_period"] = self.SCENE_PERIOD
         res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
@@ -192,10 +193,10 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         process_ind: int,
         total_processes: int,
         devices: Optional[List[int]],
-        seed: Optional[int] = None,
+        seeds: Optional[List[int]] = None,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.VALID_SCENES, process_ind, total_processes, seed=seed
+            self.VALID_SCENES, process_ind, total_processes, seeds=seeds
         )
         res["scene_period"] = self.VALID_SAMPLES_IN_SCENE
         res["max_tasks"] = self.VALID_SAMPLES_IN_SCENE * len(res["scenes"])
@@ -207,10 +208,10 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         process_ind: int,
         total_processes: int,
         devices: Optional[List[int]],
-        seed: Optional[int] = None,
+        seeds: Optional[List[int]] = None,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.TEST_SCENES, process_ind, total_processes, seed=seed
+            self.TEST_SCENES, process_ind, total_processes, seeds=seeds
         )
         res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
         return res
