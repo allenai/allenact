@@ -2,6 +2,7 @@ import warnings
 from typing import Tuple, Dict, Union
 
 import torch
+import typing
 
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from onpolicy_sync.losses.kfac import KFACOptimizer
@@ -13,33 +14,37 @@ def acktr_optimizer(actor_critic):
     return KFACOptimizer(actor_critic)
 
 
-class A2C_ACKTR(AbstractActorCriticLoss):
+class A2CACKTR(AbstractActorCriticLoss):
     def __init__(self, value_loss_coef, entropy_coef, acktr=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.acktr = acktr
 
         self.value_loss_coef = value_loss_coef
         self.entropy_coef = entropy_coef
 
-    def loss(
+    def loss(  # type: ignore
         self,
         batch: Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]],
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
-        **kwargs
+        **kwargs,
     ) -> Tuple[torch.FloatTensor, Dict[str, float]]:
 
-        actions = batch["actions"]
+        actions = typing.cast(torch.LongTensor, batch["actions"])
         values = actor_critic_output.values
         action_log_probs = actor_critic_output.distributions.log_probs(actions)
 
-        num_steps, nrollouts, _ = batch["rewards"].size()
+        num_steps, nrollouts, _ = typing.cast(torch.Tensor, batch["rewards"]).size()
         dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy().mean()
 
-        advantages = batch["returns"][:-1] - values
+        advantages = typing.cast(torch.FloatTensor, batch["returns"])[:-1] - values
         value_loss = advantages.pow(2).mean()
 
         # TODO: Decided to use normalized advantages here, is this correct?
-        action_loss = -(batch["norm_adv_targ"].detach() * action_log_probs).mean()
+        action_loss = -(
+            typing.cast(torch.FloatTensor, batch["norm_adv_targ"]).detach()
+            * action_log_probs
+        ).mean()
 
         if self.acktr:
             warnings.warn("acktr is only partially supported.")
@@ -82,14 +87,14 @@ class A2C_ACKTR(AbstractActorCriticLoss):
         )
 
 
-class A2C(A2C_ACKTR):
+class A2C(A2CACKTR):
     def __init__(self, value_loss_coef, entropy_coef, *args, **kwargs):
         super().__init__(
             value_loss_coef=value_loss_coef, entropy_coef=entropy_coef, acktr=False,
         )
 
 
-class ACKTR(A2C_ACKTR):
+class ACKTR(A2CACKTR):
     def __init__(self, value_loss_coef, entropy_coef, *args, **kwargs):
         super().__init__(
             value_loss_coef=value_loss_coef, entropy_coef=entropy_coef, acktr=True,

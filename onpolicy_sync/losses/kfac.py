@@ -17,7 +17,7 @@ from onpolicy_sync.utils import AddBias
 def _extract_patches(x, kernel_size, stride, padding):
     if padding[0] + padding[1] > 0:
         x = F.pad(
-            x, (padding[1], padding[1], padding[0], padding[0])
+            x, [padding[1], padding[1], padding[0], padding[0]]
         ).data  # Actually check dims
     x = x.unfold(2, kernel_size[0], stride[0])
     x = x.unfold(3, kernel_size[1], stride[1])
@@ -78,13 +78,13 @@ class SplitBias(nn.Module):
         self.add_bias = AddBias(module.bias.data)
         self.module.bias = None
 
-    def forward(self, input):
-        x = self.module(input)
-        x = self.add_bias(x)
-        return x
+    def forward(self, x):
+        y = self.module(x)
+        y = self.add_bias(y)
+        return y
 
 
-class KFACOptimizer(optim.Optimizer):
+class KFACOptimizer(optim.Optimizer):  # type: ignore
     def __init__(
         self,
         model,
@@ -103,6 +103,7 @@ class KFACOptimizer(optim.Optimizer):
         def split_bias(module):
             for mname, child in module.named_children():
                 if hasattr(child, "bias") and child.bias is not None:
+                    # noinspection PyProtectedMember
                     module._modules[mname] = SplitBias(child)
                 else:
                     split_bias(child)
@@ -142,14 +143,16 @@ class KFACOptimizer(optim.Optimizer):
             model.parameters(), lr=self.lr * (1 - self.momentum), momentum=self.momentum
         )
 
-    def _save_input(self, module, input):
+    def _save_input(self, module, input_to_save):
         if torch.is_grad_enabled() and self.steps % self.Ts == 0:
             classname = module.__class__.__name__
             layer_info = None
             if classname == "Conv2d":
                 layer_info = (module.kernel_size, module.stride, module.padding)
 
-            aa = compute_cov_a(input[0].data, classname, layer_info, self.fast_cnn)
+            aa = compute_cov_a(
+                input_to_save[0].data, classname, layer_info, self.fast_cnn
+            )
 
             # Initialize buffers
             if self.steps == 0:
@@ -229,7 +232,7 @@ class KFACOptimizer(optim.Optimizer):
             v = updates[p]
             vg_sum += (v * p.grad.data * self.lr * self.lr).sum()
 
-        nu = min(1, math.sqrt(self.kl_clip / vg_sum))
+        nu = min(1.0, math.sqrt(self.kl_clip / vg_sum))
 
         for p in self.model.parameters():
             v = updates[p]

@@ -53,7 +53,7 @@ class ResnetPreProcessorThor(Preprocessor):
         self.output_height: int = f(config, "output_height")
         self.output_width: int = f(config, "output_width")
         self.output_dims: int = f(config, "output_dims")
-        self.make_model: Callable[[], models.ResNet] = optf(
+        self.make_model: Callable[..., models.ResNet] = optf(
             config, "torchvision_resnet_model", models.resnet18
         )
         self.device: torch.device = optf(config, "device", "cpu")

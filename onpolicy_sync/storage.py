@@ -1,16 +1,10 @@
-import torch
-
-
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Optional
-
 from collections import defaultdict
 import torch
-
-from rl_base.preprocessor import ObservationSet
+import typing
 
 
 class RolloutStorage:
@@ -100,6 +94,7 @@ class RolloutStorage:
 
         for sensor in observations:
             if sensor not in self.observations:
+                # noinspection PyTypeChecker
                 self.observations[sensor] = (
                     torch.zeros_like(observations[sensor])
                     .unsqueeze(0)
@@ -117,6 +112,17 @@ class RolloutStorage:
         self.masks[self.step + 1].copy_(masks)
 
         self.step = (self.step + 1) % self.num_steps
+
+    def reshape(self, keep_list):
+        for sensor in self.observations:
+            self.observations[sensor] = self.observations[sensor][:, keep_list]
+        self.recurrent_hidden_states = self.recurrent_hidden_states[:, :, keep_list]
+        self.actions = self.actions[:, keep_list]
+        self.prev_actions = self.prev_actions[:, keep_list]
+        self.action_log_probs = self.action_log_probs[:, keep_list]
+        self.value_preds = self.value_preds[:, keep_list]
+        self.rewards = self.rewards[:, keep_list]
+        self.masks = self.masks[:, keep_list]
 
     def after_update(self):
         for sensor in self.observations:
@@ -198,6 +204,7 @@ class RolloutStorage:
 
             # These are all tensors of size (T, N, -1)
             for sensor in observations_batch:
+                # noinspection PyTypeChecker
                 observations_batch[sensor] = torch.stack(observations_batch[sensor], 1)
 
             actions_batch = torch.stack(actions_batch, 1)
@@ -216,8 +223,11 @@ class RolloutStorage:
 
             # Flatten the (T, N, ...) tensors to (T * N, ...)
             for sensor in observations_batch:
+                # noinspection PyTypeChecker
                 observations_batch[sensor] = self._flatten_helper(
-                    T, N, observations_batch[sensor]
+                    t=T,
+                    n=N,
+                    tensor=typing.cast(torch.Tensor, observations_batch[sensor]),
                 )
 
             actions_batch = self._flatten_helper(T, N, actions_batch)

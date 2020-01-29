@@ -19,6 +19,7 @@ class ObjectNavTaskSampler(TaskSampler):
         env_args: Dict[str, Any],
         action_space: gym.Space,
         scene_period: Optional[int] = None,
+        max_tasks: Optional[int] = None,
         *args,
         **kwargs
     ) -> None:
@@ -30,29 +31,35 @@ class ObjectNavTaskSampler(TaskSampler):
         self.sensors = sensors
         self.max_steps = max_steps
         self._action_sapce = action_space
+
+        self.scene_counter: Optional[int] = None
+        self.scene_order: Optional[List[str]] = None
+        self.scene_id: Optional[int] = None
         self.scene_period = scene_period or 0  # default makes a random choice
-        self.scene_counter = 0
-        self.scene_order = list(range(len(self.scenes)))
-        random.shuffle(self.scene_order)
-        self.scene_id = 0
+        self.max_tasks: Optional[int] = None
+        self.reset_tasks = max_tasks
+        self.reset()
 
         self._last_sampled_task: Optional[ObjectNavTask] = None
 
     def _create_environment(self) -> AI2ThorEnvironment:
         env = AI2ThorEnvironment(
-            **self.env_args,
             make_agents_visible=False,
             object_open_speed=0.05,
             restrict_to_initially_reachable_points=True,
+            **self.env_args,
         )
         return env
 
     @property
     def __len__(self) -> Union[int, float]:
+        """Length.
+
+        # Returns
+
+        Number of total tasks remaining that can be sampled. Can be float('inf').
         """
-        @return: Number of total tasks remaining that can be sampled. Can be float('inf').
-        """
-        return float("inf")
+        return float("inf") if self.max_tasks is None else self.max_tasks
 
     @property
     def total_unique(self) -> Optional[Union[int, float]]:
@@ -68,42 +75,51 @@ class ObjectNavTaskSampler(TaskSampler):
 
     @property
     def all_observation_spaces_equal(self) -> bool:
-        """
-        @return: True if all Tasks that can be sampled by this sampler have the
+        """Check if observation spaces equal.
+
+        # Returns
+
+        True if all Tasks that can be sampled by this sampler have the
             same observation space. Otherwise False.
         """
         return True
 
     def sample_scene(self):
         if self.scene_period == 0:
+            # Random scene
             self.scene_id = random.randint(0, len(self.scenes) - 1)
         elif self.scene_counter == self.scene_period:
-            self.scene_counter = 1
             if self.scene_id == len(self.scene_order) - 1:
-                self.scene_id = 0
+                # Randomize scene order for next iteration
                 random.shuffle(self.scene_order)
+                # Move to next scene
+                self.scene_id = 0
             else:
+                # Move to next scene
                 self.scene_id += 1
+            # Reset scene counter
+            self.scene_counter = 1
         else:
+            # Stay in current scene
             self.scene_counter += 1
 
-        return self.scenes[self.scene_order[self.scene_id]]
+        if self.max_tasks is not None:
+            self.max_tasks -= 1
 
-    def next_task(self) -> ObjectNavTask:
-        # print("creating next task")
+        return self.scenes[int(self.scene_order[self.scene_id])]
+
+    def next_task(self) -> Optional[ObjectNavTask]:
+        if self.max_tasks is not None and self.max_tasks <= 0:
+            return None
+
         scene = self.sample_scene()
 
         if self.env is not None:
-            # print("resetting env")
             if scene != self.env.scene_name:
                 self.env.reset(scene)
         else:
-            # print("creating env")
             self.env = self._create_environment()
-            # print("starting env")
             self.env.start(scene_name=scene)
-
-        # print("env up and ready")
 
         self.env.randomize_agent_location()
 
@@ -131,3 +147,10 @@ class ObjectNavTaskSampler(TaskSampler):
             action_space=self._action_sapce,
         )
         return self._last_sampled_task
+
+    def reset(self):
+        self.scene_counter = 0
+        self.scene_order = list(range(len(self.scenes)))
+        random.shuffle(self.scene_order)
+        self.scene_id = 0
+        self.max_tasks = self.reset_tasks

@@ -1,9 +1,12 @@
-from typing import NamedTuple, Dict, Any, Type
+from typing import NamedTuple, Dict, Any, Type, Union
 import copy
 import collections.abc
 
 
-def recursive_update(original: Dict[Any, Any], update: Dict[Any, Any]):
+def recursive_update(
+    original: Union[Dict, collections.abc.MutableMapping],
+    update: Union[Dict, collections.abc.MutableMapping],
+):
     """Recursively updates original dictionary with entries form update dict.
 
     Args:
@@ -14,7 +17,7 @@ def recursive_update(original: Dict[Any, Any], update: Dict[Any, Any]):
         Updated original dictionary.
     """
     for k, v in update.items():
-        if isinstance(v, collections.abc.Mapping):
+        if isinstance(v, collections.abc.MutableMapping):
             original[k] = recursive_update(original.get(k, {}), v)
         else:
             original[k] = v

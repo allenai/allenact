@@ -5,7 +5,7 @@ import os
 import torch
 import torch.nn as nn
 
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, DefaultDict
 from collections import defaultdict
 
 import numpy as np
@@ -62,7 +62,7 @@ def batch_observations(
     Returns:
         transposed dict of lists of observations.
     """
-    batch = defaultdict(list)
+    batch: DefaultDict = defaultdict(list)
 
     for obs in observations:
         for sensor in obs:
@@ -90,8 +90,8 @@ def _to_tensor(v):
 
 class ScalarMeanTracker(object):
     def __init__(self) -> None:
-        self._sums = {}
-        self._counts = {}
+        self._sums: Dict[str, float] = {}
+        self._counts: Dict[str, int] = {}
 
     def add_scalars(self, scalars):
         for k in scalars:
