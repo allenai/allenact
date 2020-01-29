@@ -2,11 +2,13 @@ import random
 import warnings
 from typing import List, Dict, Optional, Any, Union
 
+import gym
+
 from extensions.ai2thor.environment import AI2ThorEnvironment
 from extensions.ai2thor.tasks import ObjectNavTask
 from rl_base.sensor import Sensor
 from rl_base.task import TaskSampler
-import gym
+from onpolicy_sync.utils import set_deterministic_cudnn, set_seed
 
 
 class ObjectNavTaskSampler(TaskSampler):
@@ -21,6 +23,7 @@ class ObjectNavTaskSampler(TaskSampler):
         scene_period: Optional[int] = None,
         max_tasks: Optional[int] = None,
         seed: Optional[int] = None,
+        deterministic_cudnn: bool = False,
         *args,
         **kwargs
     ) -> None:
@@ -39,13 +42,16 @@ class ObjectNavTaskSampler(TaskSampler):
         self.scene_period = scene_period or 0  # default makes a random choice
         self.max_tasks: Optional[int] = None
         self.reset_tasks = max_tasks
-        self.reset()
 
         self._last_sampled_task: Optional[ObjectNavTask] = None
 
-        self.seed = seed
-        if self.seed is not None:
-            random.seed(seed)
+        self.seed = None
+        self.set_seed(seed)
+
+        if deterministic_cudnn:
+            set_deterministic_cudnn()
+
+        self.reset()
 
     def _create_environment(self) -> AI2ThorEnvironment:
         env = AI2ThorEnvironment(
@@ -159,3 +165,8 @@ class ObjectNavTaskSampler(TaskSampler):
         random.shuffle(self.scene_order)
         self.scene_id = 0
         self.max_tasks = self.reset_tasks
+
+    def set_seed(self, seed: int):
+        self.seed = seed
+        if seed is not None:
+            set_seed(seed)

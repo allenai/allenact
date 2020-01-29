@@ -36,6 +36,7 @@ class ExperimentConfig(abc.ABC):
         total_processes: int,
         devices: Optional[List[int]],
         seeds: Optional[List[int]],
+        deterministic_cudnn: bool,
     ) -> Dict[str, Any]:
         raise NotImplementedError()
 
@@ -45,6 +46,7 @@ class ExperimentConfig(abc.ABC):
         total_processes: int,
         devices: Optional[List[int]],
         seeds: Optional[List[int]],
+        deterministic_cudnn: bool,
     ) -> Dict[str, Any]:
         raise NotImplementedError()
 
@@ -54,5 +56,6 @@ class ExperimentConfig(abc.ABC):
         total_processes: int,
         devices: Optional[List[int]],
         seeds: Optional[List[int]],
+        deterministic_cudnn: bool,
     ) -> Dict[str, Any]:
         raise NotImplementedError()

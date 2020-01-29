@@ -147,6 +147,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         process_ind: int,
         total_processes: int,
         seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
@@ -172,6 +173,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
             "seed": seeds[process_ind] if seeds is not None else None,
+            "deterministic_cudnn": deterministic_cudnn,
         }
 
     def train_task_sampler_args(
@@ -180,9 +182,14 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         total_processes: int,
         devices: Optional[List[int]] = None,
         seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.TRAIN_SCENES, process_ind, total_processes, seeds=seeds
+            self.TRAIN_SCENES,
+            process_ind,
+            total_processes,
+            seeds=seeds,
+            deterministic_cudnn=deterministic_cudnn,
         )
         res["scene_period"] = self.SCENE_PERIOD
         res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
@@ -194,9 +201,14 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         total_processes: int,
         devices: Optional[List[int]],
         seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.VALID_SCENES, process_ind, total_processes, seeds=seeds
+            self.VALID_SCENES,
+            process_ind,
+            total_processes,
+            seeds=seeds,
+            deterministic_cudnn=deterministic_cudnn,
         )
         res["scene_period"] = self.VALID_SAMPLES_IN_SCENE
         res["max_tasks"] = self.VALID_SAMPLES_IN_SCENE * len(res["scenes"])
@@ -209,9 +221,14 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         total_processes: int,
         devices: Optional[List[int]],
         seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.TEST_SCENES, process_ind, total_processes, seeds=seeds
+            self.TEST_SCENES,
+            process_ind,
+            total_processes,
+            seeds=seeds,
+            deterministic_cudnn=deterministic_cudnn,
         )
         res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
         return res

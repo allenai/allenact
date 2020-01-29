@@ -12,13 +12,16 @@ import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.optim
 from tensorboardX import SummaryWriter
-import numpy as np
-
 
 from configs.util import Builder
 from onpolicy_sync.storage import RolloutStorage
-from onpolicy_sync.utils import LinearDecay
-from onpolicy_sync.utils import batch_observations, ScalarMeanTracker
+from onpolicy_sync.utils import (
+    LinearDecay,
+    batch_observations,
+    ScalarMeanTracker,
+    set_deterministic_cudnn,
+    set_seed,
+)
 from onpolicy_sync.vector_task import VectorSampledTasks
 from rl_base.common import Loss
 from rl_base.experiment_config import ExperimentConfig
@@ -30,10 +33,15 @@ def validate(
     read_from_parent: mp.Queue,
     write_to_parent: mp.Queue,
     seed: Optional[int] = None,
-    disable_cudnn: bool = False,
+    deterministic_cudnn: bool = False,
 ):
     evaluator = Trainer(
-        config, None, output_dir, mode="valid", seed=seed, disable_cudnn=disable_cudnn,
+        config,
+        None,
+        output_dir,
+        mode="valid",
+        seed=seed,
+        deterministic_cudnn=deterministic_cudnn,
     )
     evaluator.process_checkpoints(read_from_parent, write_to_parent)
 
@@ -46,9 +54,9 @@ class Trainer:
         output_dir: str,
         seed: Optional[int] = None,
         mode: str = "train",
-        disable_cudnn: bool = False,
+        deterministic_cudnn: bool = False,
     ):
-        self.disable_cudnn = disable_cudnn
+        self.deterministic_cudnn = deterministic_cudnn
         self.seed = seed
         self.mode = mode.lower()
         assert self.mode in [
@@ -71,27 +79,13 @@ class Trainer:
                 self.device = "cuda:%d" % self.params["gpu_ids"][0]
                 torch.cuda.set_device(self.device)  # type: ignore
 
+        if self.deterministic_cudnn:
+            set_deterministic_cudnn()
+
         seeds: Optional[List[int]] = None
         if self.seed is not None:
-            torch.manual_seed(seed)
-            random.seed(seed)
-            np.random.seed(seed)
-
-            if torch.cuda.is_available():
-                torch.cuda.manual_seed(seed)
-                torch.cuda.manual_seed_all(seed)
-
-                if self.disable_cudnn:
-                    # torch.backends.cudnn.deterministic = True
-                    # torch.backends.cudnn.benchmark = False
-                    torch.backends.cudnn.enabled = False
-                    print("cudnn enabled", torch.backends.cudnn.enabled)
-
-            random.seed(self.seed)
-            seeds = [
-                random.randint(0, 2 ** (31) - 1)
-                for _ in range(self.params["nprocesses"])
-            ]
+            set_seed(self.seed)
+            seeds = self.worker_seeds(self.params["nprocesses"])
 
         self.observation_set = None
         if "observation_set" in self.params:
@@ -161,8 +155,9 @@ class Trainer:
         self.gae_lambda: Optional[float] = None
         self.max_grad_norm: Optional[float] = None
         self.teacher_forcing: Optional[LinearDecay] = None
-        self.deterministic: Optional[bool] = None
+        self.deterministic_cudnn: Optional[bool] = None
         self.local_start_time_str: Optional[str] = None
+        self.deterministic_agent: Optional[bool] = None
 
         self.experiment_name = config.tag()
 
@@ -184,10 +179,14 @@ class Trainer:
                     self.write_to_eval,
                     self.vector_tasks.metrics_out_queue,
                     self.seed,
-                    self.disable_cudnn,
+                    self.deterministic_cudnn,
                 ),
             )
             self.eval_process.start()
+
+    @staticmethod
+    def worker_seeds(nprocesses: int):
+        return [random.randint(0, 2 ** (31) - 1) for _ in range(nprocesses)]
 
     def get_params(self, config: ExperimentConfig):
         if self.mode == "train":
@@ -223,12 +222,20 @@ class Trainer:
                 total_processes=self.params["nprocesses"],
                 devices=devices,
                 seeds=seeds,
+                deterministic_cudnn=self.deterministic_cudnn,
             )
             for it in range(self.params["nprocesses"])
         ]
 
     def checkpoint_save(self) -> str:
         os.makedirs(self.models_folder, exist_ok=True)
+
+        if self.seed is not None:
+            self.seed = self.worker_seeds(1)[0]
+            set_seed(self.seed)
+
+            seeds = self.worker_seeds(self.num_processes)
+            self.vector_tasks.set_seeds(seeds)
 
         model_path = os.path.join(
             self.models_folder,
@@ -240,20 +247,24 @@ class Trainer:
                 self.seed,
             ),
         )
-        torch.save(
-            {
-                "total_updates": self.total_updates,
-                "total_steps": self.total_steps,
-                "pipeline_stage": self.pipeline_stage,
-                "rollout_count": self.rollout_count,
-                "backprop_count": self.backprop_count,
-                "step_count": self.step_count,
-                "local_start_time_str": self.local_start_time_str,
-                "optimizer_state_dict": self.optimizer.state_dict(),
-                "model_state_dict": self.actor_critic.state_dict(),
-            },
-            model_path,
-        )
+
+        save_dict = {
+            "total_updates": self.total_updates,
+            "total_steps": self.total_steps,
+            "pipeline_stage": self.pipeline_stage,
+            "rollout_count": self.rollout_count,
+            "backprop_count": self.backprop_count,
+            "step_count": self.step_count,
+            "local_start_time_str": self.local_start_time_str,
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "model_state_dict": self.actor_critic.state_dict(),
+            "trainer_seed": self.seed,
+        }
+
+        if self.seed is not None:
+            save_dict["worker_seeds"] = seeds
+
+        torch.save(save_dict, model_path)
         return model_path
 
     def checkpoint_load(self, ckpt: Union[str, Dict[str, Any]]) -> None:
@@ -281,6 +292,14 @@ class Trainer:
             self.total_updates = ckpt["total_updates"]  # type: ignore
             self.local_start_time_str = typing.cast(str, ckpt["local_start_time_str"])
             self.params["pipeline"] = self.params["pipeline"][self.pipeline_stage :]
+            self.seed = ckpt["trainer_seed"]
+            if self.seed is not None:
+                set_seed(self.seed)
+                seeds = self.worker_seeds(self.num_processes)
+                assert (
+                    seeds == ckpt["worker_seeds"]
+                ), "worker seeds not matching stored seeds"
+                self.vector_tasks.set_seeds(seeds)
 
     def process_valid_metrics(self):
         while not self.vector_tasks.metrics_out_queue.empty():
@@ -431,7 +450,7 @@ class Trainer:
 
         actions = (
             actor_critic_output.distributions.sample()
-            if not self.deterministic
+            if not self.deterministic_agent
             else actor_critic_output.distributions.mode()
         )
 
@@ -550,7 +569,8 @@ class Trainer:
                 and self.models_folder != ""
             ):
                 model_path = self.checkpoint_save()
-                self.write_to_eval.put(("eval", model_path))
+                if self.write_to_eval is not None:
+                    self.write_to_eval.put(("eval", model_path))
 
     def setup_stage(
         self,
@@ -565,7 +585,7 @@ class Trainer:
         gae_lambda: float,
         max_grad_norm: float,
         teacher_forcing: Optional[LinearDecay] = None,
-        deterministic: bool = False,
+        deterministic_agent: bool = False,
     ):
         self.losses = losses
         self.loss_weights = loss_weights
@@ -595,7 +615,7 @@ class Trainer:
 
         self.teacher_forcing = teacher_forcing
 
-        self.deterministic = deterministic
+        self.deterministic_agent = deterministic_agent
 
     def _get_loss(self, current_loss):
         assert current_loss in self.params, "undefined referenced loss"
@@ -678,9 +698,9 @@ class Trainer:
         self,
         read_from_parent: mp.Queue,
         write_to_parent: mp.Queue,
-        deterministic: bool = True,
+        deterministic_agent: bool = True,
     ):
-        self.deterministic = deterministic
+        self.deterministic_agent = deterministic_agent
         self.teacher_forcing = None
 
         try:

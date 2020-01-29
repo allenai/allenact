@@ -60,7 +60,11 @@ def main():
     cfg, srcs = load_config(args)
 
     Trainer(
-        cfg, srcs, args.output_dir, seed=args.seed, disable_cudnn=args.disable_cudnn,
+        cfg,
+        srcs,
+        args.output_dir,
+        seed=args.seed,
+        deterministic_cudnn=args.deterministic_cudnn,
     ).run_pipeline(args.checkpoint)
 
 
