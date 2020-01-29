@@ -155,7 +155,6 @@ class Trainer:
         self.gae_lambda: Optional[float] = None
         self.max_grad_norm: Optional[float] = None
         self.teacher_forcing: Optional[LinearDecay] = None
-        self.deterministic_cudnn: Optional[bool] = None
         self.local_start_time_str: Optional[str] = None
         self.deterministic_agent: Optional[bool] = None
 
@@ -292,7 +291,7 @@ class Trainer:
             self.total_updates = ckpt["total_updates"]  # type: ignore
             self.local_start_time_str = typing.cast(str, ckpt["local_start_time_str"])
             self.params["pipeline"] = self.params["pipeline"][self.pipeline_stage :]
-            self.seed = ckpt["trainer_seed"]
+            self.seed = typing.cast(int, ckpt["trainer_seed"])
             if self.seed is not None:
                 set_seed(self.seed)
                 seeds = self.worker_seeds(self.num_processes)

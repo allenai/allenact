@@ -1,24 +1,48 @@
+from typing import Sequence, Tuple, Dict
+
 import numpy as np
 import torch
 from torch import nn as nn
+from gym.spaces.dict import Dict as SpaceDict
 
 
 class Flatten(nn.Module):
+    """Flatten input tensor so that it is of shape (batchs x -1)."""
+
     def forward(self, x):
+        """Flatten input tensor.
+
+        # Parameters
+
+        x : Tensor of size (batches x ...) to flatten to size (batches x -1)
+
+        # Returns
+
+        Flattened tensor.
+        """
         return x.view(x.size(0), -1)
 
 
 class SimpleCNN(nn.Module):
     """A Simple 3-Conv CNN followed by a fully connected layer.
 
-    Takes in observations and produces an embedding of the rgb and/or depth components
+    Takes in observations (of type gym.spaces.dict) and produces an embedding
+     of the `"rgb"` and/or `"depth"` components.
 
-    Args:
-        observation_space: The observation_space of the agent
-        output_size: The size of the embedding vector
+    # Attributes
+
+    observation_space : The observation_space of the agent.
+    output_size : The size of the embedding vector to produce.
     """
 
-    def __init__(self, observation_space, output_size):
+    def __init__(self, observation_space: SpaceDict, output_size: int):
+        """Initializer.
+
+        # Parameters
+
+        observation_space : See class attributes documentation.
+        output_size : See class attributes documentation.
+        """
         super().__init__()
         if "rgb" in observation_space.spaces:
             self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
@@ -93,11 +117,25 @@ class SimpleCNN(nn.Module):
         self.layer_init()
 
     @staticmethod
-    def _conv_output_dim(dimension, padding, dilation, kernel_size, stride):
+    def _conv_output_dim(
+        dimension: Sequence[int],
+        padding: Sequence[int],
+        dilation: Sequence[int],
+        kernel_size: Sequence[int],
+        stride: Sequence[int],
+    ) -> Tuple[int, ...]:
         """Calculates the output height and width based on the input height and
         width to the convolution layer.
 
-        ref: https://pytorch.org/docs/master/nn.html#torch.nn.Conv2d
+        For parameter definitions see [here](https://pytorch.org/docs/master/nn.html#torch.nn.Conv2d).
+
+        # Parameters
+
+        dimension : See above link.
+        padding : See above link.
+        dilation : See above link.
+        kernel_size : See above link.
+        stride : See above link.
         """
         assert len(dimension) == 2
         out_dimension = []
@@ -120,7 +158,8 @@ class SimpleCNN(nn.Module):
             )
         return tuple(out_dimension)
 
-    def layer_init(self):
+    def layer_init(self) -> None:
+        """Initialize layer parameters using kaiming normal."""
         for layer in self.cnn:
             if isinstance(layer, (nn.Conv2d, nn.Linear)):
                 nn.init.kaiming_normal_(layer.weight, nn.init.calculate_gain("relu"))
@@ -129,24 +168,26 @@ class SimpleCNN(nn.Module):
 
     @property
     def is_blind(self):
+        """True if the observation space doesn't include `"rgb"` or
+        `"depth"`."""
         return self._n_input_rgb + self._n_input_depth == 0
 
-    def forward(self, observations):
-        cnn_input = []
+    def forward(self, observations: Dict[str, torch.Tensor]):
+        cnn_input_list = []
         if self._n_input_rgb > 0:
             rgb_observations = observations["rgb"]
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             rgb_observations = rgb_observations.permute(0, 3, 1, 2)
             # rgb_observations = rgb_observations / 255.0  # normalize RGB
-            cnn_input.append(rgb_observations)
+            cnn_input_list.append(rgb_observations)
 
         if self._n_input_depth > 0:
             depth_observations = observations["depth"]
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             depth_observations = depth_observations.permute(0, 3, 1, 2)
-            cnn_input.append(depth_observations)
+            cnn_input_list.append(depth_observations)
 
-        cnn_input = torch.cat(cnn_input, dim=1)
+        cnn_input = torch.cat(cnn_input_list, dim=1)
 
         return self.cnn(cnn_input)
 

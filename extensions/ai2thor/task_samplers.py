@@ -45,7 +45,7 @@ class ObjectNavTaskSampler(TaskSampler):
 
         self._last_sampled_task: Optional[ObjectNavTask] = None
 
-        self.seed = None
+        self.seed: Optional[int] = None
         self.set_seed(seed)
 
         if deterministic_cudnn:
