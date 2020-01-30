@@ -58,7 +58,7 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
 def main():
     args = get_args()
 
-    ptitle("Master: {}".format("Training" if not args.testing else "Testing"))
+    ptitle("Master: {}".format("Training" if not args.test else "Testing"))
 
     cfg, srcs = load_config(args)
 

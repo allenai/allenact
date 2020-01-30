@@ -4,7 +4,7 @@
 # Modified work Copyright (c) Allen Institute for AI
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+import time
 from multiprocessing.connection import Connection
 from multiprocessing.context import BaseContext
 from queue import Queue
@@ -289,6 +289,9 @@ class VectorSampledTasks:
             ps.daemon = True
             ps.start()
             worker_conn.close()
+            time.sleep(
+                0.1
+            )  # Useful to ensure things don't lock up when spawning many envs
         return (
             [p.recv for p in parent_connections],
             [p.send for p in parent_connections],

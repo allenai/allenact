@@ -36,7 +36,7 @@ class ExperimentConfig(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def evaluation_params(cls, **kwargs):
+    def machine_params(cls, mode="train", **kwargs):
         raise NotImplementedError()
 
     @classmethod

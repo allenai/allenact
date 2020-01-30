@@ -152,8 +152,9 @@ def set_seed(seed: int):
 
 
 class PipelineStage(NamedTuple):
-    losses: typing.List[Union[str, Loss, Builder[Loss]]]
+    loss_names: typing.List[str]
     end_criterion: int
+    loss_weights: Optional[typing.Sequence[float]] = None
     teacher_forcing: Optional[LinearDecay] = None
 
 
@@ -161,10 +162,9 @@ class TrainingPipeline(Iterator):
     # noinspection PyUnresolvedReferences
     def __init__(
         self,
-        common_losses: Optional[Dict[str, Union[Loss, Builder[Loss]]]],
+        named_losses: Optional[Dict[str, Union[Loss, Builder[Loss]]]],
         pipeline_stages: List[PipelineStage],
         optimizer: Union[optim.Optimizer, Builder[optim.Optimizer]],  # type: ignore
-        nprocesses: int,
         num_mini_batch: int,
         update_repeats: int,
         max_grad_norm: float,
@@ -172,7 +172,6 @@ class TrainingPipeline(Iterator):
         gamma: float,
         use_gae: bool,
         gae_lambda: float,
-        gpu_ids: typing.List[int],
         save_interval: int,
         log_interval: int,
     ):
@@ -180,41 +179,37 @@ class TrainingPipeline(Iterator):
         self.log_interval = log_interval
 
         self.optimizer = optimizer
-        self.nprocesses = nprocesses
         self.num_mini_batch = num_mini_batch
 
         self.update_repeats = update_repeats
         self.max_grad_norm = max_grad_norm
         self.num_steps = num_steps
-        self.gpu_ids = gpu_ids
-        self.common_losses = common_losses
+        self.named_losses = named_losses
         self.gamma = gamma
         self.use_gae = use_gae
         self.gae_lambda = gae_lambda
 
         self.pipeline_stages = pipeline_stages
 
-        for stage in self.pipeline_stages:
-            for i, loss in list(enumerate(stage.losses)):
-                if isinstance(loss, str):
-                    stage.losses[i] = common_losses[loss]
-
-        self.current_pipeline_stage = 0
+        self.current_pipeline_stage = -1
 
     def current_stage(self):
         return (
             None
-            if self.current_pipeline_stage >= len(self.pipeline_stages)
+            if (
+                len(self.pipeline_stages) <= self.current_pipeline_stage
+                or self.current_pipeline_stage < 0
+            )
             else self.pipeline_stages[self.current_pipeline_stage]
         )
 
     def reset(self):
-        self.current_pipeline_stage = 0
+        self.current_pipeline_stage = -1
 
     def __next__(self):
-        if len(self.pipeline_stages) == self.current_pipeline_stage:
+        if len(self.pipeline_stages) == self.current_pipeline_stage + 1:
             raise StopIteration()
 
         self.current_pipeline_stage += 1
 
-        return self.pipeline_stages[self.current_pipeline_stage - 1]
+        return self.pipeline_stages[self.current_pipeline_stage]
