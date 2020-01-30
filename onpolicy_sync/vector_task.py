@@ -17,6 +17,8 @@ from gym.spaces.dict import Dict as SpaceDict
 from rl_base.common import RLStepResult
 from rl_base.task import TaskSampler
 
+from setproctitle import setproctitle as ptitle
+
 try:
     # Use torch.multiprocessing if we can.
     # We have yet to find a reason to not use it and
@@ -199,6 +201,8 @@ class VectorSampledTasks:
     ) -> None:
         """process worker for creating and interacting with the
         Tasks/TaskSampler."""
+
+        ptitle("VectorSampledTask: {}".format(worker_id))
 
         task_sampler = make_sampler_fn(**sampler_fn_args)
         current_task = task_sampler.next_task()

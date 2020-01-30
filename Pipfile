@@ -36,6 +36,7 @@ ai2thor = "*"
 networkx = "*"
 Pillow = "==6.2.1"
 setuptools = "*"
+setproctitle = "*"
 
 [requires]
 python_version = "3.6"

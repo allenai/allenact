@@ -8,6 +8,7 @@ import inspect
 import importlib
 
 from rl_base.experiment_config import ExperimentConfig
+from setproctitle import setproctitle as ptitle
 
 
 def config_source(args) -> Dict[str, Tuple[str, str]]:
@@ -55,6 +56,8 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
 
 
 def main():
+    ptitle("Master: Training")
+
     args = get_args()
 
     cfg, srcs = load_config(args)

@@ -1,3 +1,4 @@
+import glob
 import os
 import queue
 import shutil
@@ -25,6 +26,7 @@ from onpolicy_sync.utils import (
 from onpolicy_sync.vector_task import VectorSampledTasks
 from rl_base.common import Loss
 from rl_base.experiment_config import ExperimentConfig
+from setproctitle import setproctitle as ptitle
 
 
 def validate(
@@ -35,6 +37,7 @@ def validate(
     seed: Optional[int] = None,
     deterministic_cudnn: bool = False,
 ):
+    ptitle("Validation")
     evaluator = Trainer(
         config,
         None,
@@ -112,8 +115,7 @@ class Trainer:
         )
 
         self.output_dir = output_dir
-        self.models_folder = os.path.join(output_dir, "models")
-        os.makedirs(self.models_folder, exist_ok=True)
+        self.models_folder: Optional[str] = None
 
         self.configs_folder = os.path.join(output_dir, "used_configs")
         os.makedirs(self.configs_folder, exist_ok=True)
@@ -228,6 +230,9 @@ class Trainer:
         ]
 
     def checkpoint_save(self) -> str:
+        self.models_folder = os.path.join(
+            self.output_dir, "checkpoints", self.local_start_time_str
+        )
         os.makedirs(self.models_folder, exist_ok=True)
 
         if self.seed is not None:
@@ -267,9 +272,10 @@ class Trainer:
         torch.save(save_dict, model_path)
         return model_path
 
-    def checkpoint_load(self, ckpt: Union[str, Dict[str, Any]]) -> None:
+    def checkpoint_load(self, ckpt: Union[str, Dict[str, Any]], verbose=False) -> None:
         if isinstance(ckpt, str):
-            print("Loading checkpoint from %s" % ckpt)
+            if verbose:
+                print("Loading checkpoint from %s" % ckpt)
             # Map location CPU is almost always better than mapping to a CUDA device.
             ckpt = torch.load(ckpt, map_location="cpu")
 
@@ -577,9 +583,9 @@ class Trainer:
                     model_path = self.checkpoint_save()
                     if self.write_to_eval is not None:
                         self.write_to_eval.put(("eval", model_path))
-        except KeyboardInterrupt:
-            print("Trainer KeyboardInterrupt - closing")
+        except Exception as e:
             self.close()
+            raise e
 
     def setup_stage(
         self,
@@ -654,15 +660,54 @@ class Trainer:
         assert field in stage or field in self.params, "missing value for %s" % field
         return stage[field] if field in stage else self.params[field]
 
-    def run_pipeline(self, checkpoint_file_name: Optional[str] = None):
-        self.log_writer = SummaryWriter(log_dir=self.output_dir)
+    @property
+    def log_writer_path(self) -> str:
+        return os.path.join(
+            self.output_dir, "tb", self.experiment_name, self.local_start_time_str
+        )
 
+    def get_checkpoint_path(self, checkpoint_file_name: str) -> str:
+        checkpoint_start_time = [
+            s for s in checkpoint_file_name.split("__") if "time_" in s
+        ][0]
+
+        expected_path = os.path.join(
+            self.output_dir, "checkpoints", checkpoint_start_time, checkpoint_file_name
+        )
+        if os.path.exists(expected_path):
+            return expected_path
+        else:
+            print(
+                (
+                    "Could not find checkpoint with file name {}\n"
+                    "under expected path {}.\n"
+                    "Attempting to find the checkpoint elsewhere under the working directory.\n"
+                ).format(checkpoint_file_name, expected_path)
+            )
+
+            ckpts = glob.glob("./**/{}".format(checkpoint_file_name), recursive=True)
+
+            if len(ckpts) == 0:
+                raise RuntimeError(
+                    "Could not find {} anywhere"
+                    " the working directory.".format(checkpoint_file_name)
+                )
+            elif len(ckpts) > 1:
+                raise RuntimeError("Found too many checkpoint paths {}.".format(ckpts))
+            else:
+                return ckpts[0]
+
+    def run_pipeline(self, checkpoint_file_name: Optional[str] = None):
         start_time = time.time()
         self.local_start_time_str = time.strftime(
             "%Y-%m-%d_%H-%M-%S", time.localtime(start_time)
         )
+        self.log_writer = SummaryWriter(log_dir=self.log_writer_path)
+
         if checkpoint_file_name is not None:
-            self.checkpoint_load(checkpoint_file_name)
+            self.checkpoint_load(
+                self.get_checkpoint_path(checkpoint_file_name), verbose=True
+            )
 
         for stage in self.params["pipeline"]:
             self.last_log = self.step_count - self.log_interval
@@ -735,7 +780,7 @@ class Trainer:
             print("Eval KeyboardInterrupt")
 
     def run_eval(self, checkpoint_file_name: str, rollout_steps=1):
-        self.checkpoint_load(checkpoint_file_name)
+        self.checkpoint_load(checkpoint_file_name, verbose=False)
 
         rollouts = RolloutStorage(
             rollout_steps,
@@ -761,14 +806,26 @@ class Trainer:
         }
 
     def close(self):
-        eval = getattr(self, "eval_process", None)
-        if eval is not None:
-            eval.join()
-            self.eval_process = None
-        log_writer = getattr(self, "log_writer", None)
-        if log_writer is not None:
-            log_writer.close()
-            self.log_writer = None
+        try:
+            self.vector_tasks.close()
+        except Exception as _:
+            pass
+
+        try:
+            eval = getattr(self, "eval_process", None)
+            if eval is not None:
+                eval.join()
+                self.eval_process = None
+        except Exception as _:
+            pass
+
+        try:
+            log_writer = getattr(self, "log_writer", None)
+            if log_writer is not None:
+                log_writer.close()
+                self.log_writer = None
+        except Exception as _:
+            pass
 
     def __del__(self):
         self.close()

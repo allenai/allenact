@@ -7,8 +7,9 @@ import typing
 from PIL import Image
 from torchvision import transforms
 
-from extensions.ai2thor.environment import AI2ThorEnvironment
-from extensions.ai2thor.tasks import AI2ThorTask, ObjectNavTask
+from rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
+from rl_ai2thor.ai2thor_tasks import AI2ThorTask
+from rl_ai2thor.object_nav.tasks import ObjectNavTask
 from rl_base.sensor import Sensor
 
 

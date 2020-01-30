@@ -65,6 +65,9 @@ class ActorCriticOutput(tuple, typing.Generic[DistributionType]):
 
 
 class Loss(abc.ABC):
+    def __init__(self, *args, **kwargs):
+        pass
+
     @abc.abstractmethod
     def loss(self, *args, **kwargs):
         raise NotImplementedError()
