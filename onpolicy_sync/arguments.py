@@ -15,7 +15,7 @@ def get_args():
         required=False,
         type=str,
         default="experiment_output",
-        help='experiment output folder (default: "experiment_output")',
+        help="experiment output folder",
     )
 
     parser.add_argument(
@@ -37,6 +37,7 @@ def get_args():
         type=str,
         help="optional checkpoint file name to resume training",
     )
+
     parser.add_argument(
         "-d",
         "--deterministic_cudnn",
@@ -46,5 +47,25 @@ def get_args():
         help="sets CuDNN in deterministic mode",
     )
     parser.set_defaults(deterministic_cudnn=False)
+
+    parser.add_argument(
+        "-t",
+        "--test",
+        dest="test",
+        action="store_true",
+        required=False,
+        help="tests the specified experiment, assuming it was previously trained."
+        "If no checkpoint is specified, it will run on all checkpoints enabled by skip_checkpoints",
+    )
+    parser.set_defaults(test=False)
+
+    parser.add_argument(
+        "-k",
+        "--skip_checkpoints",
+        required=False,
+        default=0,
+        type=int,
+        help="optional number of skipped checkpoints between runs in test if no checkpoint specified",
+    )
 
     return parser.parse_args()

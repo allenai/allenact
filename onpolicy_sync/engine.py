@@ -6,6 +6,7 @@ import time
 import typing
 from typing import Optional, Any, Dict, Union, List, Tuple
 import random
+import glob
 
 import torch
 import torch.distributions
@@ -38,23 +39,21 @@ def validate(
     deterministic_cudnn: bool = False,
 ):
     ptitle("Validation")
-    evaluator = Trainer(
-        config,
-        None,
-        output_dir,
-        mode="valid",
+    evaluator = Validator(
+        config=config,
+        output_dir=output_dir,
         seed=seed,
         deterministic_cudnn=deterministic_cudnn,
     )
     evaluator.process_checkpoints(read_from_parent, write_to_parent)
 
 
-class Trainer:
+class Engine:
     def __init__(
         self,
         config: ExperimentConfig,
-        loaded_config_src_files: Optional[Dict[str, Tuple[str, str]]],
         output_dir: str,
+        loaded_config_src_files: Optional[Dict[str, Tuple[str, str]]],
         seed: Optional[int] = None,
         mode: str = "train",
         deterministic_cudnn: bool = False,
@@ -244,7 +243,7 @@ class Trainer:
 
         model_path = os.path.join(
             self.models_folder,
-            "exp_{}__time_{}__stage_{}__steps_{}__seed_{}.pt".format(
+            "exp_{}__time_{}__stage_{:02d}__steps_{:012d}__seed_{}.pt".format(
                 self.experiment_name,
                 self.local_start_time_str,
                 self.pipeline_stage,
@@ -318,14 +317,16 @@ class Trainer:
         return self.scalars.pop_and_reset()
 
     def log(self):
-        valid_metrics = None
+        eval_metrics = {}
         while not self.vector_tasks.metrics_out_queue.empty():
             try:
                 metric = self.vector_tasks.metrics_out_queue.get_nowait()
                 if isinstance(metric, tuple):
                     pkg_type, info = metric
                     if pkg_type == "valid_metrics":
-                        valid_metrics = {k: v for k, v in info.items()}
+                        eval_metrics["valid"] = {k: v for k, v in info.items()}
+                    elif pkg_type == "test_metrics":
+                        eval_metrics["test"] = {k: v for k, v in info.items()}
                     else:
                         cscalars: Optional[Dict[str, Union[float, int]]] = None
                         if pkg_type == "update_package":
@@ -354,10 +355,12 @@ class Trainer:
                 "train/" + k, tracked_means[k], self.total_steps + self.step_count,
             )
 
-        if valid_metrics is not None:
-            for k in valid_metrics:
+        for mode in eval_metrics:
+            for k in eval_metrics[mode]:
                 self.log_writer.add_scalar(
-                    "valid/" + k, valid_metrics[k][0], valid_metrics[k][1],
+                    "{}/".format(mode) + k,
+                    eval_metrics[mode][k][0],
+                    eval_metrics[mode][k][1],
                 )
 
     def update(self, rollouts) -> None:
@@ -754,6 +757,9 @@ class Trainer:
         write_to_parent: mp.Queue,
         deterministic_agent: bool = True,
     ):
+        assert (
+            self.mode != "train"
+        ), "process_checkpoints only to be called from a valid or test instance"
         self.deterministic_agent = deterministic_agent
         self.teacher_forcing = None
 
@@ -805,6 +811,38 @@ class Trainer:
             for k, v in self.process_valid_metrics().items()
         }
 
+    def get_checkpoint_files(
+        self, checkpoint_file_name: Optional[str] = None, skip_checkpoints: int = 0
+    ):
+        if checkpoint_file_name is not None:
+            return [checkpoint_file_name]
+        files = glob.glob(os.path.join(self.output_dir, "checkpoints", "exp_*.pt"))
+        return sorted(files)
+
+    def run_test(
+        self,
+        checkpoint_file_name: Optional[str] = None,
+        skip_checkpoints=0,
+        rollout_steps=1,
+    ):
+        assert (
+            self.mode != "train"
+        ), "run_test only to be called from a valid or test instance"
+        start_time = time.time()
+        self.local_start_time_str = time.strftime(
+            "%Y-%m-%d_%H-%M-%S", time.localtime(start_time)
+        )
+        self.log_writer = SummaryWriter(
+            log_dir=self.log_writer_path,
+            filename_suffix="__test__{}".format(self.local_start_time_str),
+        )
+
+        checkpoints = self.get_checkpoint_files(checkpoint_file_name, skip_checkpoints)
+        for checkpoint_file_name in checkpoints:
+            scalars = self.run_eval(checkpoint_file_name, rollout_steps)
+            self.vector_tasks.metrics_out_queue.put(("test_metrics", scalars))
+            self.log()
+
     def close(self):
         try:
             self.vector_tasks.close()
@@ -835,3 +873,64 @@ class Trainer:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
+
+class Trainer(Engine):
+    def __init__(
+        self,
+        config: ExperimentConfig,
+        output_dir: str,
+        loaded_config_src_files: Optional[Dict[str, Tuple[str, str]]],
+        seed: Optional[int] = None,
+        deterministic_cudnn: bool = False,
+        *args,
+        **argv
+    ):
+        super().__init__(
+            config=config,
+            loaded_config_src_files=loaded_config_src_files,
+            output_dir=output_dir,
+            seed=seed,
+            mode="train",
+            deterministic_cudnn=deterministic_cudnn,
+        )
+
+
+class Validator(Engine):
+    def __init__(
+        self,
+        config: ExperimentConfig,
+        output_dir: str,
+        seed: Optional[int] = None,
+        deterministic_cudnn: bool = False,
+        *args,
+        **argv
+    ):
+        super().__init__(
+            config=config,
+            loaded_config_src_files=None,
+            output_dir=output_dir,
+            seed=seed,
+            mode="valid",
+            deterministic_cudnn=deterministic_cudnn,
+        )
+
+
+class Tester(Engine):
+    def __init__(
+        self,
+        config: ExperimentConfig,
+        output_dir: str,
+        seed: Optional[int] = None,
+        deterministic_cudnn: bool = False,
+        *args,
+        **argv
+    ):
+        super().__init__(
+            config=config,
+            loaded_config_src_files=None,
+            output_dir=output_dir,
+            seed=seed,
+            mode="test",
+            deterministic_cudnn=deterministic_cudnn,
+        )
