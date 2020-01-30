@@ -15,7 +15,7 @@ def get_args():
         required=False,
         type=str,
         default="experiment_output",
-        help='experiment output folder (default: "experiment_output")',
+        help="experiment output folder",
     )
 
     parser.add_argument(
