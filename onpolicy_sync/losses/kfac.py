@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from onpolicy_sync.utils import AddBias
+from models.basic_models import AddBias
 
 
 # TODO: In order to make this code faster:

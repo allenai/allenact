@@ -8,7 +8,7 @@ from rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
 from rl_ai2thor.object_nav.tasks import ObjectNavTask
 from rl_base.sensor import Sensor
 from rl_base.task import TaskSampler
-from onpolicy_sync.utils import set_deterministic_cudnn, set_seed
+from utils.experiment_utils import set_deterministic_cudnn, set_seed
 
 
 class ObjectNavTaskSampler(TaskSampler):

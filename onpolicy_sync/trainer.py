@@ -14,16 +14,16 @@ import torch.nn as nn
 import torch.optim
 from tensorboardX import SummaryWriter
 
-from configs.util import Builder
 from onpolicy_sync.storage import RolloutStorage
-from onpolicy_sync.utils import (
-    LinearDecay,
-    batch_observations,
+from utils.tensor_utils import batch_observations
+from utils.experiment_utils import (
     ScalarMeanTracker,
+    LinearDecay,
     set_deterministic_cudnn,
     set_seed,
+    Builder,
 )
-from onpolicy_sync.vector_task import VectorSampledTasks
+from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
 from rl_base.common import Loss
 from rl_base.experiment_config import ExperimentConfig
 from setproctitle import setproctitle as ptitle
@@ -635,7 +635,7 @@ class Trainer:
     def _get_loss(self, current_loss):
         assert current_loss in self.params, "undefined referenced loss"
         if isinstance(self.params[current_loss], Builder):
-            return self.params[current_loss](optimizer=self.optimizer)
+            return self.params[current_loss]()
         else:
             return self.params[current_loss]
 
