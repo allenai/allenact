@@ -23,6 +23,7 @@ mkdocs-material = "*"
 mypy = "*"
 flake8 = "*"
 pre-commit = "*"
+gitpython = "*"
 
 [packages]
 gym = "*"

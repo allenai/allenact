@@ -40,19 +40,10 @@ nav:
       - ppo_config: api/configs/losses/ppo_config.md
       - a2c_config: api/configs/losses/a2c_config.md
     - util: api/configs/util.md
-  - extensions:
-    - ai2thor:
-      - tasks: api/extensions/ai2thor/tasks.md
-      - misc_util: api/extensions/ai2thor/misc_util.md
-      - sensors: api/extensions/ai2thor/sensors.md
-      - constants: api/extensions/ai2thor/constants.md
-      - models:
-        - object_nav_models: api/extensions/ai2thor/models/object_nav_models.md
-        - basic_models: api/extensions/ai2thor/models/basic_models.md
-      - task_samplers: api/extensions/ai2thor/task_samplers.md
-      - preprocessors: api/extensions/ai2thor/preprocessors.md
-      - environment: api/extensions/ai2thor/environment.md
   - main: api/main.md
+  - models:
+    - object_nav_models: api/models/object_nav_models.md
+    - basic_models: api/models/basic_models.md
   - onpolicy_sync:
     - losses:
       - imitation: api/onpolicy_sync/losses/imitation.md
@@ -60,13 +51,22 @@ nav:
       - ppo: api/onpolicy_sync/losses/ppo.md
       - kfac: api/onpolicy_sync/losses/kfac.md
       - a2cacktr: api/onpolicy_sync/losses/a2cacktr.md
-    - envs: api/onpolicy_sync/envs.md
     - arguments: api/onpolicy_sync/arguments.md
     - policy: api/onpolicy_sync/policy.md
     - utils: api/onpolicy_sync/utils.md
     - vector_task: api/onpolicy_sync/vector_task.md
     - storage: api/onpolicy_sync/storage.md
     - trainer: api/onpolicy_sync/trainer.md
+  - rl_ai2thor:
+    - ai2thor_environment: api/rl_ai2thor/ai2thor_environment.md
+    - ai2thor_constants: api/rl_ai2thor/ai2thor_constants.md
+    - ai2thor_preprocessors: api/rl_ai2thor/ai2thor_preprocessors.md
+    - ai2thor_tasks: api/rl_ai2thor/ai2thor_tasks.md
+    - object_nav:
+      - tasks: api/rl_ai2thor/object_nav/tasks.md
+      - task_samplers: api/rl_ai2thor/object_nav/task_samplers.md
+    - ai2thor_sensors: api/rl_ai2thor/ai2thor_sensors.md
+    - ai2thor_util: api/rl_ai2thor/ai2thor_util.md
   - rl_base:
     - experiment_config: api/rl_base/experiment_config.md
     - task: api/rl_base/task.md

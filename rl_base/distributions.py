@@ -4,7 +4,8 @@ import torch
 import torch.nn as nn
 from torch.distributions.utils import lazy_property
 
-from onpolicy_sync.utils import AddBias, init
+from utils.model_utils import init_linear_layer
+from models.basic_models import AddBias
 
 """
 Modify standard PyTorch distributions so they are compatible with this code.
@@ -83,7 +84,9 @@ class DiagGaussian(nn.Module):
         super(DiagGaussian, self).__init__()
 
         def init_(m):
-            return init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
+            return init_linear_layer(
+                m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0)
+            )
 
         self.fc_mean = init_(nn.Linear(num_inputs, num_outputs))
         self.logstd = AddBias(torch.zeros(num_outputs))
@@ -105,7 +108,9 @@ class Bernoulli(nn.Module):
         super(Bernoulli, self).__init__()
 
         def init_(m):
-            return init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
+            return init_linear_layer(
+                m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0)
+            )
 
         self.linear = init_(nn.Linear(num_inputs, num_outputs))
 

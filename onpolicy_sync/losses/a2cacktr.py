@@ -99,3 +99,6 @@ class ACKTR(A2CACKTR):
         super().__init__(
             value_loss_coef=value_loss_coef, entropy_coef=entropy_coef, acktr=True,
         )
+
+
+A2CConfig = dict(value_loss_coef=0.5, entropy_coef=0.01,)

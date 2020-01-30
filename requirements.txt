@@ -30,6 +30,8 @@ flake8==3.7.9
 Flask==1.1.1
 future==0.18.2
 gast==0.2.2
+gitdb2==2.0.6
+GitPython==3.0.5
 google-auth==1.11.0
 google-auth-oauthlib==0.4.1
 google-pasta==0.1.8
@@ -67,7 +69,7 @@ oauthlib==3.1.0
 opencv-python==4.1.2.30
 opt-einsum==3.1.0
 orderedmultidict==1.0.1
-packaging==20.1
+packaging==19.2
 pathspec==0.7.0
 pep517==0.8.1
 pep562==1.0
@@ -76,7 +78,7 @@ pip-shims==0.4.0
 pipenv-setup==3.0.1
 pipfile==0.0.2
 plette==0.2.3
-pre-commit==1.21.0
+pre-commit==2.0.0
 progressbar2==3.47.0
 protobuf==3.11.2
 pyasn1==0.4.8
@@ -102,9 +104,11 @@ rsa==4.0
 ruamel.yaml==0.16.6
 ruamel.yaml.clib==0.2.0
 scipy==1.4.1
+setproctitle==1.1.10
 six==1.14.0
+smmap2==2.0.5
 snowballstemmer==2.0.0
-Sphinx==2.3.1
+Sphinx==1.7.4
 sphinx-autodoc-typehints==1.10.3
 sphinx-epytext==0.0.4
 sphinx-sitemap==0.3.1

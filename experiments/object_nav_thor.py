@@ -7,13 +7,12 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from configs.losses import PPOConfig
-from configs.util import Builder
+from onpolicy_sync.losses.ppo import PPOConfig
 from models.object_nav_models import ObjectNavBaselineActorCritic
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from rl_ai2thor.object_nav.task_samplers import ObjectNavTaskSampler
 from rl_ai2thor.object_nav.tasks import ObjectNavTask
-from onpolicy_sync.utils import LinearDecay
+from utils.experiment_utils import LinearDecay, Builder, PipelineStage, TrainingPipeline
 from onpolicy_sync.losses import PPO
 from onpolicy_sync.losses.imitation import Imitation
 from rl_base.experiment_config import ExperimentConfig
@@ -69,56 +68,58 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         dagger_steps = int(3e4)
         ppo_steps = int(3e4)
         ppo_steps2 = int(1e6)
-        nprocesses = 3
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 3
         num_steps = 16
-        log_interval = 2 * num_steps * nprocesses
+        log_interval = 2 * num_steps * cls.machine_params("train")["nprocesses"]
         save_interval = 2 * log_interval
-        gpu_ids = [] if not torch.cuda.is_available() else [0]
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0
         max_grad_norm = 0.5
-        return {
-            "save_interval": save_interval,
-            "log_interval": log_interval,
-            "optimizer": Builder(optim.Adam, dict(lr=lr)),
-            "nprocesses": nprocesses,
-            "num_mini_batch": num_mini_batch,
-            "update_repeats": update_repeats,
-            "num_steps": num_steps,
-            "gpu_ids": gpu_ids,
-            "imitation_loss": Builder(Imitation,),
-            "ppo_loss": Builder(PPO, dict(), default=PPOConfig,),
-            "gamma": gamma,
-            "use_gae": use_gae,
-            "gae_lambda": gae_lambda,
-            "max_grad_norm": max_grad_norm,
-            "pipeline": [
-                {
-                    "losses": ["imitation_loss", "ppo_loss"],
-                    "teacher_forcing": LinearDecay(
+        return TrainingPipeline(
+            save_interval=save_interval,
+            log_interval=log_interval,
+            optimizer=Builder(optim.Adam, dict(lr=lr)),
+            num_mini_batch=num_mini_batch,
+            update_repeats=update_repeats,
+            num_steps=num_steps,
+            named_losses={
+                "imitation_loss": Builder(Imitation,),
+                "ppo_loss": Builder(PPO, dict(), default=PPOConfig,),
+            },
+            gamma=gamma,
+            use_gae=use_gae,
+            gae_lambda=gae_lambda,
+            max_grad_norm=max_grad_norm,
+            pipeline_stages=[
+                PipelineStage(
+                    loss_names=["imitation_loss", "ppo_loss"],
+                    teacher_forcing=LinearDecay(
                         startp=1.0, endp=0.0, steps=dagger_steps,
                     ),
-                    "end_criterion": dagger_steps,
-                },
-                {"losses": ["ppo_loss", "imitation_loss"], "end_criterion": ppo_steps,},
-                {"losses": ["ppo_loss"], "end_criterion": ppo_steps2,},
+                    end_criterion=dagger_steps,
+                ),
+                PipelineStage(
+                    loss_names=["ppo_loss", "imitation_loss"], end_criterion=ppo_steps
+                ),
+                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps2,),
             ],
-        }
+        )
 
     @classmethod
-    def evaluation_params(cls, **kwargs):
-        nprocesses = 1
-        gpu_ids = [] if not torch.cuda.is_available() else [1]
-        res = cls.training_pipeline()
-        del res["pipeline"]
-        del res["optimizer"]
-        res["nprocesses"] = nprocesses
-        res["gpu_ids"] = gpu_ids
-        return res
+    def machine_params(cls, mode="train", **kwargs):
+        if mode == "train":
+            nprocesses = 3
+            gpu_ids = [] if not torch.cuda.is_available() else [0]
+        elif mode in ["valid", "test"]:
+            nprocesses = 0
+            gpu_ids = [] if not torch.cuda.is_available() else [1]
+        else:
+            raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
+
+        return {"nprocesses": nprocesses, "gpu_ids": gpu_ids}
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:

@@ -14,17 +14,20 @@ import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.optim
 from tensorboardX import SummaryWriter
+from torch import optim
 
-from configs.util import Builder
 from onpolicy_sync.storage import RolloutStorage
-from onpolicy_sync.utils import (
-    LinearDecay,
-    batch_observations,
+from utils.tensor_utils import batch_observations
+from utils.experiment_utils import (
     ScalarMeanTracker,
+    LinearDecay,
     set_deterministic_cudnn,
     set_seed,
+    Builder,
+    TrainingPipeline,
+    PipelineStage,
 )
-from onpolicy_sync.vector_task import VectorSampledTasks
+from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
 from rl_base.common import Loss
 from rl_base.experiment_config import ExperimentConfig
 from setproctitle import setproctitle as ptitle
@@ -67,18 +70,19 @@ class Engine:
             "test",
         ], "Only train, valid, test modes supported"
 
-        self.params = self.get_params(config)
+        self.training_pipeline: TrainingPipeline = config.training_pipeline()
+        self.machine_params = config.machine_params(self.mode)
 
         self.device = "cpu"
-        if len(self.params["gpu_ids"]) > 0:
+        if len(self.machine_params["gpu_ids"]) > 0:
             if not torch.cuda.is_available():
                 print(
                     "Warning: no CUDA devices available for gpu ids {}".format(
-                        self.params["gpu_ids"]
+                        self.machine_params["gpu_ids"]
                     )
                 )
             else:
-                self.device = "cuda:%d" % self.params["gpu_ids"][0]
+                self.device = "cuda:%d" % self.machine_params["gpu_ids"][0]
                 torch.cuda.set_device(self.device)  # type: ignore
 
         if self.deterministic_cudnn:
@@ -87,22 +91,24 @@ class Engine:
         seeds: Optional[List[int]] = None
         if self.seed is not None:
             set_seed(self.seed)
-            seeds = self.worker_seeds(self.params["nprocesses"])
+            seeds = self.worker_seeds(self.machine_params["nprocesses"])
 
         self.observation_set = None
-        if "observation_set" in self.params:
-            self.observation_set = self.params["observation_set"].to(self.device)
-            self.actor_critic = config.create_model(
-                observation_set=self.observation_set
-            ).to(self.device)
-        else:
-            self.actor_critic = config.create_model().to(self.device)
+        # if "observation_set" in self.machine_params:
+        #     self.observation_set = self.machine_params["observation_set"].to(self.device)
+        #     self.actor_critic = config.create_model(
+        #         observation_set=self.observation_set
+        #     ).to(self.device)
+        # else:
+        self.actor_critic = config.create_model().to(self.device)
 
-        self.optimizer = None
-        if "optimizer" in self.params:
-            self.optimizer = self.params["optimizer"]
+        self.optimizer: Optional[  # type: ignore
+            Union[optim.Optimizer, Builder[optim.Optimizer]]
+        ] = None
+        if mode == "train":
+            self.optimizer = self.training_pipeline.optimizer
             if isinstance(self.optimizer, Builder):
-                self.optimizer = self.optimizer(
+                self.optimizer = typing.cast(Builder, self.optimizer)(
                     params=[
                         p for p in self.actor_critic.parameters() if p.requires_grad
                     ]
@@ -162,48 +168,45 @@ class Engine:
 
         self.experiment_name = config.tag()
 
-        self.save_interval = self.params["save_interval"]
-        self.log_interval = self.params["log_interval"]
-        self.num_processes = self.params["nprocesses"]
+        self.save_interval = self.training_pipeline.save_interval
+        self.log_interval = self.training_pipeline.log_interval
+        self.num_processes = self.machine_params["nprocesses"]
 
         self.config = config
 
         self.write_to_eval = None
         if self.mode == "train":
             self.mp_ctx = self.vector_tasks.mp_ctx
-            self.write_to_eval = self.mp_ctx.Queue()
-            self.eval_process = self.mp_ctx.Process(
-                target=validate,
-                args=(
-                    self.config,
-                    self.output_dir,
-                    self.write_to_eval,
-                    self.vector_tasks.metrics_out_queue,
-                    self.seed,
-                    self.deterministic_cudnn,
-                ),
-            )
-            self.eval_process.start()
+            if self.config.machine_params("valid")["nprocesses"] <= 0:
+                print(
+                    "No processes allocated to validation, no validation will be run."
+                )
+            else:
+                self.write_to_eval = self.mp_ctx.Queue()
+                self.eval_process = self.mp_ctx.Process(
+                    target=validate,
+                    args=(
+                        self.config,
+                        self.output_dir,
+                        self.write_to_eval,
+                        self.vector_tasks.metrics_out_queue,
+                        self.seed,
+                        self.deterministic_cudnn,
+                    ),
+                )
+                self.eval_process.start()
 
     @staticmethod
     def worker_seeds(nprocesses: int):
         return [random.randint(0, 2 ** (31) - 1) for _ in range(nprocesses)]
 
-    def get_params(self, config: ExperimentConfig):
-        if self.mode == "train":
-            return config.training_pipeline()
-        elif self.mode == "valid":
-            return config.evaluation_params()
-        elif self.mode == "test":
-            return config.evaluation_params()
-
     def get_sampler_fn_args(
         self, config: ExperimentConfig, seeds: Optional[List[int]] = None
     ):
         devices = (
-            self.params["sampler_devices"]
-            if "sampler_devices" in self.params
-            else self.params["gpu_ids"]
+            self.machine_params["sampler_devices"]
+            if "sampler_devices" in self.machine_params
+            else self.machine_params["gpu_ids"]
         )
 
         if self.mode == "train":
@@ -220,12 +223,12 @@ class Engine:
         return [
             fn(
                 process_ind=it,
-                total_processes=self.params["nprocesses"],
+                total_processes=self.machine_params["nprocesses"],
                 devices=devices,
                 seeds=seeds,
                 deterministic_cudnn=self.deterministic_cudnn,
             )
-            for it in range(self.params["nprocesses"])
+            for it in range(self.machine_params["nprocesses"])
         ]
 
     def checkpoint_save(self) -> str:
@@ -260,7 +263,7 @@ class Engine:
             "backprop_count": self.backprop_count,
             "step_count": self.step_count,
             "local_start_time_str": self.local_start_time_str,
-            "optimizer_state_dict": self.optimizer.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),  # type: ignore
             "model_state_dict": self.actor_critic.state_dict(),
             "trainer_seed": self.seed,
         }
@@ -290,13 +293,13 @@ class Engine:
         self.total_steps = ckpt["total_steps"]  # type: ignore
 
         if self.mode == "train":
-            self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+            self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])  # type: ignore
             self.backprop_count = ckpt["backprop_count"]  # type: ignore
             self.rollout_count = ckpt["rollout_count"]  # type: ignore
             self.pipeline_stage = ckpt["pipeline_stage"]  # type: ignore
             self.total_updates = ckpt["total_updates"]  # type: ignore
             self.local_start_time_str = typing.cast(str, ckpt["local_start_time_str"])
-            self.params["pipeline"] = self.params["pipeline"][self.pipeline_stage :]
+            self.training_pipeline.current_pipeline_stage = self.pipeline_stage
             self.seed = typing.cast(int, ckpt["trainer_seed"])
             if self.seed is not None:
                 set_seed(self.seed)
@@ -387,7 +390,7 @@ class Engine:
                     batch=bit,
                     losses={},
                 )
-                self.optimizer.zero_grad()
+                self.optimizer.zero_grad()  # type: ignore
                 total_loss: Optional[torch.FloatTensor] = None
                 for loss_name in self.losses:
                     loss, loss_weight = (
@@ -410,7 +413,7 @@ class Engine:
                 nn.utils.clip_grad_norm_(
                     self.actor_critic.parameters(), self.max_grad_norm
                 )
-                self.optimizer.step()
+                self.optimizer.step()  # type: ignore
                 self.backprop_count += 1
 
     def _preprocess_observations(self, batched_observations):
@@ -635,33 +638,45 @@ class Engine:
 
         self.deterministic_agent = deterministic_agent
 
-    def _get_loss(self, current_loss):
-        assert current_loss in self.params, "undefined referenced loss"
-        if isinstance(self.params[current_loss], Builder):
-            return self.params[current_loss](optimizer=self.optimizer)
+    def _get_loss(self, loss_name):
+        assert (
+            loss_name in self.training_pipeline.named_losses
+        ), "undefined referenced loss"
+        if isinstance(self.training_pipeline.named_losses[loss_name], Builder):
+            return self.training_pipeline.named_losses[loss_name]()
         else:
-            return self.params[current_loss]
+            return self.training_pipeline.named_losses[loss_name]
 
-    def _load_losses(self, stage):
+    def _load_losses(self, stage: PipelineStage):
         stage_losses = dict()
-        for current_loss in stage["losses"]:
-            stage_losses[current_loss] = self._get_loss(current_loss)
+        for loss_name in stage.loss_names:
+            stage_losses[loss_name] = self._get_loss(loss_name)
 
-        stage_weights = {name: 1.0 for name in stage["losses"]}
-        for current_loss in self.params.get("loss_weights", []):
-            if current_loss in stage_losses:
-                stage_weights[current_loss] = self.params["loss_weights"][current_loss]
-        for current_loss in stage.get("loss_weights", []):
-            assert current_loss in stage_losses, (
-                "missing loss definition for weight %s" % current_loss
-            )
-            stage_weights[current_loss] = stage["loss_weights"][current_loss]
+        loss_weights_list = (
+            stage.loss_weights
+            if stage.loss_weights is not None
+            else [1.0] * len(stage.loss_names)
+        )
+        stage_loss_weights = {
+            name: weight for name, weight in zip(stage.loss_names, loss_weights_list)
+        }
 
-        return stage_losses, stage_weights
+        return stage_losses, stage_loss_weights
 
     def _stage_value(self, stage, field):
-        assert field in stage or field in self.params, "missing value for %s" % field
-        return stage[field] if field in stage else self.params[field]
+        if hasattr(stage, field) and getattr(stage, field) is not None:
+            return getattr(stage, field)
+
+        if (
+            hasattr(self.training_pipeline, field)
+            and getattr(self.training_pipeline, field) is not None
+        ):
+            return getattr(self.training_pipeline, field)
+
+        if field in self.machine_params:
+            return self.machine_params[field]
+
+        raise RuntimeError("missing value for {}".format(field))
 
     @property
     def log_writer_path(self) -> str:
@@ -712,24 +727,23 @@ class Engine:
                 self.get_checkpoint_path(checkpoint_file_name), verbose=True
             )
 
-        for stage in self.params["pipeline"]:
+        for stage in self.training_pipeline:
             self.last_log = self.step_count - self.log_interval
 
-            stage_limit = stage["end_criterion"]
             stage_losses, stage_weights = self._load_losses(stage)
 
             self.setup_stage(
                 losses=stage_losses,
                 loss_weights=stage_weights,
                 steps_in_rollout=self._stage_value(stage, "num_steps"),
-                stage_task_steps=stage_limit,
+                stage_task_steps=self._stage_value(stage, "end_criterion"),
                 update_epochs=self._stage_value(stage, "update_repeats"),
                 update_mini_batches=self._stage_value(stage, "num_mini_batch"),
                 gamma=self._stage_value(stage, "gamma"),
                 use_gae=self._stage_value(stage, "use_gae"),
                 gae_lambda=self._stage_value(stage, "gae_lambda"),
                 max_grad_norm=self._stage_value(stage, "max_grad_norm"),
-                teacher_forcing=stage.get("teacher_forcing"),
+                teacher_forcing=stage.teacher_forcing,
             )
 
             self.train(
