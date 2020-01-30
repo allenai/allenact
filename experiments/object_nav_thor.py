@@ -9,17 +9,16 @@ import torch.optim as optim
 
 from configs.losses import PPOConfig
 from configs.util import Builder
-from extensions.ai2thor.models.object_nav_models import ObjectNavBaselineActorCritic
-from extensions.ai2thor.sensors import RGBSensorThor, GoalObjectTypeThorSensor
-from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
-from extensions.ai2thor.tasks import ObjectNavTask
+from models.object_nav_models import ObjectNavBaselineActorCritic
+from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
+from rl_ai2thor.object_nav.task_samplers import ObjectNavTaskSampler
+from rl_ai2thor.object_nav.tasks import ObjectNavTask
 from onpolicy_sync.utils import LinearDecay
 from onpolicy_sync.losses import PPO
 from onpolicy_sync.losses.imitation import Imitation
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.sensor import SensorSuite, ExpertActionSensor
 from rl_base.task import TaskSampler
-import random
 
 
 class ObjectNavThorExperimentConfig(ExperimentConfig):

@@ -133,3 +133,6 @@ dmypy.json
 
 #pytorch
 *.pt
+
+# Default output dir
+experiment_output

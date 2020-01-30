@@ -10,7 +10,12 @@ def get_args():
         "experiment", type=str, help="experiment configuration file name",
     )
     parser.add_argument(
-        "output_dir", type=str, help="experiment output folder",
+        "-o",
+        "--output_dir",
+        required=False,
+        type=str,
+        default="experiment_output",
+        help='experiment output folder (default: "experiment_output")',
     )
 
     parser.add_argument(

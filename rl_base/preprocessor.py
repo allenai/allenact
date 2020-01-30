@@ -97,7 +97,7 @@ class PreprocessorGraph:
 
         preprocessors : The preprocessors that will be included in the graph.
         """
-        self.preprocessors = OrderedDict()
+        self.preprocessors: Dict[str, Preprocessor] = OrderedDict()
         spaces: OrderedDict[str, gym.Space] = OrderedDict()
         for preprocessor in preprocessors:
             assert (
@@ -136,7 +136,7 @@ class PreprocessorGraph:
         return self.preprocessors[uuid]
 
     def to(self, device: torch.device) -> "PreprocessorGraph":
-        for k, v in self.preprocessors:
+        for k, v in self.preprocessors.items():
             self.preprocessors[k] = v.to(device)
         return self
 

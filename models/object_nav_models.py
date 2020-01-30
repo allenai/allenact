@@ -1,6 +1,6 @@
 import gym
 
-from extensions.ai2thor.models.basic_models import SimpleCNN, RNNStateEncoder
+from models.basic_models import SimpleCNN, RNNStateEncoder
 from onpolicy_sync.policy import ActorCriticModel, LinearCriticHead, LinearActorHead
 import torch.nn as nn
 import torch
