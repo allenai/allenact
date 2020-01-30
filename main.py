@@ -3,7 +3,7 @@ import os
 from typing import Dict, Tuple
 
 from onpolicy_sync.arguments import get_args
-from onpolicy_sync.trainer import Trainer
+from onpolicy_sync.engine import Trainer, Tester
 import inspect
 import importlib
 
@@ -56,19 +56,28 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
 
 
 def main():
-    ptitle("Master: Training")
-
     args = get_args()
+
+    ptitle("Master: {}".format("Training" if not args.testing else "Testing"))
 
     cfg, srcs = load_config(args)
 
-    Trainer(
-        cfg,
-        srcs,
-        args.output_dir,
-        seed=args.seed,
-        deterministic_cudnn=args.deterministic_cudnn,
-    ).run_pipeline(args.checkpoint)
+    if not args.test:
+        Trainer(
+            config=cfg,
+            output_dir=args.output_dir,
+            loaded_config_src_files=srcs,
+            seed=args.seed,
+            deterministic_cudnn=args.deterministic_cudnn,
+        ).run_pipeline(args.checkpoint)
+    else:
+        Tester(
+            config=cfg,
+            output_dir=args.output_dir,
+            loaded_config_src_files=srcs,
+            seed=args.seed,
+            deterministic_cudnn=args.deterministic_cudnn,
+        ).run_test(args.checkpoint, args.skip_checkpoints)
 
 
 if __name__ == "__main__":
