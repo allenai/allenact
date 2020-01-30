@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from configs.losses import algo_defaults
+from configs.losses import PPOConfig
 from configs.util import Builder
 from models.point_nav_models import PointNavBaselineActorCritic
 from onpolicy_sync.losses import PPO
@@ -76,7 +76,7 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
             "update_repeats": update_repeats,
             "num_steps": num_steps,
             "gpu_ids": gpu_ids,
-            "ppo_loss": Builder(PPO, dict(), default=algo_defaults["ppo_loss"]),
+            "ppo_loss": Builder(PPO, dict(), default=PPOConfig,),
             "gamma": gamma,
             "use_gae": use_gae,
             "gae_lambda": gae_lambda,
@@ -88,6 +88,17 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
                 }
             ],
         }
+
+    @classmethod
+    def evaluation_params(cls, **kwargs):
+        nprocesses = 1
+        gpu_ids = [] if not torch.cuda.is_available() else [1]
+        res = cls.training_pipeline()
+        del res["pipeline"]
+        del res["optimizer"]
+        res["nprocesses"] = nprocesses
+        res["gpu_ids"] = gpu_ids
+        return res
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:

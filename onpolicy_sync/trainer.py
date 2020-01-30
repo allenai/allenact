@@ -51,11 +51,7 @@ class Trainer:
         self.params = self.get_params(config)
 
         self.device = "cpu"
-<<<<<<< HEAD
-        if train_pipeline["gpu_ids"] is not None and len(train_pipeline["gpu_ids"]) > 0:
-=======
-        if len(self.params["gpu_ids"]) > 0:
->>>>>>> 47dba21b93b0f6afaec0150193aa5d1051bc86d6
+        if self.params["gpu_ids"] is not None and len(self.params["gpu_ids"]) > 0:
             if not torch.cuda.is_available():
                 print(
                     "Warning: no CUDA devices available for gpu ids {}".format(
@@ -196,8 +192,7 @@ class Trainer:
         return [
             fn(
                 process_ind=it,
-                total_processes=self.params["nprocesses"],
-                devices=devices,
+                total_processes=self.params["nprocesses"]
             )
             for it in range(self.params["nprocesses"])
         ]
@@ -524,7 +519,8 @@ class Trainer:
                 and self.models_folder != ""
             ):
                 model_path = self.checkpoint_save()
-                self.write_to_eval.put(("eval", model_path))
+                if self.write_to_eval is not None:
+                    self.write_to_eval.put(("eval", model_path))
 
     def setup_stage(
         self,

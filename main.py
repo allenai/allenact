@@ -48,12 +48,7 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, str]]:
 
 def main():
     args = get_args()
-<<<<<<< HEAD
-    Trainer(load_config(args), args.output_dir).run_pipeline(args.checkpoint)
-=======
-
     Trainer(*load_config(args), args.output_dir).run_pipeline(args.checkpoint)
->>>>>>> 47dba21b93b0f6afaec0150193aa5d1051bc86d6
 
 
 if __name__ == "__main__":

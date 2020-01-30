@@ -90,3 +90,10 @@ class PointNavTaskSampler(TaskSampler):
         )
         return self._last_sampled_task
 
+    def reset(self):
+        print("Don't have to reset habitat task sampler")
+        # self.scene_counter = 0
+        # self.scene_order = list(range(len(self.scenes)))
+        # random.shuffle(self.scene_order)
+        # self.scene_id = 0
+        # self.max_tasks = self.reset_tasks

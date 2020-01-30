@@ -30,7 +30,7 @@ class ScaleBothSides(object):
         return img.resize((self.width, self.height), self.interpolation)
 
 
-class RGBSensorHabitat(Sensor[HabitatEnvironment]):
+class RGBSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
@@ -99,7 +99,7 @@ class RGBSensorHabitat(Sensor[HabitatEnvironment]):
         return rgb
 
 
-class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment]):
+class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
