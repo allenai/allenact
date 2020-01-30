@@ -31,7 +31,9 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
     VALID_SCENES = [
         "FloorPlan1_physics"
     ]  # ["FloorPlan{}_physics".format(i) for i in range(21, 26)]
-    TEST_SCENES = ["FloorPlan{}_physics".format(i) for i in range(26, 31)]
+    TEST_SCENES = [
+        "FloorPlan1_physics"
+    ]  # ["FloorPlan{}_physics".format(i) for i in range(26, 31)]
 
     SCREEN_SIZE = 224
 
@@ -58,6 +60,8 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
     SCENE_PERIOD = 10
 
     VALID_SAMPLES_IN_SCENE = 5
+
+    TEST_SAMPLES_IN_SCENE = 2
 
     @classmethod
     def tag(cls):
@@ -113,9 +117,12 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         if mode == "train":
             nprocesses = 3
             gpu_ids = [] if not torch.cuda.is_available() else [0]
-        elif mode in ["valid", "test"]:
+        elif mode == "valid":
             nprocesses = 0
             gpu_ids = [] if not torch.cuda.is_available() else [1]
+        elif mode == "test":
+            nprocesses = 1
+            gpu_ids = [] if not torch.cuda.is_available() else [0]
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -230,5 +237,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
+        res["scene_period"] = self.TEST_SAMPLES_IN_SCENE
+        res["max_tasks"] = self.TEST_SAMPLES_IN_SCENE * len(res["scenes"])
         res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
         return res

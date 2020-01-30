@@ -57,12 +57,13 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
 
 def main():
     args = get_args()
+    print("Running with args {}".format(args))
 
-    ptitle("Master: {}".format("Training" if not args.test else "Testing"))
+    ptitle("Master: {}".format("Training" if not args.test_date != "" else "Testing"))
 
     cfg, srcs = load_config(args)
 
-    if not args.test:
+    if args.test_date == "":
         Trainer(
             config=cfg,
             output_dir=args.output_dir,
@@ -77,7 +78,7 @@ def main():
             loaded_config_src_files=srcs,
             seed=args.seed,
             deterministic_cudnn=args.deterministic_cudnn,
-        ).run_test(args.checkpoint, args.skip_checkpoints)
+        ).run_test(args.test_date, args.checkpoint, args.skip_checkpoints)
 
 
 if __name__ == "__main__":

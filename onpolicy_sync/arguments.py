@@ -50,14 +50,13 @@ def get_args():
 
     parser.add_argument(
         "-t",
-        "--test",
-        dest="test",
-        action="store_true",
+        "--test_date",
+        default="",
         required=False,
-        help="tests the specified experiment, assuming it was previously trained."
-        "If no checkpoint is specified, it will run on all checkpoints enabled by skip_checkpoints",
+        help="tests the experiment run on specified date (formatted as %%Y-%%m-%%d_%%H-%%M-%%S), assuming it was "
+        "previously trained. If no checkpoint is specified, it will run on all checkpoints enabled by "
+        "skip_checkpoints",
     )
-    parser.set_defaults(test=False)
 
     parser.add_argument(
         "-k",
