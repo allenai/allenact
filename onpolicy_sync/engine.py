@@ -411,7 +411,7 @@ class Engine:
 
                 total_loss.backward()
                 nn.utils.clip_grad_norm_(
-                    self.actor_critic.parameters(), self.max_grad_norm
+                    self.actor_critic.parameters(), self.max_grad_norm, norm_type="inf"  # type: ignore
                 )
                 self.optimizer.step()  # type: ignore
                 self.backprop_count += 1
