@@ -10,12 +10,14 @@ import gym
 import torch
 from torch import nn as nn
 
-from rl_base.common import DistributionType, ActorCriticOutput
+from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
 from gym.spaces.dict import Dict as SpaceDict
 
+DistributionType = typing.TypeVar("DistributionType")
 
-class ActorCriticModel(nn.Module, typing.Generic[DistributionType]):
+
+class ActorCriticModel(typing.Generic[DistributionType], nn.Module):
     """Abstract class defining a deep (recurrent) actor critic agent.
 
     When defining a new agent, you should over subclass this class and implement the abstract methods.
@@ -53,7 +55,9 @@ class ActorCriticModel(nn.Module, typing.Generic[DistributionType]):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def forward(self, *args, **kwargs) -> ActorCriticOutput:
+    def forward(
+        self, *args, **kwargs
+    ) -> typing.Tuple[ActorCriticOutput[DistributionType], typing.Any]:
         """Transforms input observations (& previous hidden state) into action
         probabilities and the state value.
 
@@ -64,8 +68,10 @@ class ActorCriticModel(nn.Module, typing.Generic[DistributionType]):
 
         # Returns
 
-        An object of class ActorCriticOutput which stores the agent's probability distribution over possible actions,
-        the agent's value for the state, and any extra information needed for loss computations.
+        A tuple whose first element is an object of class ActorCriticOutput which stores
+        the agent's probability distribution over possible actions, the agent's value for the
+        state, and any extra information needed for loss computations. The second element
+        may be any representation of the agent's hidden states.
         """
         raise NotImplementedError()
 

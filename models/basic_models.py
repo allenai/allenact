@@ -34,7 +34,8 @@ class SimpleCNN(nn.Module):
 
     # Attributes
 
-    observation_space : The observation_space of the agent.
+    observation_space : The observation_space of the agent, should have 'rgb' or 'depth' as
+        a component (otherwise it is a blind model).
     output_size : The size of the embedding vector to produce.
     """
 
