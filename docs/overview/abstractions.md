@@ -50,14 +50,6 @@ train actor-critic models with back-propagation, e.g. PPO or A2C.
 See the [abstract `AbstractActorCriticLoss` class](/api/onpolicy_sync/policy/#actorcriticmodel) 
 and an [example implementation](/api/onpolicy_sync/losses/ppo/#ppo).
 
-## Preprocessor
-
-Preprocessors allow augmenting or pre-processing observations such that their outputs can be consumed by other
-preprocessors or ultimately by actor-critic agents. 
-
-See the [abstract `Preprocessor` class](/api/rl_base/preprocessor/#preprocessor) 
-and an [example implementation](/api/extensions/ai2thor/preprocessors/#resnetpreprocessorthor).
-
 ## Rollout storage
 
 Rollout storage is used to store observations, internal states, actions and rewards resulting from the interaction of 

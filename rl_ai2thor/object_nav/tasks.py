@@ -41,6 +41,15 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
     1. End
         * Ends the task and the agent receives a positive reward if the object type is visible to the agent,
         otherwise it receives a negative reward.
+
+    # Attributes
+
+    env : The ai2thor environment.
+    sensor_suite: Collection of sensors formed from the `sensors` argument in the initializer.
+    task_info : The task info. Must contain a field "object_type" that specifies, as a string,
+        the goal object type.
+    max_steps : The maximum number of steps an agent can take an in the task before it is considered failed.
+    observation_space: The observation space returned on each step from the sensors.
     """
 
     _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT, LOOK_DOWN, LOOK_UP, END)
@@ -57,6 +66,10 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         max_steps: int,
         **kwargs
     ) -> None:
+        """Initializer.
+
+        See class documentation for parameter definitions.
+        """
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
@@ -109,12 +122,14 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         return self.env.current_frame
 
     def _is_goal_object_visible(self) -> bool:
+        """Is the goal object currently visible?"""
         return any(
             o["objectType"] == self.task_info["object_type"]
             for o in self.env.visible_objects()
         )
 
     def judge(self) -> float:
+        """Compute the reward after having taken a step."""
         reward = -0.01
 
         if not self.last_action_success:

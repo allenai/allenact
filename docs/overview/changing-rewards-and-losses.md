@@ -2,13 +2,13 @@
 
 In order to train actor-critic agents, we need to specify
 
-* `rewards` at the task level
-* `losses` at the training pipeline level 
+* `rewards` at the task level, and
+* `losses` at the training pipeline level. 
 
 ## Rewards
 
-For example, taking an [object navigation task in AI2THOR](/api/rl_ai2thor/object_nav/tasks/#objectnavtask) as a 
-starting point, we can see how the `_step(self, action: int) -> RLStepResult` method computes the reward for the latest 
+We will use the [object navigation task in AI2THOR](/api/rl_ai2thor/object_nav/tasks/#objectnavtask) as a 
+running example. We can see how the `ObjectNavTask._step(self, action: int) -> RLStepResult` method computes the reward for the latest 
 action by invoking a function like:
 
 ```python

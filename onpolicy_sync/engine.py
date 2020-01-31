@@ -1,6 +1,4 @@
-"""
-Defines the reinforcement learning `Engine`.
-"""
+"""Defines the reinforcement learning `Engine`."""
 import glob
 import os
 import queue
@@ -57,10 +55,11 @@ def validate(
 class Engine(object):
     """The reinforcement learning primary controller.
 
-    This `Engine` class handles all training, validation, and testing as well as
-    logging and checkpointing. You are not expected to instantiate this class
-    yourself, instead you should define an experiment which will then
-    be used to instantiate an `Engine` and perform any desired tasks.
+    This `Engine` class handles all training, validation, and testing as
+    well as logging and checkpointing. You are not expected to
+    instantiate this class yourself, instead you should define an
+    experiment which will then be used to instantiate an `Engine` and
+    perform any desired tasks.
     """
 
     def __init__(
@@ -72,7 +71,7 @@ class Engine(object):
         mode: str = "train",
         deterministic_cudnn: bool = False,
     ):
-        """ Initializer.
+        """Initializer.
 
         config : The ExperimentConfig defining the experiment to run.
         output_dir : Root directory at which checkpoints and logs should be saved.
