@@ -5,6 +5,7 @@ import queue
 import shutil
 import time
 import typing
+import warnings
 from typing import Optional, Any, Dict, Union, List, Tuple
 import random
 import glob
@@ -437,15 +438,21 @@ class Engine(object):
 
                     info["losses"][loss_name] = current_info
                 assert total_loss is not None, "No losses specified?"
-                info["total_loss"] = total_loss.item()
-                self.vector_tasks.metrics_out_queue.put(("update_package", info))
 
-                total_loss.backward()
-                nn.utils.clip_grad_norm_(
-                    self.actor_critic.parameters(), self.max_grad_norm, norm_type="inf"  # type: ignore
-                )
-                self.optimizer.step()  # type: ignore
-                self.backprop_count += 1
+                if isinstance(total_loss, torch.FloatTensor):
+                    info["total_loss"] = total_loss.item()
+                    self.vector_tasks.metrics_out_queue.put(("update_package", info))
+
+                    total_loss.backward()
+                    nn.utils.clip_grad_norm_(
+                        self.actor_critic.parameters(), self.max_grad_norm, norm_type="inf"  # type: ignore
+                    )
+                    self.optimizer.step()  # type: ignore
+                    self.backprop_count += 1
+                else:
+                    warnings.warn(
+                        "Total loss ({}) was not a FloatTensor.".format(total_loss)
+                    )
 
     def _preprocess_observations(self, batched_observations):
         if self.observation_set is None:
