@@ -1,7 +1,13 @@
+"""
+Defining arguments used when training/validating/testing.
+"""
+
 import argparse
 
 
 def get_args():
+    """Creates the argument parser and parses any input arguments."""
+
     parser = argparse.ArgumentParser(
         description="EmbodiedRL", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
