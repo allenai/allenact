@@ -10,6 +10,9 @@ from onpolicy_sync.engine import Trainer, Tester
 from rl_base.experiment_config import ExperimentConfig
 
 
+"""Entry point to training/validating/testing for a user given experiment name"""
+
+
 def get_args():
     """Creates the argument parser and parses any input arguments."""
 
