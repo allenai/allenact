@@ -1,6 +1,4 @@
-"""
-Utility classes and functions for running and designing experiments.
-"""
+"""Utility classes and functions for running and designing experiments."""
 
 import collections.abc
 import copy
@@ -71,8 +69,9 @@ class Builder(tuple, typing.Generic[ToBuildType]):
     ):
         """Create a new Builder.
 
-        For parameter descriptions see the class documentation. Note that `kwargs`
-        and `default` can be None in which case they are set to be empty dictionaries.
+        For parameter descriptions see the class documentation. Note
+        that `kwargs` and `default` can be None in which case they are
+        set to be empty dictionaries.
         """
         self = tuple.__new__(
             cls,
@@ -115,9 +114,7 @@ class Builder(tuple, typing.Generic[ToBuildType]):
 
 
 class ScalarMeanTracker(object):
-    """
-    Track a collection `scalar key -> mean` pairs.
-    """
+    """Track a collection `scalar key -> mean` pairs."""
 
     def __init__(self) -> None:
         self._sums: Dict[str, float] = {}
@@ -198,9 +195,9 @@ def set_deterministic_cudnn() -> None:
     """
     if torch.cuda.is_available():
         # noinspection PyUnresolvedReferences
-        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.deterministic = True  # type: ignore
         # noinspection PyUnresolvedReferences
-        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.benchmark = False  # type: ignore
 
 
 def set_seed(seed: int) -> None:
@@ -305,8 +302,7 @@ class TrainingPipeline(Iterator):
         self.current_pipeline_stage = -1
 
     def current_stage(self) -> PipelineStage:
-        """Returns the current stage.
-        """
+        """Returns the current stage."""
         return (
             None
             if (
@@ -317,7 +313,7 @@ class TrainingPipeline(Iterator):
         )
 
     def reset(self) -> None:
-        """Resets the pipeline. """
+        """Resets the pipeline."""
         self.current_pipeline_stage = -1
 
     def __next__(self):

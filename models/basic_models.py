@@ -1,4 +1,7 @@
-from typing import Sequence, Tuple, Dict
+"""Basic building block torch networks that can be used across a variety of
+tasks."""
+
+from typing import Sequence, Tuple, Dict, Union, cast, List
 
 import numpy as np
 import torch
@@ -193,6 +196,12 @@ class SimpleCNN(nn.Module):
 
 
 class RNNStateEncoder(nn.Module):
+    """A simple RNN-based model playing a role in many baseline embodied-
+    navigation agents.
+
+    See `seq_forward` for more details of how this model is used.
+    """
+
     def __init__(
         self,
         input_size: int,
@@ -207,10 +216,12 @@ class RNNStateEncoder(nn.Module):
 
         # Parameters
 
-        input_size : The input size of the RNN
-        hidden_size : The hidden size
-        num_layers : The number of recurrent layers
-        rnn_type : The RNN cell type.  Must be GRU or LSTM
+        input_size : The input size of the RNN.
+        hidden_size : The hidden size.
+        num_layers : The number of recurrent layers.
+        rnn_type : The RNN cell type.  Must be GRU or LSTM.
+        trainable_masked_hidden_state : If `True` the initial hidden state (used at the start of a Task)
+            is trainable (as opposed to being a vector of zeros).
         """
 
         super().__init__()
@@ -230,6 +241,7 @@ class RNNStateEncoder(nn.Module):
         self.layer_init()
 
     def layer_init(self):
+        """Initialize the RNN parameters in the model."""
         for name, param in self.rnn.named_parameters():
             if "weight" in name:
                 nn.init.orthogonal_(param)
@@ -237,63 +249,121 @@ class RNNStateEncoder(nn.Module):
                 nn.init.constant_(param, 0)
 
     @property
-    def num_recurrent_layers(self):
+    def num_recurrent_layers(self) -> int:
+        """The number of recurrent layers in the network."""
         return self._num_recurrent_layers * (2 if "LSTM" in self._rnn_type else 1)
 
-    def _pack_hidden(self, hidden_states):
-        if "LSTM" in self._rnn_type:
-            hidden_states = torch.cat([hidden_states[0], hidden_states[1]], dim=0)
+    def _pack_hidden(
+        self, hidden_states: Union[torch.FloatTensor, Sequence[torch.FloatTensor]]
+    ) -> torch.FloatTensor:
+        """Stacks hiddens states in an LSTM together (if using a GRU rather
+        than an LSTM this is just the identitiy).
 
-        return hidden_states
+        # Parameters
 
-    def _unpack_hidden(self, hidden_states):
+        hidden_states : The hidden states to (possibly) stack.
+        """
         if "LSTM" in self._rnn_type:
-            hidden_states = (
+            hidden_states = cast(
+                torch.FloatTensor,
+                torch.cat([hidden_states[0], hidden_states[1]], dim=0),
+            )
+
+        return cast(torch.FloatTensor, hidden_states)
+
+    def _unpack_hidden(
+        self, hidden_states: torch.FloatTensor
+    ) -> Union[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]]:
+        """Partial inverse of `_pack_hidden` (exact if there are 2 hidden
+        layers)."""
+        if "LSTM" in self._rnn_type:
+            new_hidden_states = (
                 hidden_states[0 : self._num_recurrent_layers],
                 hidden_states[self._num_recurrent_layers :],
             )
-
+            return cast(Tuple[torch.FloatTensor, torch.FloatTensor], new_hidden_states)
         return hidden_states
 
-    def _mask_hidden(self, hidden_states, masks):
+    def _mask_hidden(
+        self,
+        hidden_states: Union[Tuple[torch.FloatTensor, ...], torch.FloatTensor],
+        masks: torch.FloatTensor,
+    ) -> Union[Tuple[torch.FloatTensor, ...], torch.FloatTensor]:
+        """Mask input hidden states given `masks`.
+
+        Useful when masks represent steps on which a task has completed.
+
+        # Parameters
+
+        hidden_states : The hidden states.
+        masks : Masks to apply to hidden states.
+
+        # Returns
+
+        Masked hidden states. Here masked hidden states will be replaced with
+        either all zeros (if `trainable_masked_hidden_state` was False) and will
+        otherwise be a learnable collection of parameters.
+        """
         if not self.trainable_masked_hidden_state:
             if isinstance(hidden_states, tuple):
-                hidden_states = tuple(v * masks for v in hidden_states)
+                hidden_states = tuple(
+                    cast(torch.FloatTensor, v * masks) for v in hidden_states
+                )
             else:
-                hidden_states = masks * hidden_states
+                hidden_states = cast(torch.FloatTensor, masks * hidden_states)
         else:
             if isinstance(hidden_states, tuple):
+                # noinspection PyTypeChecker
                 hidden_states = tuple(
                     v
-                    * masks(1 - masks)
+                    * masks
+                    * (1 - masks)  # type: ignore
                     * (self.init_hidden_state.repeat(1, v.shape[1], 1))
                     for v in hidden_states
                 )
             else:
-                hidden_states = masks * hidden_states + (1 - masks) * (
+                # noinspection PyTypeChecker
+                hidden_states = masks * hidden_states + (1 - masks) * (  # type: ignore
                     self.init_hidden_state.repeat(1, hidden_states.shape[1], 1)
                 )
 
         return hidden_states
 
-    def single_forward(self, x, hidden_states, masks):
+    def single_forward(
+        self,
+        x: torch.FloatTensor,
+        hidden_states: torch.FloatTensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[
+        torch.FloatTensor, Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]]
+    ]:
         """Forward for a non-sequence input."""
-        hidden_states = self._unpack_hidden(hidden_states)
-        x, hidden_states = self.rnn(
-            x.unsqueeze(0), self._mask_hidden(hidden_states, masks.unsqueeze(0))
+        unpacked_hidden_states = self._unpack_hidden(hidden_states)
+        x, unpacked_hidden_states = self.rnn(
+            x.unsqueeze(0),
+            self._mask_hidden(
+                unpacked_hidden_states, cast(torch.FloatTensor, masks.unsqueeze(0))
+            ),
         )
-        x = x.squeeze(0)
-        hidden_states = self._pack_hidden(hidden_states)
+        x = cast(torch.FloatTensor, x.squeeze(0))
+        hidden_states = self._pack_hidden(unpacked_hidden_states)
         return x, hidden_states
 
-    def seq_forward(self, x, hidden_states, masks):
+    def seq_forward(
+        self,
+        x: torch.FloatTensor,
+        hidden_states: torch.FloatTensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[
+        torch.FloatTensor, Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]]
+    ]:
         """Forward for a sequence of length T.
 
         # Parameters
 
-        x : (T, N, -1) Tensor that has been flattened to (T * N, -1)
-        hidden_states : The starting hidden state.
-        masks : A (T, N) tensor flatten to (T * N).
+        x : (T, N, -1) Tensor that has been flattened to (T * N, -1).
+        hidden_states : The starting hidden states.
+        masks : A (T, N) tensor flattened to (T * N).
             The masks to be applied to hidden state at every timestep.
         """
         # x is a (T, N, -1) tensor flattened to (T * N, -1)
@@ -301,8 +371,8 @@ class RNNStateEncoder(nn.Module):
         t = int(x.size(0) / n)
 
         # unflatten
-        x = x.view(t, n, x.size(1))
-        masks = masks.view(t, n)
+        x = cast(torch.FloatTensor, x.view(t, n, x.size(1)))
+        masks = cast(torch.FloatTensor, masks.view(t, n))
 
         # steps in sequence which have zero for any agent. Assume t=0 has
         # a zero in it.
@@ -310,35 +380,49 @@ class RNNStateEncoder(nn.Module):
 
         # +1 to correct the masks[1:]
         if has_zeros.dim() == 0:
-            has_zeros = [has_zeros.item() + 1]  # handle scalar
+            # handle scalar
+            has_zeros = [has_zeros.item() + 1]  # type: ignore
         else:
             has_zeros = (has_zeros + 1).numpy().tolist()
 
         # add t=0 and t=T to the list
         has_zeros = [0] + has_zeros + [t]
 
-        hidden_states = self._unpack_hidden(hidden_states)
+        unpacked_hidden_states = self._unpack_hidden(hidden_states)
         outputs = []
-        for i in range(len(has_zeros) - 1):
+        for i in range(len(cast(List, has_zeros)) - 1):
             # process steps that don't have any zeros in masks together
-            start_idx = has_zeros[i]
-            end_idx = has_zeros[i + 1]
+            start_idx = int(has_zeros[i])
+            end_idx = int(has_zeros[i + 1])
 
-            rnn_scores, hidden_states = self.rnn(
+            # noinspection PyTypeChecker
+            rnn_scores, unpacked_hidden_states = self.rnn(
                 x[start_idx:end_idx],
-                self._mask_hidden(hidden_states, masks[start_idx].view(1, -1, 1)),
+                self._mask_hidden(
+                    unpacked_hidden_states,
+                    cast(torch.FloatTensor, masks[start_idx].view(1, -1, 1)),
+                ),
             )
 
             outputs.append(rnn_scores)
 
         # x is a (T, N, -1) tensor
-        x = torch.cat(outputs, dim=0)
-        x = x.view(t * n, -1)  # flatten
-
-        hidden_states = self._pack_hidden(hidden_states)
+        x = cast(torch.FloatTensor, torch.cat(outputs, dim=0).view(t * n, -1))
+        hidden_states = self._pack_hidden(unpacked_hidden_states)
         return x, hidden_states
 
-    def forward(self, x, hidden_states, masks):
+    def forward(
+        self,
+        x: torch.FloatTensor,
+        hidden_states: torch.FloatTensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[
+        torch.FloatTensor, Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]]
+    ]:
+        """Calls `seq_forward` or `single_forward` depending on the input size.
+
+        See the above methods for more information.
+        """
         if x.size(0) == hidden_states.size(1):
             return self.single_forward(x, hidden_states, masks)
         else:
@@ -346,11 +430,20 @@ class RNNStateEncoder(nn.Module):
 
 
 class AddBias(nn.Module):
-    def __init__(self, bias):
+    """Adding bias parameters to input values."""
+
+    def __init__(self, bias: torch.FloatTensor):
+        """Initializer.
+
+        # Parameters
+
+        bias : data to use as the initial values of the bias.
+        """
         super(AddBias, self).__init__()
         self._bias = nn.Parameter(bias.unsqueeze(1))
 
-    def forward(self, x):
+    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        """Adds the stored bias parameters to `x`."""
         assert x.dim() in [2, 4]
 
         if x.dim() == 2:
