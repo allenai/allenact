@@ -133,7 +133,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         reward = -0.01
 
         if not self.last_action_success:
-            reward += -0.1
+            reward += -0.03
 
         if self._took_end_action:
             reward += 1.0 if self._success else -1.0
@@ -144,7 +144,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         if not self.is_done():
             return {}
         else:
-            return {"success": self._success, "ep_length": self.num_steps_taken()}
+            return {"success": self._success, **super(ObjectNavTask, self).metrics()}
 
     def query_expert(self) -> Tuple[int, bool]:
         target = self.task_info["object_type"]

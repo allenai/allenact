@@ -24,6 +24,7 @@ mypy = "*"
 flake8 = "*"
 pre-commit = "*"
 gitpython = "*"
+ipython = "*"
 
 [packages]
 gym = "*"
