@@ -310,12 +310,19 @@ class Engine:
                 self.vector_tasks.set_seeds(seeds)
 
     def process_valid_metrics(self):
+        unused = []
         while not self.vector_tasks.metrics_out_queue.empty():
             try:
                 metric = self.vector_tasks.metrics_out_queue.get_nowait()
-                self.scalars.add_scalars(metric)
+                if isinstance(metric, tuple) and metric[0] == "test_metrics":
+                    unused.append(metric)
+                else:
+                    self.scalars.add_scalars(metric)
             except queue.Empty:
                 pass
+
+        for item in unused:
+            self.vector_tasks.metrics_out_queue.put(item)
 
         return self.scalars.pop_and_reset()
 
@@ -482,7 +489,8 @@ class Engine:
                 ("teacher_package", teacher_force_info)
             )
 
-        self.step_count += actions.nelement()
+        if self.mode == "train":
+            self.step_count += actions.nelement()
 
         outputs = self.vector_tasks.step([a[0].item() for a in actions])
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
@@ -826,34 +834,54 @@ class Engine:
         }
 
     def get_checkpoint_files(
-        self, checkpoint_file_name: Optional[str] = None, skip_checkpoints: int = 0
+        self,
+        experiment_date: str,
+        checkpoint_file_name: Optional[str] = None,
+        skip_checkpoints: int = 0,
     ):
         if checkpoint_file_name is not None:
             return [checkpoint_file_name]
-        files = glob.glob(os.path.join(self.output_dir, "checkpoints", "exp_*.pt"))
-        return sorted(files)
+        files = glob.glob(
+            os.path.join(self.output_dir, "checkpoints", experiment_date, "exp_*.pt")
+        )
+        files = sorted(files)
+        return files[:: skip_checkpoints + 1] + (
+            [files[-1]] if len(files) % (skip_checkpoints + 1) != 1 else []
+        )
 
     def run_test(
         self,
+        experiment_date: str,
         checkpoint_file_name: Optional[str] = None,
         skip_checkpoints=0,
         rollout_steps=1,
+        deterministic_agent=True,
     ):
         assert (
             self.mode != "train"
         ), "run_test only to be called from a valid or test instance"
-        start_time = time.time()
-        self.local_start_time_str = time.strftime(
-            "%Y-%m-%d_%H-%M-%S", time.localtime(start_time)
-        )
-        self.log_writer = SummaryWriter(
-            log_dir=self.log_writer_path,
-            filename_suffix="__test__{}".format(self.local_start_time_str),
+        self.deterministic_agent = deterministic_agent
+        self.teacher_forcing = None
+
+        test_start_time_str = time.strftime(
+            "%Y-%m-%d_%H-%M-%S", time.localtime(time.time())
         )
 
-        checkpoints = self.get_checkpoint_files(checkpoint_file_name, skip_checkpoints)
-        for checkpoint_file_name in checkpoints:
+        self.local_start_time_str = experiment_date
+
+        checkpoints = self.get_checkpoint_files(
+            experiment_date, checkpoint_file_name, skip_checkpoints
+        )
+
+        self.log_writer = SummaryWriter(
+            log_dir=self.log_writer_path,
+            filename_suffix="__test_{}".format(test_start_time_str),
+        )
+
+        for it, checkpoint_file_name in enumerate(checkpoints):
+            print("{}/{} {}".format(it + 1, len(checkpoints), checkpoint_file_name))
             scalars = self.run_eval(checkpoint_file_name, rollout_steps)
+            print("metrics", {k: v[0] for k, v in scalars.items()})
             self.vector_tasks.metrics_out_queue.put(("test_metrics", scalars))
             self.log()
 
