@@ -278,6 +278,7 @@ class TrainingPipeline(Iterator):
         gae_lambda: float,
         save_interval: int,
         log_interval: int,
+        scheduler: Optional[Union[optim.lr_scheduler._LRScheduler, Builder[optim.lr_scheduler._LRScheduler]]] = None,  # type: ignore
     ):
         """Initializer.
 
@@ -287,6 +288,7 @@ class TrainingPipeline(Iterator):
         self.log_interval = log_interval
 
         self.optimizer = optimizer
+        self.scheduler = scheduler
         self.num_mini_batch = num_mini_batch
 
         self.update_repeats = update_repeats

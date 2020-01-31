@@ -129,6 +129,12 @@ class Engine(object):
         self.optimizer: Optional[  # type: ignore
             Union[optim.Optimizer, Builder[optim.Optimizer]]
         ] = None
+        self.scheduler: Optional[
+            Union[
+                optim.lr_scheduler._LRScheduler,
+                Builder[optim.lr_scheduler._LRScheduler],
+            ]
+        ] = None
         if mode == "train":
             self.optimizer = self.training_pipeline.optimizer
             if isinstance(self.optimizer, Builder):
@@ -136,6 +142,11 @@ class Engine(object):
                     params=[
                         p for p in self.actor_critic.parameters() if p.requires_grad
                     ]
+                )
+            self.scheduler = self.training_pipeline.scheduler
+            if isinstance(self.scheduler, Builder):
+                self.scheduler = typing.cast(Builder, self.scheduler)(
+                    optimizer=self.optimizer
                 )
 
         self.vector_tasks = VectorSampledTasks(
@@ -296,6 +307,9 @@ class Engine(object):
         if self.seed is not None:
             save_dict["worker_seeds"] = seeds
 
+        if self.scheduler is not None:
+            save_dict["scheduler_state"] = self.scheduler.state_dict()
+
         torch.save(save_dict, model_path)
         return model_path
 
@@ -333,6 +347,8 @@ class Engine(object):
                     seeds == ckpt["worker_seeds"]
                 ), "worker seeds not matching stored seeds"
                 self.vector_tasks.set_seeds(seeds)
+            if self.scheduler is not None:
+                self.scheduler.load_state_dict(ckpt["scheduler_state"])
 
     def process_valid_metrics(self):
         unused = []
@@ -608,6 +624,9 @@ class Engine(object):
                 self.update(rollouts)
 
                 rollouts.after_update()
+
+                if self.scheduler is not None:
+                    self.scheduler.step(self.total_steps + self.step_count)
 
                 if (
                     self.step_count - self.last_log >= self.log_interval

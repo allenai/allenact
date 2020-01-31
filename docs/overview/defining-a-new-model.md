@@ -11,6 +11,8 @@ hidden state and previous actions.
 For convenience, we have already defined a [recurrent module](/api/models/basic_models#RNNStateEncoder) and
 [a simple CNN module](/api/basic_models#SimpleCNN) that will be used in this example.
 
+### Actor-critic model interface
+
 As an example, let's build an object navigation agent.
 
 ```python
