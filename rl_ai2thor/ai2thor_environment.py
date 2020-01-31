@@ -20,12 +20,22 @@ from rl_ai2thor.ai2thor_util import round_to_factor
 
 
 class AI2ThorEnvironment(object):
+    """Wrapper for the ai2thor controller providing additional functionality
+    and bookkeeping.
+
+    See [here](https://ai2thor.allenai.org/documentation/installation) for comprehensive
+     documentation on AI2-THOR.
+
+    # Attributes
+
+    controller : The ai2thor controller.
+    """
+
     def __init__(
         self,
+        x_display: Optional[str] = None,
         docker_enabled: bool = False,
-        x_display: str = None,
-        local_thor_build: str = None,
-        time_scale: float = 1.0,
+        local_thor_build: Optional[str] = None,
         visibility_distance: float = VISIBILITY_DISTANCE,
         fov: float = FOV,
         player_screen_width: int = 300,
@@ -34,106 +44,156 @@ class AI2ThorEnvironment(object):
         restrict_to_initially_reachable_points: bool = False,
         make_agents_visible: bool = True,
         object_open_speed: float = 1.0,
-        always_return_visible_range: bool = False,
         simplify_physics: bool = False,
     ) -> None:
+        """Initializer.
+
+        # Parameters
+
+        x_display : The x display into which to launch ai2thor (possibly necessarily if you are running on a server
+            without an attached display).
+        docker_enabled : Whether or not to run thor in a docker container (useful on a server without an attached
+            display so that you don't have to start an x display).
+        local_thor_build : The path to a local build of ai2thor. This is probably not necessary for your use case
+            and can be safely ignored.
+        visibility_distance : The distance (in meters) at which objects, in the viewport of the agent,
+            are considered visible by ai2thor and will have their "visible" flag be set to `True` in the metadata.
+        fov : The agent's camera's field of view.
+        player_screen_width : The width resolution (in pixels) of the images returned by ai2thor.
+        player_screen_height : The height resolution (in pixels) of the images returned by ai2thor.
+        quality : The quality at which to render. Possible quality settings can be found in
+            `ai2thor._quality_settings.QUALITY_SETTINGS`.
+        restrict_to_initially_reachable_points : Whether or not to restrict the agent to locations in ai2thor
+            that were found to be (initially) reachable by the agent (i.e. reachable by the agent after resetting
+            the scene). This can be useful if you want to ensure there are only a fixed set of locations where the
+            agent can go.
+        make_agents_visible : Whether or not the agent should be visible. Most noticable when there are multiple agents
+            or when quality settings are high so that the agent casts a shadow.
+        object_open_speed : How quickly objects should be opened. High speeds mean faster simulation but also mean
+            that opening objects have a lot of kinetic energy and can, possibly, knock other objects away.
+        simplify_physics : Whether or not to simplify physics when applicable. Currently this only simplies object
+            interactions when opening drawers (when simplified, objects within a drawer do not slide around on
+            their own when the drawer is opened or closed, instead they are effectively glued down).
+        """
+
         self._start_player_screen_width = player_screen_width
         self._start_player_screen_height = player_screen_height
+        self._local_thor_build = local_thor_build
         self.x_display = x_display
-        if (
-            self._start_player_screen_width < 300
-            or self._start_player_screen_height < 300
-        ):
-            self.controller = Controller(
-                x_display=self.x_display,
-                player_screen_width=300,
-                player_screen_height=300,
-            )
-        else:
-            print("ERROR: high resolution not supported")
+        self.controller: Optional[Controller] = None
+        self._started = False
+        self._quality = quality
 
-        self.controller.local_executable_path = local_thor_build
-        self.controller.docker_enabled = docker_enabled
         self._initially_reachable_points: Optional[List[Dict]] = None
         self._initially_reachable_points_set: Optional[Set[Tuple[float, float]]] = None
-        self._started = True
-        self._offset: Optional[Tuple[int, int]] = None
-        self.move_mag: Optional[float] = None
-        self.grid_size: Optional[float] = None
-        self.time_scale = time_scale
-        self.visibility_distance = visibility_distance
-        self.fov = fov
+        self._move_mag: Optional[float] = None
+        self._grid_size: Optional[float] = None
+        self._visibility_distance = visibility_distance
+        self._fov = fov
         self.restrict_to_initially_reachable_points = (
             restrict_to_initially_reachable_points
         )
         self.make_agents_visible = make_agents_visible
         self.object_open_speed = object_open_speed
-        self.always_return_visible_range = always_return_visible_range
+        self._always_return_visible_range = False
         self.simplify_physics = simplify_physics
 
-        self._quality = quality
+        self.start(None)
+        self.controller.docker_enabled = docker_enabled  # type: ignore
 
     @property
     def scene_name(self) -> str:
+        """Current ai2thor scene."""
         return self.controller.last_event.metadata["sceneName"]
 
     @property
     def current_frame(self) -> np.ndarray:
+        """Returns rgb image corresponding to the agent's egocentric view."""
         return self.controller.last_event.frame
 
     @property
-    def offset(self) -> Tuple[int, int]:
-        assert self._offset is not None
-        return self._offset
-
-    @property
     def last_event(self) -> ai2thor.server.Event:
+        """Last event returned by the controller."""
         return self.controller.last_event
 
     @property
     def started(self) -> bool:
+        """Has the ai2thor controller been started."""
         return self._started
 
     @property
-    def last_action(self):
+    def last_action(self) -> str:
+        """Last action, as a string, taken by the agent."""
         return self.controller.last_event.metadata["lastAction"]
 
     @last_action.setter
-    def last_action(self, value: str):
+    def last_action(self, value: str) -> None:
+        """Set the last action taken by the agent.
+
+        Doing this is rewriting history, be careful.
+        """
         self.controller.last_event.metadata["lastAction"] = value
 
     @property
-    def last_action_success(self):
+    def last_action_success(self) -> bool:
+        """Was the last action taken by the agent a success?"""
         return self.controller.last_event.metadata["lastActionSuccess"]
 
     @last_action_success.setter
-    def last_action_success(self, value: bool):
+    def last_action_success(self, value: bool) -> None:
+        """Set whether or not the last action taken by the agent was a success.
+
+        Doing this is rewriting history, be careful.
+        """
         self.controller.last_event.metadata["lastActionSuccess"] = value
 
     @property
-    def last_action_return(self):
+    def last_action_return(self) -> Any:
+        """Get the value returned by the last action (if applicable).
+
+        For an example of an action that returns a value, see
+        `"GetReachablePositions"`.
+        """
         return self.controller.last_event.metadata["actionReturn"]
 
     @last_action_return.setter
-    def last_action_return(self, value: Any):
+    def last_action_return(self, value: Any) -> None:
+        """Set the value returned by the last action.
+
+        Doing this is rewriting history, be careful.
+        """
         self.controller.last_event.metadata["actionReturn"] = value
 
     def start(
-        self,
-        scene_name: Optional[str],
-        move_mag: float = 0.25,
-        offset: Tuple[int, int] = (0, 0),
-        **kwargs,
+        self, scene_name: Optional[str], move_mag: float = 0.25, **kwargs,
     ) -> None:
+        """Starts the ai2thor controller if it was previously stopped.
+
+        After starting, `reset` will be called with the scene name and move magnitude.
+
+        # Parameters
+
+        scene_name : The scene to load.
+        move_mag : The amount of distance the agent moves in a single `MoveAhead` step.
+        kwargs : additional kwargs, passed to reset.
+        """
+        if self._started:
+            raise RuntimeError(
+                "Trying to start the environment but it is already started."
+            )
+
+        self.controller = Controller(
+            x_display=self.x_display,
+            player_screen_width=self._start_player_screen_width,
+            player_screen_height=self._start_player_screen_height,
+            local_executable_path=self._local_thor_build,
+            quality=self._quality,
+        )
+
         if (
-            self._start_player_screen_width < 300
-            or self._start_player_screen_height < 300
-        ):
-            # self.controller.start(
-            #     x_display=self.x_display,
-            #     player_screen_width=300,
-            #     player_screen_height=300,
-            # )
+            self._start_player_screen_height,
+            self._start_player_screen_width,
+        ) != self.current_frame.shape[:2]:
             self.controller.step(
                 {
                     "action": "ChangeResolution",
@@ -141,23 +201,12 @@ class AI2ThorEnvironment(object):
                     "y": self._start_player_screen_height,
                 }
             )
-        else:
-            print("ERROR: Non-supported resolution")
-        # else:
-        #     self.controller.start(
-        #         x_display=self.x_display,
-        #         player_screen_width=self._start_player_screen_width,
-        #         player_screen_height=self._start_player_screen_height,
-        #     )
-
-        self.controller.step({"action": "ChangeQuality", "quality": self._quality})
-        if not self.controller.last_event.metadata["lastActionSuccess"]:
-            raise Exception("Failed to change quality to: {}.".format(self._quality))
 
         self._started = True
-        self.reset(scene_name=scene_name, move_mag=move_mag, offset=offset, **kwargs)
+        self.reset(scene_name=scene_name, move_mag=move_mag, **kwargs)
 
     def stop(self) -> None:
+        """Stops the ai2thor controller."""
         try:
             self.controller.stop()
         except Exception as e:
@@ -166,43 +215,37 @@ class AI2ThorEnvironment(object):
             self._started = False
 
     def reset(
-        self,
-        scene_name: Optional[str],
-        move_mag: float = 0.25,
-        offset: Tuple[int, int] = (0, 0),
-        **kwargs,
+        self, scene_name: Optional[str], move_mag: float = 0.25, **kwargs,
     ):
-        if offset != (0, 0):
-            raise NotImplementedError("Offset must be (0,0) for now.")
+        """Resets the ai2thor in a new scene.
 
-        self._offset = offset
-        self.move_mag = move_mag
-        x_off = offset[0]
-        z_off = offset[1]
-        self.grid_size = self.move_mag * math.gcd(math.gcd(100, x_off), z_off) / 100.0
+        Resets ai2thor into a new scene and initializes the scene/agents with
+        prespecified settings (e.g. move magnitude).
+
+        # Parameters
+
+        scene_name : The scene to load.
+        move_mag : The amount of distance the agent moves in a single `MoveAhead` step.
+        kwargs : additional kwargs, passed to the controller "Initialize" action.
+        """
+        self._move_mag = move_mag
+        self._grid_size = self._move_mag
 
         if scene_name is None:
             scene_name = self.controller.last_event.metadata["sceneName"]
         self.controller.reset(scene_name)
 
-        tmp_stderr = sys.stderr
-        sys.stderr = open(
-            os.devnull, "w"
-        )  # TODO: HACKILY BLOCKING sequenceId print errors
         self.controller.step(
             {
                 "action": "Initialize",
-                "gridSize": self.grid_size,
-                "visibilityDistance": self.visibility_distance,
-                "fov": self.fov,
-                "timeScale": self.time_scale,
+                "gridSize": self._grid_size,
+                "visibilityDistance": self._visibility_distance,
+                "fov": self._fov,
                 "makeAgentsVisible": self.make_agents_visible,
-                "alwaysReturnVisibleRange": self.always_return_visible_range,
+                "alwaysReturnVisibleRange": self._always_return_visible_range,
                 **kwargs,
             }
         )
-        sys.stderr.close()
-        sys.stderr = tmp_stderr
 
         if self.object_open_speed != 1.0:
             self.controller.step(
@@ -233,6 +276,7 @@ class AI2ThorEnvironment(object):
         verbose=True,
         ignore_y_diffs=False,
     ) -> None:
+        """Helper function teleporting the agent to a given location."""
         if standing is None:
             standing = self.last_event.metadata["isStanding"]
         original_location = self.get_agent_location()
@@ -324,6 +368,7 @@ class AI2ThorEnvironment(object):
         return
 
     def random_reachable_state(self, seed: int = None) -> Dict:
+        """Returns a random reachable location in the scene."""
         if seed is not None:
             random.seed(seed)
         xyz = random.choice(self.currently_reachable_points)
@@ -337,6 +382,7 @@ class AI2ThorEnvironment(object):
     def randomize_agent_location(
         self, seed: int = None, partial_position: Optional[Dict[str, float]] = None
     ) -> Dict:
+        """Teleports the agent to a random reachable location in the scene."""
         if partial_position is None:
             partial_position = {}
         k = 0
@@ -364,6 +410,19 @@ class AI2ThorEnvironment(object):
     def object_pixels_in_frame(
         self, object_id: str, hide_all: bool = True, hide_transparent: bool = False
     ) -> np.ndarray:
+        """Return an mask for a given object in the agent's current view.
+
+        # Parameters
+
+        object_id : The id of the object.
+        hide_all : Whether or not to hide all other objects in the scene before getting the mask.
+        hide_transparent : Whether or not partially transparent objects are considered to occlude the object.
+
+        # Returns
+
+        A numpy array of the mask.
+        """
+
         # Emphasizing an object turns it magenta and hides all other objects
         # from view, we can find where the hand object is on the screen by
         # emphasizing it and then scanning across the image for the magenta pixels.
@@ -391,6 +450,9 @@ class AI2ThorEnvironment(object):
         hide_all: bool = True,
         hide_transparent: bool = False,
     ) -> np.ndarray:
+        """Like `object_pixels_in_frame` but counts object pixels in a
+        partitioning of the image."""
+
         def partition(n, num_parts):
             m = n // num_parts
             parts = [m] * num_parts
@@ -422,6 +484,7 @@ class AI2ThorEnvironment(object):
         return np.array(sums_in_blocks, dtype=np.float32)
 
     def object_in_hand(self):
+        """Object metadata for the object in the agent's hand."""
         inv_objs = self.last_event.metadata["inventoryObjects"]
         if len(inv_objs) == 0:
             return None
@@ -434,11 +497,15 @@ class AI2ThorEnvironment(object):
 
     @property
     def initially_reachable_points(self) -> List[Dict[str, float]]:
+        """List of {"x": x, "y": y, "z": z} locations in the scene that were
+        reachable after initially resetting."""
         assert self._initially_reachable_points is not None
         return copy.deepcopy(self._initially_reachable_points)  # type:ignore
 
     @property
     def initially_reachable_points_set(self) -> Set[Tuple[float, float]]:
+        """Set of (x,z) locations in the scene that were reachable after
+        initially resetting."""
         if self._initially_reachable_points_set is None:
             self._initially_reachable_points_set = set()
             for p in self.initially_reachable_points:
@@ -450,6 +517,8 @@ class AI2ThorEnvironment(object):
 
     @property
     def currently_reachable_points(self) -> List[Dict[str, float]]:
+        """List of {"x": x, "y": y, "z": z} locations in the scene that are
+        currently reachable."""
         self.step({"action": "GetReachablePositions"})
         return self.last_event.metadata["reachablePositions"]  # type:ignore
 
@@ -469,30 +538,6 @@ class AI2ThorEnvironment(object):
     @staticmethod
     def _agent_location_to_tuple(p: Dict[str, float]) -> Tuple[float, float]:
         return (round(p["x"], 2), round(p["z"], 2))
-
-    def get_flat_surface_grid(self, grid_size: int) -> np.ndarray:
-        self.step({"action": "FlatSurfacesOnGrid", "x": grid_size, "y": grid_size})
-        assert self.last_action_success
-        return np.reshape(
-            self.last_event.metadata["flatSurfacesOnGrid"],
-            newshape=(2, grid_size, grid_size),
-        )
-
-    def get_grid_metadata(self, grid_shape: Tuple[int, int]) -> Dict[str, np.ndarray]:
-        self.step(
-            {"action": "GetMetadataOnGrid", "x": grid_shape[1], "y": grid_shape[0]}
-        )
-        assert self.last_action_success
-        md = self.last_event.metadata
-        return {
-            "distances": np.reshape(md["distances"], grid_shape),
-            "normals": np.reshape(md["normals"], (3, *grid_shape)),
-            "is_openable": np.reshape(md["isOpenableGrid"], grid_shape),
-        }
-
-    @classmethod
-    def allowed_offsets_for_scene(cls, map_path: str, scene_name: str, move_mag: float):
-        raise NotImplementedError("Offsets disabled")
 
     def _snap_agent_to_initially_reachable(self, verbose=True):
         agent_location = self.get_agent_location()
@@ -595,6 +640,7 @@ class AI2ThorEnvironment(object):
     def step(
         self, action_dict: Dict[str, Union[str, int, float]]
     ) -> ai2thor.server.Event:
+        """Take a step in the ai2thor environment."""
         action = typing.cast(str, action_dict["action"])
 
         skip_render = "renderImage" in action_dict and not action_dict["renderImage"]
@@ -608,7 +654,7 @@ class AI2ThorEnvironment(object):
         if "Move" in action and "Hand" not in action:  # type: ignore
             action_dict = {
                 **action_dict,
-                "moveMagnitude": self.move_mag,
+                "moveMagnitude": self._move_mag,
             }  # type: ignore
             start_location = self.get_agent_location()
             sr = self.controller.step(action_dict)
@@ -673,6 +719,7 @@ class AI2ThorEnvironment(object):
     def position_dist(
         p0: Mapping[str, Any], p1: Mapping[str, Any], ignore_y: bool = False
     ) -> float:
+        """Distance between two points of the form {"x": x, "y":y, "z":z"}."""
         return math.sqrt(
             (p0["x"] - p1["x"]) ** 2
             + (0 if ignore_y else (p0["y"] - p1["y"]) ** 2)
@@ -681,6 +728,8 @@ class AI2ThorEnvironment(object):
 
     @staticmethod
     def rotation_dist(a: Dict[str, float], b: Dict[str, float]):
+        """Distance between rotations."""
+
         def deg_dist(d0: float, d1: float):
             dist = (d0 - d1) % 360
             return min(dist, 360 - dist)
@@ -690,6 +739,8 @@ class AI2ThorEnvironment(object):
     def closest_object_with_properties(
         self, properties: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
+        """Find the object closest to the agent that has the given
+        properties."""
         agent_pos = self.controller.last_event.metadata["agent"]["position"]
         min_dist = float("inf")
         closest = None
@@ -709,16 +760,21 @@ class AI2ThorEnvironment(object):
     def closest_visible_object_of_type(
         self, object_type: str
     ) -> Optional[Dict[str, Any]]:
+        """Find the object closest to the agent that is visible and has the
+        given type."""
         properties = {"visible": True, "objectType": object_type}
         return self.closest_object_with_properties(properties)
 
     def closest_object_of_type(self, object_type: str) -> Optional[Dict[str, Any]]:
+        """Find the object closest to the agent that has the given type."""
         properties = {"objectType": object_type}
         return self.closest_object_with_properties(properties)
 
     def closest_reachable_point_to_position(
         self, position: Dict[str, float]
     ) -> Tuple[Dict[str, float], float]:
+        """Of all reachable positions, find the one that is closest to the
+        given location."""
         target = np.array([position["x"], position["z"]])
         min_dist = float("inf")
         closest_point = None
@@ -796,11 +852,13 @@ class AI2ThorEnvironment(object):
         return {"x": agent_x, "z": agent_z}
 
     def all_objects(self) -> List[Dict[str, Any]]:
+        """Return all object metadata."""
         return self.controller.last_event.metadata["objects"]
 
     def all_objects_with_properties(
         self, properties: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
+        """Find all objects with the given properties."""
         objects = []
         for o in self.all_objects():
             satisfies_all = True
@@ -813,25 +871,8 @@ class AI2ThorEnvironment(object):
         return objects
 
     def visible_objects(self) -> List[Dict[str, Any]]:
+        """Return all visible objects."""
         return self.all_objects_with_properties({"visible": True})
-
-    def agent_relative_offset_to_absolute_offset(
-        self, x_off: float, z_off: float
-    ) -> Tuple[float, float]:
-        rotation = self.get_agent_location()["rotation"]
-        assert (
-            0 <= rotation < 360 and abs(rotation % 90) < 1e-5
-        ), "Rotation must be one of 0, 90, 180, or 270."
-
-        # Theta is the amount of rotation the coordinates have undergone
-        theta = -2 * np.pi * rotation / 360
-        change_of_basis_mat = np.array(
-            [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]
-        )
-
-        abs_offset = np.matmul(change_of_basis_mat, np.array([[x_off], [z_off]]))
-        x_abs, z_abs = list(abs_offset[:, 0])
-        return float(x_abs), float(z_abs)
 
     def get_object_by_id(self, object_id: str) -> Optional[Dict[str, Any]]:
         for o in self.last_event.metadata["objects"]:
@@ -925,7 +966,7 @@ class AI2ThorEnvironment(object):
         if sum(x != 0 for x in [dist, angle_dist, horz_dist]) != 1:
             return
 
-        grid_size = self.grid_size
+        grid_size = self._grid_size
         action = None
         if angle_dist != 0:
             if angle_dist == 1:
@@ -952,7 +993,7 @@ class AI2ThorEnvironment(object):
 
     @functools.lru_cache(1)
     def possible_neighbor_offsets(self) -> Tuple[Tuple[float, float, int, int], ...]:
-        grid_size = round(self.grid_size, 2)
+        grid_size = round(self._grid_size, 2)
         offsets = []
         for rot_diff in [-90, 0, 90]:
             for horz_diff in [-30, 0, 30, 60]:

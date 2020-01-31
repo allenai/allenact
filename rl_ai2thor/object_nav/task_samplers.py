@@ -130,7 +130,7 @@ class ObjectNavTaskSampler(TaskSampler):
                 self.env.reset(scene)
         else:
             self.env = self._create_environment()
-            self.env.start(scene_name=scene)
+            self.env.reset(scene_name=scene)
 
         self.env.randomize_agent_location()
 

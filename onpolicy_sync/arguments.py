@@ -1,6 +1,4 @@
-"""
-Defining arguments used when training/validating/testing.
-"""
+"""Defining arguments used when training/validating/testing."""
 
 import argparse
 

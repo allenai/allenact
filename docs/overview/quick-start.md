@@ -3,15 +3,15 @@
 Assuming you have [installed all of the requirements](/#installation), you can run your first experiment by calling 
 
 ```bash
-python main.py object_nav_thor runs/object_nav_thor -s 12345
+python main.py object_nav_thor -s 12345
 ```
 
 If everything was installed correctly, a simple semantic navigation model for AI2THOR will be trained and validated and 
-a new folder `runs/object_nav_thor` will be created containing
+a new folder `experiment_output` will be created containing
 
 * a `checkpoints/LOCAL_TIME_STR/` subfolder with different checkpoints,
 * a `used_configs` subfolder with all used configuration files,
-* and a tensorboard log file under `tb/LOCAL_TIME_STR/`.
+* and a tensorboard log file under `tb/ObjectNav/LOCAL_TIME_STR/`.
 
 # Experiment configuration
 
