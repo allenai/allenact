@@ -56,5 +56,3 @@ Rollout storage is used to store observations, internal states, actions and rewa
 actor-critic models with tasks running in parallel.
 
 See the [`RolloutStorage` class](/api/onpolicy_sync/storage/#rolloutstorage).
-```python
-```
