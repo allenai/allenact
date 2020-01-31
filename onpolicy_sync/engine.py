@@ -785,6 +785,7 @@ class Engine(object):
                     self.num_processes,
                     self.actor_critic.action_space,
                     self.actor_critic.recurrent_hidden_state_size,
+                    num_recurrent_layers=self.actor_critic.num_recurrent_layers(),
                 )
             )
 
@@ -840,6 +841,7 @@ class Engine(object):
             self.num_processes,
             self.actor_critic.action_space,
             self.actor_critic.recurrent_hidden_state_size,
+            num_recurrent_layers=self.actor_critic.num_recurrent_layers(),
         )
 
         num_paused = self.initialize_rollouts(rollouts)
