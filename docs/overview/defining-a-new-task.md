@@ -182,7 +182,7 @@ class ObjectNavTaskSampler(TaskSampler):
         return env
 ```
 
-# Task sampling
+### Task sampling
 
 Finally, we need to define methods to determine the number of available tasks (possibly infinite) and sample tasks:
 ```python
