@@ -1,3 +1,7 @@
+"""Implementation of the KFAC optimizer.
+
+TODO: this code is not currently supported as it only is designed for non-recurrent models.
+"""
 import math
 
 import torch

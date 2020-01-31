@@ -1,3 +1,5 @@
+"""Defining the PPO loss for actor critic type models."""
+
 from typing import Dict, Union
 
 import torch
@@ -9,17 +11,29 @@ from rl_base.distributions import CategoricalDistr
 
 
 class PPO(AbstractActorCriticLoss):
-    """Implementation of the Proximal Policy Optimization loss."""
+    """Implementation of the Proximal Policy Optimization loss.
+
+    # Attributes
+
+    clip_param : The clipping parameter to use.
+    value_loss_coef : Weight of the value loss.
+    entropy_coef : Weight of the entropy (encouraging) loss.
+    use_clipped_value_loss : Whether or not to also clip the value loss.
+    """
 
     def __init__(
         self,
-        clip_param,
-        value_loss_coef,
-        entropy_coef,
+        clip_param: float,
+        value_loss_coef: float,
+        entropy_coef: float,
         use_clipped_value_loss=True,
         *args,
         **kwargs
     ):
+        """Initializer.
+
+        See the class documentation for parameter definitions.
+        """
         super().__init__(*args, **kwargs)
         self.clip_param = clip_param
         self.value_loss_coef = value_loss_coef
