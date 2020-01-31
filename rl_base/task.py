@@ -61,6 +61,7 @@ class Task(Generic[EnvType]):
             {**self.sensor_suite.observation_spaces.spaces,}
         )
         self._num_steps_taken = 0
+        self._total_reward = 0.0
 
     def get_observations(self) -> Any:
         return self.sensor_suite.get_observations(env=self.env, task=self)
@@ -122,6 +123,7 @@ class Task(Generic[EnvType]):
         """
         assert not self.is_done()
         sr = self._step(action=action)
+        self._total_reward += float(sr.reward)
         self._increment_num_steps_taken()
         return sr
 
@@ -208,7 +210,7 @@ class Task(Generic[EnvType]):
         A dictionary where every key is a string (the metric's
             name) and the value is the value of the metric.
         """
-        return {"ep_length": self.num_steps_taken()}
+        return {"ep_length": self.num_steps_taken(), "reward": self._total_reward}
 
     def query_expert(self) -> Tuple[Any, bool]:
         """Query the expert policy for this task.

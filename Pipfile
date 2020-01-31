@@ -38,6 +38,7 @@ networkx = "*"
 Pillow = "==6.2.1"
 setuptools = "*"
 setproctitle = "*"
+ipython = "*"
 
 [requires]
 python_version = "3.6"
