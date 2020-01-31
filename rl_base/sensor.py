@@ -119,7 +119,7 @@ class SensorSuite(Generic[EnvType]):
     ) -> Dict[str, Any]:
         """Get all observations corresponding to the sensors in the suite.
 
-        # Attributes
+        # Parameters
 
         env : The environment from which to get the observation.
         task : (Optionally) the task from which to get the observation.

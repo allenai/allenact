@@ -18,6 +18,7 @@ class Preprocessor(abc.ABC):
 
     # Attributes:
         config : Configuration information for the preprocessor.
+        input_uuids : List of input universally unique ids.
         uuid : Universally unique id.
         observation_space : ``gym.Space`` object corresponding to processed observation spaces.
     """
@@ -147,7 +148,7 @@ class PreprocessorGraph:
 
         # Returns
 
-        Collect observations processed from all sensors and return it packaged inside a Dict.
+        Collect observations processed from all sensors and return them packaged inside a Dict.
         """
 
         for uuid in self.compute_order:
@@ -163,10 +164,9 @@ class ObservationSet:
 
     # Attributes
 
-    source_ids : List containing sensor and preprocessor ids for the environment, uuid of each
-        source must be unique.
-    graph : Computation graph for preprocessors.
-    observation_spaces : Observation spaces of the sources.
+    source_ids : List containing sensor and preprocessor ids to be consumed by agents. Each source uuid must be unique.
+    graph : Computation graph for all preprocessors.
+    observation_spaces : Observation spaces of all output sources.
     """
 
     source_ids: List[str]
@@ -193,7 +193,7 @@ class ObservationSet:
         self.source_ids = source_ids
         assert len(set(self.source_ids)) == len(
             self.source_ids
-        ), "No duplicated uuids allowed"
+        ), "No duplicated uuids allowed in source_ids"
 
         sensor_spaces = SensorSuite(all_sensors).observation_spaces
         preprocessor_spaces = self.graph.observation_spaces
@@ -201,7 +201,7 @@ class ObservationSet:
         for uuid in self.source_ids:
             assert (
                 uuid in sensor_spaces or uuid in preprocessor_spaces
-            ), "uuid missing from sensor suite and preprocessor graph"
+            ), "uuid {} missing from sensor suite and preprocessor graph".format(uuid)
             if uuid in sensor_spaces:
                 spaces[uuid] = sensor_spaces[uuid]
             else:

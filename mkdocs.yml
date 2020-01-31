@@ -28,6 +28,7 @@ nav:
   - Changing rewards and losses: overview/changing-rewards-and-losses.md
   - Defining a new model: overview/defining-a-new-model.md
   - Defining a new task: overview/defining-a-new-task.md
+  - Experiment specification: overview/experiment.md
 - Errata:
   - Generating documentation: errata/generating-documentation.md
 #  - Walk Through:
@@ -35,11 +36,6 @@ nav:
 - Contributing: CONTRIBUTING.md
 - Licence: LICENSE.md
 - API:
-  - configs:
-    - losses:
-      - ppo_config: api/configs/losses/ppo_config.md
-      - a2c_config: api/configs/losses/a2c_config.md
-    - util: api/configs/util.md
   - main: api/main.md
   - models:
     - object_nav_models: api/models/object_nav_models.md
@@ -53,10 +49,9 @@ nav:
       - a2cacktr: api/onpolicy_sync/losses/a2cacktr.md
     - arguments: api/onpolicy_sync/arguments.md
     - policy: api/onpolicy_sync/policy.md
-    - utils: api/onpolicy_sync/utils.md
-    - vector_task: api/onpolicy_sync/vector_task.md
+    - engine: api/onpolicy_sync/engine.md
+    - vector_sampled_tasks: api/onpolicy_sync/vector_sampled_tasks.md
     - storage: api/onpolicy_sync/storage.md
-    - trainer: api/onpolicy_sync/trainer.md
   - rl_ai2thor:
     - ai2thor_environment: api/rl_ai2thor/ai2thor_environment.md
     - ai2thor_constants: api/rl_ai2thor/ai2thor_constants.md
@@ -74,6 +69,10 @@ nav:
     - preprocessor: api/rl_base/preprocessor.md
     - distributions: api/rl_base/distributions.md
     - common: api/rl_base/common.md
+  - utils:
+    - model_utils: api/utils/model_utils.md
+    - experiment_utils: api/utils/experiment_utils.md
+    - tensor_utils: api/utils/tensor_utils.md
 markdown_extensions:
 - toc:
     permalink: '#'
