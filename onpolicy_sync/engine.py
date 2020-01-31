@@ -1,3 +1,6 @@
+"""
+Defines the reinforcement learning `Engine`.
+"""
 import glob
 import os
 import queue
@@ -51,7 +54,15 @@ def validate(
     evaluator.process_checkpoints(read_from_parent, write_to_parent)
 
 
-class Engine:
+class Engine(object):
+    """The reinforcement learning primary controller.
+
+    This `Engine` class handles all training, validation, and testing as well as
+    logging and checkpointing. You are not expected to instantiate this class
+    yourself, instead you should define an experiment which will then
+    be used to instantiate an `Engine` and perform any desired tasks.
+    """
+
     def __init__(
         self,
         config: ExperimentConfig,
@@ -61,6 +72,19 @@ class Engine:
         mode: str = "train",
         deterministic_cudnn: bool = False,
     ):
+        """ Initializer.
+
+        config : The ExperimentConfig defining the experiment to run.
+        output_dir : Root directory at which checkpoints and logs should be saved.
+        loaded_config_src_files : Paths to source config files used to create the experiment.
+        seed : Seed used to encourage deterministic behavior (it is difficult to ensure
+            completely deterministic behavior due to CUDA issues and nondeterminism
+            in environments).
+        mode : "train", "valid", or "test".
+        deterministic_cudnn : Whether or not to use deterministic cudnn. If `True` this may lower
+            training performance this is necessary (but not sufficient) if you desire
+            deterministic behavior.
+        """
         self.deterministic_cudnn = deterministic_cudnn
         self.seed = seed
         self.mode = mode.lower()
@@ -197,7 +221,8 @@ class Engine:
                 self.eval_process.start()
 
     @staticmethod
-    def worker_seeds(nprocesses: int):
+    def worker_seeds(nprocesses: int) -> List[int]:
+        """Create a collection of seeds for workers."""
         return [random.randint(0, 2 ** (31) - 1) for _ in range(nprocesses)]
 
     def get_sampler_fn_args(

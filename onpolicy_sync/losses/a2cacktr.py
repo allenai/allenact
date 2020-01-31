@@ -1,21 +1,30 @@
+"""Implementation of A2C and ACKTR losses."""
+import typing
 import warnings
 from typing import Tuple, Dict, Union
 
 import torch
-import typing
 
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
-from onpolicy_sync.losses.kfac import KFACOptimizer
 from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
 
 
-def acktr_optimizer(actor_critic):
-    return KFACOptimizer(actor_critic)
-
-
 class A2CACKTR(AbstractActorCriticLoss):
+    """Class implementing A2C and ACKTR losses.
+
+    # Attributes
+
+    acktr : `True` if should use ACKTR loss, otherwise uses A2C loss.
+    value_loss_coef : Weight of value loss.
+    entropy_coef : Weight of entropy (encouraging) loss.
+    """
+
     def __init__(self, value_loss_coef, entropy_coef, acktr=False, *args, **kwargs):
+        """Initializer.
+
+        See class documentation for parameter definitions.
+        """
         super().__init__(*args, **kwargs)
         self.acktr = acktr
 
@@ -29,7 +38,6 @@ class A2CACKTR(AbstractActorCriticLoss):
         *args,
         **kwargs,
     ) -> Tuple[torch.FloatTensor, Dict[str, float]]:
-
         actions = typing.cast(torch.LongTensor, batch["actions"])
         values = actor_critic_output.values
         action_log_probs = actor_critic_output.distributions.log_probs(actions)
@@ -88,6 +96,8 @@ class A2CACKTR(AbstractActorCriticLoss):
 
 
 class A2C(A2CACKTR):
+    """A2C Loss."""
+
     def __init__(self, value_loss_coef, entropy_coef, *args, **kwargs):
         super().__init__(
             value_loss_coef=value_loss_coef, entropy_coef=entropy_coef, acktr=False,
@@ -95,6 +105,8 @@ class A2C(A2CACKTR):
 
 
 class ACKTR(A2CACKTR):
+    """ACKTR Loss."""
+
     def __init__(self, value_loss_coef, entropy_coef, *args, **kwargs):
         super().__init__(
             value_loss_coef=value_loss_coef, entropy_coef=entropy_coef, acktr=True,
