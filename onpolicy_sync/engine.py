@@ -200,6 +200,7 @@ class Engine(object):
         self.local_start_time_str: Optional[str] = None
         self.deterministic_agent: Optional[bool] = None
         self.eval_process: Optional[mp.Process] = None
+        self.last_scheduler_steps: Optional[int] = None
 
         self.experiment_name = config.tag()
 
@@ -309,6 +310,7 @@ class Engine(object):
 
         if self.scheduler is not None:
             save_dict["scheduler_state"] = self.scheduler.state_dict()
+            save_dict["scheduler_steps"] = self.last_scheduler_steps
 
         torch.save(save_dict, model_path)
         return model_path
@@ -349,6 +351,7 @@ class Engine(object):
                 self.vector_tasks.set_seeds(seeds)
             if self.scheduler is not None:
                 self.scheduler.load_state_dict(ckpt["scheduler_state"])
+                self.last_scheduler_steps = typing.cast(int, ckpt["scheduler_steps"])
 
     def process_valid_metrics(self):
         unused = []
@@ -381,7 +384,11 @@ class Engine(object):
                     else:
                         cscalars: Optional[Dict[str, Union[float, int]]] = None
                         if pkg_type == "update_package":
-                            cscalars = {"total_loss": info["total_loss"]}
+                            cscalars = {
+                                "total_loss": info["total_loss"],
+                            }
+                            if "lr" in info:
+                                cscalars["lr"] = info["lr"]
                             for loss in info["losses"]:
                                 lossname = loss[:-5] if loss.endswith("_loss") else loss
                                 for scalar in info["losses"][loss]:
@@ -438,6 +445,10 @@ class Engine(object):
                     batch=bit,
                     losses={},
                 )
+
+                if self.scheduler is not None:
+                    info["lr"] = self.optimizer.param_groups[0]["lr"]
+
                 self.optimizer.zero_grad()  # type: ignore
                 total_loss: Optional[torch.FloatTensor] = None
                 for loss_name in self.losses:
@@ -455,7 +466,9 @@ class Engine(object):
                     info["losses"][loss_name] = current_info
                 assert total_loss is not None, "No losses specified?"
 
-                if isinstance(total_loss, torch.FloatTensor):
+                if isinstance(total_loss, torch.FloatTensor) or isinstance(
+                    total_loss, torch.cuda.FloatTensor
+                ):
                     info["total_loss"] = total_loss.item()
                     self.vector_tasks.metrics_out_queue.put(("update_package", info))
 
@@ -624,7 +637,12 @@ class Engine(object):
                 rollouts.after_update()
 
                 if self.scheduler is not None:
-                    self.scheduler.step(self.total_steps + self.step_count)
+                    new_scheduler_steps = self.total_steps + self.step_count
+                    for step in range(
+                        self.last_scheduler_steps + 1, new_scheduler_steps + 1
+                    ):
+                        self.scheduler.step(step)
+                    self.last_scheduler_steps = new_scheduler_steps
 
                 if (
                     self.step_count - self.last_log >= self.log_interval
@@ -779,6 +797,9 @@ class Engine(object):
             "%Y-%m-%d_%H-%M-%S", time.localtime(start_time)
         )
         self.log_writer = SummaryWriter(log_dir=self.log_writer_path)
+
+        if self.scheduler is not None:
+            self.last_scheduler_steps = 0
 
         if checkpoint_file_name is not None:
             self.checkpoint_load(
