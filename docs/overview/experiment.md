@@ -14,6 +14,8 @@ class ObjectNavThorExperimentConfig(rl_base.experiment_config.ExperimentConfig):
     ...
 ```
 
+## Model creation
+
 Next, `create_model` will be used to instantiate
 [object navigation baseline actor-critic models](/api/models/object_nav_models#ObjectNavBaselineActorCritic):
 ```python
@@ -50,6 +52,8 @@ class ObjectNavThorExperimentConfig(rl_base.experiment_config.ExperimentConfig):
         )
     ...
 ```
+
+## Training pipeline
 
 We can implement a training pipeline including dataset aggregation
 ([DAGGER](https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf)), by assuming the existence of an
@@ -110,6 +114,8 @@ class ObjectNavThorExperimentConfig(rl_base.experiment_config.ExperimentConfig):
     ...
 ```
 
+## Machine configuration
+
 In `machine_params` we define machine configuration parameters that will be used for training, validation and test:
 ```python
 class ObjectNavThorExperimentConfig(rl_base.experiment_config.ExperimentConfig):
@@ -129,4 +135,6 @@ class ObjectNavThorExperimentConfig(rl_base.experiment_config.ExperimentConfig):
     ...
 ```
 
-TODO!!!!!!!!!!!!!!
+## Task sampling
+
+TODO!!!!!
