@@ -46,10 +46,10 @@ class NavigationWithShaping(rl_ai2thor.object_nav.tasks.ObjectNavTask):
 ## Losses
 
 Currently we support [A2C](/api/onpolicy_sync/losses/a2cacktr#a2c), [PPO](/api/onpolicy_sync/losses/ppo#ppo),
-and [imitation](/api/onpolicy_sync/losses/imitation#imitation) losses. We can easily include dataset aggregation
-([DAGGER](https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf)) by assuming the existence of an
-expert providing optimal actions to agents and combining imitation and PPO losses in different ways through multiple
-stages:
+and [imitation](/api/onpolicy_sync/losses/imitation#imitation) losses. We can easily include
+[DAgger](https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf) or variations thereof by assuming the
+availability of an expert providing optimal actions to agents and combining imitation and PPO losses in different ways
+through multiple stages:
 
 ```python
 class MyExperimentConfig(rl_base.experiment_config.ExperimentConfig):

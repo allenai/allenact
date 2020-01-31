@@ -27,7 +27,7 @@ reproducing many of the same algorithms and ideas. After performing of survey of
 could not find a package delivering all of the following features, each of which we considered critical.
 
 1. *Decoupled tasks and environments*: a large portion of existing RL frameworks organize themselves using abstractions 
-   from the OpenAI gym. These abstractions center around the `Env` class which encasulates an agent's environment,
+   from the OpenAI gym. These abstractions center around the `Env` class which encapsulates an agent's environment,
    how it interacts with that environment, and the rewards received by the agent when taking actions. This 
    is an excellent abstraction when an environment is intimiately tied to a single task (e.g. with Atari games
    where the environment is a single game with a single goal). In embodied AI research, however, it is important to be 
