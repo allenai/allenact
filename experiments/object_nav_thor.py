@@ -91,7 +91,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             num_steps=num_steps,
             named_losses={
                 "imitation_loss": Builder(Imitation,),
-                "ppo_loss": Builder(PPO, dict(), default=PPOConfig,),
+                "ppo_loss": Builder(PPO, default=PPOConfig,),
             },
             gamma=gamma,
             use_gae=use_gae,
