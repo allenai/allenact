@@ -1,3 +1,5 @@
+"""Utility classes and functions for running and designing experiments."""
+
 import collections.abc
 import copy
 import random
@@ -65,6 +67,12 @@ class Builder(tuple, typing.Generic[ToBuildType]):
         kwargs: Optional[Dict[str, Any]] = None,
         default: Optional[Dict[str, Any]] = None,
     ):
+        """Create a new Builder.
+
+        For parameter descriptions see the class documentation. Note
+        that `kwargs` and `default` can be None in which case they are
+        set to be empty dictionaries.
+        """
         self = tuple.__new__(
             cls,
             (
@@ -106,11 +114,19 @@ class Builder(tuple, typing.Generic[ToBuildType]):
 
 
 class ScalarMeanTracker(object):
+    """Track a collection `scalar key -> mean` pairs."""
+
     def __init__(self) -> None:
         self._sums: Dict[str, float] = {}
         self._counts: Dict[str, int] = {}
 
-    def add_scalars(self, scalars):
+    def add_scalars(self, scalars: Dict[str, Union[float, int]]) -> None:
+        """Add additional scalars to track.
+
+        # Parameters
+
+        scalars : A dictionary of `scalar key -> value` pairs.
+        """
         for k in scalars:
             if k not in self._sums:
                 self._sums[k] = scalars[k]
@@ -119,39 +135,100 @@ class ScalarMeanTracker(object):
                 self._sums[k] += scalars[k]
                 self._counts[k] += 1
 
-    def pop_and_reset(self):
-        means = {k: self._sums[k] / self._counts[k] for k in self._sums}
+    def pop_and_reset(self) -> Dict[str, float]:
+        """Return tracked means and reset.
+
+        On resetting all previously tracked values are discarded.
+
+        # Returns
+
+        A dictionary of `scalar key -> current mean` pairs corresponding to those
+        values added with `add_scalars`.
+        """
+        means = {k: float(self._sums[k] / self._counts[k]) for k in self._sums}
         self._sums = {}
         self._counts = {}
         return means
 
 
-class LinearDecay:
+class LinearDecay(object):
+    """Linearly decay between two values over some number of steps.
+
+    Obtain the value corresponding to the `i`th step by calling
+    an instantiation of this object with the value `i`.
+
+    # Parameters
+
+    steps : The number of steps over which to decay.
+    startp : The starting value.
+    endp : The ending value.
+    """
+
     def __init__(self, steps: int, startp: float = 1.0, endp: float = 0.0) -> None:
+        """Initializer.
+
+        See class documentation for parameter definitions.
+        """
         self.steps = steps
         self.startp = startp
         self.endp = endp
 
     def __call__(self, epoch: int) -> float:
+        """Get the decayed value for `epoch` number of steps.
+
+        # Parameters
+
+        epoch : The number of steps.
+
+        # Returns
+
+        Decayed value for `epoch` number of steps.
+        """
         epoch = max(min(epoch, self.steps), 0)
         return self.startp + (self.endp - self.startp) * (epoch / float(self.steps))
 
 
-def set_deterministic_cudnn():
+def set_deterministic_cudnn() -> None:
+    """Makes cudnn deterministic.
+
+    This may slow down computations.
+    """
     if torch.cuda.is_available():
         # noinspection PyUnresolvedReferences
-        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.deterministic = True  # type: ignore
         # noinspection PyUnresolvedReferences
-        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.benchmark = False  # type: ignore
 
 
-def set_seed(seed: int):
+def set_seed(seed: int) -> None:
+    """Set seeds for multiple (cpu) sources of randomness.
+
+    Sets seeds for (cpu) `pytorch`, base `random`, and `numpy`.
+
+    # Parameters
+
+    seed : The seed to set.
+    """
     torch.manual_seed(seed)  # seeds the RNG for all devices (CPU and GPUs)
     random.seed(seed)
     np.random.seed(seed)
 
 
 class PipelineStage(NamedTuple):
+    """A single stage in a training pipeline.
+
+    # Attributes
+
+    loss_name : A collection of unique names assigned to losses. These will
+        reference the `Loss` objects in a `TrainingPipeline` instance.
+    end_criterion : Total number of steps agents should take in this stage.
+    loss_weights : A list of floating point numbers describing the relative weights
+        applied to the losses referenced by `loss_name`. Should be the same length
+        as `loss_name`. If this is `None`, all weights will be assumed to be one.
+    teacher_forcing : If applicable, defines the probability an agent will take the
+        expert action (as opposed to its own sampeld action) at a given time point.
+    """
+
     loss_names: typing.List[str]
     end_criterion: int
     loss_weights: Optional[typing.Sequence[float]] = None
@@ -159,10 +236,37 @@ class PipelineStage(NamedTuple):
 
 
 class TrainingPipeline(Iterator):
+    """Class defining the stages (and global parameters) in a training
+    pipeline.
+
+    The training pipeline can be used as an iterator to go through the pipeline
+    stages in, for instance, a loop.
+
+    # Attributes
+
+    named_losses : Dictionary mapping a the name of a loss to either an instantiation
+        of that loss or a `Builder` that, when called, will return that loss.
+    pipeline_stages : A list of PipelineStages. Each of these define how the agent
+        will be trained and are executed sequentially.
+    optimizer : The optimizer to use during training.
+    num_mini_batch : The number of mini-batches to break a rollout into.
+    update_repeats : The number of times we will cycle through the mini-batches corresponding
+        to a single rollout doing gradient updates.
+    max_grad_norm : The maximum "inf" norm of any gradient step (gradients are clipped to not exceed this).
+    num_steps : Total number of steps a single agent takes in a rollout.
+    gamma : Discount factor applied to rewards (should be in [0, 1]).
+    use_gae : Whether or not to use generalized advantage estimation (GAE).
+    gae_lambda : The additional parameter used in GAE.
+    save_interval : The frequency with which to save (in total agent steps).
+    log_interval : The frequency with which to log metrics to tensorboard (in total agent steps).
+    current_pipeline_stage : Integer tracking the current stage of the pipeline. If -1 then the pipeline
+        is at it's start and `__next__` will need to be called to get the first pipeline stage.
+    """
+
     # noinspection PyUnresolvedReferences
     def __init__(
         self,
-        named_losses: Optional[Dict[str, Union[Loss, Builder[Loss]]]],
+        named_losses: Dict[str, Union[Loss, Builder[Loss]]],
         pipeline_stages: List[PipelineStage],
         optimizer: Union[optim.Optimizer, Builder[optim.Optimizer]],  # type: ignore
         num_mini_batch: int,
@@ -175,6 +279,10 @@ class TrainingPipeline(Iterator):
         save_interval: int,
         log_interval: int,
     ):
+        """Initializer.
+
+        See class docstring for parameter definitions.
+        """
         self.save_interval = save_interval
         self.log_interval = log_interval
 
@@ -193,7 +301,8 @@ class TrainingPipeline(Iterator):
 
         self.current_pipeline_stage = -1
 
-    def current_stage(self):
+    def current_stage(self) -> PipelineStage:
+        """Returns the current stage."""
         return (
             None
             if (
@@ -203,10 +312,12 @@ class TrainingPipeline(Iterator):
             else self.pipeline_stages[self.current_pipeline_stage]
         )
 
-    def reset(self):
+    def reset(self) -> None:
+        """Resets the pipeline."""
         self.current_pipeline_stage = -1
 
     def __next__(self):
+        """Get the next stage in the pipeline."""
         if len(self.pipeline_stages) == self.current_pipeline_stage + 1:
             raise StopIteration()
 

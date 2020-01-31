@@ -1,3 +1,5 @@
+"""Functions used to manipulate pytorch tensors and numpy arrays."""
+
 import numbers
 from collections import defaultdict
 from typing import List, Dict, Optional, DefaultDict
@@ -12,13 +14,15 @@ def batch_observations(
     """Transpose a batch of observation dicts to a dict of batched
     observations.
 
-    Args:
-        observations:  list of dicts of observations.
-        device: The torch.device to put the resulting tensors on.
-            Will not move the tensors if None
+    # Arguments
 
-    Returns:
-        transposed dict of lists of observations.
+    observations :  List of dicts of observations.
+    device : The torch.device to put the resulting tensors on.
+        Will not move the tensors if None.
+
+    # Returns
+
+    Transposed dict of lists of observations.
     """
     batch: DefaultDict = defaultdict(list)
 
@@ -32,7 +36,17 @@ def batch_observations(
     return batch
 
 
-def to_tensor(v):
+def to_tensor(v) -> torch.Tensor:
+    """Return a torch.Tensor version of the input.
+
+    # Parameters
+
+    v : Input values that can be coerced into being a tensor.
+
+    # Returns
+
+    A tensor version of the input.
+    """
     if torch.is_tensor(v):
         return v
     elif isinstance(v, np.ndarray):
