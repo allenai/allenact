@@ -47,7 +47,6 @@ nav:
       - ppo: api/onpolicy_sync/losses/ppo.md
       - kfac: api/onpolicy_sync/losses/kfac.md
       - a2cacktr: api/onpolicy_sync/losses/a2cacktr.md
-    - arguments: api/onpolicy_sync/arguments.md
     - policy: api/onpolicy_sync/policy.md
     - engine: api/onpolicy_sync/engine.md
     - vector_sampled_tasks: api/onpolicy_sync/vector_sampled_tasks.md
