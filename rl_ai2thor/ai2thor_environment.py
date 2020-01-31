@@ -80,18 +80,12 @@ class AI2ThorEnvironment(object):
         self._start_player_screen_height = player_screen_height
         self._local_thor_build = local_thor_build
         self.x_display = x_display
-        self.controller = Controller(
-            x_display=self.x_display,
-            player_screen_width=player_screen_width,
-            player_screen_height=player_screen_height,
-            local_executable_path=local_thor_build,
-            quality=quality,
-        )
+        self.controller: Optional[Controller] = None
+        self._started = False
+        self._quality = quality
 
-        self.controller.docker_enabled = docker_enabled
         self._initially_reachable_points: Optional[List[Dict]] = None
         self._initially_reachable_points_set: Optional[Set[Tuple[float, float]]] = None
-        self._started = True
         self._move_mag: Optional[float] = None
         self._grid_size: Optional[float] = None
         self._visibility_distance = visibility_distance
@@ -104,7 +98,8 @@ class AI2ThorEnvironment(object):
         self._always_return_visible_range = False
         self.simplify_physics = simplify_physics
 
-        self._quality = quality
+        self.start(None)
+        self.controller.docker_enabled = docker_enabled  # type: ignore
 
     @property
     def scene_name(self) -> str:
@@ -194,6 +189,18 @@ class AI2ThorEnvironment(object):
             local_executable_path=self._local_thor_build,
             quality=self._quality,
         )
+
+        if (
+            self._start_player_screen_height,
+            self._start_player_screen_width,
+        ) != self.current_frame.shape[:2]:
+            self.controller.step(
+                {
+                    "action": "ChangeResolution",
+                    "x": self._start_player_screen_width,
+                    "y": self._start_player_screen_height,
+                }
+            )
 
         self._started = True
         self.reset(scene_name=scene_name, move_mag=move_mag, **kwargs)

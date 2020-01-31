@@ -123,6 +123,10 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment, AI2ThorTask]):
         **kwargs: Any
     ) -> Any:
         rgb = env.current_frame.copy()
+
+        if self._scaler is not None and rgb.shape[:2] != (self._height, self._width):
+            rgb = np.array(self._scaler(self._to_pil(rgb)), dtype=np.uint8)
+
         assert rgb.dtype in [np.uint8, np.float32]
 
         if rgb.dtype == np.uint8:
@@ -131,9 +135,6 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment, AI2ThorTask]):
         if self._should_normalize:
             rgb -= self._norm_means
             rgb /= self._norm_sds
-
-        if self._scaler is not None and rgb.shape[:2] != (self._height, self._width):
-            rgb = np.array(self._scaler(self._to_pil(rgb)), dtype=np.float32)
 
         return rgb
 
