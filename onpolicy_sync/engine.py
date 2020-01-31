@@ -455,7 +455,7 @@ class Engine(object):
                     info["losses"][loss_name] = current_info
                 assert total_loss is not None, "No losses specified?"
 
-                if isinstance(total_loss, torch.FloatTensor):
+                if isinstance(total_loss, torch.Tensor):
                     info["total_loss"] = total_loss.item()
                     self.vector_tasks.metrics_out_queue.put(("update_package", info))
 
@@ -467,7 +467,9 @@ class Engine(object):
                     self.backprop_count += 1
                 else:
                     warnings.warn(
-                        "Total loss ({}) was not a FloatTensor.".format(total_loss)
+                        "Total loss ({}) was not a FloatTensor, it is a {}.".format(
+                            total_loss, type(total_loss)
+                        )
                     )
 
     def _preprocess_observations(self, batched_observations):

@@ -16,7 +16,7 @@ def judge(self) -> float:
     reward = -0.01
 
     if not self.last_action_success:
-        reward += -0.1
+        reward += -0.03
 
     if self._took_end_action:
         reward += 1.0 if self._success else -1.0
