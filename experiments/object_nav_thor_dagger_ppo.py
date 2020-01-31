@@ -45,7 +45,7 @@ class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
 
     @classmethod
     def tag(cls):
-        return "ObjectNavDAggerPPO"
+        return "ObjectNavThorDAggerPPO"
 
     @classmethod
     def training_pipeline(cls, **kwargs):

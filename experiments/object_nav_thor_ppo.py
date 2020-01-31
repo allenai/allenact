@@ -25,6 +25,8 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     Training with PPO.
     """
 
+    SCREEN_SIZE = 224
+
     # Easy setting
     OBJECT_TYPES = sorted(["Tomato"])
     TRAIN_SCENES = ["FloorPlan1_physics"]
@@ -36,8 +38,6 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     # TRAIN_SCENES = ["FloorPlan{}".format(i) for i in range(1, 21)]
     # VALID_SCENES = ["FloorPlan{}_physics".format(i) for i in range(21, 26)]
     # TEST_SCENES = ["FloorPlan{}_physics".format(i) for i in range(26, 31)]
-
-    SCREEN_SIZE = 224
 
     SENSORS = [
         RGBSensorThor(
@@ -66,7 +66,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def tag(cls):
-        return "ObjectNavPPO"
+        return "ObjectNavThorPPO"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
@@ -100,7 +100,6 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def machine_params(cls, mode="train", **kwargs):
-        print("Is cuda available? {}".format(torch.cuda.is_available()))
         if mode == "train":
             nprocesses = 6 if not torch.cuda.is_available() else 30
             gpu_ids = [] if not torch.cuda.is_available() else [0]

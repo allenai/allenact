@@ -3,7 +3,7 @@
 Assuming you have [installed all of the requirements](/#installation), you can run your first experiment by calling 
 
 ```bash
-python main.py object_nav_thor -s 12345
+python main.py object_nav_thor_ppo -s 12345
 ```
 
 If everything was installed correctly, a simple semantic navigation model for AI2THOR will be trained and validated and 
