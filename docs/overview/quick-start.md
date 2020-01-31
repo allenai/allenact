@@ -5,13 +5,18 @@ Assuming you have [installed all of the requirements](/#installation), you can r
 ```bash
 python main.py object_nav_thor_ppo -s 12345
 ```
+This runs the experiment defined in `experiments/object_nav_thor_ppo.py`.
 
 If everything was installed correctly, a simple semantic navigation model for AI2THOR will be trained and validated and 
 a new folder `experiment_output` will be created containing
 
 * a `checkpoints/LOCAL_TIME_STR/` subfolder with different checkpoints,
 * a `used_configs` subfolder with all used configuration files,
-* and a tensorboard log file under `tb/ObjectNav/LOCAL_TIME_STR/`.
+* and a tensorboard log file under `tb/ObjectNavPPO/LOCAL_TIME_STR/`.
+
+To run your own custom experiment simply define a new experiment configuration in a file `
+experiments/my_custom_experiment.py` after which you may run it with
+`python main.py my_custom_experiment -s 12345`.
 
 # Experiment configuration
 
