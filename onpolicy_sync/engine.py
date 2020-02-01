@@ -662,10 +662,10 @@ class Engine(object):
                         or self.rollout_count == self.num_rollouts
                     )
                 ) and self.models_folder != "":
-                    self.last_save = self.step_count
                     model_path = self.checkpoint_save()
                     if self.write_to_eval is not None:
                         self.write_to_eval.put(("eval", model_path))
+                    self.last_save = self.step_count
         except Exception as e:
             self.close()
             raise e
@@ -809,7 +809,7 @@ class Engine(object):
 
         for stage in self.training_pipeline:
             self.last_log = self.step_count - self.log_interval
-            self.last_save = self.step_count - self.save_interval
+            self.last_save = self.step_count
 
             stage_losses, stage_weights = self._load_losses(stage)
 
@@ -890,7 +890,7 @@ class Engine(object):
             self.num_processes,
             self.actor_critic.action_space,
             self.actor_critic.recurrent_hidden_state_size,
-            num_recurrent_layers=self.actor_critic.num_recurrent_layers(),
+            num_recurrent_layers=self.actor_critic.num_recurrent_layers,
         )
 
         num_paused = self.initialize_rollouts(rollouts)
