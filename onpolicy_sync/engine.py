@@ -181,6 +181,7 @@ class Engine(object):
         self.step_count = 0
         self.total_steps = 0
         self.last_log = 0
+        self.last_save = 0
 
         # Fields defined when running setup_stage.
         # TODO: Lets encapsulate these better, perhaps in named
@@ -657,11 +658,11 @@ class Engine(object):
                 if (
                     self.save_interval > 0
                     and (
-                        self.step_count % self.save_interval == 0
+                        self.step_count - self.last_save >= self.save_interval
                         or self.rollout_count == self.num_rollouts
                     )
-                    and self.models_folder != ""
-                ):
+                ) and self.models_folder != "":
+                    self.last_save = self.step_count
                     model_path = self.checkpoint_save()
                     if self.write_to_eval is not None:
                         self.write_to_eval.put(("eval", model_path))
@@ -808,6 +809,7 @@ class Engine(object):
 
         for stage in self.training_pipeline:
             self.last_log = self.step_count - self.log_interval
+            self.last_save = self.step_count - self.save_interval
 
             stage_losses, stage_weights = self._load_losses(stage)
 
@@ -867,6 +869,7 @@ class Engine(object):
                         command, data = read_from_parent.get_nowait()
                         new_data = True
                     except queue.Empty:
+                        time.sleep(1)
                         pass
 
                 if command == "eval":
