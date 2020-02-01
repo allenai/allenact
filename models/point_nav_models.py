@@ -9,6 +9,7 @@ from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
 from gym.spaces.dict import Dict as SpaceDict
 
+
 class PointNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
     def __init__(
         self,

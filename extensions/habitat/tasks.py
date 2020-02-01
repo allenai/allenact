@@ -85,6 +85,7 @@ class PointNavTask(Task[HabitatTask]):
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
         self.last_geodesic_distance = self.env.get_current_episode().info['geodesic_distance']
+        self._rewards = []
 
     @property
     def action_space(self):
@@ -143,6 +144,7 @@ class PointNavTask(Task[HabitatTask]):
         geodesic_distance = self.env.get_geodesic_distance()
         delta_distance_reward = self.last_geodesic_distance - geodesic_distance
         reward += delta_distance_reward
+        # print("Prev:", self.last_geodesic_distance, "Curr", geodesic_distance, "Delta Distance Reward:", delta_distance_reward)
         self.last_geodesic_distance = geodesic_distance
 
         # if not self.last_action_success:
@@ -151,13 +153,21 @@ class PointNavTask(Task[HabitatTask]):
         if self._took_end_action:
             reward += 10.0 if self._success else 0.0
 
+        self._rewards.append(float(reward))
+
         return float(reward)
 
     def metrics(self) -> Dict[str, Any]:
         if not self.is_done():
             return {}
         else:
-            return {"success": self._success, "ep_length": self.num_steps_taken()}
+            metrics = {
+                "success": self._success,
+                "ep_length": self.num_steps_taken(),
+                "mean_reward": np.mean(self._rewards),
+            }
+            self._rewards = []
+            return metrics
 
     def query_expert(self) -> Tuple[int, bool]:
         if self._is_goal_in_range():

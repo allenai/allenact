@@ -120,5 +120,5 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     ) -> Any:
         tl = env.get_current_episode().goals[0].position
         al = env.get_location()
-        delta = np.array([tl[0] - al[0], tl[1] - al[1]])
+        delta = np.array([tl[0] - al[0], tl[2] - al[2]])
         return delta

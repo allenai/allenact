@@ -21,11 +21,11 @@ from extensions.habitat.sensors import RGBSensorHabitat, TargetCoordinatesSensor
 class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
     """A Point Navigation experiment configuraqtion in Habitat"""
 
-    TRAIN_SCENES = "/habitat-api/data/datasets/pointnav/habitat-test-scenes/v1/train/train.json.gz"
-    VALID_SCENES = "/habitat-api/data/datasets/pointnav/habitat-test-scenes/v1/val/val.json.gz"
-    TEST_SCENES = "/habitat-api/data/datasets/pointnav/habitat-test-scenes/v1/test/test.json.gz"
+    TRAIN_SCENES = "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
+    VALID_SCENES = "habitat/habitat-api/data/datasets/pointnav/gibson/v1/val/val.json.gz"
+    TEST_SCENES = "habitat/habitat-api/data/datasets/pointnav/gibson/v1/test/test.json.gz"
 
-    SCREEN_SIZE = 224
+    SCREEN_SIZE = 256
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.2
 
@@ -40,13 +40,14 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
         TargetCoordinatesSensorHabitat({"coordinate_dims": 2}),
     ]
 
-    CONFIG = habitat.get_config()
+    CONFIG = habitat.get_config('gibson.yaml')
     CONFIG.defrost()
-    CONFIG.DATASET.SCENES_DIR = '/habitat-api/data/scene_datasets/'
+    CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
     CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
-    CONFIG.SIMULATOR.SEMANTIC_SENSOR.WIDTH = SCREEN_SIZE
-    CONFIG.SIMULATOR.SEMANTIC_SENSOR.HEIGHT = SCREEN_SIZE
+    CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = SCREEN_SIZE
+    CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = SCREEN_SIZE
     CONFIG.SIMULATOR.TURN_ANGLE = 45
+    CONFIG.SIMULATOR.FORWARD_STEP_SIZE = 0.25
 
     @classmethod
     def tag(cls):
@@ -118,7 +119,8 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
     def _get_sampler_args(
         self, scenes: str
     ) -> Dict[str, Any]:
-        self.CONFIG.DATASET.DATA_PATH = scenes
+        config = self.CONFIG.clone()
+        config.DATASET.DATA_PATH = scenes
         return {
             "env_config": self.CONFIG,
             "max_steps": self.MAX_STEPS,
