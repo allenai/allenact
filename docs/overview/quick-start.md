@@ -18,7 +18,7 @@ To run your own custom experiment simply define a new experiment configuration i
 experiments/my_custom_experiment.py` after which you may run it with
 `python main.py my_custom_experiment -s 12345`.
 
-# Experiment configuration
+## Experiment configuration
 
 The main entry point for users is a configuration file that defines all the aspects associated with the experiment we
 want to run. More concretely, it includes a single class defining:
