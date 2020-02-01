@@ -236,5 +236,5 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 ```
 Now training process `i` out of `n` total processes will be instantiated with the parameters
 `ObjectNavThorPPOExperimentConfig.train_task_sampler_args(i, n, ...)`. Similar functions
- (`valid_task_sampler_args` and `test_task_sampler_args`) exist for greating validation
+ (`valid_task_sampler_args` and `test_task_sampler_args`) exist for generating validation
  and test parameters. See the documentation of `ExperimentConfig` for more information.
