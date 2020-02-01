@@ -1,10 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+import random
 from collections import defaultdict
 import torch
 import typing
+import numpy as np
 
 
 class RolloutStorage:
@@ -163,9 +164,14 @@ class RolloutStorage:
             "must be greater than or equal to the number of "
             "mini batches ({}).".format(num_processes, num_mini_batch)
         )
-        num_envs_per_batch = num_processes // num_mini_batch
-        perm = torch.randperm(num_processes)
-        for start_ind in range(0, num_processes, num_envs_per_batch):
+
+        inds = np.round(
+            np.linspace(0, num_processes, num_mini_batch + 1, endpoint=True)
+        ).astype(np.int32)
+        pairs = list(zip(inds[:-1], inds[1:]))
+        random.shuffle(pairs)
+
+        for start_ind, end_ind in pairs:
             observations_batch = defaultdict(list)
 
             recurrent_hidden_states_batch = []
@@ -178,9 +184,7 @@ class RolloutStorage:
             adv_targ = []
             norm_adv_targ = []
 
-            for offset in range(num_envs_per_batch):
-                ind = perm[start_ind + offset]
-
+            for ind in range(start_ind, end_ind):
                 for sensor in self.observations:
                     observations_batch[sensor].append(
                         self.observations[sensor][:-1, ind]
@@ -200,7 +204,7 @@ class RolloutStorage:
                 adv_targ.append(advantages[:, ind])
                 norm_adv_targ.append(normalized_advantages[:, ind])
 
-            T, N = self.num_steps, num_envs_per_batch
+            T, N = self.num_steps, end_ind - start_ind
 
             # These are all tensors of size (T, N, -1)
             for sensor in observations_batch:

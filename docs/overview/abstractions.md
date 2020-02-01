@@ -18,8 +18,9 @@ and an [example implementation](/api/rl_ai2thor/object_nav/tasks/#objectnavtask)
 
 ## Sensor
 
-Sensors provide observations extracted from an environment (e.g. RGB or depth images), or directly from a task (e.g. the 
-end point in point navigation or target object class in semantic navigation), to the agent.
+Sensors provide observations extracted from an environment (e.g. RGB or depth images) or directly from a task (e.g. the 
+end point in point navigation or target object class in semantic navigation) that can be directly consumed by 
+agents.
 
 See the [abstract `Sensor` class](/api/rl_base/sensor/#sensor) 
 and an [example implementation](/api/rl_ai2thor/ai2thor_sensors).
