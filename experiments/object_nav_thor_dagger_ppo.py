@@ -52,7 +52,7 @@ class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
         dagger_steps = int(3e4)
         ppo_steps = int(3e4)
         lr = 2.5e-4
-        num_mini_batch = 6 if not torch.cuda.is_available() else 30
+        num_mini_batch = 3 if not torch.cuda.is_available() else 18
         update_repeats = 3
         num_steps = 128
         log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
