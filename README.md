@@ -23,16 +23,16 @@ Currently, two RL algorithms are implemented
 There are an increasingly 
 [large collection](https://winderresearch.com/a-comparison-of-reinforcement-learning-frameworks-dopamine-rllib-keras-rl-coach-trfl-tensorforce-coach-and-more/) 
 of deep reinforcement learning packages and so it is natural to question why we introduce another framework
-reproducing many of the same algorithms and ideas. After performing a survey of existing frameworks we
+reproducing many of the same algorithms and ideas. After performing of survey of existing frameworks we
 could not find a package delivering all of the following features, each of which we considered critical.
 
 1. *Decoupled tasks and environments*: a large portion of existing RL frameworks organize themselves using abstractions 
-   from the OpenAI gym. These abstractions center around the `Env` class which encapsulates an agent's environment,
+   from the OpenAI gym. These abstractions center around the `Env` class which encasulates an agent's environment,
    how it interacts with that environment, and the rewards received by the agent when taking actions. This 
    is an excellent abstraction when an environment is intimiately tied to a single task (e.g. with Atari games
    where the environment is a single game with a single goal). In embodied AI research, however, it is important to be 
    able to define many tasks for a single environment; for instance, the [AI2-THOR](https://ai2thor.allenai.org/)
-   environment has been used with tasks such as
+   environment has been used with tasks such as  
    
     * [semantic/object navigation](https://arxiv.org/abs/1810.06543),
     * [interactive question answering](https://arxiv.org/abs/1712.03316),
@@ -62,12 +62,12 @@ cd embodied-rl
 
 This library has been tested only in python 3.6, the following assumes you have a working
 version of python 3.6 installed locally. In order to install requirements we recommend
-using [pipenv](https://pipenv.kennethreitz.org/en/latest/) but also include instructions if
-you would prefer to install things directly using pip.
+using [`pipenv`](https://pipenv.kennethreitz.org/en/latest/) but also include instructions if
+you would prefer to install things directly using `pip`.
 
 ### Installing requirements with `pipenv` (*recommended*)
 
-If you have already installed [pipenv](https://pipenv.kennethreitz.org/en/latest/), you may
+If you have already installed [`pipenv`](https://pipenv.kennethreitz.org/en/latest/), you may
 run the following to install all requirements.
 
 ```bash
@@ -86,6 +86,9 @@ pip install -r requirements.txt
 Depending on your machine configuration, you may need to use `pip3` instead of `pip` in the
 above.
 
+### Run your first experiment
+
+You are now ready to run your first experiment, see our [quick-start](./overview/quick-start.md) page.
 
 ## Contributions
 
