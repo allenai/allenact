@@ -101,7 +101,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     @classmethod
     def machine_params(cls, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 3 if not torch.cuda.is_available() else 30
+            nprocesses = 3 if not torch.cuda.is_available() else 18
             gpu_ids = [] if not torch.cuda.is_available() else [0]
         elif mode == "valid":
             nprocesses = 1
