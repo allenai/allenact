@@ -18,9 +18,8 @@ and an [example implementation](/api/rl_ai2thor/object_nav/tasks/#objectnavtask)
 
 ## Sensor
 
-Sensors provide observations extracted from an environment (e.g. RGB or depth images) or directly from a task (e.g. the 
-end point in point navigation or target object class in semantic navigation) that can be either directly consumed by 
-agents or processed by a [preprocessor](#preprocessor). 
+Sensors provide observations extracted from an environment (e.g. RGB or depth images), or directly from a task (e.g. the 
+end point in point navigation or target object class in semantic navigation), to the agent.
 
 See the [abstract `Sensor` class](/api/rl_base/sensor/#sensor) 
 and an [example implementation](/api/rl_ai2thor/ai2thor_sensors).
@@ -36,7 +35,7 @@ and an [example implementation](/api/rl_ai2thor/object_nav/task_samplers/#object
 ## Actor critic model
 
 The actor-critic agent is responsible for computing batched action probabilities and state values given the 
-observations provided by sensors or preprocessors, internal state representations, previous actions, and potentially 
+observations provided by sensors, internal state representations, previous actions, and potentially 
 other inputs.
 
 See the [abstract `ActorCriticModel` class](/api/onpolicy_sync/policy/#actorcriticmodel) 
@@ -52,7 +51,7 @@ and an [example implementation](/api/onpolicy_sync/losses/ppo/#ppo).
 
 ## Rollout storage
 
-Rollout storage is used to store observations, internal states, actions and rewards resulting from the interaction of 
+Rollout storage is used to store observations, internal states, actions, and rewards resulting from the interaction of 
 actor-critic models with tasks running in parallel.
 
 See the [`RolloutStorage` class](/api/onpolicy_sync/storage/#rolloutstorage).
