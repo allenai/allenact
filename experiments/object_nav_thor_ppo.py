@@ -76,9 +76,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         update_repeats = 3
         num_steps = 128
         log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
-        save_interval = int(
-            1.5 * log_interval
-        )  # Save every 10000 steps (approximately)
+        save_interval = 10000  # Save every 10000 steps (approximately)
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0
