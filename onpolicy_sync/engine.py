@@ -662,7 +662,6 @@ class Engine(object):
                         or self.rollout_count == self.num_rollouts
                     )
                 ) and self.models_folder != "":
-                    self.last_save = self.step_count
                     model_path = self.checkpoint_save()
                     if self.write_to_eval is not None:
                         self.write_to_eval.put(("eval", model_path))
