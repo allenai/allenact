@@ -39,8 +39,8 @@ could not find a package delivering all of the following features, each of which
     * [multi-agent furniture lifting](https://prior.allenai.org/projects/two-body-problem), and
     * [adversarial hide-and-seek](https://arxiv.org/abs/1912.08195).
    
-   We have designed `embodied-rl` to easily support a wide variety of tasks designed for individual environments.
-    
+    We have designed `embodied-rl` to easily support a wide variety of tasks designed for individual environments.
+
 1. *First-class pytorch support*: while many well-developed libraries exist for reinforcement learning in 
    tensorflow we prefer the abstractions and design provided by pytorch.
 1. *Configuration as code*: defining experiments using yaml configuation files is a perplexing standard. We have found
