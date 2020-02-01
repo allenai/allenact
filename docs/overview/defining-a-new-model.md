@@ -1,15 +1,15 @@
 # Defining a new model
 
 All actor-critic models must implement the interface described by the
-[ActorCriticModel class](/api/onpolicy_sync/policy#actorcriticmodel). This interface includes two methods that need to be 
+[ActorCriticModel class](/api/onpolicy_sync/policy/#actorcriticmodel). This interface includes two methods that need to be 
 implemented:
 
 * `recurrent_hidden_state_size`, returning the size of the model's hidden state; and 
-* `forward`, returning an [ActorCriticOutput](/api/rl_base/common#actorcriticoutput) given the current observation,
+* `forward`, returning an [ActorCriticOutput](/api/rl_base/common/#actorcriticoutput) given the current observation,
 hidden state and previous actions.
 
-For convenience, we have already defined a [recurrent network module](/api/models/basic_models#rnnstateencoder) and
-[a simple CNN module](/api/basic_models#simplecnn) that will be used in this example.
+For convenience, we have already defined a [recurrent network module](/api/models/basic_models/#rnnstateencoder) and
+[a simple CNN module](/api/models/basic_models/#simplecnn) that will be used in this example.
 
 ### Actor-critic model interface
 
