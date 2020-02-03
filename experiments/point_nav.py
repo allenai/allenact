@@ -43,11 +43,14 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
     CONFIG = habitat.get_config('gibson.yaml')
     CONFIG.defrost()
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
+    CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['Adrian']
     CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
     CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = SCREEN_SIZE
     CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = SCREEN_SIZE
     CONFIG.SIMULATOR.TURN_ANGLE = 45
     CONFIG.SIMULATOR.FORWARD_STEP_SIZE = 0.25
+    # print("CONFIG", CONFIG)
+    # exit()
 
     @classmethod
     def tag(cls):
@@ -56,7 +59,7 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
     @classmethod
     def training_pipeline(cls, **kwargs):
         ppo_steps = 1e8
-        nprocesses = 1
+        nprocesses = 8
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 2

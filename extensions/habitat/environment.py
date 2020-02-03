@@ -36,9 +36,6 @@ class HabitatEnvironment(object):
     ) -> Observations:
         obs = self.env.step(action_dict["action"])
         self._current_frame = obs
-        # import matplotlib.pyplot as plt
-        # plt.imshow(self.current_frame['rgb'])
-        # plt.show()
         return obs
 
     def get_geodesic_distance(self) -> float:
@@ -71,6 +68,9 @@ class HabitatEnvironment(object):
 
     def reset(self):
         self._current_frame = self.env.reset()
+        # import matplotlib.pyplot as plt
+        # plt.imshow(self.current_frame['rgb'])
+        # plt.show()
 
     @property
     def last_action_success(self):
