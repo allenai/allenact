@@ -56,12 +56,12 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
     @classmethod
     def training_pipeline(cls, **kwargs):
         ppo_steps = 1e8
-        nprocesses = 8
+        nprocesses = 1
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 2
         num_steps = 128
-        save_interval = 100
+        save_interval = 1000000
         log_interval = 2 * num_steps * nprocesses
         gpu_ids = None if not torch.cuda.is_available() else [0]
         gamma = 0.99
