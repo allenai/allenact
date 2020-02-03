@@ -235,7 +235,7 @@ class PipelineStage(NamedTuple):
     teacher_forcing: Optional[LinearDecay] = None
 
 
-class TrainingPipeline(Iterator):
+class TrainingPipeline(typing.Iterable):
     """Class defining the stages (and global parameters) in a training
     pipeline.
 
@@ -301,28 +301,16 @@ class TrainingPipeline(Iterator):
 
         self.pipeline_stages = pipeline_stages
 
-        self.current_pipeline_stage = -1
+    def __iter__(self) -> Iterator[typing.Tuple[int, PipelineStage]]:
+        """Create iterator which moves through the pipeline stages."""
+        return enumerate(self.pipeline_stages)
 
-    def current_stage(self) -> PipelineStage:
-        """Returns the current stage."""
-        return (
-            None
-            if (
-                len(self.pipeline_stages) <= self.current_pipeline_stage
-                or self.current_pipeline_stage < 0
-            )
-            else self.pipeline_stages[self.current_pipeline_stage]
+    def iterator_starting_at(
+        self, start_stage_num: int
+    ) -> Iterator[typing.Tuple[int, PipelineStage]]:
+        """Create iterator which moves through the pipeline stages starting at
+        stage `start_stage_num`."""
+        return zip(
+            range(start_stage_num, len(self.pipeline_stages)),
+            self.pipeline_stages[start_stage_num:],
         )
-
-    def reset(self) -> None:
-        """Resets the pipeline."""
-        self.current_pipeline_stage = -1
-
-    def __next__(self):
-        """Get the next stage in the pipeline."""
-        if len(self.pipeline_stages) == self.current_pipeline_stage + 1:
-            raise StopIteration()
-
-        self.current_pipeline_stage += 1
-
-        return self.pipeline_stages[self.current_pipeline_stage]

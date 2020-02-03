@@ -2,24 +2,29 @@
 import glob
 import os
 import queue
+import random
 import shutil
+import sys
 import time
+import traceback
 import typing
 import warnings
 from typing import Optional, Any, Dict, Union, List, Tuple
-import random
-import glob
 
 import torch
 import torch.distributions
 import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.optim
+from setproctitle import setproctitle as ptitle
 from tensorboardX import SummaryWriter
 from torch import optim
+from torch.optim.lr_scheduler import _LRScheduler
 
 from onpolicy_sync.storage import RolloutStorage
-from utils.tensor_utils import batch_observations
+from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
+from rl_base.common import Loss
+from rl_base.experiment_config import ExperimentConfig
 from utils.experiment_utils import (
     ScalarMeanTracker,
     LinearDecay,
@@ -29,10 +34,7 @@ from utils.experiment_utils import (
     TrainingPipeline,
     PipelineStage,
 )
-from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
-from rl_base.common import Loss
-from rl_base.experiment_config import ExperimentConfig
-from setproctitle import setproctitle as ptitle
+from utils.tensor_utils import batch_observations
 
 
 def validate(
@@ -233,6 +235,8 @@ class Engine(object):
                 )
                 self.eval_process.start()
 
+        self._is_closed: bool = False
+
     @staticmethod
     def worker_seeds(nprocesses: int) -> List[int]:
         """Create a collection of seeds for workers."""
@@ -310,7 +314,9 @@ class Engine(object):
             save_dict["worker_seeds"] = seeds
 
         if self.scheduler is not None:
-            save_dict["scheduler_state"] = self.scheduler.state_dict()
+            save_dict["scheduler_state"] = typing.cast(
+                _LRScheduler, self.scheduler
+            ).state_dict()
             save_dict["scheduler_steps"] = self.last_scheduler_steps
 
         torch.save(save_dict, model_path)
@@ -341,7 +347,6 @@ class Engine(object):
             self.pipeline_stage = ckpt["pipeline_stage"]  # type: ignore
             self.total_updates = ckpt["total_updates"]  # type: ignore
             self.local_start_time_str = typing.cast(str, ckpt["local_start_time_str"])
-            self.training_pipeline.current_pipeline_stage = self.pipeline_stage
             self.seed = typing.cast(int, ckpt["trainer_seed"])
             if self.seed is not None:
                 set_seed(self.seed)
@@ -351,7 +356,7 @@ class Engine(object):
                 ), "worker seeds not matching stored seeds"
                 self.vector_tasks.set_seeds(seeds)
             if self.scheduler is not None:
-                self.scheduler.load_state_dict(ckpt["scheduler_state"])
+                self.scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
                 self.last_scheduler_steps = typing.cast(int, ckpt["scheduler_steps"])
 
     def process_valid_metrics(self):
@@ -448,7 +453,7 @@ class Engine(object):
                 )
 
                 if self.scheduler is not None:
-                    info["lr"] = self.optimizer.param_groups[0]["lr"]
+                    info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
 
                 self.optimizer.zero_grad()  # type: ignore
                 total_loss: Optional[torch.FloatTensor] = None
@@ -666,9 +671,8 @@ class Engine(object):
                     if self.write_to_eval is not None:
                         self.write_to_eval.put(("eval", model_path))
                     self.last_save = self.step_count
-        except Exception as e:
+        finally:
             self.close()
-            raise e
 
     def setup_stage(
         self,
@@ -764,7 +768,7 @@ class Engine(object):
     def get_checkpoint_path(self, checkpoint_file_name: str) -> str:
         checkpoint_start_time = [
             s for s in checkpoint_file_name.split("__") if "time_" in s
-        ][0]
+        ][0].replace("time_", "")
 
         expected_path = os.path.join(
             self.output_dir, "checkpoints", checkpoint_start_time, checkpoint_file_name
@@ -807,7 +811,11 @@ class Engine(object):
                 self.get_checkpoint_path(checkpoint_file_name), verbose=True
             )
 
-        for stage in self.training_pipeline:
+        for stage_num, stage in self.training_pipeline.iterator_starting_at(
+            self.pipeline_stage
+        ):
+            assert stage_num == self.pipeline_stage
+
             self.last_log = self.step_count - self.log_interval
             self.last_save = self.step_count
 
@@ -845,6 +853,7 @@ class Engine(object):
             self.total_steps += self.step_count
             self.step_count = 0
 
+        print("\n\nTRAINING COMPLETE.\n\n")
         self.close()
 
     def process_checkpoints(
@@ -875,6 +884,9 @@ class Engine(object):
                 if command == "eval":
                     scalars = self.run_eval(checkpoint_file_name=data)
                     write_to_parent.put(("valid_metrics", scalars))
+                elif command in ["quit", "exit", "close"]:
+                    self.close(verbose=False)
+                    sys.exit()
                 else:
                     raise NotImplementedError()
 
@@ -961,36 +973,63 @@ class Engine(object):
             self.vector_tasks.metrics_out_queue.put(("test_metrics", scalars))
             self.log()
 
-    def close(self):
+    def close(self, verbose=True):
+        if self._is_closed:
+            return
+
+        def printif(s: Union[str, Exception]):
+            if verbose:
+                if isinstance(s, str):
+                    print(s)
+                else:
+                    traceback.print_exc()
+
         try:
+            printif("Closing Engine.vector_tasks.")
             self.vector_tasks.close()
-        except Exception as _:
+            printif("Closed.")
+        except Exception as e:
+            printif("Exception raised when closing Engine.vector_tasks:")
+            printif(e)
             pass
 
+        printif("\n\n")
         try:
-            eval = getattr(self, "eval_process", None)
+            printif("Closing Engine.eval_process")
+            eval: mp.Process = getattr(self, "eval_process", None)
             if eval is not None:
-                eval.join()
+                self.write_to_eval.put(("exit", None))
+                eval.join(5)
                 self.eval_process = None
-        except Exception as _:
+            printif("Closed.")
+        except Exception as e:
+            printif("Exception raised when closing Engine.vector_tasks:")
+            printif(e)
             pass
 
+        printif("\n\n")
         try:
+            printif("Closing Engine.log_writer")
             log_writer = getattr(self, "log_writer", None)
             if log_writer is not None:
                 log_writer.close()
                 self.log_writer = None
-        except Exception as _:
+            printif("Closed.")
+        except Exception as e:
+            printif("Exception raised when closing Engine.log_writer:")
+            printif(e)
             pass
 
+        self._is_closed = True
+
     def __del__(self):
-        self.close()
+        self.close(verbose=False)
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+        self.close(verbose=False)
 
 
 class Trainer(Engine):
