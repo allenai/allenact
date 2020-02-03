@@ -297,7 +297,7 @@ class RNNStateEncoder(nn.Module):
         # Parameters
 
         hidden_states : The hidden states.
-        masks : Masks to apply to hidden states.
+        masks : Masks to apply to hidden states (see seq_forward).
 
         # Returns
 
@@ -316,12 +316,10 @@ class RNNStateEncoder(nn.Module):
             if isinstance(hidden_states, tuple):
                 # noinspection PyTypeChecker
                 hidden_states = tuple(
-                    v
-                    * masks
-                    * (1 - masks)  # type: ignore
-                    * (self.init_hidden_state.repeat(1, v.shape[1], 1))
+                    v * masks
+                    + (1 - masks) * (self.init_hidden_state.repeat(1, v.shape[1], 1))
                     for v in hidden_states
-                )
+                )  # type: ignore
             else:
                 # noinspection PyTypeChecker
                 hidden_states = masks * hidden_states + (1 - masks) * (  # type: ignore
@@ -365,7 +363,8 @@ class RNNStateEncoder(nn.Module):
         x : (T, N, -1) Tensor that has been flattened to (T * N, -1).
         hidden_states : The starting hidden states.
         masks : A (T, N) tensor flattened to (T * N).
-            The masks to be applied to hidden state at every timestep.
+            The masks to be applied to hidden state at every timestep, equal to 0 whenever the previous step finalized
+            the task, 1 elsewhere.
         """
         # x is a (T, N, -1) tensor flattened to (T * N, -1)
         n = hidden_states.size(1)
