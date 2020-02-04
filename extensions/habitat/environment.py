@@ -68,9 +68,6 @@ class HabitatEnvironment(object):
 
     def reset(self):
         self._current_frame = self.env.reset()
-        # import matplotlib.pyplot as plt
-        # plt.imshow(self.current_frame['rgb'])
-        # plt.show()
 
     @property
     def last_action_success(self):

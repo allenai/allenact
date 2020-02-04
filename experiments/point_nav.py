@@ -43,14 +43,15 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
     CONFIG = habitat.get_config('gibson.yaml')
     CONFIG.defrost()
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
-    CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['Adrian']
+    CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['Bolton']
     CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
     CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = SCREEN_SIZE
     CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = SCREEN_SIZE
     CONFIG.SIMULATOR.TURN_ANGLE = 45
     CONFIG.SIMULATOR.FORWARD_STEP_SIZE = 0.25
-    # print("CONFIG", CONFIG)
-    # exit()
+
+    GPU_ID = 0
+
 
     @classmethod
     def tag(cls):
@@ -59,7 +60,7 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
     @classmethod
     def training_pipeline(cls, **kwargs):
         ppo_steps = 1e8
-        nprocesses = 8
+        nprocesses = 1
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 2
@@ -124,6 +125,8 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
     ) -> Dict[str, Any]:
         config = self.CONFIG.clone()
         config.DATASET.DATA_PATH = scenes
+        self.GPU_ID = (self.GPU_ID + 1) % torch.cuda.device_count()
+        config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = self.GPU_ID
         return {
             "env_config": self.CONFIG,
             "max_steps": self.MAX_STEPS,
