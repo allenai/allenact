@@ -67,7 +67,7 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
         num_steps = 128
         save_interval = 1000000
         log_interval = 2 * num_steps * nprocesses
-        gpu_ids = None if not torch.cuda.is_available() else [0]
+        gpu_ids = None if not torch.cuda.is_available() else [x for x in range(torch.cuda.device_count())]
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0
@@ -127,6 +127,7 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
         config.DATASET.DATA_PATH = scenes
         self.GPU_ID = (self.GPU_ID + 1) % torch.cuda.device_count()
         config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = self.GPU_ID
+        print("GPU ID", self.GPU_ID)
         return {
             "env_config": self.CONFIG,
             "max_steps": self.MAX_STEPS,
