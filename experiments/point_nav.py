@@ -60,14 +60,14 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
     @classmethod
     def training_pipeline(cls, **kwargs):
         ppo_steps = 1e8
-        nprocesses = 8
+        nprocesses = 2
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 2
         num_steps = 128
         save_interval = 1000000
         log_interval = 2 * num_steps * nprocesses
-        gpu_ids = None if not torch.cuda.is_available() else [x for x in range(torch.cuda.device_count())]
+        gpu_ids = None if not torch.cuda.is_available() else [0]
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0
@@ -127,9 +127,10 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
         config.DATASET.DATA_PATH = scenes
         self.GPU_ID = (self.GPU_ID + 1) % torch.cuda.device_count()
         config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = self.GPU_ID
-        print("GPU ID", self.GPU_ID)
+        # print("config:", config)
+        print("gou id", config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID)
         return {
-            "env_config": self.CONFIG,
+            "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
