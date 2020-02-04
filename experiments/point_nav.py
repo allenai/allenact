@@ -60,7 +60,7 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
     @classmethod
     def training_pipeline(cls, **kwargs):
         ppo_steps = 1e8
-        nprocesses = 1
+        nprocesses = 8
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 2

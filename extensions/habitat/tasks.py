@@ -153,8 +153,6 @@ class PointNavTask(Task[HabitatTask]):
         if self._took_end_action:
             reward += 10.0 if self._success else 0.0
 
-        print("CURRENT EPISODE:", self.env.get_current_episode())
-
         self._rewards.append(float(reward))
 
         return float(reward)
