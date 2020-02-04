@@ -57,6 +57,10 @@ class ObjectNavThorExperimentConfig(rl_base.experiment_config.ExperimentConfig):
 
 ## Training pipeline
 
+In this section we use [Builder](/api/utils/experiment_utils#builder) objects, which allow us to defer the instantiation
+of objects of the class passed as their first argument while allowing passing additional keyword arguments to their
+initializers. 
+
 We can implement a training pipeline which trains with a single stage using PPO:
 ```python
 class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfig):
