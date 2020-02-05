@@ -108,8 +108,8 @@ class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfi
 
 Alternatively, we could use a more complicated pipeline that includes dataset aggregation
 ([DAgger](https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf)). This requires the existence of an
-expert (implemented in the task definition) that provides optimal actions to agents. We have implemented 
-such a pipeline by extending the above configuration as follows
+expert (implemented in the task definition) that provides optimal actions to agents. We have implemented such a 
+pipeline by extending the above configuration as follows
 
 ```python
 class ObjectNavThorPPOExperimentConfig(experiments.ObjectNavThorPPOExperimentConfig):
@@ -169,6 +169,8 @@ class ObjectNavThorPPOExperimentConfig(experiments.ObjectNavThorPPOExperimentCon
             ],
         )
 ``` 
+Note that, in order for the saved configs in the experiment output folder to be fully usable, we currently need
+to import the module with the parent experiment config relative to the current location. 
 
 ## Machine configuration
 
