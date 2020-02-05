@@ -163,12 +163,20 @@ def init_logging(log_format="default", log_level="debug"):
     multiprocessing_logging.install_mp_handler()
 
 
+def download_ai2thor():
+    from ai2thor.controller import Controller
+
+    Controller()
+
+
 def main():
     init_logging()
 
     args = get_args()
 
     logger.info("Running with args {}".format(args))
+
+    download_ai2thor()
 
     ptitle("Master: {}".format("Training" if not args.test_date != "" else "Testing"))
 
