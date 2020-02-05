@@ -5,8 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from configs.losses import PPOConfig
-from configs.util import Builder
+from onpolicy_sync.losses.ppo import PPOConfig
 from models.point_nav_models import PointNavBaselineActorCritic
 from onpolicy_sync.losses import PPO
 from rl_base.experiment_config import ExperimentConfig
@@ -16,6 +15,7 @@ import habitat
 from extensions.habitat.tasks import PointNavTask
 from extensions.habitat.task_samplers import PointNavTaskSampler
 from extensions.habitat.sensors import RGBSensorHabitat, TargetCoordinatesSensorHabitat
+from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline
 
 
 class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
@@ -72,27 +72,24 @@ class PointNavHabitatGibsonExperimentConfig(ExperimentConfig):
         use_gae = True
         gae_lambda = 1.0
         max_grad_norm = 0.5
-        return {
-            "save_interval": save_interval,
-            "log_interval": log_interval,
-            "optimizer": Builder(optim.Adam, dict(lr=lr)),
-            "nprocesses": nprocesses,
-            "num_mini_batch": num_mini_batch,
-            "update_repeats": update_repeats,
-            "num_steps": num_steps,
-            "gpu_ids": gpu_ids,
-            "ppo_loss": Builder(PPO, dict(), default=PPOConfig,),
-            "gamma": gamma,
-            "use_gae": use_gae,
-            "gae_lambda": gae_lambda,
-            "max_grad_norm": max_grad_norm,
-            "pipeline": [
-                {
-                    "losses": ["ppo_loss"],
-                    "end_criterion": ppo_steps
-                }
+        return TrainingPipeline(
+            save_interval=save_interval,
+            log_interval=log_interval,
+            optimizer=Builder(optim.Adam, dict(lr=lr)),
+            nprocesses=nprocesses,
+            num_mini_batch=num_mini_batch,
+            update_repeats=update_repeats,
+            num_steps=num_steps,
+            gpu_ids=gpu_ids,
+            named_losses={"ppo_loss": Builder(PPO, dict(), default=PPOConfig,)},
+            gamma=gamma,
+            use_gae=use_gae,
+            gae_lambda=gae_lambda,
+            max_grad_norm=max_grad_norm,
+            pipeline_stages=[
+                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps,),
             ],
-        }
+        )
 
     @classmethod
     def evaluation_params(cls, **kwargs):
