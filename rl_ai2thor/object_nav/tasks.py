@@ -1,12 +1,11 @@
-import abc
-import warnings
 import random
-from typing import Tuple, List, Dict, Any, Optional
+import warnings
+from typing import Dict, Tuple, List, Any, Optional
 
 import gym
 import numpy as np
 
-from extensions.ai2thor.constants import (
+from rl_ai2thor.ai2thor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
     ROTATE_RIGHT,
@@ -14,63 +13,45 @@ from extensions.ai2thor.constants import (
     LOOK_UP,
     END,
 )
-from extensions.ai2thor.environment import AI2ThorEnvironment
-from extensions.ai2thor.misc_util import round_to_factor
+from rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
+from rl_ai2thor.ai2thor_util import round_to_factor
 from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor
 from rl_base.task import Task
 
 
-class AI2ThorTask(Task[AI2ThorEnvironment], abc.ABC):
-    def __init__(
-        self,
-        env: AI2ThorEnvironment,
-        sensors: List[Sensor],
-        task_info: Dict[str, Any],
-        max_steps: int,
-        **kwargs
-    ) -> None:
-        super().__init__(
-            env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
-        )
-
-        self._last_action: Optional[str] = None
-        self._last_action_ind: Optional[int] = None
-        self._last_action_success: Optional[bool] = None
-
-    @property
-    def last_action(self):
-        return self._last_action
-
-    @last_action.setter
-    def last_action(self, value: str):
-        self._last_action = value
-
-    @property
-    def last_action_success(self):
-        return self._last_action_success
-
-    @last_action_success.setter
-    def last_action_success(self, value: Optional[bool]):
-        self._last_action_success = value
-
-    def _step(self, action: int) -> RLStepResult:
-        self._last_action_ind = action
-        self.last_action = self.action_names()[action]
-        self.last_action_success = None
-        step_result = super(AI2ThorTask, self).step(action=action)
-        step_result.info["action"] = self._last_action_ind
-        step_result.info["action_success"] = self.last_action_success
-        return step_result
-
-    def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
-        if mode == "rgb":
-            return self.env.current_frame
-        else:
-            raise NotImplementedError()
-
-
 class ObjectNavTask(Task[AI2ThorEnvironment]):
+    """Defines the object navigation task in AI2-THOR.
+
+    In object navigation an agent is randomly initialized into an AI2-THOR scene and must
+    find an object of a given type (e.g. tomato, television, etc). An object is considered
+    found if the agent takes an `End` action and the object is visible to the agent (see
+    [here](https://ai2thor.allenai.org/documentation/concepts) for a definition of visibiliy
+    in AI2-THOR).
+
+    The actions available to an agent in this task are:
+
+    1. Move ahead
+        * Moves agent ahead by 0.25 meters.
+    1. Rotate left / rotate right
+        * Rotates the agent by 90 degrees counter-clockwise / clockwise.
+    1. Look down / look up
+        * Changes agent view angle by 30 degrees up or down. An agent cannot look more than 30
+          degrees above horizontal or less than 60 degrees below horizontal.
+    1. End
+        * Ends the task and the agent receives a positive reward if the object type is visible to the agent,
+        otherwise it receives a negative reward.
+
+    # Attributes
+
+    env : The ai2thor environment.
+    sensor_suite: Collection of sensors formed from the `sensors` argument in the initializer.
+    task_info : The task info. Must contain a field "object_type" that specifies, as a string,
+        the goal object type.
+    max_steps : The maximum number of steps an agent can take an in the task before it is considered failed.
+    observation_space: The observation space returned on each step from the sensors.
+    """
+
     _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT, LOOK_DOWN, LOOK_UP, END)
 
     _CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE: Dict[
@@ -85,6 +66,10 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         max_steps: int,
         **kwargs
     ) -> None:
+        """Initializer.
+
+        See class documentation for parameter definitions.
+        """
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
@@ -137,16 +122,18 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         return self.env.current_frame
 
     def _is_goal_object_visible(self) -> bool:
+        """Is the goal object currently visible?"""
         return any(
             o["objectType"] == self.task_info["object_type"]
             for o in self.env.visible_objects()
         )
 
     def judge(self) -> float:
+        """Compute the reward after having taken a step."""
         reward = -0.01
 
         if not self.last_action_success:
-            reward += -0.1
+            reward += -0.03
 
         if self._took_end_action:
             reward += 1.0 if self._success else -1.0
@@ -157,7 +144,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         if not self.is_done():
             return {}
         else:
-            return {"success": self._success, "ep_length": self.num_steps_taken()}
+            return {"success": self._success, **super(ObjectNavTask, self).metrics()}
 
     def query_expert(self) -> Tuple[int, bool]:
         target = self.task_info["object_type"]

@@ -7,34 +7,38 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from configs.losses import PPOConfig
-from configs.util import Builder
 from models.object_nav_models import ObjectNavBaselineActorCritic
-from extensions.ai2thor.sensors import RGBSensorThor, GoalObjectTypeThorSensor
-from extensions.ai2thor.task_samplers import ObjectNavTaskSampler
-from extensions.ai2thor.tasks import ObjectNavTask
-from onpolicy_sync.utils import LinearDecay
+
 from onpolicy_sync.losses import PPO
-from onpolicy_sync.losses.imitation import Imitation
+from onpolicy_sync.losses.ppo import PPOConfig
+from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
+from rl_ai2thor.object_nav.task_samplers import ObjectNavTaskSampler
+from rl_ai2thor.object_nav.tasks import ObjectNavTask
 from rl_base.experiment_config import ExperimentConfig
-from rl_base.sensor import SensorSuite, ExpertActionSensor
+from rl_base.sensor import SensorSuite
 from rl_base.task import TaskSampler
+from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline
 
 
-class ObjectNavThorExperimentConfig(ExperimentConfig):
-    """An object navigation experiment in THOR."""
+class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
+    """An object navigation experiment in THOR.
 
-    # OBJECT_TYPES = sorted(["Cup", "Television", "Tomato"])
-    OBJECT_TYPES = sorted(["Tomato"])
-    TRAIN_SCENES = [
-        "FloorPlan1_physics"
-    ]  # ["FloorPlan{}".format(i) for i in range(1, 21)]
-    VALID_SCENES = [
-        "FloorPlan1_physics"
-    ]  # ["FloorPlan{}_physics".format(i) for i in range(21, 26)]
-    TEST_SCENES = ["FloorPlan{}_physics".format(i) for i in range(26, 31)]
+    Training with PPO.
+    """
 
     SCREEN_SIZE = 224
+
+    # Easy setting
+    OBJECT_TYPES = sorted(["Tomato"])
+    TRAIN_SCENES = ["FloorPlan1_physics"]
+    VALID_SCENES = ["FloorPlan1_physics"]
+    TEST_SCENES = ["FloorPlan1_physics"]
+
+    # Hard setting
+    # OBJECT_TYPES = sorted(["Cup", "Television", "Tomato"])
+    # TRAIN_SCENES = ["FloorPlan{}".format(i) for i in range(1, 21)]
+    # VALID_SCENES = ["FloorPlan{}_physics".format(i) for i in range(21, 26)]
+    # TEST_SCENES = ["FloorPlan{}_physics".format(i) for i in range(26, 31)]
 
     SENSORS = [
         RGBSensorThor(
@@ -45,7 +49,6 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             }
         ),
         GoalObjectTypeThorSensor({"object_types": OBJECT_TYPES}),
-        ExpertActionSensor({"nactions": 6}),
     ]
 
     ENV_ARGS = {
@@ -60,65 +63,57 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
 
     VALID_SAMPLES_IN_SCENE = 5
 
+    TEST_SAMPLES_IN_SCENE = 2
+
     @classmethod
     def tag(cls):
-        return "ObjectNav"
+        return "ObjectNavThorPPO"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        dagger_steps = int(3e4)
-        ppo_steps = int(3e4)
-        ppo_steps2 = int(1e6)
-        nprocesses = 3
+        ppo_steps = int(1e6)
         lr = 2.5e-4
-        num_mini_batch = 1
+        num_mini_batch = 1 if not torch.cuda.is_available() else 6
         update_repeats = 3
-        num_steps = 16
-        log_interval = 2 * num_steps * nprocesses
-        save_interval = 2 * log_interval
-        gpu_ids = [] if not torch.cuda.is_available() else [0]
+        num_steps = 128
+        log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
+        save_interval = 10000  # Save every 10000 steps (approximately)
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0
         max_grad_norm = 0.5
-        return {
-            "save_interval": save_interval,
-            "log_interval": log_interval,
-            "optimizer": Builder(optim.Adam, dict(lr=lr)),
-            "nprocesses": nprocesses,
-            "num_mini_batch": num_mini_batch,
-            "update_repeats": update_repeats,
-            "num_steps": num_steps,
-            "gpu_ids": gpu_ids,
-            "imitation_loss": Builder(Imitation,),
-            "ppo_loss": Builder(PPO, dict(), default=PPOConfig,),
-            "gamma": gamma,
-            "use_gae": use_gae,
-            "gae_lambda": gae_lambda,
-            "max_grad_norm": max_grad_norm,
-            "pipeline": [
-                {
-                    "losses": ["imitation_loss", "ppo_loss"],
-                    "teacher_forcing": LinearDecay(
-                        startp=1.0, endp=0.0, steps=dagger_steps,
-                    ),
-                    "end_criterion": dagger_steps,
-                },
-                {"losses": ["ppo_loss", "imitation_loss"], "end_criterion": ppo_steps,},
-                {"losses": ["ppo_loss"], "end_criterion": ppo_steps2,},
+        return TrainingPipeline(
+            save_interval=save_interval,
+            log_interval=log_interval,
+            optimizer=Builder(optim.Adam, dict(lr=lr)),
+            num_mini_batch=num_mini_batch,
+            update_repeats=update_repeats,
+            num_steps=num_steps,
+            named_losses={"ppo_loss": Builder(PPO, default=PPOConfig,),},
+            gamma=gamma,
+            use_gae=use_gae,
+            gae_lambda=gae_lambda,
+            max_grad_norm=max_grad_norm,
+            pipeline_stages=[
+                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps,),
             ],
-        }
+        )
 
     @classmethod
-    def evaluation_params(cls, **kwargs):
-        nprocesses = 1
-        gpu_ids = [] if not torch.cuda.is_available() else [1]
-        res = cls.training_pipeline()
-        del res["pipeline"]
-        del res["optimizer"]
-        res["nprocesses"] = nprocesses
-        res["gpu_ids"] = gpu_ids
-        return res
+    def machine_params(cls, mode="train", **kwargs):
+        if mode == "train":
+            nprocesses = 3 if not torch.cuda.is_available() else 18
+            gpu_ids = [] if not torch.cuda.is_available() else [0]
+        elif mode == "valid":
+            nprocesses = 1
+            gpu_ids = [] if not torch.cuda.is_available() else [1]
+        elif mode == "test":
+            nprocesses = 1
+            gpu_ids = [] if not torch.cuda.is_available() else [0]
+        else:
+            raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
+
+        return {"nprocesses": nprocesses, "gpu_ids": gpu_ids}
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
@@ -141,7 +136,12 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         )
 
     def _get_sampler_args_for_scene_split(
-        self, scenes: List[str], process_ind: int, total_processes: int
+        self,
+        scenes: List[str],
+        process_ind: int,
+        total_processes: int,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
@@ -166,6 +166,8 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            "seed": seeds[process_ind] if seeds is not None else None,
+            "deterministic_cudnn": deterministic_cudnn,
         }
 
     def train_task_sampler_args(
@@ -173,19 +175,34 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         process_ind: int,
         total_processes: int,
         devices: Optional[List[int]] = None,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.TRAIN_SCENES, process_ind, total_processes
+            self.TRAIN_SCENES,
+            process_ind,
+            total_processes,
+            seeds=seeds,
+            deterministic_cudnn=deterministic_cudnn,
         )
         res["scene_period"] = self.SCENE_PERIOD
         res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
         return res
 
     def valid_task_sampler_args(
-        self, process_ind: int, total_processes: int, devices: Optional[List[int]]
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]],
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.VALID_SCENES, process_ind, total_processes
+            self.VALID_SCENES,
+            process_ind,
+            total_processes,
+            seeds=seeds,
+            deterministic_cudnn=deterministic_cudnn,
         )
         res["scene_period"] = self.VALID_SAMPLES_IN_SCENE
         res["max_tasks"] = self.VALID_SAMPLES_IN_SCENE * len(res["scenes"])
@@ -193,10 +210,21 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         return res
 
     def test_task_sampler_args(
-        self, process_ind: int, total_processes: int, devices: Optional[List[int]]
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]],
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.TEST_SCENES, process_ind, total_processes
+            self.TEST_SCENES,
+            process_ind,
+            total_processes,
+            seeds=seeds,
+            deterministic_cudnn=deterministic_cudnn,
         )
+        res["scene_period"] = self.TEST_SAMPLES_IN_SCENE
+        res["max_tasks"] = self.TEST_SAMPLES_IN_SCENE * len(res["scenes"])
         res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
         return res

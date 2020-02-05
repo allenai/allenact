@@ -1,3 +1,5 @@
+"""Defining imitation losses for actor critic type models."""
+
 from typing import Dict, Union
 
 import torch
@@ -9,6 +11,8 @@ from rl_base.distributions import CategoricalDistr
 
 
 class Imitation(AbstractActorCriticLoss):
+    """Expert imitation loss."""
+
     def loss(  # type: ignore
         self,
         batch: Dict[str, Union[Dict[str, torch.Tensor], torch.Tensor]],
@@ -16,6 +20,25 @@ class Imitation(AbstractActorCriticLoss):
         *args,
         **kwargs
     ):
+        """Computes the imitation loss.
+
+        # Parameters
+
+        batch : A batch of data corresponding to the information collected when rolling out (possibly many) agents
+            over a fixed number of steps. In particular this batch should have the same format as that returned by
+            `RolloutStorage.recurrent_generator`.
+            Here `batch["observations"]` must contain `"expert_action"` observations
+            or `"expert_policy"` observations. See `ExpertActionSensor` for an example of a sensor
+            producing such observations.
+        actor_critic_output : The output of calling an ActorCriticModel on the observations in `batch`.
+        args : Extra args. Ignored.
+        kwargs : Extra kwargs. Ignored.
+
+        # Returns
+
+        A (0-dimensional) torch.FloatTensor corresponding to the computed loss. `.backward()` will be called on this
+        tensor in order to compute a gradient update to the ActorCriticModel's parameters.
+        """
         observations = typing.cast(Dict[str, torch.Tensor], batch["observations"])
         if "expert_action" in observations:
             expert_actions_and_mask = observations["expert_action"]

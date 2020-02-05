@@ -14,8 +14,10 @@ import gym
 import numpy as np
 from gym.spaces.dict import Dict as SpaceDict
 
-from rl_base.common import EnvType, RLStepResult
+from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor, SensorSuite
+
+EnvType = TypeVar("EnvType")
 
 
 class Task(Generic[EnvType]):
@@ -27,6 +29,14 @@ class Task(Generic[EnvType]):
     A Task is a helpful generalization of the OpenAI gym's `Env` class
     and allows for multiple tasks (e.g. point and object navigation) to
     be defined on a single environment (e.g. AI2-THOR).
+
+    # Attributes
+
+    env : The environment.
+    sensor_suite: Collection of sensors formed from the `sensors` argument in the initializer.
+    task_info : Dictionary of (k, v) pairs defining task goals and other task information.
+    max_steps : The maximum number of steps an agent can take an in the task before it is considered failed.
+    observation_space: The observation space returned on each step from the sensors.
     """
 
     env: EnvType
@@ -51,6 +61,7 @@ class Task(Generic[EnvType]):
             {**self.sensor_suite.observation_spaces.spaces,}
         )
         self._num_steps_taken = 0
+        self._total_reward = 0.0
 
     def get_observations(self) -> Any:
         return self.sensor_suite.get_observations(env=self.env, task=self)
@@ -68,35 +79,97 @@ class Task(Generic[EnvType]):
 
     @abstractmethod
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
+        """Render the current task state.
+
+        Rendered task state can come in any supported modes.
+
+        # Parameters
+
+        mode : The mode in which to render. For example, you might have a 'rgb'
+            mode that renders the agent's egocentric viewpoint or a 'dev' mode
+            returning additional information.
+        args : Extra args.
+        kwargs : Extra kwargs.
+
+        # Returns
+
+        An numpy array corresponding to the requested render.
+        """
         raise NotImplementedError()
 
     def _increment_num_steps_taken(self) -> None:
+        """Helper function that increases the number of steps counter by
+        one."""
         self._num_steps_taken += 1
 
     def step(self, action: int) -> RLStepResult:
+        """Take an action in the environment.
+
+        Takes the action in the environment corresponding to
+        `self.action_names()[action]` and returns
+        observations (& rewards and any additional information)
+        corresponding to the agent's new state. Note that this function
+        should not be overwritten without care (instead
+        implement the `_step` function).
+
+        # Parameters
+
+        action : The action to take.
+
+        # Returns
+
+        A `RLStepResult` object encoding the new observations, reward, and
+        (possibly) additional information.
+        """
         assert not self.is_done()
+        sr = self._step(action=action)
+        self._total_reward += float(sr.reward)
         self._increment_num_steps_taken()
-        return self._step(action=action)
+        return sr
 
     @abstractmethod
     def _step(self, action: int) -> RLStepResult:
+        """Helper function called by `step` to take a step in the environment.
+
+        Takes the action in the environment corresponding to
+        `self.action_names()[action]` and returns
+        observations (& rewards and any additional information)
+        corresponding to the agent's new state. This function is called
+        by the (public) `step` function and is what should be implemented
+        when defining your new task. Having separate `_step` be separate from `step`
+        is useful as this allows the `step` method to perform bookkeeping (e.g.
+        keeping track of the number of steps), without having `_step` as a separate
+        method, everyone implementing `step` would need to copy this bookkeeping code.
+
+        # Parameters
+
+        action : The action to take.
+
+        # Returns
+
+        A `RLStepResult` object encoding the new observations, reward, and
+        (possibly) additional information.
+        """
         raise NotImplementedError()
 
     def reached_max_steps(self) -> bool:
+        """Has the agent reached the maximum number of steps."""
         return self.num_steps_taken() >= self.max_steps
 
     @abstractmethod
     def reached_terminal_state(self) -> bool:
+        """Has the agent reached a terminal state (excluding reaching the
+        maximum number of steps)."""
         raise NotImplementedError()
 
     def is_done(self) -> bool:
+        """Did the agent reach a terminal state or performed the maximum number
+        of steps."""
         return self.reached_terminal_state() or self.reached_max_steps()
 
     def num_steps_taken(self) -> int:
+        """Number of steps taken by the agent in the task so far."""
         return self._num_steps_taken
-
-    def info(self):
-        return {"ep_length": self.num_steps_taken()}
 
     @classmethod
     @abstractmethod
@@ -112,25 +185,32 @@ class Task(Generic[EnvType]):
 
     @property
     def total_actions(self) -> int:
+        """Total number of actions available to an agent in this Task."""
         return len(self.action_names())
 
     def index_to_action(self, index: int) -> str:
+        """Returns the action name correspond to `index`."""
         assert 0 <= index < self.total_actions
         return self.action_names()[index]
 
     @abstractmethod
     def close(self) -> None:
+        """Closes the environment and any other files opened by the Task (if
+        applicable)."""
         raise NotImplementedError()
 
     def metrics(self) -> Dict[str, Any]:
         """Computes metrics related to the task after the task's completion.
+
+        By default this function is automatically called during training
+        and the reported metrics logged to tensorboard.
 
         # Returns
 
         A dictionary where every key is a string (the metric's
             name) and the value is the value of the metric.
         """
-        return {}
+        return {"ep_length": self.num_steps_taken(), "reward": self._total_reward}
 
     def query_expert(self) -> Tuple[Any, bool]:
         """Query the expert policy for this task.
@@ -220,8 +300,15 @@ class TaskSampler(abc.ABC):
 
     @abstractmethod
     def reset(self) -> None:
-        """Resets all tasks to their original state.
+        """Resets all tasks to their original state."""
+        raise NotImplementedError()
 
-        # TODO: seeds!
+    @abstractmethod
+    def set_seed(self, seed: int) -> None:
+        """Sets new RNG seed.
+
+        # Parameters
+
+        seed : New seed.
         """
         raise NotImplementedError()

@@ -2,8 +2,9 @@ import os
 import shutil
 from pathlib import Path
 from subprocess import check_output
-from typing import Dict, Union
+from typing import Dict, Union, Optional, Set
 
+from git import Git
 from ruamel.yaml import YAML
 
 exclude_files = [
@@ -39,6 +40,11 @@ def render_file(
     call_result = check_output(args, env=os.environ).decode("utf-8")
     # noinspection PyShadowingNames
     with open(to_file, "w") as f:
+        doc_split = call_result.split("\n")
+        github_path = "https://github.com/allenai/embodied-rl/tree/master/"
+        path = github_path + doc_split[0].replace("# ", "").replace(".", "/") + ".py"
+        mdlink = "[[source]]({})".format(path)
+        call_result = "\n".join([doc_split[0] + " " + mdlink] + doc_split[1:])
         f.write(call_result)
 
     print(f"Built docs for {src_file}: {to_file}")
@@ -61,14 +67,12 @@ def build_docs_for_file(
 
 # noinspection PyShadowingNames
 def build_docs(
-    base_dir: Union[Path, str], root_path: Union[Path, str], docs_dir: Union[Path, str]
+    base_dir: Union[Path, str],
+    root_path: Union[Path, str],
+    docs_dir: Union[Path, str],
+    allowed_dirs: Optional[Set[str]] = None,
 ):
     base_dir, root_path, docs_dir = str(base_dir), str(root_path), str(docs_dir)
-
-    ignore_rel_dirs = ["docs", "scripts", "experiments"]
-    ignore_abs_dirs = [
-        os.path.abspath(os.path.join(base_dir, rel_dir)) for rel_dir in ignore_rel_dirs
-    ]
 
     nav_root = []
 
@@ -76,13 +80,16 @@ def build_docs(
         relative_path = os.path.join(root_path, child)
 
         if (
-            os.path.abspath(relative_path) in ignore_abs_dirs
-            or ".git" in relative_path
-            or ".idea" in relative_path
-            or "__pycache__" in relative_path
-            or "tests" in relative_path
-            or "mypy_cache" in relative_path
+            (allowed_dirs is not None)
+            and (os.path.isdir(relative_path))
+            and (os.path.abspath(relative_path) not in allowed_dirs)
+            # or ".git" in relative_path
+            # or ".idea" in relative_path
+            # or "__pycache__" in relative_path
+            # or "tests" in relative_path
+            # or "mypy_cache" in relative_path
         ):
+            print("\nSKIPPING {}\n".format(relative_path))
             continue
 
         # without_embodied_rl = str(root_path).replace("embodied-rl/", "")
@@ -92,7 +99,9 @@ def build_docs(
             os.mkdir(target_dir)
 
         if os.path.isdir(relative_path):
-            nav_subsection = build_docs(base_dir, relative_path, docs_dir)
+            nav_subsection = build_docs(
+                base_dir, relative_path, docs_dir, allowed_dirs=allowed_dirs
+            )
             if not nav_subsection:
                 continue
             nav_root.append({child: nav_subsection})
@@ -130,7 +139,22 @@ if __name__ == "__main__":
         os.mkdir(docs_dir)
     yaml = YAML()
 
-    nav_entries = build_docs(parent_folder_path, source_path, docs_dir)
+    # Get directories to ignore
+    git_dirs = set(
+        os.path.abspath(os.path.split(p)[0]) for p in Git(".").ls_files().split("\n")
+    )
+    ignore_rel_dirs = ["docs", "scripts", "experiments"]
+    ignore_abs_dirs = set(
+        os.path.abspath(os.path.join(str(parent_folder_path), rel_dir))
+        for rel_dir in ignore_rel_dirs
+    )
+    for d in ignore_abs_dirs:
+        if d in git_dirs:
+            git_dirs.remove(d)
+
+    nav_entries = build_docs(
+        parent_folder_path, source_path, docs_dir, allowed_dirs=git_dirs
+    )
     nav_entries.sort(key=lambda x: list(x)[0], reverse=False)
 
     mkdocs_yaml = yaml.load(yaml_path)

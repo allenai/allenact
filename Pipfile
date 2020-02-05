@@ -23,6 +23,8 @@ mkdocs-material = "*"
 mypy = "*"
 flake8 = "*"
 pre-commit = "*"
+gitpython = "*"
+ipython = "*"
 
 [packages]
 gym = "*"
@@ -36,6 +38,7 @@ ai2thor = "*"
 networkx = "*"
 Pillow = "==6.2.1"
 setuptools = "*"
+setproctitle = "*"
 
 [requires]
 python_version = "3.6"

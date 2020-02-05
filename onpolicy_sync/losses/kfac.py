@@ -1,3 +1,7 @@
+"""Implementation of the KFAC optimizer.
+
+TODO: this code is not currently supported as it only is designed for non-recurrent models.
+"""
 import math
 
 import torch
@@ -5,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from onpolicy_sync.utils import AddBias
+from models.basic_models import AddBias
 
 
 # TODO: In order to make this code faster:

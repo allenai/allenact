@@ -2,9 +2,12 @@ from typing import Dict, Any, List
 from collections import OrderedDict
 import abc
 
+import torch
 import gym
 from gym.spaces import Dict as SpaceDict
 import networkx as nx
+
+from rl_base.sensor import Sensor, SensorSuite
 
 
 class Preprocessor(abc.ABC):
@@ -13,10 +16,11 @@ class Preprocessor(abc.ABC):
     this class needs to implement the process method and the user is also
     required to set the below attributes:
 
-    Attributes:
-        config: configuration information for the preprocessor.
-        uuid: universally unique id.
-        observation_space: ``gym.Space`` object corresponding to processed observation spaces.
+    # Attributes:
+        config : Configuration information for the preprocessor.
+        input_uuids : List of input universally unique ids.
+        uuid : Universally unique id.
+        observation_space : ``gym.Space`` object corresponding to processed observation spaces.
     """
 
     config: Dict[str, Any]
@@ -70,6 +74,9 @@ class Preprocessor(abc.ABC):
         """
         raise NotImplementedError()
 
+    def to(self, device: torch.device) -> "Preprocessor":
+        raise NotImplementedError()
+
 
 class PreprocessorGraph:
     """Represents a graph of preprocessors, with each preprocessor being
@@ -91,7 +98,7 @@ class PreprocessorGraph:
 
         preprocessors : The preprocessors that will be included in the graph.
         """
-        self.preprocessors = OrderedDict()
+        self.preprocessors: Dict[str, Preprocessor] = OrderedDict()
         spaces: OrderedDict[str, gym.Space] = OrderedDict()
         for preprocessor in preprocessors:
             assert (
@@ -129,6 +136,11 @@ class PreprocessorGraph:
         """
         return self.preprocessors[uuid]
 
+    def to(self, device: torch.device) -> "PreprocessorGraph":
+        for k, v in self.preprocessors.items():
+            self.preprocessors[k] = v.to(device)
+        return self
+
     def get_observations(
         self, obs: Dict[str, Any], *args: Any, **kwargs: Any
     ) -> Dict[str, Any]:
@@ -136,7 +148,7 @@ class PreprocessorGraph:
 
         # Returns
 
-        Collect observations processed from all sensors and return it packaged inside a Dict.
+        Collect observations processed from all sensors and return them packaged inside a Dict.
         """
 
         for uuid in self.compute_order:
@@ -152,23 +164,28 @@ class ObservationSet:
 
     # Attributes
 
-    source_ids: List containing sensor and preprocessor ids for the environment, uuid of each
-        source must be unique.
-    graph: Computation graph for preprocessors.
+    source_ids : List containing sensor and preprocessor ids to be consumed by agents. Each source uuid must be unique.
+    graph : Computation graph for all preprocessors.
+    observation_spaces : Observation spaces of all output sources.
     """
 
     source_ids: List[str]
     graph: PreprocessorGraph
+    observation_spaces: SpaceDict
 
     def __init__(
-        self, source_ids: List[str], all_preprocessors: List[Preprocessor],
+        self,
+        source_ids: List[str],
+        all_preprocessors: List[Preprocessor],
+        all_sensors: List[Sensor],
     ) -> None:
         """Initializer.
 
         # Parameters
 
-        source_ids : the sensors and preprocessors that will be included in the set.
-        all_preprocessors : the entire list of preprocessors to be executed.
+        source_ids : The sensors and preprocessors that will be included in the set.
+        all_preprocessors : The entire list of preprocessors to be executed.
+        all_sensors : The entire list of sensors.
         """
 
         self.graph = PreprocessorGraph(all_preprocessors)
@@ -176,7 +193,20 @@ class ObservationSet:
         self.source_ids = source_ids
         assert len(set(self.source_ids)) == len(
             self.source_ids
-        ), "No duplicated uuids allowed"
+        ), "No duplicated uuids allowed in source_ids"
+
+        sensor_spaces = SensorSuite(all_sensors).observation_spaces
+        preprocessor_spaces = self.graph.observation_spaces
+        spaces: OrderedDict[str, gym.Space] = OrderedDict()
+        for uuid in self.source_ids:
+            assert (
+                uuid in sensor_spaces or uuid in preprocessor_spaces
+            ), "uuid {} missing from sensor suite and preprocessor graph".format(uuid)
+            if uuid in sensor_spaces:
+                spaces[uuid] = sensor_spaces[uuid]
+            else:
+                spaces[uuid] = preprocessor_spaces[uuid]
+        self.observation_spaces = SpaceDict(spaces=spaces)
 
     def get(self, uuid: str) -> Preprocessor:
         """Return preprocessor with the given `uuid`.
@@ -190,6 +220,10 @@ class ObservationSet:
         The preprocessor with unique id `uuid`.
         """
         return self.graph.get(uuid)
+
+    def to(self, device: torch.device) -> "ObservationSet":
+        self.graph = self.graph.to(device)
+        return self
 
     def get_observations(
         self, obs: Dict[str, Any], *args: Any, **kwargs: Any
