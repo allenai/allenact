@@ -10,6 +10,7 @@ import traceback
 import typing
 import warnings
 from typing import Optional, Any, Dict, Union, List, Tuple
+import logging
 
 import torch
 import torch.distributions
@@ -35,6 +36,8 @@ from utils.experiment_utils import (
     PipelineStage,
 )
 from utils.tensor_utils import batch_observations
+
+logger = logging.getLogger("embodiedrl")
 
 
 def validate(
@@ -414,18 +417,30 @@ class Engine(object):
                 pass
 
         tracked_means = self.scalars.pop_and_reset()
+        message = ["train {} steps:".format(self.total_steps + self.step_count)]
         for k in tracked_means:
             self.log_writer.add_scalar(
                 "train/" + k, tracked_means[k], self.total_steps + self.step_count,
             )
+            message += [k + " {}".format(tracked_means[k])]
+        if len(tracked_means) > 0:
+            logger.info(" ".join(message))
 
         for mode in eval_metrics:
+            message = ["{}".format(mode)]
+            add_step = True
             for k in eval_metrics[mode]:
+                if add_step:
+                    message += ["{} steps:".format(eval_metrics[mode][k][1])]
+                    add_step = False
                 self.log_writer.add_scalar(
                     "{}/".format(mode) + k,
                     eval_metrics[mode][k][0],
                     eval_metrics[mode][k][1],
                 )
+                message += [k + " {}".format(eval_metrics[mode][k][0])]
+            if len(eval_metrics[mode]) > 0:
+                logger.info(" ".join(message))
 
     def update(self, rollouts) -> None:
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
@@ -700,14 +715,13 @@ class Engine(object):
         self.num_rollouts = (
             int(self.stage_task_steps) // self.steps_in_rollout
         ) // self.num_processes
-        print(
-            "Using %d rollouts, %d steps (from %d)"
-            % (
-                self.num_rollouts,
-                self.num_rollouts * self.num_processes * self.steps_in_rollout,
-                self.stage_task_steps,
-            )
+        message = "Using %d rollouts, %d steps (from %d)" % (
+            self.num_rollouts,
+            self.num_rollouts * self.num_processes * self.steps_in_rollout,
+            self.stage_task_steps,
         )
+        print(message)
+        logger.info(message)
 
         self.gamma = gamma
         self.use_gae = use_gae

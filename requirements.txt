@@ -65,6 +65,7 @@ mkdocs==1.0.4
 mkdocs-material==4.6.0
 mkdocs-minify-plugin==0.2.1
 msgpack==0.6.2
+multiprocessing-logging==0.3.0
 mypy==0.761
 mypy-extensions==0.4.3
 networkx==2.4
