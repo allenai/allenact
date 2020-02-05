@@ -60,8 +60,8 @@ git clone git@github.com:allenai/embodied-rl.git
 cd embodied-rl
 ```
 
-This library has been tested only in python 3.6, the following assumes you have a working
-version of python 3.6 installed locally. In order to install requirements we recommend
+This library has been tested **only in python 3.6**, the following assumes you have a working
+version of **python 3.6** installed locally. In order to install requirements we recommend
 using [`pipenv`](https://pipenv.kennethreitz.org/en/latest/) but also include instructions if
 you would prefer to install things directly using `pip`.
 
@@ -92,7 +92,7 @@ You are now ready to run your first experiment, see our [quick-start](./overview
 
 ## Contributions
 
-We in the Perceptural Reasoning and Interaction Research (PRIOR) group at the
+We in the Perceptual Reasoning and Interaction Research (PRIOR) group at the
  Allen Institute for AI (AI2, @allenai) welcome contributions from the greater community. If
  you would like to make such a contributions we recommend first submitting an 
  [issue](https://github.com/allenai/embodied-rl/issues) describing your proposed improvement.
@@ -109,7 +109,7 @@ If you use this work, please cite:
 
 ```text
 @misc{embodied-rl,
-  author = {Jordi Salvador and Luca Weihs},
+  author = {Luca Weihs and Jordi Salvador},
   title = {A Python Package for Embodied Reinforcement Learning},
   year = {2020},
   publisher = {GitHub},
