@@ -7,7 +7,6 @@ import importlib
 import logging
 
 from setproctitle import setproctitle as ptitle
-import multiprocessing_logging
 
 from onpolicy_sync.engine import Trainer, Tester
 from rl_base.experiment_config import ExperimentConfig
@@ -159,8 +158,6 @@ def init_logging(log_format="default", log_level="debug"):
 
         ch.setFormatter(formatter)
         logger.addHandler(ch)
-
-    multiprocessing_logging.install_mp_handler()
 
 
 def download_ai2thor():

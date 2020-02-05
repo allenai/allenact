@@ -39,7 +39,6 @@ networkx = "*"
 Pillow = "==6.2.1"
 setuptools = "*"
 setproctitle = "*"
-multiprocessing-logging = "*"
 
 [requires]
 python_version = "3.6"
