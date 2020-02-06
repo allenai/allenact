@@ -29,6 +29,7 @@ want to run. More concretely, it includes a single class defining:
 optimizer, and other parameters like learning rates, batch sizes, etc. 
 * Machine configuration parameters that will be used e.g. for training or validation.
 * A method to instantiate [task samplers](/overview/abstractions#task-sampler).
-* Methods describing initialization parameters for task samplers used in training, validation, and testing.
+* Methods describing initialization parameters for task samplers used in training, validation, and testing; including
+ the assignment of workers to devices for running environments.
 
 A detailed view to an example experiment config file can be found [here](/overview/experiment).

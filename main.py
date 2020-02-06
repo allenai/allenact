@@ -4,11 +4,14 @@ from typing import Dict, Tuple
 import argparse
 import inspect
 import importlib
+import logging
+
 from setproctitle import setproctitle as ptitle
 
 from onpolicy_sync.engine import Trainer, Tester
 from rl_base.experiment_config import ExperimentConfig
 
+logger = logging.getLogger("embodiedrl")
 
 """Entry point to training/validating/testing for a user given experiment name"""
 
@@ -128,9 +131,49 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
     return config, sources
 
 
+def init_logging(log_format="default", log_level="debug"):
+    if log_level == "debug":
+        base_logging_level = logging.DEBUG
+    elif log_level == "info":
+        base_logging_level = logging.INFO
+    elif log_level == "warning":
+        base_logging_level = logging.WARNING
+    else:
+        raise TypeError("%s is an incorrect logging type!", log_level)
+    if len(logger.handlers) == 0:
+        ch = logging.StreamHandler()
+        logger.setLevel(base_logging_level)
+        ch.setLevel(base_logging_level)
+        if log_format == "default":
+            formatter = logging.Formatter(
+                fmt="%(asctime)s: %(levelname)s: %(message)s \t[%(filename)s: %(lineno)d]",
+                datefmt="%m/%d %I:%M:%S",
+            )
+        elif log_format == "defaultMilliseconds":
+            formatter = logging.Formatter(
+                fmt="%(asctime)s: %(levelname)s: %(message)s \t[%(filename)s: %(lineno)d]"
+            )
+        else:
+            formatter = logging.Formatter(fmt=log_format, datefmt="%m/%d %I:%M:%S")
+
+        ch.setFormatter(formatter)
+        logger.addHandler(ch)
+
+
+def download_ai2thor():
+    from ai2thor.controller import Controller
+
+    Controller(download_only=True)
+
+
 def main():
+    init_logging()
+
     args = get_args()
-    print("Running with args {}".format(args))
+
+    logger.info("Running with args {}".format(args))
+
+    download_ai2thor()
 
     ptitle("Master: {}".format("Training" if not args.test_date != "" else "Testing"))
 

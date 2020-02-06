@@ -108,8 +108,8 @@ class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfi
 
 Alternatively, we could use a more complicated pipeline that includes dataset aggregation
 ([DAgger](https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf)). This requires the existence of an
-expert (implemented in the task definition) that provides optimal actions to agents. We have implemented 
-such a pipeline by extending the above configuration as follows
+expert (implemented in the task definition) that provides optimal actions to agents. We have implemented such a 
+pipeline by extending the above configuration as follows
 
 ```python
 class ObjectNavThorPPOExperimentConfig(experiments.ObjectNavThorPPOExperimentConfig):
@@ -169,6 +169,8 @@ class ObjectNavThorPPOExperimentConfig(experiments.ObjectNavThorPPOExperimentCon
             ],
         )
 ``` 
+Note that, in order for the saved configs in the experiment output folder to be fully usable, we currently need
+to import the module with the parent experiment config relative to the current location. 
 
 ## Machine configuration
 
@@ -194,7 +196,8 @@ class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfi
     ...
 ```
 In the above we use the availability of cuda (`torch.cuda.is_available()`) to determine whether
-we should use parameters appropriate for local machines or for a server.
+we should use parameters appropriate for local machines or for a server. We might optionally add a list of
+`sampler_devices` to potentially assign devices not used for running our agent to task sampling workers.
 
 ## Task sampling
 
@@ -241,4 +244,5 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 Now training process `i` out of `n` total processes will be instantiated with the parameters
 `ObjectNavThorPPOExperimentConfig.train_task_sampler_args(i, n, ...)`. Similar functions
  (`valid_task_sampler_args` and `test_task_sampler_args`) exist for generating validation
- and test parameters. See the documentation of `ExperimentConfig` for more information.
+ and test parameters. Note also that with this function we can assign devices to run
+ our environment for each worker. See the documentation of `ExperimentConfig` for more information.

@@ -8,8 +8,8 @@ import torch.nn as nn
 import torch.optim as optim
 
 from models.object_nav_models import ObjectNavBaselineActorCritic
-from onpolicy_sync.losses import PPO
-from onpolicy_sync.losses.ppo import PPOConfig
+from onpolicy_sync.losses import A2C
+from onpolicy_sync.losses.a2cacktr import A2CConfig
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from rl_ai2thor.object_nav.task_samplers import ObjectNavTaskSampler
 from rl_ai2thor.object_nav.tasks import ObjectNavTask
@@ -66,17 +66,17 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def tag(cls):
-        return "ObjectNavThorPPO"
+        return "ObjectNavThorA2C"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        ppo_steps = 75 * int(1e6)
+        a2c_steps = int(1e6)
         lr = 2.5e-4
-        num_mini_batch = 1 if not torch.cuda.is_available() else 6
-        update_repeats = 3
+        num_mini_batch = 1
+        update_repeats = 1
         num_steps = 128
         log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
-        save_interval = 500000  # Save every 500000 steps (approximately)
+        save_interval = 10000  # Save every 10000 steps (approximately)
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0
@@ -88,20 +88,20 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, default=PPOConfig,),},
+            named_losses={"a2c_loss": Builder(A2C, default=A2CConfig,),},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
             max_grad_norm=max_grad_norm,
             pipeline_stages=[
-                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps,),
+                PipelineStage(loss_names=["a2c_loss"], end_criterion=a2c_steps,),
             ],
         )
 
     @classmethod
     def machine_params(cls, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 3 if not torch.cuda.is_available() else 20
+            nprocesses = 3 if not torch.cuda.is_available() else 18
             gpu_ids = [] if not torch.cuda.is_available() else [0]
         elif mode == "valid":
             nprocesses = 1
