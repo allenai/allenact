@@ -17,6 +17,8 @@ class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
     ObjectNavThorPPOExperimentConfig, see that config for more details.
     """
 
+    SCREEN_SIZE = 224
+
     # Easy setting
     OBJECT_TYPES = sorted(["Tomato"])
     TRAIN_SCENES = ["FloorPlan1_physics"]
@@ -28,8 +30,6 @@ class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
     # TRAIN_SCENES = ["FloorPlan{}".format(i) for i in range(1, 21)]
     # VALID_SCENES = ["FloorPlan{}_physics".format(i) for i in range(21, 26)]
     # TEST_SCENES = ["FloorPlan{}_physics".format(i) for i in range(26, 31)]
-
-    SCREEN_SIZE = 224
 
     SENSORS = [
         RGBSensorThor(
@@ -49,14 +49,14 @@ class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        dagger_steps = int(3e4)
-        ppo_steps = int(3e4)
+        dagger_steps = int(1e5)
+        ppo_steps = int(1e7)
         lr = 2.5e-4
-        num_mini_batch = 3 if not torch.cuda.is_available() else 18
+        num_mini_batch = 1 if not torch.cuda.is_available() else 6
         update_repeats = 3
         num_steps = 128
         log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
-        save_interval = 10000  # Save every 10000 steps (approximately)
+        save_interval = 250000  # Save every 250000 steps (approximately)
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0
