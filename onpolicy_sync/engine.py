@@ -11,6 +11,7 @@ import typing
 import warnings
 from typing import Optional, Any, Dict, Union, List, Tuple
 import logging
+import json
 
 import torch
 import torch.distributions
@@ -379,11 +380,15 @@ class Engine(object):
 
         return self.scalars.pop_and_reset()
 
-    def log(self):
-        eval_metrics = {}
-        while not self.vector_tasks.metrics_out_queue.empty():
+    def log(self, count=-1):
+        while not self.vector_tasks.metrics_out_queue.empty() or count > 0:
             try:
-                metric = self.vector_tasks.metrics_out_queue.get_nowait()
+                eval_metrics = {}
+                if count < 0:
+                    metric = self.vector_tasks.metrics_out_queue.get_nowait()
+                else:
+                    metric = self.vector_tasks.metrics_out_queue.get()
+                    count -= 1
                 if isinstance(metric, tuple):
                     pkg_type, info = metric
                     if pkg_type == "valid_metrics":
@@ -413,6 +418,23 @@ class Engine(object):
                             self.scalars.add_scalars(cscalars)
                 else:
                     self.scalars.add_scalars(metric)
+
+                for mode in eval_metrics:
+                    message = ["{}".format(mode)]
+                    add_step = True
+                    for k in eval_metrics[mode]:
+                        if add_step:
+                            message += ["{} steps:".format(eval_metrics[mode][k][1])]
+                            add_step = False
+                        self.log_writer.add_scalar(
+                            "{}/".format(mode) + k,
+                            eval_metrics[mode][k][0],
+                            eval_metrics[mode][k][1],
+                        )
+                        message += [k + " {}".format(eval_metrics[mode][k][0])]
+                    if len(eval_metrics[mode]) > 0:
+                        logger.info(" ".join(message))
+
             except queue.Empty:
                 pass
 
@@ -425,22 +447,6 @@ class Engine(object):
             message += [k + " {}".format(tracked_means[k])]
         if len(tracked_means) > 0:
             logger.info(" ".join(message))
-
-        for mode in eval_metrics:
-            message = ["{}".format(mode)]
-            add_step = True
-            for k in eval_metrics[mode]:
-                if add_step:
-                    message += ["{} steps:".format(eval_metrics[mode][k][1])]
-                    add_step = False
-                self.log_writer.add_scalar(
-                    "{}/".format(mode) + k,
-                    eval_metrics[mode][k][0],
-                    eval_metrics[mode][k][1],
-                )
-                message += [k + " {}".format(eval_metrics[mode][k][0])]
-            if len(eval_metrics[mode]) > 0:
-                logger.info(" ".join(message))
 
     def update(self, rollouts) -> None:
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
@@ -720,7 +726,6 @@ class Engine(object):
             self.num_rollouts * self.num_processes * self.steps_in_rollout,
             self.stage_task_steps,
         )
-        print(message)
         logger.info(message)
 
         self.gamma = gamma
@@ -777,6 +782,12 @@ class Engine(object):
     def log_writer_path(self) -> str:
         return os.path.join(
             self.output_dir, "tb", self.experiment_name, self.local_start_time_str
+        )
+
+    @property
+    def metric_path(self) -> str:
+        return os.path.join(
+            self.output_dir, "metrics", self.experiment_name, self.local_start_time_str
         )
 
     def get_checkpoint_path(self, checkpoint_file_name: str) -> str:
@@ -867,7 +878,7 @@ class Engine(object):
             self.total_steps += self.step_count
             self.step_count = 0
 
-        print("\n\nTRAINING COMPLETE.\n\n")
+        logger.info("\n\nTRAINING COMPLETE.\n\n")
         self.close()
 
     def process_checkpoints(
@@ -948,8 +959,17 @@ class Engine(object):
         )
         files = sorted(files)
         return files[:: skip_checkpoints + 1] + (
-            [files[-1]] if len(files) % (skip_checkpoints + 1) != 1 else []
+            [files[-1]]
+            if skip_checkpoints > 0 and len(files) % (skip_checkpoints + 1) != 1
+            else []
         )
+
+    def step_from_checkpoint(self, name):
+        parts = name.split("__")
+        for part in parts:
+            if "steps_" in part:
+                return int(part.split("_")[-1])
+        return -1
 
     def run_test(
         self,
@@ -975,17 +995,28 @@ class Engine(object):
             experiment_date, checkpoint_file_name, skip_checkpoints
         )
 
+        suffix = "__test_{}".format(test_start_time_str)
         self.log_writer = SummaryWriter(
-            log_dir=self.log_writer_path,
-            filename_suffix="__test_{}".format(test_start_time_str),
+            log_dir=self.log_writer_path, filename_suffix=suffix,
         )
 
+        all_results = []
         for it, checkpoint_file_name in enumerate(checkpoints):
-            print("{}/{} {}".format(it + 1, len(checkpoints), checkpoint_file_name))
+            step = self.step_from_checkpoint(checkpoint_file_name)
+            logger.info("{}/{} {} steps".format(it + 1, len(checkpoints), step,))
             scalars = self.run_eval(checkpoint_file_name, rollout_steps)
-            print("metrics", {k: v[0] for k, v in scalars.items()})
+            # logger.info("metrics", {k: v[0] for k, v in scalars.items()})
             self.vector_tasks.metrics_out_queue.put(("test_metrics", scalars))
-            self.log()
+            results = {scalar: scalars[scalar][0] for scalar in scalars}
+            results.update({"training_steps": step})
+            all_results.append(results)
+            self.log(count=1)
+
+        os.makedirs(self.metric_path, exist_ok=True)
+        fname = os.path.join(self.metric_path, "metrics" + suffix + ".json")
+        with open(fname, "w") as f:
+            json.dump(all_results, f, indent=4)
+        logger.info("Metrics saved in {}".format(fname))
 
     def close(self, verbose=True):
         if self._is_closed:
