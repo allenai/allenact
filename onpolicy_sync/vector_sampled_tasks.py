@@ -581,6 +581,10 @@ class VectorSampledTasks:
         for write_fn in self._connection_write_fns:
             write_fn((RENDER_COMMAND, (args, {"mode": "rgb", **kwargs})))
         images = [read_fn() for read_fn in self._connection_read_fns]
+
+        for index, _, _, _ in reversed(self._paused):
+            images.insert(index, np.zeros_like(images[0]))
+
         tile = tile_images(images)
         if mode == "human":
             import cv2

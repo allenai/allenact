@@ -64,6 +64,7 @@ mccabe==0.6.1
 mkdocs==1.0.4
 mkdocs-material==4.6.0
 mkdocs-minify-plugin==0.2.1
+moviepy==1.0.1
 msgpack==0.6.2
 mypy==0.761
 mypy-extensions==0.4.3
