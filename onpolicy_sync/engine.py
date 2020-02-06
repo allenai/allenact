@@ -381,13 +381,13 @@ class Engine(object):
         return self.scalars.pop_and_reset()
 
     def log(self, count=-1):
-        while not self.vector_tasks.metrics_out_queue.empty() or count > 0:
+        while (not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
             try:
                 eval_metrics = {}
                 if count < 0:
                     metric = self.vector_tasks.metrics_out_queue.get_nowait()
                 else:
-                    metric = self.vector_tasks.metrics_out_queue.get()
+                    metric = self.vector_tasks.metrics_out_queue.get(timeout=1)
                     count -= 1
                 if isinstance(metric, tuple):
                     pkg_type, info = metric
