@@ -163,7 +163,7 @@ def init_logging(log_format="default", log_level="debug"):
 def download_ai2thor():
     from ai2thor.controller import Controller
 
-    Controller()
+    Controller(download_only=True)
 
 
 def main():
