@@ -363,15 +363,21 @@ class Engine(object):
                 self.scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
                 self.last_scheduler_steps = typing.cast(int, ckpt["scheduler_steps"])
 
-    def process_valid_metrics(self):
+    def process_eval_metrics(self, count=-1):
         unused = []
-        while not self.vector_tasks.metrics_out_queue.empty():
+        while (not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
             try:
-                metric = self.vector_tasks.metrics_out_queue.get_nowait()
-                if isinstance(metric, tuple) and metric[0] == "test_metrics":
+                if count < 0:
+                    metric = self.vector_tasks.metrics_out_queue.get_nowait()
+                else:
+                    metric = self.vector_tasks.metrics_out_queue.get(timeout=1)
+                if (
+                    isinstance(metric, tuple) and metric[0] == "test_metrics"
+                ):  # queue reused for test
                     unused.append(metric)
                 else:
                     self.scalars.add_scalars(metric)
+                    count -= 1
             except queue.Empty:
                 pass
 
@@ -943,7 +949,7 @@ class Engine(object):
 
         return {
             k: (v, self.total_steps + self.step_count)
-            for k, v in self.process_valid_metrics().items()
+            for k, v in self.process_eval_metrics(count=self.num_processes).items()
         }
 
     def get_checkpoint_files(

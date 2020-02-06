@@ -70,7 +70,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        a2c_steps = int(1e6)
+        a2c_steps = int(2e6)
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 1
