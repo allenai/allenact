@@ -1,4 +1,6 @@
-# Generating documentation
+# FAQ
+
+## How do I generate documentation?
 
 Documentation is generated using [mkdoc](https://www.mkdocs.org/) and
 [pydoc-markdown](https://pypi.org/project/pydoc-markdown/). 
