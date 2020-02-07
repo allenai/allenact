@@ -6,6 +6,10 @@ from typing import List, Dict, Optional, DefaultDict
 
 import numpy as np
 import torch
+from tensorboardX import SummaryWriter as SummaryWriterBase, summary as tbxsummary
+from tensorboardX.x2num import make_np as tbxmake_np
+from tensorboardX.utils import _prepare_video as tbx_prepare_video
+from tensorboardX.proto.summary_pb2 import Summary as TBXSummary
 
 
 def batch_observations(
@@ -85,3 +89,24 @@ def tile_images(images: List[np.ndarray]) -> np.ndarray:
     # img_Hh_Ww_c
     out_image = out_image.reshape((new_height * height, new_width * width, n_channels))
     return out_image
+
+
+class SummaryWriter(SummaryWriterBase):
+    def _video(self, tag, vid):
+        tag = tbxsummary._clean_tag(tag)
+        return TBXSummary(value=[TBXSummary.Value(tag=tag, image=vid)])
+
+    def add_vid(self, tag, vid, global_step=None, walltime=None):
+        self._get_file_writer().add_summary(
+            self._video(tag, vid), global_step, walltime
+        )
+
+
+def tensor_to_video(tensor, fps=4):
+    tensor = tbxmake_np(tensor)
+    tensor = tbx_prepare_video(tensor)
+    # If user passes in uint8, then we don't need to rescale by 255
+    if tensor.dtype != np.uint8:
+        tensor = (tensor * 255.0).astype(np.uint8)
+
+    return tbxsummary.make_video(tensor, fps)

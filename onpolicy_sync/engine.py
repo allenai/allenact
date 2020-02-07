@@ -19,9 +19,9 @@ import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.optim
 from setproctitle import setproctitle as ptitle
-from tensorboardX import SummaryWriter
 from torch import optim
 from torch.optim.lr_scheduler import _LRScheduler
+import numpy as np
 
 from onpolicy_sync.storage import RolloutStorage
 from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
@@ -36,7 +36,7 @@ from utils.experiment_utils import (
     TrainingPipeline,
     PipelineStage,
 )
-from utils.tensor_utils import batch_observations
+from utils.tensor_utils import batch_observations, SummaryWriter, tensor_to_video
 
 logger = logging.getLogger("embodiedrl")
 
@@ -363,15 +363,21 @@ class Engine(object):
                 self.scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
                 self.last_scheduler_steps = typing.cast(int, ckpt["scheduler_steps"])
 
-    def process_valid_metrics(self):
+    def process_eval_metrics(self, count=-1):
         unused = []
-        while not self.vector_tasks.metrics_out_queue.empty():
+        while (not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
             try:
-                metric = self.vector_tasks.metrics_out_queue.get_nowait()
-                if isinstance(metric, tuple) and metric[0] == "test_metrics":
+                if count < 0:
+                    metric = self.vector_tasks.metrics_out_queue.get_nowait()
+                else:
+                    metric = self.vector_tasks.metrics_out_queue.get(timeout=1)
+                if (
+                    isinstance(metric, tuple) and metric[0] == "test_metrics"
+                ):  # queue reused for test
                     unused.append(metric)
                 else:
                     self.scalars.add_scalars(metric)
+                    count -= 1
             except queue.Empty:
                 pass
 
@@ -383,7 +389,6 @@ class Engine(object):
     def log(self, count=-1):
         while (not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
             try:
-                eval_metrics = {}
                 if count < 0:
                     metric = self.vector_tasks.metrics_out_queue.get_nowait()
                 else:
@@ -391,10 +396,28 @@ class Engine(object):
                     count -= 1
                 if isinstance(metric, tuple):
                     pkg_type, info = metric
-                    if pkg_type == "valid_metrics":
-                        eval_metrics["valid"] = {k: v for k, v in info.items()}
-                    elif pkg_type == "test_metrics":
-                        eval_metrics["test"] = {k: v for k, v in info.items()}
+                    if pkg_type in ["valid_metrics", "test_metrics"]:
+                        mode = pkg_type.split("_")[0]
+                        scalars, render = info
+                        metrics = {k: v for k, v in scalars.items()}
+
+                        message = ["{}".format(mode)]
+                        add_step = True
+                        for k in metrics:
+                            if add_step:
+                                metrics_steps = metrics[k][1]
+                                message += ["{} steps:".format(metrics_steps)]
+                                add_step = False
+                            self.log_writer.add_scalar(
+                                "{}/".format(mode) + k, metrics[k][0], metrics_steps,
+                            )
+                            message += [k + " {}".format(metrics[k][0])]
+                        logger.info(" ".join(message))
+
+                        if render is not None:
+                            self.log_writer.add_vid(
+                                "{}/agent_view".format(mode), render, metrics_steps,
+                            )
                     else:
                         cscalars: Optional[Dict[str, Union[float, int]]] = None
                         if pkg_type == "update_package":
@@ -418,23 +441,6 @@ class Engine(object):
                             self.scalars.add_scalars(cscalars)
                 else:
                     self.scalars.add_scalars(metric)
-
-                for mode in eval_metrics:
-                    message = ["{}".format(mode)]
-                    add_step = True
-                    for k in eval_metrics[mode]:
-                        if add_step:
-                            message += ["{} steps:".format(eval_metrics[mode][k][1])]
-                            add_step = False
-                        self.log_writer.add_scalar(
-                            "{}/".format(mode) + k,
-                            eval_metrics[mode][k][0],
-                            eval_metrics[mode][k][1],
-                        )
-                        message += [k + " {}".format(eval_metrics[mode][k][0])]
-                    if len(eval_metrics[mode]) > 0:
-                        logger.info(" ".join(message))
-
             except queue.Empty:
                 pass
 
@@ -540,7 +546,7 @@ class Engine(object):
             {"teacher_forcing_mask": teacher_forcing_mask},
         )
 
-    def collect_rollout_step(self, rollouts):
+    def collect_rollout_step(self, rollouts, render=None):
         # sample actions
         with torch.no_grad():
             step_observation = {
@@ -580,6 +586,7 @@ class Engine(object):
             self.step_count += actions.nelement()
 
         outputs = self.vector_tasks.step([a[0].item() for a in actions])
+
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
 
         rewards = torch.tensor(rewards, dtype=torch.float, device=self.device)
@@ -593,6 +600,9 @@ class Engine(object):
         )
 
         npaused, keep, batch = self.remove_paused(observations)
+
+        if render is not None and len(keep) > 0:
+            render.append(self.vector_tasks.render(mode="rgb_array"))
 
         rollouts.reshape(keep)
 
@@ -624,9 +634,11 @@ class Engine(object):
 
         return len(paused), keep, batch
 
-    def initialize_rollouts(self, rollouts):
+    def initialize_rollouts(self, rollouts, render: Optional[List[np.array]] = None):
         observations = self.vector_tasks.get_observations()
         npaused, keep, batch = self.remove_paused(observations)
+        if render is not None and len(keep) > 0:
+            render.append(self.vector_tasks.render(mode="rgb_array"))
         rollouts.reshape(keep)
         rollouts.to(self.device)
         rollouts.insert_initial_observations(self._preprocess_observations(batch))
@@ -907,8 +919,8 @@ class Engine(object):
                         pass
 
                 if command == "eval":
-                    scalars = self.run_eval(checkpoint_file_name=data)
-                    write_to_parent.put(("valid_metrics", scalars))
+                    scalars, render = self.run_eval(checkpoint_file_name=data)
+                    write_to_parent.put(("valid_metrics", (scalars, render)))
                 elif command in ["quit", "exit", "close"]:
                     self.close(verbose=False)
                     sys.exit()
@@ -930,10 +942,11 @@ class Engine(object):
             num_recurrent_layers=self.actor_critic.num_recurrent_layers,
         )
 
-        num_paused = self.initialize_rollouts(rollouts)
+        render = []
+        num_paused = self.initialize_rollouts(rollouts, render=render)
         steps = 0
         while num_paused < self.num_processes:
-            num_paused += self.collect_rollout_step(rollouts)
+            num_paused += self.collect_rollout_step(rollouts, render=render)
             steps += 1
             if steps % rollout_steps == 0:
                 rollouts.after_update()
@@ -941,10 +954,21 @@ class Engine(object):
         self.vector_tasks.resume_all()
         self.vector_tasks.reset_all()
 
-        return {
-            k: (v, self.total_steps + self.step_count)
-            for k, v in self.process_valid_metrics().items()
-        }
+        if len(render) > 0:
+            render = np.stack(render, axis=0)  # T, H, W, C
+            render = render.transpose(0, 3, 1, 2)  # T, C, H, W
+            render = np.expand_dims(render, axis=0)  # 1, T, C, H, W
+            render = tensor_to_video(render, fps=4)
+        else:
+            render = None
+
+        return (
+            {
+                k: (v, self.total_steps + self.step_count)
+                for k, v in self.process_eval_metrics(count=self.num_processes).items()
+            },
+            render,
+        )
 
     def get_checkpoint_files(
         self,
@@ -1004,12 +1028,15 @@ class Engine(object):
         for it, checkpoint_file_name in enumerate(checkpoints):
             step = self.step_from_checkpoint(checkpoint_file_name)
             logger.info("{}/{} {} steps".format(it + 1, len(checkpoints), step,))
-            scalars = self.run_eval(checkpoint_file_name, rollout_steps)
-            # logger.info("metrics", {k: v[0] for k, v in scalars.items()})
-            self.vector_tasks.metrics_out_queue.put(("test_metrics", scalars))
+
+            scalars, render = self.run_eval(checkpoint_file_name, rollout_steps)
+
+            self.vector_tasks.metrics_out_queue.put(("test_metrics", (scalars, render)))
+
             results = {scalar: scalars[scalar][0] for scalar in scalars}
             results.update({"training_steps": step})
             all_results.append(results)
+
             self.log(count=1)
 
         os.makedirs(self.metric_path, exist_ok=True)
