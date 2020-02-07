@@ -87,9 +87,9 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
             pipeline_stages=[
                 PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps,),
             ],
-            scheduler=torch.optim.lr_scheduler.LambdaLR(
-                optimizer=optimizer,
-                lr_lambda=(lambda num_updates: (lambda x: 1 - (x / float(num_updates))))(ppo_steps)
+            scheduler=Builder(
+                torch.optim.lr_scheduler.LambdaLR,
+                dict(lr_lambda=(lambda num_updates: (lambda x: 1 - (x / float(num_updates))))(ppo_steps))
             )
         )
 
