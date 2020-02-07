@@ -122,3 +122,73 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         al = env.get_location()
         delta = np.array([tl[0] - al[0], tl[2] - al[2]])
         return delta
+
+
+class DepthSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
+    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
+        super().__init__(config, *args, **kwargs)
+
+        def f(x, k, default):
+            return x[k] if k in x else default
+
+        self.height: Optional[int] = f(config, "height", None)
+        self.width: Optional[int] = f(config, "width", None)
+        self.should_normalize = f(config, "use_resnet_normalization", False)
+
+        assert (self.width is None) == (self.height is None), (
+            "In RGBSensorThor's config, "
+            "either both height/width must be None or neither."
+        )
+
+        self.norm_means = np.array([0.5], dtype=np.float32)
+        self.norm_sds = np.array([[0.25]], dtype=np.float32)
+
+        shape = None if self.height is None else (self.height, self.width, 3)
+        if not self.should_normalize:
+            low = 0.0
+            high = 1.0
+            self.observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
+        else:
+            low = np.tile(-self.norm_means / self.norm_sds, shape[:-1] + (1,))
+            high = np.tile((1 - self.norm_means) / self.norm_sds, shape[:-1] + (1,))
+            self.observation_space = gym.spaces.Box(low=low, high=high)
+
+        self.scaler = (
+            None
+            if self.width is None
+            else ScaleBothSides(width=self.width, height=self.height)
+        )
+
+        self.to_pil = transforms.ToPILImage()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "depth"
+
+    def _get_observation_space(self) -> gym.spaces.Box:
+        return self.observation_space
+
+    def get_observation(
+            self,
+            env: HabitatEnvironment,
+            task: Optional[HabitatTask],
+            *args: Any,
+            **kwargs: Any
+    ) -> Any:
+        frame = env.current_frame
+        depth = frame["depth"].copy()
+
+        assert depth.dtype in [np.uint8, np.float32]
+
+        if depth.dtype == np.uint8:
+            depth = depth.astype(np.float32) / 255.0
+
+        if self.should_normalize:
+            depth -= self.norm_means
+            depth /= self.norm_sds
+
+        if self.scaler is not None and depth.shape[:2] != (self.height, self.width):
+            depth = np.array(self.scaler(self.to_pil(depth)), dtype=np.float32)
+
+        depth = np.expand_dims(depth, 2)
+
+        return depth

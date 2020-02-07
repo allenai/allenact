@@ -266,9 +266,6 @@ class Engine(object):
             fn(
                 process_ind=it,
                 total_processes=self.machine_params["nprocesses"],
-                devices=devices,
-                seeds=seeds,
-                deterministic_cudnn=self.deterministic_cudnn,
             )
             for it in range(self.machine_params["nprocesses"])
         ]

@@ -97,3 +97,8 @@ class PointNavTaskSampler(TaskSampler):
         # random.shuffle(self.scene_order)
         # self.scene_id = 0
         # self.max_tasks = self.reset_tasks
+
+    def set_seed(self, seed: int):
+        self.seed = seed
+        if seed is not None:
+            set_seed(seed)
