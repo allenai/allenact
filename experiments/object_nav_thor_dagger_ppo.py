@@ -20,12 +20,14 @@ class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
     SCREEN_SIZE = 224
 
     # Easy setting
+    EASY = True
     OBJECT_TYPES = sorted(["Tomato"])
     TRAIN_SCENES = ["FloorPlan1_physics"]
     VALID_SCENES = ["FloorPlan1_physics"]
     TEST_SCENES = ["FloorPlan1_physics"]
 
     # Hard setting
+    # EASY = False
     # OBJECT_TYPES = sorted(["Cup", "Television", "Tomato"])
     # TRAIN_SCENES = ["FloorPlan{}".format(i) for i in range(1, 21)]
     # VALID_SCENES = ["FloorPlan{}_physics".format(i) for i in range(21, 26)]
@@ -49,8 +51,8 @@ class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        dagger_steps = int(1e5)
-        ppo_steps = int(1e7)
+        dagger_steps = int(3e4) if cls.EASY else int(1e5)
+        ppo_steps = int(3e4) if cls.EASY else int(1e7)
         lr = 2.5e-4
         num_mini_batch = 1 if not torch.cuda.is_available() else 6
         update_repeats = 3

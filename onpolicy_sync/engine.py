@@ -38,7 +38,7 @@ from utils.experiment_utils import (
 )
 from utils.tensor_utils import batch_observations, SummaryWriter, tensor_to_video
 
-logger = logging.getLogger("embodiedrl")
+LOGGER = logging.getLogger("embodiedrl")
 
 
 def validate(
@@ -171,7 +171,7 @@ class Engine(object):
                 os.makedirs(os.path.dirname(dst_file), exist_ok=True)
                 shutil.copy(src_file, dst_file)
 
-        self.log_writer = None
+        self.log_writer: Optional[SummaryWriter] = None
 
         self.scalars = ScalarMeanTracker()
 
@@ -425,7 +425,7 @@ class Engine(object):
                                 "{}/".format(mode) + k, metrics[k][0], metrics_steps,
                             )
                             message += [k + " {}".format(metrics[k][0])]
-                        logger.info(" ".join(message))
+                        LOGGER.info(" ".join(message))
 
                         if render is not None:
                             self.log_writer.add_vid(
@@ -465,7 +465,7 @@ class Engine(object):
             )
             message += [k + " {}".format(tracked_means[k])]
         if len(tracked_means) > 0:
-            logger.info(" ".join(message))
+            LOGGER.info(" ".join(message))
 
     def update(self, rollouts) -> None:
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
@@ -647,7 +647,7 @@ class Engine(object):
 
         return len(paused), keep, batch
 
-    def initialize_rollouts(self, rollouts, render: Optional[List[np.array]] = None):
+    def initialize_rollouts(self, rollouts, render: Optional[List[np.ndarray]] = None):
         observations = self.vector_tasks.get_observations()
         npaused, keep, batch = self.remove_paused(observations)
         if render is not None and len(keep) > 0:
@@ -679,8 +679,8 @@ class Engine(object):
             )
 
             self.update(rollouts)
-
             rollouts.after_update()
+            self.rollout_count += 1
 
             if self.scheduler is not None:
                 new_scheduler_steps = self.total_steps + self.step_count
@@ -696,8 +696,6 @@ class Engine(object):
             ):
                 self.log()
                 self.last_log = self.step_count
-
-            self.rollout_count += 1
 
             # save for every interval-th episode or for the last epoch
             if (
@@ -743,7 +741,7 @@ class Engine(object):
             self.num_rollouts * self.num_processes * self.steps_in_rollout,
             self.stage_task_steps,
         )
-        logger.info(message)
+        LOGGER.info(message)
 
         self.gamma = gamma
         self.use_gae = use_gae
@@ -839,6 +837,7 @@ class Engine(object):
                 return ckpts[0]
 
     def run_pipeline(self, checkpoint_file_name: Optional[str] = None):
+        encountered_exception = False
         try:
             start_time = time.time()
             self.local_start_time_str = time.strftime(
@@ -895,8 +894,15 @@ class Engine(object):
                 self.backprop_count = 0
                 self.total_steps += self.step_count
                 self.step_count = 0
+        except Exception as e:
+            encountered_exception = True
+            raise e
         finally:
-            logger.info("\n\nTRAINING COMPLETE.\n\n")
+            if not encountered_exception:
+                LOGGER.info("\n\nTRAINING COMPLETE.\n\n")
+            else:
+                LOGGER.info("\n\nENCOUNTERED EXCEPTION DURING TRAINING!\n\n")
+                LOGGER.exception(traceback.format_exc())
             self.close()
 
     def process_checkpoints(
@@ -948,7 +954,7 @@ class Engine(object):
             num_recurrent_layers=self.actor_critic.num_recurrent_layers,
         )
 
-        render = []
+        render: Union[None, np.ndarray, List[np.ndarray]] = []
         num_paused = self.initialize_rollouts(rollouts, render=render)
         steps = 0
         while num_paused < self.num_processes:
@@ -962,7 +968,7 @@ class Engine(object):
 
         if len(render) > 0:
             render = np.stack(render, axis=0)  # T, H, W, C
-            render = render.transpose(0, 3, 1, 2)  # T, C, H, W
+            render = render.transpose((0, 3, 1, 2))  # T, C, H, W
             render = np.expand_dims(render, axis=0)  # 1, T, C, H, W
             render = tensor_to_video(render, fps=4)
         else:
@@ -1033,7 +1039,7 @@ class Engine(object):
         all_results = []
         for it, checkpoint_file_name in enumerate(checkpoints):
             step = self.step_from_checkpoint(checkpoint_file_name)
-            logger.info("{}/{} {} steps".format(it + 1, len(checkpoints), step,))
+            LOGGER.info("{}/{} {} steps".format(it + 1, len(checkpoints), step,))
 
             scalars, render = self.run_eval(checkpoint_file_name, rollout_steps)
 
@@ -1049,53 +1055,55 @@ class Engine(object):
         fname = os.path.join(self.metric_path, "metrics" + suffix + ".json")
         with open(fname, "w") as f:
             json.dump(all_results, f, indent=4)
-        logger.info("Metrics saved in {}".format(fname))
+        LOGGER.info("Metrics saved in {}".format(fname))
 
     def close(self, verbose=True):
         if self._is_closed:
             return
 
-        def printif(s: Union[str, Exception]):
+        def logif(s: Union[str, Exception]):
             if verbose:
                 if isinstance(s, str):
-                    print(s)
+                    LOGGER.info(s)
+                elif isinstance(s, Exception):
+                    LOGGER.exception(traceback.format_exc())
                 else:
-                    traceback.print_exc()
+                    raise NotImplementedError()
 
         try:
-            printif("Closing Engine.vector_tasks.")
+            logif("Closing Engine.vector_tasks.")
             self.vector_tasks.close()
-            printif("Closed.")
+            logif("Closed.")
         except Exception as e:
-            printif("Exception raised when closing Engine.vector_tasks:")
-            printif(e)
+            logif("Exception raised when closing Engine.vector_tasks:")
+            logif(e)
             pass
 
-        printif("\n\n")
+        logif("\n\n")
         try:
-            printif("Closing Engine.eval_process")
+            logif("Closing Engine.eval_process")
             eval: mp.Process = getattr(self, "eval_process", None)
             if eval is not None:
                 self.write_to_eval.put(("exit", None))
                 eval.join(5)
                 self.eval_process = None
-            printif("Closed.")
+            logif("Closed.")
         except Exception as e:
-            printif("Exception raised when closing Engine.vector_tasks:")
-            printif(e)
+            logif("Exception raised when closing Engine.vector_tasks:")
+            logif(e)
             pass
 
-        printif("\n\n")
+        logif("\n\n")
         try:
-            printif("Closing Engine.log_writer")
+            logif("Closing Engine.log_writer")
             log_writer = getattr(self, "log_writer", None)
             if log_writer is not None:
                 log_writer.close()
                 self.log_writer = None
-            printif("Closed.")
+            logif("Closed.")
         except Exception as e:
-            printif("Exception raised when closing Engine.log_writer:")
-            printif(e)
+            logif("Exception raised when closing Engine.log_writer:")
+            logif(e)
             pass
 
         self._is_closed = True
