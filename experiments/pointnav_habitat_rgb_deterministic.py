@@ -43,7 +43,7 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
     CONFIG = habitat.get_config('gibson.yaml')
     CONFIG.defrost()
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
-    CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['Bolton']
+    CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['*']
     CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
     CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = SCREEN_SIZE
     CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = SCREEN_SIZE
@@ -59,23 +59,23 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        ppo_steps = 1e8
-        nprocesses = 2
+        ppo_steps = 7.5e7
+        nprocesses = 8
         lr = 2.5e-4
         num_mini_batch = 1
-        update_repeats = 2
+        update_repeats = 4
         num_steps = 128
         save_interval = 1000000
         log_interval = 2 * num_steps * nprocesses
-        # gpu_ids = None if not torch.cuda.is_available() else [0]
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0
         max_grad_norm = 0.5
+        optimizer = Builder(optim.Adam, dict(lr=lr))
         return TrainingPipeline(
             save_interval=save_interval,
             log_interval=log_interval,
-            optimizer=Builder(optim.Adam, dict(lr=lr)),
+            optimizer=optim,
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
             num_steps=num_steps,
@@ -87,6 +87,10 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
             pipeline_stages=[
                 PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps,),
             ],
+            scheduler=torch.optim.lr_scheduler.LambdaLR(
+                optimizer=optimizer,
+                lr_lambda=(lambda num_updates: (lambda x: 1 - (x / float(num_updates))))(ppo_steps)
+            )
         )
 
     @classmethod
