@@ -71,11 +71,10 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
         use_gae = True
         gae_lambda = 1.0
         max_grad_norm = 0.5
-        optimizer = Builder(optim.Adam, dict(lr=lr))
         return TrainingPipeline(
             save_interval=save_interval,
             log_interval=log_interval,
-            optimizer=optim,
+            optimizer=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
             num_steps=num_steps,
