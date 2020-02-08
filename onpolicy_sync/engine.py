@@ -124,13 +124,15 @@ class Engine(object):
             seeds = self.worker_seeds(self.machine_params["nprocesses"])
 
         self.observation_set = None
-        # if "observation_set" in self.machine_params:
-        #     self.observation_set = self.machine_params["observation_set"].to(self.device)
-        #     self.actor_critic = config.create_model(
-        #         observation_set=self.observation_set
-        #     ).to(self.device)
-        # else:
-        self.actor_critic = config.create_model().to(self.device)
+        if "observation_set" in self.machine_params:
+            self.observation_set = self.machine_params["observation_set"].to(
+                self.device
+            )
+            self.actor_critic = config.create_model(
+                observation_set=self.observation_set
+            ).to(self.device)
+        else:
+            self.actor_critic = config.create_model().to(self.device)
 
         self.optimizer: Optional[  # type: ignore
             Union[optim.Optimizer, Builder[optim.Optimizer]]

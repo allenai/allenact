@@ -41,8 +41,6 @@ class ResnetPreProcessorThor(Preprocessor):
     """Preprocess RGB image using a ResNet model."""
 
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
-        super().__init__(config, *args, **kwargs)
-
         def f(x, k):
             assert k in x, "{} must be set in ResnetPreProcessorThor".format(k)
             return x[k]
@@ -70,26 +68,27 @@ class ResnetPreProcessorThor(Preprocessor):
         self.observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
 
         assert (
-            len(self.config["input_uuids"]) == 1
+            len(config["input_uuids"]) == 1
         ), "resnet preprocessor can only consume one observation type"
 
-        self.output_uuid = (
-            self.config["output_uuid"] if "output_uuid" in self.config else "resnet"
-        )
+        f(config, "output_uuid")
+
+        super().__init__(config, *args, **kwargs)
 
     def to(self, device: torch.device) -> "ResnetPreProcessorThor":
         self.resnet = self.resnet.to(device)
+        self.device = device
         return self
 
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return self.output_uuid
-
-    def _get_input_uuids(self, *args: Any, **kwargs: Any) -> List[str]:
-        return self.config["input_uuids"]
-
-    def _get_observation_space(self) -> gym.spaces.Box:
-        return typing.cast(gym.spaces.Box, self.observation_space)
-
+    # def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+    #     return self.config["output_uuid"]
+    #
+    # def _get_input_uuids(self, *args: Any, **kwargs: Any) -> List[str]:
+    #     return self.config["input_uuids"]
+    #
+    # def _get_observation_space(self) -> gym.spaces.Box:
+    #     return typing.cast(gym.spaces.Box, self.observation_space)
+    #
     def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:
         x = obs[self.input_uuids[0]].to(self.device).permute(0, 3, 1, 2)
         return self.resnet(x.to(self.device))
