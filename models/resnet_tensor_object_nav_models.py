@@ -105,7 +105,6 @@ class ResnetTensorGoalEncoder(nn.Module):
 
         if not self.blind:
             self.in_tensor_shape = observation_spaces.spaces["rgb_resnet"].shape
-            print(self.in_tensor_shape)
 
             self.imtensor_compressor = nn.Sequential(
                 nn.Conv2d(self.in_tensor_shape[0], self.compress_hid_out_dims[0], 1),

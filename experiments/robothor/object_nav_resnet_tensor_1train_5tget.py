@@ -22,16 +22,10 @@ from rl_base.preprocessor import ObservationSet
 from rl_robothor.robothor_preprocessors import ResnetPreProcessorThor
 
 
-class ObjectNavTheRobotProjectExperimentConfig(ExperimentConfig):
-    """An object navigation experiment in THOR."""
+class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
+    """An object navigation experiment in RoboTHOR."""
 
-    OBJECT_TYPES = sorted(["Television"])
-
-    TRAIN_SCENES = ["FloorPlan_Train1_1"]
-
-    VALID_SCENES = ["FloorPlan_Train1_1"]
-
-    TEST_SCENES = ["FloorPlan_Train1_1"]
+    OBJECT_TYPES = sorted(["Television", "Mug", "Apple", "AlarmClock", "BasketBall"])
 
     SCREEN_SIZE = 224
 
@@ -45,6 +39,26 @@ class ObjectNavTheRobotProjectExperimentConfig(ExperimentConfig):
         ),
         GoalObjectTypeThorSensor({"object_types": OBJECT_TYPES}),
     ]
+
+    TRAIN_SCENES = [
+        "FloorPlan_Train1_1"
+        # "FloorPlan_Train%d_%d" % (wall, furniture)
+        # for wall in range(1, 11)  # actual limit at 16
+        # for furniture in range(1, 6)
+    ]
+
+    # VALID_SCENES = [
+    #     "FloorPlan_RVal%d_%d" % (wall, furniture)
+    #     for wall in range(1, 3)
+    #     for furniture in range(1, 3)
+    # ]
+    VALID_SCENES = TRAIN_SCENES
+
+    TEST_SCENES = VALID_SCENES
+
+    VALIDATION_SAMPLES_PER_SCENE = 10
+
+    TEST_SAMPLES_PER_SCENE = VALIDATION_SAMPLES_PER_SCENE
 
     PREPROCESSORS = [
         ResnetPreProcessorThor(
@@ -77,27 +91,22 @@ class ObjectNavTheRobotProjectExperimentConfig(ExperimentConfig):
 
     SCENE_PERIOD = 10
 
-    VALIDATION_SAMPLES_PER_SCENE = 4
-
-    TEST_SAMPLES_PER_SCENE = 4
-
     @classmethod
     def tag(cls):
-        return "ObjectNavRoboThor"
+        return "ObjectNavRoboThor_1train_5tget"
 
-    @classmethod
     def training_pipeline(cls, **kwargs):
         ppo_steps = int(1e10)
-        lr = 1e-4
-        num_mini_batch = 1
-        update_repeats = 3
+        lr = 3e-5
+        num_mini_batch = 3
+        update_repeats = 5
         num_steps = 30
-        log_interval = cls.MAX_STEPS * 20  # Log every 50 max length tasks
-        save_interval = 40000  # Save every 50000 steps (approximately)
+        log_interval = cls.MAX_STEPS * 50  # Log every 50 max length tasks
+        save_interval = 100000  # Save every 100000 steps (approximately)
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0
-        max_grad_norm = 0.5
+        max_grad_norm = 0.3
         return TrainingPipeline(
             save_interval=save_interval,
             log_interval=log_interval,
@@ -115,26 +124,24 @@ class ObjectNavTheRobotProjectExperimentConfig(ExperimentConfig):
             ],
         )
 
-    @classmethod
-    def single_gpu(cls):
+    def single_gpu(self):
         return 0
 
-    @classmethod
-    def machine_params(cls, mode="train", **kwargs):
+    def machine_params(self, mode="train", **kwargs):
         if mode == "train":
             nprocesses = 10
-            gpu_ids = [] if not torch.cuda.is_available() else [cls.single_gpu()]
+            gpu_ids = [] if not torch.cuda.is_available() else [self.single_gpu()]
         elif mode == "valid":
             nprocesses = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [cls.single_gpu()]
+            gpu_ids = [] if not torch.cuda.is_available() else [self.single_gpu()]
         elif mode == "test":
             nprocesses = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [cls.single_gpu()]
+            gpu_ids = [] if not torch.cuda.is_available() else [self.single_gpu()]
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
         observation_set = ObservationSet(
-            cls.OBSERVATIONS, cls.PREPROCESSORS, cls.SENSORS
+            self.OBSERVATIONS, self.PREPROCESSORS, self.SENSORS
         )
 
         return {
@@ -143,14 +150,15 @@ class ObjectNavTheRobotProjectExperimentConfig(ExperimentConfig):
             "observation_set": observation_set,
         }
 
-    @classmethod
-    def create_model(cls, **kwargs) -> nn.Module:
+    def create_model(self, **kwargs) -> nn.Module:
         return ResnetTensorObjectNavActorCritic(
             action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="goal_object_type_ind",
             rnn_hidden_size=512,
-            object_type_embedding_dim=32,
+            goal_dims=32,
+            compressor_hidden_out_dims=(128, 32),
+            combiner_hidden_out_dims=(128, 32),
         )
 
     @staticmethod
