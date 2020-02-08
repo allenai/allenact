@@ -28,12 +28,14 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     SCREEN_SIZE = 224
 
     # Easy setting
+    EASY = True
     OBJECT_TYPES = sorted(["Tomato"])
     TRAIN_SCENES = ["FloorPlan1_physics"]
     VALID_SCENES = ["FloorPlan1_physics"]
     TEST_SCENES = ["FloorPlan1_physics"]
 
     # Hard setting
+    # EASY = False
     # OBJECT_TYPES = sorted(["Cup", "Television", "Tomato"])
     # TRAIN_SCENES = ["FloorPlan{}".format(i) for i in range(1, 21)]
     # VALID_SCENES = ["FloorPlan{}_physics".format(i) for i in range(21, 26)]
@@ -70,13 +72,13 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        ppo_steps = int(1e6)
+        ppo_steps = int(6e4) if cls.EASY else 15 * int(1e6)
         lr = 2.5e-4
         num_mini_batch = 1 if not torch.cuda.is_available() else 6
         update_repeats = 3
         num_steps = 128
         log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
-        save_interval = 10000  # Save every 10000 steps (approximately)
+        save_interval = 500000  # Save every 500000 steps (approximately)
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0
@@ -101,7 +103,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     @classmethod
     def machine_params(cls, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 3 if not torch.cuda.is_available() else 18
+            nprocesses = 3 if not torch.cuda.is_available() else 20
             gpu_ids = [] if not torch.cuda.is_available() else [0]
         elif mode == "valid":
             nprocesses = 1

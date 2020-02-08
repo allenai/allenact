@@ -8,8 +8,9 @@ implemented:
 * `forward`, returning an [ActorCriticOutput](/api/rl_base/common/#actorcriticoutput) given the current observation,
 hidden state and previous actions.
 
-For convenience, we have already defined a [recurrent network module](/api/models/basic_models/#rnnstateencoder) and
-[a simple CNN module](/api/models/basic_models/#simplecnn) that will be used in this example.
+For convenience, we provide a [recurrent network module](/api/models/basic_models/#rnnstateencoder) and
+[a simple CNN module](/api/models/basic_models/#simplecnn) from the Habitat baseline navigation
+models, that will be used in this example.
 
 ### Actor-critic model interface
 

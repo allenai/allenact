@@ -7,7 +7,7 @@ In order to train actor-critic agents, we need to specify
 
 ## Rewards
 
-We will use the [object navigation task in AI2THOR](/api/rl_ai2thor/object_nav/tasks/#objectnavtask) as a 
+We will use the [object navigation task in AI2-THOR](/api/rl_ai2thor/object_nav/tasks/#objectnavtask) as a 
 running example. We can see how the `ObjectNavTask._step(self, action: int) -> RLStepResult` method computes the reward for the latest 
 action by invoking a function like:
 

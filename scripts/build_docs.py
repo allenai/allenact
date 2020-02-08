@@ -15,6 +15,7 @@ exclude_files = [
     "version.py",
     "run.py",
     "setup.py",
+    "main.py",
 ]
 
 

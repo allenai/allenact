@@ -1,4 +1,4 @@
-# Quick start
+# Running your first experiment
 
 Assuming you have [installed all of the requirements](/#installation), you can run your first experiment by calling 
 
@@ -7,7 +7,7 @@ python main.py object_nav_thor_ppo -s 12345
 ```
 This runs the experiment defined in `experiments/object_nav_thor_ppo.py` with seed 12345.
 
-If everything was installed correctly, a simple semantic navigation model for AI2THOR will be trained and validated and 
+If everything was installed correctly, a simple semantic navigation model for AI2-THOR will be trained and validated and 
 a new folder `experiment_output` will be created containing
 
 * a `checkpoints/LOCAL_TIME_STR/` subfolder with different checkpoints,
