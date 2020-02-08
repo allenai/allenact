@@ -5,7 +5,7 @@ import warnings
 
 import numpy as np
 
-from ..ai2thor_environment import AI2ThorEnvironment
+from rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
 from .robothor_constants import ROTATION_ANGLE, VISIBILITY_DISTANCE, FOV
 
 

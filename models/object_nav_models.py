@@ -6,15 +6,14 @@ Facebook's Habitat.
 from typing import cast, Tuple, Dict
 
 import gym
-
-from models.basic_models import SimpleCNN, RNNStateEncoder
-from onpolicy_sync.policy import ActorCriticModel, LinearCriticHead, LinearActorHead
+from gym.spaces import Dict as SpaceDict
 import torch.nn as nn
 import torch
 
+from models.basic_models import SimpleCNN, RNNStateEncoder
+from onpolicy_sync.policy import ActorCriticModel, LinearCriticHead, LinearActorHead
 from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
-from gym.spaces.dict import Dict as SpaceDict
 
 
 class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):

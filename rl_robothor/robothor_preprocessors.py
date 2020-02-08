@@ -1,5 +1,4 @@
-import typing
-from typing import Dict, Any, Callable, List
+from typing import Dict, Any, Callable
 
 import torch
 import torch.nn as nn
@@ -80,15 +79,6 @@ class ResnetPreProcessorThor(Preprocessor):
         self.device = device
         return self
 
-    # def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-    #     return self.config["output_uuid"]
-    #
-    # def _get_input_uuids(self, *args: Any, **kwargs: Any) -> List[str]:
-    #     return self.config["input_uuids"]
-    #
-    # def _get_observation_space(self) -> gym.spaces.Box:
-    #     return typing.cast(gym.spaces.Box, self.observation_space)
-    #
     def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:
         x = obs[self.input_uuids[0]].to(self.device).permute(0, 3, 1, 2)
         return self.resnet(x.to(self.device))

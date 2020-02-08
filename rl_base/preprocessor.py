@@ -33,33 +33,6 @@ class Preprocessor(abc.ABC):
         self.uuid = self.config["output_uuid"]  # _get_uuid()
         self.input_uuids = self.config["input_uuids"]  # self._get_input_uuids()
 
-    # @abc.abstractmethod
-    # def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-    #     """The unique ID of the preprocessor.
-    #
-    #     # Parameters
-    #
-    #     args : extra args.
-    #     kwargs : extra kwargs.
-    #     """
-    #     raise NotImplementedError()
-    #
-    # @abc.abstractmethod
-    # def _get_input_uuids(self, *args: Any, **kwargs: Any) -> List[str]:
-    #     """The unique IDs of the input sensors and preprocessors.
-    #
-    #     # Parameters
-    #
-    #     args : extra args.
-    #     kwargs : extra kwargs.
-    #     """
-    #     raise NotImplementedError()
-    #
-    # @abc.abstractmethod
-    # def _get_observation_space(self) -> gym.Space:
-    #     """The output observation space of the sensor."""
-    #     raise NotImplementedError()
-    #
     @abc.abstractmethod
     def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:
         """Returns processed observations from sensors or other preprocessors.
@@ -199,18 +172,13 @@ class ObservationSet:
         preprocessor_spaces = self.graph.observation_spaces
         spaces: OrderedDict[str, gym.Space] = OrderedDict()
         for uuid in self.source_ids:
-            try:
-                space = sensor_spaces[uuid]
-            except:
-                try:
-                    space = preprocessor_spaces[uuid]
-                except:
-                    assert (
-                        False
-                    ), "uuid {} missing from sensor suite and preprocessor graph".format(
-                        uuid
-                    )
-            spaces[uuid] = space
+            assert (
+                uuid in sensor_spaces.spaces or uuid in preprocessor_spaces.spaces
+            ), "uuid {} missing from sensor suite and preprocessor graph".format(uuid)
+            if uuid in sensor_spaces.spaces:
+                spaces[uuid] = sensor_spaces[uuid]
+            else:
+                spaces[uuid] = preprocessor_spaces[uuid]
         self.observation_spaces = SpaceDict(spaces=spaces)
 
     def get(self, uuid: str) -> Preprocessor:

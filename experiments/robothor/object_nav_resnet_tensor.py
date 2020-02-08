@@ -9,23 +9,29 @@ import torch.optim as optim
 from torchvision import models
 
 from onpolicy_sync.losses.ppo import PPOConfig
-from models.robothor.object_nav_models import RobothorObjectNavActorCritic
+from models.resnet_tensor_object_nav_models import ResnetTensorObjectNavActorCritic
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
-from rl_ai2thor.robothor.object_nav.task_samplers import ObjectNavTaskSampler
-from rl_ai2thor.robothor.object_nav.tasks import ObjectNavTask
-from utils.experiment_utils import LinearDecay, Builder, PipelineStage, TrainingPipeline
+from rl_robothor.object_nav.task_samplers import ObjectNavTaskSampler
+from rl_robothor.object_nav.tasks import ObjectNavTask
+from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline
 from onpolicy_sync.losses import PPO
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.task import TaskSampler
 
 from rl_base.preprocessor import ObservationSet
-from rl_ai2thor.ai2thor_preprocessors import ResnetPreProcessorThor
+from rl_robothor.robothor_preprocessors import ResnetPreProcessorThor
 
 
-class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
-    """An object navigation experiment in RoboTHOR."""
+class ObjectNavTheRobotProjectExperimentConfig(ExperimentConfig):
+    """An object navigation experiment in THOR."""
 
-    OBJECT_TYPES = sorted(["Television", "Mug", "Apple", "AlarmClock", "BasketBall"])
+    OBJECT_TYPES = sorted(["Television"])
+
+    TRAIN_SCENES = ["FloorPlan_Train1_1"]
+
+    VALID_SCENES = ["FloorPlan_Train1_1"]
+
+    TEST_SCENES = ["FloorPlan_Train1_1"]
 
     SCREEN_SIZE = 224
 
@@ -39,24 +45,6 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
         ),
         GoalObjectTypeThorSensor({"object_types": OBJECT_TYPES}),
     ]
-
-    TRAIN_SCENES = [
-        "FloorPlan_Train%d_%d" % (wall, furniture)
-        for wall in range(1, 11)  # actual limit at 16
-        for furniture in range(1, 6)
-    ]
-
-    VALID_SCENES = [
-        "FloorPlan_RVal%d_%d" % (wall, furniture)
-        for wall in range(1, 3)
-        for furniture in range(1, 3)
-    ]
-
-    TEST_SCENES = VALID_SCENES
-
-    VALIDATION_SAMPLES_PER_SCENE = 4
-
-    TEST_SAMPLES_PER_SCENE = 4
 
     PREPROCESSORS = [
         ResnetPreProcessorThor(
@@ -95,7 +83,7 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
 
     @classmethod
     def tag(cls):
-        return "ObjectNavRoboThor_50train_4val_5tgets"
+        return "ObjectNavRoboThor"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
@@ -129,7 +117,7 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
 
     @classmethod
     def single_gpu(cls):
-        return 1
+        return 0
 
     @classmethod
     def machine_params(cls, mode="train", **kwargs):
@@ -157,11 +145,11 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return RobothorObjectNavActorCritic(
+        return ResnetTensorObjectNavActorCritic(
             action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="goal_object_type_ind",
-            hidden_size=512,
+            rnn_hidden_size=512,
             object_type_embedding_dim=32,
         )
 
