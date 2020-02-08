@@ -143,6 +143,8 @@ class GoalObjectTypeThorSensor(Sensor):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
+        print(self.config["object_types"])
+
         self.ordered_object_types: List[str] = list(self.config["object_types"])
         assert self.ordered_object_types == list(sorted(self.ordered_object_types)), (
             "object types" "input to goal object type " "sensor must be ordered"

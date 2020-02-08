@@ -16,23 +16,16 @@ from rl_ai2thor.robothor.object_nav.tasks import ObjectNavTask
 from utils.experiment_utils import LinearDecay, Builder, PipelineStage, TrainingPipeline
 from onpolicy_sync.losses import PPO
 from rl_base.experiment_config import ExperimentConfig
-from rl_base.sensor import SensorSuite, ExpertActionSensor
 from rl_base.task import TaskSampler
 
 from rl_base.preprocessor import ObservationSet
 from rl_ai2thor.ai2thor_preprocessors import ResnetPreProcessorThor
 
 
-class ObjectNavTheRobotProjectExperimentConfig(ExperimentConfig):
-    """An object navigation experiment in THOR."""
+class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
+    """An object navigation experiment in RoboTHOR."""
 
-    OBJECT_TYPES = sorted(["Television"])
-
-    TRAIN_SCENES = ["FloorPlan_Train1_1"]
-
-    VALID_SCENES = ["FloorPlan_Train1_1"]
-
-    TEST_SCENES = ["FloorPlan_Train1_1"]
+    OBJECT_TYPES = sorted(["Television", "Mug", "Apple", "AlarmClock", "BasketBall"])
 
     SCREEN_SIZE = 224
 
@@ -46,6 +39,24 @@ class ObjectNavTheRobotProjectExperimentConfig(ExperimentConfig):
         ),
         GoalObjectTypeThorSensor({"object_types": OBJECT_TYPES}),
     ]
+
+    TRAIN_SCENES = [
+        "FloorPlan_Train%d_%d" % (wall, furniture)
+        for wall in range(1, 11)  # actual limit at 16
+        for furniture in range(1, 6)
+    ]
+
+    VALID_SCENES = [
+        "FloorPlan_RVal%d_%d" % (wall, furniture)
+        for wall in range(1, 3)
+        for furniture in range(1, 3)
+    ]
+
+    TEST_SCENES = VALID_SCENES
+
+    VALIDATION_SAMPLES_PER_SCENE = 4
+
+    TEST_SAMPLES_PER_SCENE = 4
 
     PREPROCESSORS = [
         ResnetPreProcessorThor(
@@ -84,7 +95,7 @@ class ObjectNavTheRobotProjectExperimentConfig(ExperimentConfig):
 
     @classmethod
     def tag(cls):
-        return "ObjectNavRoboThor"
+        return "ObjectNavRoboThor_50train_4val_5tgets"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
@@ -93,8 +104,8 @@ class ObjectNavTheRobotProjectExperimentConfig(ExperimentConfig):
         num_mini_batch = 1
         update_repeats = 3
         num_steps = 30
-        log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
-        save_interval = 10000  # Save every 10000 steps (approximately)
+        log_interval = cls.MAX_STEPS * 20  # Log every 50 max length tasks
+        save_interval = 40000  # Save every 50000 steps (approximately)
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0
@@ -116,20 +127,21 @@ class ObjectNavTheRobotProjectExperimentConfig(ExperimentConfig):
             ],
         )
 
+    @classmethod
     def single_gpu(cls):
-        return 0
+        return 1
 
     @classmethod
     def machine_params(cls, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 2
-            gpu_ids = [] if not torch.cuda.is_available() else [cls.single_gpu(cls)]
+            nprocesses = 10
+            gpu_ids = [] if not torch.cuda.is_available() else [cls.single_gpu()]
         elif mode == "valid":
             nprocesses = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [cls.single_gpu(cls)]
+            gpu_ids = [] if not torch.cuda.is_available() else [cls.single_gpu()]
         elif mode == "test":
             nprocesses = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [cls.single_gpu(cls)]
+            gpu_ids = [] if not torch.cuda.is_available() else [cls.single_gpu()]
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -152,12 +164,6 @@ class ObjectNavTheRobotProjectExperimentConfig(ExperimentConfig):
             hidden_size=512,
             object_type_embedding_dim=32,
         )
-        # action_space: gym.spaces.Discrete,
-        # observation_space: SpaceDict,
-        # goal_sensor_uuid: str,
-        # hidden_size=512,
-        # object_type_embedding_dim=32,
-        # encoder_output_dims=1568,
 
     @staticmethod
     def make_sampler_fn(**kwargs) -> TaskSampler:

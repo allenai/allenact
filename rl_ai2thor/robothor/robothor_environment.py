@@ -92,6 +92,10 @@ class RoboThorEnvironment(AI2ThorEnvironment):
             rotateStepDegrees=self._rotation_step_degrees,
             agentMode="bot",
             fieldOfView=self._fov,
+            # agentType="stochastic",
+            # continuous=True,
+            # snapToGrid=False,
+            # renderDepthImage=True,
         )
 
     def teleport_agent_to(
