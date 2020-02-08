@@ -609,7 +609,7 @@ class Engine(object):
         rollouts.reshape(keep)
 
         rollouts.insert(
-            self._preprocess_observations(batch),
+            self._preprocess_observations(batch) if len(keep) > 0 else batch,
             recurrent_hidden_states[:, keep],
             actions[keep],
             actor_critic_output.distributions.log_probs(actions)[keep],
@@ -643,7 +643,9 @@ class Engine(object):
             render.append(self.vector_tasks.render(mode="rgb_array"))
         rollouts.reshape(keep)
         rollouts.to(self.device)
-        rollouts.insert_initial_observations(self._preprocess_observations(batch))
+        rollouts.insert_initial_observations(
+            self._preprocess_observations(batch) if len(keep) > 0 else batch
+        )
         return npaused
 
     def train(self, rollouts):

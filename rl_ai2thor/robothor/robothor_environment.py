@@ -87,7 +87,11 @@ class RoboThorEnvironment(AI2ThorEnvironment):
         kwargs : additional kwargs, passed to the controller "Initialize" action.
         """
         super().reset(
-            scene_name, move_mag, rotateStepDegrees=self._rotation_step_degrees
+            scene_name,
+            move_mag,
+            rotateStepDegrees=self._rotation_step_degrees,
+            agentMode="bot",
+            fieldOfView=self._fov,
         )
 
     def teleport_agent_to(
