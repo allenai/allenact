@@ -23,6 +23,9 @@ class ObjectNavTask(BaseObjectNavTask):
         """ Judge the last event. """
         reward = self.reward_configs["step_penalty"]
 
+        if not self.last_action_success:
+            reward += self.reward_configs["unsuccessful_action_penalty"]
+
         if self._took_end_action:
             reward += (
                 self.reward_configs["goal_success_reward"] if self._success else -1.0

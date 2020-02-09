@@ -25,9 +25,7 @@ from rl_robothor.robothor_preprocessors import ResnetPreProcessorThor
 class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
     """An object navigation experiment in RoboTHOR."""
 
-    OBJECT_TYPES = sorted(
-        ["Television"]
-    )  # , "Mug", "Apple", "AlarmClock", "BasketBall"])
+    OBJECT_TYPES = sorted(["Television", "Mug", "Apple", "AlarmClock", "BasketBall"])
 
     SCREEN_SIZE = 224
 
@@ -94,7 +92,7 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
 
     @classmethod
     def tag(cls):
-        return "ObjectNavRoboThor_50train_1tget"
+        return "ObjectNavRoboThor_50train_5tget_unsuccessful_penalty"
 
     def training_pipeline(cls, **kwargs):
         ppo_steps = int(1e10)
@@ -126,7 +124,7 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
         )
 
     def single_gpu(self):
-        return 1
+        return 7
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
@@ -208,7 +206,7 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
             "rewards_config": {
                 "step_penalty": -0.01,
                 "goal_success_reward": 5,
-                "unsuccessful_action_penalty": 0,
+                "unsuccessful_action_penalty": -0.05,
             },
         }
 

@@ -1,6 +1,7 @@
 """Utility classes and functions for running and designing experiments."""
 
 import collections.abc
+from collections import OrderedDict
 import copy
 import random
 import typing
@@ -117,8 +118,8 @@ class ScalarMeanTracker(object):
     """Track a collection `scalar key -> mean` pairs."""
 
     def __init__(self) -> None:
-        self._sums: Dict[str, float] = {}
-        self._counts: Dict[str, int] = {}
+        self._sums: Dict[str, float] = OrderedDict()
+        self._counts: Dict[str, int] = OrderedDict()
 
     def add_scalars(self, scalars: Dict[str, Union[float, int]]) -> None:
         """Add additional scalars to track.
@@ -145,9 +146,11 @@ class ScalarMeanTracker(object):
         A dictionary of `scalar key -> current mean` pairs corresponding to those
         values added with `add_scalars`.
         """
-        means = {k: float(self._sums[k] / self._counts[k]) for k in self._sums}
-        self._sums = {}
-        self._counts = {}
+        means = OrderedDict(
+            [(k, float(self._sums[k] / self._counts[k])) for k in self._sums]
+        )
+        self._sums = OrderedDict()
+        self._counts = OrderedDict()
         return means
 
 

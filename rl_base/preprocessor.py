@@ -30,8 +30,8 @@ class Preprocessor(abc.ABC):
 
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
         self.config = config
-        self.uuid = self.config["output_uuid"]  # _get_uuid()
-        self.input_uuids = self.config["input_uuids"]  # self._get_input_uuids()
+        self.uuid = self.config["output_uuid"]
+        self.input_uuids = self.config["input_uuids"]
 
     @abc.abstractmethod
     def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:

@@ -43,9 +43,10 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
     ]
 
     TRAIN_SCENES = [
-        "FloorPlan_Train%d_%d" % (wall, furniture)
-        for wall in range(1, 11)  # actual limit at 16
-        for furniture in range(1, 6)
+        "FloorPlan_Train1_1"
+        # "FloorPlan_Train%d_%d" % (wall, furniture)
+        # for wall in range(1, 11)  # actual limit at 16
+        # for furniture in range(1, 6)
     ]
 
     # VALID_SCENES = [
@@ -57,7 +58,7 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
 
     TEST_SCENES = VALID_SCENES
 
-    VALIDATION_SAMPLES_PER_SCENE = 1
+    VALIDATION_SAMPLES_PER_SCENE = 10
 
     TEST_SAMPLES_PER_SCENE = VALIDATION_SAMPLES_PER_SCENE
 
@@ -94,7 +95,7 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
 
     @classmethod
     def tag(cls):
-        return "ObjectNavRoboThor_50train_1tget"
+        return "ObjectNavRoboThor_1train_1tget_unsuccessful_penalty"
 
     def training_pipeline(cls, **kwargs):
         ppo_steps = int(1e10)
@@ -126,7 +127,7 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
         )
 
     def single_gpu(self):
-        return 1
+        return 4
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
@@ -208,7 +209,7 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
             "rewards_config": {
                 "step_penalty": -0.01,
                 "goal_success_reward": 5,
-                "unsuccessful_action_penalty": 0,
+                "unsuccessful_action_penalty": -0.05,
             },
         }
 

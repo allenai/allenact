@@ -12,6 +12,7 @@ import warnings
 from typing import Optional, Any, Dict, Union, List, Tuple
 import logging
 import json
+from collections import OrderedDict
 
 import torch
 import torch.distributions
@@ -402,6 +403,9 @@ class Engine(object):
         return self.scalars.pop_and_reset()
 
     def log(self, count=-1):
+        train_metrics = []
+        losses = []
+        teachers = []
         while (not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
             try:
                 if count < 0:
@@ -414,7 +418,11 @@ class Engine(object):
                     if pkg_type in ["valid_metrics", "test_metrics"]:
                         mode = pkg_type.split("_")[0]
                         scalars, render = info
-                        metrics = {k: v for k, v in scalars.items()}
+                        metrics = OrderedDict(
+                            sorted(
+                                [(k, v) for k, v in scalars.items()], key=lambda x: x[0]
+                            )
+                        )
 
                         message = ["{}".format(mode)]
                         add_step = True
@@ -434,7 +442,6 @@ class Engine(object):
                                 "{}/agent_view".format(mode), render, metrics_steps,
                             )
                     else:
-                        cscalars: Optional[Dict[str, Union[float, int]]] = None
                         if pkg_type == "update_package":
                             cscalars = {
                                 "total_loss": info["total_loss"],
@@ -447,17 +454,35 @@ class Engine(object):
                                     cscalars["/".join([lossname, scalar])] = info[
                                         "losses"
                                     ][loss][scalar]
+                            losses.append(cscalars)
                         elif pkg_type == "teacher_package":
                             cscalars = {k: v for k, v in info.items()}
+                            teachers.append(cscalars)
                         else:
                             print("WARNING: Unknown info package {}".format(info))
-
-                        if cscalars is not None:
-                            self.scalars.add_scalars(cscalars)
                 else:
-                    self.scalars.add_scalars(metric)
+                    train_metrics.append(metric)
             except queue.Empty:
                 pass
+
+        for metric in train_metrics:
+            self.scalars.add_scalars(
+                OrderedDict(
+                    sorted([(k, v) for k, v in metric.items()], key=lambda x: x[0])
+                )
+            )
+        for loss in losses:
+            self.scalars.add_scalars(
+                OrderedDict(
+                    sorted([(k, v) for k, v in loss.items()], key=lambda x: x[0])
+                )
+            )
+        for teacher in teachers:
+            self.scalars.add_scalars(
+                OrderedDict(
+                    sorted([(k, v) for k, v in teacher.items()], key=lambda x: x[0])
+                )
+            )
 
         tracked_means = self.scalars.pop_and_reset()
         message = ["train {} steps:".format(self.total_steps + self.step_count)]

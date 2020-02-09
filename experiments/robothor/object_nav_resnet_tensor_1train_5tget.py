@@ -204,7 +204,11 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
             "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
-            "rewards_config": {"step_penalty": -0.01, "goal_success_reward": 5},
+            "rewards_config": {
+                "step_penalty": -0.01,
+                "goal_success_reward": 5,
+                "unsuccessful_action_penalty": 0,
+            },
         }
 
     def train_task_sampler_args(
