@@ -76,7 +76,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         ppo_steps = int(6e4) if cls.EASY else 15 * int(1e6)
         lr = 2.5e-4
         num_mini_batch = 1 if not torch.cuda.is_available() else 6
-        update_repeats = 3
+        update_repeats = 4
         num_steps = 128
         log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
         save_interval = 10000 if cls.EASY else 500000
@@ -93,7 +93,13 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, default=PPOConfig,),},
+            named_losses={
+                "ppo_loss": Builder(
+                    PPO,
+                    kwargs={"clip_decay": LinearDecay(ppo_steps)},
+                    default=PPOConfig,
+                ),
+            },
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
@@ -109,7 +115,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     @classmethod
     def machine_params(cls, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 3 if not torch.cuda.is_available() else 20
+            nprocesses = 1 if not torch.cuda.is_available() else 20
             gpu_ids = [] if not torch.cuda.is_available() else [0]
         elif mode == "valid":
             nprocesses = 1

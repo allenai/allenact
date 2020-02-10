@@ -70,7 +70,7 @@ class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfi
         ppo_steps = int(1e6)
         lr = 2.5e-4
         num_mini_batch = 1
-        update_repeats = 3
+        update_repeats = 4
         num_steps = 128
         log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
         save_interval = 10000  # Save every 10000 steps (approximately)
@@ -134,7 +134,7 @@ class ObjectNavThorPPOExperimentConfig(experiments.ObjectNavThorPPOExperimentCon
         ppo_steps = int(3e4)
         lr = 2.5e-4
         num_mini_batch = 6 if not torch.cuda.is_available() else 30
-        update_repeats = 3
+        update_repeats = 4
         num_steps = 128
         log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
         save_interval = 10000  # Save every 10000 steps (approximately)
