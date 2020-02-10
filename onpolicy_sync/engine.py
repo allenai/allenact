@@ -1,4 +1,4 @@
-"""Defines the reinforcement learning `Engine`."""
+"""Defines the reinforcement learning `OnPolicyRLEngine`."""
 import glob
 import os
 import queue
@@ -9,6 +9,7 @@ import time
 import traceback
 import typing
 import warnings
+from multiprocessing.context import BaseContext
 from typing import Optional, Any, Dict, Union, List, Tuple
 import logging
 import json
@@ -48,24 +49,26 @@ def validate(
     write_to_parent: mp.Queue,
     seed: Optional[int] = None,
     deterministic_cudnn: bool = False,
+    mp_ctx: Optional[BaseContext] = None,
 ):
     ptitle("Validation")
-    evaluator = Validator(
+    evaluator = OnPolicyValidator(
         config=config,
         output_dir=output_dir,
         seed=seed,
         deterministic_cudnn=deterministic_cudnn,
+        mp_ctx=mp_ctx,
     )
     evaluator.process_checkpoints(read_from_parent, write_to_parent)
 
 
-class Engine(object):
+class OnPolicyRLEngine(object):
     """The reinforcement learning primary controller.
 
-    This `Engine` class handles all training, validation, and testing as
+    This `OnPolicyRLEngine` class handles all training, validation, and testing as
     well as logging and checkpointing. You are not expected to
     instantiate this class yourself, instead you should define an
-    experiment which will then be used to instantiate an `Engine` and
+    experiment which will then be used to instantiate an `OnPolicyRLEngine` and
     perform any desired tasks.
     """
 
@@ -77,6 +80,7 @@ class Engine(object):
         seed: Optional[int] = None,
         mode: str = "train",
         deterministic_cudnn: bool = False,
+        mp_ctx: Optional[BaseContext] = None,
     ):
         """Initializer.
 
@@ -130,26 +134,15 @@ class Engine(object):
         # else:
         self.actor_critic = config.create_model().to(self.device)
 
-        self.optimizer: Optional[  # type: ignore
-            Union[optim.Optimizer, Builder[optim.Optimizer]]
-        ] = None
-        self.scheduler: Optional[
-            Union[
-                optim.lr_scheduler._LRScheduler,
-                Builder[optim.lr_scheduler._LRScheduler],
-            ]
-        ] = None
+        self.optimizer: Optional[optim.Optimizer] = None  # type: ignore
+        self.lr_scheduler: Optional[optim.lr_scheduler._LRScheduler] = None
         if mode == "train":
-            self.optimizer = self.training_pipeline.optimizer
-            if isinstance(self.optimizer, Builder):
-                self.optimizer = typing.cast(Builder, self.optimizer)(
-                    params=[
-                        p for p in self.actor_critic.parameters() if p.requires_grad
-                    ]
-                )
-            self.scheduler = self.training_pipeline.scheduler
-            if isinstance(self.scheduler, Builder):
-                self.scheduler = typing.cast(Builder, self.scheduler)(
+            self.optimizer = self.training_pipeline.optimizer_builder(
+                params=[p for p in self.actor_critic.parameters() if p.requires_grad]
+            )
+
+            if self.training_pipeline.lr_scheduler_builder is not None:
+                self.lr_scheduler = self.training_pipeline.lr_scheduler_builder(
                     optimizer=self.optimizer
                 )
 
@@ -198,11 +191,11 @@ class Engine(object):
         self.use_gae: Optional[bool] = None
         self.gae_lambda: Optional[float] = None
         self.max_grad_norm: Optional[float] = None
+        self.advance_scene_rollout_period: Optional[int] = None
         self.teacher_forcing: Optional[LinearDecay] = None
         self.local_start_time_str: Optional[str] = None
         self.deterministic_agent: Optional[bool] = None
         self.eval_process: Optional[mp.Process] = None
-        self.last_scheduler_steps: Optional[int] = None
 
         self.experiment_name = config.tag()
 
@@ -213,6 +206,7 @@ class Engine(object):
         self.config = config
 
         self.write_to_eval = None
+        self.mp_ctx: Optional[BaseContext] = mp_ctx
         if self.mode == "train":
             self.mp_ctx = self.vector_tasks.mp_ctx
             if self.config.machine_params("valid")["nprocesses"] <= 0:
@@ -221,7 +215,7 @@ class Engine(object):
                 )
             else:
                 self.write_to_eval = self.mp_ctx.Queue()
-                self.eval_process = self.mp_ctx.Process(
+                self.eval_process = self.mp_ctx.Process(  # type: ignore
                     target=validate,
                     args=(
                         self.config,
@@ -230,6 +224,7 @@ class Engine(object):
                         self.vector_tasks.metrics_out_queue,
                         self.seed,
                         self.deterministic_cudnn,
+                        self.mp_ctx,
                     ),
                 )
                 self.eval_process.start()
@@ -245,6 +240,10 @@ class Engine(object):
             self._vector_tasks = VectorSampledTasks(
                 make_sampler_fn=self.config.make_sampler_fn,
                 sampler_fn_args=self.get_sampler_fn_args(self.config, seeds),
+                multiprocessing_start_method="forkserver"
+                if self.mp_ctx is None
+                else None,
+                mp_ctx=self.mp_ctx,
             )
         return self._vector_tasks
 
@@ -330,11 +329,10 @@ class Engine(object):
         if self.seed is not None:
             save_dict["worker_seeds"] = seeds
 
-        if self.scheduler is not None:
+        if self.lr_scheduler is not None:
             save_dict["scheduler_state"] = typing.cast(
-                _LRScheduler, self.scheduler
+                _LRScheduler, self.lr_scheduler
             ).state_dict()
-            save_dict["scheduler_steps"] = self.last_scheduler_steps
 
         torch.save(save_dict, model_path)
         return model_path
@@ -372,9 +370,8 @@ class Engine(object):
                     seeds == ckpt["worker_seeds"]
                 ), "worker seeds not matching stored seeds"
                 self.vector_tasks.set_seeds(seeds)
-            if self.scheduler is not None:
-                self.scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
-                self.last_scheduler_steps = typing.cast(int, ckpt["scheduler_steps"])
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
 
     def process_eval_metrics(self, count=-1):
         unused = []
@@ -492,7 +489,7 @@ class Engine(object):
                     losses={},
                 )
 
-                if self.scheduler is not None:
+                if self.lr_scheduler is not None:
                     info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
 
                 self.optimizer.zero_grad()  # type: ignore
@@ -657,7 +654,7 @@ class Engine(object):
         rollouts.insert_initial_observations(self._preprocess_observations(batch))
         return npaused
 
-    def train(self, rollouts):
+    def train(self, rollouts: RolloutStorage):
         self.initialize_rollouts(rollouts)
 
         while self.rollout_count < self.num_rollouts:
@@ -682,13 +679,8 @@ class Engine(object):
             rollouts.after_update()
             self.rollout_count += 1
 
-            if self.scheduler is not None:
-                new_scheduler_steps = self.total_steps + self.step_count
-                for step in range(
-                    self.last_scheduler_steps + 1, new_scheduler_steps + 1
-                ):
-                    self.scheduler.step(step)
-                self.last_scheduler_steps = new_scheduler_steps
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step(epoch=self.step_count + self.total_steps)
 
             if (
                 self.step_count - self.last_log >= self.log_interval
@@ -710,6 +702,12 @@ class Engine(object):
                     self.write_to_eval.put(("eval", model_path))
                 self.last_save = self.step_count
 
+            if (self.advance_scene_rollout_period is not None) and (
+                self.rollout_count % self.advance_scene_rollout_period == 0
+            ):
+                self.vector_tasks.next_task(force_advance_scene=True)
+                self.initialize_rollouts(rollouts)
+
     def setup_stage(
         self,
         losses: Dict[str, Loss],
@@ -722,6 +720,7 @@ class Engine(object):
         use_gae: bool,
         gae_lambda: float,
         max_grad_norm: float,
+        advance_scene_rollout_period: Optional[int] = None,
         teacher_forcing: Optional[LinearDecay] = None,
         deterministic_agent: bool = False,
     ):
@@ -748,6 +747,8 @@ class Engine(object):
         self.gae_lambda = gae_lambda
 
         self.max_grad_norm = max_grad_norm
+
+        self.advance_scene_rollout_period = advance_scene_rollout_period
 
         self.teacher_forcing = teacher_forcing
 
@@ -778,7 +779,7 @@ class Engine(object):
 
         return stage_losses, stage_loss_weights
 
-    def _stage_value(self, stage, field):
+    def _stage_value(self, stage: PipelineStage, field: str, allow_none: bool = False):
         if hasattr(stage, field) and getattr(stage, field) is not None:
             return getattr(stage, field)
 
@@ -791,7 +792,10 @@ class Engine(object):
         if field in self.machine_params:
             return self.machine_params[field]
 
-        raise RuntimeError("missing value for {}".format(field))
+        if allow_none:
+            return None
+        else:
+            raise RuntimeError("missing value for {}".format(field))
 
     @property
     def log_writer_path(self) -> str:
@@ -845,9 +849,6 @@ class Engine(object):
             )
             self.log_writer = SummaryWriter(log_dir=self.log_writer_path)
 
-            if self.scheduler is not None:
-                self.last_scheduler_steps = 0
-
             if checkpoint_file_name is not None:
                 self.checkpoint_load(
                     self.get_checkpoint_path(checkpoint_file_name), verbose=True
@@ -874,6 +875,9 @@ class Engine(object):
                     use_gae=self._stage_value(stage, "use_gae"),
                     gae_lambda=self._stage_value(stage, "gae_lambda"),
                     max_grad_norm=self._stage_value(stage, "max_grad_norm"),
+                    advance_scene_rollout_period=self._stage_value(
+                        stage, "advance_scene_rollout_period"
+                    ),
                     teacher_forcing=stage.teacher_forcing,
                 )
 
@@ -1071,17 +1075,17 @@ class Engine(object):
                     raise NotImplementedError()
 
         try:
-            logif("Closing Engine.vector_tasks.")
+            logif("Closing OnPolicyRLEngine.vector_tasks.")
             self.vector_tasks.close()
             logif("Closed.")
         except Exception as e:
-            logif("Exception raised when closing Engine.vector_tasks:")
+            logif("Exception raised when closing OnPolicyRLEngine.vector_tasks:")
             logif(e)
             pass
 
         logif("\n\n")
         try:
-            logif("Closing Engine.eval_process")
+            logif("Closing OnPolicyRLEngine.eval_process")
             eval: mp.Process = getattr(self, "eval_process", None)
             if eval is not None:
                 self.write_to_eval.put(("exit", None))
@@ -1089,20 +1093,20 @@ class Engine(object):
                 self.eval_process = None
             logif("Closed.")
         except Exception as e:
-            logif("Exception raised when closing Engine.vector_tasks:")
+            logif("Exception raised when closing OnPolicyRLEngine.vector_tasks:")
             logif(e)
             pass
 
         logif("\n\n")
         try:
-            logif("Closing Engine.log_writer")
+            logif("Closing OnPolicyRLEngine.log_writer")
             log_writer = getattr(self, "log_writer", None)
             if log_writer is not None:
                 log_writer.close()
                 self.log_writer = None
             logif("Closed.")
         except Exception as e:
-            logif("Exception raised when closing Engine.log_writer:")
+            logif("Exception raised when closing OnPolicyRLEngine.log_writer:")
             logif(e)
             pass
 
@@ -1118,7 +1122,7 @@ class Engine(object):
         self.close(verbose=False)
 
 
-class Trainer(Engine):
+class OnPolicyTrainer(OnPolicyRLEngine):
     def __init__(
         self,
         config: ExperimentConfig,
@@ -1139,15 +1143,14 @@ class Trainer(Engine):
         )
 
 
-class Validator(Engine):
+class OnPolicyValidator(OnPolicyRLEngine):
     def __init__(
         self,
         config: ExperimentConfig,
         output_dir: str,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
-        *args,
-        **argv
+        **kwargs
     ):
         super().__init__(
             config=config,
@@ -1156,10 +1159,11 @@ class Validator(Engine):
             seed=seed,
             mode="valid",
             deterministic_cudnn=deterministic_cudnn,
+            **kwargs,
         )
 
 
-class Tester(Engine):
+class OnPolicyTester(OnPolicyRLEngine):
     def __init__(
         self,
         config: ExperimentConfig,

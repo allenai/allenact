@@ -268,7 +268,7 @@ class TrainingPipeline(typing.Iterable):
         self,
         named_losses: Dict[str, Union[Loss, Builder[Loss]]],
         pipeline_stages: List[PipelineStage],
-        optimizer: Union[optim.Optimizer, Builder[optim.Optimizer]],  # type: ignore
+        optimizer_builder: Builder[optim.Optimizer],  # type: ignore
         num_mini_batch: int,
         update_repeats: int,
         max_grad_norm: float,
@@ -276,9 +276,10 @@ class TrainingPipeline(typing.Iterable):
         gamma: float,
         use_gae: bool,
         gae_lambda: float,
+        advance_scene_rollout_period: Optional[int],
         save_interval: int,
         log_interval: int,
-        scheduler: Optional[Union[optim.lr_scheduler._LRScheduler, Builder[optim.lr_scheduler._LRScheduler]]] = None,  # type: ignore
+        lr_scheduler_builder: Optional[Builder[optim.lr_scheduler._LRScheduler]] = None,  # type: ignore
     ):
         """Initializer.
 
@@ -287,8 +288,8 @@ class TrainingPipeline(typing.Iterable):
         self.save_interval = save_interval
         self.log_interval = log_interval
 
-        self.optimizer = optimizer
-        self.scheduler = scheduler
+        self.optimizer_builder = optimizer_builder
+        self.lr_scheduler_builder = lr_scheduler_builder
         self.num_mini_batch = num_mini_batch
 
         self.update_repeats = update_repeats
@@ -298,6 +299,7 @@ class TrainingPipeline(typing.Iterable):
         self.gamma = gamma
         self.use_gae = use_gae
         self.gae_lambda = gae_lambda
+        self.advance_scene_rollout_period = advance_scene_rollout_period
 
         self.pipeline_stages = pipeline_stages
 

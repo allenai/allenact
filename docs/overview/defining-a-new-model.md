@@ -89,10 +89,10 @@ class ObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
      ...
 ```
 
-## Engine requirements
+## On-policy RL engine requirements
 
 Apart from the interface expected by all actor-critic models, we also need to provide a utility function to allow
-the engine to properly initalize the rollouts storage, `num_recurrent_layers`:
+the on-policy RL engine to properly initalize the rollouts storage, `num_recurrent_layers`:
 
 ```python
 class ObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
