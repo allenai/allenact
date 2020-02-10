@@ -12,6 +12,7 @@ from threading import Thread
 from typing import Any, Callable, List, Optional, Sequence, Set, Tuple, Union, Dict
 
 import numpy as np
+import typing
 from gym.spaces.dict import Dict as SpaceDict
 
 from rl_base.common import RLStepResult
@@ -43,7 +44,7 @@ RESET_COMMAND = "reset"
 SEED_COMMAND = "seed"
 
 
-class VectorSampledTasks:
+class VectorSampledTasks(object):
     """Vectorized collection of tasks. Creates multiple processes where each
     process runs its own TaskSampler. Each process generates one Task from its
     TaskSampler at a time and this class allows for interacting with these
@@ -83,7 +84,8 @@ class VectorSampledTasks:
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args: Sequence[Dict[str, Any]] = None,
         auto_resample_when_done: bool = True,
-        multiprocessing_start_method: str = "forkserver",
+        multiprocessing_start_method: Optional[str] = "forkserver",
+        mp_ctx: Optional[BaseContext] = None,
     ) -> None:
 
         self._is_waiting = False
@@ -94,12 +96,18 @@ class VectorSampledTasks:
         ), "number of processes to be created should be greater than 0"
 
         self._num_processes = len(sampler_fn_args)
-
-        assert multiprocessing_start_method in self._valid_start_methods, (
-            "multiprocessing_start_method must be one of {}. Got '{}'"
-        ).format(self._valid_start_methods, multiprocessing_start_method)
         self._auto_resample_when_done = auto_resample_when_done
-        self._mp_ctx = mp.get_context(multiprocessing_start_method)
+
+        assert (multiprocessing_start_method is None) != (
+            mp_ctx is None
+        ), "Exactly one of `multiprocessing_start_method`, and `mp_ctx` must be not None."
+        if multiprocessing_start_method is not None:
+            assert multiprocessing_start_method in self._valid_start_methods, (
+                "multiprocessing_start_method must be one of {}. Got '{}'"
+            ).format(self._valid_start_methods, multiprocessing_start_method)
+            self._mp_ctx = mp.get_context(multiprocessing_start_method)
+        else:
+            self._mp_ctx = typing.cast(BaseContext, mp_ctx)
         self.metrics_out_queue = self._mp_ctx.Queue()
         self._workers = []
         (
@@ -203,7 +211,10 @@ class VectorSampledTasks:
                     connection_write_fn(step_result)
 
                 elif command == NEXT_TASK_COMMAND:
-                    current_task = task_sampler.next_task()
+                    if data is not None:
+                        current_task = task_sampler.next_task(**data)
+                    else:
+                        current_task = task_sampler.next_task()
                     observations = current_task.get_observations()
                     connection_write_fn(observations)
 
@@ -307,8 +318,12 @@ class VectorSampledTasks:
     #     self._is_waiting = False
     #     return results
 
-    def next_task(self):
+    def next_task(self, **kwargs):
         """Move to the the next Task for all TaskSamplers.
+
+        # Parameters
+
+        kwargs : key word arguments passed to the `next_task` function of the samplers.
 
         # Returns
 
@@ -316,7 +331,7 @@ class VectorSampledTasks:
         """
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
-            write_fn((NEXT_TASK_COMMAND, None))
+            write_fn((NEXT_TASK_COMMAND, kwargs))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())

@@ -1,3 +1,5 @@
+"""Entry point to training/validating/testing for a user given experiment name"""
+
 import sys
 import os
 from typing import Dict, Tuple
@@ -8,15 +10,13 @@ import logging
 
 from setproctitle import setproctitle as ptitle
 
-from onpolicy_sync.engine import Trainer, Tester
+from onpolicy_sync.engine import OnPolicyTrainer, OnPolicyTester
 from rl_base.experiment_config import ExperimentConfig
 
 logger = logging.getLogger("embodiedrl")
 
-"""Entry point to training/validating/testing for a user given experiment name"""
 
-
-def get_args():
+def _get_args():
     """Creates the argument parser and parses any input arguments."""
 
     parser = argparse.ArgumentParser(
@@ -87,7 +87,7 @@ def get_args():
     return parser.parse_args()
 
 
-def config_source(args) -> Dict[str, Tuple[str, str]]:
+def _config_source(args) -> Dict[str, Tuple[str, str]]:
     path = os.path.abspath(os.path.normpath(args.experiment_base))
     package = os.path.basename(path)
 
@@ -108,7 +108,7 @@ def config_source(args) -> Dict[str, Tuple[str, str]]:
     return res
 
 
-def load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
+def _load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
     path = os.path.abspath(os.path.normpath(args.experiment_base))
     sys.path.insert(0, os.path.dirname(path))
     importlib.invalidate_caches()
@@ -127,11 +127,11 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
     ), "Too many or two few experiments defined in {}".format(module_path)
 
     config = experiments[0]()
-    sources = config_source(args)
+    sources = _config_source(args)
     return config, sources
 
 
-def init_logging(log_format="default", log_level="debug"):
+def _init_logging(log_format="default", log_level="debug"):
     if log_level == "debug":
         base_logging_level = logging.DEBUG
     elif log_level == "info":
@@ -160,27 +160,31 @@ def init_logging(log_format="default", log_level="debug"):
         logger.addHandler(ch)
 
 
-def download_ai2thor():
+def _download_ai2thor():
     from ai2thor.controller import Controller
 
-    Controller(download_only=True)
+    try:
+        c = Controller(download_only=True)
+        c.stop_unity()
+    except Exception as _:
+        pass
 
 
 def main():
-    init_logging()
+    _init_logging()
 
-    args = get_args()
+    args = _get_args()
 
     logger.info("Running with args {}".format(args))
 
-    download_ai2thor()
+    _download_ai2thor()
 
     ptitle("Master: {}".format("Training" if not args.test_date != "" else "Testing"))
 
-    cfg, srcs = load_config(args)
+    cfg, srcs = _load_config(args)
 
     if args.test_date == "":
-        Trainer(
+        OnPolicyTrainer(
             config=cfg,
             output_dir=args.output_dir,
             loaded_config_src_files=srcs,
@@ -188,7 +192,7 @@ def main():
             deterministic_cudnn=args.deterministic_cudnn,
         ).run_pipeline(args.checkpoint)
     else:
-        Tester(
+        OnPolicyTester(
             config=cfg,
             output_dir=args.output_dir,
             loaded_config_src_files=srcs,

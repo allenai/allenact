@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.optim.lr_scheduler import LambdaLR
 
 from models.object_nav_models import ObjectNavBaselineActorCritic
 from onpolicy_sync.losses import A2C
@@ -16,7 +17,7 @@ from rl_ai2thor.object_nav.tasks import ObjectNavTask
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.sensor import SensorSuite
 from rl_base.task import TaskSampler
-from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline
+from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
 class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
@@ -60,7 +61,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
     MAX_STEPS = 128
 
-    SCENE_PERIOD = 10
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 10
 
     VALID_SAMPLES_IN_SCENE = 5
 
@@ -72,13 +73,13 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        a2c_steps = int(3e4) if cls.EASY else 15 * int(1e6)
+        a2c_steps = int(6e4) if cls.EASY else 15 * int(1e6)
         lr = 2.5e-4
-        num_mini_batch = 1
-        update_repeats = 1
+        num_mini_batch = 1 if not torch.cuda.is_available() else 6
+        update_repeats = 3
         num_steps = 128
         log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
-        save_interval = 10000  # Save every 10000 steps (approximately)
+        save_interval = 10000 if cls.EASY else 500000
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0
@@ -86,7 +87,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         return TrainingPipeline(
             save_interval=save_interval,
             log_interval=log_interval,
-            optimizer=Builder(optim.Adam, dict(lr=lr)),
+            optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
             num_steps=num_steps,
@@ -95,15 +96,19 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             use_gae=use_gae,
             gae_lambda=gae_lambda,
             max_grad_norm=max_grad_norm,
+            advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
                 PipelineStage(loss_names=["a2c_loss"], end_criterion=a2c_steps,),
             ],
+            lr_scheduler_builder=Builder(
+                LambdaLR, {"lr_lambda": LinearDecay(steps=a2c_steps)}
+            ),
         )
 
     @classmethod
     def machine_params(cls, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 3 if not torch.cuda.is_available() else 18
+            nprocesses = 3 if not torch.cuda.is_available() else 20
             gpu_ids = [] if not torch.cuda.is_available() else [0]
         elif mode == "valid":
             nprocesses = 1
@@ -186,7 +191,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_period"] = self.SCENE_PERIOD
+        res["scene_period"] = "manual"
         res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
         return res
 

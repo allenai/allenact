@@ -268,8 +268,15 @@ class TaskSampler(abc.ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def next_task(self) -> Optional[Task]:
+    def next_task(self, force_advance_scene: bool = False) -> Optional[Task]:
         """Get the next task in the sampler's stream.
+
+        # Parameters
+
+        force_advance_scene : Used to (if applicable) force the task sampler to
+            use a new scene for the next task. This is useful if, during training,
+            you would like to train with one scene for some number of steps and
+            then explicitly control when you begin training with the next scene.
 
         # Returns
 
@@ -300,7 +307,8 @@ class TaskSampler(abc.ABC):
 
     @abstractmethod
     def reset(self) -> None:
-        """Resets all tasks to their original state."""
+        """Resets task sampler to its original state (except for any seed).
+        """
         raise NotImplementedError()
 
     @abstractmethod

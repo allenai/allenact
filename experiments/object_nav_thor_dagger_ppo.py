@@ -1,5 +1,6 @@
 import torch
 import torch.optim as optim
+from torch.optim.lr_scheduler import LambdaLR
 
 from .object_nav_thor_ppo import ObjectNavThorPPOExperimentConfig
 from onpolicy_sync.losses import PPO
@@ -58,7 +59,7 @@ class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
         update_repeats = 3
         num_steps = 128
         log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
-        save_interval = 250000  # Save every 250000 steps (approximately)
+        save_interval = 10000 if cls.EASY else 500000
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0
@@ -66,9 +67,10 @@ class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
         return TrainingPipeline(
             save_interval=save_interval,
             log_interval=log_interval,
-            optimizer=Builder(optim.Adam, dict(lr=lr)),
+            optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
+            max_grad_norm=max_grad_norm,
             num_steps=num_steps,
             named_losses={
                 "imitation_loss": Builder(Imitation,),
@@ -77,7 +79,7 @@ class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
-            max_grad_norm=max_grad_norm,
+            advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
                 PipelineStage(
                     loss_names=["imitation_loss"],
@@ -90,4 +92,7 @@ class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
                     loss_names=["ppo_loss", "imitation_loss"], end_criterion=ppo_steps
                 ),
             ],
+            lr_scheduler_builder=Builder(
+                LambdaLR, {"lr_lambda": LinearDecay(steps=dagger_steps + ppo_steps)}
+            ),
         )

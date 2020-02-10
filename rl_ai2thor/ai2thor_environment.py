@@ -14,6 +14,7 @@ import ai2thor.server
 import networkx as nx
 import numpy as np
 from ai2thor.controller import Controller
+from filelock import FileLock
 
 from rl_ai2thor.ai2thor_constants import VISIBILITY_DISTANCE, FOV
 from rl_ai2thor.ai2thor_util import round_to_factor
@@ -182,13 +183,33 @@ class AI2ThorEnvironment(object):
                 "Trying to start the environment but it is already started."
             )
 
-        self.controller = Controller(
-            x_display=self.x_display,
-            player_screen_width=self._start_player_screen_width,
-            player_screen_height=self._start_player_screen_height,
-            local_executable_path=self._local_thor_build,
-            quality=self._quality,
-        )
+        def create_controller():
+            return Controller(
+                x_display=self.x_display,
+                player_screen_width=self._start_player_screen_width,
+                player_screen_height=self._start_player_screen_height,
+                local_executable_path=self._local_thor_build,
+                quality=self._quality,
+            )
+
+        self.controller = create_controller()
+
+        # TODO: Would like to use a locking idea when starting AI2-THOR as below
+        #   to prevent downloading on multiple processes at once. The below works
+        #   but also means that thor can take quite a while to start up when launching
+        #   many processes. Not turned on because of this for now.
+        # if self._local_thor_build is None:
+        #     lock_path = os.path.join(
+        #         os.path.expanduser("~"), ".ai2thor", "download.lock"
+        #     )
+        #     lock = FileLock(lock_path, timeout=120)
+        #     try:
+        #         lock.acquire()
+        #         self.controller = create_controller()
+        #     finally:
+        #         lock.release()
+        # else:
+        #     self.controller = create_controller()
 
         if (
             self._start_player_screen_height,
