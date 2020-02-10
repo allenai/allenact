@@ -8,7 +8,6 @@ if __name__ == "__main__":
         install_requires=[
             "gym",
             "matplotlib",
-            "pybullet",
             "torchvision~=0.3.0",
             "tensorflow",
             "tensorboardx",
@@ -18,5 +17,7 @@ if __name__ == "__main__":
             "pillow==6.2.1",
             "setuptools",
             "setproctitle",
+            "moviepy",
+            "filelock",
         ],
     )
