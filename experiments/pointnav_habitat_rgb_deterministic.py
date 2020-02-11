@@ -40,7 +40,7 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
         TargetCoordinatesSensorHabitat({"coordinate_dims": 2}),
     ]
 
-    CONFIG = habitat.get_config('gibson.yaml')
+    CONFIG = habitat.get_config('configs/gibson.yaml')
     CONFIG.defrost()
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
     CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['*']
@@ -49,6 +49,7 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
     CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = SCREEN_SIZE
     CONFIG.SIMULATOR.TURN_ANGLE = 45
     CONFIG.SIMULATOR.FORWARD_STEP_SIZE = 0.25
+    CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS = MAX_STEPS
 
     GPU_ID = 0
 
@@ -69,7 +70,7 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
         log_interval = 2 * num_steps * nprocesses
         gamma = 0.99
         use_gae = True
-        gae_lambda = 1.0
+        gae_lambda = 0.95
         max_grad_norm = 0.5
         return TrainingPipeline(
             save_interval=save_interval,
@@ -78,7 +79,7 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, dict(), default=PPOConfig,)},
+            named_losses={"ppo_loss": Builder(PPO, kwargs={"use_clipped_value_loss": False}, default=PPOConfig,)},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
