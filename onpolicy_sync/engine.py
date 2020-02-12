@@ -24,6 +24,7 @@ from torch import optim
 from torch.optim.lr_scheduler import _LRScheduler
 import numpy as np
 
+from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from onpolicy_sync.storage import RolloutStorage
 from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
 from rl_base.common import Loss
@@ -81,8 +82,11 @@ class OnPolicyRLEngine(object):
         mode: str = "train",
         deterministic_cudnn: bool = False,
         mp_ctx: Optional[BaseContext] = None,
+        extra_tag: str = "",
     ):
         """Initializer.
+
+        # Parameters
 
         config : The ExperimentConfig defining the experiment to run.
         output_dir : Root directory at which checkpoints and logs should be saved.
@@ -94,6 +98,7 @@ class OnPolicyRLEngine(object):
         deterministic_cudnn : Whether or not to use deterministic cudnn. If `True` this may lower
             training performance this is necessary (but not sufficient) if you desire
             deterministic behavior.
+        extra_tag : An additional label to add to the experiment when saving tensorboard logs.
         """
         self.deterministic_cudnn = deterministic_cudnn
         self.seed = seed
@@ -180,7 +185,7 @@ class OnPolicyRLEngine(object):
         # Fields defined when running setup_stage.
         # TODO: Lets encapsulate these better, perhaps in named
         #   tuple like data structure with sensible defaults.
-        self.losses: Optional[Dict[str, Loss]] = None
+        self.losses: Optional[Dict[str, AbstractActorCriticLoss]] = None
         self.loss_weights: Optional[Dict[str, float]] = None
         self.stage_task_steps: Optional[int] = None
         self.steps_in_rollout: Optional[int] = None
@@ -204,6 +209,7 @@ class OnPolicyRLEngine(object):
         self.num_processes = self.machine_params["nprocesses"]
 
         self.config = config
+        self.extra_tag = extra_tag
 
         self.write_to_eval = None
         self.mp_ctx: Optional[BaseContext] = mp_ctx
@@ -324,6 +330,7 @@ class OnPolicyRLEngine(object):
             "optimizer_state_dict": self.optimizer.state_dict(),  # type: ignore
             "model_state_dict": self.actor_critic.state_dict(),
             "trainer_seed": self.seed,
+            "extra_tag": self.extra_tag,
         }
 
         if self.seed is not None:
@@ -372,6 +379,17 @@ class OnPolicyRLEngine(object):
                 self.vector_tasks.set_seeds(seeds)
             if self.lr_scheduler is not None:
                 self.lr_scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
+
+            self.extra_tag = typing.cast(
+                str,
+                ckpt["extra_tag"]
+                if (
+                    "extra_tag" in ckpt
+                    and ckpt["extra_tag"] != ""
+                    and self.extra_tag == ""
+                )
+                else self.extra_tag,
+            )
 
     def process_eval_metrics(self, count=-1):
         unused = []
@@ -464,7 +482,7 @@ class OnPolicyRLEngine(object):
         if len(tracked_means) > 0:
             LOGGER.info(" ".join(message))
 
-    def update(self, rollouts) -> None:
+    def update(self, rollouts: RolloutStorage) -> None:
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
 
         for e in range(self.update_epochs):
@@ -492,15 +510,18 @@ class OnPolicyRLEngine(object):
                 if self.lr_scheduler is not None:
                     info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
 
-                self.optimizer.zero_grad()  # type: ignore
-                total_loss: Optional[torch.FloatTensor] = None
+                total_loss: Optional[torch.Tensor] = None
                 for loss_name in self.losses:
                     loss, loss_weight = (
                         self.losses[loss_name],
                         self.loss_weights[loss_name],
                     )
 
-                    current_loss, current_info = loss.loss(batch, actor_critic_output)
+                    current_loss, current_info = loss.loss(
+                        step_count=self.step_count,
+                        batch=batch,
+                        actor_critic_output=actor_critic_output,
+                    )
                     if total_loss is None:
                         total_loss = loss_weight * current_loss
                     else:
@@ -513,9 +534,10 @@ class OnPolicyRLEngine(object):
                     info["total_loss"] = total_loss.item()
                     self.vector_tasks.metrics_out_queue.put(("update_package", info))
 
+                    self.optimizer.zero_grad()  # type: ignore
                     total_loss.backward()
                     nn.utils.clip_grad_norm_(
-                        self.actor_critic.parameters(), self.max_grad_norm, norm_type="inf"  # type: ignore
+                        self.actor_critic.parameters(), self.max_grad_norm,  # type: ignore
                     )
                     self.optimizer.step()  # type: ignore
                     self.backprop_count += 1
@@ -556,7 +578,7 @@ class OnPolicyRLEngine(object):
             {"teacher_forcing_mask": teacher_forcing_mask},
         )
 
-    def collect_rollout_step(self, rollouts, render=None):
+    def collect_rollout_step(self, rollouts: RolloutStorage, render=None):
         # sample actions
         with torch.no_grad():
             step_observation = {
@@ -597,6 +619,7 @@ class OnPolicyRLEngine(object):
 
         outputs = self.vector_tasks.step([a[0].item() for a in actions])
 
+        rewards: Union[List, torch.Tensor]
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
 
         rewards = torch.tensor(rewards, dtype=torch.float, device=self.device)
@@ -617,13 +640,13 @@ class OnPolicyRLEngine(object):
         rollouts.reshape(keep)
 
         rollouts.insert(
-            self._preprocess_observations(batch),
-            recurrent_hidden_states[:, keep],
-            actions[keep],
-            actor_critic_output.distributions.log_probs(actions)[keep],
-            actor_critic_output.values[keep],
-            rewards[keep],
-            masks[keep],
+            observations=self._preprocess_observations(batch),
+            recurrent_hidden_states=recurrent_hidden_states[:, keep],
+            actions=actions[keep],
+            action_log_probs=actor_critic_output.distributions.log_probs(actions)[keep],
+            value_preds=actor_critic_output.values[keep],
+            rewards=rewards[keep],
+            masks=masks[keep],
         )
 
         return npaused
@@ -672,7 +695,10 @@ class OnPolicyRLEngine(object):
                 )
 
             rollouts.compute_returns(
-                actor_critic_output.values, self.use_gae, self.gamma, self.gae_lambda,
+                actor_critic_output.values.detach(),
+                self.use_gae,
+                self.gamma,
+                self.gae_lambda,
             )
 
             self.update(rollouts)
@@ -710,7 +736,7 @@ class OnPolicyRLEngine(object):
 
     def setup_stage(
         self,
-        losses: Dict[str, Loss],
+        losses: Dict[str, AbstractActorCriticLoss],
         loss_weights: Dict[str, float],
         steps_in_rollout: int,
         stage_task_steps: int,
@@ -754,17 +780,22 @@ class OnPolicyRLEngine(object):
 
         self.deterministic_agent = deterministic_agent
 
-    def _get_loss(self, loss_name):
+    def _get_loss(self, loss_name) -> AbstractActorCriticLoss:
         assert (
             loss_name in self.training_pipeline.named_losses
         ), "undefined referenced loss"
         if isinstance(self.training_pipeline.named_losses[loss_name], Builder):
-            return self.training_pipeline.named_losses[loss_name]()
+            return typing.cast(
+                Builder[AbstractActorCriticLoss],
+                self.training_pipeline.named_losses[loss_name],
+            )()
         else:
-            return self.training_pipeline.named_losses[loss_name]
+            return typing.cast(
+                AbstractActorCriticLoss, self.training_pipeline.named_losses[loss_name]
+            )
 
     def _load_losses(self, stage: PipelineStage):
-        stage_losses = dict()
+        stage_losses: Dict[str, AbstractActorCriticLoss] = {}
         for loss_name in stage.loss_names:
             stage_losses[loss_name] = self._get_loss(loss_name)
 
@@ -799,9 +830,18 @@ class OnPolicyRLEngine(object):
 
     @property
     def log_writer_path(self) -> str:
-        return os.path.join(
-            self.output_dir, "tb", self.experiment_name, self.local_start_time_str
-        )
+        if self.extra_tag == "":
+            return os.path.join(
+                self.output_dir, "tb", self.experiment_name, self.local_start_time_str
+            )
+        else:
+            return os.path.join(
+                self.output_dir,
+                "tb",
+                self.experiment_name,
+                self.extra_tag,
+                self.local_start_time_str,
+            )
 
     @property
     def metric_path(self) -> str:
@@ -1130,8 +1170,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         loaded_config_src_files: Optional[Dict[str, Tuple[str, str]]],
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
-        *args,
-        **argv
+        **kwargs
     ):
         super().__init__(
             config=config,
@@ -1140,6 +1179,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             seed=seed,
             mode="train",
             deterministic_cudnn=deterministic_cudnn,
+            **kwargs,
         )
 
 
@@ -1170,8 +1210,7 @@ class OnPolicyTester(OnPolicyRLEngine):
         output_dir: str,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
-        *args,
-        **argv
+        **kwargs
     ):
         super().__init__(
             config=config,
@@ -1180,4 +1219,5 @@ class OnPolicyTester(OnPolicyRLEngine):
             seed=seed,
             mode="test",
             deterministic_cudnn=deterministic_cudnn,
+            **kwargs,
         )

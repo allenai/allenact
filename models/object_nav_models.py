@@ -6,15 +6,17 @@ Facebook's Habitat.
 from typing import cast, Tuple, Dict
 
 import gym
+import torch
+import torch.nn as nn
+from gym.spaces.dict import Dict as SpaceDict
 
 from models.basic_models import SimpleCNN, RNNStateEncoder
-from onpolicy_sync.policy import ActorCriticModel, LinearCriticHead, LinearActorHead
-import torch.nn as nn
-import torch
-
+from onpolicy_sync.policy import (
+    ActorCriticModel,
+    LinearActorCriticHead,
+)
 from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
-from gym.spaces.dict import Dict as SpaceDict
 
 
 class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
@@ -41,6 +43,7 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         goal_sensor_uuid: str,
         hidden_size=512,
         object_type_embedding_dim=8,
+        trainable_masked_hidden_state: bool = False,
     ):
         """Initializer.
 
@@ -59,10 +62,12 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
             (0 if self.is_blind else self.recurrent_hidden_state_size)
             + object_type_embedding_dim,
             self.recurrent_hidden_state_size,
+            trainable_masked_hidden_state=trainable_masked_hidden_state,
         )
 
-        self.actor = LinearActorHead(self.recurrent_hidden_state_size, action_space.n)
-        self.critic = LinearCriticHead(self.recurrent_hidden_state_size)
+        self.actor_and_critic = LinearActorCriticHead(
+            self.recurrent_hidden_state_size, action_space.n
+        )
 
         self.object_type_embedding = nn.Embedding(
             num_embeddings=self._n_object_types,
@@ -131,9 +136,8 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         x_cat = cast(torch.FloatTensor, torch.cat(x, dim=1))  # type: ignore
         x_out, rnn_hidden_states = self.state_encoder(x_cat, rnn_hidden_states, masks)
 
+        distributions, values = self.actor_and_critic(x_out)
         return (
-            ActorCriticOutput(
-                distributions=self.actor(x_out), values=self.critic(x_out), extras={}
-            ),
+            ActorCriticOutput(distributions=distributions, values=values, extras={}),
             cast(torch.FloatTensor, rnn_hidden_states),
         )
