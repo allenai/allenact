@@ -44,15 +44,24 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
     CONFIG.defrost()
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
     CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['*']
-    CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
+    CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR', ]
     CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = SCREEN_SIZE
     CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = SCREEN_SIZE
     CONFIG.SIMULATOR.TURN_ANGLE = 45
     CONFIG.SIMULATOR.FORWARD_STEP_SIZE = 0.25
     CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS = MAX_STEPS
 
-    GPU_ID = 0
+    CONFIG.TASK.TYPE = 'Nav-v0'
+    CONFIG.TASK.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
+    CONFIG.TASK.SENSORS = ['POINTGOAL_WITH_GPS_COMPASS_SENSOR']
+    CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.GOAL_FORMAT = "POLAR"
+    CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.DIMENSIONALITY = 2
+    CONFIG.TASK.GOAL_SENSOR_UUID = 'pointgoal_with_gps_compass'
+    CONFIG.TASK.MEASUREMENTS = ['DISTANCE_TO_GOAL', 'SPL']
+    CONFIG.TASK.SPL.TYPE = 'SPL'
+    CONFIG.TASK.SUCCESS_DISTANCE = 0.2
 
+    GPU_ID = 0
 
     @classmethod
     def tag(cls):
@@ -140,7 +149,10 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
     ) -> Dict[str, Any]:
         config = self.CONFIG.clone()
         config.DATASET.DATA_PATH = scenes
-        self.GPU_ID = (self.GPU_ID + 1) % torch.cuda.device_count()
+        if torch.cuda.device_count() > 0:
+            self.GPU_ID = (self.GPU_ID + 1) % torch.cuda.device_count()
+        else:
+            self.GPU_ID = -1
         config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = self.GPU_ID
         return {
             "env_config": config,
