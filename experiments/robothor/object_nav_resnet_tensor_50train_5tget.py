@@ -43,7 +43,6 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
     ]
 
     TRAIN_SCENES = [
-        # "FloorPlan_Train1_1"
         "FloorPlan_Train%d_%d" % (wall, furniture)
         for wall in range(1, 11)  # actual limit at 16
         for furniture in range(1, 6)
@@ -97,7 +96,7 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
 
     @classmethod
     def tag(cls):
-        return "ObjectNavRoboThor_50train_5tget_decay_unsuccessful_penalty_gae0.95_adamreg1e-5_lr1e-4_a2c_slowdecay"
+        return "object_nav_resnet_tensor_50train_5tget"
 
     def training_pipeline(cls, **kwargs):
         a2c_steps = int(1e8)
