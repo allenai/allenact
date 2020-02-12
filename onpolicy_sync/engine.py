@@ -82,8 +82,11 @@ class OnPolicyRLEngine(object):
         mode: str = "train",
         deterministic_cudnn: bool = False,
         mp_ctx: Optional[BaseContext] = None,
+        extra_tag: str = "",
     ):
         """Initializer.
+
+        # Parameters
 
         config : The ExperimentConfig defining the experiment to run.
         output_dir : Root directory at which checkpoints and logs should be saved.
@@ -95,6 +98,7 @@ class OnPolicyRLEngine(object):
         deterministic_cudnn : Whether or not to use deterministic cudnn. If `True` this may lower
             training performance this is necessary (but not sufficient) if you desire
             deterministic behavior.
+        extra_tag : An additional label to add to the experiment when saving tensorboard logs.
         """
         self.deterministic_cudnn = deterministic_cudnn
         self.seed = seed
@@ -205,6 +209,7 @@ class OnPolicyRLEngine(object):
         self.num_processes = self.machine_params["nprocesses"]
 
         self.config = config
+        self.extra_tag = extra_tag
 
         self.write_to_eval = None
         self.mp_ctx: Optional[BaseContext] = mp_ctx
@@ -325,6 +330,7 @@ class OnPolicyRLEngine(object):
             "optimizer_state_dict": self.optimizer.state_dict(),  # type: ignore
             "model_state_dict": self.actor_critic.state_dict(),
             "trainer_seed": self.seed,
+            "extra_tag": self.extra_tag,
         }
 
         if self.seed is not None:
@@ -373,6 +379,17 @@ class OnPolicyRLEngine(object):
                 self.vector_tasks.set_seeds(seeds)
             if self.lr_scheduler is not None:
                 self.lr_scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
+
+            self.extra_tag = typing.cast(
+                str,
+                ckpt["extra_tag"]
+                if (
+                    "extra_tag" in ckpt
+                    and ckpt["extra_tag"] != ""
+                    and self.extra_tag == ""
+                )
+                else self.extra_tag,
+            )
 
     def process_eval_metrics(self, count=-1):
         unused = []
@@ -813,9 +830,18 @@ class OnPolicyRLEngine(object):
 
     @property
     def log_writer_path(self) -> str:
-        return os.path.join(
-            self.output_dir, "tb", self.experiment_name, self.local_start_time_str
-        )
+        if self.extra_tag == "":
+            return os.path.join(
+                self.output_dir, "tb", self.experiment_name, self.local_start_time_str
+            )
+        else:
+            return os.path.join(
+                self.output_dir,
+                "tb",
+                self.experiment_name,
+                self.extra_tag,
+                self.local_start_time_str,
+            )
 
     @property
     def metric_path(self) -> str:
@@ -1144,8 +1170,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         loaded_config_src_files: Optional[Dict[str, Tuple[str, str]]],
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
-        *args,
-        **argv
+        **kwargs
     ):
         super().__init__(
             config=config,
@@ -1154,6 +1179,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             seed=seed,
             mode="train",
             deterministic_cudnn=deterministic_cudnn,
+            **kwargs,
         )
 
 
@@ -1184,8 +1210,7 @@ class OnPolicyTester(OnPolicyRLEngine):
         output_dir: str,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
-        *args,
-        **argv
+        **kwargs
     ):
         super().__init__(
             config=config,
@@ -1194,4 +1219,5 @@ class OnPolicyTester(OnPolicyRLEngine):
             seed=seed,
             mode="test",
             deterministic_cudnn=deterministic_cudnn,
+            **kwargs,
         )

@@ -5,7 +5,7 @@ from typing import Dict, Tuple, List, Any, Optional
 import gym
 import numpy as np
 
-from rl_ai2thor.ai2thor_constants import (
+from rl_ai2thor.ithor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
     ROTATE_RIGHT,
