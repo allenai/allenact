@@ -103,8 +103,8 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
         lr = 1e-4
         num_mini_batch = 1
         update_repeats = 1
-        num_steps = 50
-        log_interval = cls.MAX_STEPS * 50  # Log every 50 max length tasks
+        num_steps = 30
+        log_interval = cls.MAX_STEPS * 100  # Log every 50 max length tasks
         save_interval = 100000  # Save every 100000 steps (approximately)
         gamma = 0.99
         use_gae = True
@@ -132,11 +132,12 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
         )
 
     def single_gpu(self):
-        return 1
+        return 0
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 10
+            nprocesses = 50
+            sampler_devices = [2, 3, 4, 6, 7]
             gpu_ids = [] if not torch.cuda.is_available() else [self.single_gpu()]
         elif mode == "valid":
             nprocesses = 1
@@ -153,6 +154,7 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
 
         return {
             "nprocesses": nprocesses,
+            "sampler_devices": sampler_devices if mode == "train" else gpu_ids,
             "gpu_ids": gpu_ids,
             "observation_set": observation_set,
         }
@@ -205,7 +207,6 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
         return {
             "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
             "object_types": self.OBJECT_TYPES,
-            "env_args": self.ENV_ARGS,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
@@ -234,7 +235,11 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
             deterministic_cudnn=deterministic_cudnn,
         )
         res["scene_period"] = "manual"
-        res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
+        res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
+        res["env_args"]["x_display"] = (
+            ("0.%d" % devices[process_ind % len(devices)]) if len(devices) > 0 else None
+        )
         return res
 
     def valid_task_sampler_args(
@@ -254,7 +259,11 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
         )
         res["scene_period"] = self.VALIDATION_SAMPLES_PER_SCENE
         res["max_tasks"] = self.VALIDATION_SAMPLES_PER_SCENE * len(res["scenes"])
-        res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
+        res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
+        res["env_args"]["x_display"] = (
+            ("0.%d" % devices[process_ind % len(devices)]) if len(devices) > 0 else None
+        )
         return res
 
     def test_task_sampler_args(
@@ -274,5 +283,9 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
         )
         res["scene_period"] = self.TEST_SAMPLES_PER_SCENE
         res["max_tasks"] = self.TEST_SAMPLES_PER_SCENE * len(res["scenes"])
-        res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
+        res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
+        res["env_args"]["x_display"] = (
+            ("0.%d" % devices[process_ind % len(devices)]) if len(devices) > 0 else None
+        )
         return res
