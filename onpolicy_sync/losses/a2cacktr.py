@@ -33,6 +33,7 @@ class A2CACKTR(AbstractActorCriticLoss):
 
     def loss(  # type: ignore
         self,
+        step_count: int,
         batch: Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]],
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,

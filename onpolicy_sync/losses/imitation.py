@@ -15,6 +15,7 @@ class Imitation(AbstractActorCriticLoss):
 
     def loss(  # type: ignore
         self,
+        step_count: int,
         batch: Dict[str, Union[Dict[str, torch.Tensor], torch.Tensor]],
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,

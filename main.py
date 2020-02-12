@@ -1,12 +1,12 @@
 """Entry point to training/validating/testing for a user given experiment name"""
 
-import sys
-import os
-from typing import Dict, Tuple
 import argparse
-import inspect
 import importlib
+import inspect
 import logging
+import os
+import sys
+from typing import Dict, Tuple
 
 from setproctitle import setproctitle as ptitle
 
@@ -26,6 +26,17 @@ def _get_args():
     parser.add_argument(
         "experiment", type=str, help="experiment configuration file name",
     )
+
+    parser.add_argument(
+        "--extra_tag",
+        type=str,
+        default="",
+        required=False,
+        help="Add an extra tag to the experiment when trying out new ideas (will be used"
+        "as a subdirectory of the tensorboard path so you will be able to"
+        "search tensorboard logs using this extra tag).",
+    )
+
     parser.add_argument(
         "-o",
         "--output_dir",
@@ -114,7 +125,6 @@ def _load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
     importlib.invalidate_caches()
     module_path = ".{}".format(args.experiment)
 
-    parent = importlib.import_module(os.path.basename(path))
     module = importlib.import_module(module_path, package=os.path.basename(path))
 
     experiments = [
@@ -190,6 +200,7 @@ def main():
             loaded_config_src_files=srcs,
             seed=args.seed,
             deterministic_cudnn=args.deterministic_cudnn,
+            extra_tag=args.extra_tag,
         ).run_pipeline(args.checkpoint)
     else:
         OnPolicyTester(

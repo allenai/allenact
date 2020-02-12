@@ -8,7 +8,7 @@ import gym
 import numpy as np
 import networkx as nx
 
-from rl_ai2thor.ai2thor_constants import (
+from rl_ai2thor.ithor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
     ROTATE_RIGHT,
