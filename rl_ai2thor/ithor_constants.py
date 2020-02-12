@@ -3,7 +3,7 @@ interactive version of AI2-THOR.
 """
 
 from collections import OrderedDict
-from typing import Set
+from typing import Set, Tuple, Dict
 
 MOVE_AHEAD = "MoveAhead"
 ROTATE_LEFT = "RotateLeft"
@@ -189,7 +189,7 @@ for ot_tab_scene_types in _object_type_and_location_tsv.split("\n"):
         ot, scene_types_csv = ot_tab_scene_types.split("\t")
         OBJECT_TYPE_TO_SCENE_TYPES[ot] = tuple(sorted(scene_types_csv.split(",")))
 
-SCENE_TYPE_TO_OBJECT_TYPES: OrderedDict[str, Set[str]] = OrderedDict(
+SCENE_TYPE_TO_OBJECT_TYPES: Dict[str, Set[str]] = OrderedDict(
     ((k, set()) for k in ORDERED_SCENE_TYPES)
 )
 for ot_tab_scene_types in _object_type_and_location_tsv.split("\n"):
