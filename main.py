@@ -125,6 +125,7 @@ def _load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
     importlib.invalidate_caches()
     module_path = ".{}".format(args.experiment)
 
+    importlib.import_module(os.path.basename(path))
     module = importlib.import_module(module_path, package=os.path.basename(path))
 
     experiments = [
