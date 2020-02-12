@@ -30,35 +30,8 @@ class Preprocessor(abc.ABC):
 
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
         self.config = config
-        self.uuid = self._get_uuid()
-        self.input_uuids = self._get_input_uuids()
-
-    @abc.abstractmethod
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        """The unique ID of the preprocessor.
-
-        # Parameters
-
-        args : extra args.
-        kwargs : extra kwargs.
-        """
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def _get_input_uuids(self, *args: Any, **kwargs: Any) -> List[str]:
-        """The unique IDs of the input sensors and preprocessors.
-
-        # Parameters
-
-        args : extra args.
-        kwargs : extra kwargs.
-        """
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def _get_observation_space(self) -> gym.Space:
-        """The output observation space of the sensor."""
-        raise NotImplementedError()
+        self.uuid = self.config["output_uuid"]
+        self.input_uuids = self.config["input_uuids"]
 
     @abc.abstractmethod
     def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:
@@ -200,9 +173,9 @@ class ObservationSet:
         spaces: OrderedDict[str, gym.Space] = OrderedDict()
         for uuid in self.source_ids:
             assert (
-                uuid in sensor_spaces or uuid in preprocessor_spaces
+                uuid in sensor_spaces.spaces or uuid in preprocessor_spaces.spaces
             ), "uuid {} missing from sensor suite and preprocessor graph".format(uuid)
-            if uuid in sensor_spaces:
+            if uuid in sensor_spaces.spaces:
                 spaces[uuid] = sensor_spaces[uuid]
             else:
                 spaces[uuid] = preprocessor_spaces[uuid]

@@ -5,9 +5,9 @@ Facebook's Habitat.
 """
 from typing import cast, Tuple, Dict
 
-import gym
 import torch
 import torch.nn as nn
+import gym
 from gym.spaces.dict import Dict as SpaceDict
 
 from models.basic_models import SimpleCNN, RNNStateEncoder
@@ -15,6 +15,7 @@ from onpolicy_sync.policy import (
     ActorCriticModel,
     LinearActorCriticHead,
 )
+
 from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
 
