@@ -1,4 +1,5 @@
 from typing import Tuple, Dict
+import logging
 
 import gym
 from gym.spaces import Dict as SpaceDict
@@ -9,6 +10,8 @@ from models.basic_models import RNNStateEncoder
 from onpolicy_sync.policy import ActorCriticModel, LinearActorHead, LinearCriticHead
 from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
+
+LOGGER = logging.getLogger("embodiedrl")
 
 
 class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
@@ -100,6 +103,8 @@ class ResnetTensorGoalEncoder(nn.Module):
             num_embeddings=observation_spaces.spaces[self.goal_sensor_uuid].n,
             embedding_dim=self.goal_dims,
         )
+
+        # LOGGER.info("embed shape {}".format(self.embed_goal.weight.shape))
 
         self.blind = "rgb_resnet" not in observation_spaces.spaces
 

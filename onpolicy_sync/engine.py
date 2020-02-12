@@ -115,7 +115,7 @@ class OnPolicyRLEngine(object):
         self.device = "cpu"
         if len(self.machine_params["gpu_ids"]) > 0:
             if not torch.cuda.is_available():
-                print(
+                LOGGER.warning(
                     "Warning: no CUDA devices available for gpu ids {}".format(
                         self.machine_params["gpu_ids"]
                     )
@@ -395,6 +395,7 @@ class OnPolicyRLEngine(object):
 
     def process_eval_metrics(self, count=-1):
         unused = []
+        used = []
         while (not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
             try:
                 if count < 0:
@@ -406,7 +407,10 @@ class OnPolicyRLEngine(object):
                 ):  # queue reused for test
                     unused.append(metric)
                 else:
-                    self.scalars.add_scalars(metric)
+                    self.scalars.add_scalars(
+                        {k: v for k, v in metric.items() if k != "task_info"}
+                    )
+                    used.append(metric)
                     count -= 1
             except queue.Empty:
                 pass
@@ -414,7 +418,7 @@ class OnPolicyRLEngine(object):
         for item in unused:
             self.vector_tasks.metrics_out_queue.put(item)
 
-        return self.scalars.pop_and_reset()
+        return self.scalars.pop_and_reset(), used
 
     def log(self, count=-1):
         train_metrics = []
@@ -473,7 +477,7 @@ class OnPolicyRLEngine(object):
                             cscalars = {k: v for k, v in info.items()}
                             teachers.append(cscalars)
                         else:
-                            print("WARNING: Unknown info package {}".format(info))
+                            LOGGER.warning("Unknown info package {}".format(info))
                 else:
                     train_metrics.append(metric)
             except queue.Empty:
@@ -482,19 +486,28 @@ class OnPolicyRLEngine(object):
         for metric in train_metrics:
             self.scalars.add_scalars(
                 OrderedDict(
-                    sorted([(k, v) for k, v in metric.items()], key=lambda x: x[0])
+                    sorted(
+                        [(k, v) for k, v in metric.items() if k != "task_info"],
+                        key=lambda x: x[0],
+                    )
                 )
             )
         for loss in losses:
             self.scalars.add_scalars(
                 OrderedDict(
-                    sorted([(k, v) for k, v in loss.items()], key=lambda x: x[0])
+                    sorted(
+                        [(k, v) for k, v in loss.items() if k != "task_info"],
+                        key=lambda x: x[0],
+                    )
                 )
             )
         for teacher in teachers:
             self.scalars.add_scalars(
                 OrderedDict(
-                    sorted([(k, v) for k, v in teacher.items()], key=lambda x: x[0])
+                    sorted(
+                        [(k, v) for k, v in teacher.items() if k != "task_info"],
+                        key=lambda x: x[0],
+                    )
                 )
             )
 
@@ -791,7 +804,7 @@ class OnPolicyRLEngine(object):
         self.num_rollouts = (
             int(self.stage_task_steps) // self.steps_in_rollout
         ) // self.num_processes
-        message = "Using %d rollouts, %d steps (from %d)" % (
+        message = "Using %d rollouts, %d steps (from requested %d steps)" % (
             self.num_rollouts,
             self.num_rollouts * self.num_processes * self.steps_in_rollout,
             self.stage_task_steps,
@@ -1005,7 +1018,7 @@ class OnPolicyRLEngine(object):
                         pass
 
                 if command == "eval":
-                    scalars, render = self.run_eval(checkpoint_file_name=data)
+                    scalars, render, samples = self.run_eval(checkpoint_file_name=data)
                     write_to_parent.put(("valid_metrics", (scalars, render)))
                 elif command in ["quit", "exit", "close"]:
                     self.close(verbose=False)
@@ -1017,7 +1030,29 @@ class OnPolicyRLEngine(object):
         except KeyboardInterrupt:
             print("Eval KeyboardInterrupt")
 
-    def run_eval(self, checkpoint_file_name: str, rollout_steps=1):
+    def process_video(self, render, max_clip_len=500):
+        if len(render) > 0:
+            nt = len(render)
+            if nt > max_clip_len:
+                LOGGER.info(
+                    "Cutting video with length {} to {}".format(nt, max_clip_len)
+                )
+                render = render[:max_clip_len]
+            try:
+                render = np.stack(render, axis=0)  # T, H, W, C
+                render = render.transpose((0, 3, 1, 2))  # T, C, H, W
+                render = np.expand_dims(render, axis=0)  # 1, T, C, H, W
+                render = tensor_to_video(render, fps=4)
+            except MemoryError:
+                LOGGER.warning(
+                    "Skipped video with length {} (cut to {})".format(nt, max_clip_len)
+                )
+                render = None
+        else:
+            render = None
+        return render
+
+    def run_eval(self, checkpoint_file_name: str, rollout_steps=1, max_clip_len=2000):
         self.checkpoint_load(checkpoint_file_name, verbose=False)
 
         rollouts = RolloutStorage(
@@ -1040,20 +1075,14 @@ class OnPolicyRLEngine(object):
         self.vector_tasks.resume_all()
         self.vector_tasks.reset_all()
 
-        if len(render) > 0:
-            render = np.stack(render, axis=0)  # T, H, W, C
-            render = render.transpose((0, 3, 1, 2))  # T, C, H, W
-            render = np.expand_dims(render, axis=0)  # 1, T, C, H, W
-            render = tensor_to_video(render, fps=4)
-        else:
-            render = None
+        render = self.process_video(render, max_clip_len)
+
+        metrics, samples = self.process_eval_metrics(count=self.num_processes)
 
         return (
-            {
-                k: (v, self.total_steps + self.step_count)
-                for k, v in self.process_eval_metrics(count=self.num_processes).items()
-            },
+            {k: (v, self.total_steps + self.step_count) for k, v in metrics.items()},
             render,
+            samples,
         )
 
     def get_checkpoint_files(
@@ -1068,10 +1097,15 @@ class OnPolicyRLEngine(object):
             os.path.join(self.output_dir, "checkpoints", experiment_date, "exp_*.pt")
         )
         files = sorted(files)
-        return files[:: skip_checkpoints + 1] + (
-            [files[-1]]
-            if skip_checkpoints > 0 and len(files) % (skip_checkpoints + 1) != 1
-            else []
+        return (
+            files[:: skip_checkpoints + 1]
+            + (
+                [files[-1]]
+                if skip_checkpoints > 0 and len(files) % (skip_checkpoints + 1) != 1
+                else []
+            )
+            if len(files) > 0
+            else files
         )
 
     def step_from_checkpoint(self, name):
@@ -1110,25 +1144,34 @@ class OnPolicyRLEngine(object):
             log_dir=self.log_writer_path, filename_suffix=suffix,
         )
 
+        os.makedirs(self.metric_path, exist_ok=True)
+        fname = os.path.join(self.metric_path, "metrics" + suffix + ".json")
+
+        LOGGER.info("Saving metrics in {}".format(fname))
+
         all_results = []
         for it, checkpoint_file_name in enumerate(checkpoints):
             step = self.step_from_checkpoint(checkpoint_file_name)
             LOGGER.info("{}/{} {} steps".format(it + 1, len(checkpoints), step,))
 
-            scalars, render = self.run_eval(checkpoint_file_name, rollout_steps)
+            scalars, render, samples = self.run_eval(
+                checkpoint_file_name, rollout_steps
+            )
 
             self.vector_tasks.metrics_out_queue.put(("test_metrics", (scalars, render)))
 
             results = {scalar: scalars[scalar][0] for scalar in scalars}
-            results.update({"training_steps": step})
+            results.update({"training_steps": step, "tasks": samples})
             all_results.append(results)
+
+            with open(fname, "w") as f:
+                json.dump(all_results, f, indent=4)
 
             self.log(count=1)
 
-        os.makedirs(self.metric_path, exist_ok=True)
-        fname = os.path.join(self.metric_path, "metrics" + suffix + ".json")
-        with open(fname, "w") as f:
-            json.dump(all_results, f, indent=4)
+            with open(fname, "w") as f:
+                json.dump(all_results, f, indent=4)
+
         LOGGER.info("Metrics saved in {}".format(fname))
 
     def close(self, verbose=True):
@@ -1231,6 +1274,7 @@ class OnPolicyValidator(OnPolicyRLEngine):
             deterministic_cudnn=deterministic_cudnn,
             **kwargs,
         )
+        self.actor_critic.eval()
 
 
 class OnPolicyTester(OnPolicyRLEngine):
@@ -1251,3 +1295,4 @@ class OnPolicyTester(OnPolicyRLEngine):
             deterministic_cudnn=deterministic_cudnn,
             **kwargs,
         )
+        self.actor_critic.eval()

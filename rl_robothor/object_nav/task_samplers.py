@@ -2,6 +2,7 @@ import random
 import warnings
 import typing
 from typing import Optional, Dict, List, Any
+from collections import OrderedDict
 
 import gym
 
@@ -46,11 +47,11 @@ class ObjectNavTaskSampler(BaseObjectNavTaskSampler):
             **kwargs,
         )
 
-    def next_task(self) -> Optional[ObjectNavTask]:
+    def next_task(self, force_advance_scene=False) -> Optional[ObjectNavTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
 
-        scene = self.sample_scene()
+        scene = self.sample_scene(force_advance_scene)
 
         if self.env is not None:
             if scene != self.env.scene_name:
@@ -59,13 +60,13 @@ class ObjectNavTaskSampler(BaseObjectNavTaskSampler):
             self.env = self._create_environment()
             self.env.reset(scene_name=scene)
 
-        self.env.randomize_agent_location()
+        pose = self.env.randomize_agent_location()
 
         object_types_in_scene = set(
             [o["objectType"] for o in self.env.last_event.metadata["objects"]]
         )
 
-        task_info = {}
+        task_info = OrderedDict()
         for ot in random.sample(self.object_types, len(self.object_types)):
             if ot in object_types_in_scene:
                 task_info["object_type"] = ot
@@ -76,6 +77,12 @@ class ObjectNavTaskSampler(BaseObjectNavTaskSampler):
                 "Scene {} does not contain any"
                 " objects of any of the types {}.".format(scene, self.object_types)
             )
+
+        task_info["start_pose"] = OrderedDict(
+            sorted([(k, float(v)) for k, v in pose.items()], key=lambda x: x[0])
+        )
+
+        task_info["actions"] = []
 
         self._last_sampled_task = ObjectNavTask(
             env=typing.cast(RoboThorEnvironment, self.env),

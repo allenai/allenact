@@ -7,14 +7,16 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import models
+from torch.optim.lr_scheduler import LambdaLR
 
-from onpolicy_sync.losses.ppo import PPOConfig
+
+from onpolicy_sync.losses.a2cacktr import A2CConfig
 from models.resnet_tensor_object_nav_models import ResnetTensorObjectNavActorCritic
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from rl_robothor.object_nav.task_samplers import ObjectNavTaskSampler
 from rl_robothor.object_nav.tasks import ObjectNavTask
-from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline
-from onpolicy_sync.losses import PPO
+from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
+from onpolicy_sync.losses import A2C
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.task import TaskSampler
 
@@ -41,6 +43,7 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
     ]
 
     TRAIN_SCENES = [
+        # "FloorPlan_Train1_1"
         "FloorPlan_Train%d_%d" % (wall, furniture)
         for wall in range(1, 11)  # actual limit at 16
         for furniture in range(1, 6)
@@ -90,41 +93,47 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
 
     SCENE_PERIOD = 10
 
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 10
+
     @classmethod
     def tag(cls):
-        return "ObjectNavRoboThor_50train_5tget_unsuccessful_penalty"
+        return "ObjectNavRoboThor_50train_5tget_decay_unsuccessful_penalty_gae0.95_adamreg1e-5_lr1e-4_a2c_slowdecay"
 
     def training_pipeline(cls, **kwargs):
-        ppo_steps = int(1e10)
-        lr = 3e-5
-        num_mini_batch = 3
-        update_repeats = 5
-        num_steps = 30
+        a2c_steps = int(1e8)
+        lr = 1e-4
+        num_mini_batch = 1
+        update_repeats = 1
+        num_steps = 50
         log_interval = cls.MAX_STEPS * 50  # Log every 50 max length tasks
         save_interval = 100000  # Save every 100000 steps (approximately)
         gamma = 0.99
         use_gae = True
-        gae_lambda = 1.0
+        gae_lambda = 0.95
         max_grad_norm = 0.3
         return TrainingPipeline(
             save_interval=save_interval,
             log_interval=log_interval,
-            optimizer=Builder(optim.Adam, dict(lr=lr)),
+            optimizer_builder=Builder(optim.Adam, dict(lr=lr, eps=1e-5)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, dict(), default=PPOConfig,),},
+            named_losses={"a2c_loss": Builder(A2C, dict(), default=A2CConfig,),},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
             max_grad_norm=max_grad_norm,
+            advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
-                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps,),
+                PipelineStage(loss_names=["a2c_loss"], end_criterion=a2c_steps,),
             ],
+            lr_scheduler_builder=Builder(
+                LambdaLR, {"lr_lambda": LinearDecay(steps=a2c_steps, endp=1e-3)}
+            ),
         )
 
     def single_gpu(self):
-        return 7
+        return 1
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
@@ -225,7 +234,7 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_period"] = self.SCENE_PERIOD
+        res["scene_period"] = "manual"
         res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
         return res
 
