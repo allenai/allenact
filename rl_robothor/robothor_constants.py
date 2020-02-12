@@ -1,0 +1,10 @@
+MOVE_AHEAD = "MoveAhead"
+ROTATE_LEFT = "RotateLeft"
+ROTATE_RIGHT = "RotateRight"
+LOOK_DOWN = "LookDown"
+LOOK_UP = "LookUp"
+END = "End"
+
+VISIBILITY_DISTANCE = 1.5
+FOV = 42.5
+ROTATION_ANGLE = 45.0
