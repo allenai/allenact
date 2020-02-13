@@ -100,7 +100,7 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
 
     def training_pipeline(cls, **kwargs):
         a2c_steps = int(1e8)
-        lr = 1e-4
+        lr = 4e-4
         num_mini_batch = 1
         update_repeats = 1
         num_steps = 30
