@@ -327,9 +327,6 @@ class OnPolicyRLEngine(object):
             "extra_tag": self.extra_tag,
         }
 
-        if self.seed is not None:
-            save_dict["worker_seeds"] = seeds
-
         if self.lr_scheduler is not None:
             save_dict["scheduler_state"] = typing.cast(
                 _LRScheduler, self.lr_scheduler
@@ -367,9 +364,6 @@ class OnPolicyRLEngine(object):
             if self.seed is not None:
                 set_seed(self.seed)
                 seeds = self.worker_seeds(self.num_processes, None)
-                assert (
-                    seeds == ckpt["worker_seeds"]
-                ), "worker seeds not matching stored seeds"
                 self.vector_tasks.set_seeds(seeds)
             if self.lr_scheduler is not None:
                 self.lr_scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
