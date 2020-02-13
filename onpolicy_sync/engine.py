@@ -160,16 +160,8 @@ class OnPolicyRLEngine(object):
 
         self.configs_folder = os.path.join(output_dir, "used_configs")
         os.makedirs(self.configs_folder, exist_ok=True)
-        if mode == "train":
-            for file in loaded_config_src_files:
-                base, module = loaded_config_src_files[file]
-                parts = module.split(".")
-                src_file = os.path.sep.join([base] + parts) + ".py"
-                dst_file = (
-                    os.path.join(self.configs_folder, os.path.join(*parts[1:])) + ".py"
-                )
-                os.makedirs(os.path.dirname(dst_file), exist_ok=True)
-                shutil.copy(src_file, dst_file)
+
+        self.loaded_config_src_files = loaded_config_src_files
 
         self.log_writer: Optional[SummaryWriter] = None
 
@@ -923,19 +915,42 @@ class OnPolicyRLEngine(object):
             else:
                 return ckpts[0]
 
+    def save_config_files(self):
+        for file in self.loaded_config_src_files:
+            base, module = self.loaded_config_src_files[file]
+            parts = module.split(".")
+
+            src_file = os.path.sep.join([base] + parts) + ".py"
+            if not os.path.isfile(src_file):
+                LOGGER.error("Config file {} not found".format(src_file))
+
+            dst_file = (
+                os.path.join(
+                    self.configs_folder,
+                    self.local_start_time_str,
+                    os.path.join(*parts[1:]),
+                )
+                + ".py"
+            )
+            os.makedirs(os.path.dirname(dst_file), exist_ok=True)
+
+            shutil.copy(src_file, dst_file)
+
     def run_pipeline(self, checkpoint_file_name: Optional[str] = None):
         encountered_exception = False
         try:
             start_time = time.time()
-            self.local_start_time_str = time.strftime(
-                "%Y-%m-%d_%H-%M-%S", time.localtime(start_time)
-            )
-            self.log_writer = SummaryWriter(log_dir=self.log_writer_path)
 
             if checkpoint_file_name is not None:
                 self.checkpoint_load(
                     self.get_checkpoint_path(checkpoint_file_name), verbose=True
                 )
+
+            self.local_start_time_str = time.strftime(
+                "%Y-%m-%d_%H-%M-%S", time.localtime(start_time)
+            )
+
+            self.log_writer = SummaryWriter(log_dir=self.log_writer_path)
 
             for stage_num, stage in self.training_pipeline.iterator_starting_at(
                 self.pipeline_stage
