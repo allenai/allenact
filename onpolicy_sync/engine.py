@@ -944,6 +944,8 @@ class OnPolicyRLEngine(object):
                 "%Y-%m-%d_%H-%M-%S", time.localtime(start_time)
             )
 
+            self.save_config_files()
+
             self.log_writer = SummaryWriter(log_dir=self.log_writer_path)
 
             for stage_num, stage in self.training_pipeline.iterator_starting_at(
