@@ -143,7 +143,6 @@ class PointNavTask(Task[HabitatTask]):
 
         self._metrics = self.env.env.task.measurements.get_metrics()
         self._rewards.append(float(reward))
-        self._distance_to_goal.append(self._metrics['distance_to_goal'])
 
         return float(reward)
 
@@ -155,7 +154,6 @@ class PointNavTask(Task[HabitatTask]):
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
-                "distance_to_goal": np.mean(self._distance_to_goal),
                 "spl": self._metrics['spl']
             }
             self._rewards = []
