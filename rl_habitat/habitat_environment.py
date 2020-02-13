@@ -16,7 +16,7 @@ class HabitatEnvironment(object):
         docker_enabled: bool = False,
         x_display: str = None
     ) -> None:
-        print("habitat env constructor")
+        print("rl_habitat env constructor")
         self.x_display = x_display
         self.env = habitat.Env(
             config=config
@@ -57,7 +57,7 @@ class HabitatEnvironment(object):
         return self.env.current_episode
 
     def start(self):
-        print("No need to start a habitat env")
+        print("No need to start a rl_habitat env")
 
     def stop(self):
         self.env.close()

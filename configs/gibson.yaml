@@ -2,4 +2,4 @@ DATASET:
   TYPE: PointNav-v1
   SPLIT: train
   POINTNAVV1:
-    DATA_PATH: habitat/habitat-api/data/datasets/pointnav/gibson/v1/{split}/{split}.json.gz
+    DATA_PATH: rl_habitat/rl_habitat-api/data/datasets/pointnav/gibson/v1/{split}/{split}.json.gz

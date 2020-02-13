@@ -1,13 +1,12 @@
-from typing import List, Dict, Optional, Any, Tuple, Union
+from typing import List, Optional, Union
 
-from extensions.habitat.environment import HabitatEnvironment
+from rl_habitat.habitat_environment import HabitatEnvironment
 import gym
-import habitat
 from habitat.config import Config
 
 from rl_base.sensor import Sensor
 from rl_base.task import TaskSampler
-from extensions.habitat.tasks import PointNavTask
+from rl_habitat.habitat_tasks import PointNavTask
 
 
 class PointNavTaskSampler(TaskSampler):
@@ -72,13 +71,14 @@ class PointNavTaskSampler(TaskSampler):
         else:
             self.env = self._create_environment()
             self.env.reset()
-            # self.env.start() # We don't need this here because habitat does not need to start
+            # self.env.start() # We don't need this here because rl_habitat does not need to start
         ep_info = self.env.get_current_episode()
         target = ep_info.goals[0].position
 
         task_info = {
             "target": target,
-            "distance_to_goal": self.distance_to_goal
+            "distance_to_goal": self.distance_to_goal,
+            "actions": []
         }
 
         self._last_sampled_task = PointNavTask(
@@ -91,7 +91,7 @@ class PointNavTaskSampler(TaskSampler):
         return self._last_sampled_task
 
     def reset(self):
-        print("Don't have to reset habitat task sampler")
+        print("Don't have to reset rl_habitat task sampler")
         # self.scene_counter = 0
         # self.scene_order = list(range(len(self.scenes)))
         # random.shuffle(self.scene_order)

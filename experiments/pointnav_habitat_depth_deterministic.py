@@ -1,21 +1,22 @@
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 import gym
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.optim.lr_scheduler import LambdaLR
 
+import habitat
 from onpolicy_sync.losses.ppo import PPOConfig
 from models.point_nav_models import PointNavBaselineActorCritic
 from onpolicy_sync.losses import PPO
 from rl_base.experiment_config import ExperimentConfig
-from rl_base.sensor import SensorSuite, ExpertActionSensor
+from rl_base.sensor import SensorSuite
 from rl_base.task import TaskSampler
-import habitat
-from extensions.habitat.tasks import PointNavTask
-from extensions.habitat.task_samplers import PointNavTaskSampler
-from extensions.habitat.sensors import DepthSensorHabitat, TargetCoordinatesSensorHabitat
-from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline
+from rl_habitat.habitat_tasks import PointNavTask
+from rl_habitat.habitat_task_samplers import PointNavTaskSampler
+from rl_habitat.habitat_sensors import DepthSensorHabitat, TargetCoordinatesSensorHabitat
+from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
 class PointNavHabitatDepthDeterministicExperimentConfig(ExperimentConfig):
@@ -29,6 +30,8 @@ class PointNavHabitatDepthDeterministicExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.2
 
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 10
+
     SENSORS = [
         DepthSensorHabitat(
             {
@@ -40,15 +43,26 @@ class PointNavHabitatDepthDeterministicExperimentConfig(ExperimentConfig):
         TargetCoordinatesSensorHabitat({"coordinate_dims": 2}),
     ]
 
-    CONFIG = habitat.get_config('gibson.yaml')
+    CONFIG = habitat.get_config('configs/gibson.yaml')
     CONFIG.defrost()
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
-    CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['Bolton']
+    CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['*']
     CONFIG.SIMULATOR.AGENT_0.SENSORS = ['DEPTH_SENSOR']
     CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = SCREEN_SIZE
     CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = SCREEN_SIZE
     CONFIG.SIMULATOR.TURN_ANGLE = 45
     CONFIG.SIMULATOR.FORWARD_STEP_SIZE = 0.25
+    CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS = MAX_STEPS
+
+    CONFIG.TASK.TYPE = 'Nav-v0'
+    CONFIG.TASK.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
+    CONFIG.TASK.SENSORS = ['POINTGOAL_WITH_GPS_COMPASS_SENSOR']
+    CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.GOAL_FORMAT = "POLAR"
+    CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.DIMENSIONALITY = 2
+    CONFIG.TASK.GOAL_SENSOR_UUID = 'pointgoal_with_gps_compass'
+    CONFIG.TASK.MEASUREMENTS = ['DISTANCE_TO_GOAL', 'SPL']
+    CONFIG.TASK.SPL.TYPE = 'SPL'
+    CONFIG.TASK.SUCCESS_DISTANCE = 0.2
 
     GPU_ID = 0
 
@@ -60,33 +74,35 @@ class PointNavHabitatDepthDeterministicExperimentConfig(ExperimentConfig):
     @classmethod
     def training_pipeline(cls, **kwargs):
         ppo_steps = 1e8
-        nprocesses = 2
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 2
         num_steps = 128
         save_interval = 1000000
-        log_interval = 2 * num_steps * nprocesses
-        # gpu_ids = None if not torch.cuda.is_available() else [0]
+        log_interval = 5000
         gamma = 0.99
         use_gae = True
-        gae_lambda = 1.0
+        gae_lambda = 0.95
         max_grad_norm = 0.5
         return TrainingPipeline(
             save_interval=save_interval,
             log_interval=log_interval,
-            optimizer=Builder(optim.Adam, dict(lr=lr)),
+            optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
+            max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, dict(), default=PPOConfig,)},
+            named_losses={"ppo_loss": Builder(PPO, kwargs={"use_clipped_value_loss": True}, default=PPOConfig,)},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
-            max_grad_norm=max_grad_norm,
+            advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
                 PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps,),
             ],
+            lr_scheduler_builder=Builder(
+                LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
+            ),
         )
 
     @classmethod
@@ -103,14 +119,24 @@ class PointNavHabitatDepthDeterministicExperimentConfig(ExperimentConfig):
     @classmethod
     def machine_params(cls, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else 6
+            nprocesses = 1 if not torch.cuda.is_available() else 8
             gpu_ids = [] if not torch.cuda.is_available() else [0]
         elif mode == "valid":
             nprocesses = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [1]
+            if not torch.cuda.is_available():
+                gpu_ids = []
+            elif torch.cuda.device_count() == 1:
+                gpu_ids = [0]
+            elif torch.cuda.device_count() > 1:
+                gpu_ids = [torch.cuda.device_count()]
         elif mode == "test":
             nprocesses = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [0]
+            if not torch.cuda.is_available():
+                gpu_ids = []
+            elif torch.cuda.device_count() == 1:
+                gpu_ids = [0]
+            elif torch.cuda.device_count() > 1:
+                gpu_ids = [torch.cuda.device_count()]
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -136,9 +162,13 @@ class PointNavHabitatDepthDeterministicExperimentConfig(ExperimentConfig):
     ) -> Dict[str, Any]:
         config = self.CONFIG.clone()
         config.DATASET.DATA_PATH = scenes
-        self.GPU_ID = (self.GPU_ID + 1) % torch.cuda.device_count()
+        if torch.cuda.device_count() > 0:
+            # Distribute environments across all GPUs except the first
+            self.GPU_ID = 1 if self.GPU_ID == 0 else self.GPU_ID
+            self.GPU_ID = (self.GPU_ID + 1) % torch.cuda.device_count()
+        else:
+            self.GPU_ID = -1
         config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = self.GPU_ID
-        print("gpu id", config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID)
         return {
             "env_config": config,
             "max_steps": self.MAX_STEPS,

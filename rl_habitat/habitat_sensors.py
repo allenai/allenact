@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional
 
 import PIL
 import gym
@@ -7,8 +7,8 @@ import typing
 from PIL import Image
 from torchvision import transforms
 
-from extensions.habitat.environment import HabitatEnvironment
-from extensions.habitat.tasks import HabitatTask, PointNavTask
+from rl_habitat.habitat_environment import HabitatEnvironment
+from rl_habitat.habitat_tasks import HabitatTask, PointNavTask
 from rl_base.sensor import Sensor
 
 # TODO: Move this class to higher level, maybe utils? and reuse
