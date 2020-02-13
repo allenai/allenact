@@ -86,6 +86,8 @@ class PointNavTask(Task[HabitatTask]):
         self._subsampled_locations_from_which_obj_visible = None
         self.last_geodesic_distance = self.env.get_current_episode().info['geodesic_distance']
         self._rewards = []
+        self._distance_to_goal = []
+        self._metrics = None
 
     @property
     def action_space(self):
@@ -112,11 +114,6 @@ class PointNavTask(Task[HabitatTask]):
             self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
 
-            # if (
-            #     not self.last_action_success
-            # ) and self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE is not None:
-            #     self.env.update_graph_with_failed_action(failed_action=action_str)
-
         step_result = RLStepResult(
             observation=self.get_observations(),
             reward=self.judge(),
@@ -130,11 +127,6 @@ class PointNavTask(Task[HabitatTask]):
         return self.env.current_frame
 
     def _is_goal_in_range(self) -> bool:
-        # target = self.task_info["target"]
-        # current_location = self.env.get_location()
-        # distance = self.env.get_geodesic_distance(
-        #     source_state=current_location, goal_state=target
-        # )
         geodesic_distance = self.env.get_geodesic_distance()
         return geodesic_distance < self.task_info["distance_to_goal"]
 
@@ -144,16 +136,14 @@ class PointNavTask(Task[HabitatTask]):
         geodesic_distance = self.env.get_geodesic_distance()
         delta_distance_reward = self.last_geodesic_distance - geodesic_distance
         reward += delta_distance_reward
-        # print("Prev:", self.last_geodesic_distance, "Curr", geodesic_distance, "Delta Distance Reward:", delta_distance_reward)
         self.last_geodesic_distance = geodesic_distance
-
-        # if not self.last_action_success:
-        #     reward += -0.1
 
         if self._took_end_action:
             reward += 10.0 if self._success else 0.0
 
+        self._metrics = self.env.env.task.measurements.get_metrics()
         self._rewards.append(float(reward))
+        self._distance_to_goal.append(self._metrics['distance_to_goal'])
 
         return float(reward)
 
@@ -164,7 +154,9 @@ class PointNavTask(Task[HabitatTask]):
             metrics = {
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
-                "mean_reward": np.mean(self._rewards),
+                "total_reward": np.sum(self._rewards),
+                "distance_to_goal": np.mean(self._distance_to_goal),
+                "spl": self._metrics['spl']
             }
             self._rewards = []
             return metrics

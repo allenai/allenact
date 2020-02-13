@@ -116,14 +116,24 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
     @classmethod
     def machine_params(cls, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else 6
+            nprocesses = 1 if not torch.cuda.is_available() else 8
             gpu_ids = [] if not torch.cuda.is_available() else [0]
         elif mode == "valid":
             nprocesses = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [1]
+            if not torch.cuda.is_available():
+                gpu_ids = []
+            elif torch.cuda.device_count() == 1:
+                gpu_ids = [0]
+            elif torch.cuda.device_count() > 1:
+                gpu_ids = [torch.cuda.device_count()]
         elif mode == "test":
             nprocesses = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [0]
+            if not torch.cuda.is_available():
+                gpu_ids = []
+            elif torch.cuda.device_count() == 1:
+                gpu_ids = [0]
+            elif torch.cuda.device_count() > 1:
+                gpu_ids = [torch.cuda.device_count()]
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -150,6 +160,8 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
         config = self.CONFIG.clone()
         config.DATASET.DATA_PATH = scenes
         if torch.cuda.device_count() > 0:
+            # Distribute environments across all GPUs except the first
+            self.GPU_ID = 1 if self.GPU_ID == 0 else self.GPU_ID
             self.GPU_ID = (self.GPU_ID + 1) % torch.cuda.device_count()
         else:
             self.GPU_ID = -1
