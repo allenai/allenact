@@ -154,7 +154,7 @@ class PointNavTask(Task[HabitatTask]):
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
-                "spl": self._metrics['spl']
+                "spl": self._metrics['spl'] if self._metrics['spl'] is not None else 0.0
             }
             self._rewards = []
             return metrics
