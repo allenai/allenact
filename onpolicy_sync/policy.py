@@ -76,6 +76,24 @@ class ActorCriticModel(typing.Generic[DistributionType], nn.Module):
         raise NotImplementedError()
 
 
+class LinearActorCriticHead(nn.Module):
+    def __init__(self, input_size: int, num_actions: int):
+        super().__init__()
+        self.input_size = input_size
+        self.num_actions = num_actions
+        self.actor_and_critic = nn.Linear(input_size, 1 + num_actions)
+
+        nn.init.orthogonal_(self.actor_and_critic.weight)
+        nn.init.constant_(self.actor_and_critic.bias, 0)
+
+    def forward(self, x):
+        out = self.actor_and_critic(x)
+        logits = out[:, :-1]
+        values = out[:, -1:]
+        # noinspection PyArgumentList
+        return CategoricalDistr(logits=logits), values
+
+
 class LinearCriticHead(nn.Module):
     def __init__(self, input_size: int):
         super().__init__()

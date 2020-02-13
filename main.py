@@ -1,19 +1,22 @@
-import sys
-import os
-from typing import Dict, Tuple
-import argparse
-import inspect
-import importlib
-from setproctitle import setproctitle as ptitle
-
-from onpolicy_sync.engine import Trainer, Tester
-from rl_base.experiment_config import ExperimentConfig
-
-
 """Entry point to training/validating/testing for a user given experiment name"""
 
+import argparse
+import importlib
+import inspect
+import logging
+import os
+import sys
+from typing import Dict, Tuple
 
-def get_args():
+from setproctitle import setproctitle as ptitle
+
+from onpolicy_sync.engine import OnPolicyTrainer, OnPolicyTester
+from rl_base.experiment_config import ExperimentConfig
+
+logger = logging.getLogger("embodiedrl")
+
+
+def _get_args():
     """Creates the argument parser and parses any input arguments."""
 
     parser = argparse.ArgumentParser(
@@ -23,6 +26,17 @@ def get_args():
     parser.add_argument(
         "experiment", type=str, help="experiment configuration file name",
     )
+
+    parser.add_argument(
+        "--extra_tag",
+        type=str,
+        default="",
+        required=False,
+        help="Add an extra tag to the experiment when trying out new ideas (will be used"
+        "as a subdirectory of the tensorboard path so you will be able to"
+        "search tensorboard logs using this extra tag).",
+    )
+
     parser.add_argument(
         "-o",
         "--output_dir",
@@ -84,7 +98,7 @@ def get_args():
     return parser.parse_args()
 
 
-def config_source(args) -> Dict[str, Tuple[str, str]]:
+def _config_source(args) -> Dict[str, Tuple[str, str]]:
     path = os.path.abspath(os.path.normpath(args.experiment_base))
     package = os.path.basename(path)
 
@@ -105,13 +119,13 @@ def config_source(args) -> Dict[str, Tuple[str, str]]:
     return res
 
 
-def load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
+def _load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
     path = os.path.abspath(os.path.normpath(args.experiment_base))
     sys.path.insert(0, os.path.dirname(path))
     importlib.invalidate_caches()
     module_path = ".{}".format(args.experiment)
 
-    parent = importlib.import_module(os.path.basename(path))
+    importlib.import_module(os.path.basename(path))
     module = importlib.import_module(module_path, package=os.path.basename(path))
 
     experiments = [
@@ -124,28 +138,73 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
     ), "Too many or two few experiments defined in {}".format(module_path)
 
     config = experiments[0]()
-    sources = config_source(args)
+    sources = _config_source(args)
     return config, sources
 
 
+def _init_logging(log_format="default", log_level="debug"):
+    if log_level == "debug":
+        base_logging_level = logging.DEBUG
+    elif log_level == "info":
+        base_logging_level = logging.INFO
+    elif log_level == "warning":
+        base_logging_level = logging.WARNING
+    else:
+        raise TypeError("%s is an incorrect logging type!", log_level)
+    if len(logger.handlers) == 0:
+        ch = logging.StreamHandler()
+        logger.setLevel(base_logging_level)
+        ch.setLevel(base_logging_level)
+        if log_format == "default":
+            formatter = logging.Formatter(
+                fmt="%(asctime)s: %(levelname)s: %(message)s \t[%(filename)s: %(lineno)d]",
+                datefmt="%m/%d %H:%M:%S",
+            )
+        elif log_format == "defaultMilliseconds":
+            formatter = logging.Formatter(
+                fmt="%(asctime)s: %(levelname)s: %(message)s \t[%(filename)s: %(lineno)d]"
+            )
+        else:
+            formatter = logging.Formatter(fmt=log_format, datefmt="%m/%d %H:%M:%S")
+
+        ch.setFormatter(formatter)
+        logger.addHandler(ch)
+
+
+def _download_ai2thor():
+    from ai2thor.controller import Controller
+
+    try:
+        c = Controller(download_only=True)
+        c.stop_unity()
+    except Exception as _:
+        pass
+
+
 def main():
-    args = get_args()
-    print("Running with args {}".format(args))
+    _init_logging()
+
+    args = _get_args()
+
+    logger.info("Running with args {}".format(args))
+
+    _download_ai2thor()
 
     ptitle("Master: {}".format("Training" if not args.test_date != "" else "Testing"))
 
-    cfg, srcs = load_config(args)
+    cfg, srcs = _load_config(args)
 
     if args.test_date == "":
-        Trainer(
+        OnPolicyTrainer(
             config=cfg,
             output_dir=args.output_dir,
             loaded_config_src_files=srcs,
             seed=args.seed,
             deterministic_cudnn=args.deterministic_cudnn,
+            extra_tag=args.extra_tag,
         ).run_pipeline(args.checkpoint)
     else:
-        Tester(
+        OnPolicyTester(
             config=cfg,
             output_dir=args.output_dir,
             loaded_config_src_files=srcs,

@@ -1,6 +1,8 @@
+import logging
 import random
 import warnings
 from typing import List, Dict, Optional, Any, Union
+from collections import OrderedDict
 
 import gym
 
@@ -9,6 +11,8 @@ from rl_ai2thor.object_nav.tasks import ObjectNavTask
 from rl_base.sensor import Sensor
 from rl_base.task import TaskSampler
 from utils.experiment_utils import set_deterministic_cudnn, set_seed
+
+LOGGER = logging.getLogger("embodiedrl")
 
 
 class ObjectNavTaskSampler(TaskSampler):
@@ -20,10 +24,11 @@ class ObjectNavTaskSampler(TaskSampler):
         max_steps: int,
         env_args: Dict[str, Any],
         action_space: gym.Space,
-        scene_period: Optional[int] = None,
+        scene_period: Optional[Union[int, str]] = None,
         max_tasks: Optional[int] = None,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
+        fixed_tasks: Optional[List[Dict[str, Any]]] = None,
         *args,
         **kwargs
     ) -> None:
@@ -34,12 +39,14 @@ class ObjectNavTaskSampler(TaskSampler):
         self.env: Optional[AI2ThorEnvironment] = None
         self.sensors = sensors
         self.max_steps = max_steps
-        self._action_sapce = action_space
+        self._action_space = action_space
 
         self.scene_counter: Optional[int] = None
         self.scene_order: Optional[List[str]] = None
         self.scene_id: Optional[int] = None
-        self.scene_period = scene_period or 0  # default makes a random choice
+        self.scene_period: Optional[
+            Union[str, int]
+        ] = scene_period  # default makes a random choice
         self.max_tasks: Optional[int] = None
         self.reset_tasks = max_tasks
 
@@ -95,10 +102,23 @@ class ObjectNavTaskSampler(TaskSampler):
         """
         return True
 
-    def sample_scene(self):
-        if self.scene_period == 0:
+    def sample_scene(self, force_advance_scene: bool):
+        if force_advance_scene:
+            if self.scene_period != "manual":
+                LOGGER.warning(
+                    "When sampling scene, have `force_advance_scene == True`"
+                    "but `self.scene_period` is not equal to 'manual',"
+                    "this may cause unexpected behavior."
+                )
+            self.scene_id = (1 + self.scene_id) % len(self.scenes)
+            if self.scene_id == 0:
+                random.shuffle(self.scene_order)
+
+        if self.scene_period is None:
             # Random scene
             self.scene_id = random.randint(0, len(self.scenes) - 1)
+        elif self.scene_period == "manual":
+            pass
         elif self.scene_counter == self.scene_period:
             if self.scene_id == len(self.scene_order) - 1:
                 # Randomize scene order for next iteration
@@ -110,29 +130,35 @@ class ObjectNavTaskSampler(TaskSampler):
                 self.scene_id += 1
             # Reset scene counter
             self.scene_counter = 1
-        else:
+        elif isinstance(self.scene_period, int):
             # Stay in current scene
             self.scene_counter += 1
+        else:
+            raise NotImplementedError(
+                "Invalid scene_period {}".format(self.scene_period)
+            )
 
         if self.max_tasks is not None:
             self.max_tasks -= 1
 
         return self.scenes[int(self.scene_order[self.scene_id])]
 
-    def next_task(self) -> Optional[ObjectNavTask]:
+    def next_task(self, force_advance_scene: bool = False) -> Optional[ObjectNavTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
 
-        scene = self.sample_scene()
+        scene = self.sample_scene(force_advance_scene)
 
         if self.env is not None:
-            if scene != self.env.scene_name:
+            if scene.replace("_physics", "") != self.env.scene_name.replace(
+                "_physics", ""
+            ):
                 self.env.reset(scene)
         else:
             self.env = self._create_environment()
             self.env.reset(scene_name=scene)
 
-        self.env.randomize_agent_location()
+        pose = self.env.randomize_agent_location()
 
         object_types_in_scene = set(
             [o["objectType"] for o in self.env.last_event.metadata["objects"]]
@@ -145,17 +171,23 @@ class ObjectNavTaskSampler(TaskSampler):
                 break
 
         if len(task_info) == 0:
-            warnings.warn(
+            LOGGER.warning(
                 "Scene {} does not contain any"
                 " objects of any of the types {}.".format(scene, self.object_types)
             )
+
+        task_info["start_pose"] = OrderedDict(
+            sorted([(k, float(v)) for k, v in pose.items()], key=lambda x: x[0])
+        )
+
+        task_info["actions"] = []
 
         self._last_sampled_task = ObjectNavTask(
             env=self.env,
             sensors=self.sensors,
             task_info=task_info,
             max_steps=self.max_steps,
-            action_space=self._action_sapce,
+            action_space=self._action_space,
         )
         return self._last_sampled_task
 

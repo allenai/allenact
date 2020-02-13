@@ -1,10 +1,11 @@
 """Utility classes and functions for running and designing experiments."""
 
 import collections.abc
+from collections import OrderedDict
 import copy
 import random
 import typing
-from typing import NamedTuple, Dict, Any, Union, Iterator, Optional, List
+from typing import NamedTuple, Dict, Any, Union, Iterator, Optional, List, Tuple
 
 import numpy as np
 import torch
@@ -117,8 +118,8 @@ class ScalarMeanTracker(object):
     """Track a collection `scalar key -> mean` pairs."""
 
     def __init__(self) -> None:
-        self._sums: Dict[str, float] = {}
-        self._counts: Dict[str, int] = {}
+        self._sums: Dict[str, float] = OrderedDict()
+        self._counts: Dict[str, int] = OrderedDict()
 
     def add_scalars(self, scalars: Dict[str, Union[float, int]]) -> None:
         """Add additional scalars to track.
@@ -145,9 +146,11 @@ class ScalarMeanTracker(object):
         A dictionary of `scalar key -> current mean` pairs corresponding to those
         values added with `add_scalars`.
         """
-        means = {k: float(self._sums[k] / self._counts[k]) for k in self._sums}
-        self._sums = {}
-        self._counts = {}
+        means = OrderedDict(
+            [(k, float(self._sums[k] / self._counts[k])) for k in self._sums]
+        )
+        self._sums = OrderedDict()
+        self._counts = OrderedDict()
         return means
 
 
@@ -248,7 +251,7 @@ class TrainingPipeline(typing.Iterable):
         of that loss or a `Builder` that, when called, will return that loss.
     pipeline_stages : A list of PipelineStages. Each of these define how the agent
         will be trained and are executed sequentially.
-    optimizer : The optimizer to use during training.
+    optimizer_builder : Builder object to instantiate the optimizer to use during training.
     num_mini_batch : The number of mini-batches to break a rollout into.
     update_repeats : The number of times we will cycle through the mini-batches corresponding
         to a single rollout doing gradient updates.
@@ -261,6 +264,7 @@ class TrainingPipeline(typing.Iterable):
     log_interval : The frequency with which to log metrics to tensorboard (in total agent steps).
     current_pipeline_stage : Integer tracking the current stage of the pipeline. If -1 then the pipeline
         is at it's start and `__next__` will need to be called to get the first pipeline stage.
+    lr_scheduler_builder : Optional builder object to instantiate the learning rate scheduler used through the pipeline.
     """
 
     # noinspection PyUnresolvedReferences
@@ -268,7 +272,7 @@ class TrainingPipeline(typing.Iterable):
         self,
         named_losses: Dict[str, Union[Loss, Builder[Loss]]],
         pipeline_stages: List[PipelineStage],
-        optimizer: Union[optim.Optimizer, Builder[optim.Optimizer]],  # type: ignore
+        optimizer_builder: Builder[optim.Optimizer],  # type: ignore
         num_mini_batch: int,
         update_repeats: int,
         max_grad_norm: float,
@@ -276,9 +280,10 @@ class TrainingPipeline(typing.Iterable):
         gamma: float,
         use_gae: bool,
         gae_lambda: float,
+        advance_scene_rollout_period: Optional[int],
         save_interval: int,
         log_interval: int,
-        scheduler: Optional[Union[optim.lr_scheduler._LRScheduler, Builder[optim.lr_scheduler._LRScheduler]]] = None,  # type: ignore
+        lr_scheduler_builder: Optional[Builder[optim.lr_scheduler._LRScheduler]] = None,  # type: ignore
     ):
         """Initializer.
 
@@ -287,8 +292,8 @@ class TrainingPipeline(typing.Iterable):
         self.save_interval = save_interval
         self.log_interval = log_interval
 
-        self.optimizer = optimizer
-        self.scheduler = scheduler
+        self.optimizer_builder = optimizer_builder
+        self.lr_scheduler_builder = lr_scheduler_builder
         self.num_mini_batch = num_mini_batch
 
         self.update_repeats = update_repeats
@@ -298,6 +303,7 @@ class TrainingPipeline(typing.Iterable):
         self.gamma = gamma
         self.use_gae = use_gae
         self.gae_lambda = gae_lambda
+        self.advance_scene_rollout_period = advance_scene_rollout_period
 
         self.pipeline_stages = pipeline_stages
 

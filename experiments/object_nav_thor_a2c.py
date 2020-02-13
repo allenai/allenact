@@ -9,9 +9,8 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
 from models.object_nav_models import ObjectNavBaselineActorCritic
-
-from onpolicy_sync.losses import PPO
-from onpolicy_sync.losses.ppo import PPOConfig
+from onpolicy_sync.losses import A2C
+from onpolicy_sync.losses.a2cacktr import A2CConfig
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from rl_ai2thor.object_nav.task_samplers import ObjectNavTaskSampler
 from rl_ai2thor.object_nav.tasks import ObjectNavTask
@@ -70,11 +69,11 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def tag(cls):
-        return "ObjectNavThorPPO"
+        return "ObjectNavThorA2C"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        ppo_steps = int(6e4) if cls.EASY else 15 * int(1e6)
+        a2c_steps = int(6e4) if cls.EASY else 15 * int(1e6)
         lr = 2.5e-4
         num_mini_batch = 1 if not torch.cuda.is_available() else 6
         update_repeats = 4
@@ -85,38 +84,31 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         use_gae = True
         gae_lambda = 1.0
         max_grad_norm = 0.5
-
         return TrainingPipeline(
             save_interval=save_interval,
             log_interval=log_interval,
             optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
-            max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={
-                "ppo_loss": Builder(
-                    PPO,
-                    kwargs={"clip_decay": LinearDecay(ppo_steps)},
-                    default=PPOConfig,
-                ),
-            },
+            named_losses={"a2c_loss": Builder(A2C, default=A2CConfig,),},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
+            max_grad_norm=max_grad_norm,
             advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
-                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps,),
+                PipelineStage(loss_names=["a2c_loss"], end_criterion=a2c_steps,),
             ],
             lr_scheduler_builder=Builder(
-                LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
+                LambdaLR, {"lr_lambda": LinearDecay(steps=a2c_steps)}
             ),
         )
 
     @classmethod
     def machine_params(cls, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else 20
+            nprocesses = 3 if not torch.cuda.is_available() else 20
             gpu_ids = [] if not torch.cuda.is_available() else [0]
         elif mode == "valid":
             nprocesses = 1

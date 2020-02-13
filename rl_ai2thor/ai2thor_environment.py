@@ -3,9 +3,7 @@
 import copy
 import functools
 import math
-import os
 import random
-import sys
 import typing
 import warnings
 from typing import Tuple, Dict, List, Set, Union, Any, Optional, Mapping
@@ -15,8 +13,8 @@ import networkx as nx
 import numpy as np
 from ai2thor.controller import Controller
 
-from rl_ai2thor.ai2thor_constants import VISIBILITY_DISTANCE, FOV
 from rl_ai2thor.ai2thor_util import round_to_factor
+from rl_ai2thor.ithor_constants import VISIBILITY_DISTANCE, FOV
 
 
 class AI2ThorEnvironment(object):
@@ -182,13 +180,16 @@ class AI2ThorEnvironment(object):
                 "Trying to start the environment but it is already started."
             )
 
-        self.controller = Controller(
-            x_display=self.x_display,
-            player_screen_width=self._start_player_screen_width,
-            player_screen_height=self._start_player_screen_height,
-            local_executable_path=self._local_thor_build,
-            quality=self._quality,
-        )
+        def create_controller():
+            return Controller(
+                x_display=self.x_display,
+                player_screen_width=self._start_player_screen_width,
+                player_screen_height=self._start_player_screen_height,
+                local_executable_path=self._local_thor_build,
+                quality=self._quality,
+            )
+
+        self.controller = create_controller()
 
         if (
             self._start_player_screen_height,

@@ -294,7 +294,7 @@ class RNNStateEncoder(nn.Module):
                 # noinspection PyTypeChecker
                 hidden_states = tuple(
                     v * masks
-                    + (1 - masks) * (self.init_hidden_state.repeat(1, v.shape[1], 1))
+                    + (1.0 - masks) * (self.init_hidden_state.repeat(1, v.shape[1], 1))  # type: ignore
                     for v in hidden_states
                 )  # type: ignore
             else:

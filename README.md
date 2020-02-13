@@ -6,11 +6,6 @@ the [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-
 library of Ilya Kostrikov and uses some data structures from FAIR's 
 [habitat-api](https://github.com/facebookresearch/habitat-api).
 
-Currently, two RL algorithms are implemented
-
-* Advantage Actor Critic (A2C) - synchronized [A3C](https://arxiv.org/pdf/1602.01783v1.pdf)
-* [Proximal Policy Optimization (PPO)](https://arxiv.org/pdf/1707.06347.pdf)
-
 ## Table of contents
 
 1. [Why embodied-rl?](#why)
@@ -26,11 +21,7 @@ of deep reinforcement learning packages and so it is natural to question why we 
 reproducing many of the same algorithms and ideas. After performing of survey of existing frameworks we
 could not find a package delivering all of the following features, each of which we considered critical.
 
-1. *Decoupled tasks and environments*: a large portion of existing RL frameworks organize themselves using abstractions 
-   from the OpenAI gym. These abstractions center around the `Env` class which encasulates an agent's environment,
-   how it interacts with that environment, and the rewards received by the agent when taking actions. This 
-   is an excellent abstraction when an environment is intimiately tied to a single task (e.g. with Atari games
-   where the environment is a single game with a single goal). In embodied AI research, however, it is important to be 
+1. *Decoupled tasks and environments*: In embodied AI research it is important to be 
    able to define many tasks for a single environment; for instance, the [AI2-THOR](https://ai2thor.allenai.org/)
    environment has been used with tasks such as  
    
@@ -41,13 +32,12 @@ could not find a package delivering all of the following features, each of which
    
     We have designed `embodied-rl` to easily support a wide variety of tasks designed for individual environments.
 
-1. *First-class pytorch support*: while many well-developed libraries exist for reinforcement learning in 
-   tensorflow we prefer the abstractions and design provided by pytorch.
-1. *Configuration as code*: defining experiments using yaml configuation files is a perplexing standard. We have found
-   such configuration files to be restrictive, brittle, and difficult to debug. In `embodied-rl` experiments are 
+1. *First-class pytorch support*: While many well-developed libraries exist for reinforcement learning in 
+   tensorflow, we are one of a few to target pytorch.
+1. *Configuration as code*: In `embodied-rl` experiments are 
    defined using python classes, if you know how to extend an abstract python class then you know how to define an
    experiment.
-1. *Type checking and documentation*: we have put significant effort into providing extensive documentation and type
+1. *Type checking and documentation*: We have put significant effort into providing extensive documentation and type
    annotations throughout our codebase.
 
 
@@ -60,8 +50,8 @@ git clone git@github.com:allenai/embodied-rl.git
 cd embodied-rl
 ```
 
-This library has been tested only in python 3.6, the following assumes you have a working
-version of python 3.6 installed locally. In order to install requirements we recommend
+This library has been tested **only in python 3.6**, the following assumes you have a working
+version of **python 3.6** installed locally. In order to install requirements we recommend
 using [`pipenv`](https://pipenv.kennethreitz.org/en/latest/) but also include instructions if
 you would prefer to install things directly using `pip`.
 
@@ -88,11 +78,11 @@ above.
 
 ### Run your first experiment
 
-You are now ready to run your first experiment, see our [quick-start](./overview/quick-start.md) page.
+You are now ready to [run your first experiment](./overview/running-your-first-experiment.md).
 
 ## Contributions
 
-We in the Perceptural Reasoning and Interaction Research (PRIOR) group at the
+We in the Perceptual Reasoning and Interaction Research (PRIOR) group at the
  Allen Institute for AI (AI2, @allenai) welcome contributions from the greater community. If
  you would like to make such a contributions we recommend first submitting an 
  [issue](https://github.com/allenai/embodied-rl/issues) describing your proposed improvement.
@@ -109,7 +99,7 @@ If you use this work, please cite:
 
 ```text
 @misc{embodied-rl,
-  author = {Jordi Salvador and Luca Weihs},
+  author = {Luca Weihs and Jordi Salvador},
   title = {A Python Package for Embodied Reinforcement Learning},
   year = {2020},
   publisher = {GitHub},

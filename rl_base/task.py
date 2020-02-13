@@ -123,6 +123,7 @@ class Task(Generic[EnvType]):
         """
         assert not self.is_done()
         sr = self._step(action=action)
+        self.task_info["actions"].append(self.action_names()[action])
         self._total_reward += float(sr.reward)
         self._increment_num_steps_taken()
         return sr
@@ -210,7 +211,11 @@ class Task(Generic[EnvType]):
         A dictionary where every key is a string (the metric's
             name) and the value is the value of the metric.
         """
-        return {"ep_length": self.num_steps_taken(), "reward": self._total_reward}
+        return {
+            "ep_length": self.num_steps_taken(),
+            "reward": self._total_reward,
+            "task_info": self.task_info,
+        }
 
     def query_expert(self) -> Tuple[Any, bool]:
         """Query the expert policy for this task.
@@ -268,8 +273,15 @@ class TaskSampler(abc.ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def next_task(self) -> Optional[Task]:
+    def next_task(self, force_advance_scene: bool = False) -> Optional[Task]:
         """Get the next task in the sampler's stream.
+
+        # Parameters
+
+        force_advance_scene : Used to (if applicable) force the task sampler to
+            use a new scene for the next task. This is useful if, during training,
+            you would like to train with one scene for some number of steps and
+            then explicitly control when you begin training with the next scene.
 
         # Returns
 
@@ -300,7 +312,8 @@ class TaskSampler(abc.ABC):
 
     @abstractmethod
     def reset(self) -> None:
-        """Resets all tasks to their original state."""
+        """Resets task sampler to its original state (except for any seed).
+        """
         raise NotImplementedError()
 
     @abstractmethod

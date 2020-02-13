@@ -8,8 +8,9 @@ implemented:
 * `forward`, returning an [ActorCriticOutput](/api/rl_base/common/#actorcriticoutput) given the current observation,
 hidden state and previous actions.
 
-For convenience, we have already defined a [recurrent network module](/api/models/basic_models/#rnnstateencoder) and
-[a simple CNN module](/api/models/basic_models/#simplecnn) that will be used in this example.
+For convenience, we provide a [recurrent network module](/api/models/basic_models/#rnnstateencoder) and
+[a simple CNN module](/api/models/basic_models/#simplecnn) from the Habitat baseline navigation
+models, that will be used in this example.
 
 ### Actor-critic model interface
 
@@ -88,10 +89,10 @@ class ObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
      ...
 ```
 
-## Engine requirements
+## On-policy RL engine requirements
 
 Apart from the interface expected by all actor-critic models, we also need to provide a utility function to allow
-the engine to properly initalize the rollouts storage, `num_recurrent_layers`:
+the on-policy RL engine to properly initalize the rollouts storage, `num_recurrent_layers`:
 
 ```python
 class ObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):

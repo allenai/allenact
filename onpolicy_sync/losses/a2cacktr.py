@@ -33,6 +33,7 @@ class A2CACKTR(AbstractActorCriticLoss):
 
     def loss(  # type: ignore
         self,
+        step_count: int,
         batch: Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]],
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
@@ -42,15 +43,16 @@ class A2CACKTR(AbstractActorCriticLoss):
         values = actor_critic_output.values
         action_log_probs = actor_critic_output.distributions.log_probs(actions)
 
-        num_steps, nrollouts, _ = typing.cast(torch.Tensor, batch["rewards"]).size()
         dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy().mean()
 
-        advantages = typing.cast(torch.FloatTensor, batch["returns"])[:-1] - values
-        value_loss = advantages.pow(2).mean()
+        value_loss = (
+            0.5
+            * (typing.cast(torch.FloatTensor, batch["returns"]) - values).pow(2).mean()
+        )
 
-        # TODO: Decided to use normalized advantages here, is this correct?
+        # TODO: Decided not to use normalized advantages here, is this correct? (it's how it's done in Kostrikov's)
         action_loss = -(
-            typing.cast(torch.FloatTensor, batch["norm_adv_targ"]).detach()
+            typing.cast(torch.FloatTensor, batch["adv_targ"]).detach()
             * action_log_probs
         ).mean()
 

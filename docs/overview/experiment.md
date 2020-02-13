@@ -1,7 +1,7 @@
 # Experiment specification
 
 Let's look at an example experiment configuration for an object navigation example with an actor-critic agent observing
-RGB images from the environment, target object classes from the task and expert actions.
+RGB images from the environment and target object classes from the task.
 
 The interface to be implemented by the experiment specification is defined in
 [rl_base.experiment_config](/api/rl_base/experiment_config#experimentconfig). The first method to implement is `tag`,
@@ -70,7 +70,7 @@ class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfi
         ppo_steps = int(1e6)
         lr = 2.5e-4
         num_mini_batch = 1
-        update_repeats = 3
+        update_repeats = 4
         num_steps = 128
         log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
         save_interval = 10000  # Save every 10000 steps (approximately)
@@ -80,8 +80,9 @@ class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfi
         max_grad_norm = 0.5
         return utils.experiment_utils.TrainingPipeline(
             named_losses={
-                "imitation_loss": utils.experiment_utils.Builder(
-                    onpolicy_sync.losses.imitation.Imitation,
+                "ppo_loss": utils.experiment_utils.Builder(
+                    onpolicy_sync.losses.ppo.PPO,
+                    default=onpolicy_sync.losses.ppo.PPOConfig,
                 ),
             },
             optimizer=utils.experiment_utils.Builder(
@@ -108,8 +109,8 @@ class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfi
 
 Alternatively, we could use a more complicated pipeline that includes dataset aggregation
 ([DAgger](https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf)). This requires the existence of an
-expert (implemented in the task definition) that provides optimal actions to agents. We have implemented 
-such a pipeline by extending the above configuration as follows
+expert (implemented in the task definition) that provides optimal actions to agents. We have implemented such a 
+pipeline by extending the above configuration as follows
 
 ```python
 class ObjectNavThorPPOExperimentConfig(experiments.ObjectNavThorPPOExperimentConfig):
@@ -123,7 +124,8 @@ class ObjectNavThorPPOExperimentConfig(experiments.ObjectNavThorPPOExperimentCon
             }
         ),
         GoalObjectTypeThorSensor({"object_types": OBJECT_TYPES}),
-        ExpertActionSensor({"nactions": 6}),
+        ExpertActionSensor({"nactions": 6}), # Notice that we have added
+                                             # an expert action sensor.
     ]
     ...
     @classmethod
@@ -132,7 +134,7 @@ class ObjectNavThorPPOExperimentConfig(experiments.ObjectNavThorPPOExperimentCon
         ppo_steps = int(3e4)
         lr = 2.5e-4
         num_mini_batch = 6 if not torch.cuda.is_available() else 30
-        update_repeats = 3
+        update_repeats = 4
         num_steps = 128
         log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
         save_interval = 10000  # Save every 10000 steps (approximately)
@@ -148,14 +150,17 @@ class ObjectNavThorPPOExperimentConfig(experiments.ObjectNavThorPPOExperimentCon
             update_repeats=update_repeats,
             num_steps=num_steps,
             named_losses={
-                "imitation_loss": Builder(Imitation,),
+                "imitation_loss": Builder(Imitation,), # We add an imitation loss.
                 "ppo_loss": Builder(PPO, default=PPOConfig,),
             },
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
             max_grad_norm=max_grad_norm,
-            pipeline_stages=[
+            pipeline_stages=[ # The pipeline now has two stages, in the first
+                              # we use DAgger (imitation loss + teacher forcing).
+                              # In the second stage we no longer use teacher
+                              # forcing and add in the ppo loss.
                 PipelineStage(
                     loss_names=["imitation_loss"],
                     teacher_forcing=LinearDecay(
@@ -169,6 +174,8 @@ class ObjectNavThorPPOExperimentConfig(experiments.ObjectNavThorPPOExperimentCon
             ],
         )
 ``` 
+Note that, in order for the saved configs in the experiment output folder to be fully usable, we currently need
+to import the module with the parent experiment config relative to the current location. 
 
 ## Machine configuration
 
@@ -178,15 +185,16 @@ class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfi
     ...
     @classmethod
     def machine_params(cls, mode="train", **kwargs):
+        on_server = torch.cuda.is_available()
         if mode == "train":
-            nprocesses = 6 if not torch.cuda.is_available() else 30
-            gpu_ids = [] if not torch.cuda.is_available() else [0]
+            nprocesses = 6 if not on_server else 20
+            gpu_ids = [] if not on_server else [0]
         elif mode == "valid":
             nprocesses = 0
-            gpu_ids = [] if not torch.cuda.is_available() else [1]
+            gpu_ids = [] if not on_server else [1]
         elif mode == "test":
             nprocesses = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [0]
+            gpu_ids = [] if not on_server else [0]
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -194,7 +202,8 @@ class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfi
     ...
 ```
 In the above we use the availability of cuda (`torch.cuda.is_available()`) to determine whether
-we should use parameters appropriate for local machines or for a server.
+we should use parameters appropriate for local machines or for a server. We might optionally add a list of
+`sampler_devices` to assign devices (likely those not used for running our agent) to task sampling workers.
 
 ## Task sampling
 
@@ -241,4 +250,5 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 Now training process `i` out of `n` total processes will be instantiated with the parameters
 `ObjectNavThorPPOExperimentConfig.train_task_sampler_args(i, n, ...)`. Similar functions
  (`valid_task_sampler_args` and `test_task_sampler_args`) exist for generating validation
- and test parameters. See the documentation of `ExperimentConfig` for more information.
+ and test parameters. Note also that with this function we can assign devices to run
+ our environment for each worker. See the documentation of `ExperimentConfig` for more information.

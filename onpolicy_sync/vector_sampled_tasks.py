@@ -10,8 +10,10 @@ from multiprocessing.context import BaseContext
 from queue import Queue
 from threading import Thread
 from typing import Any, Callable, List, Optional, Sequence, Set, Tuple, Union, Dict
+import logging
 
 import numpy as np
+import typing
 from gym.spaces.dict import Dict as SpaceDict
 
 from rl_base.common import RLStepResult
@@ -30,6 +32,8 @@ try:
 except ImportError:
     import multiprocessing as mp  # type: ignore
 
+LOGGER = logging.getLogger("embodiedrl")
+
 STEP_COMMAND = "step"
 NEXT_TASK_COMMAND = "next_task"
 RENDER_COMMAND = "render"
@@ -43,7 +47,7 @@ RESET_COMMAND = "reset"
 SEED_COMMAND = "seed"
 
 
-class VectorSampledTasks:
+class VectorSampledTasks(object):
     """Vectorized collection of tasks. Creates multiple processes where each
     process runs its own TaskSampler. Each process generates one Task from its
     TaskSampler at a time and this class allows for interacting with these
@@ -83,7 +87,8 @@ class VectorSampledTasks:
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args: Sequence[Dict[str, Any]] = None,
         auto_resample_when_done: bool = True,
-        multiprocessing_start_method: str = "forkserver",
+        multiprocessing_start_method: Optional[str] = "forkserver",
+        mp_ctx: Optional[BaseContext] = None,
     ) -> None:
 
         self._is_waiting = False
@@ -94,12 +99,18 @@ class VectorSampledTasks:
         ), "number of processes to be created should be greater than 0"
 
         self._num_processes = len(sampler_fn_args)
-
-        assert multiprocessing_start_method in self._valid_start_methods, (
-            "multiprocessing_start_method must be one of {}. Got '{}'"
-        ).format(self._valid_start_methods, multiprocessing_start_method)
         self._auto_resample_when_done = auto_resample_when_done
-        self._mp_ctx = mp.get_context(multiprocessing_start_method)
+
+        assert (multiprocessing_start_method is None) != (
+            mp_ctx is None
+        ), "Exactly one of `multiprocessing_start_method`, and `mp_ctx` must be not None."
+        if multiprocessing_start_method is not None:
+            assert multiprocessing_start_method in self._valid_start_methods, (
+                "multiprocessing_start_method must be one of {}. Got '{}'"
+            ).format(self._valid_start_methods, multiprocessing_start_method)
+            self._mp_ctx = mp.get_context(multiprocessing_start_method)
+        else:
+            self._mp_ctx = typing.cast(BaseContext, mp_ctx)
         self.metrics_out_queue = self._mp_ctx.Queue()
         self._workers = []
         (
@@ -203,7 +214,10 @@ class VectorSampledTasks:
                     connection_write_fn(step_result)
 
                 elif command == NEXT_TASK_COMMAND:
-                    current_task = task_sampler.next_task()
+                    if data is not None:
+                        current_task = task_sampler.next_task(**data)
+                    else:
+                        current_task = task_sampler.next_task()
                     observations = current_task.get_observations()
                     connection_write_fn(observations)
 
@@ -263,14 +277,13 @@ class VectorSampledTasks:
             *[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_processes)]
         )
         self._workers = []
-        # for worker_conn, parent_conn, sampler_fn_args in zip(
-        #     worker_connections, parent_connections, sampler_fn_args
-        # ):
-        # noinspection PyShadowingBuiltins
         for id, stuff in enumerate(
             zip(worker_connections, parent_connections, sampler_fn_args)
         ):
-            worker_conn, parent_conn, sampler_fn_args = stuff  # type: ignore
+            worker_conn, parent_conn, current_sampler_fn_args = stuff  # type: ignore
+            LOGGER.info(
+                "Starting {}-th worker with args {}".format(id, current_sampler_fn_args)
+            )
             ps = self._mp_ctx.Process(  # type: ignore
                 target=self._task_sampling_loop_worker,
                 args=(
@@ -278,7 +291,7 @@ class VectorSampledTasks:
                     worker_conn.recv,
                     worker_conn.send,
                     make_sampler_fn,
-                    sampler_fn_args,
+                    current_sampler_fn_args,
                     self._auto_resample_when_done,
                     self.metrics_out_queue,
                     worker_conn,
@@ -307,8 +320,12 @@ class VectorSampledTasks:
     #     self._is_waiting = False
     #     return results
 
-    def next_task(self):
+    def next_task(self, **kwargs):
         """Move to the the next Task for all TaskSamplers.
+
+        # Parameters
+
+        kwargs : key word arguments passed to the `next_task` function of the samplers.
 
         # Returns
 
@@ -316,7 +333,7 @@ class VectorSampledTasks:
         """
         self._is_waiting = True
         for write_fn in self._connection_write_fns:
-            write_fn((NEXT_TASK_COMMAND, None))
+            write_fn((NEXT_TASK_COMMAND, kwargs))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
@@ -581,6 +598,10 @@ class VectorSampledTasks:
         for write_fn in self._connection_write_fns:
             write_fn((RENDER_COMMAND, (args, {"mode": "rgb", **kwargs})))
         images = [read_fn() for read_fn in self._connection_read_fns]
+
+        for index, _, _, _ in reversed(self._paused):
+            images.insert(index, np.zeros_like(images[0]))
+
         tile = tile_images(images)
         if mode == "human":
             import cv2

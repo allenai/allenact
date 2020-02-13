@@ -1,4 +1,4 @@
-"""Defines the reinforcement learning `Engine`."""
+"""Defines the reinforcement learning `OnPolicyRLEngine`."""
 import glob
 import os
 import queue
@@ -9,7 +9,11 @@ import time
 import traceback
 import typing
 import warnings
+from multiprocessing.context import BaseContext
 from typing import Optional, Any, Dict, Union, List, Tuple
+import logging
+import json
+from collections import OrderedDict
 
 import torch
 import torch.distributions
@@ -17,13 +21,13 @@ import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.optim
 from setproctitle import setproctitle as ptitle
-from tensorboardX import SummaryWriter
 from torch import optim
 from torch.optim.lr_scheduler import _LRScheduler
+import numpy as np
 
+from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from onpolicy_sync.storage import RolloutStorage
 from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
-from rl_base.common import Loss
 from rl_base.experiment_config import ExperimentConfig
 from utils.experiment_utils import (
     ScalarMeanTracker,
@@ -34,7 +38,9 @@ from utils.experiment_utils import (
     TrainingPipeline,
     PipelineStage,
 )
-from utils.tensor_utils import batch_observations
+from utils.tensor_utils import batch_observations, SummaryWriter, tensor_to_video
+
+LOGGER = logging.getLogger("embodiedrl")
 
 
 def validate(
@@ -44,24 +50,26 @@ def validate(
     write_to_parent: mp.Queue,
     seed: Optional[int] = None,
     deterministic_cudnn: bool = False,
+    mp_ctx: Optional[BaseContext] = None,
 ):
     ptitle("Validation")
-    evaluator = Validator(
+    evaluator = OnPolicyValidator(
         config=config,
         output_dir=output_dir,
         seed=seed,
         deterministic_cudnn=deterministic_cudnn,
+        mp_ctx=mp_ctx,
     )
     evaluator.process_checkpoints(read_from_parent, write_to_parent)
 
 
-class Engine(object):
+class OnPolicyRLEngine(object):
     """The reinforcement learning primary controller.
 
-    This `Engine` class handles all training, validation, and testing as
+    This `OnPolicyRLEngine` class handles all training, validation, and testing as
     well as logging and checkpointing. You are not expected to
     instantiate this class yourself, instead you should define an
-    experiment which will then be used to instantiate an `Engine` and
+    experiment which will then be used to instantiate an `OnPolicyRLEngine` and
     perform any desired tasks.
     """
 
@@ -73,8 +81,12 @@ class Engine(object):
         seed: Optional[int] = None,
         mode: str = "train",
         deterministic_cudnn: bool = False,
+        mp_ctx: Optional[BaseContext] = None,
+        extra_tag: str = "",
     ):
         """Initializer.
+
+        # Parameters
 
         config : The ExperimentConfig defining the experiment to run.
         output_dir : Root directory at which checkpoints and logs should be saved.
@@ -86,6 +98,7 @@ class Engine(object):
         deterministic_cudnn : Whether or not to use deterministic cudnn. If `True` this may lower
             training performance this is necessary (but not sufficient) if you desire
             deterministic behavior.
+        extra_tag : An additional label to add to the experiment when saving tensorboard logs.
         """
         self.deterministic_cudnn = deterministic_cudnn
         self.seed = seed
@@ -102,7 +115,7 @@ class Engine(object):
         self.device = "cpu"
         if len(self.machine_params["gpu_ids"]) > 0:
             if not torch.cuda.is_available():
-                print(
+                LOGGER.warning(
                     "Warning: no CUDA devices available for gpu ids {}".format(
                         self.machine_params["gpu_ids"]
                     )
@@ -114,47 +127,33 @@ class Engine(object):
         if self.deterministic_cudnn:
             set_deterministic_cudnn()
 
-        seeds: Optional[List[int]] = None
         if self.seed is not None:
             set_seed(self.seed)
-            seeds = self.worker_seeds(self.machine_params["nprocesses"])
 
         self.observation_set = None
-        # if "observation_set" in self.machine_params:
-        #     self.observation_set = self.machine_params["observation_set"].to(self.device)
-        #     self.actor_critic = config.create_model(
-        #         observation_set=self.observation_set
-        #     ).to(self.device)
-        # else:
-        self.actor_critic = config.create_model().to(self.device)
+        if "observation_set" in self.machine_params:
+            self.observation_set = self.machine_params["observation_set"].to(
+                self.device
+            )
+            self.actor_critic = config.create_model(
+                observation_set=self.observation_set
+            ).to(self.device)
+        else:
+            self.actor_critic = config.create_model().to(self.device)
 
-        self.optimizer: Optional[  # type: ignore
-            Union[optim.Optimizer, Builder[optim.Optimizer]]
-        ] = None
-        self.scheduler: Optional[
-            Union[
-                optim.lr_scheduler._LRScheduler,
-                Builder[optim.lr_scheduler._LRScheduler],
-            ]
-        ] = None
+        self.optimizer: Optional[optim.Optimizer] = None  # type: ignore
+        self.lr_scheduler: Optional[optim.lr_scheduler._LRScheduler] = None
         if mode == "train":
-            self.optimizer = self.training_pipeline.optimizer
-            if isinstance(self.optimizer, Builder):
-                self.optimizer = typing.cast(Builder, self.optimizer)(
-                    params=[
-                        p for p in self.actor_critic.parameters() if p.requires_grad
-                    ]
-                )
-            self.scheduler = self.training_pipeline.scheduler
-            if isinstance(self.scheduler, Builder):
-                self.scheduler = typing.cast(Builder, self.scheduler)(
+            self.optimizer = self.training_pipeline.optimizer_builder(
+                params=[p for p in self.actor_critic.parameters() if p.requires_grad]
+            )
+
+            if self.training_pipeline.lr_scheduler_builder is not None:
+                self.lr_scheduler = self.training_pipeline.lr_scheduler_builder(
                     optimizer=self.optimizer
                 )
 
-        self.vector_tasks = VectorSampledTasks(
-            make_sampler_fn=config.make_sampler_fn,
-            sampler_fn_args=self.get_sampler_fn_args(config, seeds),
-        )
+        self._vector_tasks: Optional[VectorSampledTasks] = None
 
         self.output_dir = output_dir
         self.models_folder: Optional[str] = None
@@ -172,7 +171,7 @@ class Engine(object):
                 os.makedirs(os.path.dirname(dst_file), exist_ok=True)
                 shutil.copy(src_file, dst_file)
 
-        self.log_writer = None
+        self.log_writer: Optional[SummaryWriter] = None
 
         self.scalars = ScalarMeanTracker()
 
@@ -188,7 +187,7 @@ class Engine(object):
         # Fields defined when running setup_stage.
         # TODO: Lets encapsulate these better, perhaps in named
         #   tuple like data structure with sensible defaults.
-        self.losses: Optional[Dict[str, Loss]] = None
+        self.losses: Optional[Dict[str, AbstractActorCriticLoss]] = None
         self.loss_weights: Optional[Dict[str, float]] = None
         self.stage_task_steps: Optional[int] = None
         self.steps_in_rollout: Optional[int] = None
@@ -199,11 +198,11 @@ class Engine(object):
         self.use_gae: Optional[bool] = None
         self.gae_lambda: Optional[float] = None
         self.max_grad_norm: Optional[float] = None
+        self.advance_scene_rollout_period: Optional[int] = None
         self.teacher_forcing: Optional[LinearDecay] = None
         self.local_start_time_str: Optional[str] = None
         self.deterministic_agent: Optional[bool] = None
         self.eval_process: Optional[mp.Process] = None
-        self.last_scheduler_steps: Optional[int] = None
 
         self.experiment_name = config.tag()
 
@@ -212,8 +211,10 @@ class Engine(object):
         self.num_processes = self.machine_params["nprocesses"]
 
         self.config = config
+        self.extra_tag = extra_tag
 
         self.write_to_eval = None
+        self.mp_ctx: Optional[BaseContext] = mp_ctx
         if self.mode == "train":
             self.mp_ctx = self.vector_tasks.mp_ctx
             if self.config.machine_params("valid")["nprocesses"] <= 0:
@@ -222,7 +223,7 @@ class Engine(object):
                 )
             else:
                 self.write_to_eval = self.mp_ctx.Queue()
-                self.eval_process = self.mp_ctx.Process(
+                self.eval_process = self.mp_ctx.Process(  # type: ignore
                     target=validate,
                     args=(
                         self.config,
@@ -231,16 +232,39 @@ class Engine(object):
                         self.vector_tasks.metrics_out_queue,
                         self.seed,
                         self.deterministic_cudnn,
+                        self.mp_ctx,
                     ),
                 )
                 self.eval_process.start()
 
         self._is_closed: bool = False
 
+    @property
+    def vector_tasks(self):
+        if self._vector_tasks is None:
+            seeds = self.worker_seeds(
+                self.machine_params["nprocesses"], initial_seed=self.seed
+            )
+            self._vector_tasks = VectorSampledTasks(
+                make_sampler_fn=self.config.make_sampler_fn,
+                sampler_fn_args=self.get_sampler_fn_args(self.config, seeds),
+                multiprocessing_start_method="forkserver"
+                if self.mp_ctx is None
+                else None,
+                mp_ctx=self.mp_ctx,
+            )
+        return self._vector_tasks
+
     @staticmethod
-    def worker_seeds(nprocesses: int) -> List[int]:
+    def worker_seeds(nprocesses: int, initial_seed: Optional[int]) -> List[int]:
         """Create a collection of seeds for workers."""
-        return [random.randint(0, 2 ** (31) - 1) for _ in range(nprocesses)]
+        if initial_seed is not None:
+            rstate = random.getstate()
+            random.seed(initial_seed)
+        seeds = [random.randint(0, 2 ** (31) - 1) for _ in range(nprocesses)]
+        if initial_seed is not None:
+            random.setstate(rstate)
+        return seeds
 
     def get_sampler_fn_args(
         self, config: ExperimentConfig, seeds: Optional[List[int]] = None
@@ -277,10 +301,10 @@ class Engine(object):
         os.makedirs(self.models_folder, exist_ok=True)
 
         if self.seed is not None:
-            self.seed = self.worker_seeds(1)[0]
+            self.seed = self.worker_seeds(1, None)[0]
             set_seed(self.seed)
 
-            seeds = self.worker_seeds(self.num_processes)
+            seeds = self.worker_seeds(self.num_processes, None)
             self.vector_tasks.set_seeds(seeds)
 
         model_path = os.path.join(
@@ -305,16 +329,16 @@ class Engine(object):
             "optimizer_state_dict": self.optimizer.state_dict(),  # type: ignore
             "model_state_dict": self.actor_critic.state_dict(),
             "trainer_seed": self.seed,
+            "extra_tag": self.extra_tag,
         }
 
         if self.seed is not None:
             save_dict["worker_seeds"] = seeds
 
-        if self.scheduler is not None:
+        if self.lr_scheduler is not None:
             save_dict["scheduler_state"] = typing.cast(
-                _LRScheduler, self.scheduler
+                _LRScheduler, self.lr_scheduler
             ).state_dict()
-            save_dict["scheduler_steps"] = self.last_scheduler_steps
 
         torch.save(save_dict, model_path)
         return model_path
@@ -347,45 +371,92 @@ class Engine(object):
             self.seed = typing.cast(int, ckpt["trainer_seed"])
             if self.seed is not None:
                 set_seed(self.seed)
-                seeds = self.worker_seeds(self.num_processes)
+                seeds = self.worker_seeds(self.num_processes, None)
                 assert (
                     seeds == ckpt["worker_seeds"]
                 ), "worker seeds not matching stored seeds"
                 self.vector_tasks.set_seeds(seeds)
-            if self.scheduler is not None:
-                self.scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
-                self.last_scheduler_steps = typing.cast(int, ckpt["scheduler_steps"])
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
 
-    def process_valid_metrics(self):
+            self.extra_tag = typing.cast(
+                str,
+                ckpt["extra_tag"]
+                if (
+                    "extra_tag" in ckpt
+                    and ckpt["extra_tag"] != ""
+                    and self.extra_tag == ""
+                )
+                else self.extra_tag,
+            )
+
+    def process_eval_metrics(self, count=-1):
         unused = []
-        while not self.vector_tasks.metrics_out_queue.empty():
+        used = []
+        while (not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
             try:
-                metric = self.vector_tasks.metrics_out_queue.get_nowait()
-                if isinstance(metric, tuple) and metric[0] == "test_metrics":
+                if count < 0:
+                    metric = self.vector_tasks.metrics_out_queue.get_nowait()
+                else:
+                    metric = self.vector_tasks.metrics_out_queue.get(timeout=1)
+                if (
+                    isinstance(metric, tuple) and metric[0] == "test_metrics"
+                ):  # queue reused for test
                     unused.append(metric)
                 else:
-                    self.scalars.add_scalars(metric)
+                    self.scalars.add_scalars(
+                        {k: v for k, v in metric.items() if k != "task_info"}
+                    )
+                    used.append(metric)
+                    count -= 1
             except queue.Empty:
                 pass
 
         for item in unused:
             self.vector_tasks.metrics_out_queue.put(item)
 
-        return self.scalars.pop_and_reset()
+        return self.scalars.pop_and_reset(), used
 
-    def log(self):
-        eval_metrics = {}
-        while not self.vector_tasks.metrics_out_queue.empty():
+    def log(self, count=-1):
+        train_metrics = []
+        losses = []
+        teachers = []
+        while (not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
             try:
-                metric = self.vector_tasks.metrics_out_queue.get_nowait()
+                if count < 0:
+                    metric = self.vector_tasks.metrics_out_queue.get_nowait()
+                else:
+                    metric = self.vector_tasks.metrics_out_queue.get(timeout=1)
+                    count -= 1
                 if isinstance(metric, tuple):
                     pkg_type, info = metric
-                    if pkg_type == "valid_metrics":
-                        eval_metrics["valid"] = {k: v for k, v in info.items()}
-                    elif pkg_type == "test_metrics":
-                        eval_metrics["test"] = {k: v for k, v in info.items()}
+                    if pkg_type in ["valid_metrics", "test_metrics"]:
+                        mode = pkg_type.split("_")[0]
+                        scalars, render = info
+                        metrics = OrderedDict(
+                            sorted(
+                                [(k, v) for k, v in scalars.items()], key=lambda x: x[0]
+                            )
+                        )
+
+                        message = ["{}".format(mode)]
+                        add_step = True
+                        for k in metrics:
+                            if add_step:
+                                metrics_steps = metrics[k][1]
+                                message += ["{} steps:".format(metrics_steps)]
+                                add_step = False
+                            self.log_writer.add_scalar(
+                                "{}/".format(mode) + k, metrics[k][0], metrics_steps,
+                            )
+                            message += [k + " {}".format(metrics[k][0])]
+                        LOGGER.info(" ".join(message))
+
+                        if render is not None:
+                            self.log_writer.add_vid(
+                                "{}/agent_view".format(mode), render, metrics_steps,
+                            )
                     else:
-                        cscalars: Optional[Dict[str, Union[float, int]]] = None
                         if pkg_type == "update_package":
                             cscalars = {
                                 "total_loss": info["total_loss"],
@@ -398,33 +469,56 @@ class Engine(object):
                                     cscalars["/".join([lossname, scalar])] = info[
                                         "losses"
                                     ][loss][scalar]
+                            losses.append(cscalars)
                         elif pkg_type == "teacher_package":
                             cscalars = {k: v for k, v in info.items()}
+                            teachers.append(cscalars)
                         else:
-                            print("WARNING: Unknown info package {}".format(info))
-
-                        if cscalars is not None:
-                            self.scalars.add_scalars(cscalars)
+                            LOGGER.warning("Unknown info package {}".format(info))
                 else:
-                    self.scalars.add_scalars(metric)
+                    train_metrics.append(metric)
             except queue.Empty:
                 pass
 
+        for metric in train_metrics:
+            self.scalars.add_scalars(
+                OrderedDict(
+                    sorted(
+                        [(k, v) for k, v in metric.items() if k != "task_info"],
+                        key=lambda x: x[0],
+                    )
+                )
+            )
+        for loss in losses:
+            self.scalars.add_scalars(
+                OrderedDict(
+                    sorted(
+                        [(k, v) for k, v in loss.items() if k != "task_info"],
+                        key=lambda x: x[0],
+                    )
+                )
+            )
+        for teacher in teachers:
+            self.scalars.add_scalars(
+                OrderedDict(
+                    sorted(
+                        [(k, v) for k, v in teacher.items() if k != "task_info"],
+                        key=lambda x: x[0],
+                    )
+                )
+            )
+
         tracked_means = self.scalars.pop_and_reset()
+        message = ["train {} steps:".format(self.total_steps + self.step_count)]
         for k in tracked_means:
             self.log_writer.add_scalar(
                 "train/" + k, tracked_means[k], self.total_steps + self.step_count,
             )
+            message += [k + " {}".format(tracked_means[k])]
+        if len(tracked_means) > 0:
+            LOGGER.info(" ".join(message))
 
-        for mode in eval_metrics:
-            for k in eval_metrics[mode]:
-                self.log_writer.add_scalar(
-                    "{}/".format(mode) + k,
-                    eval_metrics[mode][k][0],
-                    eval_metrics[mode][k][1],
-                )
-
-    def update(self, rollouts) -> None:
+    def update(self, rollouts: RolloutStorage) -> None:
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
 
         for e in range(self.update_epochs):
@@ -449,18 +543,21 @@ class Engine(object):
                     losses={},
                 )
 
-                if self.scheduler is not None:
+                if self.lr_scheduler is not None:
                     info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
 
-                self.optimizer.zero_grad()  # type: ignore
-                total_loss: Optional[torch.FloatTensor] = None
+                total_loss: Optional[torch.Tensor] = None
                 for loss_name in self.losses:
                     loss, loss_weight = (
                         self.losses[loss_name],
                         self.loss_weights[loss_name],
                     )
 
-                    current_loss, current_info = loss.loss(batch, actor_critic_output)
+                    current_loss, current_info = loss.loss(
+                        step_count=self.step_count,
+                        batch=batch,
+                        actor_critic_output=actor_critic_output,
+                    )
                     if total_loss is None:
                         total_loss = loss_weight * current_loss
                     else:
@@ -473,9 +570,10 @@ class Engine(object):
                     info["total_loss"] = total_loss.item()
                     self.vector_tasks.metrics_out_queue.put(("update_package", info))
 
+                    self.optimizer.zero_grad()  # type: ignore
                     total_loss.backward()
                     nn.utils.clip_grad_norm_(
-                        self.actor_critic.parameters(), self.max_grad_norm #, norm_type="inf"  # type: ignore
+                        self.actor_critic.parameters(), self.max_grad_norm,  # type: ignore
                     )
                     self.optimizer.step()  # type: ignore
                     self.backprop_count += 1
@@ -516,7 +614,7 @@ class Engine(object):
             {"teacher_forcing_mask": teacher_forcing_mask},
         )
 
-    def collect_rollout_step(self, rollouts):
+    def collect_rollout_step(self, rollouts: RolloutStorage, render=None):
         # sample actions
         with torch.no_grad():
             step_observation = {
@@ -556,6 +654,8 @@ class Engine(object):
             self.step_count += actions.nelement()
 
         outputs = self.vector_tasks.step([a[0].item() for a in actions])
+
+        rewards: Union[List, torch.Tensor]
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
 
         rewards = torch.tensor(rewards, dtype=torch.float, device=self.device)
@@ -570,16 +670,21 @@ class Engine(object):
 
         npaused, keep, batch = self.remove_paused(observations)
 
+        if render is not None and len(keep) > 0:
+            render.append(self.vector_tasks.render(mode="rgb_array"))
+
         rollouts.reshape(keep)
 
         rollouts.insert(
-            self._preprocess_observations(batch),
-            recurrent_hidden_states[:, keep],
-            actions[keep],
-            actor_critic_output.distributions.log_probs(actions)[keep],
-            actor_critic_output.values[keep],
-            rewards[keep],
-            masks[keep],
+            observations=self._preprocess_observations(batch)
+            if len(keep) > 0
+            else batch,
+            recurrent_hidden_states=recurrent_hidden_states[:, keep],
+            actions=actions[keep],
+            action_log_probs=actor_critic_output.distributions.log_probs(actions)[keep],
+            value_preds=actor_critic_output.values[keep],
+            rewards=rewards[keep],
+            masks=masks[keep],
         )
 
         return npaused
@@ -600,80 +705,78 @@ class Engine(object):
 
         return len(paused), keep, batch
 
-    def initialize_rollouts(self, rollouts):
+    def initialize_rollouts(self, rollouts, render: Optional[List[np.ndarray]] = None):
         observations = self.vector_tasks.get_observations()
         npaused, keep, batch = self.remove_paused(observations)
+        if render is not None and len(keep) > 0:
+            render.append(self.vector_tasks.render(mode="rgb_array"))
         rollouts.reshape(keep)
         rollouts.to(self.device)
-        rollouts.insert_initial_observations(self._preprocess_observations(batch))
+        rollouts.insert_initial_observations(
+            self._preprocess_observations(batch) if len(keep) > 0 else batch
+        )
         return npaused
 
-    def train(self, rollouts):
-        try:
-            self.initialize_rollouts(rollouts)
+    def train(self, rollouts: RolloutStorage):
+        self.initialize_rollouts(rollouts)
 
-            while self.rollout_count < self.num_rollouts:
-                for step in range(self.steps_in_rollout):
-                    self.collect_rollout_step(rollouts)
+        while self.rollout_count < self.num_rollouts:
+            for step in range(self.steps_in_rollout):
+                self.collect_rollout_step(rollouts)
 
-                with torch.no_grad():
-                    step_observation = {
-                        k: v[-1] for k, v in rollouts.observations.items()
-                    }
+            with torch.no_grad():
+                step_observation = {k: v[-1] for k, v in rollouts.observations.items()}
 
-                    actor_critic_output, _ = self.actor_critic(
-                        step_observation,
-                        rollouts.recurrent_hidden_states[-1],
-                        rollouts.prev_actions[-1],
-                        rollouts.masks[-1],
-                    )
-
-                rollouts.compute_returns(
-                    actor_critic_output.values,
-                    self.use_gae,
-                    self.gamma,
-                    self.gae_lambda,
+                actor_critic_output, _ = self.actor_critic(
+                    step_observation,
+                    rollouts.recurrent_hidden_states[-1],
+                    rollouts.prev_actions[-1],
+                    rollouts.masks[-1],
                 )
 
-                self.update(rollouts)
+            rollouts.compute_returns(
+                actor_critic_output.values.detach(),
+                self.use_gae,
+                self.gamma,
+                self.gae_lambda,
+            )
 
-                rollouts.after_update()
+            self.update(rollouts)
+            rollouts.after_update()
+            self.rollout_count += 1
 
-                if self.scheduler is not None:
-                    new_scheduler_steps = self.total_steps + self.step_count
-                    for step in range(
-                        self.last_scheduler_steps + 1, new_scheduler_steps + 1
-                    ):
-                        self.scheduler.step(step)
-                    self.last_scheduler_steps = new_scheduler_steps
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step(epoch=self.step_count + self.total_steps)
 
-                if (
-                    self.step_count - self.last_log >= self.log_interval
+            if (
+                self.step_count - self.last_log >= self.log_interval
+                or self.rollout_count == self.num_rollouts
+            ):
+                self.log()
+                self.last_log = self.step_count
+
+            # save for every interval-th episode or for the last epoch
+            if (
+                self.save_interval > 0
+                and (
+                    self.step_count - self.last_save >= self.save_interval
                     or self.rollout_count == self.num_rollouts
-                ):
-                    self.log()
-                    self.last_log = self.step_count
+                )
+            ) and self.models_folder != "":
+                model_path = self.checkpoint_save()
+                if self.write_to_eval is not None:
+                    self.write_to_eval.put(("eval", model_path))
+                self.last_save = self.step_count
 
-                self.rollout_count += 1
-
-                # save for every interval-th episode or for the last epoch
-                if (
-                    self.save_interval > 0
-                    and (
-                        self.step_count - self.last_save >= self.save_interval
-                        or self.rollout_count == self.num_rollouts
-                    )
-                ) and self.models_folder != "":
-                    model_path = self.checkpoint_save()
-                    if self.write_to_eval is not None:
-                        self.write_to_eval.put(("eval", model_path))
-                    self.last_save = self.step_count
-        finally:
-            self.close()
+            if (self.advance_scene_rollout_period is not None) and (
+                self.rollout_count % self.advance_scene_rollout_period == 0
+            ):
+                self.vector_tasks.next_task(force_advance_scene=True)
+                self.initialize_rollouts(rollouts)
 
     def setup_stage(
         self,
-        losses: Dict[str, Loss],
+        losses: Dict[str, AbstractActorCriticLoss],
         loss_weights: Dict[str, float],
         steps_in_rollout: int,
         stage_task_steps: int,
@@ -683,6 +786,7 @@ class Engine(object):
         use_gae: bool,
         gae_lambda: float,
         max_grad_norm: float,
+        advance_scene_rollout_period: Optional[int] = None,
         teacher_forcing: Optional[LinearDecay] = None,
         deterministic_agent: bool = False,
     ):
@@ -697,14 +801,12 @@ class Engine(object):
         self.num_rollouts = (
             int(self.stage_task_steps) // self.steps_in_rollout
         ) // self.num_processes
-        print(
-            "Using %d rollouts, %d steps (from %d)"
-            % (
-                self.num_rollouts,
-                self.num_rollouts * self.num_processes * self.steps_in_rollout,
-                self.stage_task_steps,
-            )
+        message = "Using %d rollouts, %d steps (from requested %d steps)" % (
+            self.num_rollouts,
+            self.num_rollouts * self.num_processes * self.steps_in_rollout,
+            self.stage_task_steps,
         )
+        LOGGER.info(message)
 
         self.gamma = gamma
         self.use_gae = use_gae
@@ -712,21 +814,28 @@ class Engine(object):
 
         self.max_grad_norm = max_grad_norm
 
+        self.advance_scene_rollout_period = advance_scene_rollout_period
+
         self.teacher_forcing = teacher_forcing
 
         self.deterministic_agent = deterministic_agent
 
-    def _get_loss(self, loss_name):
+    def _get_loss(self, loss_name) -> AbstractActorCriticLoss:
         assert (
             loss_name in self.training_pipeline.named_losses
         ), "undefined referenced loss"
         if isinstance(self.training_pipeline.named_losses[loss_name], Builder):
-            return self.training_pipeline.named_losses[loss_name]()
+            return typing.cast(
+                Builder[AbstractActorCriticLoss],
+                self.training_pipeline.named_losses[loss_name],
+            )()
         else:
-            return self.training_pipeline.named_losses[loss_name]
+            return typing.cast(
+                AbstractActorCriticLoss, self.training_pipeline.named_losses[loss_name]
+            )
 
     def _load_losses(self, stage: PipelineStage):
-        stage_losses = dict()
+        stage_losses: Dict[str, AbstractActorCriticLoss] = {}
         for loss_name in stage.loss_names:
             stage_losses[loss_name] = self._get_loss(loss_name)
 
@@ -741,7 +850,7 @@ class Engine(object):
 
         return stage_losses, stage_loss_weights
 
-    def _stage_value(self, stage, field):
+    def _stage_value(self, stage: PipelineStage, field: str, allow_none: bool = False):
         if hasattr(stage, field) and getattr(stage, field) is not None:
             return getattr(stage, field)
 
@@ -754,12 +863,30 @@ class Engine(object):
         if field in self.machine_params:
             return self.machine_params[field]
 
-        raise RuntimeError("missing value for {}".format(field))
+        if allow_none:
+            return None
+        else:
+            raise RuntimeError("missing value for {}".format(field))
 
     @property
     def log_writer_path(self) -> str:
+        if self.extra_tag == "":
+            return os.path.join(
+                self.output_dir, "tb", self.experiment_name, self.local_start_time_str
+            )
+        else:
+            return os.path.join(
+                self.output_dir,
+                "tb",
+                self.experiment_name,
+                self.extra_tag,
+                self.local_start_time_str,
+            )
+
+    @property
+    def metric_path(self) -> str:
         return os.path.join(
-            self.output_dir, "tb", self.experiment_name, self.local_start_time_str
+            self.output_dir, "metrics", self.experiment_name, self.local_start_time_str
         )
 
     def get_checkpoint_path(self, checkpoint_file_name: str) -> str:
@@ -794,64 +921,73 @@ class Engine(object):
                 return ckpts[0]
 
     def run_pipeline(self, checkpoint_file_name: Optional[str] = None):
-        start_time = time.time()
-        self.local_start_time_str = time.strftime(
-            "%Y-%m-%d_%H-%M-%S", time.localtime(start_time)
-        )
-        self.log_writer = SummaryWriter(log_dir=self.log_writer_path)
-
-        if self.scheduler is not None:
-            self.last_scheduler_steps = 0
-
-        if checkpoint_file_name is not None:
-            self.checkpoint_load(
-                self.get_checkpoint_path(checkpoint_file_name), verbose=True
+        encountered_exception = False
+        try:
+            start_time = time.time()
+            self.local_start_time_str = time.strftime(
+                "%Y-%m-%d_%H-%M-%S", time.localtime(start_time)
             )
+            self.log_writer = SummaryWriter(log_dir=self.log_writer_path)
 
-        for stage_num, stage in self.training_pipeline.iterator_starting_at(
-            self.pipeline_stage
-        ):
-            assert stage_num == self.pipeline_stage
-
-            self.last_log = self.step_count - self.log_interval
-            self.last_save = self.step_count
-
-            stage_losses, stage_weights = self._load_losses(stage)
-
-            self.setup_stage(
-                losses=stage_losses,
-                loss_weights=stage_weights,
-                steps_in_rollout=self._stage_value(stage, "num_steps"),
-                stage_task_steps=self._stage_value(stage, "end_criterion"),
-                update_epochs=self._stage_value(stage, "update_repeats"),
-                update_mini_batches=self._stage_value(stage, "num_mini_batch"),
-                gamma=self._stage_value(stage, "gamma"),
-                use_gae=self._stage_value(stage, "use_gae"),
-                gae_lambda=self._stage_value(stage, "gae_lambda"),
-                max_grad_norm=self._stage_value(stage, "max_grad_norm"),
-                teacher_forcing=stage.teacher_forcing,
-            )
-
-            self.train(
-                RolloutStorage(
-                    self.steps_in_rollout,
-                    self.num_processes,
-                    self.actor_critic.action_space,
-                    self.actor_critic.recurrent_hidden_state_size,
-                    num_recurrent_layers=self.actor_critic.num_recurrent_layers,
+            if checkpoint_file_name is not None:
+                self.checkpoint_load(
+                    self.get_checkpoint_path(checkpoint_file_name), verbose=True
                 )
-            )
 
-            self.total_updates += self.num_rollouts
-            self.pipeline_stage += 1
+            for stage_num, stage in self.training_pipeline.iterator_starting_at(
+                self.pipeline_stage
+            ):
+                assert stage_num == self.pipeline_stage
 
-            self.rollout_count = 0
-            self.backprop_count = 0
-            self.total_steps += self.step_count
-            self.step_count = 0
+                self.last_log = self.step_count - self.log_interval
+                self.last_save = self.step_count
 
-        print("\n\nTRAINING COMPLETE.\n\n")
-        self.close()
+                stage_losses, stage_weights = self._load_losses(stage)
+
+                self.setup_stage(
+                    losses=stage_losses,
+                    loss_weights=stage_weights,
+                    steps_in_rollout=self._stage_value(stage, "num_steps"),
+                    stage_task_steps=self._stage_value(stage, "end_criterion"),
+                    update_epochs=self._stage_value(stage, "update_repeats"),
+                    update_mini_batches=self._stage_value(stage, "num_mini_batch"),
+                    gamma=self._stage_value(stage, "gamma"),
+                    use_gae=self._stage_value(stage, "use_gae"),
+                    gae_lambda=self._stage_value(stage, "gae_lambda"),
+                    max_grad_norm=self._stage_value(stage, "max_grad_norm"),
+                    advance_scene_rollout_period=self._stage_value(
+                        stage, "advance_scene_rollout_period"
+                    ),
+                    teacher_forcing=stage.teacher_forcing,
+                )
+
+                self.train(
+                    RolloutStorage(
+                        self.steps_in_rollout,
+                        self.num_processes,
+                        self.actor_critic.action_space,
+                        self.actor_critic.recurrent_hidden_state_size,
+                        num_recurrent_layers=self.actor_critic.num_recurrent_layers,
+                    )
+                )
+
+                self.total_updates += self.num_rollouts
+                self.pipeline_stage += 1
+
+                self.rollout_count = 0
+                self.backprop_count = 0
+                self.total_steps += self.step_count
+                self.step_count = 0
+        except Exception as e:
+            encountered_exception = True
+            raise e
+        finally:
+            if not encountered_exception:
+                LOGGER.info("\n\nTRAINING COMPLETE.\n\n")
+            else:
+                LOGGER.info("\n\nENCOUNTERED EXCEPTION DURING TRAINING!\n\n")
+                LOGGER.exception(traceback.format_exc())
+            self.close()
 
     def process_checkpoints(
         self,
@@ -879,8 +1015,8 @@ class Engine(object):
                         pass
 
                 if command == "eval":
-                    scalars = self.run_eval(checkpoint_file_name=data)
-                    write_to_parent.put(("valid_metrics", scalars))
+                    scalars, render, samples = self.run_eval(checkpoint_file_name=data)
+                    write_to_parent.put(("valid_metrics", (scalars, render)))
                 elif command in ["quit", "exit", "close"]:
                     self.close(verbose=False)
                     sys.exit()
@@ -891,7 +1027,29 @@ class Engine(object):
         except KeyboardInterrupt:
             print("Eval KeyboardInterrupt")
 
-    def run_eval(self, checkpoint_file_name: str, rollout_steps=1):
+    def process_video(self, render, max_clip_len=500):
+        if len(render) > 0:
+            nt = len(render)
+            if nt > max_clip_len:
+                LOGGER.info(
+                    "Cutting video with length {} to {}".format(nt, max_clip_len)
+                )
+                render = render[:max_clip_len]
+            try:
+                render = np.stack(render, axis=0)  # T, H, W, C
+                render = render.transpose((0, 3, 1, 2))  # T, C, H, W
+                render = np.expand_dims(render, axis=0)  # 1, T, C, H, W
+                render = tensor_to_video(render, fps=4)
+            except MemoryError:
+                LOGGER.warning(
+                    "Skipped video with length {} (cut to {})".format(nt, max_clip_len)
+                )
+                render = None
+        else:
+            render = None
+        return render
+
+    def run_eval(self, checkpoint_file_name: str, rollout_steps=1, max_clip_len=2000):
         self.checkpoint_load(checkpoint_file_name, verbose=False)
 
         rollouts = RolloutStorage(
@@ -902,10 +1060,11 @@ class Engine(object):
             num_recurrent_layers=self.actor_critic.num_recurrent_layers,
         )
 
-        num_paused = self.initialize_rollouts(rollouts)
+        render: Union[None, np.ndarray, List[np.ndarray]] = []
+        num_paused = self.initialize_rollouts(rollouts, render=render)
         steps = 0
         while num_paused < self.num_processes:
-            num_paused += self.collect_rollout_step(rollouts)
+            num_paused += self.collect_rollout_step(rollouts, render=render)
             steps += 1
             if steps % rollout_steps == 0:
                 rollouts.after_update()
@@ -913,10 +1072,15 @@ class Engine(object):
         self.vector_tasks.resume_all()
         self.vector_tasks.reset_all()
 
-        return {
-            k: (v, self.total_steps + self.step_count)
-            for k, v in self.process_valid_metrics().items()
-        }
+        render = self.process_video(render, max_clip_len)
+
+        metrics, samples = self.process_eval_metrics(count=self.num_processes)
+
+        return (
+            {k: (v, self.total_steps + self.step_count) for k, v in metrics.items()},
+            render,
+            samples,
+        )
 
     def get_checkpoint_files(
         self,
@@ -930,9 +1094,23 @@ class Engine(object):
             os.path.join(self.output_dir, "checkpoints", experiment_date, "exp_*.pt")
         )
         files = sorted(files)
-        return files[:: skip_checkpoints + 1] + (
-            [files[-1]] if len(files) % (skip_checkpoints + 1) != 1 else []
+        return (
+            files[:: skip_checkpoints + 1]
+            + (
+                [files[-1]]
+                if skip_checkpoints > 0 and len(files) % (skip_checkpoints + 1) != 1
+                else []
+            )
+            if len(files) > 0
+            else files
         )
+
+    def step_from_checkpoint(self, name):
+        parts = name.split("__")
+        for part in parts:
+            if "steps_" in part:
+                return int(part.split("_")[-1])
+        return -1
 
     def run_test(
         self,
@@ -958,63 +1136,88 @@ class Engine(object):
             experiment_date, checkpoint_file_name, skip_checkpoints
         )
 
+        suffix = "__test_{}".format(test_start_time_str)
         self.log_writer = SummaryWriter(
-            log_dir=self.log_writer_path,
-            filename_suffix="__test_{}".format(test_start_time_str),
+            log_dir=self.log_writer_path, filename_suffix=suffix,
         )
 
+        os.makedirs(self.metric_path, exist_ok=True)
+        fname = os.path.join(self.metric_path, "metrics" + suffix + ".json")
+
+        LOGGER.info("Saving metrics in {}".format(fname))
+
+        all_results = []
         for it, checkpoint_file_name in enumerate(checkpoints):
-            print("{}/{} {}".format(it + 1, len(checkpoints), checkpoint_file_name))
-            scalars = self.run_eval(checkpoint_file_name, rollout_steps)
-            print("metrics", {k: v[0] for k, v in scalars.items()})
-            self.vector_tasks.metrics_out_queue.put(("test_metrics", scalars))
-            self.log()
+            step = self.step_from_checkpoint(checkpoint_file_name)
+            LOGGER.info("{}/{} {} steps".format(it + 1, len(checkpoints), step,))
+
+            scalars, render, samples = self.run_eval(
+                checkpoint_file_name, rollout_steps
+            )
+
+            self.vector_tasks.metrics_out_queue.put(("test_metrics", (scalars, render)))
+
+            results = {scalar: scalars[scalar][0] for scalar in scalars}
+            results.update({"training_steps": step, "tasks": samples})
+            all_results.append(results)
+
+            with open(fname, "w") as f:
+                json.dump(all_results, f, indent=4)
+
+            self.log(count=1)
+
+            with open(fname, "w") as f:
+                json.dump(all_results, f, indent=4)
+
+        LOGGER.info("Metrics saved in {}".format(fname))
 
     def close(self, verbose=True):
         if self._is_closed:
             return
 
-        def printif(s: Union[str, Exception]):
+        def logif(s: Union[str, Exception]):
             if verbose:
                 if isinstance(s, str):
-                    print(s)
+                    LOGGER.info(s)
+                elif isinstance(s, Exception):
+                    LOGGER.exception(traceback.format_exc())
                 else:
-                    traceback.print_exc()
+                    raise NotImplementedError()
 
         try:
-            printif("Closing Engine.vector_tasks.")
+            logif("Closing OnPolicyRLEngine.vector_tasks.")
             self.vector_tasks.close()
-            printif("Closed.")
+            logif("Closed.")
         except Exception as e:
-            printif("Exception raised when closing Engine.vector_tasks:")
-            printif(e)
+            logif("Exception raised when closing OnPolicyRLEngine.vector_tasks:")
+            logif(e)
             pass
 
-        printif("\n\n")
+        logif("\n\n")
         try:
-            printif("Closing Engine.eval_process")
+            logif("Closing OnPolicyRLEngine.eval_process")
             eval: mp.Process = getattr(self, "eval_process", None)
             if eval is not None:
                 self.write_to_eval.put(("exit", None))
                 eval.join(5)
                 self.eval_process = None
-            printif("Closed.")
+            logif("Closed.")
         except Exception as e:
-            printif("Exception raised when closing Engine.vector_tasks:")
-            printif(e)
+            logif("Exception raised when closing OnPolicyRLEngine.vector_tasks:")
+            logif(e)
             pass
 
-        printif("\n\n")
+        logif("\n\n")
         try:
-            printif("Closing Engine.log_writer")
+            logif("Closing OnPolicyRLEngine.log_writer")
             log_writer = getattr(self, "log_writer", None)
             if log_writer is not None:
                 log_writer.close()
                 self.log_writer = None
-            printif("Closed.")
+            logif("Closed.")
         except Exception as e:
-            printif("Exception raised when closing Engine.log_writer:")
-            printif(e)
+            logif("Exception raised when closing OnPolicyRLEngine.log_writer:")
+            logif(e)
             pass
 
         self._is_closed = True
@@ -1029,7 +1232,7 @@ class Engine(object):
         self.close(verbose=False)
 
 
-class Trainer(Engine):
+class OnPolicyTrainer(OnPolicyRLEngine):
     def __init__(
         self,
         config: ExperimentConfig,
@@ -1037,8 +1240,7 @@ class Trainer(Engine):
         loaded_config_src_files: Optional[Dict[str, Tuple[str, str]]],
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
-        *args,
-        **argv
+        **kwargs
     ):
         super().__init__(
             config=config,
@@ -1047,18 +1249,18 @@ class Trainer(Engine):
             seed=seed,
             mode="train",
             deterministic_cudnn=deterministic_cudnn,
+            **kwargs,
         )
 
 
-class Validator(Engine):
+class OnPolicyValidator(OnPolicyRLEngine):
     def __init__(
         self,
         config: ExperimentConfig,
         output_dir: str,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
-        *args,
-        **argv
+        **kwargs
     ):
         super().__init__(
             config=config,
@@ -1067,18 +1269,19 @@ class Validator(Engine):
             seed=seed,
             mode="valid",
             deterministic_cudnn=deterministic_cudnn,
+            **kwargs,
         )
+        self.actor_critic.eval()
 
 
-class Tester(Engine):
+class OnPolicyTester(OnPolicyRLEngine):
     def __init__(
         self,
         config: ExperimentConfig,
         output_dir: str,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
-        *args,
-        **argv
+        **kwargs
     ):
         super().__init__(
             config=config,
@@ -1087,4 +1290,6 @@ class Tester(Engine):
             seed=seed,
             mode="test",
             deterministic_cudnn=deterministic_cudnn,
+            **kwargs,
         )
+        self.actor_critic.eval()

@@ -15,6 +15,7 @@ exclude_files = [
     "version.py",
     "run.py",
     "setup.py",
+    "main.py",
 ]
 
 
@@ -128,6 +129,9 @@ if __name__ == "__main__":
 
     print("Copying CONTRIBUTING.md file to docs.")
     shutil.copy("CONTRIBUTING.md", "docs/CONTRIBUTING.md")
+
+    print("Copying CNAME file to docs.")
+    shutil.copy("CNAME", "docs/CNAME")
 
     print("Building the docs.")
     parent_folder_path = Path(__file__).parent.parent
