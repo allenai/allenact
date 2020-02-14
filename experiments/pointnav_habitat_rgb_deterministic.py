@@ -127,7 +127,7 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
             elif torch.cuda.device_count() == 1:
                 gpu_ids = [0]
             elif torch.cuda.device_count() > 1:
-                gpu_ids = [torch.cuda.device_count()]
+                gpu_ids = [torch.cuda.device_count() - 1]
         elif mode == "test":
             nprocesses = 1
             if not torch.cuda.is_available():
@@ -135,7 +135,7 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
             elif torch.cuda.device_count() == 1:
                 gpu_ids = [0]
             elif torch.cuda.device_count() > 1:
-                gpu_ids = [torch.cuda.device_count()]
+                gpu_ids = [torch.cuda.device_count() - 1]
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
