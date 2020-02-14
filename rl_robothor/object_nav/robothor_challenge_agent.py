@@ -93,7 +93,6 @@ class State:
 @Singleton
 class SingletonEngine:
     def __init__(self):
-        print("New engine")
         self._actions = list(TrainingTask.action_names())
 
         self.config = ExperimentConfig()
@@ -130,7 +129,6 @@ class SingletonEngine:
         self.actor_critic.load_state_dict(ckpt["model_state_dict"])
 
     def reset(self, episode):
-        print("Reset engine")
         self.episode = Episode(episode)
         self.state = State()
         self.state.rollouts = RolloutStorage(
@@ -198,6 +196,10 @@ class SingletonEngine:
     def action_name(self):
         return self._actions[self.state.action[0].item()]
 
+    def mapped_action(self):
+        action = self.action_name
+        return action if action != "End" else "Stop"
+
     def step(self, event):
         self.update_rollouts(event)
-        return self.action_name
+        return self.mapped_action()
