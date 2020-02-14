@@ -416,6 +416,7 @@ class OnPolicyRLEngine(object):
                     count -= 1
                 if isinstance(metric, tuple):
                     pkg_type, info = metric
+
                     if pkg_type in ["valid_metrics", "test_metrics"]:
                         mode = pkg_type.split("_")[0]
                         scalars, render = info
@@ -1072,10 +1073,10 @@ class OnPolicyRLEngine(object):
         )
 
         render: Union[None, np.ndarray, List[np.ndarray]] = []
-        num_paused = self.initialize_rollouts(rollouts, render=render)
+        num_paused = self.initialize_rollouts(rollouts)
         steps = 0
         while num_paused < self.num_processes:
-            num_paused += self.collect_rollout_step(rollouts, render=render)
+            num_paused += self.collect_rollout_step(rollouts)
             steps += 1
             if steps % rollout_steps == 0:
                 rollouts.after_update()
