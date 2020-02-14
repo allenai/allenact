@@ -64,7 +64,7 @@ class PointNavTaskSampler(TaskSampler):
         """
         return True
 
-    def next_task(self) -> PointNavTask:
+    def next_task(self, force_advance_scene=False) -> PointNavTask:
 
         if self.env is not None:
             self.env.reset()
