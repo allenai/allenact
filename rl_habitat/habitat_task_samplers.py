@@ -17,6 +17,7 @@ class PointNavTaskSampler(TaskSampler):
         max_steps: int,
         action_space: gym.Space,
         distance_to_goal: float,
+        max_tasks: int,
         *args,
         **kwargs
     ) -> None:
@@ -27,6 +28,8 @@ class PointNavTaskSampler(TaskSampler):
         self._action_space = action_space
         self.env_config = env_config
         self.distance_to_goal = distance_to_goal
+        self.max_tasks = max_tasks
+        self.reset_tasks = max_tasks
 
         self._last_sampled_task: Optional[PointNavTask] = None
 
@@ -42,7 +45,7 @@ class PointNavTaskSampler(TaskSampler):
         """
         @return: Number of total tasks remaining that can be sampled. Can be float('inf').
         """
-        return float("inf")
+        return float("inf") if self.max_tasks is None else self.max_tasks
 
     @property
     def total_unique(self) -> Union[int, float, None]:
@@ -65,6 +68,8 @@ class PointNavTaskSampler(TaskSampler):
         return True
 
     def next_task(self, force_advance_scene=False) -> PointNavTask:
+        if self.max_tasks is not None and self.max_tasks <= 0:
+            return None
 
         if self.env is not None:
             self.env.reset()
@@ -88,6 +93,10 @@ class PointNavTaskSampler(TaskSampler):
             max_steps=self.max_steps,
             action_space=self._action_space,
         )
+
+        if self.max_tasks is not None:
+            self.max_tasks -= 1
+
         return self._last_sampled_task
 
     def reset(self):
@@ -97,6 +106,7 @@ class PointNavTaskSampler(TaskSampler):
         # random.shuffle(self.scene_order)
         # self.scene_id = 0
         # self.max_tasks = self.reset_tasks
+        self.max_tasks = self.reset_tasks
 
     def set_seed(self, seed: int):
         self.seed = seed

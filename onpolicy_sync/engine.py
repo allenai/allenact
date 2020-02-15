@@ -1073,10 +1073,10 @@ class OnPolicyRLEngine(object):
         )
 
         render: Union[None, np.ndarray, List[np.ndarray]] = []
-        num_paused = self.initialize_rollouts(rollouts)
+        num_paused = self.initialize_rollouts(rollouts, render=render)
         steps = 0
         while num_paused < self.num_processes:
-            num_paused += self.collect_rollout_step(rollouts)
+            num_paused += self.collect_rollout_step(rollouts, render=render)
             steps += 1
             if steps % rollout_steps == 0:
                 rollouts.after_update()

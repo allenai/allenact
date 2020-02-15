@@ -124,7 +124,7 @@ class PointNavTask(Task[HabitatTask]):
 
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         assert mode in ["rgb", "depth"], "only rgb and depth rendering is implemented"
-        return self.env.current_frame
+        return self.env.current_frame['rgb']
 
     def _is_goal_in_range(self) -> bool:
         geodesic_distance = self.env.get_geodesic_distance()

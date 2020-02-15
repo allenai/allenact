@@ -78,7 +78,7 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
         update_repeats = 4
         num_steps = 128
         save_interval = 1000000
-        log_interval = 5000
+        log_interval = 10000
         gamma = 0.99
         use_gae = True
         gae_lambda = 0.95
@@ -174,14 +174,20 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
     def train_task_sampler_args(
         self, process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
-        return self._get_sampler_args(self.TRAIN_SCENES)
+        args = self._get_sampler_args(self.TRAIN_SCENES)
+        args["max_tasks"] = 4931496  # number of train episodes in gibson
+        return args
 
     def valid_task_sampler_args(
         self, process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
-        return self._get_sampler_args(self.VALID_SCENES)
+        args = self._get_sampler_args(self.VALID_SCENES)
+        args["max_tasks"] = 994  # Val mini is only 30 tasks
+        return args
 
     def test_task_sampler_args(
         self, process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
-        return self._get_sampler_args(self.TEST_SCENES)
+        args = self._get_sampler_args(self.TEST_SCENES)
+        args["max_tasks"] = 994
+        return args
