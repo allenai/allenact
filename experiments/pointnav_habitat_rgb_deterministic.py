@@ -30,8 +30,6 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.2
 
-    ADVANCE_SCENE_ROLLOUT_PERIOD = None  # This parameter is only applicable for for AI2-Thor
-
     SENSORS = [
         RGBSensorHabitat(
             {
@@ -95,7 +93,6 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
-            advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
                 PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps)
             ],
