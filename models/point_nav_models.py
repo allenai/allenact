@@ -165,5 +165,5 @@ class PointNavActorCriticSimpleConvReactionary(ActorCriticModel[CategoricalDistr
             ActorCriticOutput(
                 distributions=self.actor(x), values=self.critic(x), extras={}
             ),
-            torch.zeros_like(x),
+            torch.zeros((x.shape[0], self.recurrent_hidden_state_size ))
         )
