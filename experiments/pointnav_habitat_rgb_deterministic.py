@@ -30,14 +30,14 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.2
 
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10
+    ADVANCE_SCENE_ROLLOUT_PERIOD = None  # This parameter is only applicable for for AI2-Thor
 
     SENSORS = [
         RGBSensorHabitat(
             {
                 "height": SCREEN_SIZE,
                 "width": SCREEN_SIZE,
-                "uzse_resnet_normalization": True,
+                "use_resnet_normalization": True,
             }
         ),
         TargetCoordinatesSensorHabitat({"coordinate_dims": 2}),
@@ -118,7 +118,7 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
     @classmethod
     def machine_params(cls, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else 1
+            nprocesses = 1 if not torch.cuda.is_available() else 8
             gpu_ids = [] if not torch.cuda.is_available() else [0]
         elif mode == "valid":
             nprocesses = 1
@@ -158,8 +158,7 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
         config = self.CONFIG.clone()
         config.DATASET.DATA_PATH = scenes
         if torch.cuda.device_count() > 0:
-            # Distribute environments across all GPUs except the first
-            self.GPU_ID = 0
+            self.GPU_ID = 1
         else:
             self.GPU_ID = -1
         config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = self.GPU_ID
