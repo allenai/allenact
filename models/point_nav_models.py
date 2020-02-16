@@ -140,7 +140,7 @@ class PointNavActorCriticSimpleConvReactionary(ActorCriticModel[CategoricalDistr
 
     @property
     def num_recurrent_layers(self):
-        return 8
+        return 0
 
     def get_target_coordinates_encoding(self, observations):
         if self.embed_coordinates:
