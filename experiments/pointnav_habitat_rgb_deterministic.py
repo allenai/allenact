@@ -93,6 +93,7 @@ class PointNavHabitatRGBDeterministicExperimentConfig(ExperimentConfig):
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
+            advance_scene_rollout_period=None,
             pipeline_stages=[
                 PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps)
             ],

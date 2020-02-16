@@ -968,7 +968,9 @@ class OnPolicyRLEngine(object):
                     gae_lambda=self._stage_value(stage, "gae_lambda"),
                     max_grad_norm=self._stage_value(stage, "max_grad_norm"),
                     advance_scene_rollout_period=self._stage_value(
-                        stage, "advance_scene_rollout_period"
+                        stage,
+                        "advance_scene_rollout_period",
+                        allow_none=True
                     ),
                     teacher_forcing=stage.teacher_forcing,
                 )
