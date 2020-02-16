@@ -85,6 +85,8 @@ class PointNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         x = torch.cat(x, dim=1)
         x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
 
+        print("rnn hidden states shape:", rnn_hidden_states.shape)
+
         return (
             ActorCriticOutput(
                 distributions=self.actor(x), values=self.critic(x), extras={}
@@ -138,7 +140,7 @@ class PointNavActorCriticSimpleConvReactionary(ActorCriticModel[CategoricalDistr
 
     @property
     def num_recurrent_layers(self):
-        return 0
+        return 8
 
     def get_target_coordinates_encoding(self, observations):
         if self.embed_coordinates:
@@ -165,5 +167,5 @@ class PointNavActorCriticSimpleConvReactionary(ActorCriticModel[CategoricalDistr
             ActorCriticOutput(
                 distributions=self.actor(x), values=self.critic(x), extras={}
             ),
-            torch.zeros((x.shape[0], self.recurrent_hidden_state_size ))
+            torch.zeros((1, x.shape[0], self.recurrent_hidden_state_size))
         )
