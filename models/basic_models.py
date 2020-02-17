@@ -6,6 +6,7 @@ from typing import Sequence, Tuple, Dict, Union, cast, List
 import numpy as np
 import torch
 from torch import nn as nn
+import torchvision.models as models
 from gym.spaces.dict import Dict as SpaceDict
 
 
@@ -157,6 +158,80 @@ class SimpleCNN(nn.Module):
                 nn.init.kaiming_normal_(layer.weight, nn.init.calculate_gain("relu"))
                 if layer.bias is not None:
                     nn.init.constant_(layer.bias, val=0)
+
+    @property
+    def is_blind(self):
+        """True if the observation space doesn't include `"rgb"` or
+        `"depth"`."""
+        return self._n_input_rgb + self._n_input_depth == 0
+
+    def forward(self, observations: Dict[str, torch.Tensor]):
+        cnn_input_list = []
+        if self._n_input_rgb > 0:
+            rgb_observations = observations["rgb"]
+            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
+            rgb_observations = rgb_observations.permute(0, 3, 1, 2)
+            # rgb_observations = rgb_observations / 255.0  # normalize RGB
+            cnn_input_list.append(rgb_observations)
+
+        if self._n_input_depth > 0:
+            depth_observations = observations["depth"]
+            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
+            depth_observations = depth_observations.permute(0, 3, 1, 2)
+            cnn_input_list.append(depth_observations)
+
+        cnn_input = torch.cat(cnn_input_list, dim=1)
+
+        return self.cnn(cnn_input)
+
+
+class ResNet50(nn.Module):
+    """A Simple 3-Conv CNN followed by a fully connected layer.
+    Takes in observations (of type gym.spaces.dict) and produces an embedding
+     of the `"rgb"` and/or `"depth"` components.
+    # Attributes
+    observation_space : The observation_space of the agent, should have 'rgb' or 'depth' as
+        a component (otherwise it is a blind model).
+    output_size : The size of the embedding vector to produce.
+    """
+
+    def __init__(self, observation_space: SpaceDict, output_size: int, pretrained=True):
+        """Initializer.
+        # Parameters
+        observation_space : See class attributes documentation.
+        output_size : See class attributes documentation.
+        """
+        super().__init__()
+        if "rgb" in observation_space.spaces:
+            self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
+        else:
+            self._n_input_rgb = 0
+
+        if "depth" in observation_space.spaces:
+            self._n_input_depth = observation_space.spaces["depth"].shape[2]
+        else:
+            self._n_input_depth = 0
+
+        if self._n_input_rgb > 0:
+            cnn_dims = np.array(
+                observation_space.spaces["rgb"].shape[:2], dtype=np.float32
+            )
+        elif self._n_input_depth > 0:
+            cnn_dims = np.array(
+                observation_space.spaces["depth"].shape[:2], dtype=np.float32
+            )
+        else:
+            assert self.is_blind
+
+        if self.is_blind:
+            self.cnn = nn.Sequential()
+        else:
+            # Initialized pre trained ResNet50 with the last linear layer cut off
+            # Add a untrained linear layer mapping from 2048 ResNet feature space to output_size dimensions
+            self.cnn = nn.Sequential(
+                *list(models.resnet50(pretrained=pretrained).children())[:-1] +
+                [nn.Flatten(), nn.Linear(2048, output_size)]
+            )
 
     @property
     def is_blind(self):
