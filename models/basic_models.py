@@ -231,7 +231,7 @@ class ResNet50(nn.Module):
             self.cnn = nn.Sequential(
                 *list(models.resnet50(pretrained=pretrained).children())[:-1] +
                 [nn.Flatten(), nn.Linear(2048, output_size)]
-            )
+            ).eval()
 
     @property
     def is_blind(self):
@@ -256,10 +256,7 @@ class ResNet50(nn.Module):
 
         cnn_input = torch.cat(cnn_input_list, dim=1)
 
-        with torch.no_grad:
-            out = self.cnn(cnn_input)
-        
-        return out
+        return self.cnn(cnn_input)
 
 
 class RNNStateEncoder(nn.Module):
