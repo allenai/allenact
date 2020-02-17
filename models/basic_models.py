@@ -231,7 +231,7 @@ class ResNet50(nn.Module):
             self.cnn = nn.Sequential(
                 *list(models.resnet50(pretrained=pretrained).children())[:-1] +
                 [nn.Flatten(), nn.Linear(2048, output_size)]
-            ).eval()
+            )
 
     @property
     def is_blind(self):
