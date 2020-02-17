@@ -256,7 +256,10 @@ class ResNet50(nn.Module):
 
         cnn_input = torch.cat(cnn_input_list, dim=1)
 
-        return self.cnn(cnn_input)
+        with torch.no_grad:
+            out = self.cnn(cnn_input)
+        
+        return out
 
 
 class RNNStateEncoder(nn.Module):
