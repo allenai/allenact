@@ -1,6 +1,3 @@
-import os
-import yaml
-
 import torch
 
 # from robothor_challenge.robothor_challenge.agent import Agent
@@ -77,11 +74,6 @@ class Singleton:
         return isinstance(inst, self._decorated)
 
 
-class Episode:
-    def __init__(self, episode):
-        self.task_info = episode
-
-
 class State:
     action = None
     event = None
@@ -108,12 +100,12 @@ class SingletonEngine:
                 observation_set=self.observation_set
             ).to(self.device)
         else:
+            self.observation_set = None
             self.actor_critic = self.config.create_model().to(self.device)
 
         self.checkpoint_load(checkpoint_name)
-        self.actor_critic.eval()
 
-        self.episode = None
+        self.task_info = None
         self.state = None
 
     def pick_device(self):
@@ -127,9 +119,10 @@ class SingletonEngine:
     def checkpoint_load(self, ckpt):
         ckpt = torch.load(ckpt, map_location="cpu")
         self.actor_critic.load_state_dict(ckpt["model_state_dict"])
+        self.actor_critic.eval()
 
     def reset(self, episode):
-        self.episode = Episode(episode)
+        self.task_info = episode  # provides Task interface to sensors
         self.state = State()
         self.state.rollouts = RolloutStorage(
             num_steps=1,
@@ -146,15 +139,15 @@ class SingletonEngine:
         return self.observation_set.get_observations(batched_observations)
 
     @property
-    def current_frame(self):
+    def current_frame(self):  # provides Environment interface to sensors
         return self.state.event.frame
 
-    def update_rollouts(self, event):
-        self.state.event = event
+    def update_state(self, event):
+        self.state.event = event  # provides Environment interface to sensors
 
         obs = self.preprocess(
             batch_observations(
-                [self.sensor_suite.get_observations(self, self.episode)], self.device
+                [self.sensor_suite.get_observations(self, self)], self.device
             )
         )
 
@@ -201,5 +194,5 @@ class SingletonEngine:
         return action if action != "End" else "Stop"
 
     def step(self, event):
-        self.update_rollouts(event)
+        self.update_state(event)
         return self.mapped_action()
