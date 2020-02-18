@@ -1,4 +1,5 @@
 MOVE_AHEAD = "MoveAhead"
+MOVE_BACK = "MoveBack"
 ROTATE_LEFT = "RotateLeft"
 ROTATE_RIGHT = "RotateRight"
 LOOK_DOWN = "LookDown"
