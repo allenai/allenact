@@ -7,7 +7,7 @@ from collections import OrderedDict
 import gym
 
 from .tasks import ObjectNavTask
-from ..robothor_environment import RoboThorEnvironment
+from ..new_robothor_environment import RoboThorEnvironment
 from rl_ai2thor.object_nav.task_samplers import (
     ObjectNavTaskSampler as BaseObjectNavTaskSampler,
 )

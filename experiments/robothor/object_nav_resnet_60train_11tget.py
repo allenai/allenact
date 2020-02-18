@@ -27,7 +27,22 @@ from rl_robothor.robothor_preprocessors import ResnetPreProcessorThor
 class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
     """An object navigation experiment in RoboTHOR."""
 
-    OBJECT_TYPES = sorted(["Television", "Mug", "Apple", "AlarmClock", "BasketBall"])
+    # OBJECT_TYPES = sorted(["Television", "Mug", "Apple", "AlarmClock", "BasketBall"])
+    OBJECT_TYPES = sorted(
+        [
+            "AlarmClock",
+            "Apple",
+            "BaseballBat",
+            "BasketBall",
+            "GarbageCan",
+            "HousePlant",
+            "Laptop",
+            "Mug",
+            "SprayBottle",
+            "Television",
+            "Vase",
+        ]
+    )
 
     SCREEN_SIZE = 224
 
@@ -44,15 +59,23 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
 
     TRAIN_SCENES = [
         "FloorPlan_Train%d_%d" % (wall, furniture)
-        for wall in range(1, 11)  # actual limit at 16
+        for wall in range(1, 13)
         for furniture in range(1, 6)
     ]
 
     # VALID_SCENES = [
+    #     "FloorPlan_Val%d_%d" % (wall, furniture)
+    #     for wall in range(1, 4)
+    #     for furniture in range(1, 6)
+    # ]
+
+    # # Old CVPR submission validation
+    # TEST_SCENES = [
     #     "FloorPlan_RVal%d_%d" % (wall, furniture)
     #     for wall in range(1, 3)
     #     for furniture in range(1, 3)
     # ]
+
     VALID_SCENES = TRAIN_SCENES
 
     TEST_SCENES = VALID_SCENES
@@ -82,30 +105,33 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
     ]
 
     ENV_ARGS = {
-        "player_screen_height": SCREEN_SIZE,
-        "player_screen_width": SCREEN_SIZE,
-        "quality": "Very High",
-        "rotation_step_degrees": 45,
+        "width": 640,
+        "height": 480,
+        "agentMode": "bot",
+        "agentType": "stochastic",
+        "rotateStepDegrees": 30,
+        "visibilityDistance": 1.0,
+        "continuousMode": True,
+        "snapToGrid": False,
+        "gridSize": 0.25,
     }
 
     MAX_STEPS = 100
 
-    SCENE_PERIOD = 10
-
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 30
 
     @classmethod
     def tag(cls):
-        return "object_nav_resnet_tensor_50train_5tget"
+        return "object_nav_resnet_60train_11tget"
 
     def training_pipeline(cls, **kwargs):
-        a2c_steps = int(1e8)
-        lr = 4e-4
+        a2c_steps = int(1e9)
+        lr = 1e-3
         num_mini_batch = 1
         update_repeats = 1
         num_steps = 30
         log_interval = cls.MAX_STEPS * 100  # Log every 50 max length tasks
-        save_interval = 100000  # Save every 100000 steps (approximately)
+        save_interval = 200000  # Save every 100000 steps (approximately)
         gamma = 0.99
         use_gae = True
         gae_lambda = 0.95
@@ -132,15 +158,15 @@ class ObjectNavRoboThorExperimentConfig(ExperimentConfig):
         )
 
     def single_gpu(self):
-        return 0
+        return 7
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 50
-            sampler_devices = [2, 3, 4, 6, 7]
+            nprocesses = 120
+            sampler_devices = [0, 1, 2, 3, 4, 5, 6, 7]
             gpu_ids = [] if not torch.cuda.is_available() else [self.single_gpu()]
         elif mode == "valid":
-            nprocesses = 1
+            nprocesses = 0
             gpu_ids = [] if not torch.cuda.is_available() else [self.single_gpu()]
         elif mode == "test":
             nprocesses = 1
