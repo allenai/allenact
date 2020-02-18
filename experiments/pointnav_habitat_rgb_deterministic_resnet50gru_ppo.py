@@ -15,7 +15,7 @@ from rl_base.sensor import SensorSuite
 from rl_base.task import TaskSampler
 from rl_habitat.habitat_tasks import PointNavTask
 from rl_habitat.habitat_task_samplers import PointNavTaskSampler
-from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetCoordinatesSensorHabitat
+from rl_habitat.habitat_sensors import RGBResNetSensorHabitat, TargetCoordinatesSensorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -31,7 +31,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     DISTANCE_TO_GOAL = 0.2
 
     SENSORS = [
-        RGBSensorHabitat(
+        RGBResNetSensorHabitat(
             {
                 "height": SCREEN_SIZE,
                 "width": SCREEN_SIZE,
