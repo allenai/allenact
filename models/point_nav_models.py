@@ -197,10 +197,7 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
         # else:
         #     self.visual_encoder = nn.Linear(2048, hidden_size)
 
-        import torchvision.models as models
-        self.visual_encoder = nn.Sequential(
-            *list(models.resnet50(pretrained=True).children())[:-1] + [nn.Flatten(), nn.Linear(2048, 512)]
-        )
+        self.visual_encoder = ResNet50(observation_space, hidden_size)
 
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self.recurrent_hidden_state_size)
@@ -254,7 +251,7 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
         #     embs.append(observations["depth"].view(-1, observations["depth"].shape[-1]))
         # emb = torch.cat(embs, dim=1)
 
-        x = [self.visual_encoder(observations['rgb'])] + x
+        x = [self.visual_encoder(observations)] + x
         x = torch.cat(x, dim=1)
 
         x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)

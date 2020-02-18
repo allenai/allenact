@@ -186,14 +186,6 @@ class SimpleCNN(nn.Module):
 
 
 class ResNet50(nn.Module):
-    """A Simple 3-Conv CNN followed by a fully connected layer.
-    Takes in observations (of type gym.spaces.dict) and produces an embedding
-     of the `"rgb"` and/or `"depth"` components.
-    # Attributes
-    observation_space : The observation_space of the agent, should have 'rgb' or 'depth' as
-        a component (otherwise it is a blind model).
-    output_size : The size of the embedding vector to produce.
-    """
 
     def __init__(self, observation_space: SpaceDict, output_size: int, pretrained=True):
         """Initializer.
