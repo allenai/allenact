@@ -108,7 +108,7 @@ class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
             self.coorinate_embedding_size = coordinate_dims
 
         if 'rgb' in observation_space.spaces and 'depth' in observation_space.spaces:
-            self.visual_encoder =  nn.Linear(4096, hidden_size)
+            self.visual_encoder = nn.Linear(4096, hidden_size)
         else:
             self.visual_encoder = nn.Linear(2048, hidden_size)
 
@@ -192,7 +192,10 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
         else:
             self.coorinate_embedding_size = coordinate_dims
 
-        self.visual_encoder = ResNet50(self.observation_space, hidden_size, pretrained=True)
+        if 'rgb' in observation_space.spaces and 'depth' in observation_space.spaces:
+            self.visual_encoder = nn.Linear(4096, hidden_size)
+        else:
+            self.visual_encoder = nn.Linear(2048, hidden_size)
 
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self.recurrent_hidden_state_size)
@@ -218,7 +221,7 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
 
     @property
     def is_blind(self):
-        return self.visual_encoder.is_blind
+        return False
 
     @property
     def num_recurrent_layers(self):
@@ -239,14 +242,17 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
         target_encoding = self.get_target_coordinates_encoding(observations)
         x = [target_encoding]
 
-        if not self.is_blind:
-            perception_embed = self.visual_encoder(observations)
-            x = [perception_embed] + x
+        embs = []
+        if "rgb" in observations:
+            embs.append(observations["rgb"].view(-1, observations["rgb"].shape[-1]))
+        if "depth" in observations:
+            embs.append(observations["depth"].view(-1, observations["depth"].shape[-1]))
+        emb = torch.cat(embs, dim=1)
 
+        x = [self.visual_encoder(emb)] + x
         x = torch.cat(x, dim=1)
-        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
 
-        print("rnn hidden states shape:", rnn_hidden_states.shape)
+        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
 
         return (
             ActorCriticOutput(

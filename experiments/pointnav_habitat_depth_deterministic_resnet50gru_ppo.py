@@ -15,11 +15,11 @@ from rl_base.sensor import SensorSuite
 from rl_base.task import TaskSampler
 from rl_habitat.habitat_tasks import PointNavTask
 from rl_habitat.habitat_task_samplers import PointNavTaskSampler
-from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetCoordinatesSensorHabitat
+from rl_habitat.habitat_sensors import DepthResNetSensorHabitat, TargetCoordinatesSensorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentConfig):
+class PointNavHabitatDepthDeterministicResnet50PPOExperimentConfig(ExperimentConfig):
     """A Point Navigation experiment configuraqtion in Habitat"""
 
     TRAIN_SCENES = "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
@@ -31,7 +31,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     DISTANCE_TO_GOAL = 0.2
 
     SENSORS = [
-        RGBSensorHabitat(
+        DepthResNetSensorHabitat(
             {
                 "height": SCREEN_SIZE,
                 "width": SCREEN_SIZE,
@@ -45,7 +45,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     CONFIG.defrost()
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
     CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['*']
-    CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
+    CONFIG.SIMULATOR.AGENT_0.SENSORS = ['DEPTH_SENSOR']
     CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = SCREEN_SIZE
     CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = SCREEN_SIZE
     CONFIG.SIMULATOR.TURN_ANGLE = 45
