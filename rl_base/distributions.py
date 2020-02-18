@@ -19,7 +19,7 @@ class Distr(torch.distributions.Categorical, abc.ABC):
 
 
 class CategoricalDistr(Distr):
-    """A categorical distribution."""
+    """A categorical distribution extending PyTorch's Categorical."""
 
     def rsample(self, sample_shape=torch.Size()):
         raise NotImplementedError()
@@ -50,36 +50,35 @@ class CategoricalDistr(Distr):
         return self.probs.argmax(dim=-1, keepdim=True)
 
 
-# Normal
-FixedNormal = torch.distributions.Normal
+class FixedNormal(torch.distributions.Normal):
+    """A fixed normal distribution extending PyTorch's Normal."""
 
-log_prob_normal = FixedNormal.log_prob
-FixedNormal.log_probs = lambda self, actions: log_prob_normal(self, actions).sum(
-    -1, keepdim=True
-)
+    def log_probs(self, actions: torch.LongTensor) -> torch.FloatTensor:
+        return super().log_prob(actions).sum(-1, keepdim=True)
 
-normal_entropy = FixedNormal.entropy
-FixedNormal.entropy = lambda self: normal_entropy(self).sum(-1)
+    def entropy(self):
+        return super().entropy().sum(-1)
 
-FixedNormal.mode = lambda self: self.mean
+    def mode(self):
+        return self.mean()
 
-# Bernoulli
-FixedBernoulli = torch.distributions.Bernoulli
 
-log_prob_bernoulli = FixedBernoulli.log_prob
-FixedBernoulli.log_probs = (
-    lambda self, actions: log_prob_bernoulli(self, actions)
-    .view(actions.size(0), -1)
-    .sum(-1)
-    .unsqueeze(-1)
-)
+class FixedBernoulli(torch.distributions.Bernoulli):
+    """A fixed Bernoulli distribution extending PyTorch's Bernoulli."""
 
-bernoulli_entropy = FixedBernoulli.entropy
-FixedBernoulli.entropy = lambda self: bernoulli_entropy(self).sum(-1)
-FixedBernoulli.mode = lambda self: torch.gt(self.probs, 0.5).float()
+    def log_probs(self, actions: torch.LongTensor) -> torch.FloatTensor:
+        return super().log_prob(actions).view(actions.size(0), -1).sum(-1).unsqueeze(-1)
+
+    def entropy(self):
+        return super().entropy().sum(-1)
+
+    def mode(self):
+        return torch.gt(self.probs, 0.5).float()
 
 
 class DiagGaussian(nn.Module):
+    """A learned diagonal Gaussian distribution."""
+
     def __init__(self, num_inputs, num_outputs):
         super(DiagGaussian, self).__init__()
 
@@ -104,6 +103,8 @@ class DiagGaussian(nn.Module):
 
 
 class Bernoulli(nn.Module):
+    """A learned Bernoulli distribution."""
+
     def __init__(self, num_inputs, num_outputs):
         super(Bernoulli, self).__init__()
 
