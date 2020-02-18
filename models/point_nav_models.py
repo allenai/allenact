@@ -154,9 +154,9 @@ class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
 
         embs = []
         if "rgb" in observations:
-            embs.add(observations["rgb"].view(-1, observations["rgb"].shape[-1]))
+            embs.append(observations["rgb"].view(-1, observations["rgb"].shape[-1]))
         if "depth" in observations:
-            embs.add(observations["depth"].view(-1, observations["depth"].shape[-1]))
+            embs.append(observations["depth"].view(-1, observations["depth"].shape[-1]))
         emb = torch.cat(embs, dim=1)
 
         x = [self.visual_encoder(emb)] + x
