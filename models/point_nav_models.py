@@ -192,10 +192,15 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
         else:
             self.coorinate_embedding_size = coordinate_dims
 
-        if 'rgb' in observation_space.spaces and 'depth' in observation_space.spaces:
-            self.visual_encoder = nn.Linear(4096, hidden_size)
-        else:
-            self.visual_encoder = nn.Linear(2048, hidden_size)
+        # if 'rgb' in observation_space.spaces and 'depth' in observation_space.spaces:
+        #     self.visual_encoder = nn.Linear(4096, hidden_size)
+        # else:
+        #     self.visual_encoder = nn.Linear(2048, hidden_size)
+
+        import torchvision.models as models
+        self.visual_encoder = nn.Sequential(
+            *list(models.resnet50(pretrained=True).children())[:-1] + [nn.Flatten(), nn.Linear(2048, 512)]
+        )
 
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self.recurrent_hidden_state_size)
@@ -242,14 +247,14 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
         target_encoding = self.get_target_coordinates_encoding(observations)
         x = [target_encoding]
 
-        embs = []
-        if "rgb" in observations:
-            embs.append(observations["rgb"].view(-1, observations["rgb"].shape[-1]))
-        if "depth" in observations:
-            embs.append(observations["depth"].view(-1, observations["depth"].shape[-1]))
-        emb = torch.cat(embs, dim=1)
+        # embs = []
+        # if "rgb" in observations:
+        #     embs.append(observations["rgb"].view(-1, observations["rgb"].shape[-1]))
+        # if "depth" in observations:
+        #     embs.append(observations["depth"].view(-1, observations["depth"].shape[-1]))
+        # emb = torch.cat(embs, dim=1)
 
-        x = [self.visual_encoder(emb)] + x
+        x = [self.visual_encoder(observations['rgb'])] + x
         x = torch.cat(x, dim=1)
 
         x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
