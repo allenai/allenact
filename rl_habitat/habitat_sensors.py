@@ -329,7 +329,7 @@ class DepthResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
             depth = np.array(self.scaler(self.to_pil(depth)), dtype=np.float32)
 
         depth = self.to_tensor(depth).squeeze()
-        depth = torch.cat([3 * depth], dim=2).unsqueeze(0)
+        depth = torch.stack([3 * depth], dim=2).unsqueeze(0)
         if torch.cuda.is_available():
             depth = depth.to("cuda:0")
         depth = self.resnet(depth).detach().cpu().numpy()
