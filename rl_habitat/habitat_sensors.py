@@ -122,7 +122,7 @@ class RGBResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         self.norm_means = np.array([[[0.485, 0.456, 0.406]]], dtype=np.float32)
         self.norm_sds = np.array([[[0.229, 0.224, 0.225]]], dtype=np.float32)
 
-        shape = None if self.height is None else (512, )
+        shape = None if self.height is None else (2048, )
         if not self.should_normalize:
             low = 0.0
             high = 1.0
@@ -142,8 +142,7 @@ class RGBResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         self.to_tensor = transforms.ToTensor()
 
         self.resnet = nn.Sequential(
-            *list(models.resnet50(pretrained=True).children())[:-1] +
-            [nn.Flatten(), nn.Linear(2048, 512)]
+            *list(models.resnet50(pretrained=True).children())[:-1] + [nn.Flatten()]
         ).eval()
         self.resnet = self.resnet.to("cuda:0")
 
