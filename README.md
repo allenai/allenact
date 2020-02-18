@@ -35,7 +35,7 @@ could not find a package delivering all of the following features, each of which
 1. *First-class pytorch support*: While many well-developed libraries exist for reinforcement learning in 
    tensorflow, we are one of a few to target pytorch.
 1. *Configuration as code*: In `embodied-rl` experiments are 
-   defined using python classes, if you know how to extend an abstract python class then you know how to define an
+   defined using python classes, so knowing how to extend an abstract python class we can define an
    experiment.
 1. *Type checking and documentation*: We have put significant effort into providing extensive documentation and type
    annotations throughout our codebase.

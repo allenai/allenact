@@ -10,6 +10,17 @@ from rl_base.task import Task
 
 
 class AI2ThorTask(Task[AI2ThorEnvironment], abc.ABC):
+    """Defines an abstract embodied task in AI2-THOR.
+
+    # Attributes
+
+    env : The ai2thor environment.
+    sensor_suite: Collection of sensors formed from the `sensors` argument in the initializer.
+    task_info : Dictionary of (k, v) pairs defining task goals and other task information.
+    max_steps : The maximum number of steps an agent can take an in the task before it is considered failed.
+    observation_space: The observation space returned on each step from the sensors.
+    """
+
     def __init__(
         self,
         env: AI2ThorEnvironment,
@@ -18,6 +29,10 @@ class AI2ThorTask(Task[AI2ThorEnvironment], abc.ABC):
         max_steps: int,
         **kwargs
     ) -> None:
+        """Initializer.
+
+        See class documentation for parameter definitions.
+        """
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
