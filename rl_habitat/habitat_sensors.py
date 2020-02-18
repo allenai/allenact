@@ -145,6 +145,7 @@ class RGBResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
             *list(models.resnet50(pretrained=True).children())[:-1] +
             [nn.Flatten(), nn.Linear(2048, 512)]
         ).eval()
+        self.resnet = self.resnet.to("cuda:0")
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "rgb"
@@ -174,7 +175,7 @@ class RGBResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         if self.scaler is not None and rgb.shape[:2] != (self.height, self.width):
             rgb = np.array(self.scaler(self.to_pil(rgb)), dtype=np.float32)
 
-        rgb = self.resnet(self.to_tensor(rgb).unsqueeze(0)).detach().numpy()
+        rgb = self.resnet(self.to_tensor(rgb).unsqueeze(0).to("cuda:0")).detach().cpu().numpy()
 
         return rgb
 
