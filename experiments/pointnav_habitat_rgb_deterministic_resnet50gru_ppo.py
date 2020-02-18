@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
+from torchvision import models
 
 import habitat
 from onpolicy_sync.losses.ppo import PPOConfig
@@ -13,9 +14,11 @@ from onpolicy_sync.losses import PPO
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.sensor import SensorSuite
 from rl_base.task import TaskSampler
+from rl_base.preprocessor import ObservationSet
 from rl_habitat.habitat_tasks import PointNavTask
 from rl_habitat.habitat_task_samplers import PointNavTaskSampler
 from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetCoordinatesSensorHabitat
+from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -39,6 +42,27 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
             }
         ),
         TargetCoordinatesSensorHabitat({"coordinate_dims": 2}),
+    ]
+
+    PREPROCESSORS = [
+        ResnetPreProcessorHabitat(
+            config={
+                "input_height": SCREEN_SIZE,
+                "input_width": SCREEN_SIZE,
+                "output_width": 1,
+                "output_height": 1,
+                "output_dims": 2048,
+                "pool": True,
+                "torchvision_resnet_model": models.resnet50,
+                "input_uuids": ["rgb"],
+                "output_uuid": "rgb_resnet",
+            }
+        ),
+    ]
+
+    OBSERVATIONS = [
+        "rgb_resnet",
+        "target_coordinates_ind",
     ]
 
     CONFIG = habitat.get_config('configs/gibson.yaml')
@@ -113,8 +137,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
         res["gpu_ids"] = gpu_ids
         return res
 
-    @classmethod
-    def machine_params(cls, mode="train", **kwargs):
+    def machine_params(self, mode="train", **kwargs):
         if mode == "train":
             nprocesses = 1 if not torch.cuda.is_available() else 8
             gpu_ids = [] if not torch.cuda.is_available() else [0]
@@ -133,7 +156,15 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
-        return {"nprocesses": nprocesses, "gpu_ids": gpu_ids}
+        observation_set = ObservationSet(
+            self.OBSERVATIONS, self.PREPROCESSORS, self.SENSORS
+        )
+
+        return {
+            "nprocesses": nprocesses,
+            "gpu_ids": gpu_ids,
+            "observation_set": observation_set,
+        }
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
