@@ -107,7 +107,7 @@ class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
         else:
             self.coorinate_embedding_size = coordinate_dims
 
-        self.visual_encoder = ResNet50(observation_space, hidden_size, pretrained=True)
+        # self.visual_encoder = ResNet50(observation_space, hidden_size, pretrained=True)
 
         self.actor = LinearActorHead(
             self.recurrent_hidden_state_size, action_space.n
@@ -127,7 +127,7 @@ class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
 
     @property
     def is_blind(self):
-        return self.visual_encoder.is_blind
+        return False
 
     @property
     def num_recurrent_layers(self):
@@ -148,9 +148,7 @@ class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
         target_encoding = self.get_target_coordinates_encoding(observations)
         x = [target_encoding]
 
-        if not self.is_blind:
-            perception_embed = self.visual_encoder(observations)
-            x = [perception_embed] + x
+        x = [observations["rgb"].view(-1, observations["rgb"].shape[-1])] + x
 
         x = torch.cat(x, dim=1)
 
