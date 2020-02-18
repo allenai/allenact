@@ -107,7 +107,10 @@ class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
         else:
             self.coorinate_embedding_size = coordinate_dims
 
-        self.visual_encoder = nn.Linear(2048, 512)
+        if 'rgb' in observation_space.spaces and 'depth' in observation_space.spaces:
+            self.visual_encoder =  nn.Linear(4096, hidden_size)
+        else:
+            self.visual_encoder = nn.Linear(2048, hidden_size)
 
         self.actor = LinearActorHead(
             self.recurrent_hidden_state_size, action_space.n
@@ -148,9 +151,15 @@ class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
         target_encoding = self.get_target_coordinates_encoding(observations)
 
         x = [target_encoding]
-        resnet_emb = observations["rgb"].view(-1, observations["rgb"].shape[-1])
 
-        x = [self.visual_encoder(resnet_emb)] + x
+        embs = []
+        if "rgb" in observations:
+            embs.add(observations["rgb"].view(-1, observations["rgb"].shape[-1]))
+        if "depth" in observations:
+            embs.add(observations["depth"].view(-1, observations["depth"].shape[-1]))
+        emb = torch.cat(embs, dim=1)
+
+        x = [self.visual_encoder(emb)] + x
 
         x = torch.cat(x, dim=1)
 
