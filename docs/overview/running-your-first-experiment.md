@@ -11,7 +11,7 @@ If everything was installed correctly, a simple semantic navigation model for AI
 a new folder `experiment_output` will be created containing
 
 * a `checkpoints/LOCAL_TIME_STR/` subfolder with different checkpoints,
-* a `used_configs` subfolder with all used configuration files,
+* a `used_configs/LOCAL_TIME_STR/` subfolder with all used configuration files,
 * and a tensorboard log file under `tb/ObjectNavPPO/LOCAL_TIME_STR/`.
 
 To run your own custom experiment simply define a new experiment configuration in a file `
