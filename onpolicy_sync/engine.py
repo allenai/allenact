@@ -1029,8 +1029,12 @@ class OnPolicyRLEngine(object):
                         pass
 
                 if command == "eval":
-                    scalars, render, samples = self.run_eval(checkpoint_file_name=data)
-                    write_to_parent.put(("valid_metrics", (scalars, render)))
+                    if "render_video" in self.machine_params and self.machine_params["render_video"]:
+                        scalars, render, samples = self.run_eval(checkpoint_file_name=data, render_video=True)
+                        write_to_parent.put(("valid_metrics", (scalars, render)))
+                    else:
+                        scalars, samples = self.run_eval(checkpoint_file_name=data)
+                        write_to_parent.put(("valid_metrics", (scalars)))
                 elif command in ["quit", "exit", "close"]:
                     self.close(verbose=False)
                     sys.exit()
@@ -1063,7 +1067,7 @@ class OnPolicyRLEngine(object):
             render = None
         return render
 
-    def run_eval(self, checkpoint_file_name: str, rollout_steps=1, max_clip_len=2000):
+    def run_eval(self, checkpoint_file_name: str, rollout_steps=1, max_clip_len=2000, render_video=False):
         self.checkpoint_load(checkpoint_file_name, verbose=False)
 
         rollouts = RolloutStorage(
@@ -1074,7 +1078,7 @@ class OnPolicyRLEngine(object):
             num_recurrent_layers=self.actor_critic.num_recurrent_layers,
         )
 
-        render: Union[None, np.ndarray, List[np.ndarray]] = []
+        render: Union[None, np.ndarray, List[np.ndarray]] = [] if render_video else None
         num_paused = self.initialize_rollouts(rollouts, render=render)
         steps = 0
         while num_paused < self.num_processes:
@@ -1086,13 +1090,18 @@ class OnPolicyRLEngine(object):
         self.vector_tasks.resume_all()
         self.vector_tasks.reset_all()
 
-        render = self.process_video(render, max_clip_len)
-
         metrics, samples = self.process_eval_metrics(count=self.num_processes)
+
+        if render_video:
+            render = self.process_video(render, max_clip_len)
+            return (
+                {k: (v, self.total_steps + self.step_count) for k, v in metrics.items()},
+                render,
+                samples,
+            )
 
         return (
             {k: (v, self.total_steps + self.step_count) for k, v in metrics.items()},
-            render,
             samples,
         )
 

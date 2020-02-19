@@ -96,7 +96,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     def training_pipeline(cls, **kwargs):
         ppo_steps = 7.5e7
         lr = 2.5e-4
-        num_mini_batch = 8
+        num_mini_batch = 1
         update_repeats = 4
         num_steps = 128
         save_interval = 1000000
@@ -141,18 +141,21 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
         if mode == "train":
             nprocesses = 1 if not torch.cuda.is_available() else 8
             gpu_ids = [] if not torch.cuda.is_available() else [0]
+            render_video = False
         elif mode == "valid":
             nprocesses = 1
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
                 gpu_ids = [0]
+            render_video = False
         elif mode == "test":
             nprocesses = 1
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
                 gpu_ids = [0]
+            render_video = True
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -164,6 +167,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
             "nprocesses": nprocesses,
             "gpu_ids": gpu_ids,
             "observation_set": observation_set,
+            "render_video": render_video,
         }
 
     @classmethod
