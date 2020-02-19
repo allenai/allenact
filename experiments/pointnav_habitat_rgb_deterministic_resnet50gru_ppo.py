@@ -139,7 +139,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else 8
+            nprocesses = 1 if not torch.cuda.is_available() else 64
             gpu_ids = [] if not torch.cuda.is_available() else [0]
             render_video = False
         elif mode == "valid":
@@ -191,10 +191,10 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
         config = self.CONFIG.clone()
         config.DATASET.DATA_PATH = scenes
         if torch.cuda.device_count() > 0:
-            self.GPU_ID = 1
+            self.GPU_ID = (self.GPU_ID + 1) % 7
         else:
             self.GPU_ID = -1
-        config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = self.GPU_ID
+        config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = self.GPU_ID + 1
         return {
             "env_config": config,
             "max_steps": self.MAX_STEPS,
