@@ -76,7 +76,6 @@ class PointNavTaskSampler(TaskSampler):
         else:
             self.env = self._create_environment()
             self.env.reset()
-            # self.env.start() # We don't need this here because rl_habitat does not need to start
         ep_info = self.env.get_current_episode()
         target = ep_info.goals[0].position
 

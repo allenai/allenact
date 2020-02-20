@@ -106,12 +106,13 @@ class PointNavTask(Task[HabitatTask]):
     def _step(self, action: int) -> RLStepResult:
         action_str = self.action_names()[action]
 
+        self.env.step({"action": action_str})
+
         if action_str == END:
             self._took_end_action = True
             self._success = self._is_goal_in_range()
             self.last_action_success = self._success
         else:
-            self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
 
         step_result = RLStepResult(
@@ -128,7 +129,7 @@ class PointNavTask(Task[HabitatTask]):
 
     def _is_goal_in_range(self) -> bool:
         geodesic_distance = self.env.get_geodesic_distance()
-        return geodesic_distance < self.task_info["distance_to_goal"]
+        return geodesic_distance <= self.task_info["distance_to_goal"]
 
     def judge(self) -> float:
         reward = -0.01
@@ -141,12 +142,7 @@ class PointNavTask(Task[HabitatTask]):
         if self._took_end_action:
             reward += 10.0 if self._success else 0.0
 
-        # self._metrics = self.env.env.task.measurements.get_metrics()
         self._rewards.append(float(reward))
-        #
-        # print()
-        # for metric in self._metrics:
-        #     print(metric, " -->", self._metrics[metric])
 
         return float(reward)
 
@@ -154,12 +150,12 @@ class PointNavTask(Task[HabitatTask]):
         if not self.is_done():
             return {}
         else:
-            metrics = self.env.env.task.measurements.get_metrics()
+            _metrics = self.env.env.get_metrics()
             metrics = {
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
-                "spl": metrics['spl'] if metrics['spl'] is not None else 0.0
+                "spl": _metrics['spl'] if _metrics['spl'] is not None else 0.0
             }
             self._rewards = []
             return metrics
