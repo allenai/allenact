@@ -141,11 +141,12 @@ class PointNavTask(Task[HabitatTask]):
         if self._took_end_action:
             reward += 10.0 if self._success else 0.0
 
-        self._metrics = self.env.env.task.measurements.get_metrics()
+        # self._metrics = self.env.env.task.measurements.get_metrics()
         self._rewards.append(float(reward))
-
-        if self._metrics['spl'] > 0.0:
-            print("\n\n\nCHECK OUT THIS SPL -->", self._metrics['spl'])
+        #
+        # print()
+        # for metric in self._metrics:
+        #     print(metric, " -->", self._metrics[metric])
 
         return float(reward)
 
@@ -157,7 +158,7 @@ class PointNavTask(Task[HabitatTask]):
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
-                "spl": self._metrics['spl'] if self._metrics['spl'] is not None else 0.0
+                "spl": self.env.env.task.measurements.get_metrics()['spl'] # if self._metrics['spl'] is not None else 0.0
             }
             self._rewards = []
             return metrics

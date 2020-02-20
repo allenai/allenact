@@ -84,7 +84,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     CONFIG.TASK.GOAL_SENSOR_UUID = 'pointgoal_with_gps_compass'
     CONFIG.TASK.MEASUREMENTS = ['DISTANCE_TO_GOAL', 'SPL']
     CONFIG.TASK.SPL.TYPE = 'SPL'
-    CONFIG.TASK.SUCCESS_DISTANCE = 0.2
+    CONFIG.TASK.SPL.SUCCESS_DISTANCE = 0.2
 
     GPU_ID = 0
 
@@ -139,7 +139,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else 64
+            nprocesses = 1 if not torch.cuda.is_available() else 8
             gpu_ids = [] if not torch.cuda.is_available() else [0]
             render_video = False
         elif mode == "valid":
