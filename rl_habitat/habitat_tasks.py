@@ -144,6 +144,9 @@ class PointNavTask(Task[HabitatTask]):
         self._metrics = self.env.env.task.measurements.get_metrics()
         self._rewards.append(float(reward))
 
+        if self._metrics['spl'] > 0.0:
+            print("\n\n\nCHECK OUT THIS SPL -->", self._metrics['spl'])
+
         return float(reward)
 
     def metrics(self) -> Dict[str, Any]:
