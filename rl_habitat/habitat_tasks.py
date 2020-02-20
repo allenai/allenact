@@ -154,11 +154,12 @@ class PointNavTask(Task[HabitatTask]):
         if not self.is_done():
             return {}
         else:
+            metrics = self.env.env.task.measurements.get_metrics()
             metrics = {
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
-                "spl": self.env.env.task.measurements.get_metrics()['spl'] # if self._metrics['spl'] is not None else 0.0
+                "spl": metrics['spl'] if metrics['spl'] is not None else 0.0
             }
             self._rewards = []
             return metrics
