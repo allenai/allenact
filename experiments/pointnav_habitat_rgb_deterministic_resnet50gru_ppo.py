@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 import gym
 import torch
@@ -93,7 +93,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     CONFIG.TASK.SPL.TYPE = 'SPL'
     CONFIG.TASK.SPL.SUCCESS_DISTANCE = 0.2
 
-    TRAIN_CONFIGS = construct_env_configs(CONFIG)
+    # TRAIN_CONFIGS = construct_env_configs(CONFIG)
 
     @classmethod
     def tag(cls):
@@ -210,47 +210,62 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     #         "distance_to_goal": self.DISTANCE_TO_GOAL
     #     }
 
-    @classmethod
+    def get_train_configs(self):
+        if self._train_configs is None:
+            self._train_configs = construct_env_configs(self.CONFIG)
+        return self._train_configs
+
     def train_task_sampler_args(
-        cls, process_ind: int, total_processes: int
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]],
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         print("Process ind:", process_ind)
-        config = cls.TRAIN_CONFIGS[process_ind]
+        config = self.TRAIN_CONFIGS[process_ind]
         return {
             "env_config": config,
-            "max_steps": cls.MAX_STEPS,
-            "sensors": cls.SENSORS,
+            "max_steps": self.MAX_STEPS,
+            "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
-            "distance_to_goal": cls.DISTANCE_TO_GOAL,
+            "distance_to_goal": self.DISTANCE_TO_GOAL,
             "max_tasks": 4931496  # number of train episodes in gibson
         }
 
-    @classmethod
     def valid_task_sampler_args(
-        cls, process_ind: int, total_processes: int
+        self, process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]],
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        config = cls.CONFIG.clone()
-        config.DATASET.DATA_PATH = cls.VALID_SCENES
+        config = self.CONFIG.clone()
+        config.DATASET.DATA_PATH = self.VALID_SCENES
         return {
             "env_config": config,
-            "max_steps": cls.MAX_STEPS,
-            "sensors": cls.SENSORS,
+            "max_steps": self.MAX_STEPS,
+            "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
-            "distance_to_goal": cls.DISTANCE_TO_GOAL,
+            "distance_to_goal": self.DISTANCE_TO_GOAL,
             "max_tasks": 994  # Val mini is only 30 tasks
         }
 
-    @classmethod
     def test_task_sampler_args(
-        cls, process_ind: int, total_processes: int
+        self, process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]],
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        config = cls.CONFIG.clone()
-        config.DATASET.DATA_PATH = cls.TEST_SCENES
+        config = self.CONFIG.clone()
+        config.DATASET.DATA_PATH = self.TEST_SCENES
         return {
             "env_config": config,
-            "max_steps": cls.MAX_STEPS,
-            "sensors": cls.SENSORS,
+            "max_steps": self.MAX_STEPS,
+            "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
-            "distance_to_goal": cls.DISTANCE_TO_GOAL,
+            "distance_to_goal": self.DISTANCE_TO_GOAL,
             "max_tasks": 994  # Val mini is only 30 tasks
         }
