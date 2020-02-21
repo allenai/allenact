@@ -224,7 +224,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         print("Process ind:", process_ind)
-        config = self.get_train_configs[process_ind]
+        config = self.get_train_configs()[process_ind]
         return {
             "env_config": config,
             "max_steps": self.MAX_STEPS,
