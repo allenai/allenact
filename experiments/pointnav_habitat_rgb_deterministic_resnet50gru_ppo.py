@@ -34,7 +34,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.2
 
-    NUM_PROCESSES = 8
+    NUM_PROCESSES = 32
 
     SENSORS = [
         RGBSensorHabitat(
