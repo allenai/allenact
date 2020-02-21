@@ -34,7 +34,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.2
 
-    NUM_PROCESSES = 6
+    NUM_PROCESSES = 32
 
     SENSORS = [
         RGBSensorHabitat(
@@ -71,7 +71,8 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     CONFIG = habitat.get_config('configs/gibson.yaml')
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
-    CONFIG.SIMULATOR_GPU_ID = 0
+    # CONFIG.SIMULATOR_GPU_ID = 0
+    CONFIG.SIMULATOR_GPU_IDS = [1,2,3,4,5,6,7]
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
     CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['*']
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
