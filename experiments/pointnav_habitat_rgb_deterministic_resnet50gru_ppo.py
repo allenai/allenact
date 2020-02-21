@@ -210,10 +210,8 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     #         "distance_to_goal": self.DISTANCE_TO_GOAL
     #     }
 
-    def get_train_configs(self):
-        if self._train_configs is None:
-            self._train_configs = construct_env_configs(self.CONFIG)
-        return self._train_configs
+    def __init__(self):
+        self._train_configs = construct_env_configs(self.CONFIG)
 
     def train_task_sampler_args(
         self,
@@ -224,7 +222,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         print("Process ind:", process_ind)
-        config = self.get_train_configs()[process_ind]
+        config = self._train_configs[process_ind]
         return {
             "env_config": config,
             "max_steps": self.MAX_STEPS,
