@@ -219,7 +219,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
         self,
         process_ind: int,
         total_processes: int,
-        devices: Optional[List[int]],
+        devices: Optional[List[int]] = None,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
@@ -235,9 +235,10 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
         }
 
     def valid_task_sampler_args(
-        self, process_ind: int,
+        self,
+        process_ind: int,
         total_processes: int,
-        devices: Optional[List[int]],
+        devices: Optional[List[int]] = None,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
@@ -253,9 +254,10 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
         }
 
     def test_task_sampler_args(
-        self, process_ind: int,
+        self,
+        process_ind: int,
         total_processes: int,
-        devices: Optional[List[int]],
+        devices: Optional[List[int]] = None,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
