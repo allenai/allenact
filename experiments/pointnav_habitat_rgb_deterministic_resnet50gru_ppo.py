@@ -210,44 +210,47 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     #         "distance_to_goal": self.DISTANCE_TO_GOAL
     #     }
 
+    @classmethod
     def train_task_sampler_args(
-        self, process_ind: int, total_processes: int
+        cls, process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
         print("Process ind:", process_ind)
-        config = self.TRAIN_CONFIGS[process_ind]
+        config = cls.TRAIN_CONFIGS[process_ind]
         return {
             "env_config": config,
-            "max_steps": self.MAX_STEPS,
-            "sensors": self.SENSORS,
+            "max_steps": cls.MAX_STEPS,
+            "sensors": cls.SENSORS,
             "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
-            "distance_to_goal": self.DISTANCE_TO_GOAL,
+            "distance_to_goal": cls.DISTANCE_TO_GOAL,
             "max_tasks": 4931496  # number of train episodes in gibson
         }
 
+    @classmethod
     def valid_task_sampler_args(
-        self, process_ind: int, total_processes: int
+        cls, process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
-        config = self.CONFIG.clone()
-        config.DATASET.DATA_PATH = self.VALID_SCENES
+        config = cls.CONFIG.clone()
+        config.DATASET.DATA_PATH = cls.VALID_SCENES
         return {
             "env_config": config,
-            "max_steps": self.MAX_STEPS,
-            "sensors": self.SENSORS,
+            "max_steps": cls.MAX_STEPS,
+            "sensors": cls.SENSORS,
             "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
-            "distance_to_goal": self.DISTANCE_TO_GOAL,
+            "distance_to_goal": cls.DISTANCE_TO_GOAL,
             "max_tasks": 994  # Val mini is only 30 tasks
         }
 
+    @classmethod
     def test_task_sampler_args(
-        self, process_ind: int, total_processes: int
+        cls, process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
-        config = self.CONFIG.clone()
-        config.DATASET.DATA_PATH = self.TEST_SCENES
+        config = cls.CONFIG.clone()
+        config.DATASET.DATA_PATH = cls.TEST_SCENES
         return {
             "env_config": config,
-            "max_steps": self.MAX_STEPS,
-            "sensors": self.SENSORS,
+            "max_steps": cls.MAX_STEPS,
+            "sensors": cls.SENSORS,
             "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
-            "distance_to_goal": self.DISTANCE_TO_GOAL,
+            "distance_to_goal": cls.DISTANCE_TO_GOAL,
             "max_tasks": 994  # Val mini is only 30 tasks
         }
