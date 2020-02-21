@@ -71,8 +71,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     CONFIG = habitat.get_config('configs/gibson.yaml')
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
-    # CONFIG.SIMULATOR_GPU_ID = 0
-    CONFIG.SIMULATOR_GPU_IDS = [1,2,3,4,5,6,7]
+    CONFIG.SIMULATOR_GPU_IDS = [1, 2, 3]
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
     CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['*']
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
@@ -93,7 +92,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     CONFIG.TASK.SPL.TYPE = 'SPL'
     CONFIG.TASK.SPL.SUCCESS_DISTANCE = 0.2
 
-    # TRAIN_CONFIGS = construct_env_configs(CONFIG)
+    TRAIN_CONFIGS = construct_env_configs(CONFIG)
 
     @classmethod
     def tag(cls):
@@ -192,27 +191,6 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
         return PointNavTaskSampler(**kwargs)
 
-    # def _get_sampler_args(
-    #     self, scenes: str
-    # ) -> Dict[str, Any]:
-    #     config = self.CONFIG.clone()
-    #     config.DATASET.DATA_PATH = scenes
-    #     if torch.cuda.device_count() > 0:
-    #         self.GPU_ID = (self.GPU_ID + 1) % 7
-    #     else:
-    #         self.GPU_ID = -1
-    #     config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = self.GPU_ID + 1
-    #     return {
-    #         "env_config": config,
-    #         "max_steps": self.MAX_STEPS,
-    #         "sensors": self.SENSORS,
-    #         "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
-    #         "distance_to_goal": self.DISTANCE_TO_GOAL
-    #     }
-
-    def __init__(self):
-        self._train_configs = construct_env_configs(self.CONFIG)
-
     def train_task_sampler_args(
         self,
         process_ind: int,
@@ -221,14 +199,13 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        config = self._train_configs[process_ind]
+        config = self.TRAIN_CONFIGS[process_ind]
         return {
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
-            "max_tasks": 4931496  # number of train episodes in gibson
         }
 
     def valid_task_sampler_args(
@@ -247,7 +224,6 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
-            "max_tasks": 994  # Val mini is only 30 tasks
         }
 
     def test_task_sampler_args(
@@ -266,5 +242,4 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
-            "max_tasks": 994  # Val mini is only 30 tasks
         }

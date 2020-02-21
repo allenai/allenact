@@ -1,5 +1,5 @@
 import random
-from typing import Type, Union, List
+from typing import List
 
 import habitat
 from habitat import Config
@@ -44,12 +44,8 @@ def construct_env_configs(config: Config) -> List[Config]:
 
         task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = config.SIMULATOR_GPU_IDS[i % len(config.SIMULATOR_GPU_IDS)]
 
-        # task_config.SIMULATOR.AGENT_0.SENSORS = config.SENSORS
         task_config.freeze()
 
-        # config.defrost()
-        # config.TASK_CONFIG = task_config
-        # config.freeze()
         configs.append(task_config.clone())
 
     return configs

@@ -18,19 +18,18 @@ class PointNavTaskSampler(TaskSampler):
         max_steps: int,
         action_space: gym.Space,
         distance_to_goal: float,
-        max_tasks: int,
         *args,
         **kwargs
     ) -> None:
         self.grid_size = 0.25
         self.env: Optional[HabitatEnvironment] = None
+        self.max_tasks: Optional[int] = None
+        self.reset_tasks: Optional[int] = None
         self.sensors = sensors
         self.max_steps = max_steps
         self._action_space = action_space
         self.env_config = env_config
         self.distance_to_goal = distance_to_goal
-        self.max_tasks = max_tasks
-        self.reset_tasks = max_tasks
 
         self._last_sampled_task: Optional[PointNavTask] = None
 
@@ -42,6 +41,8 @@ class PointNavTaskSampler(TaskSampler):
             config=self.env_config,
             dataset=dataset
         )
+        self.max_tasks = env.num_episodes
+        self.reset_tasks = self.max_tasks
         return env
 
     @property
@@ -103,14 +104,9 @@ class PointNavTaskSampler(TaskSampler):
         return self._last_sampled_task
 
     def reset(self):
-        # self.scene_counter = 0
-        # self.scene_order = list(range(len(self.scenes)))
-        # random.shuffle(self.scene_order)
-        # self.scene_id = 0
-        # self.max_tasks = self.reset_tasks
         self.max_tasks = self.reset_tasks
 
     def set_seed(self, seed: int):
         self.seed = seed
-        if seed is not None:
-            set_seed(seed)
+        # if seed is not None:
+        #     set_seed(seed)

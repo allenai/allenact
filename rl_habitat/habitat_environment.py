@@ -67,6 +67,10 @@ class HabitatEnvironment(object):
         self._current_frame = self.env.reset()
 
     @property
-    def last_action_success(self):
-        # TODO: This is a dirty hack make sure actionsa arent always successful
+    def last_action_success(self) -> bool:
+        # We can not pick things up so we really can't fail in our actions
         return True
+
+    @property
+    def num_episodes(self) -> int:
+        return len(self.env.episode_iterator.episodes)

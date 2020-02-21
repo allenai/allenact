@@ -96,7 +96,6 @@ class PointNavTask(Task[HabitatTask]):
     def reached_terminal_state(self) -> bool:
         assert(self.env.env.episode_over == self._took_end_action)
         return self.env.env.episode_over
-        # return self._took_end_action
 
     @classmethod
     def action_names(cls) -> Tuple[str, ...]:
