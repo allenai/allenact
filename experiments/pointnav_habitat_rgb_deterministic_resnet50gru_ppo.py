@@ -222,6 +222,8 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         print("Process ind:", process_ind)
+        from time import sleep
+        sleep(10)
         config = self._train_configs[process_ind]
         return {
             "env_config": config,
