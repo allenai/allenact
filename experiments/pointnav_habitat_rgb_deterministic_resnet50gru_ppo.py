@@ -213,6 +213,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     def train_task_sampler_args(
         self, process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
+        print("Process ind:", process_ind)
         config = self.TRAIN_CONFIGS[process_ind]
         return {
             "env_config": config,
