@@ -2,6 +2,7 @@ from typing import List, Optional, Union
 
 from rl_habitat.habitat_environment import HabitatEnvironment
 import gym
+import habitat
 from habitat.config import Config
 
 from rl_base.sensor import Sensor
@@ -34,9 +35,12 @@ class PointNavTaskSampler(TaskSampler):
         self._last_sampled_task: Optional[PointNavTask] = None
 
     def _create_environment(self) -> HabitatEnvironment:
-        self.env_config.freeze()
+        dataset = habitat.make_dataset(
+            self.env_config.TASK_CONFIG.DATASET.TYPE, config=self.env_config.TASK_CONFIG.DATASET
+        )
         env = HabitatEnvironment(
             config=self.env_config,
+            dataset=dataset
         )
         return env
 

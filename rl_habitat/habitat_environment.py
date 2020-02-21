@@ -6,20 +6,21 @@ import numpy as np
 import habitat
 from habitat.config import Config
 from habitat.core.simulator import Observations, AgentState, ShortestPathPoint
-from habitat.core.dataset import Episode
+from habitat.core.dataset import Episode, Dataset
 
 
 class HabitatEnvironment(object):
     def __init__(
         self,
         config: Config,
-        docker_enabled: bool = False,
+        dataset: Dataset,
         x_display: str = None
     ) -> None:
         print("rl_habitat env constructor")
         self.x_display = x_display
         self.env = habitat.Env(
-            config=config
+            config=config,
+            dataset=dataset
         )
 
     @property

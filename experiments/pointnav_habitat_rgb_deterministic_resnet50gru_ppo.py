@@ -19,6 +19,7 @@ from rl_habitat.habitat_tasks import PointNavTask
 from rl_habitat.habitat_task_samplers import PointNavTaskSampler
 from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetCoordinatesSensorHabitat
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
+from rl_habitat.habitat_utils import construct_env_configs
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -32,6 +33,8 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     SCREEN_SIZE = 256
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.2
+
+    NUM_PROCESSES = 6
 
     SENSORS = [
         RGBSensorHabitat(
@@ -67,8 +70,11 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
 
     CONFIG = habitat.get_config('configs/gibson.yaml')
     CONFIG.defrost()
+    CONFIG.NUM_PROCESSES = NUM_PROCESSES
+    CONFIG.SIMULATOR_GPU_ID = 0
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
     CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['*']
+    CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
     CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
     CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = SCREEN_SIZE
     CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = SCREEN_SIZE
@@ -86,7 +92,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     CONFIG.TASK.SPL.TYPE = 'SPL'
     CONFIG.TASK.SPL.SUCCESS_DISTANCE = 0.2
 
-    GPU_ID = 0
+    TRAIN_CONFIGS = construct_env_configs(CONFIG)
 
     @classmethod
     def tag(cls):
@@ -139,7 +145,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else 8
+            nprocesses = 1 if not torch.cuda.is_available() else self.NUM_PROCESSES
             gpu_ids = [] if not torch.cuda.is_available() else [0]
             render_video = False
         elif mode == "valid":
@@ -185,41 +191,61 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
         return PointNavTaskSampler(**kwargs)
 
-    def _get_sampler_args(
-        self, scenes: str
+    # def _get_sampler_args(
+    #     self, scenes: str
+    # ) -> Dict[str, Any]:
+    #     config = self.CONFIG.clone()
+    #     config.DATASET.DATA_PATH = scenes
+    #     if torch.cuda.device_count() > 0:
+    #         self.GPU_ID = (self.GPU_ID + 1) % 7
+    #     else:
+    #         self.GPU_ID = -1
+    #     config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = self.GPU_ID + 1
+    #     return {
+    #         "env_config": config,
+    #         "max_steps": self.MAX_STEPS,
+    #         "sensors": self.SENSORS,
+    #         "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+    #         "distance_to_goal": self.DISTANCE_TO_GOAL
+    #     }
+
+    def train_task_sampler_args(
+        self, process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
-        config = self.CONFIG.clone()
-        config.DATASET.DATA_PATH = scenes
-        if torch.cuda.device_count() > 0:
-            self.GPU_ID = (self.GPU_ID + 1) % 7
-        else:
-            self.GPU_ID = -1
-        config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = self.GPU_ID + 1
+        config = self.TRAIN_CONFIGS[process_ind]
         return {
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
-            "distance_to_goal": self.DISTANCE_TO_GOAL
+            "distance_to_goal": self.DISTANCE_TO_GOAL,
+            "max_tasks": 4931496  # number of train episodes in gibson
         }
-
-    def train_task_sampler_args(
-        self, process_ind: int, total_processes: int
-    ) -> Dict[str, Any]:
-        args = self._get_sampler_args(self.TRAIN_SCENES)
-        args["max_tasks"] = 4931496  # number of train episodes in gibson
-        return args
 
     def valid_task_sampler_args(
         self, process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
-        args = self._get_sampler_args(self.VALID_SCENES)
-        args["max_tasks"] = 994  # Val mini is only 30 tasks
-        return args
+        config = self.CONFIG.clone()
+        config.DATASET.DATA_PATH = self.VALID_SCENES
+        return {
+            "env_config": config,
+            "max_steps": self.MAX_STEPS,
+            "sensors": self.SENSORS,
+            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "distance_to_goal": self.DISTANCE_TO_GOAL,
+            "max_tasks": 994  # Val mini is only 30 tasks
+        }
 
     def test_task_sampler_args(
         self, process_ind: int, total_processes: int
     ) -> Dict[str, Any]:
-        args = self._get_sampler_args(self.TEST_SCENES)
-        args["max_tasks"] = 994
-        return args
+        config = self.CONFIG.clone()
+        config.DATASET.DATA_PATH = self.TEST_SCENES
+        return {
+            "env_config": config,
+            "max_steps": self.MAX_STEPS,
+            "sensors": self.SENSORS,
+            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "distance_to_goal": self.DISTANCE_TO_GOAL,
+            "max_tasks": 994  # Val mini is only 30 tasks
+        }
