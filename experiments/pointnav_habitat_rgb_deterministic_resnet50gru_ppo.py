@@ -34,7 +34,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.2
 
-    NUM_PROCESSES = 32
+    NUM_PROCESSES = 8
 
     SENSORS = [
         RGBSensorHabitat(
@@ -221,9 +221,6 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentCo
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        print("Process ind:", process_ind)
-        from time import sleep
-        sleep(10)
         config = self._train_configs[process_ind]
         return {
             "env_config": config,
