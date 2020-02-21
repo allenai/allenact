@@ -23,7 +23,7 @@ from rl_habitat.habitat_utils import construct_env_configs
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ExperimentConfig):
+class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     """A Point Navigation experiment configuraqtion in Habitat"""
 
     TRAIN_SCENES = "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"

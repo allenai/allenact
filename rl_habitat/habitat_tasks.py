@@ -128,8 +128,8 @@ class PointNavTask(Task[HabitatTask]):
         return self.env.current_frame['rgb']
 
     def _is_goal_in_range(self) -> bool:
-        geodesic_distance = self.env.get_geodesic_distance()
-        return geodesic_distance <= self.task_info["distance_to_goal"]
+        # The habitat simulator will return an SPL value of 0.0 whenever the goal is not in range
+        return self.env.env.get_metrics()['spl']
 
     def judge(self) -> float:
         reward = -0.01
