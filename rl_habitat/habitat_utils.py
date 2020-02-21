@@ -46,6 +46,7 @@ def construct_env_configs(config: Config) -> List[Config]:
         task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = (
             config.SIMULATOR_GPU_IDS[i % len(config.SIMULATOR_GPU_IDS)]
         )
+        print("SIMULATOR GPU IDS:", config.SIMULATOR_GPU_IDS[i % len(config.SIMULATOR_GPU_IDS)])
 
         # task_config.SIMULATOR.AGENT_0.SENSORS = config.SENSORS
         task_config.freeze()
