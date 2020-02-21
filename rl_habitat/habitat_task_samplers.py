@@ -36,7 +36,7 @@ class PointNavTaskSampler(TaskSampler):
 
     def _create_environment(self) -> HabitatEnvironment:
         dataset = habitat.make_dataset(
-            self.env_config.TASK_CONFIG.DATASET.TYPE, config=self.env_config.TASK_CONFIG.DATASET
+            self.env_config.DATASET.TYPE, config=self.env_config.DATASET
         )
         env = HabitatEnvironment(
             config=self.env_config,
