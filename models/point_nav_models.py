@@ -1,6 +1,6 @@
 import gym
 
-from models.basic_models import SimpleCNN, ResNet50, RNNStateEncoder
+from models.basic_models import SimpleCNN, RNNStateEncoder
 from onpolicy_sync.policy import ActorCriticModel, LinearCriticHead, LinearActorHead
 import torch.nn as nn
 import torch
@@ -24,14 +24,20 @@ class PointNavActorCriticSimpleConv(ActorCriticModel[CategoricalDistr]):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
         self.goal_sensor_uuid = goal_sensor_uuid
+        self.recurrent_hidden_state_size = hidden_size
         self.embed_coordinates = embed_coordinates
-        self.recurrent_hidden_state_size = hidden_size + coordinate_dims
         if self.embed_coordinates:
             self.coorinate_embedding_size = coordinate_embedding_dim
         else:
             self.coorinate_embedding_size = coordinate_dims
 
         self.visual_encoder = SimpleCNN(observation_space, hidden_size)
+
+        self.state_encoder = RNNStateEncoder(
+            (0 if self.is_blind else self.recurrent_hidden_state_size)
+            + self.coorinate_embedding_size,
+            self.recurrent_hidden_state_size,
+        )
 
         self.actor = LinearActorHead(
             self.recurrent_hidden_state_size, action_space.n
@@ -55,7 +61,7 @@ class PointNavActorCriticSimpleConv(ActorCriticModel[CategoricalDistr]):
 
     @property
     def num_recurrent_layers(self):
-        return 0
+        return self.state_encoder.num_recurrent_layers
 
     def get_target_coordinates_encoding(self, observations):
         if self.embed_coordinates:
@@ -77,12 +83,13 @@ class PointNavActorCriticSimpleConv(ActorCriticModel[CategoricalDistr]):
             x = [perception_embed] + x
 
         x = torch.cat(x, dim=1)
+        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
 
         return (
             ActorCriticOutput(
                 distributions=self.actor(x), values=self.critic(x), extras={}
             ),
-            torch.zeros((1, x.shape[0], self.recurrent_hidden_state_size))
+            rnn_hidden_states,
         )
 
 
