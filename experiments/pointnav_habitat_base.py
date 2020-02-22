@@ -19,7 +19,6 @@ from rl_habitat.habitat_tasks import PointNavTask
 from rl_habitat.habitat_task_samplers import PointNavTaskSampler
 from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetCoordinatesSensorHabitat
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
-from rl_habitat.habitat_utils import construct_env_configs
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -34,7 +33,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.2
 
-    NUM_PROCESSES = 10
+    NUM_PROCESSES = 6
 
     SENSORS = [
         RGBSensorHabitat(
@@ -91,8 +90,6 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     CONFIG.TASK.MEASUREMENTS = ['DISTANCE_TO_GOAL', 'SPL']
     CONFIG.TASK.SPL.TYPE = 'SPL'
     CONFIG.TASK.SPL.SUCCESS_DISTANCE = 0.2
-
-    # TRAIN_CONFIGS = construct_env_configs(CONFIG)
 
     @classmethod
     def tag(cls):
@@ -217,7 +214,9 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         config = self.CONFIG.clone()
+        config.defrost()
         config.DATASET.DATA_PATH = self.VALID_SCENES
+        config.freeze()
         return {
             "env_config": config,
             "max_steps": self.MAX_STEPS,
@@ -235,7 +234,9 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         config = self.CONFIG.clone()
+        config.defrost()
         config.DATASET.DATA_PATH = self.TEST_SCENES
+        config.freeze()
         return {
             "env_config": config,
             "max_steps": self.MAX_STEPS,

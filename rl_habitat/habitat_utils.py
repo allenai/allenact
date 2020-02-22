@@ -16,6 +16,7 @@ def construct_env_configs(config: Config) -> List[Config]:
         List of Configs, one for each process
     """
 
+    config.freeze()
     num_processes = config.NUM_PROCESSES
     configs = []
     dataset = habitat.make_dataset(config.DATASET.TYPE)

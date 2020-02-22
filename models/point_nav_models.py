@@ -37,6 +37,8 @@ class PointNavActorCriticSimpleConv(ActorCriticModel[CategoricalDistr]):
             (0 if self.is_blind else self.recurrent_hidden_state_size)
             + self.coorinate_embedding_size,
             self.recurrent_hidden_state_size,
+            num_layers=2,
+            rnn_type="LSTM"
         )
 
         self.actor = LinearActorHead(

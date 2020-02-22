@@ -32,7 +32,6 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(PointNavHabi
 
     CONFIG = PointNavHabitatBaseExperimentConfig.CONFIG.clone()
     CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
-    CONFIG.freeze()
 
     TRAIN_CONFIGS = construct_env_configs(CONFIG)
 
