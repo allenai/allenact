@@ -176,9 +176,7 @@ class ObjectNavTaskSampler(TaskSampler):
                 " objects of any of the types {}.".format(scene, self.object_types)
             )
 
-        task_info["start_pose"] = OrderedDict(
-            sorted([(k, float(v)) for k, v in pose.items()], key=lambda x: x[0])
-        )
+        task_info["start_pose"] = pose
 
         task_info["actions"] = []
 
