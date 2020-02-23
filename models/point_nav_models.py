@@ -10,7 +10,7 @@ from rl_base.distributions import CategoricalDistr
 from gym.spaces.dict import Dict as SpaceDict
 
 
-class PointNavActorCriticSimpleConv(ActorCriticModel[CategoricalDistr]):
+class PointNavActorCriticSimpleConvLSTM(ActorCriticModel[CategoricalDistr]):
     def __init__(
         self,
         action_space: gym.spaces.Discrete,
@@ -19,7 +19,9 @@ class PointNavActorCriticSimpleConv(ActorCriticModel[CategoricalDistr]):
         hidden_size=512,
         embed_coordinates=False,
         coordinate_embedding_dim=8,
-        coordinate_dims=2
+        coordinate_dims=2,
+        num_rnn_layers=1,
+        rnn_type='GRU',
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
@@ -31,14 +33,19 @@ class PointNavActorCriticSimpleConv(ActorCriticModel[CategoricalDistr]):
         else:
             self.coorinate_embedding_size = coordinate_dims
 
+        self.sensor_fusion = False
+        if 'rgb' in observation_space.spaces and 'depth' in observation_space.spaces:
+            self.sensor_fuser = nn.Linear(hidden_size * 2, hidden_size)
+            self.sensor_fusion = True
+
         self.visual_encoder = SimpleCNN(observation_space, hidden_size)
 
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self.recurrent_hidden_state_size)
             + self.coorinate_embedding_size,
             self.recurrent_hidden_state_size,
-            num_layers=2,
-            rnn_type="LSTM"
+            num_layers=num_rnn_layers,
+            rnn_type=rnn_type
         )
 
         self.actor = LinearActorHead(
@@ -82,6 +89,8 @@ class PointNavActorCriticSimpleConv(ActorCriticModel[CategoricalDistr]):
 
         if not self.is_blind:
             perception_embed = self.visual_encoder(observations)
+            if self.sensor_fusion:
+                perception_embed = self.sensor_fuser(perception_embed)
             x = [perception_embed] + x
 
         x = torch.cat(x, dim=1)
@@ -190,6 +199,8 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
         embed_coordinates=False,
         coordinate_embedding_dim=8,
         coordinate_dims=2,
+        num_rnn_layers=1,
+        rnn_type='GRU'
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
@@ -210,6 +221,8 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
             (0 if self.is_blind else self.recurrent_hidden_state_size)
             + self.coorinate_embedding_size,
             self.recurrent_hidden_state_size,
+            num_layers=num_rnn_layers,
+            rnn_type=rnn_type
         )
 
         self.actor = LinearActorHead(

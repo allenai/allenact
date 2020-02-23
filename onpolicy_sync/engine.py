@@ -419,7 +419,11 @@ class OnPolicyRLEngine(object):
 
                     if pkg_type in ["valid_metrics", "test_metrics"]:
                         mode = pkg_type.split("_")[0]
-                        scalars, render = info
+                        if "render_video" in self.machine_params and self.machine_params["render_video"]:
+                            scalars, render = info
+                        else:
+                            scalars = info
+                            render = None
                         metrics = OrderedDict(
                             sorted(
                                 [(k, v) for k, v in scalars.items()], key=lambda x: x[0]

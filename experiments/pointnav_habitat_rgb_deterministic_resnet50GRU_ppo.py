@@ -60,4 +60,6 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(PointNavHabi
             hidden_size=512,
             embed_coordinates=False,
             coordinate_dims=2,
+            num_rnn_layers=1,
+            rnn_type='GRU'
         )
