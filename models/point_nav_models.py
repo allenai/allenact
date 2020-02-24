@@ -171,10 +171,10 @@ class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
         x = [target_encoding]
 
         embs = []
-        if "rgb" in observations:
-            embs.append(observations["rgb"].view(-1, observations["rgb"].shape[-1]))
-        if "depth" in observations:
-            embs.append(observations["depth"].view(-1, observations["depth"].shape[-1]))
+        if "rgb_resnet" in observations:
+            embs.append(observations["rgb_resnet"].view(-1, observations["rgb_resnet"].shape[-1]))
+        if "depth_resnet" in observations:
+            embs.append(observations["depth_resnet"].view(-1, observations["depth_resnet"].shape[-1]))
         emb = torch.cat(embs, dim=1)
 
         x = [self.visual_encoder(emb)] + x
@@ -265,12 +265,10 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
         x = [target_encoding]
 
         embs = []
-        if "rgb" in observations:
-            embs.append(observations["rgb"].view(-1, observations["rgb"].shape[-1]))
         if "rgb_resnet" in observations:
             embs.append(observations["rgb_resnet"].view(-1, observations["rgb_resnet"].shape[-1]))
-        if "depth" in observations:
-            embs.append(observations["depth"].view(-1, observations["depth"].shape[-1]))
+        if "depth_resnet" in observations:
+            embs.append(observations["depth_resnet"].view(-1, observations["depth_resnet"].shape[-1]))
         emb = torch.cat(embs, dim=1)
 
         x = [self.visual_encoder(emb)] + x
