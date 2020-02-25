@@ -129,7 +129,7 @@ class PointNavTask(Task[HabitatTask]):
 
     def _is_goal_in_range(self) -> bool:
         # The habitat simulator will return an SPL value of 0.0 whenever the goal is not in range
-        return self.env.env.get_metrics()['spl'] > 0.0
+        return bool(self.env.env.get_metrics()['spl'])
 
     def judge(self) -> float:
         reward = -0.01
