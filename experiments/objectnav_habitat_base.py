@@ -17,7 +17,7 @@ from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
 from rl_habitat.habitat_tasks import PointNavTask
 from rl_habitat.habitat_task_samplers import PointNavTaskSampler
-from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetCoordinatesSensorHabitat
+from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetObjectSensorHabitat
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
@@ -32,7 +32,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.1
 
-    NUM_PROCESSES = 6
+    NUM_PROCESSES = 1
 
     SENSORS = [
         RGBSensorHabitat(
@@ -42,7 +42,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
                 "use_resnet_normalization": True,
             }
         ),
-        TargetCoordinatesSensorHabitat({"coordinate_dims": 2}),
+        TargetObjectSensorHabitat({}),
     ]
 
     PREPROCESSORS = [

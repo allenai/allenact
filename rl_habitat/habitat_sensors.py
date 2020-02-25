@@ -360,3 +360,27 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         frame = env.current_frame
         goal = frame["pointgoal_with_gps_compass"]
         return goal
+
+
+class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
+    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
+        super().__init__(config, *args, **kwargs)
+
+        self.observation_space = gym.spaces.Discrete(1)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "target_object_id"
+
+    def _get_observation_space(self) -> gym.spaces.Discrete:
+        return typing.cast(gym.spaces.Discrete, self.observation_space)
+
+    def get_observation(
+        self,
+        env: HabitatEnvironment,
+        task: Optional[PointNavTask],
+        *args: Any,
+        **kwargs: Any
+    ) -> Any:
+        frame = env.current_frame
+        goal = frame["objectgoal"]
+        return goal
