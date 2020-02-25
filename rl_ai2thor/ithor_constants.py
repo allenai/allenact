@@ -1,6 +1,5 @@
 """Common constants used when training agents to complete tasks in iTHOR, the
-interactive version of AI2-THOR.
-"""
+interactive version of AI2-THOR."""
 
 from collections import OrderedDict
 from typing import Set
