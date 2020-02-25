@@ -192,7 +192,11 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             deterministic_cudnn=deterministic_cudnn,
         )
         res["scene_period"] = "manual"
-        res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
+        res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
+        res["env_args"]["x_display"] = (
+            ("0.%d" % devices[process_ind % len(devices)]) if len(devices) > 0 else None
+        )
         return res
 
     def valid_task_sampler_args(
@@ -212,7 +216,11 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         )
         res["scene_period"] = self.VALID_SAMPLES_IN_SCENE
         res["max_tasks"] = self.VALID_SAMPLES_IN_SCENE * len(res["scenes"])
-        res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
+        res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
+        res["env_args"]["x_display"] = (
+            ("0.%d" % devices[process_ind % len(devices)]) if len(devices) > 0 else None
+        )
         return res
 
     def test_task_sampler_args(
@@ -232,5 +240,9 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         )
         res["scene_period"] = self.TEST_SAMPLES_IN_SCENE
         res["max_tasks"] = self.TEST_SAMPLES_IN_SCENE * len(res["scenes"])
-        res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
+        res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
+        res["env_args"]["x_display"] = (
+            ("0.%d" % devices[process_ind % len(devices)]) if len(devices) > 0 else None
+        )
         return res

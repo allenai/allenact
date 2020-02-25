@@ -10,6 +10,7 @@ from multiprocessing.context import BaseContext
 from queue import Queue
 from threading import Thread
 from typing import Any, Callable, List, Optional, Sequence, Set, Tuple, Union, Dict
+import logging
 
 import numpy as np
 import typing
@@ -30,6 +31,8 @@ try:
     import torch.multiprocessing as mp
 except ImportError:
     import multiprocessing as mp  # type: ignore
+
+LOGGER = logging.getLogger("embodiedrl")
 
 STEP_COMMAND = "step"
 NEXT_TASK_COMMAND = "next_task"
@@ -274,14 +277,13 @@ class VectorSampledTasks(object):
             *[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_processes)]
         )
         self._workers = []
-        # for worker_conn, parent_conn, sampler_fn_args in zip(
-        #     worker_connections, parent_connections, sampler_fn_args
-        # ):
-        # noinspection PyShadowingBuiltins
         for id, stuff in enumerate(
             zip(worker_connections, parent_connections, sampler_fn_args)
         ):
-            worker_conn, parent_conn, sampler_fn_args = stuff  # type: ignore
+            worker_conn, parent_conn, current_sampler_fn_args = stuff  # type: ignore
+            LOGGER.info(
+                "Starting {}-th worker with args {}".format(id, current_sampler_fn_args)
+            )
             ps = self._mp_ctx.Process(  # type: ignore
                 target=self._task_sampling_loop_worker,
                 args=(
@@ -289,7 +291,7 @@ class VectorSampledTasks(object):
                     worker_conn.recv,
                     worker_conn.send,
                     make_sampler_fn,
-                    sampler_fn_args,
+                    current_sampler_fn_args,
                     self._auto_resample_when_done,
                     self.metrics_out_queue,
                     worker_conn,

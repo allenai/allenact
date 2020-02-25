@@ -2,6 +2,7 @@ import logging
 import random
 import warnings
 from typing import List, Dict, Optional, Any, Union
+from collections import OrderedDict
 
 import gym
 
@@ -27,6 +28,7 @@ class ObjectNavTaskSampler(TaskSampler):
         max_tasks: Optional[int] = None,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
+        fixed_tasks: Optional[List[Dict[str, Any]]] = None,
         *args,
         **kwargs
     ) -> None:
@@ -156,13 +158,13 @@ class ObjectNavTaskSampler(TaskSampler):
             self.env = self._create_environment()
             self.env.reset(scene_name=scene)
 
-        self.env.randomize_agent_location()
+        pose = self.env.randomize_agent_location()
 
         object_types_in_scene = set(
             [o["objectType"] for o in self.env.last_event.metadata["objects"]]
         )
 
-        task_info = {}
+        task_info: Dict[str, Any] = {}
         for ot in random.sample(self.object_types, len(self.object_types)):
             if ot in object_types_in_scene:
                 task_info["object_type"] = ot
@@ -173,6 +175,10 @@ class ObjectNavTaskSampler(TaskSampler):
                 "Scene {} does not contain any"
                 " objects of any of the types {}.".format(scene, self.object_types)
             )
+
+        task_info["start_pose"] = pose
+
+        task_info["actions"] = []
 
         self._last_sampled_task = ObjectNavTask(
             env=self.env,

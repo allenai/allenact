@@ -126,6 +126,7 @@ def _load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
     importlib.invalidate_caches()
     module_path = ".{}".format(args.experiment)
 
+    importlib.import_module(os.path.basename(path))
     module = importlib.import_module(module_path, package=os.path.basename(path))
 
     experiments = [
@@ -158,14 +159,14 @@ def _init_logging(log_format="default", log_level="debug"):
         if log_format == "default":
             formatter = logging.Formatter(
                 fmt="%(asctime)s: %(levelname)s: %(message)s \t[%(filename)s: %(lineno)d]",
-                datefmt="%m/%d %I:%M:%S",
+                datefmt="%m/%d %H:%M:%S",
             )
         elif log_format == "defaultMilliseconds":
             formatter = logging.Formatter(
                 fmt="%(asctime)s: %(levelname)s: %(message)s \t[%(filename)s: %(lineno)d]"
             )
         else:
-            formatter = logging.Formatter(fmt=log_format, datefmt="%m/%d %I:%M:%S")
+            formatter = logging.Formatter(fmt=log_format, datefmt="%m/%d %H:%M:%S")
 
         ch.setFormatter(formatter)
         logger.addHandler(ch)

@@ -123,6 +123,7 @@ class Task(Generic[EnvType]):
         """
         assert not self.is_done()
         sr = self._step(action=action)
+        self.task_info["actions"].append(self.action_names()[action])
         self._total_reward += float(sr.reward)
         self._increment_num_steps_taken()
         return sr
@@ -210,7 +211,11 @@ class Task(Generic[EnvType]):
         A dictionary where every key is a string (the metric's
             name) and the value is the value of the metric.
         """
-        return {"ep_length": self.num_steps_taken(), "reward": self._total_reward}
+        return {
+            "ep_length": self.num_steps_taken(),
+            "reward": self._total_reward,
+            "task_info": self.task_info,
+        }
 
     def query_expert(self) -> Tuple[Any, bool]:
         """Query the expert policy for this task.
