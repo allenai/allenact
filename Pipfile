@@ -33,6 +33,7 @@ setuptools = "*"
 setproctitle = "*"
 moviepy = "*"
 filelock = "*"
+numpy-quaternion = "*"
 
 [requires]
 python_version = "3.6"
