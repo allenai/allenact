@@ -35,9 +35,9 @@ class TargetCoordinatesSensorRobothor(Sensor[RoboThorEnvironment, PointNavTask])
         )
 
         rho, phi = cartesian_to_polar(
-            -direction_vector_agent[2], direction_vector_agent[0]
+            direction_vector_agent[2], -direction_vector_agent[0]
         )
-        return np.array([rho, -phi], dtype=np.float32)
+        return np.array([rho, phi], dtype=np.float32)
 
     def get_observation(
         self,
@@ -61,7 +61,7 @@ class TargetCoordinatesSensorRobothor(Sensor[RoboThorEnvironment, PointNavTask])
 def quaternion_from_y_angle(angle: float) -> np.quaternion:
     r"""Creates a quaternion from rotation angle around y axis
     """
-    return quaternion_from_coeff(np.array([np.cos(np.pi*angle/360.0), 0.0, np.sin(np.pi*angle/360.0), 0.0]))
+    return quaternion_from_coeff(np.array([0.0, np.sin(np.pi*angle/360.0), 0.0, np.cos(np.pi*angle/360.0)]))
 
 
 def quaternion_from_coeff(coeffs: np.ndarray) -> np.quaternion:
