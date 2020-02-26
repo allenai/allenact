@@ -248,16 +248,15 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
         target_encoding = self.get_object_type_encoding(observations)
         x = [target_encoding]
 
-        if not self.is_blind:
-            embs = []
-            if "rgb_resnet" in observations:
-                embs.append(observations["rgb_resnet"].view(-1, observations["rgb_resnet"].shape[-1]))
-            if "depth_resnet" in observations:
-                embs.append(observations["depth_resnet"].view(-1, observations["depth_resnet"].shape[-1]))
-            perception_embed = torch.cat(embs, dim=1)
-            x = [perception_embed] + x
+        embs = []
+        if "rgb_resnet" in observations:
+            embs.append(observations["rgb_resnet"].view(-1, observations["rgb_resnet"].shape[-1]))
+        if "depth_resnet" in observations:
+            embs.append(observations["depth_resnet"].view(-1, observations["depth_resnet"].shape[-1]))
+        perception_emb = torch.cat(embs, dim=1)
+        x = [self.visual_encoder(perception_emb)] + x
 
-        x_cat = cast(torch.FloatTensor, torch.cat(x, dim=1))  # type: ignore
+        x_cat = torch.cat(x, dim=1)  # type: ignore
         x_out, rnn_hidden_states = self.state_encoder(x_cat, rnn_hidden_states, masks)
 
         distributions, values = self.actor_and_critic(x_out)
