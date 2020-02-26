@@ -342,7 +342,7 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
-        self.observation_space = gym.spaces.Discrete(config["coordinate_dims"])
+        self.observation_space = gym.spaces.space.Space(config["coordinate_dims"])
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "target_coordinates_ind"

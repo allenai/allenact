@@ -42,6 +42,8 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         hidden_size=512,
         object_type_embedding_dim=8,
         trainable_masked_hidden_state: bool = False,
+        num_rnn_layers=1,
+        rnn_type='GRU',
     ):
         """Initializer.
         See class documentation for parameter definitions.
@@ -60,6 +62,8 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
             + object_type_embedding_dim,
             self.recurrent_hidden_state_size,
             trainable_masked_hidden_state=trainable_masked_hidden_state,
+            num_layers=num_rnn_layers,
+            rnn_type=rnn_type
         )
 
         self.actor_and_critic = LinearActorCriticHead(
@@ -133,3 +137,86 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
             ActorCriticOutput(distributions=distributions, values=values, extras={}),
             cast(torch.FloatTensor, rnn_hidden_states),
         )
+
+
+    # class ObjectNavActorCriticSimpleConvGRU(ActorCriticModel[CategoricalDistr]):
+    #     def __init__(
+    #             self,
+    #             action_space: gym.spaces.Discrete,
+    #             observation_space: SpaceDict,
+    #             goal_sensor_uuid: str,
+    #             hidden_size=512,
+    #             object_embedding_size=32,
+    #             num_rnn_layers=1,
+    #             rnn_type='GRU',
+    #     ):
+    #         super().__init__(action_space=action_space, observation_space=observation_space)
+    #
+    #         self.goal_sensor_uuid = goal_sensor_uuid
+    #         self.recurrent_hidden_state_size = hidden_size
+    #         self.object_embedding_size = object_embedding_size
+    #
+    #         self.object_encoder = nn.Embedding(38, self.object_embedding_size)
+    #
+    #         self.sensor_fusion = False
+    #         if 'rgb' in observation_space.spaces and 'depth' in observation_space.spaces:
+    #             self.sensor_fuser = nn.Linear(hidden_size * 2, hidden_size)
+    #             self.sensor_fusion = True
+    #
+    #         self.visual_encoder = SimpleCNN(observation_space, hidden_size)
+    #
+    #         self.state_encoder = RNNStateEncoder(
+    #             (0 if self.is_blind else self.recurrent_hidden_state_size)
+    #             + self.object_embedding_size,
+    #             self.recurrent_hidden_state_size,
+    #             num_layers=num_rnn_layers,
+    #             rnn_type=rnn_type
+    #         )
+    #
+    #         self.actor = LinearActorHead(
+    #             self.recurrent_hidden_state_size, action_space.n
+    #         )
+    #         self.critic = LinearCriticHead(
+    #             self.recurrent_hidden_state_size
+    #         )
+    #
+    #         self.train()
+    #
+    #     @property
+    #     def output_size(self):
+    #         return self.recurrent_hidden_state_size
+    #
+    #     @property
+    #     def is_blind(self):
+    #         return self.visual_encoder.is_blind
+    #
+    #     @property
+    #     def num_recurrent_layers(self):
+    #         return self.state_encoder.num_recurrent_layers
+    #
+    #     def get_target_coordinates_encoding(self, observations):
+    #         obs = self.object_encoder(observations[self.goal_sensor_uuid].to(torch.long))
+    #         return obs.view(-1, obs.shape[-1])
+    #
+    #     def recurrent_hidden_state_size(self):
+    #         return self._hidden_size
+    #
+    #     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
+    #         target_encoding = self.get_target_coordinates_encoding(observations)
+    #         x = [target_encoding]
+    #
+    #         if not self.is_blind:
+    #             perception_embed = self.visual_encoder(observations)
+    #             if self.sensor_fusion:
+    #                 perception_embed = self.sensor_fuser(perception_embed)
+    #             x = [perception_embed] + x
+    #
+    #         x = torch.cat(x, dim=1)
+    #         x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
+    #
+    #         return (
+    #             ActorCriticOutput(
+    #                 distributions=self.actor(x), values=self.critic(x), extras={}
+    #             ),
+    #             rnn_hidden_states,
+    #         )

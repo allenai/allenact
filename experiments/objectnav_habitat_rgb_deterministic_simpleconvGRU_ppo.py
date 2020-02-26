@@ -1,7 +1,7 @@
 import gym
 import torch.nn as nn
 
-from models.point_nav_models import PointNavActorCriticSimpleConvLSTM
+from models.object_nav_models import ObjectNavBaselineActorCritic
 from rl_base.sensor import SensorSuite
 from rl_habitat.habitat_tasks import PointNavTask
 from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetObjectSensorHabitat
@@ -37,13 +37,12 @@ class ObjectNavHabitatRGBeterministicSimpleConvGRUPPOExperimentConfig(ObjectNavH
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return PointNavActorCriticSimpleConvLSTM(
+        return ObjectNavBaselineActorCritic(
             action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             goal_sensor_uuid="target_object_id",
             hidden_size=512,
-            embed_coordinates=False,
-            coordinate_dims=2,
+            object_type_embedding_dim=32,
             num_rnn_layers=1,
             rnn_type='GRU'
         )
