@@ -5,7 +5,7 @@ from torchvision import models
 from models.object_nav_models import ObjectNavResNetActorCritic
 from rl_base.sensor import SensorSuite
 from rl_habitat.habitat_tasks import PointNavTask
-from rl_habitat.habitat_sensors import DepthSensorHabitat, TargetObjectSensorHabitat
+from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetObjectSensorHabitat
 from rl_habitat.habitat_utils import construct_env_configs
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from experiments.objectnav_habitat_base import ObjectNavHabitatBaseExperimentConfig
@@ -15,7 +15,7 @@ class ObjectNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ObjectNavHa
     """A Point Navigation experiment configuraqtion in Habitat"""
 
     SENSORS = [
-        DepthSensorHabitat(
+        RGBSensorHabitat(
             {
                 "height": ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE,
                 "width": ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE,
