@@ -102,19 +102,28 @@ class RoboThorEnvironment:
             self.access_grid(object_type) > -0.5
         )  # -1.0 for unreachable, 0.0 for end point
 
-    def path_corners(self, object_type: str) -> Collection[Dict[str, float]]:
+    def point_reachable(self, xyz: Dict[str, float]) -> bool:
+        """Determines whether a path can be computed from the current agent location to the target point."""
+        return (
+            self.dist_to_point(xyz) > -0.5
+        )  # -1.0 for unreachable, 0.0 for end point
+
+    def path_corners(self, target: Union[str, Dict[str, float]]) -> Collection[Dict[str, float]]:
         """Returns an array with a sequence of xyz dictionaries objects representing the corners of the shortest path
-         to the object of given type."""
+         to the object of given type or end point location."""
         pose = self.agent_state()
         position = {k: float(pose[k]) for k in ["x", "y", "z"]}
         rotation = {**pose["rotation"]} if "rotation" in pose else {}
         try:
-            path = metrics.get_shortest_path_to_object_type(
-                self.controller,
-                object_type,
-                position,
-                rotation if len(rotation) > 0 else None,
-            )
+            if isinstance(target, str):
+                path = metrics.get_shortest_path_to_object_type(
+                    self.controller,
+                    target,
+                    position,
+                    rotation if len(rotation) > 0 else None,
+                )
+            else:
+                path = get_shortest_path_to_point(self.controller, position, **target)
         except ValueError:
             path = []
         finally:
@@ -158,6 +167,15 @@ class RoboThorEnvironment:
         """Minimal geodesic distance to object of given type from agent's current location. It might return -1.0 for
          unreachable targets."""
         return self.access_grid(object_type)
+
+    def dist_to_point(self, xyz: Dict[str, float]) -> float:
+        """Minimal geodesic distance to end point from agent's current location. It might return -1.0 for
+         unreachable targets."""
+        corners = self.path_corners(xyz)
+        dist = self.path_corners_to_dist(corners)
+        if dist == float("inf"):
+            dist = -1.0  # -1.0 for unreachable
+        return dist
 
     def agent_state(self) -> Dict[str, Union[Dict[str, float], float]]:
         """Return agent position, rotation and horizon."""
@@ -308,3 +326,31 @@ class RoboThorEnvironment:
     def visible_objects(self) -> List[Dict[str, Any]]:
         """Return all visible objects."""
         return self.all_objects_with_properties({"visible": True})
+
+
+def get_shortest_path_to_point(
+        controller,
+        initial_position,
+        x, y, z
+):
+    """
+    Computes the shortest path to an end point from an initial position using a controller
+    :param controller: agent controller
+    :param initial_position: dict(x=float, y=float, z=float) with the desired initial rotation
+    """
+    args = dict(
+        action='GetShortestPathToPoint',
+        position=initial_position,
+        x=x,
+        y=y,
+        z=z
+    )
+    event = controller.step(args)
+    if event.metadata['lastActionSuccess']:
+        return event.metadata['actionReturn']['corners']
+    else:
+        raise ValueError(
+            "Unable to find shortest path for target point '{}'".format(
+                [x, y, z]
+            )
+        )
