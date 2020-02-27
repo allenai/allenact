@@ -113,7 +113,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
     @classmethod
     def training_pipeline(cls, **kwargs):
         ppo_steps = 7.5e7
-        lr = 2.5e-4
+        lr = 2.5e-5
         num_mini_batch = 1
         update_repeats = 4
         num_steps = 128
