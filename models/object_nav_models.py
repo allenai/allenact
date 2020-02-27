@@ -252,7 +252,7 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
         Tuple of the `ActorCriticOutput` and recurrent hidden state.
         """
         target_encoding = self.get_object_type_encoding(observations)
-        print("TARGET ENCODING SHAPE:", target_encoding.shape)
+        target_encoding = target_encoding.view(-1, target_encoding.shape[-1])
         x = [target_encoding]
 
         embs = []
