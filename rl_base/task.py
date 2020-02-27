@@ -312,8 +312,7 @@ class TaskSampler(abc.ABC):
 
     @abstractmethod
     def reset(self) -> None:
-        """Resets task sampler to its original state (except for any seed).
-        """
+        """Resets task sampler to its original state (except for any seed)."""
         raise NotImplementedError()
 
     @abstractmethod

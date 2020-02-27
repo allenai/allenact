@@ -164,7 +164,7 @@ class ObjectNavTaskSampler(TaskSampler):
             [o["objectType"] for o in self.env.last_event.metadata["objects"]]
         )
 
-        task_info = {}
+        task_info: Dict[str, Any] = {}
         for ot in random.sample(self.object_types, len(self.object_types)):
             if ot in object_types_in_scene:
                 task_info["object_type"] = ot
