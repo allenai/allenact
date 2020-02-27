@@ -7,7 +7,7 @@ from habitat.config import Config
 
 from rl_base.sensor import Sensor
 from rl_base.task import TaskSampler
-from rl_habitat.habitat_tasks import PointNavTask
+from rl_habitat.habitat_tasks import PointNavTask, ObjectNavTask
 
 
 class PointNavTaskSampler(TaskSampler):
@@ -192,7 +192,7 @@ class ObjectNavTaskSampler(TaskSampler):
             "actions": []
         }
 
-        self._last_sampled_task = PointNavTask(
+        self._last_sampled_task = ObjectNavTask(
             env=self.env,
             sensors=self.sensors,
             task_info=task_info,
