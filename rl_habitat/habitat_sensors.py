@@ -382,5 +382,5 @@ class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         **kwargs: Any
     ) -> Any:
         frame = env.current_frame
-        goal = frame["objectgoal"]
+        goal = frame["objectgoal"][0]
         return goal
