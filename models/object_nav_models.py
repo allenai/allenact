@@ -133,7 +133,7 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
             perception_embed = self.visual_encoder(observations)
             x = [perception_embed] + x
 
-        x_cat = cast(torch.FloatTensor, torch.cat(x, dim=1))  # type: ignore
+        x_cat = torch.cat(x, dim=1)  # type: ignore
         x_out, rnn_hidden_states = self.state_encoder(x_cat, rnn_hidden_states, masks)
 
         return (
