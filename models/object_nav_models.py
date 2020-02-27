@@ -127,11 +127,10 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         Tuple of the `ActorCriticOutput` and recurrent hidden state.
         """
         target_encoding = self.get_object_type_encoding(observations)
-        target_encoding = target_encoding.view(-1, target_encoding.shape[-1])
         x = [target_encoding]
 
         if not self.is_blind:
-            perception_embed = self.visual_encoder(observations)
+            perception_embed = self.visual_encoder(observations).unsqueeze(1)
             x = [perception_embed] + x
 
         x_cat = torch.cat(x, dim=1)  # type: ignore

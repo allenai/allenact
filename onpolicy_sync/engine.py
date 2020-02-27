@@ -619,7 +619,7 @@ class OnPolicyRLEngine(object):
                 rollouts.masks[rollouts.step],
             )
 
-        print("Actor Critic Output:", actor_critic_output)
+        print("Actor Critic Output:", actor_critic_output.distributions.logits)
         actions = (
             actor_critic_output.distributions.sample()
             if not self.deterministic_agent
