@@ -245,11 +245,13 @@ class ObjectNavTask(Task[HabitatTask]):
     def judge(self) -> float:
         reward = -0.01
 
+        metrics = self.env.env.get_metrics()
+        distance_to_goal = metrics["distance_to_goal"]
         geodesic_distance = self.env.get_geodesic_distance()
         if geodesic_distance in [float('-inf'), float('inf')] or np.isnan(geodesic_distance):
             geodesic_distance = self.last_geodesic_distance
         delta_distance_reward = self.last_geodesic_distance - geodesic_distance
-        print("Geodesic Distance:", geodesic_distance, "--- Last Geodesic Distance:", self.last_geodesic_distance, "--- Delta Distance:", delta_distance_reward)
+        print("Geodesic Distance:", geodesic_distance, "--- Distance To Goal:", distance_to_goal)
         reward += delta_distance_reward
         self.last_geodesic_distance = geodesic_distance
 
