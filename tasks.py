@@ -368,6 +368,6 @@ def create_robothor_objectnav_dataset(ctx, rotateStepDegrees=45.0, visibilityDis
 
     print('{} episodes in dataset'.format(len(all_episodes)))
 
-    fname = 'dataset_pointnav.json'
+    fname = 'dataset_objectnav.json'
     with open(fname, 'w') as f:
         json.dump(all_episodes, f, indent=4)
