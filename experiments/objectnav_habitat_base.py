@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
-from torchvision import models
 
 import habitat
 from onpolicy_sync.losses.ppo import PPOConfig
@@ -17,8 +16,6 @@ from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
 from rl_habitat.habitat_tasks import ObjectNavTask
 from rl_habitat.habitat_task_samplers import ObjectNavTaskSampler
-from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetObjectSensorHabitat
-from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -34,38 +31,6 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
 
     NUM_PROCESSES = 4
 
-    SENSORS = [
-        RGBSensorHabitat(
-            {
-                "height": SCREEN_SIZE,
-                "width": SCREEN_SIZE,
-                "use_resnet_normalization": True,
-            }
-        ),
-        TargetObjectSensorHabitat({}),
-    ]
-
-    PREPROCESSORS = [
-        ResnetPreProcessorHabitat(
-            config={
-                "input_height": SCREEN_SIZE,
-                "input_width": SCREEN_SIZE,
-                "output_width": 1,
-                "output_height": 1,
-                "output_dims": 2048,
-                "pool": True,
-                "torchvision_resnet_model": models.resnet50,
-                "input_uuids": ["rgb"],
-                "output_uuid": "rgb_resnet",
-            }
-        ),
-    ]
-
-    OBSERVATIONS = [
-        "rgb_resnet",
-        "target_object_id",
-    ]
-
     CONFIG = habitat.get_config('configs/mp3d.yaml')
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
@@ -73,19 +38,9 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
     CONFIG.DATASET.TYPE = 'ObjectNav-v1'
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
-    CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
     CONFIG.SIMULATOR.AGENT_0.HEIGHT = 0.88
     CONFIG.SIMULATOR.AGENT_0.RADIUS = 0.18
     CONFIG.SIMULATOR.HABITAT_SIM_V0.ALLOW_SLIDING = False
-
-    CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = SCREEN_SIZE
-    CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = SCREEN_SIZE
-    # CONFIG.SIMULATOR.RGB_SENSOR.HFOV = 79
-    CONFIG.SIMULATOR.RGB_SENSOR.POSITION = [0, 0.88, 0]
-    # CONFIG.SIMULATOR.DEPTH_SENSOR.WIDTH = SCREEN_SIZE
-    # CONFIG.SIMULATOR.DEPTH_SENSOR.HEIGHT = SCREEN_SIZE
-    # CONFIG.SIMULATOR.DEPTH_SENSOR.HFOV = 79
-    # CONFIG.SIMULATOR.DEPTH_SENSOR.POSITION = [0, 0.88, 0]
 
     CONFIG.SIMULATOR.TURN_ANGLE = 45
     CONFIG.SIMULATOR.TILT_ANGLE = 30
