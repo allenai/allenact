@@ -1,15 +1,17 @@
 import gym
 import torch.nn as nn
+from torchvision import models
 
-from models.object_nav_models import ObjectNavBaselineActorCritic
+from models.object_nav_models import ObjectNavResNetActorCritic
 from rl_base.sensor import SensorSuite
-from rl_habitat.habitat_tasks import ObjectNavTask
+from rl_habitat.habitat_tasks import PointNavTask
 from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetObjectSensorHabitat
 from rl_habitat.habitat_utils import construct_env_configs
+from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from experiments.objectnav_habitat_base import ObjectNavHabitatBaseExperimentConfig
 
 
-class ObjectNavHabitatRGBeterministicSimpleConvGRUPPOExperimentConfig(ObjectNavHabitatBaseExperimentConfig):
+class ObjectNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ObjectNavHabitatBaseExperimentConfig):
     """A Point Navigation experiment configuraqtion in Habitat"""
 
     SENSORS = [
@@ -23,10 +25,24 @@ class ObjectNavHabitatRGBeterministicSimpleConvGRUPPOExperimentConfig(ObjectNavH
         TargetObjectSensorHabitat({}),
     ]
 
-    PREPROCESSORS = []
+    PREPROCESSORS = [
+        ResnetPreProcessorHabitat(
+            config={
+                "input_height": ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE,
+                "input_width": ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE,
+                "output_width": 1,
+                "output_height": 1,
+                "output_dims": 2048,
+                "pool": True,
+                "torchvision_resnet_model": models.resnet50,
+                "input_uuids": ["rgb"],
+                "output_uuid": "rgb_resnet",
+            }
+        ),
+    ]
 
     OBSERVATIONS = [
-        "rgb",
+        "rgb_resnet",
         "target_object_id",
     ]
 
@@ -37,8 +53,8 @@ class ObjectNavHabitatRGBeterministicSimpleConvGRUPPOExperimentConfig(ObjectNavH
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ObjectNavBaselineActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+        return ObjectNavResNetActorCritic(
+            action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             goal_sensor_uuid="target_object_id",
             hidden_size=512,

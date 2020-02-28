@@ -366,7 +366,7 @@ class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
-        self.observation_space = gym.spaces.Discrete(1)
+        self.observation_space = gym.spaces.Discrete(38)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "target_object_id"
@@ -382,5 +382,5 @@ class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         **kwargs: Any
     ) -> Any:
         frame = env.current_frame
-        goal = frame["objectgoal"]
+        goal = frame["objectgoal"][0]
         return goal

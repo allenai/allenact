@@ -258,6 +258,7 @@ class ObjectNavTask(Task[HabitatTask]):
         return float(reward)
 
     def metrics(self) -> Dict[str, Any]:
+        print("Self Rewards:", self._rewards)
         if not self.is_done():
             return {}
         else:

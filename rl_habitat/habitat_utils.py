@@ -50,3 +50,4 @@ def construct_env_configs(config: Config) -> List[Config]:
         configs.append(task_config.clone())
 
     return configs
+

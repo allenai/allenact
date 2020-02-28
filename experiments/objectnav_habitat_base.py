@@ -15,8 +15,8 @@ from rl_base.experiment_config import ExperimentConfig
 from rl_base.sensor import SensorSuite
 from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
-from rl_habitat.habitat_tasks import PointNavTask
-from rl_habitat.habitat_task_samplers import PointNavTaskSampler
+from rl_habitat.habitat_tasks import ObjectNavTask
+from rl_habitat.habitat_task_samplers import ObjectNavTaskSampler
 from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetObjectSensorHabitat
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
@@ -32,7 +32,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.1
 
-    NUM_PROCESSES = 1
+    NUM_PROCESSES = 2
 
     SENSORS = [
         RGBSensorHabitat(
@@ -191,7 +191,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return PointNavActorCriticResNet50GRU(
-            action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
+            action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
@@ -201,7 +201,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return PointNavTaskSampler(**kwargs)
+        return ObjectNavTaskSampler(**kwargs)
 
     def train_task_sampler_args(
         self,
@@ -216,7 +216,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
         }
 
@@ -236,6 +236,6 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
         }

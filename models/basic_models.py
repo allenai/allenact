@@ -19,7 +19,7 @@ class Flatten(nn.Module):
         # Returns
         Flattened tensor.
         """
-        return x.view(x.size(0), -1)
+        return x.reshape(x.size(0), -1)
 
 
 class SimpleCNN(nn.Module):
@@ -104,7 +104,7 @@ class SimpleCNN(nn.Module):
                         stride=self._cnn_layers_stride[2],
                     ),
                     #  nn.ReLU(True),
-                    nn.Flatten(),
+                    Flatten(),
                     nn.Linear(32 * rgb_cnn_dims[0] * rgb_cnn_dims[1], output_size),
                     nn.ReLU(True),
                 )
@@ -145,7 +145,7 @@ class SimpleCNN(nn.Module):
                         stride=self._cnn_layers_stride[2],
                     ),
                     #  nn.ReLU(True),
-                    nn.Flatten(),
+                    Flatten(),
                     nn.Linear(32 * depth_cnn_dims[0] * depth_cnn_dims[1], output_size),
                     nn.ReLU(True),
                 )
