@@ -34,7 +34,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
     CONFIG = habitat.get_config('configs/mp3d.yaml')
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
-    CONFIG.SIMULATOR_GPU_IDS = [1, 2, 3]
+    CONFIG.SIMULATOR_GPU_IDS = [0]
     CONFIG.DATASET.TYPE = 'ObjectNav-v1'
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
@@ -72,7 +72,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 4
-        num_steps = 128
+        num_steps = 32
         save_interval = 1000000
         log_interval = 10000
         gamma = 0.99
