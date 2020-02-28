@@ -11,22 +11,22 @@ from torchvision import models
 import numpy as np
 
 from onpolicy_sync.losses.ppo import PPOConfig
-from models.object_nav_models import ObjectNavBaselineActorCritic
+from models.point_nav_models import PointNavActorCriticResNet50GRU
 from onpolicy_sync.losses import PPO
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.sensor import SensorSuite
 from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
-from rl_robothor.robothor_tasks import ObjectNavTask
-from rl_robothor.robothor_task_samplers import ObjectNavTaskSampler
-# from rl_robothor.robothor_sensors import GPSCompassSensorRoboThor
-from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
+from rl_robothor.robothor_tasks import PointNavTask
+from rl_robothor.robothor_task_samplers import PointNavTaskSampler
+from rl_robothor.robothor_sensors import GPSCompassSensorRoboThor
+from rl_ai2thor.ai2thor_sensors import RGBSensorThor
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
-    """An Object Navigation experiment configuration in RoboThor"""
+class PointNavRoboThorBaseExperimentConfig(ExperimentConfig):
+    """A Point Navigation experiment configuraqtion in RoboThor"""
 
     TRAIN_SCENES = None
 
@@ -36,23 +36,6 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
 
     NUM_PROCESSES = 12
 
-    OBJECT_TYPES = sorted(
-        [
-            "AlarmClock",
-            "Apple",
-            "BaseballBat",
-            "BasketBall",
-            "Bowl",
-            "GarbageCan",
-            "HousePlant",
-            "Laptop",
-            "Mug",
-            "SprayBottle",
-            "Television",
-            "Vase",
-        ]
-    )
-
     SENSORS = [
         RGBSensorThor(
             {
@@ -61,7 +44,7 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
                 "use_resnet_normalization": True,
             }
         ),
-        GoalObjectTypeThorSensor({"object_types": OBJECT_TYPES}),
+        GPSCompassSensorRoboThor({}),
     ]
 
     PREPROCESSORS = [
@@ -82,7 +65,7 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
 
     OBSERVATIONS = [
         "rgb_resnet",
-        "goal_object_type_ind",
+        "target_coordinates_ind",
     ]
 
     ENV_ARGS = dict(
@@ -105,7 +88,7 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
 
     @classmethod
     def tag(cls):
-        return "ObjectNav"
+        return "PointNav"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
@@ -178,19 +161,18 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ObjectNavBaselineActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+        return PointNavActorCriticResNet50GRU(
+            action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
-            goal_sensor_uuid="target_object_id",
+            goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
-            object_type_embedding_dim=32,
-            num_rnn_layers=1,
-            rnn_type='GRU'
+            embed_coordinates=False,
+            coordinate_dims=2,
         )
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return ObjectNavTaskSampler(**kwargs)
+        return PointNavTaskSampler(**kwargs)
 
     @staticmethod
     def _partition_inds(n: int, num_parts: int):

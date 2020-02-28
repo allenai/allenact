@@ -92,8 +92,9 @@ class PointNavTask(Task[RoboThorEnvironment]):
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
-        pose = self.env.agent_state()
-        self.path = [{k: pose[k] for k in ['x', 'y', 'z']}]
+        # pose = self.env.agent_state()
+        # self.path = [{k: pose[k] for k in ['x', 'y', 'z']}]
+        self.path = []  # the initial coordinate will be directly taken from the optimal path
 
     @property
     def action_space(self):
@@ -201,8 +202,9 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
-        pose = self.env.agent_state()
-        self.path = [{k: pose[k] for k in ['x', 'y', 'z']}]
+        # pose = self.env.agent_state()
+        # self.path = [{k: pose[k] for k in ['x', 'y', 'z']}]
+        self.path = []  # the initial coordinate will be directly taken from the optimal path
 
     @property
     def action_space(self):

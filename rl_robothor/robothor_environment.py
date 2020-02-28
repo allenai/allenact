@@ -34,7 +34,7 @@ class RoboThorEnvironment:
             rotateStepDegrees=30.0,
             visibilityDistance=1.0,
             gridSize=0.25,
-            agentType="stochastic",
+            # agentType="stochastic",
             continuousMode=True,
             snapToGrid=False,
             agentMode="bot",
