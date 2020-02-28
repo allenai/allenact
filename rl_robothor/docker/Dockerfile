@@ -23,7 +23,8 @@ WORKDIR /
 RUN git clone https://github.com/allenai/ai2thor && cd /ai2thor && git checkout 27d67618acfb3d89f4bf23aa30ba2280d54b19c2
 
 WORKDIR /embodied-rl
-RUN pipenv run PYTHOPATH=../ai2thor:$PYTHONPATH python3 -c "import ai2thor.controller; ai2thor.controller.Controller(download_only=True)"
+RUN pipenv install --skip-lock flask numpy pyyaml requests progressbar2 msgpack Pillow
+RUN PYTHONPATH=../ai2thor:$PYTHONPATH pipenv run python3 -c "import ai2thor.controller; ai2thor.controller.Controller(download_only=True)"
 
 ENV TZ=America/Los_Angeles
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone

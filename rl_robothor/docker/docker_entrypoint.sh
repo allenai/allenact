@@ -8,5 +8,6 @@ pipenv run tensorboard --logdir ~/work/data/embodied-rl/ --bind_all &> ~/logtens
 #pipenv uninstall --skip-lock torchvision
 #pipenv install --skip-lock torchvision~=0.3.0
 
-PYTHON_PATH=../ai2thor:$PYTHON_PATH pipenv shell
+export PYTHONPATH=../ai2thor:$PYTHONPATH
 echo "PYTHONPATH $PYTHONPATH"
+pipenv shell
