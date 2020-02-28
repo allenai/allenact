@@ -9,7 +9,7 @@ from rl_habitat.habitat_utils import construct_env_configs
 from experiments.objectnav_habitat_base import ObjectNavHabitatBaseExperimentConfig
 
 
-class ObjectNavHabitatRGBeterministicSimpleConvGRUPPOExperimentConfig(ObjectNavHabitatBaseExperimentConfig):
+class ObjectNavHabitatRGBDeterministicSimpleConvGRUPPOExperimentConfig(ObjectNavHabitatBaseExperimentConfig):
     """A Point Navigation experiment configuraqtion in Habitat"""
 
     SENSORS = [
@@ -32,6 +32,9 @@ class ObjectNavHabitatRGBeterministicSimpleConvGRUPPOExperimentConfig(ObjectNavH
 
     CONFIG = ObjectNavHabitatBaseExperimentConfig.CONFIG.clone()
     CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
+    CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE
+    CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE
+    CONFIG.SIMULATOR.RGB_SENSOR.POSITION = [0, 0.88, 0]
 
     TRAIN_CONFIGS = construct_env_configs(CONFIG)
 
