@@ -612,6 +612,8 @@ class OnPolicyRLEngine(object):
                 k: v[rollouts.step] for k, v in rollouts.observations.items()
             }
 
+            print("REWARDS:", rollouts.rewards)
+
             actor_critic_output, recurrent_hidden_states = self.actor_critic(
                 step_observation,
                 rollouts.recurrent_hidden_states[rollouts.step],
