@@ -60,6 +60,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
     CONFIG.TASK.SPL.DISTANCE_TO = 'VIEW_POINTS'
     CONFIG.TASK.SPL.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
     CONFIG.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "VIEW_POINTS"
+    CONFIG.PYROBOT = []
 
     @classmethod
     def tag(cls):
