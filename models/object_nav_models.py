@@ -126,16 +126,10 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         x = [target_encoding]
 
         if not self.is_blind:
-            print("RGB Observation:", observations['rgb'])
-            import time
-            time.sleep(11)
             perception_embed = self.visual_encoder(observations)
             x = [perception_embed] + x
 
         x_cat = cast(torch.FloatTensor, torch.cat(x, dim=1))  # type: ignore
-        print("X CAT EMBEDING:", x_cat)
-        import time
-        time.sleep(11)
         x_out, rnn_hidden_states = self.state_encoder(x_cat, rnn_hidden_states, masks)
 
         distributions, values = self.actor_and_critic(x_out)
