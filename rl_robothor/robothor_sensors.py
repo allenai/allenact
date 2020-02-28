@@ -7,7 +7,7 @@ import typing
 from torchvision import transforms
 
 from rl_robothor.robothor_environment import RoboThorEnvironment
-from rl_habitat.habitat_tasks import PointNavTask
+from rl_robothor.robothor_tasks import PointNavTask
 from rl_base.sensor import Sensor
 from rl_ai2thor.ai2thor_sensors import ScaleBothSides
 
@@ -53,7 +53,7 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
         agent_position = np.array([agent_state[k] for k in ['x', 'y', 'z']])
         rotation_world_agent = quaternion_from_y_angle(agent_state['rotation']['y'])
 
-        goal_position = np.array([task["target"][k] for k in ['x', 'y', 'z']])
+        goal_position = np.array([task.task_info["target"][k] for k in ['x', 'y', 'z']])
 
         return self._compute_pointgoal(
             agent_position, rotation_world_agent, goal_position
@@ -144,8 +144,7 @@ class DepthSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
             *args: Any,
             **kwargs: Any
     ) -> Any:
-        frame = env.current_frame
-        depth = frame["depth"].copy()
+        depth = env.current_depth.copy()
 
         assert depth.dtype in [np.uint8, np.float32]
 

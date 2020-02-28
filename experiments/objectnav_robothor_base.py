@@ -28,7 +28,12 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
     """An Object Navigation experiment configuration in RoboThor"""
 
-    TRAIN_SCENES = None
+    # TRAIN_SCENES = None
+    TRAIN_SCENES = [
+        "FloorPlan_Train%d_%d" % (wall, furniture)
+        for wall in range(1, 13)
+        for furniture in range(1, 6)
+    ]
 
     SCREEN_SIZE = 256
     MAX_STEPS = 500
@@ -113,7 +118,7 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 4
-        num_steps = 128
+        num_steps = 64
         save_interval = 1000000
         log_interval = 10000
         gamma = 0.99
@@ -201,7 +206,7 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
     def _get_sampler_args_for_scene_split(
         self,
         scenes: List[str],
-        scene_to_episodes: Dict[str, Any],
+        # scene_to_episodes: Dict[str, Any],
         process_ind: int,
         total_processes: int,
         seeds: Optional[List[int]] = None,
@@ -224,7 +229,9 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
         inds = self._partition_inds(len(scenes), total_processes)
 
         return {
-            "scene_to_episodes": {scene: scene_to_episodes[scene] for scene in scenes[inds[process_ind] : inds[process_ind + 1]]},
+            # "scene_to_episodes": {scene: scene_to_episodes[scene] for scene in scenes[inds[process_ind] : inds[process_ind + 1]]},
+            "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
+            "object_types": self.OBJECT_TYPES,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
@@ -248,20 +255,20 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        if self.TRAIN_SCENES is None:
-            with open('data/dataset_objectnav.json', 'r') as f:
-                all_scenes = json.load(f)
-                self.TRAIN_SCENES = {}
-                for episode in all_scenes:
-                    if episode['scene'] in self.TRAIN_SCENES:
-                        self.TRAIN_SCENES[episode['scene']].append(episode)
-                    else:
-                        self.TRAIN_SCENES[episode['scene']] = [episode]
-                self.scene_names = sorted(self.TRAIN_SCENES.keys())
-                print("Loaded episodes for scenes {}".format(self.scene_names))
+        # if self.TRAIN_SCENES is None:
+        #     with open('data/dataset_objectnav.json', 'r') as f:
+        #         all_scenes = json.load(f)
+        #         self.TRAIN_SCENES = {}
+        #         for episode in all_scenes:
+        #             if episode['scene'] in self.TRAIN_SCENES:
+        #                 self.TRAIN_SCENES[episode['scene']].append(episode)
+        #             else:
+        #                 self.TRAIN_SCENES[episode['scene']] = [episode]
+        #         self.scene_names = sorted(self.TRAIN_SCENES.keys())
+        #         print("Loaded episodes for scenes {}".format(self.scene_names))
 
         res = self._get_sampler_args_for_scene_split(
-            self.scene_names,
+            # self.scene_names,
             self.TRAIN_SCENES,
             process_ind,
             total_processes,
@@ -272,6 +279,6 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)]) if len(devices) > 0 else None
+            ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
         )
         return res

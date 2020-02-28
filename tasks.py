@@ -1,13 +1,40 @@
 from invoke import task
+import multiprocessing as mp
 
 @task
-def create_robothor_pointnav_dataset(ctx, rotateStepDegrees=45.0, visibilityDistance=1.0, gridSize=0.25, samples_per_scene=1000, initials_per_target = 50, width=300, height=300, fieldOfView=79):
+def create_robothor_pointnav_dataset(ctxt, rotateStepDegrees=45.0, visibilityDistance=1.0, gridSize=0.25,
+                                     samples_per_scene=4000, initials_per_target = 50, width=300, height=300,
+                                     fieldOfView=79, num_processes=32, num_gpus=8):
+    scenes = [
+        "FloorPlan_Train%d_%d" % (wall, furniture)
+        for wall in range(1, 13)
+        for furniture in range(1, 6)
+    ]
+
+    inputs = []
+    it = 0
+    for scene in scenes:
+        inputs.append((it % num_gpus, scene, rotateStepDegrees, visibilityDistance, gridSize, samples_per_scene,
+                       initials_per_target, width, height, fieldOfView))
+        it += 1
+
+    pool = mp.Pool(processes=num_processes)
+    pool.map(create_robothor_pointnav_dataset_worker, inputs)
+
+    pool.close()
+    pool.join()
+
+
+def create_robothor_pointnav_dataset_worker(inputs):
+    gpu_id, scene, rotateStepDegrees, visibilityDistance, gridSize, samples_per_scene, initials_per_target, width, height, fieldOfView = inputs
     from rl_robothor.robothor_environment import RoboThorEnvironment as Env
     import random
     import numpy as np
     import copy
     from ai2thor.util import metrics
     import json
+
+    print(gpu_id, scene)
 
     cfg = dict(
         rotateStepDegrees=rotateStepDegrees,
@@ -26,15 +53,9 @@ def create_robothor_pointnav_dataset(ctx, rotateStepDegrees=45.0, visibilityDist
         movementGaussianSigma=1e-20,
         rotateGaussianMu=1e-20,
         rotateGaussianSigma=1e-20,
-        x_display="0.0"
+        x_display="0.%d" % gpu_id
     )
     env = Env(**cfg)
-
-    scenes = [
-        "FloorPlan_Train%d_%d" % (wall, furniture)
-        for wall in range(1, 13)
-        for furniture in range(1, 6)
-    ]
 
     def get_shortest_path_to_point(
             controller,
@@ -113,93 +134,96 @@ def create_robothor_pointnav_dataset(ctx, rotateStepDegrees=45.0, visibilityDist
         return initial
 
     all_episodes = []
-    for scene in scenes:
-        env.reset(scene)
-        candidates = copy.copy(env.currently_reachable_points)
-        targets = extract_targets(copy.copy(candidates), npoints=samples_per_scene // initials_per_target, margin=2 * gridSize)
-        scene_episodes = []
-        ntargets = 0
-        for target in targets:
-            initials = extract_initials(copy.copy(candidates), npoints=2 * initials_per_target, margin=0.5 * gridSize, tget=target)
-            random.shuffle(initials)
-            initials = initials[:initials_per_target]
+    env.reset(scene)
+    candidates = copy.copy(env.currently_reachable_points)
+    print('{} candidates'.format(len(candidates)))
+    targets = extract_targets(copy.copy(candidates), npoints=samples_per_scene // initials_per_target, margin=2 * gridSize)
+    print('{} targets'.format(len(targets)))
+    scene_episodes = []
+    ntargets = 0
+    for target in targets:
+        initials = extract_initials(copy.copy(candidates), npoints=2 * initials_per_target, margin=0.5 * gridSize, tget=target)
+        random.shuffle(initials)
+        initials = initials[:initials_per_target]
 
-            ninitials = 0
-            eps = 0.0001
-            for pos_unity in initials:
-                possible_orientations = np.linspace(0, 360, num=round(360/rotateStepDegrees), endpoint=True).tolist()
+        ninitials = 0
+        eps = 0.0001
+        for pos_unity in initials:
+            possible_orientations = np.linspace(0, 360, num=round(360/rotateStepDegrees), endpoint=True).tolist()
 
-                try:
-                    # print('{} to {} in {}'.format(pos_unity, target, scene))
-                    path = get_shortest_path_to_point(
-                        env.controller,
-                        pos_unity,
-                        target
+            try:
+                # print('{} to {} in {}'.format(pos_unity, target, scene))
+                path = get_shortest_path_to_point(
+                    env.controller,
+                    pos_unity,
+                    target
+                )
+                minimum_path_length = metrics.path_distance(path)
+
+                rotation_allowed = False
+                while not rotation_allowed:
+                    if len(possible_orientations) == 0:
+                        break
+                    rotation_y = random.choice(possible_orientations)
+                    possible_orientations.remove(rotation_y)
+                    evt = env.controller.step(
+                        action="TeleportFull",
+                        x=pos_unity['x'],
+                        y=pos_unity['y'],
+                        z=pos_unity['z'],
+                        rotation=dict(x=0, y=rotation_y, z=0)
                     )
-                    minimum_path_length = metrics.path_distance(path)
+                    rotation_allowed = evt.metadata['lastActionSuccess']
+                    if not evt.metadata['lastActionSuccess']:
+                        print(evt.metadata['errorMessage'])
+                        print("--------- Rotation not allowed! for pos {} rot {} ".format(pos_unity, rotation_y))
 
-                    rotation_allowed = False
-                    while not rotation_allowed:
-                        if len(possible_orientations) == 0:
-                            break
-                        rotation_y = random.choice(possible_orientations)
-                        possible_orientations.remove(rotation_y)
-                        evt = env.controller.step(
-                            action="TeleportFull",
-                            x=pos_unity['x'],
-                            y=pos_unity['y'],
-                            z=pos_unity['z'],
-                            rotation=dict(x=0, y=rotation_y, z=0)
-                        )
-                        rotation_allowed = evt.metadata['lastActionSuccess']
-                        if not evt.metadata['lastActionSuccess']:
-                            print(evt.metadata['errorMessage'])
-                            print("--------- Rotation not allowed! for pos {} rot {} ".format(pos_unity, rotation_y))
+                if minimum_path_length > eps and rotation_allowed:
+                    scene_episodes.append({
+                        'scene': scene,
+                        'target_position': target,
+                        'initial_position': pos_unity,
+                        'initial_orientation': rotation_y,
+                        'shortest_path': path,
+                        'shortest_path_length': minimum_path_length
+                    })
 
-                    if minimum_path_length > eps and rotation_allowed:
-                        scene_episodes.append({
-                            'scene': scene,
-                            'target_position': target,
-                            'initial_position': pos_unity,
-                            'initial_orientation': rotation_y,
-                            'shortest_path': path,
-                            'shortest_path_length': minimum_path_length
-                        })
+                ninitials += 1
+            except ValueError:
+                print("-----Invalid path discarding point...")
 
-                    ninitials += 1
-                except ValueError:
-                    print("-----Invalid path discarding point...")
+        # scene=initials[:initials_per_target]
+        #
+        if ninitials > 0:
+            ntargets += 1
+        print('{} initial points accum for {} targets'.format(ninitials, ntargets))
+    print('{} targets in {}'.format(ntargets, scene))
 
-            # scene=initials[:initials_per_target]
-            #
-            if ninitials > 0:
-                ntargets += 1
-        print('{} targets in {}'.format(ntargets, scene))
+    sorted_objs = sorted(scene_episodes,
+                         key=lambda m: (m['shortest_path_length'], len(m['shortest_path'])))
+    third = int(len(sorted_objs) / 3.0)
 
-        sorted_objs = sorted(scene_episodes,
-                             key=lambda m: (m['shortest_path_length'], len(m['shortest_path'])))
-        third = int(len(sorted_objs) / 3.0)
+    for i, obj in enumerate(sorted_objs):
+        if i < third:
+            level = 'easy'
+        elif i < 2 * third:
+            level = 'medium'
+        else:
+            level = 'hard'
+        sorted_objs[i]['difficulty'] = level
 
-        for i, obj in enumerate(sorted_objs):
-            if i < third:
-                level = 'easy'
-            elif i < 2 * third:
-                level = 'medium'
-            else:
-                level = 'hard'
-            sorted_objs[i]['difficulty'] = level
+    print('{} easy {} medium {} hard in {}'.format(third, third, len(sorted_objs) - 2 * third, scene))
 
-        print('{} easy {} medium {} hard in {}'.format(third, third, len(sorted_objs) - 2 * third, scene))
-
-        all_episodes += scene_episodes
-        print('{} episodes in {}'.format(len(scene_episodes), scene))
+    all_episodes += scene_episodes
+    print('{} episodes in {}'.format(len(scene_episodes), scene))
 
     print('{} episodes in dataset'.format(len(all_episodes)))
 
-    fname = 'dataset_pointnav.json'
+    fname = 'data/dataset_pointnav_{}.json'.format(scene)
     with open(fname, 'w') as f:
         json.dump(all_episodes, f, indent=4)
 
+    env.stop()
 
 @task
 def create_robothor_objectnav_dataset(ctx, rotateStepDegrees=45.0, visibilityDistance=1.0, gridSize=0.25, samples_per_scene=1000, width=300, height=300, fieldOfView=79):

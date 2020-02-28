@@ -282,6 +282,8 @@ class OnPolicyRLEngine(object):
             fn(
                 process_ind=it,
                 total_processes=self.machine_params["nprocesses"],
+                devices=devices,
+                seeds=seeds,
             )
             for it in range(self.machine_params["nprocesses"])
         ]

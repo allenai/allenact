@@ -186,7 +186,7 @@ def main():
 
     args = _get_args()
 
-    logger.info("Running with args {}".format(args))
+    # logger.info("Running with args {}".format(args))
 
     # _download_ai2thor()
 

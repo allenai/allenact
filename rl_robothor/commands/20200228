@@ -1,0 +1,33 @@
+jordis-1
+docker run --privileged -it -v ~/work:/root/work -p 4711:6006 jordisai2/embodiedrl:latest
+python main.py -o ~/work/data/embodied-rl pointnav_robothor_rgb_deterministic_simpleconvGRU_ppo -s 12345 &> ~/logexp &
+
+jordis-2
+docker run --privileged -it -v ~/work:/root/work -p 4711:6006 jordisai2/embodiedrl:latest
+python main.py -o ~/work/data/embodied-rl pointnav_robothor_depth_deterministic_simpleconvGRU_ppo -s 12345 &> ~/logexp &
+
+jordis-3
+docker run --privileged -it -v ~/work:/root/work -p 4711:6006 jordisai2/embodiedrl:latest
+python main.py -o ~/work/data/embodied-rl pointnav_robothor_rgb_deterministic_resnet50GRU_ppo -s 12345 &> ~/logexp &
+
+jordis-4
+docker run --privileged -it -v ~/work:/root/work -p 4711:6006 jordisai2/embodiedrl:latest
+python main.py -o ~/work/data/embodied-rl pointnav_robothor_depth_deterministic_resnet50GRU_ppo -s 12345 &> ~/logexp &
+
+
+
+jordis-5
+docker run --privileged -it -v ~/work:/root/work -p 4711:6006 jordisai2/embodiedrl:latest
+python main.py -o ~/work/data/embodied-rl objectnav_robothor_rgb_deterministic_simpleconvGRU_ppo -s 12345 &> ~/logexp &
+
+jordis-6
+docker run --privileged -it -v ~/work:/root/work -p 4711:6006 jordisai2/embodiedrl:latest
+python main.py -o ~/work/data/embodied-rl objectnav_robothor_depth_deterministic_simpleconvGRU_ppo -s 12345 &> ~/logexp &
+
+jordis-7
+docker run --privileged -it -v ~/work:/root/work -p 4711:6006 jordisai2/embodiedrl:latest
+python main.py -o ~/work/data/embodied-rl objectnav_robothor_rgb_deterministic_resnet50GRU_ppo -s 12345 &> ~/logexp &
+
+jordis-8
+docker run --privileged -it -v ~/work:/root/work -p 4711:6006 jordisai2/embodiedrl:latest
+python main.py -o ~/work/data/embodied-rl objectnav_robothor_depth_deterministic_resnet50GRU_ppo -s 12345 &> ~/logexp &

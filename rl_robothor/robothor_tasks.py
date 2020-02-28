@@ -113,16 +113,14 @@ class PointNavTask(Task[RoboThorEnvironment]):
     def _step(self, action: int) -> RLStepResult:
         action_str = self.action_names()[action]
 
-        self.env.step({"action": action_str})
-
-        pose = self.env.agent_state()
-        self.path.append({k: pose[k] for k in ['x', 'y', 'z']})
-
         if action_str == END:
             self._took_end_action = True
             self._success = self._is_goal_in_range()
             self.last_action_success = self._success
         else:
+            self.env.step({"action": action_str})
+            pose = self.env.agent_state()
+            self.path.append({k: pose[k] for k in ['x', 'y', 'z']})
             self.last_action_success = self.env.last_action_success
 
         step_result = RLStepResult(
@@ -141,7 +139,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         tget = self.task_info["target"]
         # pose = self.env.agent_state()
         # dist = np.sqrt((pose['x'] - tget['x']) ** 2 + (pose['z'] - tget['z']) ** 2)
-        dist = self.env.dist_to_point(**tget)
+        dist = self.env.dist_to_point(tget)
         return -0.5 < dist <= 0.2
 
     def judge(self) -> float:
@@ -173,7 +171,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
-                "spl": self.spl() if len(self.episode_optimal_corners) > 0 else 0.0
+                "spl": self.spl() if len(self.episode_optimal_corners) > 1 else 0.0
             }
             self._rewards = []
             return metrics
@@ -223,16 +221,14 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
     def _step(self, action: int) -> RLStepResult:
         action_str = self.action_names()[action]
 
-        self.env.step({"action": action_str})
-
-        pose = self.env.agent_state()
-        self.path.append({k: pose[k] for k in ['x', 'y', 'z']})
-
         if action_str == END:
             self._took_end_action = True
             self._success = self._is_goal_in_range()
             self.last_action_success = self._success
         else:
+            self.env.step({"action": action_str})
+            pose = self.env.agent_state()
+            self.path.append({k: pose[k] for k in ['x', 'y', 'z']})
             self.last_action_success = self.env.last_action_success
 
         step_result = RLStepResult(
@@ -285,7 +281,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
-                "spl": self.spl() if len(self.episode_optimal_corners) > 0 else 0.0
+                "spl": self.spl() if len(self.episode_optimal_corners) > 1 else 0.0
             }
             self._rewards = []
             return metrics

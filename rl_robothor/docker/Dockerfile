@@ -29,6 +29,10 @@ RUN PYTHONPATH=../ai2thor:$PYTHONPATH pipenv run python3 -c "import ai2thor.cont
 ENV TZ=America/Los_Angeles
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
+RUN pipenv install --skip-lock numba
+
+#RUN pipenv run pip install torch==1.3.1+cu100 torchvision==0.4.2+cu100 -f https://download.pytorch.org/whl/torch_stable.html
+
 COPY . /embodied-rl/
 # run in interactive session: pipenv shell
 ENTRYPOINT ["rl_robothor/docker/docker_entrypoint.sh"]

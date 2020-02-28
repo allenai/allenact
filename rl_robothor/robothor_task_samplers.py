@@ -138,8 +138,8 @@ LOGGER = logging.getLogger("embodiedrl")
 class ObjectNavTaskSampler(TaskSampler):
     def __init__(
         self,
-        # scenes: List[str],
-        # object_types: List[str],
+        scenes: List[str],
+        object_types: List[str],
         scene_to_episodes: List[Dict[str, Any]],
         sensors: List[Sensor],
         max_steps: int,
@@ -154,11 +154,11 @@ class ObjectNavTaskSampler(TaskSampler):
         **kwargs
     ) -> None:
         self.env_args = env_args
-        # self.scenes = scenes
-        # self.object_types = object_types
-        self.scene_to_episodes = scene_to_episodes
-        self.scene_counters = {scene: -1 for scene in self.scene_to_episodes}
-        self.scenes = self.scene_to_episodes.keys()
+        self.scenes = scenes
+        self.object_types = object_types
+        # self.scene_to_episodes = scene_to_episodes
+        # self.scene_counters = {scene: -1 for scene in self.scene_to_episodes}
+        # self.scenes = list(self.scene_to_episodes.keys())
         self.env: Optional[RoboThorEnvironment] = None
         self.sensors = sensors
         self.max_steps = max_steps
@@ -261,12 +261,11 @@ class ObjectNavTaskSampler(TaskSampler):
 
         return self.scenes[int(self.scene_order[self.scene_id])]
 
-    def sample_episode(self, scene):
-        self.scene_counters[scene] = (self.scene_counters[scene] + 1) % len(self.scene_to_episodes[scene])
-        if self.scene_counters[scene] == 0:
-            random.shuffle(self.scene_to_episodes[scene])
-        return self.scene_to_episodes[scene][self.scene_counters[scene]]
-
+    # def sample_episode(self, scene):
+    #     self.scene_counters[scene] = (self.scene_counters[scene] + 1) % len(self.scene_to_episodes[scene])
+    #     if self.scene_counters[scene] == 0:
+    #         random.shuffle(self.scene_to_episodes[scene])
+    #     return self.scene_to_episodes[scene][self.scene_counters[scene]]
 
     def next_task(self, force_advance_scene: bool = False) -> Optional[ObjectNavTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
@@ -283,43 +282,44 @@ class ObjectNavTaskSampler(TaskSampler):
             self.env = self._create_environment()
             self.env.reset(scene_name=scene)
 
-        # pose = self.env.randomize_agent_location()
-        #
-        # object_types_in_scene = set(
-        #     [o["objectType"] for o in self.env.last_event.metadata["objects"]]
-        # )
-        #
-        # task_info = {}
-        # for ot in random.sample(self.object_types, len(self.object_types)):
-        #     if ot in object_types_in_scene:
-        #         task_info["object_type"] = ot
-        #         break
-        #
-        # if len(task_info) == 0:
-        #     LOGGER.warning(
-        #         "Scene {} does not contain any"
-        #         " objects of any of the types {}.".format(scene, self.object_types)
-        #     )
-        #
-        # task_info["start_pose"] = OrderedDict(
-        #     sorted([(k, float(v)) for k, v in pose.items()], key=lambda x: x[0])
-        # )
-        #
-        # task_info["actions"] = []
+        pose = self.env.randomize_agent_location()
 
-        task_info = copy.deepcopy(self.sample_episode(scene))
+        object_types_in_scene = set(
+            [o["objectType"] for o in self.env.last_event.metadata["objects"]]
+        )
 
-        pose = {**task_info['initial_position'], 'rotation': {'x': 0.0, 'y': task_info['initial_orientation'], 'z': 0.0}, 'horizon': 0.0}
-        self.env.step({"action": "TeleportFull", **pose})
-        assert self.env.last_action_success, "Failed to initialize agent to {} in {} for epsiode {}".format(pose, scene, task_info)
-        # 'scene': scene,
-        # 'object_type': object_type,
-        # 'object_id': object_id,
-        # 'target_position': target_position,
-        # 'initial_position': pos_unity,
-        # 'initial_orientation': roatation_y,
-        # 'shortest_path': path,
-        # 'shortest_path_length': minimum_path_length
+        task_info = {}
+        for ot in random.sample(self.object_types, len(self.object_types)):
+            if ot in object_types_in_scene:
+                task_info["object_type"] = ot
+                break
+
+        if len(task_info) == 0:
+            LOGGER.warning(
+                "Scene {} does not contain any"
+                " objects of any of the types {}.".format(scene, self.object_types)
+            )
+
+        task_info["start_pose"] = OrderedDict(
+            sorted([(k, float(v)) for k, v in pose.items()], key=lambda x: x[0])
+        )
+
+        task_info["actions"] = []
+
+        # task_info = copy.deepcopy(self.sample_episode(scene))
+        # task_info['actions'] = []
+        #
+        # pose = {**task_info['initial_position'], 'rotation': {'x': 0.0, 'y': task_info['initial_orientation'], 'z': 0.0}, 'horizon': 0.0}
+        # self.env.step({"action": "TeleportFull", **pose})
+        # assert self.env.last_action_success, "Failed to initialize agent to {} in {} for epsiode {}".format(pose, scene, task_info)
+        # # 'scene': scene,
+        # # 'object_type': object_type,
+        # # 'object_id': object_id,
+        # # 'target_position': target_position,
+        # # 'initial_position': pos_unity,
+        # # 'initial_orientation': roatation_y,
+        # # 'shortest_path': path,
+        # # 'shortest_path_length': minimum_path_length
 
         self._last_sampled_task = ObjectNavTask(
             env=self.env,
@@ -336,10 +336,10 @@ class ObjectNavTaskSampler(TaskSampler):
         random.shuffle(self.scene_order)
         self.scene_id = 0
         self.max_tasks = self.reset_tasks
-        for scene in self.scene_to_episodes:
-            random.shuffle(self.scene_to_episodes[scene])
-        for scene in self.scene_counters:
-            self.scene_counters[scene] = -1
+        # for scene in self.scene_to_episodes:
+        #     random.shuffle(self.scene_to_episodes[scene])
+        # for scene in self.scene_counters:
+        #     self.scene_counters[scene] = -1
 
     def set_seed(self, seed: int):
         self.seed = seed
@@ -350,9 +350,9 @@ class ObjectNavTaskSampler(TaskSampler):
 class PointNavTaskSampler(TaskSampler):
     def __init__(
         self,
-        # scenes: List[str],
+        scenes: List[str],
         # object_types: List[str],
-        scene_to_episodes: List[Dict[str, Any]],
+        # scene_to_episodes: List[Dict[str, Any]],
         sensors: List[Sensor],
         max_steps: int,
         env_args: Dict[str, Any],
@@ -366,11 +366,11 @@ class PointNavTaskSampler(TaskSampler):
         **kwargs
     ) -> None:
         self.env_args = env_args
-        # self.scenes = scenes
+        self.scenes = scenes
         # self.object_types = object_types
-        self.scene_to_episodes = scene_to_episodes
-        self.scene_counters = {scene: -1 for scene in self.scene_to_episodes}
-        self.scenes = self.scene_to_episodes.keys()
+        # self.scene_to_episodes = scene_to_episodes
+        # self.scene_counters = {scene: -1 for scene in self.scene_to_episodes}
+        # self.scenes = list(self.scene_to_episodes.keys())
         self.env: Optional[RoboThorEnvironment] = None
         self.sensors = sensors
         self.max_steps = max_steps
@@ -477,11 +477,11 @@ class PointNavTaskSampler(TaskSampler):
 
         return self.scenes[int(self.scene_order[self.scene_id])]
 
-    def sample_episode(self, scene):
-        self.scene_counters[scene] = (self.scene_counters[scene] + 1) % len(self.scene_to_episodes[scene])
-        if self.scene_counters[scene] == 0:
-            random.shuffle(self.scene_to_episodes[scene])
-        return self.scene_to_episodes[scene][self.scene_counters[scene]]
+    # def sample_episode(self, scene):
+    #     self.scene_counters[scene] = (self.scene_counters[scene] + 1) % len(self.scene_to_episodes[scene])
+    #     if self.scene_counters[scene] == 0:
+    #         random.shuffle(self.scene_to_episodes[scene])
+    #     return self.scene_to_episodes[scene][self.scene_counters[scene]]
 
     def next_task(self, force_advance_scene: bool = False) -> Optional[ObjectNavTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
@@ -498,12 +498,30 @@ class PointNavTaskSampler(TaskSampler):
             self.env = self._create_environment()
             self.env.reset(scene_name=scene)
 
-        task_info = copy.deepcopy(self.sample_episode(scene))
-        task_info['target'] = task_info['target_position']
+        # task_info = copy.deepcopy(self.sample_episode(scene))
+        # task_info['target'] = task_info['target_position']
+        # task_info['actions'] = []
 
-        pose = {**task_info['initial_position'], 'rotation': {'x': 0.0, 'y': task_info['initial_orientation'], 'z': 0.0}, 'horizon': 0.0}
-        self.env.step({"action": "TeleportFull", **pose})
-        assert self.env.last_action_success, "Failed to initialize agent to {} in {} for epsiode {}".format(pose, scene, task_info)
+        self.env.reset()
+        locs = copy.deepcopy(self.env.currently_reachable_points)
+
+        cond = True
+        attempt = 0
+        while cond and attempt < 100:
+            self.env.randomize_agent_location()
+            target = random.choice(locs)
+            cond = self.env.dist_to_point(target) <= 0
+        pose = self.env.agent_state()
+
+        task_info = {}
+        task_info['initial_position'] = {k: pose[k] for k in ['x', 'y', 'z']}
+        task_info['initial_orientation'] = pose["rotation"]["y"]
+        task_info['target'] = target
+        task_info['actions'] = []
+
+        # pose = {**task_info['initial_position'], 'rotation': {'x': 0.0, 'y': task_info['initial_orientation'], 'z': 0.0}, 'horizon': 0.0}
+        # self.env.step({"action": "TeleportFull", **pose})
+        # assert self.env.last_action_success, "Failed to initialize agent to {} in {} for epsiode {}".format(pose, scene, task_info)
 
         self._last_sampled_task = PointNavTask(
             env=self.env,
@@ -521,10 +539,10 @@ class PointNavTaskSampler(TaskSampler):
         self.scene_id = 0
         self.max_tasks = self.reset_tasks
 
-        for scene in self.scene_to_episodes:
-            random.shuffle(self.scene_to_episodes[scene])
-        for scene in self.scene_counters:
-            self.scene_counters[scene] = -1
+        # for scene in self.scene_to_episodes:
+        #     random.shuffle(self.scene_to_episodes[scene])
+        # for scene in self.scene_counters:
+        #     self.scene_counters[scene] = -1
 
     def set_seed(self, seed: int):
         self.seed = seed
