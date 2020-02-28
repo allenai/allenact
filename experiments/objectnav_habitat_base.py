@@ -32,7 +32,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.1
 
-    NUM_PROCESSES = 1
+    NUM_PROCESSES = 4
 
     SENSORS = [
         RGBSensorHabitat(

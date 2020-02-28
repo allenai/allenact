@@ -196,6 +196,7 @@ class ObjectNavTask(Task[HabitatTask]):
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
         self.last_geodesic_distance = self.env.get_current_episode().info['geodesic_distance']
+        self.last_distance_to_goal = self.env.env.get_metrics()["distance_to_goal"]
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
@@ -245,15 +246,15 @@ class ObjectNavTask(Task[HabitatTask]):
     def judge(self) -> float:
         reward = -0.01
 
-        metrics = self.env.env.get_metrics()
-        distance_to_goal = metrics["distance_to_goal"]
-        geodesic_distance = self.env.get_geodesic_distance()
-        if geodesic_distance in [float('-inf'), float('inf')] or np.isnan(geodesic_distance):
-            geodesic_distance = self.last_geodesic_distance
-        delta_distance_reward = self.last_geodesic_distance - geodesic_distance
-        print("Geodesic Distance:", geodesic_distance, "--- Distance To Goal:", distance_to_goal)
+        distance_to_goal = self.env.env.get_metrics()["distance_to_goal"]
+        # geodesic_distance = self.env.get_geodesic_distance()
+        # if geodesic_distance in [float('-inf'), float('inf')] or np.isnan(geodesic_distance):
+        #     geodesic_distance = self.last_geodesic_distance
+        # delta_distance_reward = self.last_geodesic_distance - geodesic_distance
+        delta_distance_reward = self.last_distance_to_goal- distance_to_goal
+        # print("Geodesic Distance:", geodesic_distance, "--- Distance To Goal:", distance_to_goal)
         reward += delta_distance_reward
-        self.last_geodesic_distance = geodesic_distance
+        self.last_distance_to_goal = distance_to_goal
 
         if self._took_end_action:
             reward += 10.0 if self._success else 0.0
@@ -263,7 +264,7 @@ class ObjectNavTask(Task[HabitatTask]):
         return float(reward)
 
     def metrics(self) -> Dict[str, Any]:
-        print("Self Rewards:", self._rewards)
+        # print("Self Rewards:", self._rewards)
         if not self.is_done():
             return {}
         else:
