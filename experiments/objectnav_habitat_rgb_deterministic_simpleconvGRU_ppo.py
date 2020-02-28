@@ -31,9 +31,10 @@ class ObjectNavHabitatRGBDeterministicSimpleConvGRUPPOExperimentConfig(ObjectNav
     ]
 
     CONFIG = ObjectNavHabitatBaseExperimentConfig.CONFIG.clone()
-    CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR', 'DEPTH_SENSOR', 'SEMANTIC_SENSOR']
+    CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
     CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE
     CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE
+    CONFIG.SIMULATOR.RGB_SENSOR.HFOV = 79
     CONFIG.SIMULATOR.RGB_SENSOR.POSITION = [0, 0.88, 0]
 
     TRAIN_CONFIGS = construct_env_configs(CONFIG)
