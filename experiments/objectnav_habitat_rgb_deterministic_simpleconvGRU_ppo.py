@@ -37,7 +37,7 @@ class ObjectNavHabitatRGBDeterministicSimpleConvGRUPPOExperimentConfig(ObjectNav
     CONFIG.SIMULATOR.RGB_SENSOR.HFOV = 79
     CONFIG.SIMULATOR.RGB_SENSOR.POSITION = [0, 0.88, 0]
 
-    TRAIN_CONFIGS = construct_env_configs(CONFIG)
+    TRAIN_CONFIGS = [CONFIG] # construct_env_configs(CONFIG)
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
