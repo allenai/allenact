@@ -29,7 +29,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.1
 
-    NUM_PROCESSES = 1
+    NUM_PROCESSES = 3
 
     CONFIG = habitat.get_config('configs/mp3d.yaml')
     CONFIG.defrost()
@@ -72,7 +72,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 4
-        num_steps = 32
+        num_steps = 3128
         save_interval = 1000000
         log_interval = 10000
         gamma = 0.99
