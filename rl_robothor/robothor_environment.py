@@ -123,7 +123,7 @@ class RoboThorEnvironment:
                     rotation if len(rotation) > 0 else None,
                 )
             else:
-                path = get_shortest_path_to_point(self.controller, position, **target)
+                path = get_shortest_path_to_point(self.controller, position, target)
         except ValueError:
             path = []
         finally:
@@ -331,19 +331,20 @@ class RoboThorEnvironment:
 def get_shortest_path_to_point(
         controller,
         initial_position,
-        x, y, z
+        target_position
 ):
     """
     Computes the shortest path to an end point from an initial position using a controller
     :param controller: agent controller
-    :param initial_position: dict(x=float, y=float, z=float) with the desired initial rotation
+    :param initial_position: dict(x=float, y=float, z=float) with the desired initial position
+    :param target_position: dict(x=float, y=float, z=float) with the desired target position
     """
     args = dict(
         action='GetShortestPathToPoint',
         position=initial_position,
-        x=x,
-        y=y,
-        z=z
+        x=target_position['x'],
+        y=target_position['y'],
+        z=target_position['z']
     )
     event = controller.step(args)
     if event.metadata['lastActionSuccess']:
@@ -351,6 +352,6 @@ def get_shortest_path_to_point(
     else:
         raise ValueError(
             "Unable to find shortest path for target point '{}'".format(
-                [x, y, z]
+                target_position
             )
         )

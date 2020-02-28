@@ -10,7 +10,7 @@ from rl_habitat.habitat_tasks import PointNavTask
 from rl_base.sensor import Sensor
 
 
-class TargetCoordinatesSensorRobothor(Sensor[RoboThorEnvironment, PointNavTask]):
+class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 

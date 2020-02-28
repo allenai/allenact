@@ -92,7 +92,8 @@ class PointNavTask(Task[RoboThorEnvironment]):
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
-        self.path = []
+        pose = self.env.agent_state()
+        self.path = [{k: pose[k] for k in ['x', 'y', 'z']}]
 
     @property
     def action_space(self):
@@ -136,10 +137,11 @@ class PointNavTask(Task[RoboThorEnvironment]):
         return self.env.current_frame['rgb']
 
     def _is_goal_in_range(self) -> bool:
-        pose = self.env.agent_state()
         tget = self.task_info["target"]
-        dist = np.sqrt((pose['x'] - tget['x']) ** 2 + (pose['z'] - tget['z']) ** 2)
-        return dist <= 0.2  # TODO confirm it's the same criterion in habitat
+        # pose = self.env.agent_state()
+        # dist = np.sqrt((pose['x'] - tget['x']) ** 2 + (pose['z'] - tget['z']) ** 2)
+        dist = self.env.dist_to_point(**tget)
+        return -0.5 < dist <= 0.2
 
     def judge(self) -> float:
         reward = -0.01
@@ -199,7 +201,8 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
-        self.path = []
+        pose = self.env.agent_state()
+        self.path = [{k: pose[k] for k in ['x', 'y', 'z']}]
 
     @property
     def action_space(self):

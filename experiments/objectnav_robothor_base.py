@@ -7,7 +7,6 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 
-import habitat
 from onpolicy_sync.losses.ppo import PPOConfig
 from models.point_nav_models import PointNavActorCriticResNet50GRU
 from onpolicy_sync.losses import PPO
@@ -17,16 +16,16 @@ from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
 from rl_habitat.habitat_tasks import PointNavTask
 from rl_habitat.habitat_task_samplers import PointNavTaskSampler
-from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetObjectSensorHabitat
+from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
+# from rl_robothor.robothor_sensors import GPSCompassSensorRoboThor
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
-    """A Point Navigation experiment configuraqtion in Habitat"""
+class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
+    """A Point Navigation experiment configuration in RoboThor"""
 
-    TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/train/train.json.gz"
-    VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val/val.json.gz"
+    TRAIN_SCENES = "data/dataset_pointnav.json"
 
     SCREEN_SIZE = 256
     MAX_STEPS = 500
@@ -35,14 +34,14 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
     NUM_PROCESSES = 1
 
     SENSORS = [
-        RGBSensorHabitat(
+        RGBSensorThor(
             {
                 "height": SCREEN_SIZE,
                 "width": SCREEN_SIZE,
                 "use_resnet_normalization": True,
             }
         ),
-        TargetObjectSensorHabitat({}),
+        GoalObjectTypeThorSensor({}),
     ]
 
     PREPROCESSORS = [
@@ -63,48 +62,48 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
 
     OBSERVATIONS = [
         "rgb_resnet",
-        "target_object_id",
+        "goal_object_type_ind",
     ]
 
-    CONFIG = habitat.get_config('configs/mp3d.yaml')
-    CONFIG.defrost()
-    CONFIG.NUM_PROCESSES = NUM_PROCESSES
-    CONFIG.SIMULATOR_GPU_IDS = [0]
-    CONFIG.DATASET.TYPE = 'ObjectNav-v1'
-    CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
-    CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
-    CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
-    CONFIG.SIMULATOR.AGENT_0.HEIGHT = 0.88
-    CONFIG.SIMULATOR.AGENT_0.RADIUS = 0.18
-    CONFIG.SIMULATOR.HABITAT_SIM_V0.ALLOW_SLIDING = False
+    # CONFIG = habitat.get_config('configs/mp3d.yaml')
+    # CONFIG.defrost()
+    # CONFIG.NUM_PROCESSES = NUM_PROCESSES
+    # CONFIG.SIMULATOR_GPU_IDS = [0]
+    # CONFIG.DATASET.TYPE = 'ObjectNav-v1'
+    # CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
+    # CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
+    # CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
+    # CONFIG.SIMULATOR.AGENT_0.HEIGHT = 0.88
+    # CONFIG.SIMULATOR.AGENT_0.RADIUS = 0.18
+    # CONFIG.SIMULATOR.HABITAT_SIM_V0.ALLOW_SLIDING = False
 
-    CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = SCREEN_SIZE
-    CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = SCREEN_SIZE
-    CONFIG.SIMULATOR.RGB_SENSOR.HFOV = 79
-    CONFIG.SIMULATOR.RGB_SENSOR.POSITION = [0, 0.88, 0]
-    CONFIG.SIMULATOR.DEPTH_SENSOR.WIDTH = SCREEN_SIZE
-    CONFIG.SIMULATOR.DEPTH_SENSOR.HEIGHT = SCREEN_SIZE
-    CONFIG.SIMULATOR.DEPTH_SENSOR.HFOV = 79
-    CONFIG.SIMULATOR.DEPTH_SENSOR.POSITION = [0, 0.88, 0]
+    # CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = SCREEN_SIZE
+    # CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = SCREEN_SIZE
+    # CONFIG.SIMULATOR.RGB_SENSOR.HFOV = 79
+    # CONFIG.SIMULATOR.RGB_SENSOR.POSITION = [0, 0.88, 0]
+    # CONFIG.SIMULATOR.DEPTH_SENSOR.WIDTH = SCREEN_SIZE
+    # CONFIG.SIMULATOR.DEPTH_SENSOR.HEIGHT = SCREEN_SIZE
+    # CONFIG.SIMULATOR.DEPTH_SENSOR.HFOV = 79
+    # CONFIG.SIMULATOR.DEPTH_SENSOR.POSITION = [0, 0.88, 0]
 
-    CONFIG.SIMULATOR.TURN_ANGLE = 45
-    CONFIG.SIMULATOR.TILT_ANGLE = 30
-    CONFIG.SIMULATOR.ACTION_SPACE_CONFIG = "v1"
-    CONFIG.SIMULATOR.FORWARD_STEP_SIZE = 0.25
-    CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS = MAX_STEPS
+    # CONFIG.SIMULATOR.TURN_ANGLE = 45
+    # CONFIG.SIMULATOR.TILT_ANGLE = 30
+    # CONFIG.SIMULATOR.ACTION_SPACE_CONFIG = "v1"
+    # CONFIG.SIMULATOR.FORWARD_STEP_SIZE = 0.25
+    # CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS = MAX_STEPS
 
-    CONFIG.TASK.TYPE = 'ObjectNav-v1'
-    CONFIG.TASK.POSSIBLE_ACTIONS = ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "LOOK_UP", "LOOK_DOWN"]
-    CONFIG.TASK.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
-    CONFIG.TASK.SENSORS = ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR']
-    CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.GOAL_FORMAT = "POLAR"
-    CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.DIMENSIONALITY = 2
-    CONFIG.TASK.GOAL_SENSOR_UUID = 'objectgoal'
-    CONFIG.TASK.MEASUREMENTS = ['DISTANCE_TO_GOAL', 'SPL']
-    CONFIG.TASK.SPL.TYPE = 'SPL'
-    CONFIG.TASK.SPL.DISTANCE_TO = 'VIEW_POINTS'
-    CONFIG.TASK.SPL.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
-    CONFIG.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "VIEW_POINTS"
+    # CONFIG.TASK.TYPE = 'ObjectNav-v1'
+    # CONFIG.TASK.POSSIBLE_ACTIONS = ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "LOOK_UP", "LOOK_DOWN"]
+    # CONFIG.TASK.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
+    # CONFIG.TASK.SENSORS = ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR']
+    # CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.GOAL_FORMAT = "POLAR"
+    # CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.DIMENSIONALITY = 2
+    # CONFIG.TASK.GOAL_SENSOR_UUID = 'objectgoal'
+    # CONFIG.TASK.MEASUREMENTS = ['DISTANCE_TO_GOAL', 'SPL']
+    # CONFIG.TASK.SPL.TYPE = 'SPL'
+    # CONFIG.TASK.SPL.DISTANCE_TO = 'VIEW_POINTS'
+    # CONFIG.TASK.SPL.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
+    # CONFIG.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "VIEW_POINTS"
 
     @classmethod
     def tag(cls):
