@@ -252,7 +252,7 @@ class ObjectNavTask(Task[HabitatTask]):
             geodesic_distance = self.last_geodesic_distance
         delta_distance_reward = self.last_geodesic_distance - geodesic_distance
         # delta_distance_reward = self.last_distance_to_goal- distance_to_goal
-        # print("Geodesic Distance:", geodesic_distance, "--- Distance To Goal:", distance_to_goal)
+        print("Geodesic Distance:", geodesic_distance, "--- Last Geodesic Distance:", self.last_geodesic_distance, "--- Delta:", delta_distance_reward)
         reward += delta_distance_reward
         # self.last_distance_to_goal = distance_to_goal
         self.last_geodesic_distance = geodesic_distance
