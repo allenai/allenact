@@ -12,7 +12,9 @@ from gym.spaces.dict import Dict as SpaceDict
 from models.basic_models import SimpleCNN, RNNStateEncoder
 from onpolicy_sync.policy import (
     ActorCriticModel,
-    LinearActorCriticHead
+    LinearActorCriticHead,
+    LinearCriticHead,
+    LinearActorHead
 )
 
 from rl_base.common import ActorCriticOutput
@@ -66,8 +68,11 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
             rnn_type=rnn_type
         )
 
-        self.actor_and_critic = LinearActorCriticHead(
+        self.actor = LinearActorHead(
             self.recurrent_hidden_state_size, action_space.n
+        )
+        self.critic = LinearCriticHead(
+            self.recurrent_hidden_state_size
         )
 
         self.object_type_embedding = nn.Embedding(
@@ -132,9 +137,9 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         x_cat = cast(torch.FloatTensor, torch.cat(x, dim=1))  # type: ignore
         x_out, rnn_hidden_states = self.state_encoder(x_cat, rnn_hidden_states, masks)
 
-        distributions, values = self.actor_and_critic(x_out)
+        # distributions, values = self.actor_and_critic(x_out)
         return (
-            ActorCriticOutput(distributions=distributions, values=values, extras={}),
+            ActorCriticOutput(distributions=self.actor(x_out), values=self.critic(x_out), extras={}),
             cast(torch.FloatTensor, rnn_hidden_states),
         )
 
