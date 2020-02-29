@@ -51,14 +51,14 @@ class RoboThorTask(Task[RoboThorEnvironment]):
     def last_action_success(self, value: Optional[bool]):
         self._last_action_success = value
 
-    def _step(self, action: int) -> RLStepResult:
-        self._last_action_ind = action
-        self.last_action = self.action_names()[action]
-        self.last_action_success = None
-        step_result = super().step(action=action)
-        step_result.info["action"] = self._last_action_ind
-        step_result.info["action_success"] = self.last_action_success
-        return step_result
+    # def _step(self, action: int) -> RLStepResult:
+    #     self._last_action_ind = action
+    #     self.last_action = self.action_names()[action]
+    #     self.last_action_success = None
+    #     step_result = super().step(action=action)
+    #     step_result.info["action"] = self._last_action_ind
+    #     step_result.info["action_success"] = self.last_action_success
+    #     return step_result
 
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         if mode == "rgb":
@@ -88,7 +88,10 @@ class PointNavTask(Task[RoboThorEnvironment]):
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
         self.episode_optimal_corners = self.env.path_corners(task_info["target"])  # assume it's valid (sampler must take care)!
-        self.last_geodesic_distance = self.env.path_corners_to_dist(self.episode_optimal_corners)
+        dist = self.env.path_corners_to_dist(self.episode_optimal_corners)
+        if dist == float("inf"):
+            dist = -1.0  # -1.0 for unreachable
+        self.last_geodesic_distance = dist
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
@@ -117,6 +120,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
             self._took_end_action = True
             self._success = self._is_goal_in_range()
             self.last_action_success = self._success
+
         else:
             self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
@@ -127,7 +131,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
             observation=self.get_observations(),
             reward=self.judge(),
             done=self.is_done(),
-            info={"last_action_success": self.last_action_success},
+            info={"last_action_success": self.last_action_success, "action": action},
         )
         return step_result
 
@@ -199,7 +203,10 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
         self.episode_optimal_corners = self.env.path_corners(task_info["object_type"])  # assume it's valid (sampler must take care)!
-        self.last_geodesic_distance = self.env.path_corners_to_dist(self.episode_optimal_corners)
+        dist = self.env.path_corners_to_dist(self.episode_optimal_corners)
+        if dist == float("inf"):
+            dist = -1.0  # -1.0 for unreachable
+        self.last_geodesic_distance = dist
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
@@ -238,7 +245,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             observation=self.get_observations(),
             reward=self.judge(),
             done=self.is_done(),
-            info={"last_action_success": self.last_action_success},
+            info={"last_action_success": self.last_action_success, "action": action},
         )
         return step_result
 

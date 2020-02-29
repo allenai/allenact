@@ -764,6 +764,7 @@ class OnPolicyRLEngine(object):
             if (self.advance_scene_rollout_period is not None) and (
                 self.rollout_count % self.advance_scene_rollout_period == 0
             ):
+                LOGGER.info("Force advance tasks with {} rollouts".format(self.rollout_count))
                 self.vector_tasks.next_task(force_advance_scene=True)
                 self.initialize_rollouts(rollouts)
 

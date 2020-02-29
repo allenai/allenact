@@ -44,6 +44,7 @@ class RoboThorEnvironment:
         recursive_update(self.config, {**kwargs, "agentMode": "bot"})
         self.controller = Controller(**self.config)
         self.known_good_locations: Dict[str, Any] = {self.scene_name: copy.deepcopy(self.currently_reachable_points)}
+        assert len(self.known_good_locations[self.scene_name]) > 100
         # LOGGER.warning("init to scene {} in pos {}".format(self.scene_name, self.agent_state()))
         # npoints = len(self.currently_reachable_points)
         # assert npoints > 100, "only {} reachable points after init".format(npoints)
@@ -197,6 +198,7 @@ class RoboThorEnvironment:
             assert self.last_action_success, "Could not reset to new scene"
             if scene_name not in self.known_good_locations:
                 self.known_good_locations[scene_name] = copy.deepcopy(self.currently_reachable_points)
+                assert len(self.known_good_locations[scene_name]) > 100
         # else:
             # assert (
             #     self.scene_name in self.known_good_locations
@@ -245,6 +247,7 @@ class RoboThorEnvironment:
         if seed is not None:
             random.seed(seed)
         # xyz = random.choice(self.currently_reachable_points)
+        assert len(self.known_good_locations[self.scene_name]) > 100
         xyz = copy.copy(random.choice(self.known_good_locations[self.scene_name]))
         rotation = random.choice(
             np.arange(0.0, 360.0, self.config["rotateStepDegrees"])

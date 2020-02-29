@@ -282,8 +282,8 @@ class VectorSampledTasks(object):
         ):
             worker_conn, parent_conn, current_sampler_fn_args = stuff  # type: ignore
             LOGGER.info(
-                # "Starting {}-th worker with args {}".format(id, current_sampler_fn_args)
-                "Starting {}-th worker".format(id)
+                "Starting {}-th worker with args {}".format(id, current_sampler_fn_args)
+                # "Starting {}-th worker".format(id)
             )
             ps = self._mp_ctx.Process(  # type: ignore
                 target=self._task_sampling_loop_worker,
