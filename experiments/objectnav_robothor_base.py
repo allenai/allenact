@@ -35,11 +35,17 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
         for furniture in range(1, 6)
     ]
 
+    VALID_SCENES = [
+        "FloorPlan_Val%d_%d" % (wall, furniture)
+        for wall in range(1, 4)
+        for furniture in range(1, 6)
+    ]
+
     SCREEN_SIZE = 256
     MAX_STEPS = 500
     ADVANCE_SCENE_ROLLOUT_PERIOD = 10  # if more than 1 scene per worker
 
-    NUM_PROCESSES = 12
+    NUM_PROCESSES = 10
 
     OBJECT_TYPES = sorted(
         [
@@ -120,7 +126,7 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
         update_repeats = 4
         num_steps = 64
         save_interval = 1000000
-        log_interval = 10000
+        log_interval = 1000
         gamma = 0.99
         use_gae = True
         gae_lambda = 0.95
@@ -270,6 +276,29 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
         res = self._get_sampler_args_for_scene_split(
             # self.scene_names,
             self.TRAIN_SCENES,
+            process_ind,
+            total_processes,
+            seeds=seeds,
+            deterministic_cudnn=deterministic_cudnn,
+        )
+        res["scene_period"] = "manual"
+        res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
+        res["env_args"]["x_display"] = (
+            ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
+        )
+        return res
+
+    def valid_task_sampler_args(
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]] = None,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
+    ) -> Dict[str, Any]:
+        res = self._get_sampler_args_for_scene_split(
+            self.VALID_SCENES,
             process_ind,
             total_processes,
             seeds=seeds,

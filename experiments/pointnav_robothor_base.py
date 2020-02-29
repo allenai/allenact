@@ -34,11 +34,17 @@ class PointNavRoboThorBaseExperimentConfig(ExperimentConfig):
         for furniture in range(1, 6)
     ]
 
+    VALID_SCENES = [
+        "FloorPlan_Val%d_%d" % (wall, furniture)
+        for wall in range(1, 4)
+        for furniture in range(1, 6)
+    ]
+
     SCREEN_SIZE = 256
     MAX_STEPS = 500
     ADVANCE_SCENE_ROLLOUT_PERIOD = 10  # if more than 1 scene per worker
 
-    NUM_PROCESSES = 60
+    NUM_PROCESSES = 10
 
     SENSORS = [
         RGBSensorThor(
@@ -130,12 +136,16 @@ class PointNavRoboThorBaseExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
+            # nprocesses = 1 if not torch.cuda.is_available() else self.NUM_PROCESSES
+            # sampler_devices = [0, 1, 2, 3, 4, 5, 6, 7]
+            # gpu_ids = [] if not torch.cuda.is_available() else [7]
+            # render_video = False
             nprocesses = 1 if not torch.cuda.is_available() else self.NUM_PROCESSES
-            sampler_devices = [0, 1, 2, 3, 4, 5, 6, 7]
-            gpu_ids = [] if not torch.cuda.is_available() else [7]
+            sampler_devices = [0]
+            gpu_ids = [] if not torch.cuda.is_available() else [0]
             render_video = False
         elif mode == "valid":
-            nprocesses = 0
+            nprocesses = 1
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
@@ -250,6 +260,29 @@ class PointNavRoboThorBaseExperimentConfig(ExperimentConfig):
         res = self._get_sampler_args_for_scene_split(
             # self.scene_names,
             self.TRAIN_SCENES,
+            process_ind,
+            total_processes,
+            seeds=seeds,
+            deterministic_cudnn=deterministic_cudnn,
+        )
+        res["scene_period"] = "manual"
+        res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
+        res["env_args"]["x_display"] = (
+            ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
+        )
+        return res
+
+    def valid_task_sampler_args(
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]] = None,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
+    ) -> Dict[str, Any]:
+        res = self._get_sampler_args_for_scene_split(
+            self.VALID_SCENES,
             process_ind,
             total_processes,
             seeds=seeds,

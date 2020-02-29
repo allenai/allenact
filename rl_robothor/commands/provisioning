@@ -1,3 +1,5 @@
-sudo apt-get install -y python3-venv && python3 -mvenv start && source test/bin/activate && pip install torch && python -c "import torch; print(torch.cuda.is_available())"
+sudo apt-get install -y python3-venv && python3 -mvenv start && source start/bin/activate && pip install torch && python -c "import torch; print(torch.cuda.is_available())"
 docker login
 docker pull jordisai2/embodiedrl:latest
+mkdir -p work/data/embodied-rl
+docker run --privileged -it -v ~/work:/root/work -p 4711:6006 jordisai2/embodiedrl:latest
