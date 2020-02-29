@@ -40,6 +40,8 @@ class PointNavRoboThorBaseExperimentConfig(ExperimentConfig):
         for furniture in range(1, 6)
     ]
 
+    VALIDATION_SAMPLES_PER_SCENE = 1
+
     SCREEN_SIZE = 256
     MAX_STEPS = 500
     ADVANCE_SCENE_ROLLOUT_PERIOD = 10  # if more than 1 scene per worker
@@ -288,7 +290,8 @@ class PointNavRoboThorBaseExperimentConfig(ExperimentConfig):
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_period"] = "manual"
+        res["scene_period"] = self.VALIDATION_SAMPLES_PER_SCENE
+        res["max_tasks"] = self.VALIDATION_SAMPLES_PER_SCENE * len(res["scenes"])
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (

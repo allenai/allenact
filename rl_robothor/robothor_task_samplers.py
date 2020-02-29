@@ -399,17 +399,23 @@ class PointNavTaskSampler(TaskSampler):
 
         cond = True
         attempt = 0
-        while cond and attempt < 100:
+        while cond and attempt < 10:
             self.env.randomize_agent_location()
             target = random.choice(locs)
             cond = self.env.dist_to_point(target) <= 0
+            attempt += 1
+
         pose = self.env.agent_state()
 
         task_info = {}
+        task_info['scene'] = scene
         task_info['initial_position'] = {k: pose[k] for k in ['x', 'y', 'z']}
         task_info['initial_orientation'] = pose["rotation"]["y"]
         task_info['target'] = target
         task_info['actions'] = []
+
+        if cond:
+            LOGGER.warning("No path for sampled episode {}".format(task_info))
 
         # pose = {**task_info['initial_position'], 'rotation': {'x': 0.0, 'y': task_info['initial_orientation'], 'z': 0.0}, 'horizon': 0.0}
         # self.env.step({"action": "TeleportFull", **pose})

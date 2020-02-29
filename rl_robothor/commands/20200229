@@ -1,0 +1,11 @@
+nav-ablation-11
+python main.py -o ~/work/data/embodied-rl pointnav_robothor_rgb_deterministic_simpleconvGRU_ppo -s 12345 &> ~/work/data/embodied-rl/logexp &
+
+nav-ablation-12
+python main.py -o ~/work/data/embodied-rl pointnav_robothor_depth_deterministic_simpleconvGRU_ppo -s 12345 &> ~/work/data/embodied-rl/logexp &
+
+nav-ablation-13
+python main.py -o ~/work/data/embodied-rl pointnav_robothor_rgb_deterministic_resnet50GRU_ppo -s 12345 &> ~/work/data/embodied-rl/logexp &
+
+nav-ablation-14
+python main.py -o ~/work/data/embodied-rl pointnav_robothor_depth_deterministic_resnet50GRU_ppo -s 12345 &> ~/work/data/embodied-rl/logexp &
