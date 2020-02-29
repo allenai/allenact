@@ -29,12 +29,12 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.1
 
-    NUM_PROCESSES = 16
+    NUM_PROCESSES = 4
 
     CONFIG = habitat.get_config('configs/mp3d.yaml')
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
-    CONFIG.SIMULATOR_GPU_IDS = [1,2,3,4,5,6,7]
+    CONFIG.SIMULATOR_GPU_IDS = [0]
     CONFIG.DATASET.TYPE = 'ObjectNav-v1'
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
