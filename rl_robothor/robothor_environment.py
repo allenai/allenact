@@ -43,8 +43,12 @@ class RoboThorEnvironment:
         )
         recursive_update(self.config, {**kwargs, "agentMode": "bot"})
         self.controller = Controller(**self.config)
-        self.known_good_locations: Dict[str, Any] = {self.scene_name: self.agent_state()}
+        self.known_good_locations: Dict[str, Any] = {self.scene_name: copy.deepcopy(self.currently_reachable_points)}
+        # LOGGER.warning("init to scene {} in pos {}".format(self.scene_name, self.agent_state()))
+        # npoints = len(self.currently_reachable_points)
+        # assert npoints > 100, "only {} reachable points after init".format(npoints)
         self.grids: Dict[str, Tuple[Dict[str, np.array], int, int, int, int]] = {}
+        self.initialize_grid()
 
     def initialize_grid_dimensions(
         self, reachable_points: Collection[Dict[str, float]]
@@ -93,7 +97,7 @@ class RoboThorEnvironment:
         if self.scene_name in self.grids:
             return
 
-        self.grids[self.scene_name] = ({},) + self.initialize_grid_dimensions(self.currently_reachable_points)  # type: ignore
+        self.grids[self.scene_name] = ({},) + self.initialize_grid_dimensions(self.known_good_locations[self.scene_name])  # type: ignore
 
     def object_reachable(self, object_type: str) -> bool:
         """Determines whether a path can be computed from the discretized current agent location to the target object
@@ -191,18 +195,19 @@ class RoboThorEnvironment:
         if scene_name is not None and scene_name != self.scene_name:
             self.controller.reset(scene_name)
             assert self.last_action_success, "Could not reset to new scene"
-            assert len(self.currently_reachable_points) > 200, "only {} reachable points after reset".format(len(self.currently_reachable_points))
             if scene_name not in self.known_good_locations:
-                self.known_good_locations[scene_name] = self.agent_state()
-            else:
-                self.controller.step("TeleportFull", **self.known_good_locations[scene_name])
-                assert self.last_action_success, "Could not reset to known good location"
-        else:
-            assert (
-                self.scene_name in self.known_good_locations
-            ), "Resetting scene without known good location"
-            self.controller.step("TeleportFull", **self.known_good_locations[self.scene_name])
-            assert self.last_action_success, "Could not reset to known good location"
+                self.known_good_locations[scene_name] = copy.deepcopy(self.currently_reachable_points)
+        # else:
+            # assert (
+            #     self.scene_name in self.known_good_locations
+            # ), "Resetting scene without known good location"
+            # LOGGER.warning("Resetting {} to {}".format(self.scene_name, self.known_good_locations[self.scene_name]))
+            # self.controller.step("TeleportFull", **self.known_good_locations[self.scene_name])
+            # assert self.last_action_success, "Could not reset to known good location"
+
+        # npoints = len(self.currently_reachable_points)
+        # assert npoints > 100, "only {} reachable points after reset".format(npoints)
+
         self.initialize_grid()
 
     def randomize_agent_location(
@@ -215,7 +220,7 @@ class RoboThorEnvironment:
         state: Optional[Dict] = None
 
         while k == 0 or (not self.last_action_success and k < 10):
-            self.reset()
+            # self.reset()
             state = {**self.random_reachable_state(seed=seed), **partial_position}
             self.controller.step("TeleportFull", **state)
             k += 1
@@ -234,12 +239,13 @@ class RoboThorEnvironment:
         return self.agent_state()
 
     def random_reachable_state(
-        self, seed: int = None
+        self, seed: Optional[int] = None
     ) -> Dict[str, Union[Dict[str, float], float]]:
         """Returns a random reachable location in the scene."""
         if seed is not None:
             random.seed(seed)
-        xyz = random.choice(self.currently_reachable_points)
+        # xyz = random.choice(self.currently_reachable_points)
+        xyz = copy.copy(random.choice(self.known_good_locations[self.scene_name]))
         rotation = random.choice(
             np.arange(0.0, 360.0, self.config["rotateStepDegrees"])
         )
@@ -249,6 +255,9 @@ class RoboThorEnvironment:
             "rotation": {"x": 0.0, "y": float(rotation), "z": 0.0},
             "horizon": float(horizon),
         }
+
+    def known_good_locations_list(self):
+        return self.known_good_locations[self.scene_name]
 
     @property
     def currently_reachable_points(self) -> List[Dict[str, float]]:

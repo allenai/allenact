@@ -394,8 +394,7 @@ class PointNavTaskSampler(TaskSampler):
         # task_info['target'] = task_info['target_position']
         # task_info['actions'] = []
 
-        self.env.reset()
-        locs = copy.deepcopy(self.env.currently_reachable_points)
+        locs = self.env.known_good_locations_list()
 
         cond = True
         attempt = 0

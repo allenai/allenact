@@ -119,9 +119,9 @@ class PointNavTask(Task[RoboThorEnvironment]):
             self.last_action_success = self._success
         else:
             self.env.step({"action": action_str})
+            self.last_action_success = self.env.last_action_success
             pose = self.env.agent_state()
             self.path.append({k: pose[k] for k in ['x', 'y', 'z']})
-            self.last_action_success = self.env.last_action_success
 
         step_result = RLStepResult(
             observation=self.get_observations(),
@@ -133,7 +133,10 @@ class PointNavTask(Task[RoboThorEnvironment]):
 
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         assert mode in ["rgb", "depth"], "only rgb and depth rendering is implemented"
-        return self.env.current_frame['rgb']
+        if mode == "rgb":
+            return self.env.current_frame
+        elif mode == "depth":
+            return self.env.current_depth
 
     def _is_goal_in_range(self) -> bool:
         tget = self.task_info["target"]
@@ -146,8 +149,8 @@ class PointNavTask(Task[RoboThorEnvironment]):
         reward = -0.01
 
         geodesic_distance = self.env.dist_to_point(self.task_info['target'])
-        delta_distance_reward = self.last_geodesic_distance - geodesic_distance
-        reward += delta_distance_reward
+        if self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5:  # (robothor limits)
+            reward += self.last_geodesic_distance - geodesic_distance
         self.last_geodesic_distance = geodesic_distance
 
         if self._took_end_action:
@@ -227,9 +230,9 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             self.last_action_success = self._success
         else:
             self.env.step({"action": action_str})
+            self.last_action_success = self.env.last_action_success
             pose = self.env.agent_state()
             self.path.append({k: pose[k] for k in ['x', 'y', 'z']})
-            self.last_action_success = self.env.last_action_success
 
         step_result = RLStepResult(
             observation=self.get_observations(),

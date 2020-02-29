@@ -110,7 +110,7 @@ class PointNavRoboThorBaseExperimentConfig(ExperimentConfig):
         update_repeats = 4
         num_steps = 64
         save_interval = 1000000
-        log_interval = 1000
+        log_interval = 2000
         gamma = 0.99
         use_gae = True
         gae_lambda = 0.95
@@ -127,7 +127,7 @@ class PointNavRoboThorBaseExperimentConfig(ExperimentConfig):
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
-            advance_scene_rollout_period=None,
+            advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
                 PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps)
             ],

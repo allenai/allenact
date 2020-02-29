@@ -16,17 +16,17 @@ tail -f ~/work/data/embodied-rl/logexp
 
 
 nav-ablation-15
-python main.py -o ~/work/data/embodied-rl objectnav_robothor_rgb_deterministic_simpleconvGRU_ppo -s 12345 -c ~/work/data/embodied-rl/checkpoints/2020-02-28_17-10-23/exp_ObjectNav__time_2020-02-28_17-10-23__stage_00__steps_000003000960__seed_1929261812.pt &> ~/work/data/embodied-rl/logexp &
+python main.py -o ~/work/data/embodied-rl objectnav_robothor_rgb_deterministic_simpleconvGRU_ppo -s 12345 &> ~/work/data/embodied-rl/logexp &
 tail -f ~/work/data/embodied-rl/logexp
 
 nav-ablation-16
-python main.py -o ~/work/data/embodied-rl objectnav_robothor_depth_deterministic_simpleconvGRU_ppo -s 12345 -c ~/work/data/embodied-rl/checkpoints/2020-02-28_17-09-10/exp_ObjectNav__time_2020-02-28_17-09-10__stage_00__steps_000001000320__seed_1789368711.pt &> ~/work/data/embodied-rl/logexp &
+python main.py -o ~/work/data/embodied-rl objectnav_robothor_depth_deterministic_simpleconvGRU_ppo -s 12345 &> ~/work/data/embodied-rl/logexp &
 tail -f ~/work/data/embodied-rl/logexp
 
 nav-ablation-17
-python main.py -o ~/work/data/embodied-rl objectnav_robothor_rgb_deterministic_resnet50GRU_ppo -s 12345 -c ~/work/data/embodied-rl/checkpoints/2020-02-28_17-11-02/exp_ObjectNav__time_2020-02-28_17-11-02__stage_00__steps_000002000640__seed_1798481042.pt &> ~/work/data/embodied-rl/logexp &
+python main.py -o ~/work/data/embodied-rl objectnav_robothor_rgb_deterministic_resnet50GRU_ppo -s 12345 &> ~/work/data/embodied-rl/logexp &
 tail -f ~/work/data/embodied-rl/logexp
 
 nav-ablation-18
-python main.py -o ~/work/data/embodied-rl objectnav_robothor_depth_deterministic_resnet50GRU_ppo -s 12345 -c ~/work/data/embodied-rl/checkpoints/2020-02-28_17-11-17/exp_ObjectNav__time_2020-02-28_17-11-17__stage_00__steps_000002000640__seed_1798481042.pt &> ~/work/data/embodied-rl/logexp &
+python main.py -o ~/work/data/embodied-rl objectnav_robothor_depth_deterministic_resnet50GRU_ppo -s 12345 &> ~/work/data/embodied-rl/logexp &
 tail -f ~/work/data/embodied-rl/logexp
