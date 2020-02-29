@@ -36,8 +36,6 @@ class ObjectNavHabitatRGBDeterministicSimpleConvGRUPPOExperimentConfig(ObjectNav
     CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE
     CONFIG.SIMULATOR.RGB_SENSOR.POSITION = [0, 0.88, 0]
 
-    CONFIG.SIMULATOR.pop('DEPTH_SENSOR')
-
     TRAIN_CONFIGS = construct_env_configs(CONFIG)
 
     @classmethod
