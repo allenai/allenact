@@ -43,7 +43,7 @@ class RoboThorEnvironment:
         )
         recursive_update(self.config, {**kwargs, "agentMode": "bot"})
         self.controller = Controller(**self.config)
-        self.known_good_location = self.agent_state()
+        self.known_good_locations: Dict[str, Any] = {self.scene_name: self.agent_state()}
         self.grids: Dict[str, Tuple[Dict[str, np.array], int, int, int, int]] = {}
 
     def initialize_grid_dimensions(
@@ -191,12 +191,17 @@ class RoboThorEnvironment:
         if scene_name is not None and scene_name != self.scene_name:
             self.controller.reset(scene_name)
             assert self.last_action_success, "Could not reset to new scene"
-            self.known_good_location = self.agent_state()
+            assert len(self.currently_reachable_points) > 200, "only {} reachable points after reset".format(len(self.currently_reachable_points))
+            if scene_name not in self.known_good_locations:
+                self.known_good_locations[scene_name] = self.agent_state()
+            else:
+                self.controller.step("TeleportFull", **self.known_good_locations[scene_name])
+                assert self.last_action_success, "Could not reset to known good location"
         else:
             assert (
-                self.known_good_location is not None
+                self.scene_name in self.known_good_locations
             ), "Resetting scene without known good location"
-            self.controller.step("TeleportFull", **self.known_good_location)
+            self.controller.step("TeleportFull", **self.known_good_locations[self.scene_name])
             assert self.last_action_success, "Could not reset to known good location"
         self.initialize_grid()
 
