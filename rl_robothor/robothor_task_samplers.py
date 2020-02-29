@@ -400,7 +400,7 @@ class PointNavTaskSampler(TaskSampler):
         attempt = 0
         while cond and attempt < 10:
             self.env.randomize_agent_location()
-            target = random.choice(locs)
+            target = copy.copy(random.choice(locs))
             cond = self.env.dist_to_point(target) <= 0
             attempt += 1
 
