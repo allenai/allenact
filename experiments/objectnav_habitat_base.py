@@ -73,7 +73,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 4
-        num_steps = 3128
+        num_steps = 128
         save_interval = 1000000
         log_interval = 10000
         gamma = 0.99
