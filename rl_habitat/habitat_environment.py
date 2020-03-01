@@ -44,6 +44,11 @@ class HabitatEnvironment(object):
         goal = self.get_current_episode().goals[0].position
         return self.env.sim.geodesic_distance(curr, goal)
 
+    def get_distance_to_target(self) -> float:
+        curr = self.get_location()
+        goal = self.get_current_episode().goals[0]['view_points'][0]['agent_state']['position']
+        return self.env.sim.geodesic_distance(curr, goal)
+
     def get_location(self) -> AgentState:
         return self.env.sim.get_agent_state().position
 

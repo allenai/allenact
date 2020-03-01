@@ -196,7 +196,7 @@ class ObjectNavTask(Task[HabitatTask]):
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
         self.last_geodesic_distance = self.env.get_current_episode().info['geodesic_distance']
-        self.last_distance_to_goal = self.env.env.get_metrics()["distance_to_goal"]
+        self.last_distance_to_goal = self.env.get_distance_to_target()  # self.env.env.get_metrics()["distance_to_goal"]
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
@@ -246,7 +246,7 @@ class ObjectNavTask(Task[HabitatTask]):
     def judge(self) -> float:
         reward = -0.01
 
-        distance_to_goal = self.env.env.get_metrics()["distance_to_goal"]
+        distance_to_goal = self.env.get_distance_to_target() # self.env.env.get_metrics()["distance_to_goal"]
         # geodesic_distance = self.env.get_geodesic_distance()
         if distance_to_goal in [float('-inf'), float('inf')] or np.isnan(distance_to_goal):
             distance_to_goal = self.last_distance_to_goal
