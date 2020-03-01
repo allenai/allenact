@@ -195,7 +195,7 @@ class ObjectNavTask(Task[HabitatTask]):
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
-        self.last_geodesic_distance = self.env.get_current_episode().info['geodesic_distance']
+        self.last_geodesic_distance = self.env.get_geodesic_distance() #self.env.get_current_episode().info['geodesic_distance']
         self.last_distance_to_goal = self.env.env.get_metrics()["distance_to_goal"]
         self._rewards = []
         self._distance_to_goal = []
@@ -252,7 +252,7 @@ class ObjectNavTask(Task[HabitatTask]):
             geodesic_distance = self.last_geodesic_distance
         delta_distance_reward = self.last_geodesic_distance - geodesic_distance
         # delta_distance_reward = self.last_distance_to_goal- distance_to_goal
-        print("Geodesic Distance:", geodesic_distance, "--- Last Geodesic Distance:", self.last_geodesic_distance, "--- Delta:", delta_distance_reward)
+        # print("Geodesic Distance:", geodesic_distance, "--- Last Geodesic Distance:", self.last_geodesic_distance, "--- Delta:", delta_distance_reward)
         reward += delta_distance_reward
         # self.last_distance_to_goal = distance_to_goal
         self.last_geodesic_distance = geodesic_distance
