@@ -33,7 +33,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.2
 
-    NUM_PROCESSES = 32
+    NUM_PROCESSES = 30
 
     SENSORS = [
         RGBSensorHabitat(
@@ -70,7 +70,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     CONFIG = habitat.get_config('configs/gibson.yaml')
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
-    CONFIG.SIMULATOR_GPU_IDS = [1,2,3]
+    CONFIG.SIMULATOR_GPU_IDS = [1, 2, 3]
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
     CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['*']
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES

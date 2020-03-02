@@ -139,6 +139,9 @@ class PointNavTask(Task[HabitatTask]):
         geodesic_distance = self.env.env.get_metrics()['distance_to_goal']  # self.env.get_geodesic_distance()
         delta_distance_reward = self.last_geodesic_distance - geodesic_distance
         reward += delta_distance_reward
+        print("Geodesic Distance:", geodesic_distance,
+              "--- Last Geodesic Distance:", self.last_geodesic_distance,
+              "--- Delta:", delta_distance_reward)
         self.last_geodesic_distance = geodesic_distance
 
         if self._took_end_action:
