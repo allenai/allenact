@@ -308,11 +308,11 @@ class PointNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
             self.coorinate_embedding_size = coordinate_dims
 
         self.visual_encoder = nn.Sequential(
-            nn.Conv2d(2048, 2048, (3, 3), padding=1),
+            nn.Conv2d(2048, 2048, (1, 1)),
             nn.ReLU(),
-            nn.Conv2d(2048, 2048, (3, 3), padding=1),
+            nn.Conv2d(2048, 2048, (1, 1)),
             nn.ReLU(),
-            nn.Conv2d(2048, 2048, (3, 3), padding=1),
+            nn.Conv2d(2048, 2048, (1, 1)),
             nn.AdaptiveAvgPool2d((1,1)),
             nn.Flatten(),
             nn.Linear(2048, 512)
