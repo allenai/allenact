@@ -29,12 +29,12 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.1
 
-    NUM_PROCESSES = 4
+    NUM_PROCESSES = 14
 
     CONFIG = habitat.get_config('configs/mp3d.yaml')
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
-    CONFIG.SIMULATOR_GPU_IDS = [0]
+    CONFIG.SIMULATOR_GPU_IDS = [1, 2, 3, 4, 5, 6, 7]
     CONFIG.DATASET.TYPE = 'ObjectNav-v1'
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
@@ -57,9 +57,9 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
     CONFIG.TASK.GOAL_SENSOR_UUID = 'objectgoal'
     CONFIG.TASK.MEASUREMENTS = ['DISTANCE_TO_GOAL', 'SPL']
     CONFIG.TASK.SPL.TYPE = 'SPL'
-    CONFIG.TASK.SPL.DISTANCE_TO = 'VIEW_POINTS'
+    # CONFIG.TASK.SPL.DISTANCE_TO = 'VIEW_POINTS'
     CONFIG.TASK.SPL.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
-    CONFIG.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "VIEW_POINTS"
+    # CONFIG.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "VIEW_POINTS"
 
     @classmethod
     def tag(cls):
