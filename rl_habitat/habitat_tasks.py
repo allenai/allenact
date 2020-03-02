@@ -86,7 +86,7 @@ class PointNavTask(Task[HabitatTask]):
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
-        self.last_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']  # self.env.get_current_episode().info['geodesic_distance']
+        self.last_geodesic_distance = self.env.get_current_episode().info['geodesic_distance']  # self.env.env.get_metrics()['distance_to_goal']
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
