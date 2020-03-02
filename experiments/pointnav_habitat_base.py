@@ -33,7 +33,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.2
 
-    NUM_PROCESSES = 30
+    NUM_PROCESSES = 1
 
     SENSORS = [
         RGBSensorHabitat(
