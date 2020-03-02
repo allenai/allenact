@@ -309,14 +309,11 @@ class PointNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
 
         self.visual_encoder = nn.Sequential(
             nn.Conv2d(2048, 2048, (3, 3), padding=1),
-            nn.MaxPool2d((2, 2), stride=2),
             nn.ReLU(),
             nn.Conv2d(2048, 2048, (3, 3), padding=1),
-            nn.MaxPool2d((2, 2), stride=2),
             nn.ReLU(),
             nn.Conv2d(2048, 2048, (3, 3), padding=1),
-            nn.MaxPool2d((2, 2), stride=2),
-            nn.ReLU(),
+            nn.AdaptiveAvgPool2d((1,1)),
             nn.Flatten(),
             nn.Linear(2048, 512)
         )
