@@ -2,7 +2,8 @@
 
 import numbers
 from collections import defaultdict
-from typing import List, Dict, Optional, DefaultDict
+import typing
+from typing import List, Dict, Optional, DefaultDict, Union, Any
 
 import numpy as np
 import torch
@@ -14,7 +15,7 @@ from tensorboardX.proto.summary_pb2 import Summary as TBXSummary
 
 def batch_observations(
     observations: List[Dict], device: Optional[torch.device] = None
-) -> Dict[str, torch.Tensor]:
+) -> Dict[str, Union[Dict, torch.Tensor]]:
     """Transpose a batch of observation dicts to a dict of batched
     observations.
 
@@ -28,16 +29,47 @@ def batch_observations(
 
     Transposed dict of lists of observations.
     """
-    batch: DefaultDict = defaultdict(list)
+    # batch: DefaultDict = defaultdict(list)
+    #
+    # for obs in observations[1:]:
+    #     for sensor in obs:
+    #         batch[sensor].append(to_tensor(obs[sensor]))
+    #
+    # for sensor in batch:
+    #     batch[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)
 
-    for obs in observations:
-        for sensor in obs:
-            batch[sensor].append(to_tensor(obs[sensor]))
+    def dict_from_observation(observation: Dict[str, Any]) -> Dict[str, List[Any]]:
+        batch: DefaultDict = defaultdict(list)
 
-    for sensor in batch:
-        batch[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)
+        for sensor in observation:
+            if isinstance(observation[sensor], Dict):
+                batch[sensor] = dict_from_observation(observation[sensor])
+            else:
+                batch[sensor].append(to_tensor(observation[sensor]))
 
-    return batch
+        return batch
+
+    def fill_dict_from_observations(batch: Dict[str, Union[Dict, List]], observation: Dict[str, Any]) -> None:
+        for sensor in observation:
+            if isinstance(observation[sensor], Dict):
+                fill_dict_from_observations(batch[sensor], observation[sensor])
+            else:
+                batch[sensor].append(to_tensor(observation[sensor]))
+
+    def dict_to_batch(batch: Dict[str, Union[Dict, List]], device: Optional[torch.device]=None) -> None:
+        for sensor in batch:
+            if isinstance(batch[sensor], Dict):
+                dict_to_batch(batch[sensor], device)
+            else:
+                batch[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)
+
+    batch = dict_from_observation(observations[0])
+    for obs in observations[1:]:
+        fill_dict_from_observations(batch, obs)
+
+    dict_to_batch(batch, device)
+
+    return typing.cast(Dict[str, Union[Dict, torch.Tensor]], batch)
 
 
 def to_tensor(v) -> torch.Tensor:

@@ -610,12 +610,8 @@ class OnPolicyRLEngine(object):
     def collect_rollout_step(self, rollouts: RolloutStorage, render=None):
         # sample actions
         with torch.no_grad():
-            step_observation = {
-                k: v[rollouts.step] for k, v in rollouts.observations.items()
-            }
-
             actor_critic_output, recurrent_hidden_states = self.actor_critic(
-                step_observation,
+                rollouts.pick_observation_step(rollouts.step),
                 rollouts.recurrent_hidden_states[rollouts.step],
                 rollouts.prev_actions[rollouts.step],
                 rollouts.masks[rollouts.step],
@@ -718,10 +714,8 @@ class OnPolicyRLEngine(object):
                 self.collect_rollout_step(rollouts)
 
             with torch.no_grad():
-                step_observation = {k: v[-1] for k, v in rollouts.observations.items()}
-
                 actor_critic_output, _ = self.actor_critic(
-                    step_observation,
+                    rollouts.pick_observation_step(-1),
                     rollouts.recurrent_hidden_states[-1],
                     rollouts.prev_actions[-1],
                     rollouts.masks[-1],
