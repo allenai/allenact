@@ -648,18 +648,21 @@ class ThreadedVectorSampledTasks(VectorSampledTasks):
             *[(Queue(), Queue()) for _ in range(self._num_processes)]
         )
         self._workers = []
-        # noinspection PyShadowingBuiltins
         for id, stuff in enumerate(
-            zip(parent_read_queues, parent_write_queues, sampler_fn_args)
+                zip(parent_read_queues, parent_write_queues, sampler_fn_args)
         ):
-            parent_read_queue, parent_write_queue, sampler_fn_args = stuff  # type: ignore
+            parent_read_queue, parent_write_queue, current_sampler_fn_args = stuff  # type: ignore
+            LOGGER.info(
+                "Starting {}-th worker with args {}".format(id, current_sampler_fn_args)
+            )
             thread = Thread(
                 target=self._task_sampling_loop_worker,
                 args=(
+                    id,
                     parent_write_queue.get,
                     parent_read_queue.put,
                     make_sampler_fn,
-                    sampler_fn_args,
+                    current_sampler_fn_args,
                     self._auto_resample_when_done,
                     self.metrics_out_queue,
                 ),

@@ -18,6 +18,12 @@ class ResNetEmbedder(nn.Module):
 
     def forward(self, x):
         with torch.no_grad():
+            # # TODO Debug
+            # import cv2
+            # for it in range(x.shape[0]):
+            #     cvim = 255.0 * (0.5 + 0.22 * x[it].to('cpu').permute(1, 2, 0).numpy()[:, :, ::-1])
+            #     cv2.imwrite('test_lores{}.png'.format(it), cvim)
+
             x = self.model.conv1(x)
             x = self.model.bn1(x)
             x = self.model.relu(x)
@@ -81,7 +87,7 @@ class ResnetPreProcessorHabitat(Preprocessor):
         return self
 
     def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:
-        x = obs[self.input_uuids[0]].to(self.device).permute(0, 3, 1, 2)
+        x = obs[self.input_uuids[0]].to(self.device).permute(0, 3, 1, 2)  # bhwc -> bchw
         # If the input is depth, repeat it across all 3 channels
         if x.shape[1] == 1:
             x = x.repeat(1, 3, 1, 1)

@@ -40,6 +40,7 @@ class ObjectNavTaskSampler(TaskSampler):
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
         fixed_tasks: Optional[List[Dict[str, Any]]] = None,
+        allow_flipping: bool = False,
         *args,
         **kwargs
     ) -> None:
@@ -53,6 +54,7 @@ class ObjectNavTaskSampler(TaskSampler):
         self.sensors = sensors
         self.max_steps = max_steps
         self._action_space = action_space
+        self.allow_flipping = allow_flipping
 
         self.scene_counter: Optional[int] = None
         self.scene_order: Optional[List[str]] = None
@@ -197,6 +199,11 @@ class ObjectNavTaskSampler(TaskSampler):
         task_info['initial_orientation'] = pose["rotation"]["y"]
 
         task_info["actions"] = []
+
+        if self.allow_flipping and random.random() > 0.5:
+            task_info["mirrored"] = True
+        else:
+            task_info["mirrored"] = False
 
         # task_info = copy.deepcopy(self.sample_episode(scene))
         # task_info['actions'] = []

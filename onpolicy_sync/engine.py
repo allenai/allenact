@@ -27,7 +27,7 @@ import numpy as np
 
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from onpolicy_sync.storage import RolloutStorage
-from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
+from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks, ThreadedVectorSampledTasks
 from rl_base.experiment_config import ExperimentConfig
 from utils.experiment_utils import (
     ScalarMeanTracker,
@@ -122,7 +122,7 @@ class OnPolicyRLEngine(object):
                 )
             else:
                 self.device = "cuda:%d" % self.machine_params["gpu_ids"][0]
-                torch.cuda.set_device(self.device)  # type: ignore
+                # torch.cuda.set_device(self.device)  # type: ignore
 
         if self.deterministic_cudnn:
             set_deterministic_cudnn()
@@ -237,6 +237,7 @@ class OnPolicyRLEngine(object):
             seeds = self.worker_seeds(
                 self.machine_params["nprocesses"], initial_seed=self.seed
             )
+            # self._vector_tasks = ThreadedVectorSampledTasks(  # TODO Debugging
             self._vector_tasks = VectorSampledTasks(
                 make_sampler_fn=self.config.make_sampler_fn,
                 sampler_fn_args=self.get_sampler_fn_args(self.config, seeds),
@@ -610,8 +611,9 @@ class OnPolicyRLEngine(object):
     def collect_rollout_step(self, rollouts: RolloutStorage, render=None):
         # sample actions
         with torch.no_grad():
+            step_observation = rollouts.pick_observation_step(rollouts.step)
             actor_critic_output, recurrent_hidden_states = self.actor_critic(
-                rollouts.pick_observation_step(rollouts.step),
+                step_observation,
                 rollouts.recurrent_hidden_states[rollouts.step],
                 rollouts.prev_actions[rollouts.step],
                 rollouts.masks[rollouts.step],

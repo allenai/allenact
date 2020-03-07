@@ -38,7 +38,7 @@ def batch_observations(
     # for sensor in batch:
     #     batch[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)
 
-    def dict_from_observation(observation: Dict[str, Any]) -> Dict[str, List[Any]]:
+    def dict_from_observation(observation: Dict[str, Any]) -> Dict[str, Union[Dict, List]]:
         batch: DefaultDict = defaultdict(list)
 
         for sensor in observation:
@@ -57,6 +57,7 @@ def batch_observations(
                 batch[sensor].append(to_tensor(observation[sensor]))
 
     def dict_to_batch(batch: Dict[str, Union[Dict, List]], device: Optional[torch.device]=None) -> None:
+        batch = typing.cast(Union[Dict, List, torch.Tensor], batch)
         for sensor in batch:
             if isinstance(batch[sensor], Dict):
                 dict_to_batch(batch[sensor], device)
@@ -64,6 +65,7 @@ def batch_observations(
                 batch[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)
 
     batch = dict_from_observation(observations[0])
+
     for obs in observations[1:]:
         fill_dict_from_observations(batch, obs)
 

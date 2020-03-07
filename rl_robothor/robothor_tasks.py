@@ -203,6 +203,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
         self.episode_optimal_corners = self.env.path_corners(task_info["object_type"])  # assume it's valid (sampler must take care)!
+        self.mirror = task_info['mirrored']
         dist = self.env.path_corners_to_dist(self.episode_optimal_corners)
         if dist == float("inf"):
             dist = -1.0  # -1.0 for unreachable
@@ -231,6 +232,12 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
     def _step(self, action: int) -> RLStepResult:
         action_str = self.action_names()[action]
 
+        if self.mirror:
+            if action_str == ROTATE_RIGHT:
+                action_str = ROTATE_LEFT
+            elif action_str == ROTATE_LEFT:
+                action_str = ROTATE_RIGHT
+
         if action_str == END:
             self._took_end_action = True
             self._success = self._is_goal_in_range()
@@ -252,9 +259,13 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         assert mode in ["rgb", "depth"], "only rgb and depth rendering is implemented"
         if mode == "rgb":
-            return self.env.current_frame
+            frame = self.env.current_frame.copy()
         elif mode == "depth":
-            return self.env.current_depth
+            frame = self.env.current_depth.copy()
+        if self.mirror:
+            frame = frame[:, ::-1, :].copy()  # horizontal flip
+            # print("mirrored render")
+        return frame
 
     def _is_goal_in_range(self) -> bool:
         return any(
@@ -282,6 +293,17 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         res = compute_single_spl(self.path, self.episode_optimal_corners, self._success)
         self.env.step({"action": "TeleportFull", **pose})
         return res
+
+    def get_observations(self) -> Any:
+        obs = self.sensor_suite.get_observations(env=self.env, task=self)
+        if self.mirror:
+            # flipped = []
+            for o in obs:
+                if ('rgb' in o or 'depth' in o) and isinstance(obs[o], np.ndarray) and len(obs[o].shape) == 3:  # heuristic to determine this is a visual sensor
+                    obs[o] = obs[o][:, ::-1, :].copy()  # horizontal flip
+                    # flipped.append(o)
+            # print('flipped {}'.format(flipped))
+        return obs
 
     def metrics(self) -> Dict[str, Any]:
         if not self.is_done():

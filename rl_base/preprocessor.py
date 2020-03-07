@@ -140,11 +140,13 @@ class ObservationSet:
     source_ids : List containing sensor and preprocessor ids to be consumed by agents. Each source uuid must be unique.
     graph : Computation graph for all preprocessors.
     observation_spaces : Observation spaces of all output sources.
+    device : Device where the PreprocessorGraph is executed.
     """
 
     source_ids: List[str]
     graph: PreprocessorGraph
     observation_spaces: SpaceDict
+    device: torch.device = torch.device("cpu")
 
     def __init__(
         self,
@@ -196,6 +198,7 @@ class ObservationSet:
 
     def to(self, device: torch.device) -> "ObservationSet":
         self.graph = self.graph.to(device)
+        self.device = device
         return self
 
     def get_observations(

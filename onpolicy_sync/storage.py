@@ -48,7 +48,7 @@ class RolloutStorage:
 
         self.masks = torch.ones(num_steps + 1, num_processes, 1)
 
-        self.flattened_spaces = dict()
+        self.flattened_spaces: Dict[str, List[str]] = dict()
 
         self.num_steps = num_steps
         self.step = 0
@@ -66,10 +66,13 @@ class RolloutStorage:
         self.prev_actions = self.prev_actions.to(device)
         self.masks = self.masks.to(device)
 
-    def insert_initial_observations(self, observations: Dict[str, Union[torch.Tensor, Dict]], prefix: str='', path: List[str]=[], time_step: int=0):
+    def insert_initial_observations(self, observations: Dict[str, Union[torch.Tensor, Dict]], prefix: str='',
+                                    path: List[str]=[], time_step: int=0):
         for sensor in observations:
             if not torch.is_tensor(observations[sensor]):
-                self.insert_initial_observations(observations[sensor], prefix=prefix + sensor + '.', path=path + [sensor])
+                self.insert_initial_observations(
+                    observations[sensor], prefix=prefix + sensor + '.', path=path + [sensor], time_step=time_step
+                )
             else:
                 sensor_name = prefix + sensor
                 if sensor_name not in self.observations:
@@ -88,7 +91,7 @@ class RolloutStorage:
                     )
 
                     if len(path) > 0:
-                        assert sensor_name not in self.flattened_spaces, "new flattened name already existing in flattened spaces"
+                        assert sensor_name not in self.flattened_spaces, "new flattened name {} already existing in flattened spaces".format(sensor_name)
                         self.flattened_spaces[sensor_name] = path + [sensor]
 
                 self.observations[sensor_name][time_step].copy_(observations[sensor])

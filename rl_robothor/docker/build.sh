@@ -36,8 +36,8 @@ fi
 
 
 #if (id -nG | grep -qw "docker") || [ "$USER" == "root" ]; then
-    NVIDIA_VERSION=418.87.01
-    CUDA_VERSION=10.1
+#    NVIDIA_VERSION=418.87.01
+#    CUDA_VERSION=10.1
     echo "Building Docker container with CUDA Version: $CUDA_VERSION, NVIDIA Driver: $NVIDIA_VERSION"
     docker build -f rl_robothor/docker/Dockerfile --build-arg CUDA_VERSION=$CUDA_VERSION --build-arg NVIDIA_VERSION=$NVIDIA_VERSION -t jordisai2/embodiedrl:latest .
 #else
