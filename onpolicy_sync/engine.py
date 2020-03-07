@@ -131,7 +131,7 @@ class OnPolicyRLEngine(object):
             set_seed(self.seed)
 
         self.observation_set = None
-        if "observation_set" in self.machine_params:
+        if "observation_set" in self.machine_params and self.machine_params["observation_set"] is not None:
             self.observation_set = self.machine_params["observation_set"].to(
                 self.device
             )
@@ -140,6 +140,14 @@ class OnPolicyRLEngine(object):
             ).to(self.device)
         else:
             self.actor_critic = config.create_model().to(self.device)
+
+        # if self.mode == "train" and len(self.machine_params["gpu_ids"]) > 0:
+        #     LOGGER.info("Using data parallelism to actor critic")
+        #     self.actor_critic = torch.nn.DataParallel(self.actor_critic).to("cuda")
+        #     self.is_data_parallel = True
+        # else:
+        #     self.is_data_parallel = False
+        self.is_data_parallel = False
 
         self.optimizer: Optional[optim.Optimizer] = None  # type: ignore
         self.lr_scheduler: Optional[optim.lr_scheduler._LRScheduler] = None
@@ -322,7 +330,7 @@ class OnPolicyRLEngine(object):
             "step_count": self.step_count,
             "local_start_time_str": self.local_start_time_str,
             "optimizer_state_dict": self.optimizer.state_dict(),  # type: ignore
-            "model_state_dict": self.actor_critic.state_dict(),
+            "model_state_dict": self.actor_critic.state_dict() if not self.is_data_parallel else self.actor_critic.module,
             "trainer_seed": self.seed,
             "extra_tag": self.extra_tag,
         }
@@ -349,7 +357,10 @@ class OnPolicyRLEngine(object):
             ckpt,
         )
 
-        self.actor_critic.load_state_dict(ckpt["model_state_dict"])
+        if not self.is_data_parallel:
+            self.actor_critic.load_state_dict(ckpt["model_state_dict"])
+        else:
+            self.actor_critic.module.load_state_dict(ckpt["model_state_dict"])
         self.step_count = ckpt["step_count"]  # type: ignore
         self.total_steps = ckpt["total_steps"]  # type: ignore
 
@@ -982,9 +993,9 @@ class OnPolicyRLEngine(object):
                     RolloutStorage(
                         self.steps_in_rollout,
                         self.num_processes,
-                        self.actor_critic.action_space,
-                        self.actor_critic.recurrent_hidden_state_size,
-                        num_recurrent_layers=self.actor_critic.num_recurrent_layers,
+                        self.actor_critic.action_space if not self.is_data_parallel else self.actor_critic.module.action_space,
+                        self.actor_critic.recurrent_hidden_state_size if not self.is_data_parallel else self.actor_critic.module.recurrent_hidden_state_size,
+                        num_recurrent_layers=self.actor_critic.num_recurrent_layers if not self.is_data_parallel else self.actor_critic.module.num_recurrent_layers,
                     )
                 )
 
@@ -1076,9 +1087,9 @@ class OnPolicyRLEngine(object):
         rollouts = RolloutStorage(
             rollout_steps,
             self.num_processes,
-            self.actor_critic.action_space,
-            self.actor_critic.recurrent_hidden_state_size,
-            num_recurrent_layers=self.actor_critic.num_recurrent_layers,
+            self.actor_critic.action_space if not self.is_data_parallel else self.actor_critic.module.action_space,
+            self.actor_critic.recurrent_hidden_state_size if not self.is_data_parallel else self.actor_critic.module.recurrent_hidden_state_size,
+            num_recurrent_layers=self.actor_critic.num_recurrent_layers if not self.is_data_parallel else self.actor_critic.module.num_recurrent_layers,
         )
 
         render: Union[None, np.ndarray, List[np.ndarray]] = [] if render_video else None

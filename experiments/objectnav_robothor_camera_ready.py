@@ -104,31 +104,31 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
     ]
 
     PREPROCESSORS = [
-        ResnetPreProcessorHabitat(
-            config={
-                "input_height": SCREEN_SIZE,
-                "input_width": SCREEN_SIZE,
-                "output_width": 7,
-                "output_height": 7,
-                "output_dims": 512,
-                "pool": False,
-                "torchvision_resnet_model": models.resnet18,
-                "input_uuids": ["rgb_lowres"],
-                "output_uuid": "rgb_resnet",
-                "parallel": False,
-            }
+        Builder(ResnetPreProcessorHabitat,
+                dict(config={
+                    "input_height": SCREEN_SIZE,
+                    "input_width": SCREEN_SIZE,
+                    "output_width": 7,
+                    "output_height": 7,
+                    "output_dims": 512,
+                    "pool": False,
+                    "torchvision_resnet_model": models.resnet18,
+                    "input_uuids": ["rgb_lowres"],
+                    "output_uuid": "rgb_resnet",
+                    "parallel": True,  # TODO False for debugging
+            })
         ),
-        FasterRCNNPreProcessorRoboThor(
-            config={
-                "input_height": CAMERA_HEIGHT,
-                "input_width": CAMERA_WIDTH,
-                "max_dets": DETECTOR_DETS,
-                "detector_spatial_res": 7,
-                "detector_thres": 0.12,
-                "input_uuids": ["rgb_highres"],
-                "output_uuid": "object_detector",
-                "parallel": True,  # TODO False for debugging
-            }
+        Builder(FasterRCNNPreProcessorRoboThor,
+                dict(config={
+                    "input_height": CAMERA_HEIGHT,
+                    "input_width": CAMERA_WIDTH,
+                    "max_dets": DETECTOR_DETS,
+                    "detector_spatial_res": 7,
+                    "detector_thres": 0.12,
+                    "input_uuids": ["rgb_highres"],
+                    "output_uuid": "object_detector",
+                    "parallel": True,  # TODO False for debugging
+            })
         )
     ]
 
@@ -163,7 +163,7 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
         update_repeats = 4
         num_steps = 30
         save_interval = 200000
-        log_interval = 2000
+        log_interval = 1000
         gamma = 0.99
         use_gae = True
         gae_lambda = 0.95
@@ -196,7 +196,7 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
             gpu_ids = [] if not torch.cuda.is_available() else [0]
             render_video = False
         elif mode == "valid":
-            nprocesses = 1  # TODO debugging (0)
+            nprocesses = 0  # TODO debugging (0)
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
@@ -213,8 +213,8 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
         observation_set = ObservationSet(
-            self.OBSERVATIONS, self.PREPROCESSORS, self.SENSORS
-        )
+            self.OBSERVATIONS, [prep() for prep in self.PREPROCESSORS], self.SENSORS
+        ) if nprocesses > 0 else None
 
         return {
             "nprocesses": nprocesses,
