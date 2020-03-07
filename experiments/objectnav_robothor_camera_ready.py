@@ -160,7 +160,7 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
         a2c_steps = int(1e8)
         lr = 1e-3
         num_mini_batch = 1
-        update_repeats = 4
+        update_repeats = 1
         num_steps = 30
         save_interval = 200000
         log_interval = 1000
@@ -196,7 +196,7 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
             gpu_ids = [] if not torch.cuda.is_available() else [0]
             render_video = False
         elif mode == "valid":
-            nprocesses = 0  # TODO debugging (0)
+            nprocesses = 1  # TODO debugging (0)
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
@@ -212,8 +212,11 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
+        prep_args = {}
+        if mode == "valid":
+            prep_args["parallel"] = False
         observation_set = ObservationSet(
-            self.OBSERVATIONS, [prep() for prep in self.PREPROCESSORS], self.SENSORS
+            self.OBSERVATIONS, [prep(config=prep_args) for prep in self.PREPROCESSORS], self.SENSORS
         ) if nprocesses > 0 else None
 
         return {
