@@ -52,7 +52,7 @@ class ObjectNavRoboThorBaseExperimentConfig(ExperimentConfig):
 
     DETECTOR_DETS = 3
 
-    MAX_STEPS = 200
+    MAX_STEPS = 500
     ADVANCE_SCENE_ROLLOUT_PERIOD = 10  # if more than 1 scene per worker
 
     VALIDATION_SAMPLES_PER_SCENE = 1

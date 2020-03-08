@@ -64,6 +64,9 @@ def batch_observations(
             else:
                 batch[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)
 
+    if len(observations) == 0:
+        return typing.cast(Dict[str, Union[Dict, torch.Tensor]], observations)
+
     batch = dict_from_observation(observations[0])
 
     for obs in observations[1:]:

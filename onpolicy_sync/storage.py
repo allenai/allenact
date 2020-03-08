@@ -20,6 +20,7 @@ class RolloutStorage:
         action_space,
         recurrent_hidden_state_size,
         num_recurrent_layers=1,
+        flatten_separator='._AUTOFLATTEN_.'
     ):
         self.observations = {}
 
@@ -52,6 +53,7 @@ class RolloutStorage:
 
         self.num_steps = num_steps
         self.step = 0
+        self.flatten_separator = flatten_separator
 
     def to(self, device):
         for sensor in self.observations:
@@ -66,12 +68,30 @@ class RolloutStorage:
         self.prev_actions = self.prev_actions.to(device)
         self.masks = self.masks.to(device)
 
+    def flatten_spaces(self, observations: Dict[str, Union[torch.Tensor, Dict]]) -> Dict[str, torch.Tensor]:
+        def recursive_flatten(obs: Dict[str, Union[torch.Tensor, Dict]], res: Dict[str, torch.Tensor],
+                              prefix: str='', flatten_sep=self.flatten_separator) -> None:
+            for sensor in obs:
+                if not torch.is_tensor(obs[sensor]):
+                    recursive_flatten(
+                        obs[sensor], res, prefix=prefix + sensor + flatten_sep
+                    )
+                else:
+                    sensor_name = prefix + sensor
+                    res[sensor_name] = obs[sensor]
+        flattened_obs = {}
+        recursive_flatten(observations, flattened_obs)
+        return flattened_obs
+
     def insert_initial_observations(self, observations: Dict[str, Union[torch.Tensor, Dict]], prefix: str='',
                                     path: List[str]=[], time_step: int=0):
         for sensor in observations:
             if not torch.is_tensor(observations[sensor]):
                 self.insert_initial_observations(
-                    observations[sensor], prefix=prefix + sensor + '.', path=path + [sensor], time_step=time_step
+                    observations[sensor],
+                    prefix=prefix + sensor + self.flatten_separator,
+                    path=path + [sensor],
+                    time_step=time_step
                 )
             else:
                 sensor_name = prefix + sensor
@@ -91,32 +111,11 @@ class RolloutStorage:
                     )
 
                     if len(path) > 0:
-                        assert sensor_name not in self.flattened_spaces, "new flattened name {} already existing in flattened spaces".format(sensor_name)
+                        assert sensor_name not in self.flattened_spaces,\
+                            "new flattened name {} already existing in flattened spaces".format(sensor_name)
                         self.flattened_spaces[sensor_name] = path + [sensor]
 
                 self.observations[sensor_name][time_step].copy_(observations[sensor])
-
-    # def insert_observations(self, observations: Dict[str, Union[torch.Tensor, Dict]], prefix: str='', path: List[str]=[]):
-    #     for sensor in observations:
-    #         if not torch.is_tensor(observations[sensor]):
-    #             self.insert_observations(observations[sensor], prefix=prefix + sensor + '.', path=path + [sensor])
-    #             return
-    #         else:
-    #             sensor_name = prefix + sensor
-    #             if sensor_name not in self.observations:
-    #                 # noinspection PyTypeChecker
-    #                 self.observations[sensor_name] = (
-    #                     torch.zeros_like(observations[sensor])
-    #                     .unsqueeze(0)
-    #                     .repeat(self.num_steps + 1)
-    #                     .to(self.actions.get_device())
-    #                 )
-    #
-    #                 if len(path) > 0:
-    #                     assert sensor_name not in self.flattened_spaces, "new flattened name already existing in flattened spaces"
-    #                     self.flattened_spaces[sensor_name] = path + [sensor]
-    #
-    #             self.observations[sensor_name][self.step + 1].copy_(observations[sensor])
 
     def insert(
         self,
