@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional
 import PIL
 import gym
 import numpy as np
+from pyquaternion import Quaternion
 import typing
 from PIL import Image
 import torch
@@ -384,3 +385,27 @@ class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         frame = env.current_frame
         goal = frame["objectgoal"][0]
         return goal
+
+
+class AgentCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
+    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
+        super().__init__(config, *args, **kwargs)
+
+        self.observation_space = gym.spaces.Box(-1000, 1000, shape=(4,))
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "agent_position_and_rotation"
+
+    def _get_observation_space(self) -> gym.spaces.Discrete:
+        return typing.cast(gym.spaces.Discrete, self.observation_space)
+
+    def get_observation(
+        self,
+        env: HabitatEnvironment,
+        task: Optional[PointNavTask],
+        *args: Any,
+        **kwargs: Any
+    ) -> Any:
+        position = env.env.sim.get_agent_state().position
+        quaternion = Quaternion(env.env.sim.get_agent_state().rotation.components)
+        return np.array([position[0], position[1], position[2], quaternion.radians])
