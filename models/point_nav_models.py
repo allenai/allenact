@@ -317,7 +317,7 @@ class PointNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
             nn.Conv2d(2048, 512, (1, 1)),
             nn.ReLU(),
             nn.Conv2d(512, 32, (1, 1)),
-            nn.AdaptiveAvgPool2d((1,1)),
+            # nn.AdaptiveAvgPool2d((1,1)),
             nn.Flatten(),
             nn.Linear(2048, 512)
         )

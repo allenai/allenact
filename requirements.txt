@@ -101,6 +101,7 @@ pyflakes==2.1.1
 pyglet==1.4.10
 Pygments==2.5.2
 pymdown-extensions==6.3
+pyquaternion==0.9.5
 pyparsing==2.4.6
 python-dateutil==2.8.1
 python-utils==2.3.0
