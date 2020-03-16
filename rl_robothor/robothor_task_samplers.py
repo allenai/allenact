@@ -1,28 +1,15 @@
 from typing import List, Optional, Union, Dict, Any
-
-from rl_robothor.robothor_environment import RoboThorEnvironment
-
-from rl_base.task import TaskSampler
-
 import random
-import warnings
-import typing
-from typing import Optional, Dict, List, Any
-from collections import OrderedDict
-import logging
+import copy
 
 import gym
 
+from rl_base.task import TaskSampler
 from rl_robothor.robothor_tasks import ObjectNavTask, PointNavTask
 from rl_robothor.robothor_environment import RoboThorEnvironment
-# from rl_ai2thor.object_nav.task_samplers import (
-#     ObjectNavTaskSampler as BaseObjectNavTaskSampler,
-# )
 from rl_base.sensor import Sensor
 from utils.experiment_utils import set_seed, set_deterministic_cudnn
-import copy
-
-LOGGER = logging.getLogger("embodiedrl")
+from utils.system import LOGGER
 
 
 class ObjectNavTaskSampler(TaskSampler):

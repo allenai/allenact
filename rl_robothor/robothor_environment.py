@@ -1,6 +1,5 @@
 import typing
 from typing import Any, Optional, Dict, List, Union, Iterable, Tuple, Sized, Collection
-import logging
 import random
 import copy
 from collections import OrderedDict
@@ -12,8 +11,7 @@ from ai2thor.util import metrics
 import numpy as np
 
 from utils.experiment_utils import recursive_update
-
-LOGGER = logging.getLogger("embodiedrl")
+from utils.system import LOGGER
 
 
 class RoboThorEnvironment:

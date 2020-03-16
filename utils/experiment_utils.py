@@ -203,15 +203,18 @@ def set_deterministic_cudnn() -> None:
         torch.backends.cudnn.benchmark = False  # type: ignore
 
 
-def set_seed(seed: int) -> None:
+def set_seed(seed: Optional[int]=None) -> None:
     """Set seeds for multiple (cpu) sources of randomness.
 
     Sets seeds for (cpu) `pytorch`, base `random`, and `numpy`.
 
     # Parameters
 
-    seed : The seed to set.
+    seed : The seed to set. If set to None, keep using the current seed.
     """
+    if seed is None:
+        return
+
     torch.manual_seed(seed)  # seeds the RNG for all devices (CPU and GPUs)
     random.seed(seed)
     np.random.seed(seed)

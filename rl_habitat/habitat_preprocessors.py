@@ -1,5 +1,4 @@
 from typing import Dict, Any, Callable, Optional, List, Union
-import logging
 
 import torch
 import torch.nn as nn
@@ -8,8 +7,7 @@ import numpy as np
 import gym
 
 from rl_base.preprocessor import Preprocessor
-
-LOGGER = logging.getLogger("embodiedrl")
+from utils.system import LOGGER
 
 
 class ResNetEmbedder(nn.Module):

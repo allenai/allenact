@@ -1,6 +1,5 @@
 import typing
 from typing import Tuple, Dict
-import logging
 
 import gym
 from gym.spaces import Dict as SpaceDict
@@ -11,8 +10,7 @@ from models.basic_models import RNNStateEncoder
 from onpolicy_sync.policy import ActorCriticModel, LinearActorHead, LinearCriticHead
 from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
-
-LOGGER = logging.getLogger("embodiedrl")
+from utils.system import LOGGER
 
 
 class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):

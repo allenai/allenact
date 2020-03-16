@@ -22,6 +22,7 @@ from rl_base.task import TaskSampler
 from setproctitle import setproctitle as ptitle
 
 from utils.tensor_utils import tile_images
+from utils.system import init_logging, LOGGER
 
 try:
     # Use torch.multiprocessing if we can.
@@ -31,8 +32,6 @@ try:
     import torch.multiprocessing as mp
 except ImportError:
     import multiprocessing as mp  # type: ignore
-
-LOGGER = logging.getLogger("embodiedrl")
 
 STEP_COMMAND = "step"
 NEXT_TASK_COMMAND = "next_task"
@@ -89,6 +88,7 @@ class VectorSampledTasks(object):
         auto_resample_when_done: bool = True,
         multiprocessing_start_method: Optional[str] = "forkserver",
         mp_ctx: Optional[BaseContext] = None,
+        metrics_out_queue: mp.Queue = None,
     ) -> None:
 
         self._is_waiting = False
@@ -111,7 +111,7 @@ class VectorSampledTasks(object):
             self._mp_ctx = mp.get_context(multiprocessing_start_method)
         else:
             self._mp_ctx = typing.cast(BaseContext, mp_ctx)
-        self.metrics_out_queue = self._mp_ctx.Queue()
+        self.metrics_out_queue = metrics_out_queue or self._mp_ctx.Queue()
         self._workers = []
         (
             self._connection_read_fns,
@@ -186,6 +186,8 @@ class VectorSampledTasks(object):
         Tasks/TaskSampler."""
 
         ptitle("VectorSampledTask: {}".format(worker_id))
+
+        init_logging()
 
         task_sampler = make_sampler_fn(**sampler_fn_args)
         current_task = task_sampler.next_task()
@@ -594,14 +596,17 @@ class VectorSampledTasks(object):
         self._is_waiting = False
         return results
 
-    def render(self, mode: str = "human", *args, **kwargs) -> Union[np.ndarray, None]:
+    def render(self, mode: str = "human", *args, **kwargs) -> Union[np.ndarray, None, List[np.ndarray]]:
         """Render observations from all Tasks in a tiled image."""
         for write_fn in self._connection_write_fns:
             write_fn((RENDER_COMMAND, (args, {"mode": "rgb", **kwargs})))
-        images = [read_fn() for read_fn in self._connection_read_fns]
+        images: List[np.ndarray] = [read_fn() for read_fn in self._connection_read_fns]
 
         for index, _, _, _ in reversed(self._paused):
             images.insert(index, np.zeros_like(images[0]))
+
+        if mode == "rgb_list":
+            return images
 
         tile = tile_images(images)
         if mode == "human":

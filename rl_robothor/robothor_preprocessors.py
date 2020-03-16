@@ -1,7 +1,6 @@
 import typing
 from typing import Dict, Any, Optional, List, Union
 from collections import OrderedDict
-import logging
 
 import gym
 from gym.spaces.dict import Dict as SpaceDict
@@ -11,8 +10,7 @@ from torch.nn.parallel import DistributedDataParallel
 
 from utils.cacheless_frcnn import fasterrcnn_resnet50_fpn
 from rl_base.preprocessor import Preprocessor
-
-LOGGER = logging.getLogger("embodiedrl")
+from utils.system import LOGGER
 
 
 class BatchedFasterRCNN(torch.nn.Module):
