@@ -347,7 +347,6 @@ class VectorSampledTasks(object):
 
         List of observations for each of the unpaused tasks.
         """
-        print("Num unpaused tasks:", self.num_unpaused_tasks)
         return self.call(["get_observations"] * self.num_unpaused_tasks,)
 
     def next_task_at(self, index_process: int) -> List[RLStepResult]:
@@ -417,6 +416,7 @@ class VectorSampledTasks(object):
         List of outputs from the step method of tasks.
         """
         self.async_step(actions)
+        print("Num unpaused tasks:", self.num_unpaused_tasks)
         return self.wait_step()
 
     def reset_all(self):
