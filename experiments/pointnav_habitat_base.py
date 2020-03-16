@@ -33,7 +33,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.2
 
-    NUM_PROCESSES = 8
+    NUM_PROCESSES = 12
 
     SENSORS = [
         RGBSensorHabitat(
@@ -70,7 +70,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     CONFIG = habitat.get_config('configs/gibson.yaml')
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
-    CONFIG.SIMULATOR_GPU_IDS = [1]
+    CONFIG.SIMULATOR_GPU_IDS = [1, 2, 3, 4, 5, 6]
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
     CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['*']
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
@@ -150,14 +150,14 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
-                gpu_ids = [0]
+                gpu_ids = [7]
             render_video = False
         elif mode == "test":
             nprocesses = 1
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
-                gpu_ids = [0]
+                gpu_ids = [7]
             render_video = True
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
