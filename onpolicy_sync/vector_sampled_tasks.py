@@ -475,6 +475,7 @@ class VectorSampledTasks(object):
         index : which process to pause. All indexes after this
             one will be shifted down by one.
         """
+        print("PAUSE AT", index)
         if self._is_waiting:
             for read_fn in self._connection_read_fns:
                 read_fn()
