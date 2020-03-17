@@ -482,7 +482,6 @@ class VectorSampledTasks(object):
         write_fn = self._connection_write_fns.pop(index)
         worker = self._workers.pop(index)
         self._paused.append((index, read_fn, write_fn, worker))
-        print("PAUSING!")
 
     def resume_all(self) -> None:
         """Resumes any paused processes."""

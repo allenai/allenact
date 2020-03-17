@@ -688,6 +688,7 @@ class OnPolicyRLEngine(object):
             else:
                 keep.append(it)
                 running.append(obs)
+        print("PAUSED:", paused)
 
         for p in reversed(paused):
             self.vector_tasks.pause_at(p)
