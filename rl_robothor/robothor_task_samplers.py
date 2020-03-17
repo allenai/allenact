@@ -22,6 +22,7 @@ class ObjectNavTaskSampler(TaskSampler):
         max_steps: int,
         env_args: Dict[str, Any],
         action_space: gym.Space,
+        rewards_config: Dict,
         scene_period: Optional[Union[int, str]] = None,
         max_tasks: Optional[int] = None,
         seed: Optional[int] = None,
@@ -31,6 +32,7 @@ class ObjectNavTaskSampler(TaskSampler):
         *args,
         **kwargs
     ) -> None:
+        self.rewards_config = rewards_config
         self.env_args = env_args
         self.scenes = scenes
         self.object_types = object_types
@@ -213,6 +215,7 @@ class ObjectNavTaskSampler(TaskSampler):
             task_info=task_info,
             max_steps=self.max_steps,
             action_space=self._action_space,
+            reward_configs=self.rewards_config
         )
         return self._last_sampled_task
 
@@ -243,6 +246,7 @@ class PointNavTaskSampler(TaskSampler):
         max_steps: int,
         env_args: Dict[str, Any],
         action_space: gym.Space,
+        rewards_config: Dict,
         scene_period: Optional[Union[int, str]] = None,
         max_tasks: Optional[int] = None,
         seed: Optional[int] = None,
@@ -251,6 +255,7 @@ class PointNavTaskSampler(TaskSampler):
         *args,
         **kwargs
     ) -> None:
+        self.rewards_config = rewards_config
         self.env_args = env_args
         self.scenes = scenes
         # self.object_types = object_types
@@ -420,6 +425,7 @@ class PointNavTaskSampler(TaskSampler):
             task_info=task_info,
             max_steps=self.max_steps,
             action_space=self._action_space,
+            reward_configs=self.rewards_config
         )
         return self._last_sampled_task
 

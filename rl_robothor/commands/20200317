@@ -1,0 +1,33 @@
+robothor-cready-1
+
+sudo apt-get update && sudo apt-get -y install python3-pip libxrender1 libsm6 xserver-xorg-core xorg python3-venv vim pciutils wget git module-init-tools tzdata
+pip3 install pipenv==2018.11.26
+PATH=/home/ubuntu/.local/bin:$PATH
+cd /work/eccv2020/embodied-rl
+pipenv install --skip-lock --dev
+pipenv install --skip-lock ai2thor==2.3.6
+
+cd /work/eccv2020/embodied-rl
+sudo /home/ubuntu/.local/bin/pipenv run python rl_robothor/docker/startx.py &> ~/logxserver &
+ofolder=~/work/data/the-robot-project/camera-ready/
+mkdir -p $ofolder
+pipenv run tensorboard --bind_all --logdir $ofolder &> ~/logtensorboard &
+rm -r $ofolder/*
+pipenv run python main.py -o $ofolder -s 12345 objectnav_robothor_camera_ready_old_cvpr_model_image_only_noshaping &> $ofolder/log_exp &
+tail -f $ofolder/log_exp
+
+
+robothor-cready-2
+
+sudo apt-get update && sudo apt-get -y install python3-pip libxrender1 libsm6 xserver-xorg-core xorg python3-venv vim pciutils wget git module-init-tools tzdata
+pip3 install pipenv==2018.11.26
+PATH=/home/ubuntu/.local/bin:$PATH
+pipenv install --skip-lock --dev
+pipenv install --skip-lock ai2thor==2.3.6
+sudo /home/ubuntu/.local/bin/pipenv run python rl_robothor/docker/startx.py &> ~/logxserver &
+ofolder=~/work/data/the-robot-project/camera-ready/
+mkdir -p $ofolder
+pipenv run tensorboard --bind_all --logdir $ofolder &> ~/logtensorboard &
+rm -r $ofolder/*
+pipenv run python main.py -o $ofolder -s 12345 objectnav_robothor_camera_ready_old_cvpr_model_image_only_shaping &> $ofolder/log_exp &
+tail -f $ofolder/log_exp
