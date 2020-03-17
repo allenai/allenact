@@ -416,7 +416,7 @@ class VectorSampledTasks(object):
         List of outputs from the step method of tasks.
         """
         self.async_step(actions)
-        print("Num unpaused tasks:", self.num_unpaused_tasks)
+        print("Paused:", self._paused)
         return self.wait_step()
 
     def reset_all(self):
