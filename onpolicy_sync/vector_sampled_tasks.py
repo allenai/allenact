@@ -237,7 +237,7 @@ class VectorSampledTasks(object):
                         result = getattr(current_task, function_name)()
                     else:
                         result = getattr(current_task, function_name)(*function_args)
-                    print("RESULT:", observations)
+                    print("RESULT:", result)
                     connection_write_fn(result)
 
                 elif command == ATTR_COMMAND:
