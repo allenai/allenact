@@ -345,14 +345,19 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         if self.reward_configs["shaping_weight"] == 0.0:
             return rew
 
-        geodesic_distance = self.env.dist_to_point(self.task_info["object_type"])
+        # geodesic_distance = self.env.dist_to_object(self.task_info["object_type"])
+        # if self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5:  # (robothor limits)
+        #     if self.last_geodesic_distance > geodesic_distance:
+        #         rew += self.reward_configs["delta_dist_reward_closer"]
+        #     elif self.last_geodesic_distance == geodesic_distance:
+        #         rew += self.reward_configs["delta_dist_reward_same"]
+        #     else:
+        #         rew += self.reward_configs["delta_dist_reward_further"]
+        # self.last_geodesic_distance = geodesic_distance
+
+        geodesic_distance = self.env.dist_to_object(self.task_info["object_type"])
         if self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5:  # (robothor limits)
-            if self.last_geodesic_distance > geodesic_distance:
-                rew += self.reward_configs["delta_dist_reward_closer"]
-            elif self.last_geodesic_distance == geodesic_distance:
-                rew += self.reward_configs["delta_dist_reward_same"]
-            else:
-                rew += self.reward_configs["delta_dist_reward_further"]
+            rew += self.last_geodesic_distance - geodesic_distance
         self.last_geodesic_distance = geodesic_distance
 
         # # ...and also exploring! We won't be able to hit the optimal path in test

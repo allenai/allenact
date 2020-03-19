@@ -43,6 +43,15 @@ class RoboThorEnvironment:
         self.controller = Controller(**self.config)
         self.known_good_locations: Dict[str, Any] = {self.scene_name: copy.deepcopy(self.currently_reachable_points)}
         assert len(self.known_good_locations[self.scene_name]) > 100
+
+        # onames = [o['objectId'] for o in self.last_event.metadata['objects']]
+        # removed = []
+        # for oname in onames:
+        #     if 'Painting' in oname:
+        #         self.controller.step("RemoveFromScene", objectId=oname)
+        #         removed.append(oname)
+        # LOGGER.info("Removed {} Paintings from {}".format(len(removed), self.scene_name))
+
         # LOGGER.warning("init to scene {} in pos {}".format(self.scene_name, self.agent_state()))
         # npoints = len(self.currently_reachable_points)
         # assert npoints > 100, "only {} reachable points after init".format(npoints)
@@ -111,6 +120,7 @@ class RoboThorEnvironment:
             self.dist_to_point(xyz) > -0.5
         )  # -1.0 for unreachable, 0.0 for end point
 
+    # TODO consider caching for some resolution (e.g. initial grid)?
     def path_corners(self, target: Union[str, Dict[str, float]]) -> Collection[Dict[str, float]]:
         """Returns an array with a sequence of xyz dictionaries objects representing the corners of the shortest path
          to the object of given type or end point location."""
@@ -197,6 +207,15 @@ class RoboThorEnvironment:
             if scene_name not in self.known_good_locations:
                 self.known_good_locations[scene_name] = copy.deepcopy(self.currently_reachable_points)
                 assert len(self.known_good_locations[scene_name]) > 100
+
+            # onames = [o['objectId'] for o in self.last_event.metadata['objects']]
+            # removed = []
+            # for oname in onames:
+            #     if 'Painting' in oname:
+            #         self.controller.step("RemoveFromScene", objectId=oname)
+            #         removed.append(oname)
+            # LOGGER.info("Removed {} Paintings from {}".format(len(removed), scene_name))
+
         # else:
             # assert (
             #     self.scene_name in self.known_good_locations
