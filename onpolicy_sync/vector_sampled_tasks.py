@@ -219,6 +219,7 @@ class VectorSampledTasks(object):
                     else:
                         current_task = task_sampler.next_task()
                     observations = current_task.get_observations()
+                    print("OBSERVATIONS:", observations)
                     connection_write_fn(observations)
 
                 elif command == RENDER_COMMAND:
