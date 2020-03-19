@@ -688,7 +688,6 @@ class OnPolicyRLEngine(object):
             else:
                 keep.append(it)
                 running.append(obs)
-        print("PAUSED:", paused)
 
         for p in reversed(paused):
             self.vector_tasks.pause_at(p)
@@ -1313,7 +1312,7 @@ class OnPolicyTester(OnPolicyRLEngine):
     ):
         super().__init__(
             config=config,
-            loaded_config_src_files=None,
+            # loaded_config_src_files=None,
             output_dir=output_dir,
             seed=seed,
             mode="test",

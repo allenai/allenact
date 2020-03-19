@@ -29,7 +29,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.1
 
-    NUM_PROCESSES = 14
+    NUM_PROCESSES = 12
 
     CONFIG = habitat.get_config('configs/mp3d.yaml')
     CONFIG.defrost()
