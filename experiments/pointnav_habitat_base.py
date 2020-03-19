@@ -235,7 +235,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     ) -> Dict[str, Any]:
         config = self.CONFIG.clone()
         config.defrost()
-        config.DATASET.DATA_PATH = self.TEST_SCENES
+        config.DATASET.DATA_PATH = self.VALID_SCENES
         config.freeze()
         return {
             "env_config": config,
