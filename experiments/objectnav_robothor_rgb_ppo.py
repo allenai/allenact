@@ -50,7 +50,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     SCREEN_SIZE = 224
 
     MAX_STEPS = 500
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10  # if more than 1 scene per worker
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000  # if more than 1 scene per worker
 
     VALIDATION_SAMPLES_PER_SCENE = 1
 
@@ -105,7 +105,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                     "torchvision_resnet_model": models.resnet18,
                     "input_uuids": ["rgb_lowres"],
                     "output_uuid": "rgb_resnet",
-                    "parallel": True,  # TODO False for debugging
+                    "parallel": False,  # TODO False for debugging
             })
         ),
     ]
@@ -170,7 +170,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
             nprocesses = 1 if not torch.cuda.is_available() else self.NUM_PROCESSES  # TODO default 2 for debugging
-            sampler_devices = [0, 1, 2, 3, 4, 5, 6]  # TODO vs4 only has 7 gpus
+            sampler_devices = [1, 2, 3, 4, 5, 6]  # TODO vs4 only has 7 gpus
             gpu_ids = [] if not torch.cuda.is_available() else [0]
             render_video = False
         elif mode == "valid":
@@ -178,7 +178,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
-                gpu_ids = [6]  # TODO vs4 only has 7 gpus
+                gpu_ids = [0]
             render_video = False
         elif mode == "test":
             nprocesses = 1
