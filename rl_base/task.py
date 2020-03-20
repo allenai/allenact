@@ -123,7 +123,6 @@ class Task(Generic[EnvType]):
         """
         assert not self.is_done()
         sr = self._step(action=action)
-        self.task_info["actions"].append(self.action_names()[action])
         self._total_reward += float(sr.reward)
         self._increment_num_steps_taken()
         return sr
@@ -174,8 +173,12 @@ class Task(Generic[EnvType]):
 
     @classmethod
     @abstractmethod
-    def action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
         """A tuple of action names.
+
+        # Parameters
+
+        kwargs : Keyword arguments.
 
         # Returns
 
@@ -183,6 +186,14 @@ class Task(Generic[EnvType]):
             running `task.step(i)` corresponds to taking action task.action_names()[i].
         """
         raise NotImplementedError()
+
+    def action_names(self) -> Tuple[str, ...]:
+        """Action names of the Task instance.
+
+        This method should be overwritten if `class_action_names`
+        requires key word arguments to determine the number of actions.
+        """
+        return self.class_action_names()
 
     @property
     def total_actions(self) -> int:
@@ -312,8 +323,7 @@ class TaskSampler(abc.ABC):
 
     @abstractmethod
     def reset(self) -> None:
-        """Resets task sampler to its original state (except for any seed).
-        """
+        """Resets task sampler to its original state (except for any seed)."""
         raise NotImplementedError()
 
     @abstractmethod

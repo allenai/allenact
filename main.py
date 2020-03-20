@@ -1,4 +1,5 @@
-"""Entry point to training/validating/testing for a user given experiment name"""
+"""Entry point to training/validating/testing for a user given experiment
+name."""
 
 import argparse
 import importlib

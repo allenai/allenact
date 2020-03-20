@@ -43,7 +43,7 @@ class ObjectNavThorExperimentConfig(rl_base.experiment_config.ExperimentConfig):
     def create_model(cls, **kwargs) -> torch.nn.Module:
         return models.object_nav_models.ObjectNavBaselineActorCritic(
             action_space=gym.spaces.Discrete(
-                len(rl_ai2thor.object_nav.tasks.ObjectNavTask.action_names())
+                len(rl_ai2thor.object_nav.tasks.ObjectNavTask.class_action_names())
             ),
             observation_space=rl_base.sensor.SensorSuite(
                 cls.SENSORS

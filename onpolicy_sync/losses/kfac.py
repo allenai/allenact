@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from models.basic_models import AddBias
+from rl_base.distributions import AddBias
 
 
 # TODO: In order to make this code faster:

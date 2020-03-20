@@ -90,7 +90,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         return self._took_end_action
 
     @classmethod
-    def action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
         return cls._actions
 
     def close(self) -> None:

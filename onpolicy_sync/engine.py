@@ -26,6 +26,7 @@ from torch.optim.lr_scheduler import _LRScheduler
 import numpy as np
 
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
+from onpolicy_sync.policy import ActorCriticModel
 from onpolicy_sync.storage import RolloutStorage
 from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
 from rl_base.experiment_config import ExperimentConfig
@@ -66,11 +67,11 @@ def validate(
 class OnPolicyRLEngine(object):
     """The reinforcement learning primary controller.
 
-    This `OnPolicyRLEngine` class handles all training, validation, and testing as
-    well as logging and checkpointing. You are not expected to
-    instantiate this class yourself, instead you should define an
-    experiment which will then be used to instantiate an `OnPolicyRLEngine` and
-    perform any desired tasks.
+    This `OnPolicyRLEngine` class handles all training, validation, and
+    testing as well as logging and checkpointing. You are not expected
+    to instantiate this class yourself, instead you should define an
+    experiment which will then be used to instantiate an
+    `OnPolicyRLEngine` and perform any desired tasks.
     """
 
     def __init__(
@@ -131,15 +132,22 @@ class OnPolicyRLEngine(object):
             set_seed(self.seed)
 
         self.observation_set = None
+        self.actor_critic: ActorCriticModel
+
         if "observation_set" in self.machine_params:
             self.observation_set = self.machine_params["observation_set"].to(
                 self.device
             )
-            self.actor_critic = config.create_model(
-                observation_set=self.observation_set
-            ).to(self.device)
+            self.actor_critic = typing.cast(
+                ActorCriticModel,
+                config.create_model(observation_set=self.observation_set).to(
+                    self.device
+                ),
+            )
         else:
-            self.actor_critic = config.create_model().to(self.device)
+            self.actor_critic = typing.cast(
+                ActorCriticModel, config.create_model().to(self.device)
+            )
 
         self.optimizer: Optional[optim.Optimizer] = None  # type: ignore
         self.lr_scheduler: Optional[optim.lr_scheduler._LRScheduler] = None
@@ -657,7 +665,7 @@ class OnPolicyRLEngine(object):
             device=self.device,
         )
 
-        npaused, keep, batch = self.remove_paused(observations)
+        npaused, keep, batch = self.remove_paused_and_batch(observations)
 
         if render is not None and len(keep) > 0:
             render.append(self.vector_tasks.render(mode="rgb_array"))
@@ -668,7 +676,9 @@ class OnPolicyRLEngine(object):
             observations=self._preprocess_observations(batch)
             if len(keep) > 0
             else batch,
-            recurrent_hidden_states=recurrent_hidden_states[:, keep],
+            recurrent_hidden_states=recurrent_hidden_states[:, keep]
+            if recurrent_hidden_states is not None
+            else None,
             actions=actions[keep],
             action_log_probs=actor_critic_output.distributions.log_probs(actions)[keep],
             value_preds=actor_critic_output.values[keep],
@@ -678,7 +688,7 @@ class OnPolicyRLEngine(object):
 
         return npaused
 
-    def remove_paused(self, observations):
+    def remove_paused_and_batch(self, observations):
         paused, keep, running = [], [], []
         for it, obs in enumerate(observations):
             if obs is None:
@@ -696,7 +706,7 @@ class OnPolicyRLEngine(object):
 
     def initialize_rollouts(self, rollouts, render: Optional[List[np.ndarray]] = None):
         observations = self.vector_tasks.get_observations()
-        npaused, keep, batch = self.remove_paused(observations)
+        npaused, keep, batch = self.remove_paused_and_batch(observations)
         if render is not None and len(keep) > 0:
             render.append(self.vector_tasks.render(mode="rgb_array"))
         rollouts.reshape(keep)
@@ -970,7 +980,7 @@ class OnPolicyRLEngine(object):
                     gae_lambda=self._stage_value(stage, "gae_lambda"),
                     max_grad_norm=self._stage_value(stage, "max_grad_norm"),
                     advance_scene_rollout_period=self._stage_value(
-                        stage, "advance_scene_rollout_period"
+                        stage, "advance_scene_rollout_period", allow_none=True
                     ),
                     teacher_forcing=stage.teacher_forcing,
                 )
@@ -981,7 +991,9 @@ class OnPolicyRLEngine(object):
                         self.num_processes,
                         self.actor_critic.action_space,
                         self.actor_critic.recurrent_hidden_state_size,
-                        num_recurrent_layers=self.actor_critic.num_recurrent_layers,
+                        num_recurrent_layers=self.actor_critic.num_recurrent_layers
+                        if "num_recurrent_layers" in dir(self.actor_critic)
+                        else 0,
                     )
                 )
 

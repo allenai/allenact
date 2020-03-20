@@ -14,7 +14,7 @@ training, validation and testing.
 Let's define a semantic navigation task, where agents have to navigate from a starting point in an environment to an
 object of a specific class using a minimal amount of steps and deciding when the goal has been reached.
 
-We need to define the methods `action_space`, `render`, `_step`, `reached_terminal_state`, `action_names`, `close`,
+We need to define the methods `action_space`, `render`, `_step`, `reached_terminal_state`, `class_action_names`, `close`,
 `metrics`, and `query_expert` from the base `Task` definition.
 
 
@@ -49,7 +49,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         return gym.spaces.Discrete(len(self._actions))
 
     @classmethod
-    def action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls) -> Tuple[str, ...]:
         return cls._actions
         def reached_terminal_state(self) -> bool:
         return self._took_end_action
@@ -65,7 +65,7 @@ Next, we define the main method `_step` that will be called every time the agent
 class ObjectNavTask(Task[AI2ThorEnvironment]):
     ...
     def _step(self, action: int) -> RLStepResult:
-        action_str = self.action_names()[action]
+        action_str = self.class_action_names()[action]
 
         if action_str == 'END':
             self._took_end_action = True
