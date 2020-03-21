@@ -1178,7 +1178,7 @@ class OnPolicyRLEngine(object):
             step = self.step_from_checkpoint(checkpoint_file_name)
             LOGGER.info("{}/{} {} steps".format(it + 1, len(checkpoints), step,))
 
-            scalars, render, samples = self.run_eval(
+            scalars, samples = self.run_eval(
                 checkpoint_file_name, rollout_steps
             )
 
