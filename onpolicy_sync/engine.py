@@ -1182,7 +1182,7 @@ class OnPolicyRLEngine(object):
                 checkpoint_file_name, rollout_steps
             )
 
-            self.vector_tasks.metrics_out_queue.put(("test_metrics", (scalars, render)))
+            self.vector_tasks.metrics_out_queue.put(("test_metrics", (scalars,)))
 
             results = {scalar: scalars[scalar][0] for scalar in scalars}
             results.update({"training_steps": step, "tasks": samples})
