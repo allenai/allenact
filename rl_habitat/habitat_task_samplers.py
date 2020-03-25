@@ -74,7 +74,7 @@ class PointNavTaskSampler(TaskSampler):
 
     def next_task(self, force_advance_scene=False) -> PointNavTask:
         if self.max_tasks is not None and self.max_tasks <= 0:
-            return None
+            return self.env.num_episodes
 
         if self.env is not None:
             self.env.reset()
@@ -143,7 +143,7 @@ class ObjectNavTaskSampler(TaskSampler):
             config=self.env_config,
             dataset=dataset
         )
-        self.max_tasks = None # env.num_episodes
+        self.max_tasks = env.num_episodes
         self.reset_tasks = self.max_tasks
         return env
 
@@ -156,7 +156,7 @@ class ObjectNavTaskSampler(TaskSampler):
 
     @property
     def total_unique(self) -> Union[int, float, None]:
-        return None
+        return self.env.num_episodes
 
     @property
     def last_sampled_task(self) -> Optional[PointNavTask]:

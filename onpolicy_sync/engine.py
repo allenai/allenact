@@ -379,14 +379,14 @@ class OnPolicyRLEngine(object):
     def process_eval_metrics(self, count=-1):
         unused = []
         used = []
-        while (not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
+        while (count < 0 and not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
             try:
                 if count < 0:
                     metric = self.vector_tasks.metrics_out_queue.get_nowait()
                 else:
                     metric = self.vector_tasks.metrics_out_queue.get(timeout=1)
                 if (
-                    isinstance(metric, tuple) and metric[0] == "test_metrics"
+                        isinstance(metric, tuple) and metric[0] == "test_metrics"
                 ):  # queue reused for test
                     unused.append(metric)
                 else:
@@ -394,14 +394,14 @@ class OnPolicyRLEngine(object):
                         {k: v for k, v in metric.items() if k != "task_info"}
                     )
                     used.append(metric)
-                    count -= 1
+                    if count > 0:
+                        count -= 1
             except queue.Empty:
                 pass
-
         for item in unused:
             self.vector_tasks.metrics_out_queue.put(item)
-
         return self.scalars.pop_and_reset(), used
+
 
     def log(self, count=-1):
         train_metrics = []
@@ -1094,7 +1094,10 @@ class OnPolicyRLEngine(object):
         self.vector_tasks.resume_all()
         self.vector_tasks.reset_all()
 
-        metrics, samples = self.process_eval_metrics(count=self.num_processes)
+        num_tasks = self.vector_tasks.call("total_unique")
+        total_tasks = sum(num_tasks)
+
+        metrics, samples = self.process_eval_metrics(count=total_tasks)
 
         if render_video:
             render = self.process_video(render, max_clip_len)
@@ -1192,9 +1195,6 @@ class OnPolicyRLEngine(object):
                 json.dump(all_results, f, indent=4)
 
             self.log(count=1)
-
-            with open(fname, "w") as f:
-                json.dump(all_results, f, indent=4)
 
         LOGGER.info("Metrics saved in {}".format(fname))
 
