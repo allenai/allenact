@@ -51,6 +51,12 @@ class PointNavHabitatDepthDeterministicResNet50PPOExperimentConfig(PointNavHabit
 
     TRAIN_CONFIGS = construct_env_configs(CONFIG)
 
+    TEST_CONFIG = CONFIG.clone()
+    TEST_CONFIG.defrost()
+    TEST_CONFIG.DATASET.DATA_PATH = PointNavHabitatBaseExperimentConfig.VALID_SCENES
+    TEST_CONFIG.freeze()
+    TEST_CONFIGS = construct_env_configs(TEST_CONFIG)
+
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return PointNavActorCriticResNet50(

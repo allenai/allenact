@@ -153,11 +153,11 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
                 gpu_ids = [7]
             render_video = False
         elif mode == "test":
-            nprocesses = 1
+            nprocesses = 12
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
-                gpu_ids = [7]
+                gpu_ids = [0]
             render_video = True
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
@@ -233,10 +233,11 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        config = self.CONFIG.clone()
-        config.defrost()
-        config.DATASET.DATA_PATH = self.VALID_SCENES
-        config.freeze()
+        # config = self.CONFIG.clone()
+        # config.defrost()
+        # config.DATASET.DATA_PATH = self.VALID_SCENES
+        # config.freeze()
+        config = self.TEST_CONFIGS[process_ind]
         return {
             "env_config": config,
             "max_steps": self.MAX_STEPS,
