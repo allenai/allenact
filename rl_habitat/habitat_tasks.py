@@ -195,8 +195,8 @@ class ObjectNavTask(Task[HabitatTask]):
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
-        self.last_geodesic_distance = self.env.get_current_episode().info['geodesic_distance']
-        self.last_distance_to_goal = self.env.get_current_episode().info['geodesic_distance'] #self.env.env.get_metrics()["distance_to_goal"]
+        self.last_geodesic_distance = env.get_geodesic_distance() # self.env.get_current_episode().info['geodesic_distance']
+        # self.last_distance_to_goal = self.env.get_current_episode().info['geodesic_distance'] #self.env.env.get_metrics()["distance_to_goal"]
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
@@ -247,15 +247,18 @@ class ObjectNavTask(Task[HabitatTask]):
         reward = -0.01
 
         # distance_to_goal = self.env.get_distance_to_target() # self.env.env.get_metrics()["distance_to_goal"]
-        distance_to_goal = self.env.env.get_metrics()["distance_to_goal"]
-        if distance_to_goal in [float('-inf'), float('inf')] or np.isnan(distance_to_goal):
-            distance_to_goal = self.last_distance_to_goal
-        delta_distance_reward = self.last_distance_to_goal - distance_to_goal
+        # distance_to_goal = self.env.env.get_metrics()["distance_to_goal"]
+
+        new_geodesic_distance = self.emv.get_geodesic_distance()
+        if new_geodesic_distance in [float('-inf'), float('inf')] or np.isnan(new_geodesic_distance):
+            new_geodesic_distance = self.last_geodesic_distance
+        delta_distance_reward = self.last_geodesic_distance - new_geodesic_distance
+
         # delta_distance_reward = self.last_distance_to_goal- distance_to_goal
         # print("Geodesic Distance:", geodesic_distance, "--- Last Geodesic Distance:", self.last_geodesic_distance, "--- Delta:", delta_distance_reward)
         reward += delta_distance_reward
         # self.last_distance_to_goal = distance_to_goal
-        self.last_distance_to_goal = distance_to_goal
+        self.last_geodesic_distance = new_geodesic_distance
 
         if self._took_end_action:
             reward += 10.0 if self._success else 0.0
