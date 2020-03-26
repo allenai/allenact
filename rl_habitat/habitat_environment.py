@@ -43,6 +43,7 @@ class HabitatEnvironment(object):
     def get_geodesic_distance(self) -> float:
         curr = self.get_location()
         goals = self.get_current_episode().goals
+        print("Goal Index:", self.goal_index, "Number of Goals:", len(goals))
 
         goal = goals[self.goal_index].position
         distance = self.env.sim.geodesic_distance(curr, goal)
@@ -50,7 +51,7 @@ class HabitatEnvironment(object):
             self.goal_index = (self.goal_index + 1) % len(goals)
             goal = goals[self.goal_index].position
             distance = self.env.sim.geodesic_distance(curr, goal)
-
+        print("Distance:", distance)
         return distance
 
     def get_distance_to_target(self) -> float:
@@ -79,6 +80,7 @@ class HabitatEnvironment(object):
 
     def reset(self):
         self._current_frame = self.env.reset()
+        self.goal_index = 0
 
     @property
     def last_action_success(self) -> bool:
