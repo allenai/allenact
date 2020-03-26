@@ -22,6 +22,7 @@ class HabitatEnvironment(object):
             config=config,
             dataset=dataset
         )
+        self.goal_index = 0
 
     @property
     def scene_name(self) -> str:
@@ -41,8 +42,16 @@ class HabitatEnvironment(object):
 
     def get_geodesic_distance(self) -> float:
         curr = self.get_location()
-        goal = self.get_current_episode().goals[0].position
-        return self.env.sim.geodesic_distance(curr, goal)
+        goals = self.get_current_episode().goals
+
+        goal = goals[self.goal_index].position
+        distance = self.env.sim.geodesic_distance(curr, goal)
+        while distance in [float('-inf'), float('inf')] or np.isnan(distance):
+            self.goal_index = (self.goal_index + 1) % len(goals)
+            goal = goals[self.goal_index].position
+            distance = self.env.sim.geodesic_distance(curr, goal)
+
+        return distance
 
     def get_distance_to_target(self) -> float:
         curr = self.get_location()
