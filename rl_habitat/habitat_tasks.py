@@ -50,15 +50,6 @@ class HabitatTask(Task[HabitatEnvironment]):
     def last_action_success(self, value: Optional[bool]):
         self._last_action_success = value
 
-    def _step(self, action: int) -> RLStepResult:
-        self._last_action_ind = action
-        self.last_action = self.action_names()[action]
-        self.last_action_success = None
-        step_result = super(HabitatTask, self).step(action=action)
-        step_result.info["action"] = self._last_action_ind
-        step_result.info["action_success"] = self.last_action_success
-        return step_result
-
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         if mode == "rgb":
             return self.env.current_frame["rgb"]

@@ -105,7 +105,7 @@ class PointNavTaskSampler(TaskSampler):
 
     def set_seed(self, seed: int):
         self.seed = seed
-        
+
 
 class ObjectNavTaskSampler(TaskSampler):
     def __init__(
