@@ -9,8 +9,10 @@ from rl_habitat.habitat_utils import construct_env_configs
 from experiments.objectnav_habitat_base import ObjectNavHabitatBaseExperimentConfig
 
 
-class ObjectNavHabitatDebthDeterministicSimpleConvGRUPPOExperimentConfig(ObjectNavHabitatBaseExperimentConfig):
-    """A Point Navigation experiment configuraqtion in Habitat"""
+class ObjectNavHabitatDebthDeterministicSimpleConvGRUPPOExperimentConfig(
+    ObjectNavHabitatBaseExperimentConfig
+):
+    """A Point Navigation experiment configuraqtion in Habitat."""
 
     SENSORS = [
         DepthSensorHabitat(
@@ -31,9 +33,13 @@ class ObjectNavHabitatDebthDeterministicSimpleConvGRUPPOExperimentConfig(ObjectN
     ]
 
     CONFIG = ObjectNavHabitatBaseExperimentConfig.CONFIG.clone()
-    CONFIG.SIMULATOR.AGENT_0.SENSORS = ['DEPTH_SENSOR']
-    CONFIG.SIMULATOR.DEPTH_SENSOR.WIDTH = ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE
-    CONFIG.SIMULATOR.DEPTH_SENSOR.HEIGHT = ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE
+    CONFIG.SIMULATOR.AGENT_0.SENSORS = ["DEPTH_SENSOR"]
+    CONFIG.SIMULATOR.DEPTH_SENSOR.WIDTH = (
+        ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE
+    )
+    CONFIG.SIMULATOR.DEPTH_SENSOR.HEIGHT = (
+        ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE
+    )
     CONFIG.SIMULATOR.DEPTH_SENSOR.POSITION = [0, 0.88, 0]
 
     TRAIN_CONFIGS = construct_env_configs(CONFIG)
@@ -47,5 +53,5 @@ class ObjectNavHabitatDebthDeterministicSimpleConvGRUPPOExperimentConfig(ObjectN
             hidden_size=512,
             object_type_embedding_dim=32,
             num_rnn_layers=1,
-            rnn_type='GRU'
+            rnn_type="GRU",
         )

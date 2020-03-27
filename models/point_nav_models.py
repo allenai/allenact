@@ -9,9 +9,7 @@ from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
 from gym.spaces.dict import Dict as SpaceDict
 
-from habitat_baselines.rl.ddppo.policy.resnet_policy import (
-    PointNavResNetPolicy,
-)
+from habitat_baselines.rl.ddppo.policy.resnet_policy import PointNavResNetPolicy
 
 
 class PointNavActorCriticSimpleConvLSTM(ActorCriticModel[CategoricalDistr]):
@@ -25,7 +23,7 @@ class PointNavActorCriticSimpleConvLSTM(ActorCriticModel[CategoricalDistr]):
         coordinate_embedding_dim=8,
         coordinate_dims=2,
         num_rnn_layers=1,
-        rnn_type='GRU',
+        rnn_type="GRU",
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
@@ -38,7 +36,7 @@ class PointNavActorCriticSimpleConvLSTM(ActorCriticModel[CategoricalDistr]):
             self.coorinate_embedding_size = coordinate_dims
 
         self.sensor_fusion = False
-        if 'rgb' in observation_space.spaces and 'depth' in observation_space.spaces:
+        if "rgb" in observation_space.spaces and "depth" in observation_space.spaces:
             self.sensor_fuser = nn.Linear(hidden_size * 2, hidden_size)
             self.sensor_fusion = True
 
@@ -49,18 +47,16 @@ class PointNavActorCriticSimpleConvLSTM(ActorCriticModel[CategoricalDistr]):
             + self.coorinate_embedding_size,
             self.recurrent_hidden_state_size,
             num_layers=num_rnn_layers,
-            rnn_type=rnn_type
+            rnn_type=rnn_type,
         )
 
-        self.actor = LinearActorHead(
-            self.recurrent_hidden_state_size, action_space.n
-        )
-        self.critic = LinearCriticHead(
-            self.recurrent_hidden_state_size
-        )
+        self.actor = LinearActorHead(self.recurrent_hidden_state_size, action_space.n)
+        self.critic = LinearCriticHead(self.recurrent_hidden_state_size)
 
         if self.embed_coordinates:
-            self.coordinate_embedding = nn.Linear(coordinate_dims, coordinate_embedding_dim)
+            self.coordinate_embedding = nn.Linear(
+                coordinate_dims, coordinate_embedding_dim
+            )
 
         self.train()
 
@@ -117,7 +113,7 @@ class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
         hidden_size=512,
         embed_coordinates=False,
         coordinate_embedding_dim=8,
-        coordinate_dims=2
+        coordinate_dims=2,
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
@@ -129,20 +125,18 @@ class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
         else:
             self.coorinate_embedding_size = coordinate_dims
 
-        if 'rgb' in observation_space.spaces and 'depth' in observation_space.spaces:
+        if "rgb" in observation_space.spaces and "depth" in observation_space.spaces:
             self.visual_encoder = nn.Linear(4096, hidden_size)
         else:
             self.visual_encoder = nn.Linear(2048, hidden_size)
 
-        self.actor = LinearActorHead(
-            self.recurrent_hidden_state_size, action_space.n
-        )
-        self.critic = LinearCriticHead(
-            self.recurrent_hidden_state_size
-        )
+        self.actor = LinearActorHead(self.recurrent_hidden_state_size, action_space.n)
+        self.critic = LinearCriticHead(self.recurrent_hidden_state_size)
 
         if self.embed_coordinates:
-            self.coordinate_embedding = nn.Linear(coordinate_dims, coordinate_embedding_dim)
+            self.coordinate_embedding = nn.Linear(
+                coordinate_dims, coordinate_embedding_dim
+            )
 
         self.train()
 
@@ -176,9 +170,17 @@ class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
 
         embs = []
         if "rgb_resnet" in observations:
-            embs.append(observations["rgb_resnet"].view(-1, observations["rgb_resnet"].shape[-1]))
+            embs.append(
+                observations["rgb_resnet"].view(
+                    -1, observations["rgb_resnet"].shape[-1]
+                )
+            )
         if "depth_resnet" in observations:
-            embs.append(observations["depth_resnet"].view(-1, observations["depth_resnet"].shape[-1]))
+            embs.append(
+                observations["depth_resnet"].view(
+                    -1, observations["depth_resnet"].shape[-1]
+                )
+            )
         emb = torch.cat(embs, dim=1)
 
         x = [self.visual_encoder(emb)] + x
@@ -189,7 +191,7 @@ class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
             ActorCriticOutput(
                 distributions=self.actor(x), values=self.critic(x), extras={}
             ),
-            torch.zeros((1, x.shape[0], self.recurrent_hidden_state_size))
+            torch.zeros((1, x.shape[0], self.recurrent_hidden_state_size)),
         )
 
 
@@ -204,7 +206,7 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
         coordinate_embedding_dim=8,
         coordinate_dims=2,
         num_rnn_layers=1,
-        rnn_type='GRU'
+        rnn_type="GRU",
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
@@ -216,7 +218,7 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
         else:
             self.coorinate_embedding_size = coordinate_dims
 
-        if 'rgb' in observation_space.spaces and 'depth' in observation_space.spaces:
+        if "rgb" in observation_space.spaces and "depth" in observation_space.spaces:
             self.visual_encoder = nn.Linear(4096, hidden_size)
         else:
             self.visual_encoder = nn.Linear(2048, hidden_size)
@@ -226,18 +228,16 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
             + self.coorinate_embedding_size,
             self.recurrent_hidden_state_size,
             num_layers=num_rnn_layers,
-            rnn_type=rnn_type
+            rnn_type=rnn_type,
         )
 
-        self.actor = LinearActorHead(
-            self.recurrent_hidden_state_size, action_space.n
-        )
-        self.critic = LinearCriticHead(
-            self.recurrent_hidden_state_size
-        )
+        self.actor = LinearActorHead(self.recurrent_hidden_state_size, action_space.n)
+        self.critic = LinearCriticHead(self.recurrent_hidden_state_size)
 
         if self.embed_coordinates:
-            self.coordinate_embedding = nn.Linear(coordinate_dims, coordinate_embedding_dim)
+            self.coordinate_embedding = nn.Linear(
+                coordinate_dims, coordinate_embedding_dim
+            )
 
         self.train()
 
@@ -270,9 +270,17 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
 
         embs = []
         if "rgb_resnet" in observations:
-            embs.append(observations["rgb_resnet"].view(-1, observations["rgb_resnet"].shape[-1]))
+            embs.append(
+                observations["rgb_resnet"].view(
+                    -1, observations["rgb_resnet"].shape[-1]
+                )
+            )
         if "depth_resnet" in observations:
-            embs.append(observations["depth_resnet"].view(-1, observations["depth_resnet"].shape[-1]))
+            embs.append(
+                observations["depth_resnet"].view(
+                    -1, observations["depth_resnet"].shape[-1]
+                )
+            )
         emb = torch.cat(embs, dim=1)
 
         x = [self.visual_encoder(emb)] + x
@@ -299,7 +307,7 @@ class PointNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
         coordinate_embedding_dim=8,
         coordinate_dims=2,
         num_rnn_layers=1,
-        rnn_type='GRU'
+        rnn_type="GRU",
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
@@ -326,7 +334,7 @@ class PointNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
             nn.ReLU(),
             # nn.AdaptiveAvgPool2d((1,1)),
             nn.Flatten(),
-            nn.Linear(2048, 512)
+            nn.Linear(2048, 512),
         )
 
         self.state_encoder = RNNStateEncoder(
@@ -334,18 +342,16 @@ class PointNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
             + self.coorinate_embedding_size,
             self.recurrent_hidden_state_size,
             num_layers=num_rnn_layers,
-            rnn_type=rnn_type
+            rnn_type=rnn_type,
         )
 
-        self.actor = LinearActorHead(
-            self.recurrent_hidden_state_size, action_space.n
-        )
-        self.critic = LinearCriticHead(
-            self.recurrent_hidden_state_size
-        )
+        self.actor = LinearActorHead(self.recurrent_hidden_state_size, action_space.n)
+        self.critic = LinearCriticHead(self.recurrent_hidden_state_size)
 
         if self.embed_coordinates:
-            self.coordinate_embedding = nn.Linear(coordinate_dims, coordinate_embedding_dim)
+            self.coordinate_embedding = nn.Linear(
+                coordinate_dims, coordinate_embedding_dim
+            )
 
         self.train()
 
@@ -407,7 +413,7 @@ class PointNavActorCriticResNeXTPreTrained(ActorCriticModel[CategoricalDistr]):
         coordinate_embedding_dim=8,
         coordinate_dims=2,
         num_rnn_layers=1,
-        rnn_type='GRU'
+        rnn_type="GRU",
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
@@ -419,56 +425,51 @@ class PointNavActorCriticResNeXTPreTrained(ActorCriticModel[CategoricalDistr]):
         else:
             self.coorinate_embedding_size = coordinate_dims
 
-
         visual_encoder_weights = torch.load(
             "models/weights/gibson-2plus-mp3d-train-val-test-se-resneXt50-rgb.pth",
-            map_location="cpu"
+            map_location="cpu",
         )
 
         pretrained_resnet = PointNavResNetPolicy(
             observation_space=observation_space,
             action_space=action_space,
             goal_sensor_uuid=goal_sensor_uuid,
-            backbone=visual_encoder_weights['model_args'].backbone,
-            hidden_size=visual_encoder_weights['model_args'].hidden_size,
-            num_recurrent_layers=visual_encoder_weights['model_args'].num_recurrent_layers,
-            resnet_baseplanes=visual_encoder_weights['model_args'].resnet_baseplanes,
-            rnn_type=visual_encoder_weights['model_args'].rnn_type
+            backbone=visual_encoder_weights["model_args"].backbone,
+            hidden_size=visual_encoder_weights["model_args"].hidden_size,
+            num_recurrent_layers=visual_encoder_weights[
+                "model_args"
+            ].num_recurrent_layers,
+            resnet_baseplanes=visual_encoder_weights["model_args"].resnet_baseplanes,
+            rnn_type=visual_encoder_weights["model_args"].rnn_type,
         )
 
         prefix = "actor_critic.net.visual_encoder."
         pretrained_resnet.net.visual_encoder.load_state_dict(
             {
-                k[len(prefix):]: v
+                k[len(prefix) :]: v
                 for k, v in visual_encoder_weights["state_dict"].items()
                 if (k.startswith(prefix) and not "running_mean_and_var" in k)
             }
         )
 
         self.visual_encoder = pretrained_resnet.net.visual_encoder
-        self.compressor = nn.Sequential(
-            nn.Flatten(),
-            nn.ReLU(),
-            nn.Linear(2048, 512)
-        )
+        self.compressor = nn.Sequential(nn.Flatten(), nn.ReLU(), nn.Linear(2048, 512))
 
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self.recurrent_hidden_state_size)
             + self.coorinate_embedding_size,
             self.recurrent_hidden_state_size,
             num_layers=num_rnn_layers,
-            rnn_type=rnn_type
+            rnn_type=rnn_type,
         )
 
-        self.actor = LinearActorHead(
-            self.recurrent_hidden_state_size, action_space.n
-        )
-        self.critic = LinearCriticHead(
-            self.recurrent_hidden_state_size
-        )
+        self.actor = LinearActorHead(self.recurrent_hidden_state_size, action_space.n)
+        self.critic = LinearCriticHead(self.recurrent_hidden_state_size)
 
         if self.embed_coordinates:
-            self.coordinate_embedding = nn.Linear(coordinate_dims, coordinate_embedding_dim)
+            self.coordinate_embedding = nn.Linear(
+                coordinate_dims, coordinate_embedding_dim
+            )
 
         self.train()
 

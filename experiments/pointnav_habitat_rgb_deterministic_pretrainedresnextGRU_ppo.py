@@ -9,8 +9,10 @@ from rl_habitat.habitat_utils import construct_env_configs
 from experiments.pointnav_habitat_base import PointNavHabitatBaseExperimentConfig
 
 
-class PointNavHabitatRGBDeterministicPretrainedResNext101PPOExperimentConfig(PointNavHabitatBaseExperimentConfig):
-    """A Point Navigation experiment configuraqtion in Habitat"""
+class PointNavHabitatRGBDeterministicPretrainedResNext101PPOExperimentConfig(
+    PointNavHabitatBaseExperimentConfig
+):
+    """A Point Navigation experiment configuraqtion in Habitat."""
 
     SENSORS = [
         RGBSensorHabitat(
@@ -31,7 +33,7 @@ class PointNavHabitatRGBDeterministicPretrainedResNext101PPOExperimentConfig(Poi
     ]
 
     CONFIG = PointNavHabitatBaseExperimentConfig.CONFIG.clone()
-    CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
+    CONFIG.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
 
     TRAIN_CONFIGS = construct_env_configs(CONFIG)
 
@@ -45,5 +47,5 @@ class PointNavHabitatRGBDeterministicPretrainedResNext101PPOExperimentConfig(Poi
             embed_coordinates=False,
             coordinate_dims=2,
             num_rnn_layers=1,
-            rnn_type='GRU'
+            rnn_type="GRU",
         )

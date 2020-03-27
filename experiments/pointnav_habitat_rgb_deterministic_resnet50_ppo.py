@@ -11,8 +11,10 @@ from rl_habitat.habitat_utils import construct_env_configs
 from experiments.pointnav_habitat_base import PointNavHabitatBaseExperimentConfig
 
 
-class PointNavHabitatRGBDeterministicResNet50PPOExperimentConfig(PointNavHabitatBaseExperimentConfig):
-    """A Point Navigation experiment configuraqtion in Habitat"""
+class PointNavHabitatRGBDeterministicResNet50PPOExperimentConfig(
+    PointNavHabitatBaseExperimentConfig
+):
+    """A Point Navigation experiment configuraqtion in Habitat."""
 
     SENSORS = [
         RGBSensorHabitat(
@@ -47,7 +49,7 @@ class PointNavHabitatRGBDeterministicResNet50PPOExperimentConfig(PointNavHabitat
     ]
 
     CONFIG = PointNavHabitatBaseExperimentConfig.CONFIG.clone()
-    CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
+    CONFIG.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
 
     TRAIN_CONFIGS = construct_env_configs(CONFIG)
 

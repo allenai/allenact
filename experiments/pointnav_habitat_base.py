@@ -23,11 +23,17 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 
 
 class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
-    """A Point Navigation experiment configuraqtion in Habitat"""
+    """A Point Navigation experiment configuraqtion in Habitat."""
 
-    TRAIN_SCENES = "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
-    VALID_SCENES = "habitat/habitat-api/data/datasets/pointnav/gibson/v1/val/val.json.gz"
-    TEST_SCENES = "habitat/habitat-api/data/datasets/pointnav/gibson/v1/test/test.json.gz"
+    TRAIN_SCENES = (
+        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
+    )
+    VALID_SCENES = (
+        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/val/val.json.gz"
+    )
+    TEST_SCENES = (
+        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/test/test.json.gz"
+    )
 
     SCREEN_SIZE = 256
     MAX_STEPS = 500
@@ -67,28 +73,28 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
         "target_coordinates_ind",
     ]
 
-    CONFIG = habitat.get_config('configs/gibson.yaml')
+    CONFIG = habitat.get_config("configs/gibson.yaml")
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
     CONFIG.SIMULATOR_GPU_IDS = [1, 2, 3, 4, 5, 6]
-    CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
-    CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['*']
+    CONFIG.DATASET.SCENES_DIR = "habitat/habitat-api/data/scene_datasets/"
+    CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
-    CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
+    CONFIG.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
     CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = SCREEN_SIZE
     CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = SCREEN_SIZE
     CONFIG.SIMULATOR.TURN_ANGLE = 45
     CONFIG.SIMULATOR.FORWARD_STEP_SIZE = 0.25
     CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS = MAX_STEPS
 
-    CONFIG.TASK.TYPE = 'Nav-v0'
+    CONFIG.TASK.TYPE = "Nav-v0"
     CONFIG.TASK.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
-    CONFIG.TASK.SENSORS = ['POINTGOAL_WITH_GPS_COMPASS_SENSOR']
+    CONFIG.TASK.SENSORS = ["POINTGOAL_WITH_GPS_COMPASS_SENSOR"]
     CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.GOAL_FORMAT = "POLAR"
     CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.DIMENSIONALITY = 2
-    CONFIG.TASK.GOAL_SENSOR_UUID = 'pointgoal_with_gps_compass'
-    CONFIG.TASK.MEASUREMENTS = ['DISTANCE_TO_GOAL', 'SPL']
-    CONFIG.TASK.SPL.TYPE = 'SPL'
+    CONFIG.TASK.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
+    CONFIG.TASK.MEASUREMENTS = ["DISTANCE_TO_GOAL", "SPL"]
+    CONFIG.TASK.SPL.TYPE = "SPL"
     CONFIG.TASK.SPL.SUCCESS_DISTANCE = 0.2
 
     @classmethod
@@ -116,7 +122,11 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={"use_clipped_value_loss": True}, default=PPOConfig,)},
+            named_losses={
+                "ppo_loss": Builder(
+                    PPO, kwargs={"use_clipped_value_loss": True}, default=PPOConfig,
+                )
+            },
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,

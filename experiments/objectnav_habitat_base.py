@@ -20,9 +20,11 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 
 
 class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
-    """A Point Navigation experiment configuraqtion in Habitat"""
+    """A Point Navigation experiment configuraqtion in Habitat."""
 
-    TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/train/train.json.gz"
+    TRAIN_SCENES = (
+        "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/train/train.json.gz"
+    )
     VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val/val.json.gz"
 
     SCREEN_SIZE = 256
@@ -31,12 +33,12 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
 
     NUM_PROCESSES = 14
 
-    CONFIG = habitat.get_config('configs/mp3d.yaml')
+    CONFIG = habitat.get_config("configs/mp3d.yaml")
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
     CONFIG.SIMULATOR_GPU_IDS = [1, 2, 3, 4, 5, 6]
-    CONFIG.DATASET.TYPE = 'ObjectNav-v1'
-    CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
+    CONFIG.DATASET.TYPE = "ObjectNav-v1"
+    CONFIG.DATASET.SCENES_DIR = "habitat/habitat-api/data/scene_datasets/"
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
     CONFIG.SIMULATOR.AGENT_0.HEIGHT = 0.88
     CONFIG.SIMULATOR.AGENT_0.RADIUS = 0.18
@@ -48,15 +50,22 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
     CONFIG.SIMULATOR.FORWARD_STEP_SIZE = 0.25
     CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS = MAX_STEPS
 
-    CONFIG.TASK.TYPE = 'ObjectNav-v1'
-    CONFIG.TASK.POSSIBLE_ACTIONS = ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "LOOK_UP", "LOOK_DOWN"]
+    CONFIG.TASK.TYPE = "ObjectNav-v1"
+    CONFIG.TASK.POSSIBLE_ACTIONS = [
+        "STOP",
+        "MOVE_FORWARD",
+        "TURN_LEFT",
+        "TURN_RIGHT",
+        "LOOK_UP",
+        "LOOK_DOWN",
+    ]
     CONFIG.TASK.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
-    CONFIG.TASK.SENSORS = ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR']
+    CONFIG.TASK.SENSORS = ["OBJECTGOAL_SENSOR", "COMPASS_SENSOR", "GPS_SENSOR"]
     CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.GOAL_FORMAT = "POLAR"
     CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.DIMENSIONALITY = 2
-    CONFIG.TASK.GOAL_SENSOR_UUID = 'objectgoal'
-    CONFIG.TASK.MEASUREMENTS = ['DISTANCE_TO_GOAL', 'SPL']
-    CONFIG.TASK.SPL.TYPE = 'SPL'
+    CONFIG.TASK.GOAL_SENSOR_UUID = "objectgoal"
+    CONFIG.TASK.MEASUREMENTS = ["DISTANCE_TO_GOAL", "SPL"]
+    CONFIG.TASK.SPL.TYPE = "SPL"
     # CONFIG.TASK.SPL.DISTANCE_TO = 'VIEW_POINTS'
     CONFIG.TASK.SPL.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
     # CONFIG.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "VIEW_POINTS"
@@ -86,7 +95,11 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={"use_clipped_value_loss": True}, default=PPOConfig,)},
+            named_losses={
+                "ppo_loss": Builder(
+                    PPO, kwargs={"use_clipped_value_loss": True}, default=PPOConfig,
+                )
+            },
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,

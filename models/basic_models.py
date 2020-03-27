@@ -14,6 +14,7 @@ class Flatten(nn.Module):
 
     def forward(self, x):
         """Flatten input tensor.
+
         # Parameters
         x : Tensor of size (batches x ...) to flatten to size (batches x -1)
         # Returns
@@ -23,9 +24,10 @@ class Flatten(nn.Module):
 
 
 class SimpleCNN(nn.Module):
-    """A Simple 3-Conv CNN followed by a fully connected layer.
-    Takes in observations (of type gym.spaces.dict) and produces an embedding
-     of the `"rgb"` and/or `"depth"` components.
+    """A Simple 3-Conv CNN followed by a fully connected layer. Takes in
+    observations (of type gym.spaces.dict) and produces an embedding of the
+    `"rgb"` and/or `"depth"` components.
+
     # Attributes
     observation_space : The observation_space of the agent, should have 'rgb' or 'depth' as
         a component (otherwise it is a blind model).
@@ -34,6 +36,7 @@ class SimpleCNN(nn.Module):
 
     def __init__(self, observation_space: SpaceDict, output_size: int):
         """Initializer.
+
         # Parameters
         observation_space : See class attributes documentation.
         output_size : See class attributes documentation.
@@ -71,7 +74,7 @@ class SimpleCNN(nn.Module):
         else:
             if self._n_input_rgb > 0:
                 for kernel_size, stride in zip(
-                        self._cnn_layers_kernel_size, self._cnn_layers_stride
+                    self._cnn_layers_kernel_size, self._cnn_layers_stride
                 ):
                     # noinspection PyUnboundLocalVariable
                     rgb_cnn_dims = self._conv_output_dim(
@@ -112,7 +115,7 @@ class SimpleCNN(nn.Module):
 
             if self._n_input_depth > 0:
                 for kernel_size, stride in zip(
-                        self._cnn_layers_kernel_size, self._cnn_layers_stride
+                    self._cnn_layers_kernel_size, self._cnn_layers_stride
                 ):
                     # noinspection PyUnboundLocalVariable
                     depth_cnn_dims = self._conv_output_dim(
@@ -160,8 +163,9 @@ class SimpleCNN(nn.Module):
         stride: Sequence[int],
     ) -> Tuple[int, ...]:
         """Calculates the output height and width based on the input height and
-        width to the convolution layer.
-        For parameter definitions see [here](https://pytorch.org/docs/master/nn.html#torch.nn.Conv2d).
+        width to the convolution layer. For parameter definitions see
+        [here](https://pytorch.org/docs/master/nn.html#torch.nn.Conv2d).
+
         # Parameters
         dimension : See above link.
         padding : See above link.
@@ -226,6 +230,7 @@ class SimpleCNN(nn.Module):
 class RNNStateEncoder(nn.Module):
     """A simple RNN-based model playing a role in many baseline embodied-
     navigation agents.
+
     See `seq_forward` for more details of how this model is used.
     """
 
@@ -237,8 +242,9 @@ class RNNStateEncoder(nn.Module):
         rnn_type: str = "GRU",
         trainable_masked_hidden_state: bool = False,
     ):
-        """An RNN for encoding the state in RL.
-        Supports masking the hidden state during various timesteps in the forward lass
+        """An RNN for encoding the state in RL. Supports masking the hidden
+        state during various timesteps in the forward lass.
+
         # Parameters
         input_size : The input size of the RNN.
         hidden_size : The hidden size.
@@ -282,6 +288,7 @@ class RNNStateEncoder(nn.Module):
     ) -> torch.FloatTensor:
         """Stacks hiddens states in an LSTM together (if using a GRU rather
         than an LSTM this is just the identitiy).
+
         # Parameters
         hidden_states : The hidden states to (possibly) stack.
         """
@@ -311,8 +318,9 @@ class RNNStateEncoder(nn.Module):
         hidden_states: Union[Tuple[torch.FloatTensor, ...], torch.FloatTensor],
         masks: torch.FloatTensor,
     ) -> Union[Tuple[torch.FloatTensor, ...], torch.FloatTensor]:
-        """Mask input hidden states given `masks`.
-        Useful when masks represent steps on which a task has completed.
+        """Mask input hidden states given `masks`. Useful when masks represent
+        steps on which a task has completed.
+
         # Parameters
         hidden_states : The hidden states.
         masks : Masks to apply to hidden states (see seq_forward).
@@ -373,6 +381,7 @@ class RNNStateEncoder(nn.Module):
         torch.FloatTensor, Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]]
     ]:
         """Forward for a sequence of length T.
+
         # Parameters
         x : (T, N, -1) Tensor that has been flattened to (T * N, -1).
         hidden_states : The starting hidden states.
@@ -434,6 +443,7 @@ class RNNStateEncoder(nn.Module):
         torch.FloatTensor, Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]]
     ]:
         """Calls `seq_forward` or `single_forward` depending on the input size.
+
         See the above methods for more information.
         """
         if x.size(0) == hidden_states.size(1):
@@ -447,6 +457,7 @@ class AddBias(nn.Module):
 
     def __init__(self, bias: torch.FloatTensor):
         """Initializer.
+
         # Parameters
         bias : data to use as the initial values of the bias.
         """

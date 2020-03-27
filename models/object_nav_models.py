@@ -1,4 +1,5 @@
 """Baseline models for use in the object navigation task.
+
 Object navigation is currently available as a Task in AI2-THOR and
 Facebook's Habitat.
 """
@@ -14,7 +15,7 @@ from onpolicy_sync.policy import (
     ActorCriticModel,
     LinearActorCriticHead,
     LinearCriticHead,
-    LinearActorHead
+    LinearActorHead,
 )
 
 from rl_base.common import ActorCriticOutput
@@ -23,6 +24,7 @@ from rl_base.distributions import CategoricalDistr
 
 class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
     """Baseline recurrent actor critic model for object-navigation.
+
     # Attributes
     action_space : The space of actions available to the agent. Currently only discrete
         actions are allowed (so this space will always be of type `gym.spaces.Discrete`).
@@ -45,9 +47,10 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         object_type_embedding_dim=8,
         trainable_masked_hidden_state: bool = False,
         num_rnn_layers=1,
-        rnn_type='GRU',
+        rnn_type="GRU",
     ):
         """Initializer.
+
         See class documentation for parameter definitions.
         """
         super().__init__(action_space=action_space, observation_space=observation_space)
@@ -65,15 +68,11 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
             self.recurrent_hidden_state_size,
             trainable_masked_hidden_state=trainable_masked_hidden_state,
             num_layers=num_rnn_layers,
-            rnn_type=rnn_type
+            rnn_type=rnn_type,
         )
 
-        self.actor = LinearActorHead(
-            self.recurrent_hidden_state_size, action_space.n
-        )
-        self.critic = LinearCriticHead(
-            self.recurrent_hidden_state_size
-        )
+        self.actor = LinearActorHead(self.recurrent_hidden_state_size, action_space.n)
+        self.critic = LinearCriticHead(self.recurrent_hidden_state_size)
 
         self.object_type_embedding = nn.Embedding(
             num_embeddings=self._n_object_types,
@@ -114,11 +113,12 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         masks: torch.FloatTensor,
     ) -> Tuple[ActorCriticOutput, torch.FloatTensor]:
         """Processes input batched observations to produce new actor and critic
-        values.
-        Processes input batched observations (along with prior hidden states, previous actions,
-        and masks denoting which recurrent hidden states should be masked) and returns
-        an `ActorCriticOutput` object containing the model's policy (distribution over actions)
-        and evaluation of the current state (value).
+        values. Processes input batched observations (along with prior hidden
+        states, previous actions, and masks denoting which recurrent hidden
+        states should be masked) and returns an `ActorCriticOutput` object
+        containing the model's policy (distribution over actions) and
+        evaluation of the current state (value).
+
         # Parameters
         observations : Batched input observations.
         rnn_hidden_states : Hidden states from initial timepoints.
@@ -139,13 +139,16 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
 
         # distributions, values = self.actor_and_critic(x_out)
         return (
-            ActorCriticOutput(distributions=self.actor(x_out), values=self.critic(x_out), extras={}),
+            ActorCriticOutput(
+                distributions=self.actor(x_out), values=self.critic(x_out), extras={}
+            ),
             rnn_hidden_states,
         )
 
 
 class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
     """Baseline recurrent actor critic model for object-navigation.
+
     # Attributes
     action_space : The space of actions available to the agent. Currently only discrete
         actions are allowed (so this space will always be of type `gym.spaces.Discrete`).
@@ -168,9 +171,10 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
         object_type_embedding_dim=8,
         trainable_masked_hidden_state: bool = False,
         num_rnn_layers=1,
-        rnn_type='GRU',
+        rnn_type="GRU",
     ):
         """Initializer.
+
         See class documentation for parameter definitions.
         """
         super().__init__(action_space=action_space, observation_space=observation_space)
@@ -180,7 +184,10 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
         self.hidden_size = hidden_size
         self.object_type_embedding_size = object_type_embedding_dim
 
-        if 'rgb_resnet' in observation_space.spaces and 'depth_resnet' in observation_space.spaces:
+        if (
+            "rgb_resnet" in observation_space.spaces
+            and "depth_resnet" in observation_space.spaces
+        ):
             self.visual_encoder = nn.Linear(4096, hidden_size)
         else:
             self.visual_encoder = nn.Linear(2048, hidden_size)
@@ -191,7 +198,7 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
             self.recurrent_hidden_state_size,
             trainable_masked_hidden_state=trainable_masked_hidden_state,
             num_layers=num_rnn_layers,
-            rnn_type=rnn_type
+            rnn_type=rnn_type,
         )
 
         self.actor_and_critic = LinearActorCriticHead(
@@ -237,11 +244,12 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
         masks: torch.FloatTensor,
     ) -> Tuple[ActorCriticOutput, torch.FloatTensor]:
         """Processes input batched observations to produce new actor and critic
-        values.
-        Processes input batched observations (along with prior hidden states, previous actions,
-        and masks denoting which recurrent hidden states should be masked) and returns
-        an `ActorCriticOutput` object containing the model's policy (distribution over actions)
-        and evaluation of the current state (value).
+        values. Processes input batched observations (along with prior hidden
+        states, previous actions, and masks denoting which recurrent hidden
+        states should be masked) and returns an `ActorCriticOutput` object
+        containing the model's policy (distribution over actions) and
+        evaluation of the current state (value).
+
         # Parameters
         observations : Batched input observations.
         rnn_hidden_states : Hidden states from initial timepoints.
@@ -255,9 +263,17 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
 
         embs = []
         if "rgb_resnet" in observations:
-            embs.append(observations["rgb_resnet"].view(-1, observations["rgb_resnet"].shape[-1]))
+            embs.append(
+                observations["rgb_resnet"].view(
+                    -1, observations["rgb_resnet"].shape[-1]
+                )
+            )
         if "depth_resnet" in observations:
-            embs.append(observations["depth_resnet"].view(-1, observations["depth_resnet"].shape[-1]))
+            embs.append(
+                observations["depth_resnet"].view(
+                    -1, observations["depth_resnet"].shape[-1]
+                )
+            )
         perception_emb = torch.cat(embs, dim=1)
         x = [self.visual_encoder(perception_emb)] + x
 

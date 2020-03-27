@@ -5,14 +5,20 @@ from torchvision import models
 from models.point_nav_models import PointNavActorCriticResNet50
 from rl_base.sensor import SensorSuite
 from rl_habitat.habitat_tasks import PointNavTask
-from rl_habitat.habitat_sensors import RGBSensorHabitat, DepthSensorHabitat, TargetCoordinatesSensorHabitat
+from rl_habitat.habitat_sensors import (
+    RGBSensorHabitat,
+    DepthSensorHabitat,
+    TargetCoordinatesSensorHabitat,
+)
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from rl_habitat.habitat_utils import construct_env_configs
 from experiments.pointnav_habitat_base import PointNavHabitatBaseExperimentConfig
 
 
-class PointNavHabitatRGBDDeterministicResNet50PPOExperimentConfig(PointNavHabitatBaseExperimentConfig):
-    """A Point Navigation experiment configuraqtion in Habitat"""
+class PointNavHabitatRGBDDeterministicResNet50PPOExperimentConfig(
+    PointNavHabitatBaseExperimentConfig
+):
+    """A Point Navigation experiment configuraqtion in Habitat."""
 
     SENSORS = [
         RGBSensorHabitat(
@@ -68,7 +74,7 @@ class PointNavHabitatRGBDDeterministicResNet50PPOExperimentConfig(PointNavHabita
     ]
 
     CONFIG = PointNavHabitatBaseExperimentConfig.CONFIG.clone()
-    CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR', 'DEPTH_SENSOR']
+    CONFIG.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
 
     TRAIN_CONFIGS = construct_env_configs(CONFIG)
 

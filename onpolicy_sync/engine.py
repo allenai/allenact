@@ -66,11 +66,11 @@ def validate(
 class OnPolicyRLEngine(object):
     """The reinforcement learning primary controller.
 
-    This `OnPolicyRLEngine` class handles all training, validation, and testing as
-    well as logging and checkpointing. You are not expected to
-    instantiate this class yourself, instead you should define an
-    experiment which will then be used to instantiate an `OnPolicyRLEngine` and
-    perform any desired tasks.
+    This `OnPolicyRLEngine` class handles all training, validation, and
+    testing as well as logging and checkpointing. You are not expected
+    to instantiate this class yourself, instead you should define an
+    experiment which will then be used to instantiate an
+    `OnPolicyRLEngine` and perform any desired tasks.
     """
 
     def __init__(
@@ -279,10 +279,7 @@ class OnPolicyRLEngine(object):
             )
 
         return [
-            fn(
-                process_ind=it,
-                total_processes=self.machine_params["nprocesses"],
-            )
+            fn(process_ind=it, total_processes=self.machine_params["nprocesses"],)
             for it in range(self.machine_params["nprocesses"])
         ]
 
@@ -419,7 +416,10 @@ class OnPolicyRLEngine(object):
 
                     if pkg_type in ["valid_metrics", "test_metrics"]:
                         mode = pkg_type.split("_")[0]
-                        if "render_video" in self.machine_params and self.machine_params["render_video"]:
+                        if (
+                            "render_video" in self.machine_params
+                            and self.machine_params["render_video"]
+                        ):
                             scalars, render = info
                         else:
                             scalars = info
@@ -972,9 +972,7 @@ class OnPolicyRLEngine(object):
                     gae_lambda=self._stage_value(stage, "gae_lambda"),
                     max_grad_norm=self._stage_value(stage, "max_grad_norm"),
                     advance_scene_rollout_period=self._stage_value(
-                        stage,
-                        "advance_scene_rollout_period",
-                        allow_none=True
+                        stage, "advance_scene_rollout_period", allow_none=True
                     ),
                     teacher_forcing=stage.teacher_forcing,
                 )
@@ -1033,8 +1031,13 @@ class OnPolicyRLEngine(object):
                         pass
 
                 if command == "eval":
-                    if "render_video" in self.machine_params and self.machine_params["render_video"]:
-                        scalars, render, samples = self.run_eval(checkpoint_file_name=data, render_video=True)
+                    if (
+                        "render_video" in self.machine_params
+                        and self.machine_params["render_video"]
+                    ):
+                        scalars, render, samples = self.run_eval(
+                            checkpoint_file_name=data, render_video=True
+                        )
                         write_to_parent.put(("valid_metrics", (scalars, render)))
                     else:
                         scalars, samples = self.run_eval(checkpoint_file_name=data)
@@ -1071,7 +1074,13 @@ class OnPolicyRLEngine(object):
             render = None
         return render
 
-    def run_eval(self, checkpoint_file_name: str, rollout_steps=1, max_clip_len=2000, render_video=False):
+    def run_eval(
+        self,
+        checkpoint_file_name: str,
+        rollout_steps=1,
+        max_clip_len=2000,
+        render_video=False,
+    ):
         self.checkpoint_load(checkpoint_file_name, verbose=False)
 
         rollouts = RolloutStorage(
@@ -1099,7 +1108,10 @@ class OnPolicyRLEngine(object):
         if render_video:
             render = self.process_video(render, max_clip_len)
             return (
-                {k: (v, self.total_steps + self.step_count) for k, v in metrics.items()},
+                {
+                    k: (v, self.total_steps + self.step_count)
+                    for k, v in metrics.items()
+                },
                 render,
                 samples,
             )

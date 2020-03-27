@@ -5,13 +5,8 @@ from typing import Tuple, Union, Sequence
 
 
 class RNNMap(nn.Module):
-
     def __init__(
-            self,
-            embedding_size=8,
-            input_size=512,
-            rnn_type='GRU',
-            num_rnn_layers=1,
+        self, embedding_size=8, input_size=512, rnn_type="GRU", num_rnn_layers=1,
     ):
         super().__init__()
         self.rnn = getattr(nn, rnn_type)(
@@ -36,6 +31,7 @@ class RNNMap(nn.Module):
     ) -> torch.FloatTensor:
         """Stacks hiddens states in an LSTM together (if using a GRU rather
         than an LSTM this is just the identitiy).
+
         # Parameters
         hidden_states : The hidden states to (possibly) stack.
         """
@@ -61,10 +57,7 @@ class RNNMap(nn.Module):
         return hidden_states
 
     def single_forward(
-            self,
-            x: torch.Tensor,
-            memory_map: torch.FloatTensor,
-            position: Tuple[int, int]
+        self, x: torch.Tensor, memory_map: torch.FloatTensor, position: Tuple[int, int]
     ) -> (torch.FloatTensor, torch.FloatTensor):
 
         memory = memory_map[position]
@@ -84,6 +77,7 @@ class RNNMap(nn.Module):
         torch.FloatTensor, Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]]
     ]:
         """Calls `seq_forward` or `single_forward` depending on the input size.
+
         See the above methods for more information.
         """
         if x.size(0) == hidden_states.size(1):

@@ -19,11 +19,11 @@ from rl_base.sensor import Sensor
 class ScaleBothSides(object):
     """Rescales the input PIL.Image to the given 'width' and `height`.
 
-        Attributes
-            width: new width
-            height: new height
-            interpolation: Default: PIL.Image.BILINEAR
-        """
+    Attributes
+        width: new width
+        height: new height
+        interpolation: Default: PIL.Image.BILINEAR
+    """
 
     def __init__(self, width: int, height: int, interpolation=Image.BILINEAR):
         self.width = width
@@ -70,7 +70,7 @@ class RGBSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
             else ScaleBothSides(width=self.width, height=self.height)
         )
 
-        self.to_pil = transforms.ToPILImage(mode='RGB')
+        self.to_pil = transforms.ToPILImage(mode="RGB")
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "rgb"
@@ -79,11 +79,11 @@ class RGBSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         return self.observation_space
 
     def get_observation(
-            self,
-            env: HabitatEnvironment,
-            task: Optional[HabitatTask],
-            *args: Any,
-            **kwargs: Any
+        self,
+        env: HabitatEnvironment,
+        task: Optional[HabitatTask],
+        *args: Any,
+        **kwargs: Any
     ) -> Any:
         frame = env.current_frame
         rgb = frame["rgb"].copy()
@@ -123,7 +123,7 @@ class RGBResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         self.norm_means = np.array([[[0.485, 0.456, 0.406]]], dtype=np.float32)
         self.norm_sds = np.array([[[0.229, 0.224, 0.225]]], dtype=np.float32)
 
-        shape = None if self.height is None else (2048, )
+        shape = None if self.height is None else (2048,)
         if not self.should_normalize:
             low = 0.0
             high = 1.0
@@ -139,7 +139,7 @@ class RGBResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
             else ScaleBothSides(width=self.width, height=self.height)
         )
 
-        self.to_pil = transforms.ToPILImage(mode='RGB')
+        self.to_pil = transforms.ToPILImage(mode="RGB")
         self.to_tensor = transforms.ToTensor()
 
         self.resnet = nn.Sequential(
@@ -156,11 +156,11 @@ class RGBResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         return self.observation_space
 
     def get_observation(
-            self,
-            env: HabitatEnvironment,
-            task: Optional[HabitatTask],
-            *args: Any,
-            **kwargs: Any
+        self,
+        env: HabitatEnvironment,
+        task: Optional[HabitatTask],
+        *args: Any,
+        **kwargs: Any
     ) -> Any:
         frame = env.current_frame
         rgb = frame["rgb"].copy()
@@ -229,11 +229,11 @@ class DepthSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         return self.observation_space
 
     def get_observation(
-            self,
-            env: HabitatEnvironment,
-            task: Optional[HabitatTask],
-            *args: Any,
-            **kwargs: Any
+        self,
+        env: HabitatEnvironment,
+        task: Optional[HabitatTask],
+        *args: Any,
+        **kwargs: Any
     ) -> Any:
         frame = env.current_frame
         depth = frame["depth"].copy()
@@ -275,7 +275,7 @@ class DepthResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         self.norm_means = np.array([0.5], dtype=np.float32)
         self.norm_sds = np.array([[0.25]], dtype=np.float32)
 
-        shape = None if self.height is None else (2048, )
+        shape = None if self.height is None else (2048,)
         if not self.should_normalize:
             low = 0.0
             high = 1.0
@@ -308,11 +308,11 @@ class DepthResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         return self.observation_space
 
     def get_observation(
-            self,
-            env: HabitatEnvironment,
-            task: Optional[HabitatTask],
-            *args: Any,
-            **kwargs: Any
+        self,
+        env: HabitatEnvironment,
+        task: Optional[HabitatTask],
+        *args: Any,
+        **kwargs: Any
     ) -> Any:
         frame = env.current_frame
         depth = frame["depth"].copy()
@@ -343,7 +343,9 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
-        self.observation_space = gym.spaces.Box(-3.15, 1000, shape=(config["coordinate_dims"],))
+        self.observation_space = gym.spaces.Box(
+            -3.15, 1000, shape=(config["coordinate_dims"],)
+        )
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "target_coordinates_ind"

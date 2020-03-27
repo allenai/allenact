@@ -37,10 +37,7 @@ class PointNavTaskSampler(TaskSampler):
         dataset = habitat.make_dataset(
             self.env_config.DATASET.TYPE, config=self.env_config.DATASET
         )
-        env = HabitatEnvironment(
-            config=self.env_config,
-            dataset=dataset
-        )
+        env = HabitatEnvironment(config=self.env_config, dataset=dataset)
         self.max_tasks = env.num_episodes
         self.reset_tasks = self.max_tasks
         return env
@@ -87,7 +84,7 @@ class PointNavTaskSampler(TaskSampler):
         task_info = {
             "target": target,
             "distance_to_goal": self.distance_to_goal,
-            "actions": []
+            "actions": [],
         }
 
         self._last_sampled_task = PointNavTask(
@@ -139,10 +136,7 @@ class ObjectNavTaskSampler(TaskSampler):
         dataset = habitat.make_dataset(
             self.env_config.DATASET.TYPE, config=self.env_config.DATASET
         )
-        env = HabitatEnvironment(
-            config=self.env_config,
-            dataset=dataset
-        )
+        env = HabitatEnvironment(config=self.env_config, dataset=dataset)
         self.max_tasks = env.num_episodes
         self.reset_tasks = self.max_tasks
         return env
@@ -189,7 +183,7 @@ class ObjectNavTaskSampler(TaskSampler):
         task_info = {
             "target": target,
             "distance_to_goal": self.distance_to_goal,
-            "actions": []
+            "actions": [],
         }
 
         self._last_sampled_task = ObjectNavTask(

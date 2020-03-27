@@ -86,7 +86,7 @@ class PointNavTask(Task[HabitatTask]):
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
-        self.last_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
+        self.last_geodesic_distance = self.env.env.get_metrics()["distance_to_goal"]
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
@@ -127,16 +127,16 @@ class PointNavTask(Task[HabitatTask]):
 
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         assert mode in ["rgb", "depth"], "only rgb and depth rendering is implemented"
-        return self.env.current_frame['rgb']
+        return self.env.current_frame["rgb"]
 
     def _is_goal_in_range(self) -> bool:
         # The habitat simulator will return an SPL value of 0.0 whenever the goal is not in range
-        return bool(self.env.env.get_metrics()['spl'])
+        return bool(self.env.env.get_metrics()["spl"])
 
     def judge(self) -> float:
         reward = -0.01
 
-        geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
+        geodesic_distance = self.env.env.get_metrics()["distance_to_goal"]
         delta_distance_reward = self.last_geodesic_distance - geodesic_distance
         reward += delta_distance_reward
         self.last_geodesic_distance = geodesic_distance
@@ -157,7 +157,7 @@ class PointNavTask(Task[HabitatTask]):
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
-                "spl": _metrics['spl'] if _metrics['spl'] is not None else 0.0
+                "spl": _metrics["spl"] if _metrics["spl"] is not None else 0.0,
             }
             self._rewards = []
             return metrics
@@ -195,8 +195,12 @@ class ObjectNavTask(Task[HabitatTask]):
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
-        self.last_geodesic_distance = self.env.get_current_episode().info['geodesic_distance']
-        self.last_distance_to_goal = self.env.get_current_episode().info['geodesic_distance'] #self.env.env.get_metrics()["distance_to_goal"]
+        self.last_geodesic_distance = self.env.get_current_episode().info[
+            "geodesic_distance"
+        ]
+        self.last_distance_to_goal = self.env.get_current_episode().info[
+            "geodesic_distance"
+        ]  # self.env.env.get_metrics()["distance_to_goal"]
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
@@ -237,18 +241,20 @@ class ObjectNavTask(Task[HabitatTask]):
 
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         assert mode in ["rgb", "depth"], "only rgb and depth rendering is implemented"
-        return self.env.current_frame['rgb']
+        return self.env.current_frame["rgb"]
 
     def _is_goal_in_range(self) -> bool:
         # The habitat simulator will return an SPL value of 0.0 whenever the goal is not in range
-        return bool(self.env.env.get_metrics()['spl'])
+        return bool(self.env.env.get_metrics()["spl"])
 
     def judge(self) -> float:
         reward = -0.01
 
         # distance_to_goal = self.env.get_distance_to_target() # self.env.env.get_metrics()["distance_to_goal"]
         distance_to_goal = self.env.env.get_metrics()["distance_to_goal"]
-        if distance_to_goal in [float('-inf'), float('inf')] or np.isnan(distance_to_goal):
+        if distance_to_goal in [float("-inf"), float("inf")] or np.isnan(
+            distance_to_goal
+        ):
             distance_to_goal = self.last_distance_to_goal
         delta_distance_reward = self.last_distance_to_goal - distance_to_goal
         # delta_distance_reward = self.last_distance_to_goal- distance_to_goal
@@ -274,7 +280,7 @@ class ObjectNavTask(Task[HabitatTask]):
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
-                "spl": _metrics['spl'] if _metrics['spl'] is not None else 0.0
+                "spl": _metrics["spl"] if _metrics["spl"] is not None else 0.0,
             }
             self._rewards = []
             return metrics
