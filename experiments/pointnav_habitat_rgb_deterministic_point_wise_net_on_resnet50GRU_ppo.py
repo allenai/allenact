@@ -4,7 +4,7 @@ from torchvision import models
 
 import habitat
 
-from models.point_nav_models import PointNavActorCriticTrainResNet50GRU
+from models.point_nav_models import PointNavActorCriticPointWiseNetOnResNet50GRU
 from rl_base.sensor import SensorSuite
 from rl_habitat.habitat_tasks import PointNavTask
 from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetCoordinatesSensorHabitat
@@ -61,7 +61,7 @@ class PointNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return PointNavActorCriticTrainResNet50GRU(
+        return PointNavActorCriticPointWiseNetOnResNet50GRU(
             action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",

@@ -135,7 +135,8 @@ class SimpleCNN(nn.Module):
         stride: Sequence[int],
     ) -> Tuple[int, ...]:
         """Calculates the output height and width based on the input height and
-        width to the convolution layer. For parameter definitions see
+        width to the convolution layer. For parameter definitions see.
+
         [here](https://pytorch.org/docs/master/nn.html#torch.nn.Conv2d).
 
         # Parameters

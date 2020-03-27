@@ -296,7 +296,7 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
         )
 
 
-class PointNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
+class PointNavActorCriticPointWiseNetOnResNet50GRU(ActorCriticModel[CategoricalDistr]):
     def __init__(
         self,
         action_space: gym.spaces.Discrete,
