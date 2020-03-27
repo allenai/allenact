@@ -118,8 +118,8 @@ class ScalarMeanTracker(object):
     """Track a collection `scalar key -> mean` pairs."""
 
     def __init__(self) -> None:
-        self._sums: Dict[str, float] = OrderedDict()
-        self._counts: Dict[str, int] = OrderedDict()
+        self._sums: Dict[str, float] = {}
+        self._counts: Dict[str, int] = {}
 
     def add_scalars(self, scalars: Dict[str, Union[float, int]]) -> None:
         """Add additional scalars to track.
@@ -146,12 +146,17 @@ class ScalarMeanTracker(object):
         A dictionary of `scalar key -> current mean` pairs corresponding to those
         values added with `add_scalars`.
         """
-        means = OrderedDict(
-            [(k, float(self._sums[k] / self._counts[k])) for k in self._sums]
-        )
-        self._sums = OrderedDict()
-        self._counts = OrderedDict()
+        means = {k: float(self._sums[k] / self._counts[k]) for k in self._sums}
+        self._sums = {}
+        self._counts = {}
         return means
+
+    @property
+    def empty(self):
+        assert len(self._sums) == len(self._counts), "Mismatched length of _sums {} and _counts {}".format(
+            len(self._sums), len(self._counts)
+        )
+        return len(self._sums) == 0
 
 
 class LinearDecay(object):
@@ -203,15 +208,18 @@ def set_deterministic_cudnn() -> None:
         torch.backends.cudnn.benchmark = False  # type: ignore
 
 
-def set_seed(seed: int) -> None:
+def set_seed(seed: Optional[int]=None) -> None:
     """Set seeds for multiple (cpu) sources of randomness.
 
     Sets seeds for (cpu) `pytorch`, base `random`, and `numpy`.
 
     # Parameters
 
-    seed : The seed to set.
+    seed : The seed to set. If set to None, keep using the current seed.
     """
+    if seed is None:
+        return
+
     torch.manual_seed(seed)  # seeds the RNG for all devices (CPU and GPUs)
     random.seed(seed)
     np.random.seed(seed)

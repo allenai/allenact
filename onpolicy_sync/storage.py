@@ -3,8 +3,10 @@
 # LICENSE file in the root directory of this source tree.
 import random
 from collections import defaultdict
-import torch
 import typing
+from typing import Union, List, Dict
+
+import torch
 import numpy as np
 
 
@@ -18,6 +20,7 @@ class RolloutStorage:
         action_space,
         recurrent_hidden_state_size,
         num_recurrent_layers=1,
+        flatten_separator='._AUTOFLATTEN_.'
     ):
         self.observations = {}
 
@@ -46,8 +49,13 @@ class RolloutStorage:
 
         self.masks = torch.ones(num_steps + 1, num_processes, 1)
 
+        self.flattened_spaces: Dict[str, List[str]] = dict()
+
         self.num_steps = num_steps
         self.step = 0
+        self.flatten_separator = flatten_separator
+
+        self.unnarrow_data: Dict[str, Union[int, torch.Tensor]] = defaultdict(dict)
 
     def to(self, device):
         for sensor in self.observations:
@@ -62,23 +70,54 @@ class RolloutStorage:
         self.prev_actions = self.prev_actions.to(device)
         self.masks = self.masks.to(device)
 
-    def insert_initial_observations(self, observations):
+    def flatten_spaces(self, observations: Dict[str, Union[torch.Tensor, Dict]]) -> Dict[str, torch.Tensor]:
+        def recursive_flatten(obs: Dict[str, Union[torch.Tensor, Dict]], res: Dict[str, torch.Tensor],
+                              prefix: str='', flatten_sep=self.flatten_separator) -> None:
+            for sensor in obs:
+                if not torch.is_tensor(obs[sensor]):
+                    recursive_flatten(
+                        obs[sensor], res, prefix=prefix + sensor + flatten_sep
+                    )
+                else:
+                    sensor_name = prefix + sensor
+                    res[sensor_name] = obs[sensor]
+        flattened_obs = {}
+        recursive_flatten(observations, flattened_obs)
+        return flattened_obs
+
+    def insert_initial_observations(self, observations: Dict[str, Union[torch.Tensor, Dict]], prefix: str='',
+                                    path: List[str]=[], time_step: int=0):
         for sensor in observations:
-            if sensor not in self.observations:
-                self.observations[sensor] = (
-                    torch.zeros_like(observations[sensor])
-                    .unsqueeze(0)
-                    .repeat(
-                        self.num_steps + 1,
-                        *(1 for _ in range(len(observations[sensor].shape))),
-                    )
-                    .to(
-                        "cpu"
-                        if self.actions.get_device() < 0
-                        else self.actions.get_device()
-                    )
+            if not torch.is_tensor(observations[sensor]):
+                self.insert_initial_observations(
+                    observations[sensor],
+                    prefix=prefix + sensor + self.flatten_separator,
+                    path=path + [sensor],
+                    time_step=time_step
                 )
-            self.observations[sensor][0].copy_(observations[sensor])
+            else:
+                sensor_name = prefix + sensor
+                if sensor_name not in self.observations:
+                    self.observations[sensor_name] = (
+                        torch.zeros_like(observations[sensor])
+                        .unsqueeze(0)
+                        .repeat(
+                            self.num_steps + 1,
+                            *(1 for _ in range(len(observations[sensor].shape))),
+                        )
+                        .to(
+                            "cpu"
+                            if self.actions.get_device() < 0
+                            else self.actions.get_device()
+                        )
+                    )
+
+                    if len(path) > 0:
+                        assert sensor_name not in self.flattened_spaces,\
+                            "new flattened name {} already existing in flattened spaces".format(sensor_name)
+                        self.flattened_spaces[sensor_name] = path + [sensor]
+
+                self.observations[sensor_name][time_step].copy_(observations[sensor])
 
     def insert(
         self,
@@ -93,16 +132,8 @@ class RolloutStorage:
     ):
         assert len(args) == 0
 
-        for sensor in observations:
-            if sensor not in self.observations:
-                # noinspection PyTypeChecker
-                self.observations[sensor] = (
-                    torch.zeros_like(observations[sensor])
-                    .unsqueeze(0)
-                    .repeat(self.num_steps + 1)
-                    .to(self.actions.get_device())
-                )
-            self.observations[sensor][self.step + 1].copy_(observations[sensor])
+        # self.insert_observations(observations)
+        self.insert_initial_observations(observations, time_step=self.step + 1)
 
         self.recurrent_hidden_states[self.step + 1].copy_(recurrent_hidden_states)
         self.actions[self.step].copy_(actions)
@@ -125,13 +156,88 @@ class RolloutStorage:
         self.rewards = self.rewards[:, keep_list]
         self.masks = self.masks[:, keep_list]
 
+    def narrow(self):
+        assert len(self.unnarrow_data) == 0, "attempting to narrow narrowed rollouts"
+
+        if self.step == 0:  # we're actually done
+            return
+
+        for sensor in self.observations:
+            self.unnarrow_data["observations"][sensor] = self.observations[sensor]
+            self.observations[sensor] = self.observations[sensor].narrow(0, 0, self.step + 1)
+
+        self.unnarrow_data["recurrent_hidden_states"] = self.recurrent_hidden_states
+        self.recurrent_hidden_states = self.recurrent_hidden_states.narrow(0, 0, self.step + 1)
+
+        self.unnarrow_data["actions"] = self.actions
+        self.actions = self.actions.narrow(0, 0, self.step)
+
+        self.unnarrow_data["prev_actions"] = self.prev_actions
+        self.prev_actions = self.prev_actions.narrow(0, 0, self.step + 1)
+
+        self.unnarrow_data["action_log_probs"] = self.action_log_probs
+        self.action_log_probs = self.action_log_probs.narrow(0, 0, self.step)
+
+        self.unnarrow_data["value_preds"] = self.value_preds
+        self.value_preds = self.value_preds.narrow(0, 0, self.step)
+
+        self.unnarrow_data["rewards"] = self.rewards
+        self.rewards = self.rewards.narrow(0, 0, self.step)
+
+        self.unnarrow_data["masks"] = self.masks
+        self.masks = self.masks.narrow(0, 0, self.step + 1)
+
+        self.unnarrow_data["num_steps"] = self.num_steps
+        self.num_steps = self.step
+
+    def unnarrow(self):
+        assert len(self.unnarrow_data) > 0, "attempting to unnarrow unnarrowed rollouts"
+
+        for sensor in self.observations:
+            self.observations[sensor] = self.unnarrow_data["observations"][sensor]
+            del self.unnarrow_data["observations"][sensor]
+
+        assert len(self.unnarrow_data["observations"]) == 0, "unnarrow_data contains observations {}".format(self.unnarrow_data["observations"])
+        del self.unnarrow_data["observations"]
+
+        self.recurrent_hidden_states = self.unnarrow_data["recurrent_hidden_states"]
+        del self.unnarrow_data["recurrent_hidden_states"]
+
+        self.actions = self.unnarrow_data["actions"]
+        del self.unnarrow_data["actions"]
+
+        self.prev_actions = self.unnarrow_data["prev_actions"]
+        del self.unnarrow_data["prev_actions"]
+
+        self.action_log_probs = self.unnarrow_data["action_log_probs"]
+        del self.unnarrow_data["action_log_probs"]
+
+        self.value_preds = self.unnarrow_data["value_preds"]
+        del self.unnarrow_data["value_preds"]
+
+        self.rewards = self.unnarrow_data["rewards"]
+        del self.unnarrow_data["rewards"]
+
+        self.masks = self.unnarrow_data["masks"]
+        del self.unnarrow_data["masks"]
+
+        self.num_steps = self.unnarrow_data["num_steps"]
+        del self.unnarrow_data["num_steps"]
+
+        assert len(self.unnarrow_data) == 0
+
     def after_update(self):
+        assert self.step == 0, "wrong number of steps {} in rollouts storage with capacity {}".format(self.step, self.num_steps)
+
         for sensor in self.observations:
             self.observations[sensor][0].copy_(self.observations[sensor][-1])
 
         self.recurrent_hidden_states[0].copy_(self.recurrent_hidden_states[-1])
         self.masks[0].copy_(self.masks[-1])
         self.prev_actions[0].copy_(self.prev_actions[-1])
+
+        if len(self.unnarrow_data) > 0:
+            self.unnarrow()
 
     def compute_returns(self, next_value, use_gae, gamma, tau):
         if use_gae:
@@ -246,7 +352,7 @@ class RolloutStorage:
             norm_adv_targ = self._flatten_helper(T, N, norm_adv_targ)
 
             yield {
-                "observations": observations_batch,
+                "observations": self.unflatten_spaces(observations_batch),
                 "recurrent_hidden_states": recurrent_hidden_states_batch,
                 "actions": actions_batch,
                 "prev_actions": prev_actions_batch,
@@ -257,6 +363,30 @@ class RolloutStorage:
                 "adv_targ": adv_targ,
                 "norm_adv_targ": norm_adv_targ,
             }
+
+    def unflatten_spaces(self, observations):
+        def ddict2dict(d):
+            for k, v in d.items():
+                if isinstance(v, dict):
+                    d[k] = ddict2dict(v)
+            return dict(d)
+
+        nested_dict = lambda: defaultdict(nested_dict)
+        result = nested_dict()
+        for name in observations:
+            if name not in self.flattened_spaces:
+                result[name] = observations[name]
+            else:
+                full_path = self.flattened_spaces[name]
+                cur_dict = result
+                for part in full_path[:-1]:
+                    cur_dict = cur_dict[part]
+                cur_dict[full_path[-1]] = observations[name]
+        return ddict2dict(result)
+
+    def pick_observation_step(self, step: int) -> Dict[str, Union[Dict, torch.Tensor]]:
+        observations_batch = {sensor: self.observations[sensor][step] for sensor in self.observations}
+        return self.unflatten_spaces(observations_batch)
 
     @staticmethod
     def _flatten_helper(t: int, n: int, tensor: torch.Tensor) -> torch.Tensor:
