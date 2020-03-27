@@ -142,7 +142,7 @@ class OnPolicyRLEngine(object):
             self.actor_critic = config.create_model().to(self.device)
 
         self.optimizer: Optional[optim.Optimizer] = None  # type: ignore
-        self.lr_scheduler: Optmodel_argsional[optim.lr_scheduler._LRScheduler] = None
+        self.lr_scheduler: Optional[optim.lr_scheduler._LRScheduler] = None
         if mode == "train":
             self.optimizer = self.training_pipeline.optimizer_builder(
                 params=[p for p in self.actor_critic.parameters() if p.requires_grad]
