@@ -6,14 +6,17 @@ from habitat import Config
 
 
 def construct_env_configs(config: Config) -> List[Config]:
-    r"""Create list of Habitat Configs for training on multiple processes
+    """Create list of Habitat Configs for training on multiple processes
     To allow better performance, dataset are split into small ones for
     each individual env, grouped by scenes.
-    Args:
-        config: configs that contain num_processes as well as information
-        necessary to create individual environments.
-    Returns:
-        List of Configs, one for each process
+
+    # Parameters
+
+    config : configs that contain num_processes as well as information
+             necessary to create individual environments.
+
+    # Returns
+    List of Configs, one for each process.
     """
 
     config.freeze()
