@@ -73,7 +73,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
         "target_coordinates_ind",
     ]
 
-    CONFIG = habitat.get_config("configs/gibson.yaml")
+    CONFIG = habitat.get_config("rl_habitat/configs/gibson.yaml")
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
     CONFIG.SIMULATOR_GPU_IDS = [1, 2, 3, 4, 5, 6]

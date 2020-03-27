@@ -33,7 +33,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
 
     NUM_PROCESSES = 14
 
-    CONFIG = habitat.get_config("configs/mp3d.yaml")
+    CONFIG = habitat.get_config("rl_habitat/configs/mp3d.yaml")
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
     CONFIG.SIMULATOR_GPU_IDS = [1, 2, 3, 4, 5, 6]
