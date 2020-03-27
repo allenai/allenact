@@ -1,11 +1,9 @@
 from typing import Any, Dict, Optional
 
-import PIL
 import gym
 import numpy as np
 from pyquaternion import Quaternion
 import typing
-from PIL import Image
 import torch
 import torch.nn as nn
 import torchvision.models as models
@@ -14,24 +12,7 @@ from torchvision import transforms
 from rl_habitat.habitat_environment import HabitatEnvironment
 from rl_habitat.habitat_tasks import HabitatTask, PointNavTask
 from rl_base.sensor import Sensor
-
-
-class ScaleBothSides(object):
-    """Rescales the input PIL.Image to the given 'width' and `height`.
-
-    Attributes
-        width: new width
-        height: new height
-        interpolation: Default: PIL.Image.BILINEAR
-    """
-
-    def __init__(self, width: int, height: int, interpolation=Image.BILINEAR):
-        self.width = width
-        self.height = height
-        self.interpolation = interpolation
-
-    def __call__(self, img: PIL.Image) -> PIL.Image:
-        return img.resize((self.width, self.height), self.interpolation)
+from utils.tensor_utils import ScaleBothSides
 
 
 class RGBSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
