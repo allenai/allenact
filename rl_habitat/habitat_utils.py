@@ -6,9 +6,9 @@ from habitat import Config
 
 
 def construct_env_configs(config: Config) -> List[Config]:
-    """Create list of Habitat Configs for training on multiple processes
-    To allow better performance, dataset are split into small ones for
-    each individual env, grouped by scenes.
+    """Create list of Habitat Configs for training on multiple processes To
+    allow better performance, dataset are split into small ones for each
+    individual env, grouped by scenes.
 
     # Parameters
 
@@ -16,6 +16,7 @@ def construct_env_configs(config: Config) -> List[Config]:
              necessary to create individual environments.
 
     # Returns
+
     List of Configs, one for each process.
     """
 
