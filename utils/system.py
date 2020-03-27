@@ -1,6 +1,13 @@
 import logging
+import socket
+from contextlib import closing
+import sys
 
 LOGGER = logging.getLogger("embodiedrl")
+
+
+def excepthook(*args):
+    LOGGER.error("Uncaught exception:", exc_info=args)
 
 
 def init_logging(log_format="default", log_level="debug"):
@@ -36,3 +43,12 @@ def init_logging(log_format="default", log_level="debug"):
 
     LOGGER.setLevel(log_level)
     LOGGER.addHandler(ch)
+
+    sys.excepthook = excepthook
+
+
+def find_free_port(address='localhost'):
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind((address, 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]

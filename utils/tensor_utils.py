@@ -4,13 +4,19 @@ import numbers
 from collections import defaultdict
 import typing
 from typing import List, Dict, Optional, DefaultDict, Union, Any
+import os
+import tempfile
 
 import numpy as np
 import torch
-from tensorboardX import SummaryWriter as SummaryWriterBase, summary as tbxsummary
+from tensorboardX import SummaryWriter as TBXSummaryWriter, summary as tbxsummary
 from tensorboardX.x2num import make_np as tbxmake_np
 from tensorboardX.utils import _prepare_video as tbx_prepare_video
 from tensorboardX.proto.summary_pb2 import Summary as TBXSummary
+from moviepy import editor as mpy
+from moviepy.editor import concatenate_videoclips
+
+from utils.system import LOGGER
 
 
 def batch_observations(
@@ -31,7 +37,7 @@ def batch_observations(
     """
     # batch: DefaultDict = defaultdict(list)
     #
-    # for obs in observations[1:]:
+    # for obs in observations:
     #     for sensor in obs:
     #         batch[sensor].append(to_tensor(obs[sensor]))
     #
@@ -128,7 +134,7 @@ def tile_images(images: List[np.ndarray]) -> np.ndarray:
     return out_image
 
 
-class SummaryWriter(SummaryWriterBase):
+class SummaryWriter(TBXSummaryWriter):
     def _video(self, tag, vid):
         tag = tbxsummary._clean_tag(tag)
         return TBXSummary(value=[TBXSummary.Value(tag=tag, image=vid)])
@@ -147,3 +153,85 @@ def tensor_to_video(tensor, fps=4):
         tensor = (tensor * 255.0).astype(np.uint8)
 
     return tbxsummary.make_video(tensor, fps)
+
+
+def tensor_to_clip(tensor, fps=4):
+    tensor = tbxmake_np(tensor)
+    tensor = tbx_prepare_video(tensor)
+    # If user passes in uint8, then we don't need to rescale by 255
+    if tensor.dtype != np.uint8:
+        tensor = (tensor * 255.0).astype(np.uint8)
+
+    t, h, w, c = tensor.shape
+
+    clip = mpy.ImageSequenceClip(list(tensor), fps=fps)
+
+    return clip, (h, w, c)
+
+
+def clips_to_video(clips, h, w, c):
+    # encode sequence of images into gif string
+    clip = concatenate_videoclips(clips)
+
+    filename = tempfile.NamedTemporaryFile(suffix=".gif", delete=False).name
+
+    # moviepy >= 1.0.0 use logger=None to suppress output.
+    try:
+        clip.write_gif(filename, verbose=False, logger=None)
+    except TypeError:
+        LOGGER.warning("Upgrade to moviepy >= 1.0.0 to suppress the progress bar.")
+        clip.write_gif(filename, verbose=False)
+
+    with open(filename, "rb") as f:
+        tensor_string = f.read()
+
+    try:
+        os.remove(filename)
+    except OSError:
+        LOGGER.warning("The temporary file used by moviepy cannot be deleted.")
+
+    return TBXSummary.Image(height=h, width=w, colorspace=c, encoded_image_string=tensor_string)
+
+
+def process_video(render, max_clip_len=500, max_video_len=-1):
+    output = []
+    hwc = None
+    if len(render) > 0:
+        if len(render) > max_video_len > 0:
+            LOGGER.warning("Clipping video to first {} frames out of {} original frames".format(
+                max_video_len, len(render)
+            ))
+            render = render[:max_video_len]
+        for clipstart in range(0, len(render), max_clip_len):
+            clip = render[clipstart:clipstart + max_clip_len]
+            try:
+                current = np.stack(clip, axis=0)  # T, H, W, C
+                current = current.transpose((0, 3, 1, 2))  # T, C, H, W
+                current = np.expand_dims(current, axis=0)  # 1, T, C, H, W
+                current, cur_hwc = tensor_to_clip(current, fps=4)
+
+                if hwc is None:
+                    hwc = cur_hwc
+                else:
+                    assert hwc == cur_hwc, "Inconsistent clip shape: previous {} current {}".format(hwc, cur_hwc)
+
+                output.append(current)
+            except MemoryError:
+                LOGGER.error(
+                    "Skipping video due to memory error with clip of length {}".format(len(clip))
+                )
+                return None
+    else:
+        LOGGER.warning("Calling process_video with 0 frames")
+        return None
+
+    assert len(output) > 0, "No clips to concatenate"
+    assert hwc is not None, "No tensor dims assigned"
+
+    try:
+        result = clips_to_video(output, *hwc)
+    except MemoryError:
+        LOGGER.error("Skipping video due to memory error calling clips_to_video")
+        result = None
+
+    return result

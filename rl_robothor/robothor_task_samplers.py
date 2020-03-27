@@ -80,7 +80,7 @@ class ObjectNavTaskSampler(TaskSampler):
 
     @property
     def total_unique(self) -> Optional[Union[int, float]]:
-        return None
+        return self.reset_tasks
 
     @property
     def last_sampled_task(self) -> Optional[ObjectNavTask]:
@@ -169,7 +169,7 @@ class ObjectNavTaskSampler(TaskSampler):
             [o["objectType"] for o in self.env.last_event.metadata["objects"]]
         )
 
-        task_info = {}
+        task_info = {"scene": scene}
         for ot in random.sample(self.object_types, len(self.object_types)):
             if ot in object_types_in_scene:
                 task_info["object_type"] = ot
@@ -208,6 +208,9 @@ class ObjectNavTaskSampler(TaskSampler):
         # # 'initial_orientation': roatation_y,
         # # 'shortest_path': path,
         # # 'shortest_path_length': minimum_path_length
+
+        if self.reset_tasks is not None:
+            LOGGER.debug("valid task_info {}".format(task_info))
 
         self._last_sampled_task = ObjectNavTask(
             env=self.env,
@@ -306,7 +309,7 @@ class PointNavTaskSampler(TaskSampler):
         # for scene in self.scene_to_episodes:
         #     total += len(self.scene_to_episodes[scene])
         # return total
-        return None
+        return self.reset_tasks
 
     @property
     def last_sampled_task(self) -> Optional[PointNavTask]:

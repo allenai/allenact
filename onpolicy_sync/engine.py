@@ -11,7 +11,6 @@ import typing
 import warnings
 from multiprocessing.context import BaseContext
 from typing import Optional, Any, Dict, Union, List, Tuple
-import logging
 import json
 from collections import OrderedDict
 
@@ -28,6 +27,7 @@ import numpy as np
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from onpolicy_sync.storage import RolloutStorage
 from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks, ThreadedVectorSampledTasks
+from onpolicy_sync.vector_preprocessed_tasks import VectorPreprocessedTasks, ThreadedVectorPreprocessedTasks
 from rl_base.experiment_config import ExperimentConfig
 from utils.experiment_utils import (
     ScalarMeanTracker,
@@ -39,8 +39,7 @@ from utils.experiment_utils import (
     PipelineStage,
 )
 from utils.tensor_utils import batch_observations, SummaryWriter, tensor_to_video
-
-LOGGER = logging.getLogger("embodiedrl")
+from utils.system import init_logging, LOGGER
 
 
 def validate(
@@ -52,6 +51,7 @@ def validate(
     deterministic_cudnn: bool = False,
     mp_ctx: Optional[BaseContext] = None,
 ):
+    init_logging()
     ptitle("Validation")
     evaluator = OnPolicyValidator(
         config=config,
@@ -130,37 +130,6 @@ class OnPolicyRLEngine(object):
         if self.seed is not None:
             set_seed(self.seed)
 
-        self.observation_set = None
-        if "observation_set" in self.machine_params and self.machine_params["observation_set"] is not None:
-            self.observation_set = self.machine_params["observation_set"].to(
-                self.device
-            )
-            self.actor_critic = config.create_model(
-                observation_set=self.observation_set
-            ).to(self.device)
-        else:
-            self.actor_critic = config.create_model().to(self.device)
-
-        # if self.mode == "train" and len(self.machine_params["gpu_ids"]) > 0:
-        #     LOGGER.info("Using data parallelism to actor critic")
-        #     self.actor_critic = torch.nn.DataParallel(self.actor_critic).to("cuda")
-        #     self.is_data_parallel = True
-        # else:
-        #     self.is_data_parallel = False
-        self.is_data_parallel = False
-
-        self.optimizer: Optional[optim.Optimizer] = None  # type: ignore
-        self.lr_scheduler: Optional[optim.lr_scheduler._LRScheduler] = None
-        if mode == "train":
-            self.optimizer = self.training_pipeline.optimizer_builder(
-                params=[p for p in self.actor_critic.parameters() if p.requires_grad]
-            )
-
-            if self.training_pipeline.lr_scheduler_builder is not None:
-                self.lr_scheduler = self.training_pipeline.lr_scheduler_builder(
-                    optimizer=self.optimizer
-                )
-
         self._vector_tasks: Optional[VectorSampledTasks] = None
 
         self.output_dir = output_dir
@@ -237,6 +206,50 @@ class OnPolicyRLEngine(object):
                 )
                 self.eval_process.start()
 
+        self.observation_set = None
+        if ('make_preprocessors_fns' in self.machine_params
+                and self.machine_params["make_preprocessors_fns"] is not None
+                and len(self.machine_params["make_preprocessors_fns"]) > 0):
+            observation_set = self.machine_params["make_preprocessors_fns"][0]()
+            self.actor_critic = config.create_model(
+                observation_set=observation_set
+            ).to(self.device)
+            del observation_set
+        elif "observation_set" in self.machine_params and self.machine_params["observation_set"] is not None:
+            self.observation_set = self.machine_params["observation_set"].to(
+                self.device
+            )
+            self.actor_critic = config.create_model(
+                observation_set=self.observation_set
+            ).to(self.device)
+        else:
+            self.actor_critic = config.create_model().to(self.device)
+
+        if ('make_preprocessors_fns' in self.machine_params
+                and self.machine_params["make_preprocessors_fns"] is not None
+                and len(self.machine_params["make_preprocessors_fns"]) == 0):
+            LOGGER.warning("Found empty make_preprocessors_fns list in machine_params")
+
+        # if self.mode == "train" and len(self.machine_params["gpu_ids"]) > 0:
+        #     LOGGER.info("Using data parallelism to actor critic")
+        #     self.actor_critic = torch.nn.DataParallel(self.actor_critic).to("cuda")
+        #     self.is_data_parallel = True
+        # else:
+        #     self.is_data_parallel = False
+        self.is_data_parallel = False
+
+        self.optimizer: Optional[optim.Optimizer] = None  # type: ignore
+        self.lr_scheduler: Optional[optim.lr_scheduler._LRScheduler] = None
+        if mode == "train":
+            self.optimizer = self.training_pipeline.optimizer_builder(
+                params=[p for p in self.actor_critic.parameters() if p.requires_grad]
+            )
+
+            if self.training_pipeline.lr_scheduler_builder is not None:
+                self.lr_scheduler = self.training_pipeline.lr_scheduler_builder(
+                    optimizer=self.optimizer
+                )
+
         self._is_closed: bool = False
 
     @property
@@ -245,15 +258,36 @@ class OnPolicyRLEngine(object):
             seeds = self.worker_seeds(
                 self.machine_params["nprocesses"], initial_seed=self.seed
             )
-            # self._vector_tasks = ThreadedVectorSampledTasks(  # TODO Debugging
-            self._vector_tasks = VectorSampledTasks(
-                make_sampler_fn=self.config.make_sampler_fn,
-                sampler_fn_args=self.get_sampler_fn_args(self.config, seeds),
-                multiprocessing_start_method="forkserver"
-                if self.mp_ctx is None
-                else None,
-                mp_ctx=self.mp_ctx,
-            )
+            if ('make_preprocessors_fns' in self.machine_params
+                    and self.machine_params["make_preprocessors_fns"] is not None
+                    and len(self.machine_params["make_preprocessors_fns"]) > 0):
+                assert "task_sampler_ids" in self.machine_params, "Missing task_sampler_ids for machine_params with make_preprocessors_fns"
+                # self._vector_tasks = ThreadedVectorPreprocessedTasks(  # TODO Debugging
+                self._vector_tasks = VectorPreprocessedTasks(
+                    make_preprocessors_fn=self.machine_params["make_preprocessors_fns"],
+                    task_sampler_ids=self.machine_params["task_sampler_ids"],
+                    make_sampler_fn=self.config.make_sampler_fn,
+                    sampler_fn_args=self.get_sampler_fn_args(self.config, seeds),
+                    multiprocessing_start_method="forkserver"
+                    if self.mp_ctx is None
+                    else None,
+                    mp_ctx=self.mp_ctx,
+                )
+            else:
+                if ('make_preprocessors_fns' in self.machine_params
+                        and self.machine_params["make_preprocessors_fns"] is not None
+                        and len(self.machine_params["make_preprocessors_fns"]) == 0):
+                    LOGGER.warning("Found empty make_preprocessors_fns list in machine_params")
+
+                # self._vector_tasks = ThreadedVectorSampledTasks(  # TODO Debugging
+                self._vector_tasks = VectorSampledTasks(
+                    make_sampler_fn=self.config.make_sampler_fn,
+                    sampler_fn_args=self.get_sampler_fn_args(self.config, seeds),
+                    multiprocessing_start_method="forkserver"
+                    if self.mp_ctx is None
+                    else None,
+                    mp_ctx=self.mp_ctx,
+                )
         return self._vector_tasks
 
     @staticmethod
@@ -393,7 +427,7 @@ class OnPolicyRLEngine(object):
     def process_eval_metrics(self, count=-1):
         unused = []
         used = []
-        while (not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
+        while (count < 0 and not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
             try:
                 if count < 0:
                     metric = self.vector_tasks.metrics_out_queue.get_nowait()
@@ -408,7 +442,8 @@ class OnPolicyRLEngine(object):
                         {k: v for k, v in metric.items() if k != "task_info"}
                     )
                     used.append(metric)
-                    count -= 1
+                    if count > 0:
+                        count -= 1
             except queue.Empty:
                 pass
 

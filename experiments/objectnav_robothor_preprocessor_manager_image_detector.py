@@ -10,9 +10,9 @@ from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 import numpy as np
 
-from onpolicy_sync.losses.ppo import PPOConfig
-from models.tensor_object_nav_models import ResnetTensorObjectNavActorCritic
-from onpolicy_sync.losses import PPO
+from onpolicy_sync.losses.a2cacktr import A2CConfig
+from models.frcnn_tensor_object_nav_models import ResnetFasterRCNNTensorsObjectNavActorCritic
+from onpolicy_sync.losses import A2C
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
@@ -20,67 +20,64 @@ from rl_robothor.robothor_tasks import ObjectNavTask
 from rl_robothor.robothor_task_samplers import ObjectNavTaskSampler
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
+from rl_robothor.robothor_preprocessors import FasterRCNNPreProcessorRoboThor
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
+class ObjectNavRoboThorImageDetectorExperimentConfig(ExperimentConfig):
     """An Object Navigation experiment configuration in RoboThor"""
 
     TRAIN_SCENES = [
-        "FloorPlan_Train%d_%d" % (wall + 1, furniture + 1)
-        for wall in range(12)
-        for furniture in range(5)
+        "FloorPlan_Train%d_%d" % (wall, furniture)
+        for wall in range(1, 13)
+        for furniture in range(1, 6)
     ]
 
     VALID_SCENES = [
-        "FloorPlan_Val%d_%d" % (wall + 1, furniture + 1)
-        for wall in range(3)
-        for furniture in range(5)
+        "FloorPlan_Val%d_%d" % (wall, furniture)
+        for wall in range(1, 4)
+        for furniture in range(1, 6)
     ]
 
     TEST_SCENES = [
-        "FloorPlan_test-dev%d_%d" % (wall + 1, furniture + 1)
-        for wall in range(2)
-        for furniture in range(2)
+        "FloorPlan_test-dev%d_%d" % (wall, furniture)
+        for wall in range(1, 3)
+        for furniture in range(1, 3)
     ]
 
-    CAMERA_WIDTH = 400
-    CAMERA_HEIGHT = 300
+    CAMERA_WIDTH = 400  # 640
+    CAMERA_HEIGHT = 300  # 480
 
     SCREEN_SIZE = 224
 
-    MAX_STEPS = 500
+    DETECTOR_DETS = 3
 
-    # It also ignores the empirical success of all episodes with length > num_steps * ADVANCE_SCENE_ROLLOUT_PERIOD and
-    # some with shorter lengths
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000  # generally useful if more than 1 scene per worker
+    MAX_STEPS = 500
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 10  # if more than 1 scene per worker
 
     VALIDATION_SAMPLES_PER_SCENE = 1
 
-    NUM_PROCESSES = 120  # TODO 2 for debugging
+    NUM_PROCESSES = 60  # TODO 2 for debugging
 
     TARGET_TYPES = sorted(
         [
-            "AlarmClock",
-            "Apple",
-            "BaseballBat",
-            "BasketBall",
-            "Bowl",
-            "GarbageCan",
-            "HousePlant",
-            "Laptop",
-            "Mug",
-            "Remote",
-            "SprayBottle",
-            "Television",
-            "Vase",
-            # 'AlarmClock',
-            # 'Apple',
-            # 'BasketBall',
-            # 'Mug',
-            # 'Television',
+            'AlarmClock',
+            'Apple',
+            'BasketBall',
+            'Mug',
+            'Television',
         ]
     )
+
+    TARGET_TO_DETECTOR_MAP = {
+        'AlarmClock': 'clock',
+        'Apple': 'apple',
+        'BasketBall': 'sports ball',
+        'Mug': 'cup',
+        'Television': 'tv',
+    }
+
+    DETECTOR_TYPES = FasterRCNNPreProcessorRoboThor.COCO_INSTANCE_CATEGORY_NAMES
 
     SENSORS = [
         RGBSensorThor(
@@ -91,8 +88,18 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 "uuid": "rgb_lowres",
             }
         ),
+        RGBSensorThor(
+            {
+                "height": CAMERA_HEIGHT,
+                "width": CAMERA_WIDTH,
+                "use_resnet_normalization": False,
+                "uuid": "rgb_highres"
+            }
+        ),
         GoalObjectTypeThorSensor({
             "object_types": TARGET_TYPES,
+            "target_to_detector_map": TARGET_TO_DETECTOR_MAP,
+            "detector_types": DETECTOR_TYPES,
         }),
     ]
 
@@ -108,14 +115,27 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                     "torchvision_resnet_model": models.resnet18,
                     "input_uuids": ["rgb_lowres"],
                     "output_uuid": "rgb_resnet",
-                    "parallel": False,  # TODO False for debugging
+                    "parallel": True,  # TODO False for debugging
             })
         ),
+        Builder(FasterRCNNPreProcessorRoboThor,
+                dict(config={
+                    "input_height": CAMERA_HEIGHT,
+                    "input_width": CAMERA_WIDTH,
+                    "max_dets": DETECTOR_DETS,
+                    "detector_spatial_res": 7,
+                    "detector_thres": 0.12,
+                    "input_uuids": ["rgb_highres"],
+                    "output_uuid": "object_detector",
+                    "parallel": True,  # TODO False for debugging
+            })
+        )
     ]
 
     OBSERVATIONS = [
         "rgb_resnet",
         "goal_object_type_ind",
+        "object_detector"
     ]
 
     ENV_ARGS = dict(
@@ -129,19 +149,18 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         gridSize=0.25,
         snapToGrid=False,
         agentMode="bot",
-        include_private_scenes=True,
     )
 
     @classmethod
     def tag(cls):
-        return "ObjectNavRobothorRGBPPO"
+        return "ObjectNav"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        ppo_steps = int(1e8)
-        lr = 3e-4
+        a2c_steps = int(1e8)
+        lr = 1e-3
         num_mini_batch = 1
-        update_repeats = 3
+        update_repeats = 1
         num_steps = 30
         save_interval = 200000
         log_interval = 1000
@@ -157,23 +176,38 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
+            named_losses={"a2c_loss": Builder(A2C, kwargs={}, default=A2CConfig,)},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
             advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
-                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps)
+                PipelineStage(loss_names=["a2c_loss"], end_criterion=a2c_steps)
             ],
-            lr_scheduler_builder=Builder(
-                LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
-            ),
+            # lr_scheduler_builder=Builder(
+            #     LambdaLR, {"lr_lambda": LinearDecay(steps=a2c_steps)}
+            # ),
         )
+
+    def create_preprocessed_args(self, manager_devices, num_samplers):
+        def instantiate_preprocessors(x):
+            prep_args = {"parallel": False}  # enforce each preprocessor runs on a single device
+            return ObservationSet(
+                self.OBSERVATIONS, [prep(config=prep_args) for prep in self.PREPROCESSORS], self.SENSORS
+            ).to(x)
+
+        make_preprocessor_fns = [lambda *args, **kwargs: instantiate_preprocessors(x) for x in manager_devices]
+
+        task_sampler_ids = [[] * len(manager_devices)]
+        for sampler in range(num_samplers):
+            task_sampler_ids[sampler % len(manager_devices)].append(sampler)
+
+        return {"make_preprocessors_fns": make_preprocessor_fns, "task_sampler_ids": task_sampler_ids}
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
             nprocesses = 1 if not torch.cuda.is_available() else self.NUM_PROCESSES  # TODO default 2 for debugging
-            sampler_devices = [1, 2, 3, 4, 5, 6]  # TODO vs4 only has 7 gpus
+            sampler_devices = [0, 1, 2, 3, 4, 5, 6, 7]
             gpu_ids = [] if not torch.cuda.is_available() else [0]
             render_video = False
         elif mode == "valid":
@@ -193,31 +227,45 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
-        # Disable parallelization for validation process
-        prep_args = {}
-        if mode == "valid":
-            prep_args["parallel"] = False
-        observation_set = ObservationSet(
-            self.OBSERVATIONS, [prep(config=prep_args) for prep in self.PREPROCESSORS], self.SENSORS
-        ) if nprocesses > 0 else None
+        # prep_args = {}
+        # if mode == "valid":
+        #     prep_args["parallel"] = False
+        # observation_set = ObservationSet(
+        #     self.OBSERVATIONS, [prep(config=prep_args) for prep in self.PREPROCESSORS], self.SENSORS
+        # ) if nprocesses > 0 else None
 
-        return {
+        res = {
             "nprocesses": nprocesses,
             "gpu_ids": gpu_ids,
             "sampler_devices": sampler_devices if mode == "train" else gpu_ids,
-            "observation_set": observation_set,
+            # "observation_set": observation_set,
             "render_video": render_video,
         }
 
+        if mode == "train":
+            res.update(self.create_preprocessed_args(sampler_devices, nprocesses))
+        elif mode in ["valid", "test"]:
+            prep_args = {"parallel": False}
+
+            # TODO defer building (use Builder wrapper only)
+            observation_set = ObservationSet(
+                self.OBSERVATIONS, [prep(config=prep_args) for prep in self.PREPROCESSORS], self.SENSORS
+            ) if nprocesses > 0 else None
+            res["observation_set"] = observation_set
+
+        return res
+
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ResnetTensorObjectNavActorCritic(
+        return ResnetFasterRCNNTensorsObjectNavActorCritic(
             action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="goal_object_type_ind",
             resnet_preprocessor_uuid="rgb_resnet",
+            detector_preprocessor_uuid="object_detector",
             rnn_hidden_size=512,
             goal_dims=32,
+            max_dets=3,
         )
 
     @classmethod
@@ -264,9 +312,11 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": {
                 "step_penalty": -0.01,
-                "goal_success_reward": 10.0,
-                "failed_stop_reward": 0.0,
-                "shaping_weight": 1.0,  # applied to the decrease in distance to target
+                "goal_success_reward": 5.0,
+                "unsuccessful_action_penalty": -0.05,
+                "failed_stop_reward": -1.0,
+                "shaping_weight": 0.0,  # applied to the decrease in distance to target
+                "exploration_shaping_weight": 0.1,  # relative to shaping weight
             },
         }
 
@@ -285,7 +335,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_period"] = "manual"  # uses ADVANCE_SCENE_ROLLOUT_PERIOD
+        res["scene_period"] = "manual"
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (

@@ -26,17 +26,25 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     """An Object Navigation experiment configuration in RoboThor"""
 
+    # TRAIN_SCENES = [
+    #     "FloorPlan_Train%d_%d" % (wall + 1, furniture + 1)
+    #     for wall in range(12)
+    #     for furniture in range(5)
+    # ]
+    #
+    # VALID_SCENES = [
+    #     "FloorPlan_Val%d_%d" % (wall + 1, furniture + 1)
+    #     for wall in range(3)
+    #     for furniture in range(5)
+    # ]
+
     TRAIN_SCENES = [
         "FloorPlan_Train%d_%d" % (wall + 1, furniture + 1)
-        for wall in range(12)
-        for furniture in range(5)
+        for wall in range(1)
+        for furniture in range(1)
     ]
 
-    VALID_SCENES = [
-        "FloorPlan_Val%d_%d" % (wall + 1, furniture + 1)
-        for wall in range(3)
-        for furniture in range(5)
-    ]
+    VALID_SCENES = TRAIN_SCENES
 
     TEST_SCENES = [
         "FloorPlan_test-dev%d_%d" % (wall + 1, furniture + 1)
@@ -55,30 +63,35 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     # some with shorter lengths
     ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000  # generally useful if more than 1 scene per worker
 
-    VALIDATION_SAMPLES_PER_SCENE = 1
+    VALIDATION_SAMPLES_PER_SCENE = 10
 
-    NUM_PROCESSES = 120  # TODO 2 for debugging
+    NUM_PROCESSES = 4  # TODO 2 for debugging
 
+    # TARGET_TYPES = sorted(
+    #     [
+    #         "AlarmClock",
+    #         "Apple",
+    #         "BaseballBat",
+    #         "BasketBall",
+    #         "Bowl",
+    #         "GarbageCan",
+    #         "HousePlant",
+    #         "Laptop",
+    #         "Mug",
+    #         "Remote",
+    #         "SprayBottle",
+    #         "Television",
+    #         "Vase",
+    #         # 'AlarmClock',
+    #         # 'Apple',
+    #         # 'BasketBall',
+    #         # 'Mug',
+    #         # 'Television',
+    #     ]
+    # )
     TARGET_TYPES = sorted(
         [
-            "AlarmClock",
-            "Apple",
-            "BaseballBat",
-            "BasketBall",
-            "Bowl",
-            "GarbageCan",
-            "HousePlant",
-            "Laptop",
-            "Mug",
-            "Remote",
-            "SprayBottle",
             "Television",
-            "Vase",
-            # 'AlarmClock',
-            # 'Apple',
-            # 'BasketBall',
-            # 'Mug',
-            # 'Television',
         ]
     )
 
@@ -138,13 +151,13 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        ppo_steps = int(1e8)
+        ppo_steps = int(10000)
         lr = 3e-4
         num_mini_batch = 1
         update_repeats = 3
         num_steps = 30
-        save_interval = 200000
-        log_interval = 1000
+        save_interval = cls.NUM_PROCESSES * num_steps * 10  # every >= 10 rollouts
+        log_interval = 1  # log every rollout
         gamma = 0.99
         use_gae = True
         gae_lambda = 0.95
@@ -170,41 +183,45 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             ),
         )
 
+    def split_num_processes(self, ndevices):
+        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(self.NUM_PROCESSES, ndevices)
+        res = [0] * ndevices
+        for it in range(self.NUM_PROCESSES):
+            res[it % ndevices] += 1
+        return res
+
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else self.NUM_PROCESSES  # TODO default 2 for debugging
-            sampler_devices = [1, 2, 3, 4, 5, 6]  # TODO vs4 only has 7 gpus
-            gpu_ids = [] if not torch.cuda.is_available() else [0]
+            workers_per_device = 1
+            # gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7] * workers_per_device  # TODO vs4 only has 7 gpus
+            gpu_ids = [] if not torch.cuda.is_available() else [0, 1] * workers_per_device  # TODO vs4 only has 7 gpus
+            nprocesses = 2 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
+            sampler_devices = [0, 1, 2, 3, 4, 5, 6, 7]  # TODO vs4 only has 7 gpus (ignored with > 1 gpu_ids)
             render_video = False
         elif mode == "valid":
             nprocesses = 1  # TODO debugging (0)
-            if not torch.cuda.is_available():
-                gpu_ids = []
-            else:
-                gpu_ids = [0]
+            gpu_ids = [] if not torch.cuda.is_available() else [0]
             render_video = False
         elif mode == "test":
             nprocesses = 1
-            if not torch.cuda.is_available():
-                gpu_ids = []
-            else:
-                gpu_ids = [0]
+            gpu_ids = [] if not torch.cuda.is_available() else [0]
             render_video = True
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
         # Disable parallelization for validation process
-        prep_args = {}
         if mode == "valid":
-            prep_args["parallel"] = False
-        observation_set = ObservationSet(
-            self.OBSERVATIONS, [prep(config=prep_args) for prep in self.PREPROCESSORS], self.SENSORS
-        ) if nprocesses > 0 else None
+            for prep in self.PREPROCESSORS:
+                prep.kwargs["config"]["parallel"] = False
+
+        observation_set = Builder(ObservationSet, kwargs=dict(
+            source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
+        )) if mode == 'train' or nprocesses > 0 else None
 
         return {
             "nprocesses": nprocesses,
             "gpu_ids": gpu_ids,
-            "sampler_devices": sampler_devices if mode == "train" else gpu_ids,
+            "sampler_devices": sampler_devices if mode == "train" else gpu_ids,  # ignored with > 1 gpu_ids
             "observation_set": observation_set,
             "render_video": render_video,
         }

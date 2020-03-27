@@ -18,55 +18,55 @@ from rl_base.sensor import Sensor
 from rl_base.task import Task
 
 
-class RoboThorTask(Task[RoboThorEnvironment]):
-    def __init__(
-        self,
-        env: RoboThorEnvironment,
-        sensors: List[Sensor],
-        task_info: Dict[str, Any],
-        max_steps: int,
-        **kwargs
-    ) -> None:
-        super().__init__(
-            env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
-        )
-
-        self._last_action: Optional[str] = None
-        self._last_action_ind: Optional[int] = None
-        self._last_action_success: Optional[bool] = None
-
-    @property
-    def last_action(self):
-        return self._last_action
-
-    @last_action.setter
-    def last_action(self, value: str):
-        self._last_action = value
-
-    @property
-    def last_action_success(self):
-        return self._last_action_success
-
-    @last_action_success.setter
-    def last_action_success(self, value: Optional[bool]):
-        self._last_action_success = value
-
-    # def _step(self, action: int) -> RLStepResult:
-    #     self._last_action_ind = action
-    #     self.last_action = self.action_names()[action]
-    #     self.last_action_success = None
-    #     step_result = super().step(action=action)
-    #     step_result.info["action"] = self._last_action_ind
-    #     step_result.info["action_success"] = self.last_action_success
-    #     return step_result
-
-    def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
-        if mode == "rgb":
-            return self.env.current_frame["rgb"]
-        elif mode == "depth":
-            return self.env.current_frame["depth"]
-        else:
-            raise NotImplementedError()
+# class RoboThorTask(Task[RoboThorEnvironment]):
+#     def __init__(
+#         self,
+#         env: RoboThorEnvironment,
+#         sensors: List[Sensor],
+#         task_info: Dict[str, Any],
+#         max_steps: int,
+#         **kwargs
+#     ) -> None:
+#         super().__init__(
+#             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
+#         )
+#
+#         self._last_action: Optional[str] = None
+#         self._last_action_ind: Optional[int] = None
+#         self._last_action_success: Optional[bool] = None
+#
+#     @property
+#     def last_action(self):
+#         return self._last_action
+#
+#     @last_action.setter
+#     def last_action(self, value: str):
+#         self._last_action = value
+#
+#     @property
+#     def last_action_success(self):
+#         return self._last_action_success
+#
+#     @last_action_success.setter
+#     def last_action_success(self, value: Optional[bool]):
+#         self._last_action_success = value
+#
+#     # def _step(self, action: int) -> RLStepResult:
+#     #     self._last_action_ind = action
+#     #     self.last_action = self.action_names()[action]
+#     #     self.last_action_success = None
+#     #     step_result = super().step(action=action)
+#     #     step_result.info["action"] = self._last_action_ind
+#     #     step_result.info["action_success"] = self.last_action_success
+#     #     return step_result
+#
+#     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
+#         if mode == "rgb":
+#             return self.env.current_frame["rgb"]
+#         elif mode == "depth":
+#             return self.env.current_frame["depth"]
+#         else:
+#             raise NotImplementedError()
 
 
 class PointNavTask(Task[RoboThorEnvironment]):
@@ -416,7 +416,8 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
-                "spl": self.spl() if len(self.episode_optimal_corners) > 1 else 0.0
+                "spl": self.spl() if len(self.episode_optimal_corners) > 1 else 0.0,
+                "task_info": self.task_info,
             }
             self._rewards = []
             return metrics

@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 from collections import OrderedDict
 import abc
 
@@ -8,6 +8,7 @@ from gym.spaces import Dict as SpaceDict
 import networkx as nx
 
 from rl_base.sensor import Sensor, SensorSuite
+from utils.experiment_utils import Builder
 
 
 class Preprocessor(abc.ABC):
@@ -64,7 +65,7 @@ class PreprocessorGraph:
     preprocessors: Dict[str, Preprocessor]
     observation_spaces: SpaceDict
 
-    def __init__(self, preprocessors: List[Preprocessor],) -> None:
+    def __init__(self, preprocessors: List[Union[Preprocessor, Builder[Preprocessor]]],) -> None:
         """Initializer.
 
         # Parameters
@@ -74,6 +75,9 @@ class PreprocessorGraph:
         self.preprocessors: Dict[str, Preprocessor] = OrderedDict()
         spaces: OrderedDict[str, gym.Space] = OrderedDict()
         for preprocessor in preprocessors:
+            if isinstance(preprocessor, Builder):
+                preprocessor = preprocessor()
+
             assert (
                 preprocessor.uuid not in self.preprocessors
             ), "'{}' is duplicated preprocessor uuid".format(preprocessor.uuid)
@@ -151,7 +155,7 @@ class ObservationSet:
     def __init__(
         self,
         source_ids: List[str],
-        all_preprocessors: List[Preprocessor],
+        all_preprocessors: List[Union[Preprocessor, Builder[Preprocessor]]],
         all_sensors: List[Sensor],
     ) -> None:
         """Initializer.
