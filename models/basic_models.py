@@ -8,6 +8,8 @@ import torch
 from torch import nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
+from utils.model_utils import make_cnn
+
 
 class Flatten(nn.Module):
     """Flatten input tensor so that it is of shape (batchs x -1)."""
@@ -86,32 +88,16 @@ class SimpleCNN(nn.Module):
                         kernel_size=np.array(kernel_size, dtype=np.float32),
                         stride=np.array(stride, dtype=np.float32),
                     )
+                layer_channels = [32, 64, 32]
                 # noinspection PyUnboundLocalVariable
-                self.rgb_cnn = nn.Sequential(
-                    nn.Conv2d(
-                        in_channels=self._n_input_rgb,
-                        out_channels=32,
-                        kernel_size=self._cnn_layers_kernel_size[0],
-                        stride=self._cnn_layers_stride[0],
-                    ),
-                    nn.ReLU(True),
-                    nn.Conv2d(
-                        in_channels=32,
-                        out_channels=64,
-                        kernel_size=self._cnn_layers_kernel_size[1],
-                        stride=self._cnn_layers_stride[1],
-                    ),
-                    nn.ReLU(True),
-                    nn.Conv2d(
-                        in_channels=64,
-                        out_channels=32,
-                        kernel_size=self._cnn_layers_kernel_size[2],
-                        stride=self._cnn_layers_stride[2],
-                    ),
-                    #  nn.ReLU(True),
-                    nn.Flatten(),
-                    nn.Linear(32 * rgb_cnn_dims[0] * rgb_cnn_dims[1], output_size),
-                    nn.ReLU(True),
+                self.rgb_cnn = make_cnn(
+                    input_channels=self._n_input_rgb,
+                    layer_channels=layer_channels,
+                    kernel_sizes=self._cnn_layers_kernel_size,
+                    strides=self._cnn_layers_stride,
+                    output_height=rgb_cnn_dims[0],
+                    output_width=rgb_cnn_dims[1],
+                    output_channels=output_size,
                 )
                 self.layer_init(self.rgb_cnn)
 
@@ -127,32 +113,16 @@ class SimpleCNN(nn.Module):
                         kernel_size=np.array(kernel_size, dtype=np.float32),
                         stride=np.array(stride, dtype=np.float32),
                     )
+                layer_channels = [32, 64, 32]
                 # noinspection PyUnboundLocalVariable
-                self.depth_cnn = nn.Sequential(
-                    nn.Conv2d(
-                        in_channels=self._n_input_depth,
-                        out_channels=32,
-                        kernel_size=self._cnn_layers_kernel_size[0],
-                        stride=self._cnn_layers_stride[0],
-                    ),
-                    nn.ReLU(True),
-                    nn.Conv2d(
-                        in_channels=32,
-                        out_channels=64,
-                        kernel_size=self._cnn_layers_kernel_size[1],
-                        stride=self._cnn_layers_stride[1],
-                    ),
-                    nn.ReLU(True),
-                    nn.Conv2d(
-                        in_channels=64,
-                        out_channels=32,
-                        kernel_size=self._cnn_layers_kernel_size[2],
-                        stride=self._cnn_layers_stride[2],
-                    ),
-                    #  nn.ReLU(True),
-                    nn.Flatten(),
-                    nn.Linear(32 * depth_cnn_dims[0] * depth_cnn_dims[1], output_size),
-                    nn.ReLU(True),
+                self.rgb_cnn = make_cnn(
+                    input_channels=self._n_input_depth,
+                    layer_channels=layer_channels,
+                    kernel_sizes=self._cnn_layers_kernel_size,
+                    strides=self._cnn_layers_stride,
+                    output_height=depth_cnn_dims[0],
+                    output_width=depth_cnn_dims[1],
+                    output_channels=output_size,
                 )
                 self.layer_init(self.depth_cnn)
 
