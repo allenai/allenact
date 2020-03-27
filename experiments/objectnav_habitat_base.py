@@ -1,4 +1,5 @@
 from typing import Dict, Any, List, Optional
+from abc import abstractmethod
 
 import gym
 import torch
@@ -171,6 +172,11 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
         return ObjectNavTaskSampler(**kwargs)
 
+    @classmethod
+    @abstractmethod
+    def train_config(cls, process_ind: int) -> habitat.Config:
+        raise NotImplementedError
+
     def train_task_sampler_args(
         self,
         process_ind: int,
@@ -179,7 +185,7 @@ class ObjectNavHabitatBaseExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        config = self.TRAIN_CONFIGS[process_ind]
+        config = self.train_config(process_ind)
         return {
             "env_config": config,
             "max_steps": self.MAX_STEPS,

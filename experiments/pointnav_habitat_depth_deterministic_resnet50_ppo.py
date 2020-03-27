@@ -2,6 +2,8 @@ import gym
 import torch.nn as nn
 from torchvision import models
 
+import habitat
+
 from models.point_nav_models import PointNavActorCriticResNet50
 from rl_base.sensor import SensorSuite
 from rl_habitat.habitat_tasks import PointNavTask
@@ -55,6 +57,10 @@ class PointNavHabitatDepthDeterministicResNet50PPOExperimentConfig(
     CONFIG.SIMULATOR.AGENT_0.SENSORS = ["DEPTH_SENSOR"]
 
     TRAIN_CONFIGS = construct_env_configs(CONFIG)
+
+    @classmethod
+    def train_config(cls, process_ind: int) -> habitat.Config:
+        return cls.TRAIN_CONFIGS[process_ind]
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:

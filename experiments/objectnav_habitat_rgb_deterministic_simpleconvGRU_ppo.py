@@ -1,6 +1,8 @@
 import gym
 import torch.nn as nn
 
+import habitat
+
 from models.object_nav_models import ObjectNavBaselineActorCritic
 from rl_base.sensor import SensorSuite
 from rl_habitat.habitat_tasks import ObjectNavTask
@@ -41,6 +43,10 @@ class ObjectNavHabitatRGBDeterministicSimpleConvGRUPPOExperimentConfig(
     CONFIG.SIMULATOR.RGB_SENSOR.POSITION = [0, 0.88, 0]
 
     TRAIN_CONFIGS = construct_env_configs(CONFIG)
+
+    @classmethod
+    def train_config(cls, process_ind: int) -> habitat.Config:
+        return cls.TRAIN_CONFIGS[process_ind]
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
