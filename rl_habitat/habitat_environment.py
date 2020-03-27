@@ -11,7 +11,7 @@ from habitat.core.dataset import Episode, Dataset
 
 class HabitatEnvironment(object):
     def __init__(self, config: Config, dataset: Dataset, x_display: str = None) -> None:
-        print("rl_habitat env constructor")
+        # print("rl_habitat env constructor")
         self.x_display = x_display
         self.env = habitat.Env(config=config, dataset=dataset)
 
