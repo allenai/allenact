@@ -324,6 +324,7 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
+        # Distance is a non-negative real and angle is normalized to the range (-Pi, Pi] or [-Pi, Pi)
         self.observation_space = gym.spaces.Box(
             -3.15, 1000, shape=(config["coordinate_dims"],)
         )
