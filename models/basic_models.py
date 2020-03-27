@@ -29,6 +29,7 @@ class SimpleCNN(nn.Module):
     `"rgb"` and/or `"depth"` components.
 
     # Attributes
+
     observation_space : The observation_space of the agent, should have 'rgb' or 'depth' as
         a component (otherwise it is a blind model).
     output_size : The size of the embedding vector to produce.
@@ -38,6 +39,7 @@ class SimpleCNN(nn.Module):
         """Initializer.
 
         # Parameters
+
         observation_space : See class attributes documentation.
         output_size : See class attributes documentation.
         """
@@ -167,6 +169,7 @@ class SimpleCNN(nn.Module):
         [here](https://pytorch.org/docs/master/nn.html#torch.nn.Conv2d).
 
         # Parameters
+
         dimension : See above link.
         padding : See above link.
         dilation : See above link.
@@ -246,6 +249,7 @@ class RNNStateEncoder(nn.Module):
         state during various timesteps in the forward lass.
 
         # Parameters
+
         input_size : The input size of the RNN.
         hidden_size : The hidden size.
         num_layers : The number of recurrent layers.
@@ -290,6 +294,7 @@ class RNNStateEncoder(nn.Module):
         than an LSTM this is just the identitiy).
 
         # Parameters
+
         hidden_states : The hidden states to (possibly) stack.
         """
         if "LSTM" in self._rnn_type:
@@ -322,9 +327,12 @@ class RNNStateEncoder(nn.Module):
         steps on which a task has completed.
 
         # Parameters
+
         hidden_states : The hidden states.
         masks : Masks to apply to hidden states (see seq_forward).
+
         # Returns
+
         Masked hidden states. Here masked hidden states will be replaced with
         either all zeros (if `trainable_masked_hidden_state` was False) and will
         otherwise be a learnable collection of parameters.
@@ -383,6 +391,7 @@ class RNNStateEncoder(nn.Module):
         """Forward for a sequence of length T.
 
         # Parameters
+
         x : (T, N, -1) Tensor that has been flattened to (T * N, -1).
         hidden_states : The starting hidden states.
         masks : A (T, N) tensor flattened to (T * N).
@@ -459,6 +468,7 @@ class AddBias(nn.Module):
         """Initializer.
 
         # Parameters
+
         bias : data to use as the initial values of the bias.
         """
         super(AddBias, self).__init__()

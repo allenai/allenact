@@ -33,6 +33,7 @@ class RNNMap(nn.Module):
         than an LSTM this is just the identitiy).
 
         # Parameters
+
         hidden_states : The hidden states to (possibly) stack.
         """
         if "LSTM" in self._rnn_type:

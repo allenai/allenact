@@ -26,6 +26,7 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
     """Baseline recurrent actor critic model for object-navigation.
 
     # Attributes
+
     action_space : The space of actions available to the agent. Currently only discrete
         actions are allowed (so this space will always be of type `gym.spaces.Discrete`).
     observation_space : The observation space expected by the agent. This observation space
@@ -120,11 +121,14 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         evaluation of the current state (value).
 
         # Parameters
+
         observations : Batched input observations.
         rnn_hidden_states : Hidden states from initial timepoints.
         prev_actions : Tensor of previous actions taken.
         masks : Masks applied to hidden states. See `RNNStateEncoder`.
+
         # Returns
+
         Tuple of the `ActorCriticOutput` and recurrent hidden state.
         """
         target_encoding = self.get_object_type_encoding(observations)
@@ -150,6 +154,7 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
     """Baseline recurrent actor critic model for object-navigation.
 
     # Attributes
+
     action_space : The space of actions available to the agent. Currently only discrete
         actions are allowed (so this space will always be of type `gym.spaces.Discrete`).
     observation_space : The observation space expected by the agent. This observation space
@@ -251,11 +256,14 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
         evaluation of the current state (value).
 
         # Parameters
+
         observations : Batched input observations.
         rnn_hidden_states : Hidden states from initial timepoints.
         prev_actions : Tensor of previous actions taken.
         masks : Masks applied to hidden states. See `RNNStateEncoder`.
+
         # Returns
+
         Tuple of the `ActorCriticOutput` and recurrent hidden state.
         """
         target_encoding = self.get_object_type_encoding(observations)
