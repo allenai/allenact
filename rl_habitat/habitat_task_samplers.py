@@ -54,7 +54,7 @@ class PointNavTaskSampler(TaskSampler):
 
     @property
     def total_unique(self) -> Union[int, float, None]:
-        return None
+        return self.env.num_episodes
 
     @property
     def last_sampled_task(self) -> Optional[PointNavTask]:
@@ -143,7 +143,7 @@ class ObjectNavTaskSampler(TaskSampler):
             config=self.env_config,
             dataset=dataset
         )
-        self.max_tasks = env.num_episodes if env.num_episodes == 2184 else None # mp3d objectnav val -> 2184
+        self.max_tasks = env.num_episodes # mp3d objectnav val -> 2184
         self.reset_tasks = self.max_tasks
         return env
 
