@@ -96,6 +96,12 @@ def _get_args():
         help="optional number of skipped checkpoints between runs in test if no checkpoint specified",
     )
 
+    parser.add_argument(
+        "--single_process_training",
+        action="store_true",
+        help="whether or not to train with a single process (useful for debugging).",
+    )
+
     return parser.parse_args()
 
 
@@ -203,6 +209,7 @@ def main():
             seed=args.seed,
             deterministic_cudnn=args.deterministic_cudnn,
             extra_tag=args.extra_tag,
+            single_process_training=args.single_process_training,
         ).run_pipeline(args.checkpoint)
     else:
         OnPolicyTester(

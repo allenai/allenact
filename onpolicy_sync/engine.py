@@ -28,7 +28,11 @@ import numpy as np
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from onpolicy_sync.policy import ActorCriticModel
 from onpolicy_sync.storage import RolloutStorage
-from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
+from onpolicy_sync.vector_sampled_tasks import (
+    VectorSampledTasks,
+    DEFAULT_MP_CONTEXT_TYPE,
+    SingleProcessVectorSampledTasks,
+)
 from rl_base.experiment_config import ExperimentConfig
 from utils.experiment_utils import (
     ScalarMeanTracker,
@@ -84,6 +88,7 @@ class OnPolicyRLEngine(object):
         deterministic_cudnn: bool = False,
         mp_ctx: Optional[BaseContext] = None,
         extra_tag: str = "",
+        single_process_training: bool = False,
     ):
         """Initializer.
 
@@ -212,16 +217,25 @@ class OnPolicyRLEngine(object):
 
         self.config = config
         self.extra_tag = extra_tag
+        self.single_process_training = single_process_training
 
         self.write_to_eval = None
         self.mp_ctx: Optional[BaseContext] = mp_ctx
         if self.mode == "train":
             self.mp_ctx = self.vector_tasks.mp_ctx
+            if self.mp_ctx is None:
+                self.mp_ctx = mp.get_context(DEFAULT_MP_CONTEXT_TYPE)
+
             if self.config.machine_params("valid")["nprocesses"] <= 0:
                 print(
                     "No processes allocated to validation, no validation will be run."
                 )
             else:
+                if self.single_process_training:
+                    raise NotImplementedError(
+                        "Validation during training is currently"
+                        "not implemented with single_process_training."
+                    )
                 self.write_to_eval = self.mp_ctx.Queue()
                 self.eval_process = self.mp_ctx.Process(  # type: ignore
                     target=validate,
@@ -245,14 +259,20 @@ class OnPolicyRLEngine(object):
             seeds = self.worker_seeds(
                 self.machine_params["nprocesses"], initial_seed=self.seed
             )
-            self._vector_tasks = VectorSampledTasks(
-                make_sampler_fn=self.config.make_sampler_fn,
-                sampler_fn_args=self.get_sampler_fn_args(self.config, seeds),
-                multiprocessing_start_method="forkserver"
-                if self.mp_ctx is None
-                else None,
-                mp_ctx=self.mp_ctx,
-            )
+            if self.single_process_training:
+                self._vector_tasks = SingleProcessVectorSampledTasks(
+                    make_sampler_fn=self.config.make_sampler_fn,
+                    sampler_fn_args=self.get_sampler_fn_args(self.config, seeds),
+                )
+            else:
+                self._vector_tasks = VectorSampledTasks(
+                    make_sampler_fn=self.config.make_sampler_fn,
+                    sampler_fn_args=self.get_sampler_fn_args(self.config, seeds),
+                    multiprocessing_start_method=DEFAULT_MP_CONTEXT_TYPE
+                    if self.mp_ctx is None
+                    else None,
+                    mp_ctx=self.mp_ctx,
+                )
         return self._vector_tasks
 
     @staticmethod
@@ -414,7 +434,7 @@ class OnPolicyRLEngine(object):
 
         return self.scalars.pop_and_reset(), used
 
-    def log(self, count=-1):
+    def log(self, fps: Optional[float] = None, count=-1):
         train_metrics = []
         losses = []
         teachers = []
@@ -511,7 +531,15 @@ class OnPolicyRLEngine(object):
             self.log_writer.add_scalar(
                 "train/" + k, tracked_means[k], self.total_steps + self.step_count,
             )
-            message += [k + " {}".format(tracked_means[k])]
+            message += [
+                k
+                + (" {:.3g}" if abs(tracked_means[k]) < 1 else " {:.3f}").format(
+                    tracked_means[k]
+                )
+            ]
+        if fps is not None:
+            message += ["fps {:.2f}".format(fps)]
+
         if len(tracked_means) > 0:
             LOGGER.info(" ".join(message))
 
@@ -672,18 +700,27 @@ class OnPolicyRLEngine(object):
 
         rollouts.reshape(keep)
 
+        if len(keep) == actions.shape[0]:
+            index_kept = lambda x, recurrent: x
+        else:
+            index_kept = (
+                lambda x, recurrent: None
+                if x is None
+                else (x[:, keep] if recurrent else x[keep])
+            )
+
         rollouts.insert(
             observations=self._preprocess_observations(batch)
             if len(keep) > 0
             else batch,
-            recurrent_hidden_states=recurrent_hidden_states[:, keep]
-            if recurrent_hidden_states is not None
-            else None,
-            actions=actions[keep],
-            action_log_probs=actor_critic_output.distributions.log_probs(actions)[keep],
-            value_preds=actor_critic_output.values[keep],
-            rewards=rewards[keep],
-            masks=masks[keep],
+            recurrent_hidden_states=index_kept(recurrent_hidden_states, True),
+            actions=index_kept(actions, False),
+            action_log_probs=index_kept(
+                actor_critic_output.distributions.log_probs(actions), False
+            ),
+            value_preds=index_kept(actor_critic_output.values, False),
+            rewards=index_kept(rewards, False),
+            masks=index_kept(masks, False),
         )
 
         return npaused
@@ -719,6 +756,8 @@ class OnPolicyRLEngine(object):
     def train(self, rollouts: RolloutStorage):
         self.initialize_rollouts(rollouts)
 
+        last_log_time = time.time()
+
         while self.rollout_count < self.num_rollouts:
             for step in range(self.steps_in_rollout):
                 self.collect_rollout_step(rollouts)
@@ -751,8 +790,12 @@ class OnPolicyRLEngine(object):
                 self.step_count - self.last_log >= self.log_interval
                 or self.rollout_count == self.num_rollouts
             ):
-                self.log()
+                self.log(
+                    fps=(self.step_count - self.last_log)
+                    / (time.time() - last_log_time)
+                )
                 self.last_log = self.step_count
+                last_log_time = time.time()
 
             # save for every interval-th episode or for the last epoch
             if (
@@ -1083,7 +1126,9 @@ class OnPolicyRLEngine(object):
             self.num_processes,
             self.actor_critic.action_space,
             self.actor_critic.recurrent_hidden_state_size,
-            num_recurrent_layers=self.actor_critic.num_recurrent_layers,
+            num_recurrent_layers=self.actor_critic.num_recurrent_layers
+            if "num_recurrent_layers" in dir(self.actor_critic)
+            else 0,
         )
 
         render: Union[None, np.ndarray, List[np.ndarray]] = []

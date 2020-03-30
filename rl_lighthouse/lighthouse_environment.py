@@ -73,18 +73,17 @@ class LightHouseEnvironment(object):
             _base_world_tensor(world_radius=world_radius, world_dim=world_dim)
         )
         self.current_position = np.zeros(world_dim, dtype=int)
-        # self.furthest_visited_lower = np.zeros(world_dim, dtype=int)
-        # self.furthest_visited_upper = np.zeros(world_dim, dtype=int)
         self.closest_distance_to_corners = np.full(
             2 ** world_dim, fill_value=world_radius, dtype=int
         )
         self.positions: List[Tuple[int, ...]] = [tuple(self.current_position)]
-
         self.goal_position: Optional[np.ndarray] = None
+        self.last_action: Optional[int] = None
 
         self.random_reset()
 
     def random_reset(self, goal_position: Optional[bool] = None):
+        self.last_action = None
         self.world_tensor = copy.deepcopy(
             _base_world_tensor(world_radius=self.world_radius, world_dim=self.world_dim)
         )
@@ -106,8 +105,6 @@ class LightHouseEnvironment(object):
         self.closest_distance_to_corners = np.abs(
             (self.world_corners - self.current_position.reshape(1, -1))
         ).max(1)
-        # self.furthest_visited_lower = np.zeros(self.world_dim, dtype=int)
-        # self.furthest_visited_upper = np.zeros(self.world_dim, dtype=int)
 
         self.positions = [tuple(self.current_position)]
 
@@ -117,6 +114,8 @@ class LightHouseEnvironment(object):
 
     def step(self, action: int) -> bool:
         assert 0 <= action < 2 * self.world_dim
+        self.last_action = action
+
         delta = -1 if action >= self.world_dim else 1
         ind = action % self.world_dim
         old = self.current_position[ind]
