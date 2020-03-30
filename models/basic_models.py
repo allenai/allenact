@@ -8,6 +8,8 @@ import torch
 from torch import nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
+from utils.model_utils import make_cnn
+
 
 class Flatten(nn.Module):
     """Flatten input tensor so that it is of shape (batchs x -1)."""
@@ -16,21 +18,17 @@ class Flatten(nn.Module):
         """Flatten input tensor.
 
         # Parameters
-
         x : Tensor of size (batches x ...) to flatten to size (batches x -1)
-
         # Returns
-
         Flattened tensor.
         """
-        return x.view(x.size(0), -1)
+        return x.reshape(x.size(0), -1)
 
 
 class SimpleCNN(nn.Module):
-    """A Simple 3-Conv CNN followed by a fully connected layer.
-
-    Takes in observations (of type gym.spaces.dict) and produces an embedding
-     of the `"rgb"` and/or `"depth"` components.
+    """A Simple 3-Conv CNN followed by a fully connected layer. Takes in
+    observations (of type gym.spaces.dict) and produces an embedding of the
+    `"rgb"` and/or `"depth"` components.
 
     # Attributes
 
@@ -65,60 +63,68 @@ class SimpleCNN(nn.Module):
         self._cnn_layers_stride = [(4, 4), (2, 2), (1, 1)]
 
         if self._n_input_rgb > 0:
-            cnn_dims = np.array(
+            rgb_cnn_dims = np.array(
                 observation_space.spaces["rgb"].shape[:2], dtype=np.float32
             )
-        elif self._n_input_depth > 0:
-            cnn_dims = np.array(
+        if self._n_input_depth > 0:
+            depth_cnn_dims = np.array(
                 observation_space.spaces["depth"].shape[:2], dtype=np.float32
             )
-        else:
+        if self._n_input_rgb <= 0 and self._n_input_depth <= 0:
             assert self.is_blind
 
         if self.is_blind:
             self.cnn = nn.Sequential()
         else:
-            for kernel_size, stride in zip(
-                self._cnn_layers_kernel_size, self._cnn_layers_stride
-            ):
+            if self._n_input_rgb > 0:
+                for kernel_size, stride in zip(
+                    self._cnn_layers_kernel_size, self._cnn_layers_stride
+                ):
+                    # noinspection PyUnboundLocalVariable
+                    rgb_cnn_dims = self._conv_output_dim(
+                        dimension=rgb_cnn_dims,
+                        padding=np.array([0, 0], dtype=np.float32),
+                        dilation=np.array([1, 1], dtype=np.float32),
+                        kernel_size=np.array(kernel_size, dtype=np.float32),
+                        stride=np.array(stride, dtype=np.float32),
+                    )
+                layer_channels = [32, 64, 32]
                 # noinspection PyUnboundLocalVariable
-                cnn_dims = self._conv_output_dim(
-                    dimension=cnn_dims,
-                    padding=np.array([0, 0], dtype=np.float32),
-                    dilation=np.array([1, 1], dtype=np.float32),
-                    kernel_size=np.array(kernel_size, dtype=np.float32),
-                    stride=np.array(stride, dtype=np.float32),
+                self.rgb_cnn = make_cnn(
+                    input_channels=self._n_input_rgb,
+                    layer_channels=layer_channels,
+                    kernel_sizes=self._cnn_layers_kernel_size,
+                    strides=self._cnn_layers_stride,
+                    output_height=rgb_cnn_dims[0],
+                    output_width=rgb_cnn_dims[1],
+                    output_channels=output_size,
                 )
+                self.layer_init(self.rgb_cnn)
 
-            # noinspection PyUnboundLocalVariable
-            self.cnn = nn.Sequential(
-                nn.Conv2d(
-                    in_channels=self._n_input_rgb + self._n_input_depth,
-                    out_channels=32,
-                    kernel_size=self._cnn_layers_kernel_size[0],
-                    stride=self._cnn_layers_stride[0],
-                ),
-                nn.ReLU(True),
-                nn.Conv2d(
-                    in_channels=32,
-                    out_channels=64,
-                    kernel_size=self._cnn_layers_kernel_size[1],
-                    stride=self._cnn_layers_stride[1],
-                ),
-                nn.ReLU(True),
-                nn.Conv2d(
-                    in_channels=64,
-                    out_channels=32,
-                    kernel_size=self._cnn_layers_kernel_size[2],
-                    stride=self._cnn_layers_stride[2],
-                ),
-                #  nn.ReLU(True),
-                Flatten(),
-                nn.Linear(32 * cnn_dims[0] * cnn_dims[1], output_size),
-                nn.ReLU(True),
-            )
-
-        self.layer_init()
+            if self._n_input_depth > 0:
+                for kernel_size, stride in zip(
+                    self._cnn_layers_kernel_size, self._cnn_layers_stride
+                ):
+                    # noinspection PyUnboundLocalVariable
+                    depth_cnn_dims = self._conv_output_dim(
+                        dimension=depth_cnn_dims,
+                        padding=np.array([0, 0], dtype=np.float32),
+                        dilation=np.array([1, 1], dtype=np.float32),
+                        kernel_size=np.array(kernel_size, dtype=np.float32),
+                        stride=np.array(stride, dtype=np.float32),
+                    )
+                layer_channels = [32, 64, 32]
+                # noinspection PyUnboundLocalVariable
+                self.rgb_cnn = make_cnn(
+                    input_channels=self._n_input_depth,
+                    layer_channels=layer_channels,
+                    kernel_sizes=self._cnn_layers_kernel_size,
+                    strides=self._cnn_layers_stride,
+                    output_height=depth_cnn_dims[0],
+                    output_width=depth_cnn_dims[1],
+                    output_channels=output_size,
+                )
+                self.layer_init(self.depth_cnn)
 
     @staticmethod
     def _conv_output_dim(
@@ -129,9 +135,9 @@ class SimpleCNN(nn.Module):
         stride: Sequence[int],
     ) -> Tuple[int, ...]:
         """Calculates the output height and width based on the input height and
-        width to the convolution layer.
+        width to the convolution layer. For parameter definitions see.
 
-        For parameter definitions see [here](https://pytorch.org/docs/master/nn.html#torch.nn.Conv2d).
+        [here](https://pytorch.org/docs/master/nn.html#torch.nn.Conv2d).
 
         # Parameters
 
@@ -162,9 +168,10 @@ class SimpleCNN(nn.Module):
             )
         return tuple(out_dimension)
 
-    def layer_init(self) -> None:
+    @staticmethod
+    def layer_init(cnn) -> None:
         """Initialize layer parameters using kaiming normal."""
-        for layer in self.cnn:
+        for layer in cnn:
             if isinstance(layer, (nn.Conv2d, nn.Linear)):
                 nn.init.kaiming_normal_(layer.weight, nn.init.calculate_gain("relu"))
                 if layer.bias is not None:
@@ -177,23 +184,21 @@ class SimpleCNN(nn.Module):
         return self._n_input_rgb + self._n_input_depth == 0
 
     def forward(self, observations: Dict[str, torch.Tensor]):
-        cnn_input_list = []
+        cnn_output_list = []
         if self._n_input_rgb > 0:
             rgb_observations = observations["rgb"]
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             rgb_observations = rgb_observations.permute(0, 3, 1, 2)
             # rgb_observations = rgb_observations / 255.0  # normalize RGB
-            cnn_input_list.append(rgb_observations)
+            cnn_output_list.append(self.rgb_cnn(rgb_observations))
 
         if self._n_input_depth > 0:
             depth_observations = observations["depth"]
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             depth_observations = depth_observations.permute(0, 3, 1, 2)
-            cnn_input_list.append(depth_observations)
+            cnn_output_list.append(self.depth_cnn(depth_observations))
 
-        cnn_input = torch.cat(cnn_input_list, dim=1)
-
-        return self.cnn(cnn_input)
+        return torch.cat(cnn_output_list, dim=1)
 
 
 class RNNStateEncoder(nn.Module):
@@ -211,9 +216,8 @@ class RNNStateEncoder(nn.Module):
         rnn_type: str = "GRU",
         trainable_masked_hidden_state: bool = False,
     ):
-        """An RNN for encoding the state in RL.
-
-        Supports masking the hidden state during various timesteps in the forward lass
+        """An RNN for encoding the state in RL. Supports masking the hidden
+        state during various timesteps in the forward lass.
 
         # Parameters
 
@@ -290,9 +294,8 @@ class RNNStateEncoder(nn.Module):
         hidden_states: Union[Tuple[torch.FloatTensor, ...], torch.FloatTensor],
         masks: torch.FloatTensor,
     ) -> Union[Tuple[torch.FloatTensor, ...], torch.FloatTensor]:
-        """Mask input hidden states given `masks`.
-
-        Useful when masks represent steps on which a task has completed.
+        """Mask input hidden states given `masks`. Useful when masks represent
+        steps on which a task has completed.
 
         # Parameters
 
