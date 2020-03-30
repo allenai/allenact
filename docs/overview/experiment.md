@@ -67,17 +67,6 @@ class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfi
     ...
     @classmethod
     def training_pipeline(cls, **kwargs):
-        ppo_steps = int(1e6)
-        lr = 2.5e-4
-        num_mini_batch = 1
-        update_repeats = 4
-        num_steps = 128
-        log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
-        save_interval = 10000  # Save every 10000 steps (approximately)
-        gamma = 0.99
-        use_gae = True
-        gae_lambda = 1.0
-        max_grad_norm = 0.5
         return utils.experiment_utils.TrainingPipeline(
             named_losses={
                 "ppo_loss": utils.experiment_utils.Builder(
@@ -86,21 +75,21 @@ class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfi
                 ),
             },
             optimizer=utils.experiment_utils.Builder(
-                torch.optim.Adam, dict(lr=lr)
+                torch.optim.Adam, dict(lr=2.5e-4)
             ),
-            save_interval=save_interval,
-            log_interval=log_interval,
-            num_mini_batch=num_mini_batch,
-            update_repeats=update_repeats,
-            num_steps=num_steps,
-            gamma=gamma,
-            use_gae=use_gae,
-            gae_lambda=gae_lambda,
-            max_grad_norm=max_grad_norm,
+            save_interval=10000,  # Save every 10000 steps (approximately)
+            log_interval=cls.MAX_STEPS * 10,  # Log every 10 max length tasks
+            num_mini_batch=1,
+            update_repeats=4,
+            num_steps=128,
+            gamma=0.99,
+            use_gae=True,
+            gae_lambda=1.0,
+            max_grad_norm=0.5,
             pipeline_stages=[
                 utils.experiment_utils.PipelineStage(
                     loss_names=["ppo_loss"],
-                    end_criterion=ppo_steps
+                    end_criterion=int(1e6)
                 ),
             ],
         )
@@ -113,7 +102,7 @@ expert (implemented in the task definition) that provides optimal actions to age
 pipeline by extending the above configuration as follows
 
 ```python
-class ObjectNavThorPPOExperimentConfig(experiments.ObjectNavThorPPOExperimentConfig):
+class ObjectNavThorPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
     ...
     SENSORS = [
         RGBSensorThor(
@@ -131,32 +120,21 @@ class ObjectNavThorPPOExperimentConfig(experiments.ObjectNavThorPPOExperimentCon
     @classmethod
     def training_pipeline(cls, **kwargs):
         dagger_steps = int(3e4)
-        ppo_steps = int(3e4)
-        lr = 2.5e-4
-        num_mini_batch = 6 if not torch.cuda.is_available() else 30
-        update_repeats = 4
-        num_steps = 128
-        log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
-        save_interval = 10000  # Save every 10000 steps (approximately)
-        gamma = 0.99
-        use_gae = True
-        gae_lambda = 1.0
-        max_grad_norm = 0.5
         return TrainingPipeline(
-            save_interval=save_interval,
-            log_interval=log_interval,
-            optimizer=Builder(optim.Adam, dict(lr=lr)),
-            num_mini_batch=num_mini_batch,
-            update_repeats=update_repeats,
-            num_steps=num_steps,
+            save_interval=10000,  # Save every 10000 steps (approximately)
+            log_interval=cls.MAX_STEPS * 10,  # Log every 10 max length tasks
+            optimizer=Builder(optim.Adam, dict(lr=2.5e-4)),
+            num_mini_batch=6 if not torch.cuda.is_available() else 30,
+            update_repeats=4,
+            num_steps=128,
             named_losses={
                 "imitation_loss": Builder(Imitation,), # We add an imitation loss.
                 "ppo_loss": Builder(PPO, default=PPOConfig,),
             },
-            gamma=gamma,
-            use_gae=use_gae,
-            gae_lambda=gae_lambda,
-            max_grad_norm=max_grad_norm,
+            gamma=0.99,
+            use_gae=True,
+            gae_lambda=1.0,
+            max_grad_norm=0.5,
             pipeline_stages=[ # The pipeline now has two stages, in the first
                               # we use DAgger (imitation loss + teacher forcing).
                               # In the second stage we no longer use teacher
@@ -169,7 +147,8 @@ class ObjectNavThorPPOExperimentConfig(experiments.ObjectNavThorPPOExperimentCon
                     end_criterion=dagger_steps,
                 ),
                 PipelineStage(
-                    loss_names=["ppo_loss", "imitation_loss"], end_criterion=ppo_steps
+                    loss_names=["ppo_loss", "imitation_loss"],
+                    end_criterion=int(3e4)
                 ),
             ],
         )
@@ -243,7 +222,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             deterministic_cudnn=deterministic_cudnn,
         )
         res["scene_period"] = self.SCENE_PERIOD
-        res["env_args"]["x_display"] = "0.%d" % devices[0] if len(devices) > 0 else None
+        res["env_args"]["x_display"] = None
         return res
     ...
 ```
