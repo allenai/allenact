@@ -345,7 +345,9 @@ class OnPolicyRunner(object):
 
         return message
 
-    def process_train_packages(self, log_writer, pkgs):
+    def process_train_packages(self, log_writer, pkgs, last_steps=0, last_time=0.0):
+        current_time = time.time()
+
         pkg_types, payloads, all_steps = [vals for vals in zip(*pkgs)]
 
         steps = all_steps[0]
@@ -355,7 +357,13 @@ class OnPolicyRunner(object):
         message = ["train {} steps:".format(steps)]
         for info_type in all_info_types:
             message += self.aggregate_infos(log_writer, info_type, steps)
+        message += ["elapsed_time {} s".format(current_time - last_time)]
+        fps = (steps - last_steps) / (current_time - last_time)
+        message += ["approx_fps {}".format(fps)]
         LOGGER.info(" ".join(message))
+        log_writer.add_scalar("train/approx_fps", fps, steps)
+
+        return steps, current_time
 
     def log(self, nworkers, checkpoints=None):
         if checkpoints is None:
@@ -372,6 +380,9 @@ class OnPolicyRunner(object):
             filename_suffix="__{}_{}".format(self.mode, self.local_start_time_str),
         )
 
+        last_train_steps = 0
+        last_train_time = time.time()
+
         try:
             collected = []
             while True:
@@ -387,7 +398,12 @@ class OnPolicyRunner(object):
                     if len(collected) >= nworkers:
                         collected = sorted(collected, key=lambda x: x[2])  # sort by num_steps
                         if collected[nworkers - 1][2] == collected[0][2]:  # ensure nworkers have provided the same num_steps
-                            self.process_train_packages(log_writer, collected[:nworkers])
+                            last_train_steps, last_train_time = self.process_train_packages(
+                                log_writer,
+                                collected[:nworkers],
+                                last_steps=last_train_steps,
+                                last_time=last_train_time,
+                            )
                             collected = collected[nworkers:]
                         elif len(collected) > 2 * nworkers:
                             raise Exception("Unable to aggregate train packages from {} workers".format(nworkers))
