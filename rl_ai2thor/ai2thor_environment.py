@@ -325,7 +325,6 @@ class AI2ThorEnvironment(object):
                 > 1e-2
                 or min(rot_diff, 360 - rot_diff) > 1
             ):
-                print(x)
                 warnings.warn(
                     "Teleportation FAILED but agent still moved (position_dist {}, rot diff {})"
                     " (\nprevious location\n{}\ncurrent_location\n{}\n)".format(

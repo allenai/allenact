@@ -55,9 +55,28 @@ class LightHouseTask(Task[LightHouseEnvironment], abc.ABC):
         return super(LightHouseTask, self).step(action=action)
 
     def render(self, mode: str = "array", *args, **kwargs) -> np.ndarray:
-        assert mode == "array"
-
-        return self.env.render(mode, *args, **kwargs)
+        if mode == "array":
+            return self.env.render(mode, *args, **kwargs)
+        elif mode in ["rgb", "rgb_array", "human"]:
+            arr = self.env.render("array", *args, **kwargs)
+            colors = np.array(
+                [
+                    (31, 119, 180),
+                    (255, 127, 14),
+                    (44, 160, 44),
+                    (214, 39, 40),
+                    (148, 103, 189),
+                    (140, 86, 75),
+                    (227, 119, 194),
+                    (127, 127, 127),
+                    (188, 189, 34),
+                    (23, 190, 207),
+                ],
+                dtype=np.uint8,
+            )
+            return colors[arr]
+        else:
+            raise NotImplementedError("Render mode '{}' is not supported.".format(mode))
 
 
 class FindGoalLightHouseTask(LightHouseTask):
@@ -82,11 +101,12 @@ class FindGoalLightHouseTask(LightHouseTask):
     def _step(self, action: int) -> RLStepResult:
         success = self.env.step(action)
         reward = -0.01  # Step penalty
-        reward -= (not success) * 0.1  # Failed action penalty
 
         if np.all(self.env.current_position == self.env.goal_position):
             self._found_target = True
             reward += 1  # Found target reward
+        elif self.num_steps_taken() == self.max_steps - 1:
+            reward = -0.01 / (1 - 0.99)  # TODO: Assumes discounting factor = 0.99
 
         return RLStepResult(
             observation=self.get_observations(),
@@ -129,6 +149,7 @@ class FindGoalLightHouseTaskSampler(TaskSampler):
         world_radius: int,
         sensors: List[Sensor],
         max_steps: int,
+        max_tasks: Optional[int] = None,
         seed: Optional[int] = None,
         **kwargs
     ):
@@ -137,6 +158,8 @@ class FindGoalLightHouseTaskSampler(TaskSampler):
         self._last_sampled_task: Optional[FindGoalLightHouseTask] = None
         self.sensors = sensors
         self.max_steps = max_steps
+        self.max_tasks = max_tasks
+        self.total_sampled = 0
 
         self.seed: Optional[int] = None
         if seed is not None:
@@ -152,17 +175,21 @@ class FindGoalLightHouseTaskSampler(TaskSampler):
 
     @property
     def __len__(self) -> Union[int, float]:
-        return float("inf")
+        return float("inf") if self.max_tasks is None else self.max_tasks
 
     @property
     def total_unique(self) -> Optional[Union[int, float]]:
-        return None
+        return self.max_tasks
 
     @property
     def last_sampled_task(self) -> Optional[Task]:
         return self._last_sampled_task
 
     def next_task(self, force_advance_scene: bool = False) -> Optional[Task]:
+        if self.max_tasks is not None and self.total_sampled >= self.max_tasks:
+            return None
+
+        self.total_sampled += 1
         self.env.random_reset()
         return FindGoalLightHouseTask(
             env=self.env, sensors=self.sensors, task_info={}, max_steps=self.max_steps
@@ -176,7 +203,7 @@ class FindGoalLightHouseTaskSampler(TaskSampler):
         return True
 
     def reset(self) -> None:
-        raise NotImplementedError
+        self.total_sampled = 0
 
     def set_seed(self, seed: int) -> None:
         set_seed(seed)

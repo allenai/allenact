@@ -17,16 +17,16 @@ from rl_lighthouse.lighthouse_tasks import FindGoalLightHouseTaskSampler
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class LightHouseOneDimPPOExperimentConfig(ExperimentConfig):
+class LightHouseTwoDimPPOExperimentConfig(ExperimentConfig):
     """Find goal in 1-dim lighthouse env.
 
     Training with PPO.
     """
 
-    WORLD_DIM = 1
-    VIEW_RADIUS = 1
+    WORLD_DIM = 2
+    VIEW_RADIUS = 10
     WORLD_RADIUS = 10
-    DEGREE = 2
+    DEGREE = -1
     MAX_STEPS = 1000
 
     SENSORS = [
@@ -37,17 +37,17 @@ class LightHouseOneDimPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def tag(cls):
-        return "LightHouseOneDimPPO"
+        return "LightHouseTwoDimPPO"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
         ppo_steps = int(1e6)
-        lr = 2.5e-4
-        num_mini_batch = 2
-        update_repeats = 4
+        lr = 1e-2
+        num_mini_batch = 1
+        update_repeats = 1
         num_steps = 128
         log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
-        save_interval = 500000
+        save_interval = 100000
         gamma = 0.99
         use_gae = True
         gae_lambda = 1.0
@@ -83,10 +83,10 @@ class LightHouseOneDimPPOExperimentConfig(ExperimentConfig):
     @classmethod
     def machine_params(cls, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 6 if not torch.cuda.is_available() else 20
+            nprocesses = 8 if not torch.cuda.is_available() else 20
             gpu_ids = [] if not torch.cuda.is_available() else [0]
         elif mode == "valid":
-            nprocesses = 1
+            nprocesses = 0
             gpu_ids = [] if not torch.cuda.is_available() else [1]
         elif mode == "test":
             nprocesses = 1
@@ -133,13 +133,16 @@ class LightHouseOneDimPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        return self.train_task_sampler_args(
-            process_ind=process_ind,
-            total_processes=total_processes,
-            devices=devices,
-            seeds=seeds,
-            deterministic_cudnn=deterministic_cudnn,
-        )
+        return {
+            **self.train_task_sampler_args(
+                process_ind=process_ind,
+                total_processes=total_processes,
+                devices=devices,
+                seeds=seeds,
+                deterministic_cudnn=deterministic_cudnn,
+            ),
+            "max_tasks": 10,
+        }
 
     def test_task_sampler_args(
         self,
@@ -149,7 +152,7 @@ class LightHouseOneDimPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        return self.train_task_sampler_args(
+        return self.valid_task_sampler_args(
             process_ind=process_ind,
             total_processes=total_processes,
             devices=devices,

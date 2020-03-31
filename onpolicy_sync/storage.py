@@ -118,6 +118,8 @@ class RolloutStorage:
         self.step = (self.step + 1) % self.num_steps
 
     def reshape(self, keep_list):
+        if self.actions.shape[1] == len(keep_list):
+            return
         for sensor in self.observations:
             self.observations[sensor] = self.observations[sensor][:, keep_list]
         self.recurrent_hidden_states = self.recurrent_hidden_states[:, :, keep_list]

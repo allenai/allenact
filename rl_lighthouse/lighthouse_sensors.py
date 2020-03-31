@@ -19,7 +19,6 @@ class CornerSensor(Sensor[LightHouseEnvironment, Any]):
         self.view_radius = config["view_radius"]
         self.world_dim = config["world_dim"]
         self.view_corner_offsets: Optional[np.ndarray] = None
-        # self.world_corners_offset: Optional[List[typing.Tuple[int, ...]]] = None
 
         self.observation_space = gym.spaces.Box(
             low=min(LightHouseEnvironment.SPACE_LEVELS),
@@ -59,6 +58,22 @@ class CornerSensor(Sensor[LightHouseEnvironment, Any]):
         )
         view_values = env.world_tensor.reshape(-1)[flat_view_corner_indices]
 
+        last_action = 2 * env.world_dim if env.last_action is None else env.last_action
+        on_border_bools = np.concatenate(
+            (
+                env.current_position == env.world_radius,
+                env.current_position == -env.world_radius,
+            ),
+            axis=0,
+        )
+
+        if last_action == 2 * env.world_dim or on_border_bools[last_action]:
+            on_border_value = last_action
+        elif on_border_bools.any():
+            on_border_value = np.argwhere(on_border_bools).reshape(-1)[0]
+        else:
+            on_border_value = 2 * env.world_dim
+
         seen_mask = np.array(
             env.closest_distance_to_corners <= self.view_radius, dtype=int
         )
@@ -71,21 +86,13 @@ class CornerSensor(Sensor[LightHouseEnvironment, Any]):
             * seen_mask
         )
 
-        on_neg_border = (-1 * (env.current_position == -env.world_radius)) + (
-            env.current_position == env.world_radius
-        )
-
         return np.concatenate(
-            (view_values, seen_corner_values, on_neg_border),
-            axis=0,
-            out=np.zeros(
-                (
-                    view_values.shape[0]
-                    + seen_corner_values.shape[0]
-                    + on_neg_border.shape[0],
-                ),
-                dtype=np.float32,
+            (
+                seen_corner_values + view_values * (1 - seen_mask),
+                [on_border_value, last_action],
             ),
+            axis=0,
+            out=np.zeros((seen_corner_values.shape[0] + 2,), dtype=np.float32,),
         )
 
 
@@ -102,17 +109,6 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
 
         self.corner_sensor = CornerSensor(config=config)
 
-        # (
-        #     design_mat,
-        #     tuple_to_ind,
-        # ) = self._create_full_design_matrix_and_tuple_to_ind_dict(
-        #     variables_and_levels=self._get_variables_and_levels(
-        #         world_dim=self.world_dim
-        #     ),
-        #     degree=self.degree
-        # )
-        # self.design_mat = design_mat
-        # self.tuple_to_ind = tuple_to_ind
         self.variables_and_levels = self._get_variables_and_levels(
             world_dim=self.world_dim
         )
@@ -127,6 +123,16 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
             columns=[x[0] for x in self.variables_and_levels],
         )
         self._view_tuple_to_design_array: Dict[typing.Tuple[int, ...], np.ndarray] = {}
+
+        (
+            design_matrix,
+            tuple_to_ind,
+        ) = self._create_full_design_matrix_and_tuple_to_ind_dict(
+            variables_and_levels=self.variables_and_levels, degree=self.degree
+        )
+
+        self.design_matrix = np.array(design_matrix, dtype=bool)
+        self.tuple_to_ind = tuple_to_ind
 
         self.observation_space = gym.spaces.Box(
             low=min(LightHouseEnvironment.SPACE_LEVELS),
@@ -143,25 +149,19 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
         )
 
     def view_tuple_to_design_array(self, view_tuple: typing.Tuple):
-        if view_tuple not in self._view_tuple_to_design_array:
-            self.single_row_df.loc[0, :] = view_tuple
-            self._view_tuple_to_design_array[view_tuple] = np.array(
-                patsy.dmatrix(self._design_mat_formula, data=self.single_row_df,),
-                dtype=np.float32,
-            ).reshape(-1)
-        return self._view_tuple_to_design_array[view_tuple]
-
-    @classmethod
-    def output_dim(cls, world_dim: int):
-        return (
-            ((3 if world_dim == 1 else 4) ** (2 ** world_dim))
-            * (3 ** (2 ** world_dim))
-            * (3 ** world_dim)
+        return np.array(
+            self.design_matrix[self.tuple_to_ind[view_tuple], :], dtype=np.float32
         )
 
     @classmethod
+    def output_dim(cls, world_dim: int):
+        return ((3 if world_dim == 1 else 4) ** (2 ** world_dim)) * (
+            2 * world_dim + 1
+        ) ** 2
+
+    @classmethod
     def _create_full_design_matrix_and_tuple_to_ind_dict(
-        cls, variables_and_levels: List[typing.Tuple[str, List[int]]], degree
+        cls, variables_and_levels: List[typing.Tuple[str, List[int]]], degree: int
     ):
         all_tuples = [
             tuple(x)
@@ -194,8 +194,8 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
                 ("s{}".format(i), list(range(3 if world_dim == 1 else 4)))
                 for i in range(2 ** world_dim)
             ]
-            + [("m{}".format(i), list(range(3))) for i in range(2 ** world_dim)]
-            + [("h{}".format(i), [-1, 0, 1]) for i in range(world_dim)]
+            + [("b{}".format(i), list(range(2 * world_dim + 1))) for i in range(1)]
+            + [("a{}".format(i), list(range(2 * world_dim + 1))) for i in range(1)]
         )
 
     @classmethod
