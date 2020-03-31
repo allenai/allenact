@@ -158,7 +158,7 @@ def main():
 
     LOGGER.info("Running with args {}".format(args))
 
-    _download_ai2thor()
+    # _download_ai2thor()
 
     ptitle("Master: {}".format("Training" if not args.test_date != "" else "Testing"))
 

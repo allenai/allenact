@@ -392,9 +392,8 @@ class OnPolicyRunner(object):
                         elif len(collected) > 2 * nworkers:
                             raise Exception("Unable to aggregate train packages from {} workers".format(nworkers))
                 elif package[0] == "valid_package":
-                    if package[1] is None:  # no validation samplers
-                        pass
-                    self.process_eval_package(log_writer, package)
+                    if package[1] is not None:  # no validation samplers
+                        self.process_eval_package(log_writer, package)
                     if finalized and self.queues["checkpoints"].empty():  # assume queue is actually empty after trainer finished and no checkpoints in queue
                         break
                 elif package[0] == "test_package":

@@ -411,14 +411,15 @@ class OnPolicyRLEngine(object):
                 else:
                     raise NotImplementedError()
 
-        try:
-            logif("{} worker {} Closing OnPolicyRLEngine.vector_tasks.".format(self.mode, self.worker_id))
-            self.vector_tasks.close()
-            logif("{} worker {} Closed.".format(self.mode, self.worker_id))
-        except Exception as e:
-            logif("{} worker {} Exception raised when closing OnPolicyRLEngine.vector_tasks:".format(self.mode, self.worker_id))
-            logif(e)
-            pass
+        if self.vector_tasks is not None:
+            try:
+                logif("{} worker {} Closing OnPolicyRLEngine.vector_tasks.".format(self.mode, self.worker_id))
+                self.vector_tasks.close()
+                logif("{} worker {} Closed.".format(self.mode, self.worker_id))
+            except Exception as e:
+                logif("{} worker {} Exception raised when closing OnPolicyRLEngine.vector_tasks:".format(self.mode, self.worker_id))
+                logif(e)
+                pass
 
         self._is_closed = True
 
@@ -509,7 +510,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             device: Union[str, torch.device, int] = "cpu",
             distributed_port: int = 0,
             deterministic_agent: bool = False,
-            distributed_preemption_threshold: float = 0.8,
+            distributed_preemption_threshold: float = 1.0,
             distributed_barrier: Optional[mp.Barrier] = None,
             **kwargs,
     ):
