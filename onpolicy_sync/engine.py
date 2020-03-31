@@ -22,6 +22,7 @@ import torch.nn as nn
 import torch.optim
 from setproctitle import setproctitle as ptitle
 from torch import optim
+from torch.distributions import Categorical
 from torch.optim.lr_scheduler import _LRScheduler
 import numpy as np
 
@@ -615,12 +616,24 @@ class OnPolicyRLEngine(object):
         return self.observation_set.get_observations(batched_observations)
 
     def apply_teacher_forcing(self, actions, step_observation):
-        tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
-        expert_actions = (
-            step_observation["expert_action"].view(-1, 2)[:, 0].view(*tf_mask_shape)
+        if "expert_action" in step_observation:
+            expert_actions_and_exists = step_observation["expert_action"]
+        else:
+            expert_policies = step_observation["expert_policy"][:, :-1]
+            expert_actions_and_exists = torch.cat(
+                (
+                    Categorical(probs=expert_policies).sample().view(-1, 1),
+                    step_observation["expert_policy"][:, -1:].long(),
+                ),
+                dim=1,
+            )
+
+        tf_mask_shape = expert_actions_and_exists.shape[:-1] + (1,)
+        expert_actions = expert_actions_and_exists.view(-1, 2)[:, 0].view(
+            *tf_mask_shape
         )
-        expert_action_exists_mask = (
-            step_observation["expert_action"].view(-1, 2)[:, 1].view(*tf_mask_shape)
+        expert_action_exists_mask = expert_actions_and_exists.view(-1, 2)[:, 1].view(
+            *tf_mask_shape
         )
         teacher_forcing_mask = (
             torch.distributions.bernoulli.Bernoulli(

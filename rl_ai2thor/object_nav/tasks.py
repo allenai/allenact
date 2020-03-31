@@ -149,7 +149,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         else:
             return {"success": self._success, **super(ObjectNavTask, self).metrics()}
 
-    def query_expert(self) -> Tuple[int, bool]:
+    def query_expert(self, **kwargs) -> Tuple[int, bool]:
         target = self.task_info["object_type"]
 
         if self._is_goal_object_visible():

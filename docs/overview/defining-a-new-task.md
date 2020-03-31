@@ -118,7 +118,7 @@ e.g. for DAGGER training.
         else:
             return {"success": self._success, "ep_length": self.num_steps_taken()}
 
-    def query_expert(self) -> Tuple[int, bool]:
+    def query_expert(self, **kwargs) -> Tuple[int, bool]:
         return my_objnav_expert_implementation(self)
 ```
 
