@@ -47,8 +47,8 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     ]
 
     PREPROCESSORS = [
-        ResnetPreProcessorHabitat(
-            config={
+        Builder(ResnetPreProcessorHabitat,
+            dict(config={
                 "input_height": SCREEN_SIZE,
                 "input_width": SCREEN_SIZE,
                 "output_width": 1,
@@ -58,7 +58,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
                 "torchvision_resnet_model": models.resnet50,
                 "input_uuids": ["rgb"],
                 "output_uuid": "rgb_resnet",
-            }
+            })
         ),
     ]
 
@@ -98,7 +98,6 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     @classmethod
     def training_pipeline(cls, **kwargs):
         ppo_steps = 7.5e7
-        lr = 2.5e-4
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 4
