@@ -286,6 +286,8 @@ class OnPolicyRLEngine(object):
 
     # aggregates task metrics currently in queue
     def aggregate_task_metrics(self, count=-1) -> Tuple[Tuple[str, Dict[str, float], int], List[Dict[str, Any]]]:
+        assert self.scalars.empty, "found non-empty scalars {}".format(self.scalars._counts)
+
         task_outputs = []
         while (count == -1 and not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
             try:
@@ -704,15 +706,18 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         assert type in self.tstate.tracking_types,\
             "Only {} types are accepted for aggregation".format(self.tstate.tracking_types)
 
+        assert self.scalars.empty, "Found non-empty scalars {}".format(self.scalars._counts)
+
         infos = self.tstate.tracking_info[type]
         nsamples = sum(info[2] for info in infos)
+        valid_infos = sum(info[2] > 0 for info in infos)  # used to cancel the averaging in self.scalars
 
         # assert nsamples != 0, "Attempting to aggregate type {} with 0 samples".format(type)
 
         for name, payload, nsamps in infos:
             if nsamps > 0:
                 self.scalars.add_scalars(
-                    {k: len(infos) * payload[k] * nsamps / nsamples for k in payload}
+                    {k: valid_infos * payload[k] * nsamps / nsamples for k in payload}
                 )
 
         pkg_type = name
@@ -735,6 +740,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             data_generator = rollouts.recurrent_generator(
                 advantages, self.tstate.update_mini_batches
             )
+
+            # self.optimizer.zero_grad()  # type: ignore
 
             for bit, batch in enumerate(data_generator):
                 # TODO: check recursively within batch
@@ -782,7 +789,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
                 if isinstance(total_loss, torch.Tensor):
                     self.optimizer.zero_grad()  # type: ignore
-                    total_loss.backward()
+
+                    total_loss.backward()  # synchronize
+
                     nn.utils.clip_grad_norm_(
                         self.actor_critic.parameters(), self.tstate.max_grad_norm,  # type: ignore
                     )
@@ -797,6 +806,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                             self.mode, self.worker_id, total_loss, type(total_loss)
                         )
                     )
+
+            # nn.utils.clip_grad_norm_(
+            #     self.actor_critic.parameters(), self.tstate.max_grad_norm,  # type: ignore
+            # )
+            # self.optimizer.step()  # type: ignore
+            # self.tstate.backprop_count += 1
 
     def apply_teacher_forcing(self, actions, step_observation, step_count):
         tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
@@ -921,6 +936,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 model_path = self.checkpoint_save()
                 self.checkpoints_queue.put(("eval", model_path))
                 self.tstate.last_save = self.step_count
+                if self.tstate.last_log < self.step_count:
+                    self.send_package()
+                    self.tstate.last_log = self.step_count
 
             if (self.tstate.advance_scene_rollout_period is not None) and (
                     self.tstate.rollout_count % self.tstate.advance_scene_rollout_period == 0
@@ -929,7 +947,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     self.mode, self.worker_id, self.tstate.rollout_count
                 ))
                 self.vector_tasks.next_task(force_advance_scene=True)
-                self.initialize_rollouts(rollouts)
                 self.initialize_rollouts(rollouts)
 
     def run_pipeline(self, checkpoint_file_name: Optional[str] = None):
