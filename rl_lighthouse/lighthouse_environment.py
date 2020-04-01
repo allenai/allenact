@@ -27,9 +27,11 @@ def _get_world_corners(world_dim: int, world_radius: int):
         return tuple(vec)
 
     return tuple(
-        combination_to_vec(comb)
-        for i in range(world_dim + 1)
-        for comb in itertools.combinations(list(range(world_dim)), i)
+        sorted(
+            combination_to_vec(comb)
+            for i in range(world_dim + 1)
+            for comb in itertools.combinations(list(range(world_dim)), i)
+        )
     )
 
 

@@ -10,6 +10,8 @@ from tensorboardX import SummaryWriter as SummaryWriterBase, summary as tbxsumma
 from tensorboardX.x2num import make_np as tbxmake_np
 from tensorboardX.utils import _prepare_video as tbx_prepare_video
 from tensorboardX.proto.summary_pb2 import Summary as TBXSummary
+import PIL
+from PIL import Image
 
 
 def batch_observations(
@@ -110,3 +112,21 @@ def tensor_to_video(tensor, fps=4):
         tensor = (tensor * 255.0).astype(np.uint8)
 
     return tbxsummary.make_video(tensor, fps)
+
+
+class ScaleBothSides(object):
+    """Rescales the input PIL.Image to the given 'width' and `height`.
+
+    Attributes
+        width: new width
+        height: new height
+        interpolation: Default: PIL.Image.BILINEAR
+    """
+
+    def __init__(self, width: int, height: int, interpolation=Image.BILINEAR):
+        self.width = width
+        self.height = height
+        self.interpolation = interpolation
+
+    def __call__(self, img: PIL.Image) -> PIL.Image:
+        return img.resize((self.width, self.height), self.interpolation)

@@ -140,6 +140,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         self.config = config
         self.uuid = self._get_uuid()
         self.observation_space = self._get_observation_space()
+        self.expert_args: Dict[str, Any] = config.get("expert_args", default={})
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "expert_action"
@@ -160,9 +161,51 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
     def get_observation(
         self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
     ) -> Any:
-        action, expert_was_successful = task.query_expert()
+        action, expert_was_successful = task.query_expert(**self.expert_args)
         assert isinstance(action, int), (
             "In expert action sensor, `task.query_expert()` "
             "did not return an integer action."
         )
         return np.array([action, expert_was_successful], dtype=np.int64)
+
+
+class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
+    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
+        super().__init__(config, *args, **kwargs)
+        self.config = config
+        self.uuid = self._get_uuid()
+        self.observation_space = self._get_observation_space()
+        self.expert_args: Dict[str, Any] = config.get("expert_args", {})
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "expert_policy"
+
+    def _get_observation_space(self) -> gym.spaces.Tuple:
+        """The observation space of the expert action sensor.
+
+        Will equal `gym.spaces.Tuple(gym.spaces.Box(num actions in
+        task), gym.spaces.Discrete(2))` where the first entry of the
+        tuple is the expert policy and the second equals 0 if and only
+        if the expert failed to generate a true expert action. The value
+        `num actions in task` should be in `config["nactions"]`
+        """
+        return gym.spaces.Tuple(
+            (
+                gym.spaces.Box(low=0, high=1, shape=(self.config["nactions"],)),
+                gym.spaces.Discrete(2),
+            )
+        )
+
+    def get_observation(
+        self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
+    ) -> Any:
+        policy, expert_was_successful = task.query_expert(**self.expert_args)
+        assert isinstance(policy, np.ndarray) and policy.shape == (
+            self.config["nactions"],
+        ), (
+            "In expert action sensor, `task.query_expert()` "
+            "did not return an numpy array."
+        )
+        return np.array(
+            np.concatenate((policy, [expert_was_successful]), axis=0), dtype=np.float32
+        )

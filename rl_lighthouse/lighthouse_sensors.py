@@ -12,6 +12,63 @@ from rl_base.task import Task
 from rl_lighthouse.lighthouse_environment import LightHouseEnvironment
 
 
+def get_corner_observation(
+    env: LightHouseEnvironment,
+    view_radius: int,
+    view_corner_offsets: Optional[np.array],
+):
+    if view_corner_offsets is None:
+        view_corner_offsets = view_radius * (2 * (env.world_corners > 0) - 1)
+
+    world_corners_offset = env.world_corners + env.world_radius
+    multidim_view_corner_indices = np.clip(
+        np.reshape(env.current_position, (1, -1))
+        + view_corner_offsets
+        + env.world_radius,
+        a_min=0,
+        a_max=2 * env.world_radius,
+    )
+    flat_view_corner_indices = np.ravel_multi_index(
+        np.transpose(multidim_view_corner_indices), env.world_tensor.shape
+    )
+    view_values = env.world_tensor.reshape(-1)[flat_view_corner_indices]
+
+    last_action = 2 * env.world_dim if env.last_action is None else env.last_action
+    on_border_bools = np.concatenate(
+        (
+            env.current_position == env.world_radius,
+            env.current_position == -env.world_radius,
+        ),
+        axis=0,
+    )
+
+    if last_action == 2 * env.world_dim or on_border_bools[last_action]:
+        on_border_value = last_action
+    elif on_border_bools.any():
+        on_border_value = np.argwhere(on_border_bools).reshape(-1)[0]
+    else:
+        on_border_value = 2 * env.world_dim
+
+    seen_mask = np.array(env.closest_distance_to_corners <= view_radius, dtype=int)
+    seen_corner_values = (
+        env.world_tensor.reshape(-1)[
+            np.ravel_multi_index(
+                np.transpose(world_corners_offset), env.world_tensor.shape
+            )
+        ]
+        * seen_mask
+    )
+
+    return np.concatenate(
+        (
+            seen_corner_values + view_values * (1 - seen_mask),
+            [on_border_value, last_action],
+        ),
+        axis=0,
+        out=np.zeros((seen_corner_values.shape[0] + 2,), dtype=np.float32,),
+    )
+
+
 class CornerSensor(Sensor[LightHouseEnvironment, Any]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
@@ -45,54 +102,10 @@ class CornerSensor(Sensor[LightHouseEnvironment, Any]):
                 2 * (env.world_corners > 0) - 1
             )
 
-        world_corners_offset = env.world_corners + env.world_radius
-        multidim_view_corner_indices = np.clip(
-            np.reshape(env.current_position, (1, -1))
-            + self.view_corner_offsets
-            + env.world_radius,
-            a_min=0,
-            a_max=2 * env.world_radius,
-        )
-        flat_view_corner_indices = np.ravel_multi_index(
-            np.transpose(multidim_view_corner_indices), env.world_tensor.shape
-        )
-        view_values = env.world_tensor.reshape(-1)[flat_view_corner_indices]
-
-        last_action = 2 * env.world_dim if env.last_action is None else env.last_action
-        on_border_bools = np.concatenate(
-            (
-                env.current_position == env.world_radius,
-                env.current_position == -env.world_radius,
-            ),
-            axis=0,
-        )
-
-        if last_action == 2 * env.world_dim or on_border_bools[last_action]:
-            on_border_value = last_action
-        elif on_border_bools.any():
-            on_border_value = np.argwhere(on_border_bools).reshape(-1)[0]
-        else:
-            on_border_value = 2 * env.world_dim
-
-        seen_mask = np.array(
-            env.closest_distance_to_corners <= self.view_radius, dtype=int
-        )
-        seen_corner_values = (
-            env.world_tensor.reshape(-1)[
-                np.ravel_multi_index(
-                    np.transpose(world_corners_offset), env.world_tensor.shape
-                )
-            ]
-            * seen_mask
-        )
-
-        return np.concatenate(
-            (
-                seen_corner_values + view_values * (1 - seen_mask),
-                [on_border_value, last_action],
-            ),
-            axis=0,
-            out=np.zeros((seen_corner_values.shape[0] + 2,), dtype=np.float32,),
+        return get_corner_observation(
+            env=env,
+            view_radius=self.view_radius,
+            view_corner_offsets=self.view_corner_offsets,
         )
 
 
@@ -103,6 +116,15 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
         self.view_radius = config["view_radius"]
         self.world_dim = config["world_dim"]
         self.degree = config["degree"]
+
+        if self.world_dim > 2:
+            raise NotImplementedError(
+                "When using the `FactorialDesignCornerSensor`,"
+                "`world_dim` must be <= 2 due to memory constraints."
+                "In the current implementation, creating the design"
+                "matrix in the `world_dim == 3` case would require"
+                "instantiating a matrix of size ~ 3Mx3M (9 trillion entries)."
+            )
 
         self.view_corner_offsets: Optional[np.ndarray] = None
         # self.world_corners_offset: Optional[List[typing.Tuple[int, ...]]] = None
