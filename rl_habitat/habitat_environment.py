@@ -23,7 +23,9 @@ class HabitatEnvironment(object):
             config=config,
             dataset=dataset
         )
+        # Set the target to a random goal from the provided list for this episode
         self.goal_index = 0
+        self.last_geodesic_distance = None
 
     @property
     def scene_name(self) -> str:
@@ -60,8 +62,12 @@ class HabitatEnvironment(object):
             try_count += 1
             if try_count >= len(goals):
                 print("In here returning 0")
-                return 0.0
+                if self.last_geodesic_distance is None:
+                    self.last_geodesic_distance = 0.0
+                    return 0.0
+                return self.last_geodesic_distance
         print("Distance:", distance)
+        self.last_geodesic_distance = distance
         return distance
 
     def get_distance_to_target(self) -> float:
@@ -92,6 +98,8 @@ class HabitatEnvironment(object):
         self._current_frame = self.env.reset()
         # Set the target to a random goal from the provided list for this episode
         self.goal_index = random.randint(0, len(self.get_current_episode().goals))
+        # Reset the last distance to target
+        self.get_geodesic_distance()
 
     @property
     def last_action_success(self) -> bool:
