@@ -143,7 +143,7 @@ class ObjectNavTaskSampler(TaskSampler):
             config=self.env_config,
             dataset=dataset
         )
-        self.max_tasks = env.num_episodes # mp3d objectnav val -> 2184
+        self.max_tasks = 2184 if env.num_episodes == 2184 else None # mp3d objectnav val -> 2184
         self.reset_tasks = self.max_tasks
         return env
 

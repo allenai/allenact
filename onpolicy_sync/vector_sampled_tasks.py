@@ -205,7 +205,6 @@ class VectorSampledTasks(object):
                         if auto_resample_when_done:
                             current_task = task_sampler.next_task()
                             if current_task is None:
-                                # print("CURRENT TASK IS NONE")
                                 step_result = step_result.clone({"observation": None})
                             else:
                                 step_result = step_result.clone(
