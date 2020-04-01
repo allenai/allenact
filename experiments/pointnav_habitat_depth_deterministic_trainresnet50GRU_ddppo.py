@@ -37,6 +37,7 @@ class PointNavHabitatDepthDeterministicResNet50GRUPPOExperimentConfig(PointNavHa
                 "torchvision_resnet_model": models.resnet50,
                 "input_uuids": ["depth"],
                 "output_uuid": "depth_resnet",
+                "parallel": False,
             }
         ),
     ]
@@ -55,7 +56,7 @@ class PointNavHabitatDepthDeterministicResNet50GRUPPOExperimentConfig(PointNavHa
     def create_model(cls, **kwargs) -> nn.Module:
         return PointNavActorCriticTrainResNet50GRU(
             action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
-            observation_space=SensorSuite(cls.SENSORS).observation_spaces,
+            observation_space=kwargs["observation_set"].observation_spaces,#SensorSuite(cls.SENSORS).observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
             embed_coordinates=False,
