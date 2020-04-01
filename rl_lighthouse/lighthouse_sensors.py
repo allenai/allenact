@@ -117,6 +117,15 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
         self.world_dim = config["world_dim"]
         self.degree = config["degree"]
 
+        if self.world_dim > 2:
+            raise NotImplementedError(
+                "When using the `FactorialDesignCornerSensor`,"
+                "`world_dim` must be <= 2 due to memory constraints."
+                "In the current implementation, creating the design"
+                "matrix in the `world_dim == 3` case would require"
+                "instantiating a matrix of size ~ 3Mx3M (9 trillion entries)."
+            )
+
         self.view_corner_offsets: Optional[np.ndarray] = None
         # self.world_corners_offset: Optional[List[typing.Tuple[int, ...]]] = None
 
