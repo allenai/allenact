@@ -10,7 +10,7 @@ from typing import Dict, Tuple
 
 from setproctitle import setproctitle as ptitle
 
-from onpolicy_sync.engine import OnPolicyTrainer, OnPolicyTester
+from onpolicy_sync.runner import OnPolicyRunner
 from rl_base.experiment_config import ExperimentConfig
 from utils.system import init_logging, LOGGER
 
@@ -158,29 +158,32 @@ def main():
 
     LOGGER.info("Running with args {}".format(args))
 
-    _download_ai2thor()
+    # _download_ai2thor()
 
     ptitle("Master: {}".format("Training" if not args.test_date != "" else "Testing"))
 
     cfg, srcs = _load_config(args)
 
     if args.test_date == "":
-        OnPolicyTrainer(
+        OnPolicyRunner(
             config=cfg,
             output_dir=args.output_dir,
             loaded_config_src_files=srcs,
             seed=args.seed,
+            mode="train",
             deterministic_cudnn=args.deterministic_cudnn,
             extra_tag=args.extra_tag,
-        ).run_pipeline(args.checkpoint)
+        ).start_train(args.checkpoint)
     else:
-        OnPolicyTester(
+        OnPolicyRunner(
             config=cfg,
             output_dir=args.output_dir,
             loaded_config_src_files=srcs,
             seed=args.seed,
+            mode="test",
             deterministic_cudnn=args.deterministic_cudnn,
-        ).run_test(args.test_date, args.checkpoint, args.skip_checkpoints)
+            extra_tag=args.extra_tag,
+        ).start_test(args.test_date, args.checkpoint, args.skip_checkpoints)
 
 
 if __name__ == "__main__":

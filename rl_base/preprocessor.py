@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 from collections import OrderedDict
 import abc
 
@@ -8,6 +8,7 @@ from gym.spaces import Dict as SpaceDict
 import networkx as nx
 
 from rl_base.sensor import Sensor, SensorSuite
+from utils.experiment_utils import Builder
 
 
 class Preprocessor(abc.ABC):
@@ -64,7 +65,7 @@ class PreprocessorGraph:
     preprocessors: Dict[str, Preprocessor]
     observation_spaces: SpaceDict
 
-    def __init__(self, preprocessors: List[Preprocessor],) -> None:
+    def __init__(self, preprocessors: List[Union[Preprocessor, Builder[Preprocessor]]],) -> None:
         """Initializer.
 
         # Parameters
@@ -74,6 +75,9 @@ class PreprocessorGraph:
         self.preprocessors: Dict[str, Preprocessor] = OrderedDict()
         spaces: OrderedDict[str, gym.Space] = OrderedDict()
         for preprocessor in preprocessors:
+            if isinstance(preprocessor, Builder):
+                preprocessor = preprocessor()
+
             assert (
                 preprocessor.uuid not in self.preprocessors
             ), "'{}' is duplicated preprocessor uuid".format(preprocessor.uuid)
@@ -140,16 +144,18 @@ class ObservationSet:
     source_ids : List containing sensor and preprocessor ids to be consumed by agents. Each source uuid must be unique.
     graph : Computation graph for all preprocessors.
     observation_spaces : Observation spaces of all output sources.
+    device : Device where the PreprocessorGraph is executed.
     """
 
     source_ids: List[str]
     graph: PreprocessorGraph
     observation_spaces: SpaceDict
+    device: torch.device = torch.device("cpu")
 
     def __init__(
         self,
         source_ids: List[str],
-        all_preprocessors: List[Preprocessor],
+        all_preprocessors: List[Union[Preprocessor, Builder[Preprocessor]]],
         all_sensors: List[Sensor],
     ) -> None:
         """Initializer.
@@ -196,6 +202,7 @@ class ObservationSet:
 
     def to(self, device: torch.device) -> "ObservationSet":
         self.graph = self.graph.to(device)
+        self.device = device
         return self
 
     def get_observations(
