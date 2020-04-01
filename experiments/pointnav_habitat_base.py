@@ -33,7 +33,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.2
 
-    NUM_PROCESSES = [12, 12, 12, 12, 12, 12, 12, 12] # 12
+    NUM_PROCESSES = 32
 
     SENSORS = [
         RGBSensorHabitat(
@@ -99,6 +99,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     def training_pipeline(cls, **kwargs):
         ppo_steps = 7.5e7
         lr = 2.5e-4
+        lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 4
         num_steps = 128
@@ -142,7 +143,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else self.NUM_PROCESSES
+            nprocesses = 1 if not torch.cuda.is_available() else  [4, 4, 4, 4, 4, 4, 4, 4] # self.NUM_PROCESSES
             gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7]
             render_video = False
         elif mode == "valid":
