@@ -164,7 +164,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
 
         observation_set = Builder(ObservationSet, kwargs=dict(
             source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
-        )) if mode == 'train' or nprocesses > 0 else None
+        )) # if mode == 'train' or nprocesses > 0 else None
 
         return {
             "nprocesses": nprocesses,
