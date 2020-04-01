@@ -58,6 +58,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
                 "torchvision_resnet_model": models.resnet50,
                 "input_uuids": ["rgb"],
                 "output_uuid": "rgb_resnet",
+                "parallel": False,
             })
         ),
     ]
