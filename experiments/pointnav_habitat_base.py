@@ -142,7 +142,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else  [4, 4, 4, 4, 4, 4, 4, 4] # self.NUM_PROCESSES
+            nprocesses = 1 if not torch.cuda.is_available() else  [2, 2, 2, 2, 2, 2, 2, 2] # self.NUM_PROCESSES
             gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7]
             render_video = False
         elif mode == "valid":
