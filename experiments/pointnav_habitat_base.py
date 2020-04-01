@@ -162,9 +162,9 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
-        observation_set = ObservationSet(
-            self.OBSERVATIONS, self.PREPROCESSORS, self.SENSORS
-        )
+        observation_set = Builder(ObservationSet, kwargs=dict(
+            source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
+        )) if mode == 'train' or nprocesses > 0 else None
 
         return {
             "nprocesses": nprocesses,
