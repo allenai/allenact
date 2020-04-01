@@ -61,12 +61,11 @@ class HabitatEnvironment(object):
             distance = self.env.sim.geodesic_distance(curr, goal)
             try_count += 1
             if try_count >= len(goals):
-                print("In here returning 0")
                 if self.last_geodesic_distance is None:
                     self.last_geodesic_distance = 0.0
                     return 0.0
                 return self.last_geodesic_distance
-        print("Distance:", distance)
+
         self.last_geodesic_distance = distance
         return distance
 
@@ -97,7 +96,7 @@ class HabitatEnvironment(object):
     def reset(self):
         self._current_frame = self.env.reset()
         # Set the target to a random goal from the provided list for this episode
-        self.goal_index = random.randint(0, len(self.get_current_episode().goals))
+        self.goal_index = random.randint(0, len(self.get_current_episode().goals) - 1)
         # Reset the last distance to target
         self.get_geodesic_distance()
 
