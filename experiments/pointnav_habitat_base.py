@@ -146,14 +146,14 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
             gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7]
             render_video = False
         elif mode == "valid":
-            nprocesses = [1]
+            nprocesses = 1
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
                 gpu_ids = [7]
             render_video = False
         elif mode == "test":
-            nprocesses = [1]
+            nprocesses = 1
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
