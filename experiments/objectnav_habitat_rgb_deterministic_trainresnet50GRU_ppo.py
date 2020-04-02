@@ -11,7 +11,7 @@ from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from experiments.objectnav_habitat_base import ObjectNavHabitatBaseExperimentConfig
 
 
-class ObjectNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(ObjectNavHabitatBaseExperimentConfig):
+class ObjectNavHabitatRGBDeterministicTrainResNet50GRUPPOExperimentConfig(ObjectNavHabitatBaseExperimentConfig):
     """A Point Navigation experiment configuraqtion in Habitat"""
 
     SENSORS = [

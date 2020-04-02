@@ -278,7 +278,6 @@ class ObjectNavNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]
         observation_space: SpaceDict,
         goal_sensor_uuid: str,
         hidden_size=512,
-        embed_coordinates=False,
         coordinate_embedding_dim=8,
         coordinate_dims=2,
         num_rnn_layers=1,
@@ -288,7 +287,6 @@ class ObjectNavNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]
 
         self.goal_sensor_uuid = goal_sensor_uuid
         self.recurrent_hidden_state_size = hidden_size
-        self.embed_coordinates = embed_coordinates
         if self.embed_coordinates:
             self.coorinate_embedding_size = coordinate_embedding_dim
         else:
