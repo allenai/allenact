@@ -62,20 +62,20 @@ def make_cnn(
 
     net = nn.Sequential()
 
-    input_channels = [input_channels] + list(layer_channels)
+    input_channels_list = [input_channels] + list(layer_channels)
 
     for it, current_channels in enumerate(layer_channels):
         net.add_module(
-            "conv_%d".format(it),
+            "conv_{}".format(it),
             nn.Conv2d(
-                in_channels=input_channels[it],
+                in_channels=input_channels_list[it],
                 out_channels=current_channels,
                 kernel_size=kernel_sizes[it],
                 stride=strides[it],
             ),
         )
         if it < len(layer_channels) - 1:
-            net.add_module("relu_%d".format(it), nn.ReLU(inplace=True))
+            net.add_module("relu_{}".format(it), nn.ReLU(inplace=True))
 
     net.add_module("flatten", nn.Flatten())
     net.add_module(

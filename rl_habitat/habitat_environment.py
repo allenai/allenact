@@ -46,7 +46,7 @@ class HabitatEnvironment(object):
     ) -> List[ShortestPathPoint]:
         return self.env.sim.action_space_shortest_path(source_state, [target_state])
 
-    def get_current_episode(self) -> [Episode]:
+    def get_current_episode(self) -> Episode:
         return self.env.current_episode
 
     def start(self):

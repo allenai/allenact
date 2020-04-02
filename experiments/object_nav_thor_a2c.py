@@ -78,7 +78,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         num_mini_batch = 1 if not torch.cuda.is_available() else 6
         update_repeats = 4
         num_steps = 128
-        log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
+        metric_accumulate_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
         save_interval = 10000 if cls.EASY else 500000
         gamma = 0.99
         use_gae = True
@@ -86,7 +86,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         max_grad_norm = 0.5
         return TrainingPipeline(
             save_interval=save_interval,
-            log_interval=log_interval,
+            metric_accumulate_interval=metric_accumulate_interval,
             optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
@@ -98,7 +98,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             max_grad_norm=max_grad_norm,
             advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
-                PipelineStage(loss_names=["a2c_loss"], end_criterion=a2c_steps,),
+                PipelineStage(loss_names=["a2c_loss"], max_stage_steps=a2c_steps,),
             ],
             lr_scheduler_builder=Builder(
                 LambdaLR, {"lr_lambda": LinearDecay(steps=a2c_steps)}

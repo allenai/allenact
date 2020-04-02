@@ -26,7 +26,7 @@ class LightHouseOneDimDAggerExperimentConfig(ExperimentConfig):
     VIEW_RADIUS = 1
     EXPERT_VIEW_RADIUS = 5
     WORLD_RADIUS = 10
-    DEGREE = 2
+    DEGREE = -1
     MAX_STEPS = 1000
 
     SENSORS = [
@@ -52,7 +52,7 @@ class LightHouseOneDimDAggerExperimentConfig(ExperimentConfig):
         num_mini_batch = 2
         update_repeats = 4
         num_steps = 128
-        log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
+        metric_accumulate_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
         save_interval = 500000
         gamma = 0.99
         use_gae = True
@@ -61,7 +61,7 @@ class LightHouseOneDimDAggerExperimentConfig(ExperimentConfig):
 
         return TrainingPipeline(
             save_interval=save_interval,
-            log_interval=log_interval,
+            metric_accumulate_interval=metric_accumulate_interval,
             optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
@@ -78,7 +78,7 @@ class LightHouseOneDimDAggerExperimentConfig(ExperimentConfig):
                     teacher_forcing=LinearDecay(
                         startp=1.0, endp=0.0, steps=imitation_steps // 10,
                     ),
-                    end_criterion=imitation_steps,
+                    max_stage_steps=imitation_steps,
                 ),
             ],
             lr_scheduler_builder=Builder(

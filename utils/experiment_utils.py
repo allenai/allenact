@@ -1,5 +1,5 @@
 """Utility classes and functions for running and designing experiments."""
-
+import abc
 import collections.abc
 from collections import OrderedDict
 import copy
@@ -12,6 +12,7 @@ import torch
 from torch import optim
 
 from rl_base.common import Loss
+from typing import Callable
 
 
 def recursive_update(
@@ -111,7 +112,7 @@ class Builder(tuple, typing.Generic[ToBuildType]):
         allkwargs = copy.deepcopy(self.default)
         recursive_update(allkwargs, self.kwargs)
         recursive_update(allkwargs, kwargs)
-        return typing.cast(typing.Callable, self.class_type)(**allkwargs)
+        return typing.cast(Callable, self.class_type)(**allkwargs)
 
 
 class ScalarMeanTracker(object):
@@ -152,6 +153,17 @@ class ScalarMeanTracker(object):
         self._sums = OrderedDict()
         self._counts = OrderedDict()
         return means
+
+    def sums(self):
+        return copy.copy(self._sums)
+
+    def counts(self):
+        return copy.copy(self._counts)
+
+    def means(self):
+        return OrderedDict(
+            [(k, float(self._sums[k] / self._counts[k])) for k in self._sums]
+        )
 
 
 class LinearDecay(object):
@@ -217,6 +229,49 @@ def set_seed(seed: int) -> None:
     np.random.seed(seed)
 
 
+class EarlyStoppingCriterion(abc.ABC):
+    """Abstract class for class who determines if training should stop early in
+    a particular pipeline stage."""
+
+    @abc.abstractmethod
+    def __call__(
+        self,
+        stage_steps: int,
+        total_steps: int,
+        training_metrics: ScalarMeanTracker,
+        test_valid_metrics: List[Tuple[str, int, Union[float, np.ndarray]]],
+    ) -> bool:
+        """Returns `True` if training should be stopped early.
+
+        # Parameters
+
+        stage_steps: Total number of steps taken in the current pipeline stage.
+        total_steps: Total number of steps taken during training so far (includes steps
+            taken in prior pipeline stages).
+        training_metrics: Metrics recovered over some fixed number of steps
+            (see the `metric_accumulate_interval` attribute in the `TrainingPipeline` class)
+            training.
+        test_valid_metrics: A tuple `(key, steps, value)` where key is the metric's name
+             prefixed by either `"valid/"` or `"test/"`, `steps` is the total number of
+             steps that the validation/test model was trained for, and value is the
+             value of the metric.
+        """
+        raise NotImplementedError
+
+
+class NeverEarlyStoppingCriterion(EarlyStoppingCriterion):
+    """Implementation of `EarlyStoppingCriterion` which never stops early."""
+
+    def __call__(
+        self,
+        stage_steps: int,
+        total_steps: int,
+        training_metrics: ScalarMeanTracker,
+        test_valid_metrics: List[Tuple[str, int, Union[float, np.ndarray]]],
+    ) -> bool:
+        return False
+
+
 class PipelineStage(NamedTuple):
     """A single stage in a training pipeline.
 
@@ -224,7 +279,14 @@ class PipelineStage(NamedTuple):
 
     loss_name : A collection of unique names assigned to losses. These will
         reference the `Loss` objects in a `TrainingPipeline` instance.
-    end_criterion : Total number of steps agents should take in this stage.
+    max_stage_steps : Either the total number of steps agents should take in this stage or
+        a Callable object (e.g. a function)
+    early_stopping_criterion: An `EarlyStoppingCriterion` object which determines if
+        training in this stage should be stopped early. If `None` then no early stopping
+        occurs. If `early_stopping_criterion` is not `None` then we do not guarantee
+        reproducibility when restarting a model from a checkpoint (as the
+         `EarlyStoppingCriterion` object may store internal state which is not
+         saved in the checkpoint).
     loss_weights : A list of floating point numbers describing the relative weights
         applied to the losses referenced by `loss_name`. Should be the same length
         as `loss_name`. If this is `None`, all weights will be assumed to be one.
@@ -233,7 +295,8 @@ class PipelineStage(NamedTuple):
     """
 
     loss_names: typing.List[str]
-    end_criterion: int
+    max_stage_steps: Union[int, Callable]
+    early_stopping_criterion: Optional[EarlyStoppingCriterion] = None
     loss_weights: Optional[typing.Sequence[float]] = None
     teacher_forcing: Optional[LinearDecay] = None
 
@@ -260,8 +323,12 @@ class TrainingPipeline(typing.Iterable):
     gamma : Discount factor applied to rewards (should be in [0, 1]).
     use_gae : Whether or not to use generalized advantage estimation (GAE).
     gae_lambda : The additional parameter used in GAE.
-    save_interval : The frequency with which to save (in total agent steps).
-    log_interval : The frequency with which to log metrics to tensorboard (in total agent steps).
+    save_interval : The frequency with which to save (in total agent steps). If `None` or <= 0 then no checkpoints will
+        be saved.
+    metric_accumulate_interval : The frequency with which training/validation metrics are accumulated (in total agent steps).
+        Metrics accumulated in an interval are logged (if `should_log` is `True`) and used by the stage's early stopping
+        criterion (if any).
+    should_log: `True` if metrics accumulated during training should be logged to the console as well as to a tensorboard file.
     current_pipeline_stage : Integer tracking the current stage of the pipeline. If -1 then the pipeline
         is at it's start and `__next__` will need to be called to get the first pipeline stage.
     lr_scheduler_builder : Optional builder object to instantiate the learning rate scheduler used through the pipeline.
@@ -281,8 +348,9 @@ class TrainingPipeline(typing.Iterable):
         use_gae: bool,
         gae_lambda: float,
         advance_scene_rollout_period: Optional[int],
-        save_interval: int,
-        log_interval: int,
+        save_interval: Optional[int],
+        metric_accumulate_interval: int,
+        should_log: bool = True,
         lr_scheduler_builder: Optional[Builder[optim.lr_scheduler._LRScheduler]] = None,  # type: ignore
     ):
         """Initializer.
@@ -290,7 +358,7 @@ class TrainingPipeline(typing.Iterable):
         See class docstring for parameter definitions.
         """
         self.save_interval = save_interval
-        self.log_interval = log_interval
+        self.metric_accumulate_interval = metric_accumulate_interval
 
         self.optimizer_builder = optimizer_builder
         self.lr_scheduler_builder = lr_scheduler_builder
@@ -304,6 +372,7 @@ class TrainingPipeline(typing.Iterable):
         self.use_gae = use_gae
         self.gae_lambda = gae_lambda
         self.advance_scene_rollout_period = advance_scene_rollout_period
+        self.should_log = should_log
 
         self.pipeline_stages = pipeline_stages
 

@@ -1,7 +1,10 @@
+# type: ignore
+# TODO: @klemenkotar please fix all type errors.
+
 import torch
 import torch.nn as nn
 
-from typing import Tuple, Union, Sequence
+from typing import Tuple, Union, Sequence, cast
 
 
 class RNNMap(nn.Module):
@@ -59,7 +62,7 @@ class RNNMap(nn.Module):
 
     def single_forward(
         self, x: torch.Tensor, memory_map: torch.FloatTensor, position: Tuple[int, int]
-    ) -> (torch.FloatTensor, torch.FloatTensor):
+    ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
 
         memory = memory_map[position]
         x_out, memory_out = self.rnn(x, memory)

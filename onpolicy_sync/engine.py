@@ -1,5 +1,8 @@
 """Defines the reinforcement learning `OnPolicyRLEngine`."""
 import glob
+import itertools
+import json
+import logging
 import os
 import queue
 import random
@@ -9,12 +12,11 @@ import time
 import traceback
 import typing
 import warnings
+from collections import OrderedDict
 from multiprocessing.context import BaseContext
 from typing import Optional, Any, Dict, Union, List, Tuple
-import logging
-import json
-from collections import OrderedDict
 
+import numpy as np
 import torch
 import torch.distributions
 import torch.multiprocessing as mp
@@ -24,7 +26,6 @@ from setproctitle import setproctitle as ptitle
 from torch import optim
 from torch.distributions import Categorical
 from torch.optim.lr_scheduler import _LRScheduler
-import numpy as np
 
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from onpolicy_sync.policy import ActorCriticModel
@@ -43,6 +44,8 @@ from utils.experiment_utils import (
     Builder,
     TrainingPipeline,
     PipelineStage,
+    EarlyStoppingCriterion,
+    NeverEarlyStoppingCriterion,
 )
 from utils.tensor_utils import batch_observations, SummaryWriter, tensor_to_video
 
@@ -119,6 +122,12 @@ class OnPolicyRLEngine(object):
         self.training_pipeline: TrainingPipeline = config.training_pipeline()
         self.machine_params = config.machine_params(self.mode)
 
+        self.save_interval = self.training_pipeline.save_interval
+        self.metric_accumulate_interval = (
+            self.training_pipeline.metric_accumulate_interval
+        )
+        self.num_processes = self.machine_params["nprocesses"]
+
         self.device = "cpu"
         if len(self.machine_params["gpu_ids"]) > 0:
             if not torch.cuda.is_available():
@@ -187,7 +196,9 @@ class OnPolicyRLEngine(object):
         self.backprop_count = 0
         self.step_count = 0
         self.total_steps = 0
-        self.last_log = 0
+        self.last_metrics_accumulate_steps: Optional[
+            int
+        ] = None if self.metric_accumulate_interval is None else 0
         self.last_save = 0
 
         # Fields defined when running setup_stage.
@@ -195,7 +206,9 @@ class OnPolicyRLEngine(object):
         #   tuple like data structure with sensible defaults.
         self.losses: Optional[Dict[str, AbstractActorCriticLoss]] = None
         self.loss_weights: Optional[Dict[str, float]] = None
-        self.stage_task_steps: Optional[int] = None
+        self.max_stage_steps: Optional[int] = None
+        self.early_stopping_criterion: Optional[EarlyStoppingCriterion] = None
+        self.is_logging: Optional[bool] = None
         self.steps_in_rollout: Optional[int] = None
         self.update_epochs: Optional[int] = None
         self.update_mini_batches: Optional[int] = None
@@ -211,10 +224,6 @@ class OnPolicyRLEngine(object):
         self.eval_process: Optional[mp.Process] = None
 
         self.experiment_name = config.tag()
-
-        self.save_interval = self.training_pipeline.save_interval
-        self.log_interval = self.training_pipeline.log_interval
-        self.num_processes = self.machine_params["nprocesses"]
 
         self.config = config
         self.extra_tag = extra_tag
@@ -308,7 +317,13 @@ class OnPolicyRLEngine(object):
             )
 
         return [
-            fn(process_ind=it, total_processes=self.machine_params["nprocesses"],)
+            fn(
+                process_ind=it,
+                total_processes=self.machine_params["nprocesses"],
+                devices=devices,
+                seeds=seeds,
+                deterministic_cudnn=self.deterministic_cudnn,
+            )
             for it in range(self.machine_params["nprocesses"])
         ]
 
@@ -429,10 +444,31 @@ class OnPolicyRLEngine(object):
 
         return self.scalars.pop_and_reset(), used
 
-    def log(self, fps: Optional[float] = None, count=-1):
+    def _empty_metrics_out_queue(self, count=-1):
+        try:
+            while count != 0:
+                self.vector_tasks.metrics_out_queue.get_nowait()
+                count -= 1
+        except queue.Empty as _:
+            pass
+
+    def accumulate_data_from_metrics_out_queue(
+        self, count=-1
+    ) -> Dict[
+        str,
+        Union[
+            ScalarMeanTracker,
+            List[Tuple[str, int, Union[float, np.ndarray]]],
+            str,
+            List[str],
+        ],
+    ]:
+        assert self.log_writer is not None, "Log writer has not been initialized."
         train_metrics = []
         losses = []
         teachers = []
+        valid_test_metrics = []
+        valid_test_messages = []
         while (not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
             try:
                 if count < 0:
@@ -466,15 +502,16 @@ class OnPolicyRLEngine(object):
                                 metrics_steps = metrics[k][1]
                                 message += ["{} steps:".format(metrics_steps)]
                                 add_step = False
-                            self.log_writer.add_scalar(
-                                "{}/".format(mode) + k, metrics[k][0], metrics_steps,
+
+                            valid_test_metrics.append(
+                                ("{}/".format(mode) + k, metrics[k][0], metrics_steps)
                             )
                             message += [k + " {}".format(metrics[k][0])]
-                        LOGGER.info(" ".join(message))
+                        valid_test_messages.append(" ".join(message))
 
                         if render is not None:
-                            self.log_writer.add_vid(
-                                "{}/agent_view".format(mode), render, metrics_steps,
+                            valid_test_metrics.append(
+                                ("{}/agent_view".format(mode), render, metrics_steps)
                             )
                     else:
                         if pkg_type == "update_package":
@@ -500,51 +537,66 @@ class OnPolicyRLEngine(object):
             except queue.Empty:
                 pass
 
-        for metric in train_metrics:
+        for to_record in itertools.chain(train_metrics, losses, teachers):
             self.scalars.add_scalars(
                 OrderedDict(
                     sorted(
-                        [(k, v) for k, v in metric.items() if k != "task_info"],
-                        key=lambda x: x[0],
-                    )
-                )
-            )
-        for loss in losses:
-            self.scalars.add_scalars(
-                OrderedDict(
-                    sorted(
-                        [(k, v) for k, v in loss.items() if k != "task_info"],
-                        key=lambda x: x[0],
-                    )
-                )
-            )
-        for teacher in teachers:
-            self.scalars.add_scalars(
-                OrderedDict(
-                    sorted(
-                        [(k, v) for k, v in teacher.items() if k != "task_info"],
+                        [(k, v) for k, v in to_record.items() if k != "task_info"],
                         key=lambda x: x[0],
                     )
                 )
             )
 
-        tracked_means = self.scalars.pop_and_reset()
-        message = ["train {} steps:".format(self.total_steps + self.step_count)]
+        valid_test_metrics = []
+        valid_test_messages = []
+
+        return {
+            "train_scalar_tracker": self.scalars,
+            "valid_test_metrics": valid_test_metrics,
+            "valid_test_messages": valid_test_messages,
+        }
+
+    def log(
+        self,
+        train_scalar_tracker: ScalarMeanTracker,
+        valid_test_metrics: List[Tuple[str, int, Union[float, np.ndarray]]],
+        valid_test_messages: List[str],
+        fps: Optional[float] = None,
+    ):
+        assert self.log_writer is not None, "Log writer has not been initialized."
+
+        for key, metric_steps, metric in valid_test_metrics:
+            if np.isscalar(metric):
+                self.log_writer.add_scalar(
+                    tag=key, scalar_value=metric, global_step=metric_steps,
+                )
+            else:
+                self.log_writer.add_vid(
+                    tag=key, vid=metric, global_step=metric_steps,
+                )
+        for message in valid_test_messages:
+            LOGGER.info(message)
+
+        tracked_means = train_scalar_tracker.means()
+        train_message_list = [
+            "train {} steps:".format(self.total_steps + self.step_count)
+        ]
         for k in tracked_means:
             self.log_writer.add_scalar(
                 "train/" + k, tracked_means[k], self.total_steps + self.step_count,
             )
-            message += [
+            train_message_list += [
                 k
                 + (" {:.3g}" if abs(tracked_means[k]) < 1 else " {:.3f}").format(
                     tracked_means[k]
                 )
             ]
         if fps is not None:
-            message += ["fps {:.2f}".format(fps)]
+            train_message_list += ["fps {:.2f}".format(fps)]
 
-        if len(tracked_means) > 0:
-            LOGGER.info(" ".join(message))
+        train_message = " ".join(train_message_list)
+
+        LOGGER.info(train_message)
 
     def update(self, rollouts: RolloutStorage) -> None:
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
@@ -771,9 +823,12 @@ class OnPolicyRLEngine(object):
     def train(self, rollouts: RolloutStorage):
         self.initialize_rollouts(rollouts)
 
-        last_log_time = time.time()
+        last_metrics_accumulate_time = time.time()
 
-        while self.rollout_count < self.num_rollouts:
+        early_stopping_criterion_met = False
+        while self.rollout_count < self.num_rollouts and (
+            self.early_stopping_criterion is None or not early_stopping_criterion_met
+        ):
             for step in range(self.steps_in_rollout):
                 self.collect_rollout_step(rollouts)
 
@@ -802,19 +857,41 @@ class OnPolicyRLEngine(object):
                 self.lr_scheduler.step(epoch=self.step_count + self.total_steps)
 
             if (
-                self.step_count - self.last_log >= self.log_interval
+                self.step_count - self.last_metrics_accumulate_steps
+                >= self.metric_accumulate_interval
                 or self.rollout_count == self.num_rollouts
             ):
-                self.log(
-                    fps=(self.step_count - self.last_log)
-                    / (time.time() - last_log_time)
+                self.scalars.pop_and_reset()
+                accumulated_metrics_data = self.accumulate_data_from_metrics_out_queue()
+                early_stopping_criterion_met = self.early_stopping_criterion(
+                    stage_steps=self.step_count,
+                    total_steps=self.total_steps,
+                    training_metrics=typing.cast(
+                        ScalarMeanTracker,
+                        accumulated_metrics_data["train_scalar_tracker"],
+                    ),
+                    test_valid_metrics=typing.cast(
+                        List[Tuple[str, int, Union[float, Any]]],
+                        accumulated_metrics_data.get("test_valid_metrics", []),
+                    ),
                 )
-                self.last_log = self.step_count
-                last_log_time = time.time()
+                if self.is_logging:
+                    self.log(
+                        **{  # type: ignore
+                            **accumulated_metrics_data,  # type: ignore
+                            "fps": (
+                                self.step_count - self.last_metrics_accumulate_steps
+                            )
+                            / (time.time() - last_metrics_accumulate_time),
+                        }
+                    )
+                self.last_metrics_accumulate_steps = self.step_count
+                last_metrics_accumulate_time = time.time()
 
             # save for every interval-th episode or for the last epoch
             if (
-                self.save_interval > 0
+                self.save_interval is not None
+                and self.save_interval > 0
                 and (
                     self.step_count - self.last_save >= self.save_interval
                     or self.rollout_count == self.num_rollouts
@@ -836,13 +913,15 @@ class OnPolicyRLEngine(object):
         losses: Dict[str, AbstractActorCriticLoss],
         loss_weights: Dict[str, float],
         steps_in_rollout: int,
-        stage_task_steps: int,
+        max_stage_steps: int,
         update_epochs: int,
         update_mini_batches: int,
         gamma: float,
         use_gae: bool,
         gae_lambda: float,
         max_grad_norm: float,
+        early_stopping_criterion: Optional[EarlyStoppingCriterion] = None,
+        should_log: bool = True,
         advance_scene_rollout_period: Optional[int] = None,
         teacher_forcing: Optional[LinearDecay] = None,
         deterministic_agent: bool = False,
@@ -850,20 +929,27 @@ class OnPolicyRLEngine(object):
         self.losses = losses
         self.loss_weights = loss_weights
 
-        self.stage_task_steps = stage_task_steps
+        self.max_stage_steps = max_stage_steps
         self.steps_in_rollout = steps_in_rollout
         self.update_epochs = update_epochs
         self.update_mini_batches = update_mini_batches
 
         self.num_rollouts = (
-            int(self.stage_task_steps) // self.steps_in_rollout
+            int(self.max_stage_steps) // self.steps_in_rollout
         ) // self.num_processes
         message = "Using %d rollouts, %d steps (from requested %d steps)" % (
             self.num_rollouts,
             self.num_rollouts * self.num_processes * self.steps_in_rollout,
-            self.stage_task_steps,
+            self.max_stage_steps,
         )
         LOGGER.info(message)
+
+        self.early_stopping_criterion = (
+            early_stopping_criterion
+            if early_stopping_criterion is not None
+            else NeverEarlyStoppingCriterion()
+        )
+        self.is_logging = should_log
 
         self.gamma = gamma
         self.use_gae = use_gae
@@ -1014,14 +1100,19 @@ class OnPolicyRLEngine(object):
 
             self.save_config_files()
 
-            self.log_writer = SummaryWriter(log_dir=self.log_writer_path)
+            if self.is_logging is not None:
+                self.log_writer = SummaryWriter(log_dir=self.log_writer_path)
 
             for stage_num, stage in self.training_pipeline.iterator_starting_at(
                 self.pipeline_stage
             ):
                 assert stage_num == self.pipeline_stage
 
-                self.last_log = self.step_count - self.log_interval
+                self.last_metrics_accumulate_steps = (
+                    None
+                    if self.metric_accumulate_interval is None
+                    else self.step_count - self.metric_accumulate_interval
+                )
                 self.last_save = self.step_count
 
                 stage_losses, stage_weights = self._load_losses(stage)
@@ -1030,13 +1121,17 @@ class OnPolicyRLEngine(object):
                     losses=stage_losses,
                     loss_weights=stage_weights,
                     steps_in_rollout=self._stage_value(stage, "num_steps"),
-                    stage_task_steps=self._stage_value(stage, "end_criterion"),
+                    max_stage_steps=self._stage_value(stage, "max_stage_steps"),
                     update_epochs=self._stage_value(stage, "update_repeats"),
                     update_mini_batches=self._stage_value(stage, "num_mini_batch"),
                     gamma=self._stage_value(stage, "gamma"),
                     use_gae=self._stage_value(stage, "use_gae"),
                     gae_lambda=self._stage_value(stage, "gae_lambda"),
                     max_grad_norm=self._stage_value(stage, "max_grad_norm"),
+                    early_stopping_criterion=self._stage_value(
+                        stage, "early_stopping_criterion", allow_none=True
+                    ),
+                    should_log=self._stage_value(stage, "should_log"),
                     advance_scene_rollout_period=self._stage_value(
                         stage, "advance_scene_rollout_period", allow_none=True
                     ),
@@ -1228,7 +1323,7 @@ class OnPolicyRLEngine(object):
         skip_checkpoints=0,
         rollout_steps=1,
         deterministic_agent=True,
-    ):
+    ) -> List[Dict[str, Any]]:
         assert (
             self.mode != "train"
         ), "run_test only to be called from a valid or test instance"
@@ -1273,12 +1368,16 @@ class OnPolicyRLEngine(object):
             with open(fname, "w") as f:
                 json.dump(all_results, f, indent=4)
 
-            self.log(count=1)
+            accumulated_metrics_data = self.accumulate_data_from_metrics_out_queue(
+                count=1
+            )
+            self.log(**accumulated_metrics_data)  # type: ignore
 
             with open(fname, "w") as f:
                 json.dump(all_results, f, indent=4)
 
         LOGGER.info("Metrics saved in {}".format(fname))
+        return all_results
 
     def close(self, verbose=True):
         if self._is_closed:
