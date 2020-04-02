@@ -278,19 +278,17 @@ class ObjectNavNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]
         observation_space: SpaceDict,
         goal_sensor_uuid: str,
         hidden_size=512,
-        coordinate_embedding_dim=8,
-        coordinate_dims=2,
+        object_type_embedding_dim=8,
+        trainable_masked_hidden_state: bool = False,
         num_rnn_layers=1,
         rnn_type='GRU'
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
         self.goal_sensor_uuid = goal_sensor_uuid
+        self._n_object_types = self.observation_space.spaces[self.goal_sensor_uuid].n
         self.recurrent_hidden_state_size = hidden_size
-        if self.embed_coordinates:
-            self.coorinate_embedding_size = coordinate_embedding_dim
-        else:
-            self.coorinate_embedding_size = coordinate_dims
+        self.object_type_embedding_size = object_type_embedding_dim
 
         self.visual_encoder = nn.Sequential(
             nn.Conv2d(2048, 2048, (1, 1)),
@@ -314,6 +312,7 @@ class ObjectNavNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]
             (0 if self.is_blind else self.recurrent_hidden_state_size)
             + self.coorinate_embedding_size,
             self.recurrent_hidden_state_size,
+            trainable_masked_hidden_state=trainable_masked_hidden_state,
             num_layers=num_rnn_layers,
             rnn_type=rnn_type
         )
@@ -325,8 +324,10 @@ class ObjectNavNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]
             self.recurrent_hidden_state_size
         )
 
-        if self.embed_coordinates:
-            self.coordinate_embedding = nn.Linear(coordinate_dims, coordinate_embedding_dim)
+        self.object_type_embedding = nn.Embedding(
+            num_embeddings=self._n_object_types,
+            embedding_dim=object_type_embedding_dim,
+        )
 
         self.train()
 

@@ -62,6 +62,7 @@ class ObjectNavHabitatRGBDeterministicTrainResNet50GRUPPOExperimentConfig(Object
             goal_sensor_uuid="target_object_id",
             hidden_size=512,
             object_type_embedding_dim=32,
+            trainable_masked_hidden_state = False,
             num_rnn_layers=1,
             rnn_type='GRU'
         )
