@@ -463,7 +463,6 @@ class OnPolicyRLEngine(object):
             List[str],
         ],
     ]:
-        assert self.log_writer is not None, "Log writer has not been initialized."
         train_metrics = []
         losses = []
         teachers = []
