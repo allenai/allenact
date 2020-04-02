@@ -888,12 +888,12 @@ class OnPolicyRLEngine(object):
             # save for every interval-th episode or for the last epoch
             if (
                 self.save_interval is not None
-                and self.save_interval > 0
+                and self.models_folder != ""
                 and (
-                    self.step_count - self.last_save >= self.save_interval
-                    or self.rollout_count == self.num_rollouts
+                    self.rollout_count == self.num_rollouts
+                    or 0 < self.save_interval <= self.step_count - self.last_save
                 )
-            ) and self.models_folder != "":
+            ):
                 model_path = self.checkpoint_save()
                 if self.write_to_eval is not None:
                     self.write_to_eval.put(("eval", model_path))
