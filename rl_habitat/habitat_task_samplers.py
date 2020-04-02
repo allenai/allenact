@@ -7,7 +7,7 @@ from habitat.config import Config
 
 from rl_base.sensor import Sensor
 from rl_base.task import TaskSampler
-from rl_habitat.habitat_tasks import PointNavTask, ObjectNavTask
+from rl_habitat.habitat_tasks import PointNavTask, ObjectNavTask  # type: ignore
 
 
 class PointNavTaskSampler(TaskSampler):
@@ -128,7 +128,7 @@ class ObjectNavTaskSampler(TaskSampler):
         self.env_config = env_config
         self.distance_to_goal = distance_to_goal
 
-        self._last_sampled_task: Optional[PointNavTask] = None
+        self._last_sampled_task: Optional[ObjectNavTask] = None
 
     def _create_environment(self) -> HabitatEnvironment:
         dataset = habitat.make_dataset(
@@ -151,7 +151,7 @@ class ObjectNavTaskSampler(TaskSampler):
         return None
 
     @property
-    def last_sampled_task(self) -> Optional[PointNavTask]:
+    def last_sampled_task(self) -> Optional[ObjectNavTask]:
         return self._last_sampled_task
 
     def close(self) -> None:
@@ -166,7 +166,7 @@ class ObjectNavTaskSampler(TaskSampler):
         """
         return True
 
-    def next_task(self, force_advance_scene=False) -> PointNavTask:
+    def next_task(self, force_advance_scene=False) -> ObjectNavTask:
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
 

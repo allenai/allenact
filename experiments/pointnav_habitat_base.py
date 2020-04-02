@@ -110,14 +110,14 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
         update_repeats = 4
         num_steps = 128
         save_interval = 1000000
-        log_interval = 10000
+        metric_accumulate_interval = 10000
         gamma = 0.99
         use_gae = True
         gae_lambda = 0.95
         max_grad_norm = 0.5
         return TrainingPipeline(
             save_interval=save_interval,
-            log_interval=log_interval,
+            metric_accumulate_interval=metric_accumulate_interval,
             optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
@@ -133,7 +133,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
             gae_lambda=gae_lambda,
             advance_scene_rollout_period=None,
             pipeline_stages=[
-                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps)
+                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps)
             ],
             lr_scheduler_builder=Builder(
                 LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
@@ -187,7 +187,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return PointNavActorCriticResNet50GRU(
-            action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
+            action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
@@ -217,7 +217,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
         }
 
@@ -237,7 +237,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
         }
 
@@ -257,6 +257,6 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
         }

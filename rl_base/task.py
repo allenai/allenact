@@ -106,7 +106,7 @@ class Task(Generic[EnvType]):
         """Take an action in the environment.
 
         Takes the action in the environment corresponding to
-        `self.action_names()[action]` and returns
+        `self.class_action_names()[action]` and returns
         observations (& rewards and any additional information)
         corresponding to the agent's new state. Note that this function
         should not be overwritten without care (instead
@@ -132,7 +132,7 @@ class Task(Generic[EnvType]):
         """Helper function called by `step` to take a step in the environment.
 
         Takes the action in the environment corresponding to
-        `self.action_names()[action]` and returns
+        `self.class_action_names()[action]` and returns
         observations (& rewards and any additional information)
         corresponding to the agent's new state. This function is called
         by the (public) `step` function and is what should be implemented
@@ -183,7 +183,7 @@ class Task(Generic[EnvType]):
         # Returns
 
         Tuple of (ordered) action names so that taking action
-            running `task.step(i)` corresponds to taking action task.action_names()[i].
+            running `task.step(i)` corresponds to taking action task.class_action_names()[i].
         """
         raise NotImplementedError()
 
@@ -198,12 +198,12 @@ class Task(Generic[EnvType]):
     @property
     def total_actions(self) -> int:
         """Total number of actions available to an agent in this Task."""
-        return len(self.action_names())
+        return len(self.class_action_names())
 
     def index_to_action(self, index: int) -> str:
         """Returns the action name correspond to `index`."""
         assert 0 <= index < self.total_actions
-        return self.action_names()[index]
+        return self.class_action_names()[index]
 
     @abstractmethod
     def close(self) -> None:

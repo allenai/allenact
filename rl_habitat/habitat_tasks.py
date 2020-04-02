@@ -1,3 +1,5 @@
+# TODO: @klemenkotar please fix all type errors
+
 from typing import Tuple, List, Dict, Any, Optional
 
 import gym
@@ -90,14 +92,14 @@ class PointNavTask(Task[HabitatTask]):
         return self.env.env.episode_over
 
     @classmethod
-    def action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls) -> Tuple[str, ...]:
         return cls._actions
 
     def close(self) -> None:
         self.env.stop()
 
     def _step(self, action: int) -> RLStepResult:
-        action_str = self.action_names()[action]
+        action_str = self.class_action_names()[action]
 
         self.env.step({"action": action_str})
 
@@ -155,7 +157,7 @@ class PointNavTask(Task[HabitatTask]):
 
     def query_expert(self) -> Tuple[int, bool]:
         if self._is_goal_in_range():
-            return self.action_names().index(END), True
+            return self.class_action_names().index(END), True
 
         target = self.task_info["target"]
         current_location = self.env.get_location()
@@ -204,14 +206,14 @@ class ObjectNavTask(Task[HabitatTask]):
         return self.env.env.episode_over
 
     @classmethod
-    def action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls) -> Tuple[str, ...]:
         return cls._actions
 
     def close(self) -> None:
         self.env.stop()
 
     def _step(self, action: int) -> RLStepResult:
-        action_str = self.action_names()[action]
+        action_str = self.class_action_names()[action]
 
         self.env.step({"action": action_str})
 
@@ -273,7 +275,7 @@ class ObjectNavTask(Task[HabitatTask]):
 
     def query_expert(self) -> Tuple[int, bool]:
         if self._is_goal_in_range():
-            return self.action_names().index(END), True
+            return self.class_action_names().index(END), True
 
         target = self.task_info["target"]
         current_location = self.env.get_location()

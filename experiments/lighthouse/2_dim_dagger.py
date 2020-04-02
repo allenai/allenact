@@ -1,6 +1,7 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple, Union
 
 import gym
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -9,11 +10,52 @@ from torch.optim.lr_scheduler import LambdaLR
 from models.basic_models import LinearActorCritic
 from onpolicy_sync.losses.imitation import Imitation
 from rl_base.experiment_config import ExperimentConfig
-from rl_base.sensor import SensorSuite, ExpertPolicySensor
+from rl_base.sensor import SensorSuite, ExpertPolicySensor, Sensor
 from rl_base.task import TaskSampler
 from rl_lighthouse.lighthouse_sensors import FactorialDesignCornerSensor
 from rl_lighthouse.lighthouse_tasks import FindGoalLightHouseTaskSampler
-from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
+from utils.experiment_utils import (
+    Builder,
+    PipelineStage,
+    TrainingPipeline,
+    LinearDecay,
+    EarlyStoppingCriterion,
+    ScalarMeanTracker,
+)
+
+
+class StopIfNearOptimal(EarlyStoppingCriterion):
+    def __init__(self, optimal: float, deviation: float, gamma=0.9):
+        self.optimal = optimal
+        self.deviaion = deviation
+        self.gamma = gamma
+        self.running_mean = None
+
+    def __call__(
+        self,
+        stage_steps: int,
+        total_steps: int,
+        training_metrics: ScalarMeanTracker,
+        test_valid_metrics: List[Tuple[str, int, Union[float, np.ndarray]]],
+    ) -> bool:
+        sums = training_metrics.sums()
+        counts = training_metrics.counts()
+
+        k = "ep_length"
+        if k in sums:
+            count = counts[k]
+            ep_length_ave = sums[k] / count
+
+            if self.running_mean is None:
+                self.running_mean = ep_length_ave
+            else:
+                self.running_mean = (1 - self.gamma ** count) * ep_length_ave + (
+                    self.gamma ** count
+                ) * self.running_mean
+
+        if self.running_mean is None:
+            return False
+        return self.running_mean < self.optimal + self.deviaion
 
 
 class LightHouseTwoDimDAggerExperimentConfig(ExperimentConfig):
@@ -23,13 +65,13 @@ class LightHouseTwoDimDAggerExperimentConfig(ExperimentConfig):
     """
 
     WORLD_DIM = 2
-    VIEW_RADIUS = 5
-    EXPERT_VIEW_RADIUS = 10
+    VIEW_RADIUS = 1
+    EXPERT_VIEW_RADIUS = 1
     WORLD_RADIUS = 10
-    DEGREE = 2
+    DEGREE = -1
     MAX_STEPS = 1000
 
-    SENSORS = [
+    SENSORS: List[Sensor] = [
         FactorialDesignCornerSensor(
             {"view_radius": VIEW_RADIUS, "world_dim": WORLD_DIM, "degree": DEGREE}
         ),
@@ -47,12 +89,13 @@ class LightHouseTwoDimDAggerExperimentConfig(ExperimentConfig):
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        imitation_steps = int(1e6)
+        dagger_steps = int(1e5)
+        imitation_steps = int(1e6) - dagger_steps
         lr = 1e-2
         num_mini_batch = 2
         update_repeats = 4
         num_steps = 128
-        log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
+        metric_accumulate_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
         save_interval = 500000
         gamma = 0.99
         use_gae = True
@@ -61,7 +104,7 @@ class LightHouseTwoDimDAggerExperimentConfig(ExperimentConfig):
 
         return TrainingPipeline(
             save_interval=save_interval,
-            log_interval=log_interval,
+            metric_accumulate_interval=metric_accumulate_interval,
             optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
@@ -75,14 +118,14 @@ class LightHouseTwoDimDAggerExperimentConfig(ExperimentConfig):
             pipeline_stages=[
                 PipelineStage(
                     loss_names=["imitation_loss"],
-                    teacher_forcing=LinearDecay(
-                        startp=1.0, endp=0.0, steps=imitation_steps // 10,
+                    early_stopping_criterion=StopIfNearOptimal(
+                        optimal=50, deviation=10
                     ),
-                    end_criterion=imitation_steps,
+                    max_stage_steps=imitation_steps,
                 ),
             ],
             lr_scheduler_builder=Builder(
-                LambdaLR, {"lr_lambda": LinearDecay(steps=imitation_steps)}
+                LambdaLR, {"lr_lambda": LinearDecay(steps=dagger_steps)}
             ),
         )
 
@@ -139,13 +182,16 @@ class LightHouseTwoDimDAggerExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        return self.train_task_sampler_args(
-            process_ind=process_ind,
-            total_processes=total_processes,
-            devices=devices,
-            seeds=seeds,
-            deterministic_cudnn=deterministic_cudnn,
-        )
+        return {
+            **self.train_task_sampler_args(
+                process_ind=process_ind,
+                total_processes=total_processes,
+                devices=devices,
+                seeds=seeds,
+                deterministic_cudnn=deterministic_cudnn,
+            ),
+            "max_tasks": 10,
+        }
 
     def test_task_sampler_args(
         self,
@@ -155,7 +201,7 @@ class LightHouseTwoDimDAggerExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        return self.train_task_sampler_args(
+        return self.valid_task_sampler_args(
             process_ind=process_ind,
             total_processes=total_processes,
             devices=devices,

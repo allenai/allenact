@@ -932,7 +932,10 @@ class SingleProcessVectorSampledTasks(object):
             return
 
         for g in self._vector_task_generators:
-            g.send((CLOSE_COMMAND, None))
+            try:
+                g.send((CLOSE_COMMAND, None))
+            except StopIteration:
+                pass
 
         self._is_closed = True
 

@@ -26,7 +26,7 @@ class LightHouseOneDimPPOExperimentConfig(ExperimentConfig):
     WORLD_DIM = 1
     VIEW_RADIUS = 1
     WORLD_RADIUS = 10
-    DEGREE = 2
+    DEGREE = -1
     MAX_STEPS = 1000
 
     SENSORS = [
@@ -46,7 +46,7 @@ class LightHouseOneDimPPOExperimentConfig(ExperimentConfig):
         num_mini_batch = 2
         update_repeats = 4
         num_steps = 128
-        log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
+        metric_accumulate_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
         save_interval = 500000
         gamma = 0.99
         use_gae = True
@@ -55,7 +55,7 @@ class LightHouseOneDimPPOExperimentConfig(ExperimentConfig):
 
         return TrainingPipeline(
             save_interval=save_interval,
-            log_interval=log_interval,
+            metric_accumulate_interval=metric_accumulate_interval,
             optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
@@ -73,7 +73,7 @@ class LightHouseOneDimPPOExperimentConfig(ExperimentConfig):
             gae_lambda=gae_lambda,
             advance_scene_rollout_period=None,
             pipeline_stages=[
-                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps,),
+                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps,),
             ],
             lr_scheduler_builder=Builder(
                 LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
@@ -133,13 +133,16 @@ class LightHouseOneDimPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        return self.train_task_sampler_args(
-            process_ind=process_ind,
-            total_processes=total_processes,
-            devices=devices,
-            seeds=seeds,
-            deterministic_cudnn=deterministic_cudnn,
-        )
+        return {
+            **self.train_task_sampler_args(
+                process_ind=process_ind,
+                total_processes=total_processes,
+                devices=devices,
+                seeds=seeds,
+                deterministic_cudnn=deterministic_cudnn,
+            ),
+            "max_tasks": 10,
+        }
 
     def test_task_sampler_args(
         self,
@@ -149,7 +152,7 @@ class LightHouseOneDimPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        return self.train_task_sampler_args(
+        return self.valid_task_sampler_args(
             process_ind=process_ind,
             total_processes=total_processes,
             devices=devices,

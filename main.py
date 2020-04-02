@@ -138,7 +138,7 @@ def _load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
     experiments = [
         m[1]
         for m in inspect.getmembers(module, inspect.isclass)
-        if m[1].__module__ == module.__name__
+        if m[1].__module__ == module.__name__ and issubclass(m[1], ExperimentConfig)
     ]
     assert (
         len(experiments) == 1
@@ -210,7 +210,7 @@ def main():
             deterministic_cudnn=args.deterministic_cudnn,
             extra_tag=args.extra_tag,
             single_process_training=args.single_process_training,
-        ).run_pipeline(args.checkpoint)
+        ).run_pipeline(checkpoint_file_name=args.checkpoint)
     else:
         OnPolicyTester(
             config=cfg,
@@ -218,7 +218,11 @@ def main():
             loaded_config_src_files=srcs,
             seed=args.seed,
             deterministic_cudnn=args.deterministic_cudnn,
-        ).run_test(args.test_date, args.checkpoint, args.skip_checkpoints)
+        ).run_test(
+            experiment_date=args.test_date,
+            checkpoint_file_name=args.checkpoint,
+            skip_checkpoints=args.skip_checkpoints,
+        )
 
 
 if __name__ == "__main__":

@@ -66,8 +66,12 @@ class Imitation(AbstractActorCriticLoss):
                 )
             ).sum() / torch.clamp(expert_successes, min=1)
         elif "expert_policy" in observations:
-            expert_policies = batch["observations"]["expert_policy"][:, :-1]
-            expert_actions_masks = batch["observations"]["expert_policy"][:, -1:]
+            expert_policies = typing.cast(
+                Dict[str, torch.Tensor], batch["observations"]
+            )["expert_policy"][:, :-1]
+            expert_actions_masks = typing.cast(
+                Dict[str, torch.Tensor], batch["observations"]
+            )["expert_policy"][:, -1:]
 
             expert_successes = expert_actions_masks.sum()
             if expert_successes.item() == 0:

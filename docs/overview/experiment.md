@@ -78,7 +78,7 @@ class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfi
                 torch.optim.Adam, dict(lr=2.5e-4)
             ),
             save_interval=10000,  # Save every 10000 steps (approximately)
-            log_interval=cls.MAX_STEPS * 10,  # Log every 10 max length tasks
+            metric_accumulate_interval=cls.MAX_STEPS * 10,  # Log every 10 max length tasks
             num_mini_batch=1,
             update_repeats=4,
             num_steps=128,
@@ -89,7 +89,7 @@ class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfi
             pipeline_stages=[
                 utils.experiment_utils.PipelineStage(
                     loss_names=["ppo_loss"],
-                    end_criterion=int(1e6)
+                    max_stage_steps=int(1e6)
                 ),
             ],
         )
@@ -122,7 +122,7 @@ class ObjectNavThorPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
         dagger_steps = int(3e4)
         return TrainingPipeline(
             save_interval=10000,  # Save every 10000 steps (approximately)
-            log_interval=cls.MAX_STEPS * 10,  # Log every 10 max length tasks
+            metric_accumulate_interval=cls.MAX_STEPS * 10,  # Log every 10 max length tasks
             optimizer=Builder(optim.Adam, dict(lr=2.5e-4)),
             num_mini_batch=6 if not torch.cuda.is_available() else 30,
             update_repeats=4,
@@ -144,11 +144,11 @@ class ObjectNavThorPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
                     teacher_forcing=LinearDecay(
                         startp=1.0, endp=0.0, steps=dagger_steps,
                     ),
-                    end_criterion=dagger_steps,
+                    max_stage_steps=dagger_steps,
                 ),
                 PipelineStage(
                     loss_names=["ppo_loss", "imitation_loss"],
-                    end_criterion=int(3e4)
+                    max_stage_steps=int(3e4)
                 ),
             ],
         )
