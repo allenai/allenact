@@ -369,11 +369,9 @@ class ObjectNavNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]
         x_cat = cast(torch.FloatTensor, torch.cat(x, dim=1))  # type: ignore
         x_out, rnn_hidden_states = self.state_encoder(x_cat, rnn_hidden_states, masks)
 
-        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
-
         return (
             ActorCriticOutput(
-                distributions=self.actor(x), values=self.critic(x), extras={}
+                distributions=self.actor(x_out), values=self.critic(x_out), extras={}
             ),
             rnn_hidden_states,
         )
