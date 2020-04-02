@@ -133,13 +133,16 @@ class LightHouseOneDimPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        return self.train_task_sampler_args(
-            process_ind=process_ind,
-            total_processes=total_processes,
-            devices=devices,
-            seeds=seeds,
-            deterministic_cudnn=deterministic_cudnn,
-        )
+        return {
+            **self.train_task_sampler_args(
+                process_ind=process_ind,
+                total_processes=total_processes,
+                devices=devices,
+                seeds=seeds,
+                deterministic_cudnn=deterministic_cudnn,
+            ),
+            "max_tasks": 10,
+        }
 
     def test_task_sampler_args(
         self,
@@ -149,7 +152,7 @@ class LightHouseOneDimPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        return self.train_task_sampler_args(
+        return self.valid_task_sampler_args(
             process_ind=process_ind,
             total_processes=total_processes,
             devices=devices,

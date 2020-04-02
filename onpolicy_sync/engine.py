@@ -504,14 +504,14 @@ class OnPolicyRLEngine(object):
                                 add_step = False
 
                             valid_test_metrics.append(
-                                ("{}/".format(mode) + k, metrics[k][0], metrics_steps)
+                                ("{}/".format(mode) + k, metrics_steps, metrics[k][0])
                             )
                             message += [k + " {}".format(metrics[k][0])]
                         valid_test_messages.append(" ".join(message))
 
                         if render is not None:
                             valid_test_metrics.append(
-                                ("{}/agent_view".format(mode), render, metrics_steps)
+                                ("{}/agent_view".format(mode), metrics_steps, render)
                             )
                     else:
                         if pkg_type == "update_package":
@@ -546,9 +546,6 @@ class OnPolicyRLEngine(object):
                     )
                 )
             )
-
-        valid_test_metrics = []
-        valid_test_messages = []
 
         return {
             "train_scalar_tracker": self.scalars,
@@ -921,7 +918,6 @@ class OnPolicyRLEngine(object):
         gae_lambda: float,
         max_grad_norm: float,
         early_stopping_criterion: Optional[EarlyStoppingCriterion] = None,
-        should_log: bool = True,
         advance_scene_rollout_period: Optional[int] = None,
         teacher_forcing: Optional[LinearDecay] = None,
         deterministic_agent: bool = False,
@@ -949,7 +945,6 @@ class OnPolicyRLEngine(object):
             if early_stopping_criterion is not None
             else NeverEarlyStoppingCriterion()
         )
-        self.is_logging = should_log
 
         self.gamma = gamma
         self.use_gae = use_gae
@@ -1100,6 +1095,7 @@ class OnPolicyRLEngine(object):
 
             self.save_config_files()
 
+            self.is_logging = self.training_pipeline.should_log
             if self.is_logging is not None:
                 self.log_writer = SummaryWriter(log_dir=self.log_writer_path)
 
@@ -1131,7 +1127,6 @@ class OnPolicyRLEngine(object):
                     early_stopping_criterion=self._stage_value(
                         stage, "early_stopping_criterion", allow_none=True
                     ),
-                    should_log=self._stage_value(stage, "should_log"),
                     advance_scene_rollout_period=self._stage_value(
                         stage, "advance_scene_rollout_period", allow_none=True
                     ),

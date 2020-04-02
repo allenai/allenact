@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from models.basic_models import LinearActorCritic
 from onpolicy_sync.losses.imitation import Imitation
 from rl_base.experiment_config import ExperimentConfig
-from rl_base.sensor import SensorSuite, ExpertPolicySensor
+from rl_base.sensor import SensorSuite, ExpertPolicySensor, Sensor
 from rl_base.task import TaskSampler
 from rl_lighthouse.lighthouse_sensors import FactorialDesignCornerSensor
 from rl_lighthouse.lighthouse_tasks import FindGoalLightHouseTaskSampler
@@ -71,7 +71,7 @@ class LightHouseTwoDimDAggerExperimentConfig(ExperimentConfig):
     DEGREE = -1
     MAX_STEPS = 1000
 
-    SENSORS = [
+    SENSORS: List[Sensor] = [
         FactorialDesignCornerSensor(
             {"view_radius": VIEW_RADIUS, "world_dim": WORLD_DIM, "degree": DEGREE}
         ),
@@ -182,13 +182,16 @@ class LightHouseTwoDimDAggerExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        return self.train_task_sampler_args(
-            process_ind=process_ind,
-            total_processes=total_processes,
-            devices=devices,
-            seeds=seeds,
-            deterministic_cudnn=deterministic_cudnn,
-        )
+        return {
+            **self.train_task_sampler_args(
+                process_ind=process_ind,
+                total_processes=total_processes,
+                devices=devices,
+                seeds=seeds,
+                deterministic_cudnn=deterministic_cudnn,
+            ),
+            "max_tasks": 10,
+        }
 
     def test_task_sampler_args(
         self,
@@ -198,7 +201,7 @@ class LightHouseTwoDimDAggerExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        return self.train_task_sampler_args(
+        return self.valid_task_sampler_args(
             process_ind=process_ind,
             total_processes=total_processes,
             devices=devices,

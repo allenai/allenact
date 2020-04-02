@@ -1,4 +1,3 @@
-# type: ignore
 # TODO: @klemenkotar please fix all type errors
 
 import random

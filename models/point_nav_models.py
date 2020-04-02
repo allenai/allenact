@@ -1,4 +1,3 @@
-# type: ignore
 # TODO: @klemenkotar please fix the type errors
 
 import gym

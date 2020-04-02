@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import OrderedDict
-from typing import Generic, Dict, Any, List, Optional, TYPE_CHECKING, TypeVar
+from typing import Generic, Dict, Any, List, Optional, TYPE_CHECKING, TypeVar, Sequence
 
 import gym
 from gym.spaces import Dict as SpaceDict
@@ -84,7 +84,7 @@ class SensorSuite(Generic[EnvType]):
     sensors: Dict[str, Sensor[EnvType, Any]]
     observation_spaces: SpaceDict
 
-    def __init__(self, sensors: List[Sensor]) -> None:
+    def __init__(self, sensors: Sequence[Sensor]) -> None:
         """Initializer.
 
         # Parameters
