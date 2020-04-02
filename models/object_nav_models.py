@@ -310,7 +310,7 @@ class ObjectNavNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]
 
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self.recurrent_hidden_state_size)
-            + self.coorinate_embedding_size,
+            + object_type_embedding_dim,
             self.recurrent_hidden_state_size,
             trainable_masked_hidden_state=trainable_masked_hidden_state,
             num_layers=num_rnn_layers,
