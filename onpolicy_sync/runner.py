@@ -318,6 +318,7 @@ class OnPolicyRunner(object):
 
     def aggregate_infos(self, log_writer, infos, steps):
         nsamples = sum(info[2] for info in infos)
+        valid_infos = sum(info[2] > 0 for info in infos)
 
         # assert nsamples != 0, "Attempting to aggregate infos with 0 samples".format(type)
         assert self.scalars.empty, "Attempting to aggregate with non-empty ScalarMeanTracker"
@@ -326,7 +327,7 @@ class OnPolicyRunner(object):
             assert nsamps >= 0, "negative ({}) samples in info".format(nsamps)
             if nsamps > 0:
                 self.scalars.add_scalars(
-                    {k: len(infos) * payload[k] * nsamps / nsamples for k in payload}
+                    {k: valid_infos * payload[k] * nsamps / nsamples for k in payload}
                 )
 
         message = []
@@ -357,11 +358,13 @@ class OnPolicyRunner(object):
         message = ["train {} steps:".format(steps)]
         for info_type in all_info_types:
             message += self.aggregate_infos(log_writer, info_type, steps)
-        message += ["elapsed_time {} s".format(current_time - last_time)]
-        fps = (steps - last_steps) / (current_time - last_time)
-        message += ["approx_fps {}".format(fps)]
-        LOGGER.info(" ".join(message))
-        log_writer.add_scalar("train/approx_fps", fps, steps)
+        message += ["elapsed_time {}s".format(current_time - last_time)]
+
+        if last_steps > 0:
+            fps = (steps - last_steps) / (current_time - last_time)
+            message += ["approx_fps {}".format(fps)]
+            LOGGER.info(" ".join(message))
+            log_writer.add_scalar("train/approx_fps", fps, steps)
 
         return steps, current_time
 
