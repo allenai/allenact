@@ -154,6 +154,11 @@ class VectorSampledTasks(object):
         self._paused: List[Tuple[int, Callable, Callable, mp.Process]] = []
 
     @property
+    def is_closed(self) -> bool:
+        """Has the vector task been closed."""
+        return self._is_closed
+
+    @property
     def num_unpaused_tasks(self) -> int:
         """Number of unpaused processes.
 
@@ -705,6 +710,11 @@ class SingleProcessVectorSampledTasks(object):
             for vsi in self._vector_task_generators
         ]
         self._paused: List[Tuple[int, Generator]] = []
+
+    @property
+    def is_closed(self) -> bool:
+        """Has the vector task been closed."""
+        return self._is_closed
 
     @property
     def mp_ctx(self) -> Optional[BaseContext]:
