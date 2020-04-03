@@ -155,7 +155,7 @@ class PointNavTask(Task[HabitatTask]):
             self._rewards = []
             return metrics
 
-    def query_expert(self) -> Tuple[int, bool]:
+    def query_expert(self, **kwargs) -> Tuple[int, bool]:
         if self._is_goal_in_range():
             return self.class_action_names().index(END), True
 
@@ -273,7 +273,7 @@ class ObjectNavTask(Task[HabitatTask]):
             self._rewards = []
             return metrics
 
-    def query_expert(self) -> Tuple[int, bool]:
+    def query_expert(self, **kwargs) -> Tuple[int, bool]:
         if self._is_goal_in_range():
             return self.class_action_names().index(END), True
 
