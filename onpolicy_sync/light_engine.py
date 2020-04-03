@@ -291,24 +291,31 @@ class OnPolicyRLEngine(object):
         task_outputs = []
         while (count == -1 and not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
             try:
-                if count < 0:
+                if count == -1:
                     task_output = self.vector_tasks.metrics_out_queue.get_nowait()
                 else:
                     task_output = self.vector_tasks.metrics_out_queue.get(timeout=1)
-                    if count > 0:
-                        count -= 1
+                    count -= 1
                 task_outputs.append(task_output)
             except queue.Empty:
                 pass
 
+        nsamples = 0
         for task_output in task_outputs:
+            if len(task_output) == 0\
+                    or (len(task_output) == 1 and "task_info" in task_output)\
+                    or ("success" in task_output and task_output["success"] is None):
+                continue
             self.scalars.add_scalars(
                 {k: v for k, v in task_output.items() if k != "task_info"}
             )
+            nsamples += 1
+
+        if nsamples < len(task_outputs):
+            LOGGER.warning("Discarded {} empty task metrics".format(len(task_outputs) - nsamples))
 
         pkg_type = "task_metrics_package"
         payload = self.scalars.pop_and_reset() if len(task_outputs) > 0 else None
-        nsamples = len(task_outputs)
 
         return (pkg_type, payload, nsamples), task_outputs
 
@@ -486,16 +493,16 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.tracking_info = {type: [] for type in self.tracking_types}
             self.former_steps = former_steps
 
-            self.num_samplers = num_samplers
-            self.num_rollouts = (int(self.stage_task_steps) // self.steps_in_rollout) // self.num_samplers
+            # self.num_samplers = num_samplers
+            # self.num_rollouts = (int(self.stage_task_steps) // self.steps_in_rollout) // self.num_samplers
             if self.steps_in_rollout > 0:
-                LOGGER.info("Stage {} using >= {} rollouts ({} steps out of {} requested)".format(
-                    self.pipeline_stage,
-                    self.num_rollouts,
-                    self.num_rollouts * self.num_samplers * self.steps_in_rollout,
-                    self.stage_task_steps,
-                ))
                 LOGGER.info("tstate {}".format(self.__dict__))
+                # LOGGER.info("Stage {} using >= {} rollouts ({} steps out of {} requested)".format(
+                #     self.pipeline_stage,
+                #     self.num_rollouts,
+                #     self.num_rollouts * self.num_samplers * self.steps_in_rollout,
+                #     self.stage_task_steps,
+                # ))
 
     def __init__(
             self,
@@ -512,7 +519,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             device: Union[str, torch.device, int] = "cpu",
             distributed_port: int = 0,
             deterministic_agent: bool = False,
-            distributed_preemption_threshold: float = 1.0,
+            distributed_preemption_threshold: float = 0.6,
             distributed_barrier: Optional[mp.Barrier] = None,
             **kwargs,
     ):
@@ -813,6 +820,15 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             # self.optimizer.step()  # type: ignore
             # self.tstate.backprop_count += 1
 
+        # target = self.actor_critic.module if self.is_distributed else self.actor_critic
+        # state_dict = target.state_dict()
+        # keys = sorted(list(state_dict.keys()))
+        # LOGGER.debug("worker {} param 0 {} param -1 {}".format(
+        #     self.worker_id,
+        #     state_dict[keys[0]].flatten()[0],
+        #     state_dict[keys[-1]].flatten()[-1],
+        # ))
+
     def apply_teacher_forcing(self, actions, step_observation, step_count):
         tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
         expert_actions = step_observation["expert_action"][..., 0:1]
@@ -861,10 +877,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 if self.is_distributed:
                     # Preempt stragglers
                     if (
-                        int(self.num_workers_done.get("done")) > self.distributed_preemption_threshold * self.num_workers and
-                        step >= self.tstate.steps_in_rollout / 4
+                        int(self.num_workers_done.get("done")) > self.distributed_preemption_threshold * self.num_workers
+                        and step >= self.tstate.steps_in_rollout / 4 and rollouts.step > 0
                     ):
                         rollouts.narrow()
+                        LOGGER.debug("{} worker {} narrowed rollouts at step {} ({})".format(self.mode, self.worker_id, rollouts.step, step))
                         break
 
             with torch.no_grad():
@@ -886,7 +903,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     self.distributed_barrier.reset()
 
                 ndone = int(self.num_workers_done.get("done"))
-                assert ndone == self.num_workers, "# workers done {} <> # workers".format(ndone, self.num_workers)
+                assert ndone == self.num_workers, "# workers done {} <> # workers {}".format(ndone, self.num_workers)
 
                 # get the actual step_count
                 new_worker_steps = self.step_count - self.tstate.former_steps
@@ -1113,7 +1130,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                     try:
                         command, data = self.checkpoints_queue.get_nowait()
                     except queue.Empty:
-                        time.sleep(1)  # there might be another command coming
+                        time.sleep(1)  # there might be another command about to arrive
                     finally:
                         cond = not self.checkpoints_queue.empty()  # keep forwarding to latest command in queue
 

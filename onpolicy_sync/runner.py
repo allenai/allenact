@@ -363,8 +363,8 @@ class OnPolicyRunner(object):
         if last_steps > 0:
             fps = (steps - last_steps) / (current_time - last_time)
             message += ["approx_fps {}".format(fps)]
-            LOGGER.info(" ".join(message))
             log_writer.add_scalar("train/approx_fps", fps, steps)
+        LOGGER.info(" ".join(message))
 
         return steps, current_time
 

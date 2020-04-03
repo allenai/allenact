@@ -397,6 +397,12 @@ class PointNavTaskSampler(TaskSampler):
         # task_info['actions'] = []
 
         locs = self.env.known_good_locations_list()
+        # LOGGER.debug("locs[0] {} locs[-1] {}".format(locs[0], locs[-1]))
+    
+        ys = [loc['y'] for loc in locs]
+        miny = min(ys)
+        maxy = max(ys)
+        assert maxy - miny < 1e-6, "miny {} maxy {} for scene {}".format(miny, maxy, scene)
 
         cond = True
         attempt = 0
@@ -417,6 +423,8 @@ class PointNavTaskSampler(TaskSampler):
 
         if cond:
             LOGGER.warning("No path for sampled episode {}".format(task_info))
+        # else:
+        #     LOGGER.debug("Path found for sampled episode {}".format(task_info))
 
         # pose = {**task_info['initial_position'], 'rotation': {'x': 0.0, 'y': task_info['initial_orientation'], 'z': 0.0}, 'horizon': 0.0}
         # self.env.step({"action": "TeleportFull", **pose})
