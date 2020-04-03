@@ -140,7 +140,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         self.config = config
         self.uuid = self._get_uuid()
         self.observation_space = self._get_observation_space()
-        self.expert_args: Dict[str, Any] = config.get("expert_args", default={})
+        self.expert_args: Dict[str, Any] = config.get("expert_args", {})
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "expert_action"
