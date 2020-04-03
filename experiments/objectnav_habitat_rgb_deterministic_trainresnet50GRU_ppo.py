@@ -33,7 +33,7 @@ class ObjectNavHabitatRGBDeterministicTrainResNet50GRUPPOExperimentConfig(Object
                 "output_width": 1,
                 "output_height": 1,
                 "output_dims": 2048,
-                "pool": True,
+                "pool": False,
                 "torchvision_resnet_model": models.resnet50,
                 "input_uuids": ["rgb"],
                 "output_uuid": "rgb_resnet",
