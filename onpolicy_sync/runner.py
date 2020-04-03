@@ -409,6 +409,7 @@ class OnPolicyRunner(object):
                             )
                             collected = collected[nworkers:]
                         elif len(collected) > 2 * nworkers:
+                            print("Len of collected:", len(collected))
                             raise Exception("Unable to aggregate train packages from {} workers".format(nworkers))
                 elif package[0] == "valid_package":
                     if package[1] is not None:  # no validation samplers
