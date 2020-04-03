@@ -264,7 +264,9 @@ class OnPolicyRLEngine(object):
         self._is_closed: bool = False
 
     @property
-    def vector_tasks(self):
+    def vector_tasks(
+        self,
+    ) -> Union[VectorSampledTasks, SingleProcessVectorSampledTasks]:
         if self._vector_tasks is None:
             seeds = self.worker_seeds(
                 self.machine_params["nprocesses"], initial_seed=self.seed
@@ -333,22 +335,24 @@ class OnPolicyRLEngine(object):
         )
         os.makedirs(self.models_folder, exist_ok=True)
 
-        if self.seed is not None:
+        if self.seed is not None and not self.vector_tasks.is_closed:
             self.seed = self.worker_seeds(1, None)[0]
             set_seed(self.seed)
 
             seeds = self.worker_seeds(self.num_processes, None)
             self.vector_tasks.set_seeds(seeds)
 
-        model_path = os.path.join(
-            self.models_folder,
-            "exp_{}__time_{}__stage_{:02d}__steps_{:012d}__seed_{}.pt".format(
-                self.experiment_name,
-                self.local_start_time_str,
-                self.pipeline_stage,
-                self.total_steps + self.step_count,
-                self.seed,
-            ),
+        model_path = os.path.abspath(
+            os.path.join(
+                self.models_folder,
+                "exp_{}__time_{}__stage_{:02d}__steps_{:012d}__seed_{}.pt".format(
+                    self.experiment_name,
+                    self.local_start_time_str,
+                    self.pipeline_stage,
+                    self.total_steps + self.step_count,
+                    self.seed,
+                ),
+            )
         )
 
         save_dict = {
@@ -536,8 +540,9 @@ class OnPolicyRLEngine(object):
             except queue.Empty:
                 pass
 
+        train_scalars = []
         for to_record in itertools.chain(train_metrics, losses, teachers):
-            self.scalars.add_scalars(
+            train_scalars.append(
                 OrderedDict(
                     sorted(
                         [(k, v) for k, v in to_record.items() if k != "task_info"],
@@ -545,19 +550,22 @@ class OnPolicyRLEngine(object):
                     )
                 )
             )
+            self.scalars.add_scalars(train_scalars[-1])
 
         return {
             "train_scalar_tracker": self.scalars,
+            "train_metrics": train_scalars,
             "valid_test_metrics": valid_test_metrics,
             "valid_test_messages": valid_test_messages,
         }
 
     def log(
         self,
-        train_scalar_tracker: ScalarMeanTracker,
+        train_scalar_tracker: Optional[ScalarMeanTracker],
         valid_test_metrics: List[Tuple[str, int, Union[float, np.ndarray]]],
         valid_test_messages: List[str],
         fps: Optional[float] = None,
+        **kwargs,
     ):
         assert self.log_writer is not None, "Log writer has not been initialized."
 
@@ -573,26 +581,27 @@ class OnPolicyRLEngine(object):
         for message in valid_test_messages:
             LOGGER.info(message)
 
-        tracked_means = train_scalar_tracker.means()
-        train_message_list = [
-            "train {} steps:".format(self.total_steps + self.step_count)
-        ]
-        for k in tracked_means:
-            self.log_writer.add_scalar(
-                "train/" + k, tracked_means[k], self.total_steps + self.step_count,
-            )
-            train_message_list += [
-                k
-                + (" {:.3g}" if abs(tracked_means[k]) < 1 else " {:.3f}").format(
-                    tracked_means[k]
-                )
+        if train_scalar_tracker is not None:
+            tracked_means = train_scalar_tracker.means()
+            train_message_list = [
+                "train {} steps:".format(self.total_steps + self.step_count)
             ]
-        if fps is not None:
-            train_message_list += ["fps {:.2f}".format(fps)]
+            for k in tracked_means:
+                self.log_writer.add_scalar(
+                    "train/" + k, tracked_means[k], self.total_steps + self.step_count,
+                )
+                train_message_list += [
+                    k
+                    + (" {:.3g}" if abs(tracked_means[k]) < 1 else " {:.3f}").format(
+                        tracked_means[k]
+                    )
+                ]
+            if fps is not None:
+                train_message_list += ["fps {:.2f}".format(fps)]
 
-        train_message = " ".join(train_message_list)
+            train_message = " ".join(train_message_list)
 
-        LOGGER.info(train_message)
+            LOGGER.info(train_message)
 
     def update(self, rollouts: RolloutStorage) -> None:
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
@@ -887,12 +896,12 @@ class OnPolicyRLEngine(object):
             # save for every interval-th episode or for the last epoch
             if (
                 self.save_interval is not None
-                and self.save_interval > 0
+                and self.models_folder != ""
                 and (
-                    self.step_count - self.last_save >= self.save_interval
-                    or self.rollout_count == self.num_rollouts
+                    self.rollout_count == self.num_rollouts
+                    or 0 < self.save_interval <= self.step_count - self.last_save
                 )
-            ) and self.models_folder != "":
+            ):
                 model_path = self.checkpoint_save()
                 if self.write_to_eval is not None:
                     self.write_to_eval.put(("eval", model_path))
@@ -924,19 +933,21 @@ class OnPolicyRLEngine(object):
         self.losses = losses
         self.loss_weights = loss_weights
 
-        self.max_stage_steps = max_stage_steps
         self.steps_in_rollout = steps_in_rollout
         self.update_epochs = update_epochs
         self.update_mini_batches = update_mini_batches
 
         self.num_rollouts = (
-            int(self.max_stage_steps) // self.steps_in_rollout
+            int(max_stage_steps) // self.steps_in_rollout
         ) // self.num_processes
-        message = "Using %d rollouts, %d steps (from requested %d steps)" % (
-            self.num_rollouts,
-            self.num_rollouts * self.num_processes * self.steps_in_rollout,
-            self.max_stage_steps,
+        self.max_stage_steps = (
+            self.num_rollouts * self.num_processes * self.steps_in_rollout
         )
+        message = (
+            "Using %d rollouts, %d steps (possibly truncated from requested %d steps)"
+            % (self.num_rollouts, self.max_stage_steps, max_stage_steps,)
+        )
+
         LOGGER.info(message)
 
         self.early_stopping_criterion = (
@@ -1092,7 +1103,8 @@ class OnPolicyRLEngine(object):
                 "%Y-%m-%d_%H-%M-%S", time.localtime(start_time)
             )
 
-            self.save_config_files()
+            if self.loaded_config_src_files is not None:
+                self.save_config_files()
 
             self.is_logging = self.training_pipeline.should_log
             if self.is_logging is not None:
@@ -1266,17 +1278,12 @@ class OnPolicyRLEngine(object):
 
         if render_video:
             render = self.process_video(render, max_clip_len)
-            return (
-                {
-                    k: (v, self.total_steps + self.step_count)
-                    for k, v in metrics.items()
-                },
-                render,
-                samples,
-            )
+        else:
+            render = None
 
         return (
             {k: (v, self.total_steps + self.step_count) for k, v in metrics.items()},
+            render,
             samples,
         )
 
@@ -1331,46 +1338,55 @@ class OnPolicyRLEngine(object):
         self.local_start_time_str = experiment_date
 
         checkpoints = self.get_checkpoint_files(
-            experiment_date, checkpoint_file_name, skip_checkpoints
+            experiment_date=experiment_date,
+            checkpoint_file_name=checkpoint_file_name,
+            skip_checkpoints=skip_checkpoints,
         )
 
         suffix = "__test_{}".format(test_start_time_str)
-        self.log_writer = SummaryWriter(
-            log_dir=self.log_writer_path, filename_suffix=suffix,
-        )
+
+        def info_log(message):
+            if self.is_logging:
+                LOGGER.info(message)
+
+        if self.is_logging:
+            self.log_writer = SummaryWriter(
+                log_dir=self.log_writer_path, filename_suffix=suffix,
+            )
 
         os.makedirs(self.metric_path, exist_ok=True)
         fname = os.path.join(self.metric_path, "metrics" + suffix + ".json")
 
-        LOGGER.info("Saving metrics in {}".format(fname))
+        info_log("Saving metrics in {}".format(fname))
 
         all_results = []
         for it, checkpoint_file_name in enumerate(checkpoints):
             step = self.step_from_checkpoint(checkpoint_file_name)
-            LOGGER.info("{}/{} {} steps".format(it + 1, len(checkpoints), step,))
+            info_log("{}/{} {} steps".format(it + 1, len(checkpoints), step,))
 
             scalars, render, samples = self.run_eval(
                 checkpoint_file_name, rollout_steps
             )
 
-            self.vector_tasks.metrics_out_queue.put(("test_metrics", (scalars, render)))
-
             results = {scalar: scalars[scalar][0] for scalar in scalars}
             results.update({"training_steps": step, "tasks": samples})
             all_results.append(results)
 
-            with open(fname, "w") as f:
-                json.dump(all_results, f, indent=4)
+            if self.is_logging:
+                self.log(
+                    train_scalar_tracker=None,
+                    valid_test_metrics=[
+                        ("test/{}".format(key), scalars[key][1], scalars[key][0])
+                        for key in scalars
+                    ]
+                    + [("test/agent_view", step, render)],
+                    valid_test_messages=[],
+                )  # type: ignore
 
-            accumulated_metrics_data = self.accumulate_data_from_metrics_out_queue(
-                count=1
-            )
-            self.log(**accumulated_metrics_data)  # type: ignore
+                with open(fname, "w") as f:
+                    json.dump(all_results, f, indent=4)
 
-            with open(fname, "w") as f:
-                json.dump(all_results, f, indent=4)
-
-        LOGGER.info("Metrics saved in {}".format(fname))
+        info_log("Metrics saved in {}".format(fname))
         return all_results
 
     def close(self, verbose=True):
@@ -1442,7 +1458,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         loaded_config_src_files: Optional[Dict[str, Tuple[str, str]]],
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             config=config,
@@ -1462,8 +1478,11 @@ class OnPolicyValidator(OnPolicyRLEngine):
         output_dir: str,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
-        **kwargs
+        should_log: bool = True,
+        **kwargs,
     ):
+        if "loaded_config_src_files" in kwargs:
+            del kwargs["loaded_config_src_files"]
         super().__init__(
             config=config,
             loaded_config_src_files=None,
@@ -1474,6 +1493,7 @@ class OnPolicyValidator(OnPolicyRLEngine):
             **kwargs,
         )
         self.actor_critic.eval()
+        self.is_logging = should_log
 
 
 class OnPolicyTester(OnPolicyRLEngine):
@@ -1483,8 +1503,11 @@ class OnPolicyTester(OnPolicyRLEngine):
         output_dir: str,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
-        **kwargs
+        should_log: bool = True,
+        **kwargs,
     ):
+        if "loaded_config_src_files" in kwargs:
+            del kwargs["loaded_config_src_files"]
         super().__init__(
             config=config,
             loaded_config_src_files=None,
@@ -1495,3 +1518,4 @@ class OnPolicyTester(OnPolicyRLEngine):
             **kwargs,
         )
         self.actor_critic.eval()
+        self.is_logging = should_log

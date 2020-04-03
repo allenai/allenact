@@ -323,15 +323,19 @@ class TrainingPipeline(typing.Iterable):
     gamma : Discount factor applied to rewards (should be in [0, 1]).
     use_gae : Whether or not to use generalized advantage estimation (GAE).
     gae_lambda : The additional parameter used in GAE.
-    save_interval : The frequency with which to save (in total agent steps). If `None` or <= 0 then no checkpoints will
-        be saved.
-    metric_accumulate_interval : The frequency with which training/validation metrics are accumulated (in total agent steps).
-        Metrics accumulated in an interval are logged (if `should_log` is `True`) and used by the stage's early stopping
-        criterion (if any).
-    should_log: `True` if metrics accumulated during training should be logged to the console as well as to a tensorboard file.
+    save_interval : The frequency with which to save (in total agent steps taken). If `None` then *no*
+        checkpoints will be saved. Otherwise, in addition to the checkpoints being saved every
+        `save_interval` steps, a checkpoint will *always* be saved at the end of each pipeline stage.
+        If `save_interval <= 0` then checkpoints will only be saved at the end of each pipeline stage.
+    metric_accumulate_interval : The frequency with which training/validation metrics are accumulated
+        (in total agent steps). Metrics accumulated in an interval are logged (if `should_log` is `True`)
+        and used by the stage's early stopping criterion (if any).
+    should_log: `True` if metrics accumulated during training should be logged to the console as well
+        as to a tensorboard file.
     current_pipeline_stage : Integer tracking the current stage of the pipeline. If -1 then the pipeline
         is at it's start and `__next__` will need to be called to get the first pipeline stage.
-    lr_scheduler_builder : Optional builder object to instantiate the learning rate scheduler used through the pipeline.
+    lr_scheduler_builder : Optional builder object to instantiate the learning rate scheduler used
+        through the pipeline.
     """
 
     # noinspection PyUnresolvedReferences
