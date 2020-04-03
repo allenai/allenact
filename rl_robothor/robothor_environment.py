@@ -264,7 +264,7 @@ class RoboThorEnvironment:
             assert self.last_action_success, "Force action failed with {}".format(state)
 
         # LOGGER.debug("location after teleport full {}".format(self.agent_state()))
-        self.controller.step("TeleportFull", **self.agent_state())  # TODO only for debug
+        # self.controller.step("TeleportFull", **self.agent_state())  # TODO only for debug
         # LOGGER.debug("location after re-teleport full {}".format(self.agent_state()))
 
         return self.agent_state()
