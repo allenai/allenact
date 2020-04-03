@@ -512,7 +512,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             device: Union[str, torch.device, int] = "cpu",
             distributed_port: int = 0,
             deterministic_agent: bool = False,
-            distributed_preemption_threshold: float = 1.0,
+            distributed_preemption_threshold: float = 0.8,
             distributed_barrier: Optional[mp.Barrier] = None,
             **kwargs,
     ):
