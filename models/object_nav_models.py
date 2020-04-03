@@ -364,7 +364,7 @@ class ObjectNavNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]
         if "depth_resnet" in observations:
             embs.append(self.visual_encoder(observations["depth_resnet"]))
         perception_emb = torch.cat(embs, dim=1)
-        x = [self.visual_encoder(perception_emb)] + x
+        x = [perception_emb] + x
 
         x_cat = cast(torch.FloatTensor, torch.cat(x, dim=1))  # type: ignore
         x_out, rnn_hidden_states = self.state_encoder(x_cat, rnn_hidden_states, masks)
