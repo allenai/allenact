@@ -408,8 +408,8 @@ class OnPolicyRunner(object):
                                 last_time=last_train_time,
                             )
                             collected = collected[nworkers:]
-                        elif len(collected) > 2 * nworkers + 1:
-                            raise Exception("Unable to aggregate train packages from {} workers".format(nworkers))
+                        # elif len(collected) > 2 * nworkers:
+                        #     raise Exception("Unable to aggregate train packages from {} workers".format(nworkers))
                 elif package[0] == "valid_package":
                     if package[1] is not None:  # no validation samplers
                         self.process_eval_package(log_writer, package)
