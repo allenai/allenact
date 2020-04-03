@@ -182,7 +182,7 @@ class OnPolicyRunner(object):
         distributed_barrier = None
         if nworkers > 1:
             distributed_port = find_free_port()
-            distributed_barrier = self.mp_ctx.Barrier(nworkers)
+            distributed_barrier = self.mp_ctx.Barrier(nworkers, timeout=100)
 
         for wit in range(nworkers):
             train: mp.Process = self.mp_ctx.Process(
@@ -390,7 +390,7 @@ class OnPolicyRunner(object):
             collected = []
             while True:
                 try:
-                    package = self.queues["results"].get(timeout=10)  # TODO wait for 10 seconds, then check all workers are alive
+                    package = self.queues["results"].get(timeout=100)  # TODO wait for 10 seconds, then check all workers are alive
                 except queue.Empty:
                     for process_type in self.processes:
                         for it, process in enumerate(self.processes[process_type]):
