@@ -400,6 +400,7 @@ class OnPolicyRunner(object):
                     collected.append(package)
                     if len(collected) >= nworkers:
                         collected = sorted(collected, key=lambda x: x[2])  # sort by num_steps
+                        print("COLLECTED! \n\n\n\n\n\n\n", collected, "\n\n\n\n\n\n\n")
                         if collected[nworkers - 1][2] == collected[0][2]:  # ensure nworkers have provided the same num_steps
                             last_train_steps, last_train_time = self.process_train_packages(
                                 log_writer,
@@ -408,7 +409,7 @@ class OnPolicyRunner(object):
                                 last_time=last_train_time,
                             )
                             collected = collected[nworkers:]
-                        elif len(collected) > 2 * nworkers + 2:
+                        elif len(collected) > 2 * nworkers:
                             raise Exception("Unable to aggregate train packages from {} workers".format(nworkers))
                 elif package[0] == "valid_package":
                     if package[1] is not None:  # no validation samplers
