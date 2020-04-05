@@ -400,7 +400,7 @@ class OnPolicyRunner(object):
                     collected.append(package)
                     if len(collected) >= nworkers:
                         collected = sorted(collected, key=lambda x: x[2])  # sort by num_steps
-                        print("COLLECTED! \n\n\n\n\n\n\n", collected, "\n\n\n\n\n\n\n")
+                        print("COLLECTED! Length:", len(collected), "\n\n\n\n\n\n\n", collected, "\n\n\n\n\n\n\n")
                         if collected[nworkers - 1][2] == collected[0][2]:  # ensure nworkers have provided the same num_steps
                             last_train_steps, last_train_time = self.process_train_packages(
                                 log_writer,
