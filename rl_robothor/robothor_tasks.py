@@ -438,7 +438,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
     def spl(self):
         pose = self.env.agent_state()
         res = compute_single_spl(self.path, self.episode_optimal_corners, self._success)
-        self.env.step({"action": "TeleportFull", **pose})
+        # self.env.step({"action": "TeleportFull", **pose})
         return res
 
     def get_observations(self) -> Any:

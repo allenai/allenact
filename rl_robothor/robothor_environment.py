@@ -120,7 +120,6 @@ class RoboThorEnvironment:
             self.dist_to_point(xyz) > -0.5
         )  # -1.0 for unreachable, 0.0 for end point
 
-    # TODO consider caching for some resolution (e.g. initial grid)?
     def path_corners(self, target: Union[str, Dict[str, float]]) -> Collection[Dict[str, float]]:
         """Returns an array with a sequence of xyz dictionaries objects representing the corners of the shortest path
          to the object of given type or end point location."""
@@ -138,15 +137,69 @@ class RoboThorEnvironment:
             else:
                 path = metrics.get_shortest_path_to_point(self.controller, position, target)
         except ValueError:
+            LOGGER.debug("No path to object {} from {} in {}".format(target, position, self.scene_name))
             path = []
         finally:
+            if isinstance(target, str):
+                self.controller.step("TeleportFull", **pose)
+                # pass
             new_pose = self.agent_state()
-            assert abs(new_pose['x'] - pose['x']) < 1e-5, "wrong x"
-            assert abs(new_pose['y'] - pose['y']) < 1e-5, "wrong y"
-            assert abs(new_pose['z'] - pose['z']) < 1e-5, "wrong z"
-            assert abs(new_pose['rotation']['y'] - pose['rotation']['y']) < 1e-5, "wrong rotation y"
-            assert abs(new_pose['horizon'] - pose['horizon']) < 1e-5, "wrong horizon"
-        #     self.controller.step("TeleportFull", **pose)
+            try:
+                assert abs(new_pose['x'] - pose['x']) < 1e-5, "wrong x"
+                assert abs(new_pose['y'] - pose['y']) < 1e-5, "wrong y"
+                assert abs(new_pose['z'] - pose['z']) < 1e-5, "wrong z"
+                assert abs(new_pose['rotation']['x'] - pose['rotation']['x']) < 1e-5, "wrong rotation x"
+                assert abs(new_pose['rotation']['y'] - pose['rotation']['y']) < 1e-5, "wrong rotation y"
+                assert abs(new_pose['rotation']['z'] - pose['rotation']['z']) < 1e-5, "wrong rotation z"
+                assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
+            except Exception:
+                LOGGER.error("new_pose {} old_pose {} in {}".format(new_pose, pose, self.scene_name))
+            # if abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) > 1e-5:
+            #     LOGGER.debug("wrong horizon {} vs {} after path to object {} from {} in {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360), target, position, self.scene_name))
+            # else:
+            #     LOGGER.debug("correct horizon {} vs {} after path to object {} from {} in {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360), target, position, self.scene_name))
+            # assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
+
+            # # TODO: the agent will continue with a random horizon from here on
+            # target_horizon = (pose['horizon'] % 360) - (360 if (pose['horizon'] % 360) >= 180 else 0)
+            # new_pose = self.agent_state()['horizon']
+            # update_horizon = (new_pose % 360) - (360 if (new_pose % 360) >= 180 else 0)
+            # cond = abs(target_horizon - update_horizon) > 1e-5
+            # nmovements = 0
+            # while cond:
+            #     cond = abs(target_horizon - update_horizon) > 1e-5 and target_horizon > update_horizon
+            #     while cond:
+            #         self.controller.step("LookDown")
+            #         old = update_horizon
+            #         new_pose = self.agent_state()['horizon']
+            #         update_horizon = (new_pose % 360) - (360 if (new_pose % 360) >= 180 else 0)
+            #         LOGGER.debug("LookDown horizon {} -> {} ({})".format(old, update_horizon, target_horizon))
+            #         nmovements += 1
+            #         cond = abs(target_horizon - update_horizon) > 1e-5 and target_horizon > update_horizon
+            #
+            #     cond = abs(target_horizon - update_horizon) > 1e-5 and target_horizon < update_horizon
+            #     while cond:
+            #         self.controller.step("LookUp")
+            #         old = update_horizon
+            #         new_pose = self.agent_state()['horizon']
+            #         update_horizon = (new_pose % 360) - (360 if (new_pose % 360) >= 180 else 0)
+            #         LOGGER.debug("LookUp horizon {} -> {} ({})".format(old, update_horizon, target_horizon))
+            #         nmovements += 1
+            #         cond = abs(target_horizon - update_horizon) > 1e-5 and target_horizon < update_horizon
+            #
+            #     cond = abs(target_horizon - update_horizon) > 1e-5
+            # LOGGER.debug("nmovements {}".format(nmovements))
+            # new_pose = self.agent_state()
+            # assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
+
+            # try:
+            #     assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
+            # except Exception:
+            #     LOGGER.error("wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360)))
+            #     self.controller.step("TeleportFull", **pose)
+            #     assert abs(
+            #         (new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {} after teleport full".format(
+            #         (new_pose['horizon'] % 360), (pose['horizon'] % 360))
         #     # LOGGER.debug("initial pos in path corners {} current pos {} path {}".format(pose, self.agent_state(), path))
         return path
 
@@ -203,7 +256,7 @@ class RoboThorEnvironment:
         return {
             **{k: float(v) for k, v in agent_meta["position"].items()},
             "rotation": {k: float(v) for k, v in agent_meta["rotation"].items()},
-            "horizon": float(agent_meta["cameraHorizon"]),
+            "horizon": round(float(agent_meta["cameraHorizon"]), 1),
         }
 
     def reset(self, scene_name: str = None) -> None:

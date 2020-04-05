@@ -519,7 +519,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             device: Union[str, torch.device, int] = "cpu",
             distributed_port: int = 0,
             deterministic_agent: bool = False,
-            distributed_preemption_threshold: float = 0.6,
+            distributed_preemption_threshold: float = 0.7,
             distributed_barrier: Optional[mp.Barrier] = None,
             **kwargs,
     ):
@@ -878,7 +878,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     # Preempt stragglers
                     if (
                         int(self.num_workers_done.get("done")) > self.distributed_preemption_threshold * self.num_workers
-                        and step >= self.tstate.steps_in_rollout / 4 and rollouts.step > 0
+                        and self.tstate.steps_in_rollout / 4 <= step < 0.95 * self.tstate.steps_in_rollout
                     ):
                         rollouts.narrow()
                         LOGGER.debug("{} worker {} narrowed rollouts at step {} ({})".format(self.mode, self.worker_id, rollouts.step, step))
@@ -949,13 +949,14 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             if (
                 self.step_count - self.tstate.last_save >= self.tstate.save_interval
                 or self.step_count >= self.tstate.stage_task_steps
-            ) and self.checkpoints_dir != "" and self.worker_id == 0 and self.tstate.save_interval > 0:
-                model_path = self.checkpoint_save()
-                self.checkpoints_queue.put(("eval", model_path))
+            ) and self.checkpoints_dir != "" and self.tstate.save_interval > 0:
+                if self.worker_id == 0:
+                    model_path = self.checkpoint_save()
+                    self.checkpoints_queue.put(("eval", model_path))
                 self.tstate.last_save = self.step_count
-                if self.tstate.last_log < self.step_count:
-                    self.send_package()
-                    self.tstate.last_log = self.step_count
+                # if self.tstate.last_log < self.step_count:  # TODO only one is sent!
+                #     self.send_package()
+                #     self.tstate.last_log = self.step_count
 
             if (self.tstate.advance_scene_rollout_period is not None) and (
                     self.tstate.rollout_count % self.tstate.advance_scene_rollout_period == 0
