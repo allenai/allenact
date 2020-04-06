@@ -19,28 +19,29 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         action_space: gym.spaces.Discrete,
         observation_space: SpaceDict,
         goal_sensor_uuid: str,
-        rnn_hidden_size=512,
+        resnet_preprocessor_uuid: str,
+        rnn_hidden_size: int = 512,
         goal_dims: int = 32,
-        compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
+        resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
         combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
     ):
         super().__init__(
             action_space=action_space, observation_space=observation_space,
         )
 
-        self.goal_sensor_uuid = goal_sensor_uuid
         self.hidden_size = rnn_hidden_size
 
-        self.goal_imtensor_encoder = ResnetTensorGoalEncoder(
+        self.goal_visual_encoder = ResnetTensorGoalEncoder(
             self.observation_space,
-            self.goal_sensor_uuid,
+            goal_sensor_uuid,
+            resnet_preprocessor_uuid,
             goal_dims,
-            compressor_hidden_out_dims,
+            resnet_compressor_hidden_out_dims,
             combiner_hidden_out_dims,
         )
 
         self.state_encoder = RNNStateEncoder(
-            self.goal_imtensor_encoder.output_dims, rnn_hidden_size,
+            self.goal_visual_encoder.output_dims, rnn_hidden_size,
         )
 
         self.actor = LinearActorHead(self.hidden_size, action_space.n)
@@ -57,7 +58,7 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
     def is_blind(self) -> bool:
         """True if the model is blind (e.g. neither 'depth' or 'rgb' is an
         input observation type)."""
-        return self.goal_imtensor_encoder.is_blind
+        return self.goal_visual_encoder.is_blind
 
     @property
     def num_recurrent_layers(self) -> int:
@@ -68,10 +69,10 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
-        return self.goal_imtensor_encoder.get_object_type_encoding(observations)
+        return self.goal_visual_encoder.get_object_type_encoding(observations)
 
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
-        x = self.goal_imtensor_encoder(observations)
+        x = self.goal_visual_encoder(observations)
         x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
 
         return (
@@ -87,39 +88,41 @@ class ResnetTensorGoalEncoder(nn.Module):
         self,
         observation_spaces: SpaceDict,
         goal_sensor_uuid: str,
-        goal_dims: int = 32,
-        compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
+        resnet_preprocessor_uuid: str,
+        class_dims: int = 32,
+        resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
         combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
     ) -> None:
         super().__init__()
 
-        self.goal_sensor_uuid = goal_sensor_uuid
-        self.goal_dims = goal_dims
-        self.compress_hid_out_dims = compressor_hidden_out_dims
+        self.goal_uuid = goal_sensor_uuid
+        self.resnet_uuid = resnet_preprocessor_uuid
+
+        self.class_dims = class_dims
+
+        self.resnet_hid_out_dims = resnet_compressor_hidden_out_dims
         self.combine_hid_out_dims = combiner_hidden_out_dims
 
-        self.embed_goal = nn.Embedding(
-            num_embeddings=observation_spaces.spaces[self.goal_sensor_uuid].n,
-            embedding_dim=self.goal_dims,
+        self.embed_class = nn.Embedding(
+            num_embeddings=observation_spaces.spaces[self.goal_uuid].n,
+            embedding_dim=self.class_dims,
         )
 
-        # LOGGER.info("embed shape {}".format(self.embed_goal.weight.shape))
-
-        self.blind = "rgb_resnet" not in observation_spaces.spaces
+        self.blind = self.resnet_uuid not in observation_spaces.spaces
 
         if not self.blind:
-            self.in_tensor_shape = observation_spaces.spaces["rgb_resnet"].shape
+            self.resnet_tensor_shape = observation_spaces.spaces[self.resnet_uuid].shape
 
-            self.imtensor_compressor = nn.Sequential(
-                nn.Conv2d(self.in_tensor_shape[0], self.compress_hid_out_dims[0], 1),
+            self.resnet_compressor = nn.Sequential(
+                nn.Conv2d(self.resnet_tensor_shape[0], self.resnet_hid_out_dims[0], 1),
                 nn.ReLU(),
-                nn.Conv2d(*self.compress_hid_out_dims[0:2], 1),
+                nn.Conv2d(*self.resnet_hid_out_dims[0:2], 1),
                 nn.ReLU(),
             )
 
-            self.target_imtensor_combiner = nn.Sequential(
+            self.target_obs_combiner = nn.Sequential(
                 nn.Conv2d(
-                    self.compress_hid_out_dims[1] + self.goal_dims,
+                    self.resnet_hid_out_dims[1] + self.class_dims,
                     self.combine_hid_out_dims[0],
                     1,
                 ),
@@ -134,12 +137,12 @@ class ResnetTensorGoalEncoder(nn.Module):
     @property
     def output_dims(self):
         if self.blind:
-            return self.goal_dims
+            return self.class_dims
         else:
             return (
                 self.combine_hid_out_dims[-1]
-                * self.in_tensor_shape[1]
-                * self.in_tensor_shape[2]
+                * self.resnet_tensor_shape[1]
+                * self.resnet_tensor_shape[2]
             )
 
     def get_object_type_encoding(
@@ -148,26 +151,25 @@ class ResnetTensorGoalEncoder(nn.Module):
         """Get the object type encoding from input batched observations."""
         return typing.cast(
             torch.FloatTensor,
-            self.embed_goal(observations[self.goal_sensor_uuid].to(torch.int64)),
+            self.embed_class(observations[self.goal_uuid].to(torch.int64)),
         )
+
+    def compress_resnet(self, observations):
+        return self.resnet_compressor(observations[self.resnet_uuid])
+
+    def distribute_target(self, observations):
+        target_emb = self.embed_class(observations[self.goal_uuid])
+        return target_emb.view(-1, self.class_dims, 1, 1).expand(-1, -1, self.resnet_tensor_shape[-2], self.resnet_tensor_shape[-1])
 
     def forward(self, observations):
-        target_emb = self.embed_goal(observations[self.goal_sensor_uuid])
-
         if self.blind:
-            return target_emb
+            return self.embed_class(observations[self.goal_uuid])
 
-        imtensor = self.imtensor_compressor(observations["rgb_resnet"])
+        embs = [
+            self.compress_resnet(observations),
+            self.distribute_target(observations),
+        ]
 
-        x = self.target_imtensor_combiner(
-            torch.cat(
-                (
-                    imtensor,
-                    target_emb.view(-1, self.goal_dims, 1, 1).expand(
-                        -1, -1, imtensor.shape[-2], imtensor.shape[-1]
-                    ),
-                ),
-                dim=-3,
-            )
-        )
+        x = self.target_obs_combiner(torch.cat(embs, dim=-3,))
+
         return x.view(x.size(0), -1)  # flatten

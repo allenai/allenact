@@ -144,16 +144,17 @@ class RoboThorEnvironment:
                 self.controller.step("TeleportFull", **pose)
                 # pass
             new_pose = self.agent_state()
-            try:
-                assert abs(new_pose['x'] - pose['x']) < 1e-5, "wrong x"
-                assert abs(new_pose['y'] - pose['y']) < 1e-5, "wrong y"
-                assert abs(new_pose['z'] - pose['z']) < 1e-5, "wrong z"
-                assert abs(new_pose['rotation']['x'] - pose['rotation']['x']) < 1e-5, "wrong rotation x"
-                assert abs(new_pose['rotation']['y'] - pose['rotation']['y']) < 1e-5, "wrong rotation y"
-                assert abs(new_pose['rotation']['z'] - pose['rotation']['z']) < 1e-5, "wrong rotation z"
-                assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
-            except Exception:
-                LOGGER.error("new_pose {} old_pose {} in {}".format(new_pose, pose, self.scene_name))
+            # try:
+            #     assert abs(new_pose['x'] - pose['x']) < 1e-5, "wrong x"
+            #     assert abs(new_pose['y'] - pose['y']) < 1e-5, "wrong y"
+            #     assert abs(new_pose['z'] - pose['z']) < 1e-5, "wrong z"
+            #     assert abs(new_pose['rotation']['x'] - pose['rotation']['x']) < 1e-5, "wrong rotation x"
+            #     assert abs(new_pose['rotation']['y'] - pose['rotation']['y']) < 1e-5, "wrong rotation y"
+            #     assert abs(new_pose['rotation']['z'] - pose['rotation']['z']) < 1e-5, "wrong rotation z"
+            #     assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
+            # except Exception:
+            #     LOGGER.error("new_pose {} old_pose {} in {}".format(new_pose, pose, self.scene_name))
+
             # if abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) > 1e-5:
             #     LOGGER.debug("wrong horizon {} vs {} after path to object {} from {} in {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360), target, position, self.scene_name))
             # else:
