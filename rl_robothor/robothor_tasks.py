@@ -16,7 +16,7 @@ from rl_robothor.robothor_environment import RoboThorEnvironment
 from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor
 from rl_base.task import Task
-
+from utils.system import LOGGER
 
 # class RoboThorTask(Task[RoboThorEnvironment]):
 #     def __init__(
@@ -93,6 +93,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         dist = self.env.path_corners_to_dist(self.episode_optimal_corners)
         if dist == float("inf"):
             dist = -1.0  # -1.0 for unreachable
+            LOGGER.warning("No path for {} from {} to {}".format(self.env.scene_name, self.env.agent_state(), task_info["target"]))
         self.last_geodesic_distance = dist
         self._rewards = []
         self._distance_to_goal = []
@@ -122,7 +123,6 @@ class PointNavTask(Task[RoboThorEnvironment]):
             self._took_end_action = True
             self._success = self._is_goal_in_range()
             self.last_action_success = self._success
-
         else:
             self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
@@ -144,12 +144,23 @@ class PointNavTask(Task[RoboThorEnvironment]):
         elif mode == "depth":
             return self.env.current_depth
 
-    def _is_goal_in_range(self) -> bool:
+    def _is_goal_in_range(self) -> Optional[bool]:
         tget = self.task_info["target"]
         # pose = self.env.agent_state()
         # dist = np.sqrt((pose['x'] - tget['x']) ** 2 + (pose['z'] - tget['z']) ** 2)
         dist = self.env.dist_to_point(tget)
-        return -0.5 < dist <= 0.2
+
+        if -0.5 < dist <= 0.2:
+            return True
+        elif dist > 0.2:
+            return False
+        else:
+            LOGGER.warning("No path for {} from {} to {}".format(
+                self.env.scene_name,
+                self.env.agent_state(),
+                tget
+            ))
+            return None
 
     # def judge(self) -> float:
     #     reward = -0.01
@@ -174,17 +185,13 @@ class PointNavTask(Task[RoboThorEnvironment]):
 
         geodesic_distance = self.env.dist_to_point(self.task_info['target'])
         if self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5:  # (robothor limits)
+            rew += self.last_geodesic_distance - geodesic_distance
             # if self.last_geodesic_distance > geodesic_distance:
             #     rew += self.reward_configs["delta_dist_reward_closer"]
             # elif self.last_geodesic_distance == geodesic_distance:
             #     rew += self.reward_configs["delta_dist_reward_same"]
             # else:
             #     rew += self.reward_configs["delta_dist_reward_further"]
-
-            geodesic_distance = self.env.dist_to_point(self.task_info['target'])
-            if self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5:  # (robothor limits)
-                rew += self.last_geodesic_distance - geodesic_distance
-
         self.last_geodesic_distance = geodesic_distance
 
         # # ...and also exploring! We won't be able to hit the optimal path in test
@@ -208,34 +215,66 @@ class PointNavTask(Task[RoboThorEnvironment]):
         #     reward += self.reward_configs["unsuccessful_action_penalty"]
 
         if self._took_end_action:
-            reward += (
-                self.reward_configs["goal_success_reward"]
-                if self._success
-                else self.reward_configs["failed_stop_reward"]
-            )
+            if self._success is not None:
+                reward += (
+                    self.reward_configs["goal_success_reward"]
+                    if self._success
+                    else self.reward_configs["failed_stop_reward"]
+                )
 
         self._rewards.append(float(reward))
 
         return float(reward)
 
     def spl(self):
-        pose = self.env.agent_state()
-        res = compute_single_spl(self.path, self.episode_optimal_corners, self._success)
-        self.env.step({"action": "TeleportFull", **pose})
+        if len(self.episode_optimal_corners) <= 1 or self._success is None:
+            return None
+
+        if not self._success:
+            return 0.0
+
+        # pose = self.env.agent_state()
+        res = compute_single_spl(self.path, self.episode_optimal_corners, self._success)  # no controller involved
+
+        # # self.env.step({"action": "TeleportFull", **pose})
+        # new_pose = self.env.agent_state()
+        # assert abs(new_pose['x'] - pose['x']) < 1e-5, "wrong x"
+        # assert abs(new_pose['y'] - pose['y']) < 1e-5, "wrong y"
+        # assert abs(new_pose['z'] - pose['z']) < 1e-5, "wrong z"
+        # assert abs(new_pose['rotation']['y'] - pose['rotation']['y']) < 1e-5, "wrong rotation y"
+        # assert abs(new_pose['horizon'] - pose['horizon']) < 1e-5, "wrong horizon"
+
         return res
+
+    def dist_to_target(self):
+        res = self.env.dist_to_point(self.task_info['target'])
+        return res if res > -0.5 else None
 
     def metrics(self) -> Dict[str, Any]:
         if not self.is_done():
             return {}
         else:
-            metrics = {
-                "success": self._success,
-                "ep_length": self.num_steps_taken(),
-                "total_reward": np.sum(self._rewards),
-                "spl": self.spl() if len(self.episode_optimal_corners) > 1 else 0.0
-            }
+            total_reward = float(np.sum(self._rewards))
             self._rewards = []
-            return metrics
+
+            if self._success is None:
+                return {}
+
+            dist2tget = self.dist_to_target()
+            if dist2tget is None:
+                return {}
+
+            spl = self.spl()
+            if spl is None:
+                return {}
+
+            return {
+                "success": self._success,  # False also if no path to target
+                "ep_length": self.num_steps_taken(),
+                "total_reward": total_reward,
+                "dist_to_target": dist2tget,
+                "spl": spl,
+            }
 
 
 class ObjectNavTask(Task[RoboThorEnvironment]):
@@ -399,7 +438,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
     def spl(self):
         pose = self.env.agent_state()
         res = compute_single_spl(self.path, self.episode_optimal_corners, self._success)
-        self.env.step({"action": "TeleportFull", **pose})
+        # self.env.step({"action": "TeleportFull", **pose})
         return res
 
     def get_observations(self) -> Any:
@@ -407,8 +446,11 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         if self.mirror:
             # flipped = []
             for o in obs:
-                if ('rgb' in o or 'depth' in o) and isinstance(obs[o], np.ndarray) and len(obs[o].shape) == 3:  # heuristic to determine this is a visual sensor
-                    obs[o] = obs[o][:, ::-1, :].copy()  # horizontal flip
+                if ('rgb' in o or 'depth' in o) and isinstance(obs[o], np.ndarray):
+                    if len(obs[o].shape) == 3:  # heuristic to determine this is a visual sensor
+                        obs[o] = obs[o][:, ::-1, :].copy()  # horizontal flip
+                    elif len(obs[o].shape) == 2:  # perhaps only two axes for depth?
+                        obs[o] = obs[o][:, ::-1].copy()  # horizontal flip
                     # flipped.append(o)
             # print('flipped {}'.format(flipped))
         return obs

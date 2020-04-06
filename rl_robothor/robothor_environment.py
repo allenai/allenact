@@ -120,27 +120,87 @@ class RoboThorEnvironment:
             self.dist_to_point(xyz) > -0.5
         )  # -1.0 for unreachable, 0.0 for end point
 
-    # TODO consider caching for some resolution (e.g. initial grid)?
     def path_corners(self, target: Union[str, Dict[str, float]]) -> Collection[Dict[str, float]]:
         """Returns an array with a sequence of xyz dictionaries objects representing the corners of the shortest path
          to the object of given type or end point location."""
         pose = self.agent_state()
         position = {k: float(pose[k]) for k in ["x", "y", "z"]}
-        rotation = {**pose["rotation"]} if "rotation" in pose else {}
+        # LOGGER.debug("initial pos in path corners {} target {}".format(pose, target))
         try:
             if isinstance(target, str):
                 path = metrics.get_shortest_path_to_object_type(
                     self.controller,
                     target,
                     position,
-                    rotation if len(rotation) > 0 else None,
+                    {**pose["rotation"]} if "rotation" in pose else None,
                 )
             else:
-                path = get_shortest_path_to_point(self.controller, position, target)
+                path = metrics.get_shortest_path_to_point(self.controller, position, target)
         except ValueError:
+            LOGGER.debug("No path to object {} from {} in {}".format(target, position, self.scene_name))
             path = []
         finally:
-            self.controller.step("TeleportFull", **pose)
+            if isinstance(target, str):
+                self.controller.step("TeleportFull", **pose)
+                # pass
+            new_pose = self.agent_state()
+            try:
+                assert abs(new_pose['x'] - pose['x']) < 1e-5, "wrong x"
+                assert abs(new_pose['y'] - pose['y']) < 1e-5, "wrong y"
+                assert abs(new_pose['z'] - pose['z']) < 1e-5, "wrong z"
+                assert abs(new_pose['rotation']['x'] - pose['rotation']['x']) < 1e-5, "wrong rotation x"
+                assert abs(new_pose['rotation']['y'] - pose['rotation']['y']) < 1e-5, "wrong rotation y"
+                assert abs(new_pose['rotation']['z'] - pose['rotation']['z']) < 1e-5, "wrong rotation z"
+                assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
+            except Exception:
+                LOGGER.error("new_pose {} old_pose {} in {}".format(new_pose, pose, self.scene_name))
+            # if abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) > 1e-5:
+            #     LOGGER.debug("wrong horizon {} vs {} after path to object {} from {} in {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360), target, position, self.scene_name))
+            # else:
+            #     LOGGER.debug("correct horizon {} vs {} after path to object {} from {} in {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360), target, position, self.scene_name))
+            # assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
+
+            # # TODO: the agent will continue with a random horizon from here on
+            # target_horizon = (pose['horizon'] % 360) - (360 if (pose['horizon'] % 360) >= 180 else 0)
+            # new_pose = self.agent_state()['horizon']
+            # update_horizon = (new_pose % 360) - (360 if (new_pose % 360) >= 180 else 0)
+            # cond = abs(target_horizon - update_horizon) > 1e-5
+            # nmovements = 0
+            # while cond:
+            #     cond = abs(target_horizon - update_horizon) > 1e-5 and target_horizon > update_horizon
+            #     while cond:
+            #         self.controller.step("LookDown")
+            #         old = update_horizon
+            #         new_pose = self.agent_state()['horizon']
+            #         update_horizon = (new_pose % 360) - (360 if (new_pose % 360) >= 180 else 0)
+            #         LOGGER.debug("LookDown horizon {} -> {} ({})".format(old, update_horizon, target_horizon))
+            #         nmovements += 1
+            #         cond = abs(target_horizon - update_horizon) > 1e-5 and target_horizon > update_horizon
+            #
+            #     cond = abs(target_horizon - update_horizon) > 1e-5 and target_horizon < update_horizon
+            #     while cond:
+            #         self.controller.step("LookUp")
+            #         old = update_horizon
+            #         new_pose = self.agent_state()['horizon']
+            #         update_horizon = (new_pose % 360) - (360 if (new_pose % 360) >= 180 else 0)
+            #         LOGGER.debug("LookUp horizon {} -> {} ({})".format(old, update_horizon, target_horizon))
+            #         nmovements += 1
+            #         cond = abs(target_horizon - update_horizon) > 1e-5 and target_horizon < update_horizon
+            #
+            #     cond = abs(target_horizon - update_horizon) > 1e-5
+            # LOGGER.debug("nmovements {}".format(nmovements))
+            # new_pose = self.agent_state()
+            # assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
+
+            # try:
+            #     assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
+            # except Exception:
+            #     LOGGER.error("wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360)))
+            #     self.controller.step("TeleportFull", **pose)
+            #     assert abs(
+            #         (new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {} after teleport full".format(
+            #         (new_pose['horizon'] % 360), (pose['horizon'] % 360))
+        #     # LOGGER.debug("initial pos in path corners {} current pos {} path {}".format(pose, self.agent_state(), path))
         return path
 
     def path_corners_to_dist(self, corners: Collection[Dict[str, float]]) -> float:
@@ -196,7 +256,7 @@ class RoboThorEnvironment:
         return {
             **{k: float(v) for k, v in agent_meta["position"].items()},
             "rotation": {k: float(v) for k, v in agent_meta["rotation"].items()},
-            "horizon": float(agent_meta["cameraHorizon"]),
+            "horizon": round(float(agent_meta["cameraHorizon"]), 1),
         }
 
     def reset(self, scene_name: str = None) -> None:
@@ -241,6 +301,7 @@ class RoboThorEnvironment:
         while k == 0 or (not self.last_action_success and k < 10):
             # self.reset()
             state = {**self.random_reachable_state(seed=seed), **partial_position}
+            # LOGGER.debug("picked target location {}".format(state))
             self.controller.step("TeleportFull", **state)
             k += 1
 
@@ -255,6 +316,10 @@ class RoboThorEnvironment:
             self.controller.step("TeleportFull", **state, force_action=True)  # type: ignore
             assert self.last_action_success, "Force action failed with {}".format(state)
 
+        # LOGGER.debug("location after teleport full {}".format(self.agent_state()))
+        # self.controller.step("TeleportFull", **self.agent_state())  # TODO only for debug
+        # LOGGER.debug("location after re-teleport full {}".format(self.agent_state()))
+
         return self.agent_state()
 
     def random_reachable_state(
@@ -265,7 +330,7 @@ class RoboThorEnvironment:
             random.seed(seed)
         # xyz = random.choice(self.currently_reachable_points)
         assert len(self.known_good_locations[self.scene_name]) > 100
-        xyz = copy.copy(random.choice(self.known_good_locations[self.scene_name]))
+        xyz = copy.deepcopy(random.choice(self.known_good_locations[self.scene_name]))
         rotation = random.choice(
             np.arange(0.0, 360.0, self.config["rotateStepDegrees"])
         )
@@ -362,30 +427,30 @@ class RoboThorEnvironment:
         return self.all_objects_with_properties({"visible": True})
 
 
-def get_shortest_path_to_point(
-        controller,
-        initial_position,
-        target_position
-):
-    """
-    Computes the shortest path to an end point from an initial position using a controller
-    :param controller: agent controller
-    :param initial_position: dict(x=float, y=float, z=float) with the desired initial position
-    :param target_position: dict(x=float, y=float, z=float) with the desired target position
-    """
-    args = dict(
-        action='GetShortestPathToPoint',
-        position=initial_position,
-        x=target_position['x'],
-        y=target_position['y'],
-        z=target_position['z']
-    )
-    event = controller.step(args)
-    if event.metadata['lastActionSuccess']:
-        return event.metadata['actionReturn']['corners']
-    else:
-        raise ValueError(
-            "Unable to find shortest path for target point '{}'".format(
-                target_position
-            )
-        )
+# def get_shortest_path_to_point(
+#         controller,
+#         initial_position,
+#         target_position
+# ):
+#     """
+#     Computes the shortest path to an end point from an initial position using a controller
+#     :param controller: agent controller
+#     :param initial_position: dict(x=float, y=float, z=float) with the desired initial position
+#     :param target_position: dict(x=float, y=float, z=float) with the desired target position
+#     """
+#     args = dict(
+#         action='GetShortestPathToPoint',
+#         position=initial_position,
+#         x=target_position['x'],
+#         y=target_position['y'],
+#         z=target_position['z']
+#     )
+#     event = controller.step(args)
+#     if event.metadata['lastActionSuccess']:
+#         return event.metadata['actionReturn']['corners']
+#     else:
+#         raise ValueError(
+#             "Unable to find shortest path for target point '{}'".format(
+#                 target_position
+#             )
+#         )

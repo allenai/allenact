@@ -2,7 +2,7 @@ import gym
 import torch.nn as nn
 from torchvision import models
 
-from models.object_nav_models import ObjectNavNavActorCriticTrainResNet50GRU
+from models.object_nav_models import ObjectNavActorCriticTrainResNet50GRU
 from rl_base.sensor import SensorSuite
 from rl_habitat.habitat_tasks import ObjectNavTask
 from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetObjectSensorHabitat
@@ -57,7 +57,7 @@ class ObjectNavHabitatRGBDeterministicTrainResNet50GRUPPOExperimentConfig(Object
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ObjectNavNavActorCriticTrainResNet50GRU(
+        return ObjectNavActorCriticTrainResNet50GRU(
             action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             goal_sensor_uuid="target_object_id",

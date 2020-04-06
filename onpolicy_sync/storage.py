@@ -9,6 +9,8 @@ from typing import Union, List, Dict
 import torch
 import numpy as np
 
+from utils.system import LOGGER
+
 
 class RolloutStorage:
     """Class for storing rollout information for RL trainers."""
@@ -160,6 +162,7 @@ class RolloutStorage:
         assert len(self.unnarrow_data) == 0, "attempting to narrow narrowed rollouts"
 
         if self.step == 0:  # we're actually done
+            LOGGER.debug("Called narrow with self.step == 0")
             return
 
         for sensor in self.observations:
@@ -179,7 +182,10 @@ class RolloutStorage:
         self.action_log_probs = self.action_log_probs.narrow(0, 0, self.step)
 
         self.unnarrow_data["value_preds"] = self.value_preds
-        self.value_preds = self.value_preds.narrow(0, 0, self.step)
+        self.value_preds = self.value_preds.narrow(0, 0, self.step + 1)
+
+        self.unnarrow_data["returns"] = self.returns
+        self.returns = self.returns.narrow(0, 0, self.step + 1)
 
         self.unnarrow_data["rewards"] = self.rewards
         self.rewards = self.rewards.narrow(0, 0, self.step)
@@ -215,6 +221,9 @@ class RolloutStorage:
         self.value_preds = self.unnarrow_data["value_preds"]
         del self.unnarrow_data["value_preds"]
 
+        self.returns = self.unnarrow_data["returns"]
+        del self.unnarrow_data["returns"]
+
         self.rewards = self.unnarrow_data["rewards"]
         del self.unnarrow_data["rewards"]
 
@@ -227,8 +236,6 @@ class RolloutStorage:
         assert len(self.unnarrow_data) == 0
 
     def after_update(self):
-        assert self.step == 0, "wrong number of steps {} in rollouts storage with capacity {}".format(self.step, self.num_steps)
-
         for sensor in self.observations:
             self.observations[sensor][0].copy_(self.observations[sensor][-1])
 
@@ -238,6 +245,7 @@ class RolloutStorage:
 
         if len(self.unnarrow_data) > 0:
             self.unnarrow()
+            self.step = 0
 
     def compute_returns(self, next_value, use_gae, gamma, tau):
         if use_gae:

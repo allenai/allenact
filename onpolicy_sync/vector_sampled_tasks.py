@@ -259,7 +259,7 @@ class VectorSampledTasks(object):
                 elif command == SAMPLER_ATTR_COMMAND:
                     property_name = data
                     result = getattr(task_sampler, property_name)
-                    LOGGER.debug("task_sampler {} {}".format(property_name, result))
+                    # LOGGER.debug("task_sampler {} {}".format(property_name, result))
                     connection_write_fn(result)
 
                 # TODO: update CALL_COMMAND for getting attribute like this
