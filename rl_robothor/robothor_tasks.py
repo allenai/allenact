@@ -446,8 +446,11 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         if self.mirror:
             # flipped = []
             for o in obs:
-                if ('rgb' in o or 'depth' in o) and isinstance(obs[o], np.ndarray) and len(obs[o].shape) == 3:  # heuristic to determine this is a visual sensor
-                    obs[o] = obs[o][:, ::-1, :].copy()  # horizontal flip
+                if ('rgb' in o or 'depth' in o) and isinstance(obs[o], np.ndarray):
+                    if len(obs[o].shape) == 3:  # heuristic to determine this is a visual sensor
+                        obs[o] = obs[o][:, ::-1, :].copy()  # horizontal flip
+                    elif len(obs[o].shape) == 2:  # perhaps only two axes for depth?
+                        obs[o] = obs[o][:, ::-1].copy()  # horizontal flip
                     # flipped.append(o)
             # print('flipped {}'.format(flipped))
         return obs
