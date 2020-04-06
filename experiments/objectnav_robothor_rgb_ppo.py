@@ -22,7 +22,7 @@ from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
+class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     """An Object Navigation experiment configuration in RoboThor"""
 
     TRAIN_SCENES = [
@@ -49,11 +49,11 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
 
     # It also ignores the empirical success of all episodes with length > num_steps * ADVANCE_SCENE_ROLLOUT_PERIOD and
     # some with shorter lengths
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000000000  # generally useful if more than 1 scene per worker
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 6  # generally useful if more than 1 scene per worker
 
     VALIDATION_SAMPLES_PER_SCENE = 1
 
-    NUM_PROCESSES = 60  # TODO 2 for debugging
+    NUM_PROCESSES = 12  # TODO 2 for debugging
 
     TARGET_TYPES = sorted(
         [
@@ -143,7 +143,7 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def tag(cls):
-        return "ObjectNavRobothorRGBDDPPO"
+        return "ObjectNavRobothorRGBPPO"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
@@ -331,29 +331,68 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
     #     )
     #     return res
 
-    def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(self.NUM_PROCESSES, ndevices)
-        res = [0] * ndevices
-        for it in range(self.NUM_PROCESSES):
-            res[it % ndevices] += 1
-        return res
+    # def split_num_processes(self, ndevices):
+    #     assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(self.NUM_PROCESSES, ndevices)
+    #     res = [0] * ndevices
+    #     for it in range(self.NUM_PROCESSES):
+    #         res[it % ndevices] += 1
+    #     return res
+    #
+    # def machine_params(self, mode="train", **kwargs):
+    #     if mode == "train":
+    #         # gpu_ids = [] if not torch.cuda.is_available() else [0]
+    #         # nprocesses = 1 if not torch.cuda.is_available() else self.NUM_PROCESSES
+    #         # sampler_devices = [1]
+    #         # render_video = False
+    #         workers_per_device = 1
+    #         gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7] * workers_per_device  # TODO vs4 only has 7 gpus
+    #         nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
+    #         render_video = False
+    #     elif mode == "valid":
+    #         nprocesses = 1
+    #         if not torch.cuda.is_available():
+    #             gpu_ids = []
+    #         else:
+    #             gpu_ids = [0]
+    #         render_video = False
+    #     elif mode == "test":
+    #         nprocesses = 1
+    #         if not torch.cuda.is_available():
+    #             gpu_ids = []
+    #         else:
+    #             gpu_ids = [0]
+    #         render_video = True
+    #     else:
+    #         raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
+    #
+    #     # Disable parallelization for validation process
+    #     if mode == "valid":
+    #         for prep in self.PREPROCESSORS:
+    #             prep.kwargs["config"]["parallel"] = False
+    #
+    #     observation_set = Builder(ObservationSet, kwargs=dict(
+    #         source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
+    #     )) if mode == 'train' or nprocesses > 0 else None
+    #
+    #     return {
+    #         "nprocesses": nprocesses,
+    #         "gpu_ids": gpu_ids,
+    #         "observation_set": observation_set,
+    #         "render_video": render_video,
+    #     }
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            # gpu_ids = [] if not torch.cuda.is_available() else [0]
-            # nprocesses = 1 if not torch.cuda.is_available() else self.NUM_PROCESSES
-            # sampler_devices = [1]
-            # render_video = False
-            workers_per_device = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7] * workers_per_device  # TODO vs4 only has 7 gpus
-            nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
+            gpu_ids = [] if not torch.cuda.is_available() else [0]
+            nprocesses = 1 if not torch.cuda.is_available() else self.NUM_PROCESSES
+            sampler_devices = [1]
             render_video = False
         elif mode == "valid":
             nprocesses = 1
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
-                gpu_ids = [0]
+                gpu_ids = [1]
             render_video = False
         elif mode == "test":
             nprocesses = 1
@@ -377,6 +416,7 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
         return {
             "nprocesses": nprocesses,
             "gpu_ids": gpu_ids,
+            "sampler_devices": sampler_devices if mode == "train" else gpu_ids,
             "observation_set": observation_set,
             "render_video": render_video,
         }
