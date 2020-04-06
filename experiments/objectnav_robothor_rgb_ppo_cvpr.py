@@ -154,13 +154,13 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"a2c_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
+            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
             advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
-                PipelineStage(loss_names=["a2c_loss"], end_criterion=ppo_steps)
+                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps)
             ],
             lr_scheduler_builder=Builder(
                 LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
