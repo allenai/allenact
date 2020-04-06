@@ -448,14 +448,6 @@ class OnPolicyRLEngine(object):
 
         return self.scalars.pop_and_reset(), used
 
-    def _empty_metrics_out_queue(self, count=-1):
-        try:
-            while count != 0:
-                self.vector_tasks.metrics_out_queue.get_nowait()
-                count -= 1
-        except queue.Empty as _:
-            pass
-
     def accumulate_data_from_metrics_out_queue(
         self, count=-1
     ) -> Dict[
