@@ -1,7 +1,6 @@
-from typing import Dict, Any, List, Optional, Tuple, Union
+from typing import Dict, Any, List, Optional
 
 import gym
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -14,48 +13,13 @@ from rl_base.sensor import SensorSuite, ExpertPolicySensor, Sensor
 from rl_base.task import TaskSampler
 from rl_lighthouse.lighthouse_sensors import FactorialDesignCornerSensor
 from rl_lighthouse.lighthouse_tasks import FindGoalLightHouseTaskSampler
+from rl_lighthouse.lighthouse_util import StopIfNearOptimal
 from utils.experiment_utils import (
     Builder,
     PipelineStage,
     TrainingPipeline,
     LinearDecay,
-    EarlyStoppingCriterion,
-    ScalarMeanTracker,
 )
-
-
-class StopIfNearOptimal(EarlyStoppingCriterion):
-    def __init__(self, optimal: float, deviation: float, gamma=0.9):
-        self.optimal = optimal
-        self.deviaion = deviation
-        self.gamma = gamma
-        self.running_mean = None
-
-    def __call__(
-        self,
-        stage_steps: int,
-        total_steps: int,
-        training_metrics: ScalarMeanTracker,
-        test_valid_metrics: List[Tuple[str, int, Union[float, np.ndarray]]],
-    ) -> bool:
-        sums = training_metrics.sums()
-        counts = training_metrics.counts()
-
-        k = "ep_length"
-        if k in sums:
-            count = counts[k]
-            ep_length_ave = sums[k] / count
-
-            if self.running_mean is None:
-                self.running_mean = ep_length_ave
-            else:
-                self.running_mean = (1 - self.gamma ** count) * ep_length_ave + (
-                    self.gamma ** count
-                ) * self.running_mean
-
-        if self.running_mean is None:
-            return False
-        return self.running_mean < self.optimal + self.deviaion
 
 
 class LightHouseTwoDimDAggerExperimentConfig(ExperimentConfig):
