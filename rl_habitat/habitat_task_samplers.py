@@ -74,7 +74,7 @@ class PointNavTaskSampler(TaskSampler):
 
     def next_task(self, force_advance_scene=False) -> PointNavTask:
         if self.max_tasks is not None and self.max_tasks <= 0:
-            return self.env.num_episodes
+            return None
 
         if self.env is not None:
             self.env.reset()

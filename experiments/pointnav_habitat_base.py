@@ -103,8 +103,8 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
         num_mini_batch = 1
         update_repeats = 4
         num_steps = 128
-        save_interval = 1000000
-        log_interval = 10000
+        save_interval = 100  # 1000000
+        log_interval = 10  # 10000
         gamma = 0.99
         use_gae = True
         gae_lambda = 0.95
@@ -143,7 +143,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else  [4, 4, 4, 4, 4, 4, 4, 4] # self.NUM_PROCESSES
+            nprocesses = 1 if not torch.cuda.is_available() else [4, 4, 4, 4, 4, 4, 4, 4] # self.NUM_PROCESSES
             gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7]
             render_video = False
         elif mode == "valid":
