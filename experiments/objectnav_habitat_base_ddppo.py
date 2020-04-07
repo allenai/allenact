@@ -132,9 +132,9 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
-        observation_set = ObservationSet(
-            self.OBSERVATIONS, self.PREPROCESSORS, self.SENSORS
-        )
+        observation_set = Builder(ObservationSet, kwargs=dict(
+            source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
+        ))
 
         return {
             "nprocesses": nprocesses,
@@ -147,7 +147,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     def create_model(cls, **kwargs) -> nn.Module:
         return PointNavActorCriticResNet50GRU(
             action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
-            observation_space=SensorSuite(cls.SENSORS).observation_spaces,
+            observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
             embed_coordinates=False,
