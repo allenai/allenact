@@ -8,17 +8,17 @@ from rl_habitat.habitat_tasks import PointNavTask
 from rl_habitat.habitat_sensors import DepthSensorHabitat, TargetCoordinatesSensorHabitat
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from rl_habitat.habitat_utils import construct_env_configs
-from experiments.pointnav_habitat_base import PointNavHabitatBaseExperimentConfig
+from experiments.pointnav_habitat_base_ddppo import PointNavHabitatDDPPOBaseExperimentConfig
 
 
-class PointNavHabitatDepthDeterministicResNet50GRUPPOExperimentConfig(PointNavHabitatBaseExperimentConfig):
+class PointNavHabitatDepthDeterministicResNet50GRUDDPPOExperimentConfig(PointNavHabitatDDPPOBaseExperimentConfig):
     """A Point Navigation experiment configuraqtion in Habitat"""
 
     SENSORS = [
         DepthSensorHabitat(
             {
-                "height": PointNavHabitatBaseExperimentConfig.SCREEN_SIZE,
-                "width": PointNavHabitatBaseExperimentConfig.SCREEN_SIZE,
+                "height": PointNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
+                "width": PointNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
                 "use_resnet_normalization": True,
             }
         ),
@@ -28,8 +28,8 @@ class PointNavHabitatDepthDeterministicResNet50GRUPPOExperimentConfig(PointNavHa
     PREPROCESSORS = [
         ResnetPreProcessorHabitat(
             config={
-                "input_height": PointNavHabitatBaseExperimentConfig.SCREEN_SIZE,
-                "input_width": PointNavHabitatBaseExperimentConfig.SCREEN_SIZE,
+                "input_height": PointNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
+                "input_width": PointNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
                 "output_width": 1,
                 "output_height": 1,
                 "output_dims": 2048,
@@ -47,7 +47,7 @@ class PointNavHabitatDepthDeterministicResNet50GRUPPOExperimentConfig(PointNavHa
         "target_coordinates_ind",
     ]
 
-    CONFIG = PointNavHabitatBaseExperimentConfig.CONFIG.clone()
+    CONFIG = PointNavHabitatDDPPOBaseExperimentConfig.CONFIG.clone()
     CONFIG.SIMULATOR.AGENT_0.SENSORS = ['DEPTH_SENSOR']
 
     TRAIN_CONFIGS = construct_env_configs(CONFIG)
@@ -56,7 +56,7 @@ class PointNavHabitatDepthDeterministicResNet50GRUPPOExperimentConfig(PointNavHa
     def create_model(cls, **kwargs) -> nn.Module:
         return PointNavActorCriticTrainResNet50GRU(
             action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
-            observation_space=kwargs["observation_set"].observation_spaces,#SensorSuite(cls.SENSORS).observation_spaces,
+            observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
             embed_coordinates=False,

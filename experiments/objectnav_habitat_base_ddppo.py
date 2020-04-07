@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
-from torchvision import models
 
 import habitat
 from onpolicy_sync.losses.ppo import PPOConfig
@@ -15,86 +14,56 @@ from rl_base.experiment_config import ExperimentConfig
 from rl_base.sensor import SensorSuite
 from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
-from rl_habitat.habitat_tasks import PointNavTask
-from rl_habitat.habitat_task_samplers import PointNavTaskSampler
-from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetCoordinatesSensorHabitat
-from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
+from rl_habitat.habitat_tasks import ObjectNavTask
+from rl_habitat.habitat_task_samplers import ObjectNavTaskSampler
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
+class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     """A Point Navigation experiment configuraqtion in Habitat"""
 
-    TRAIN_SCENES = "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
-    VALID_SCENES = "habitat/habitat-api/data/datasets/pointnav/gibson/v1/val/val.json.gz"
-    TEST_SCENES = "habitat/habitat-api/data/datasets/pointnav/gibson/v1/test/test.json.gz"
+    TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/train/train.json.gz"
+    VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val/val.json.gz"
 
     SCREEN_SIZE = 256
     MAX_STEPS = 500
-    DISTANCE_TO_GOAL = 0.2
+    DISTANCE_TO_GOAL = 0.1
 
-    NUM_PROCESSES = 6
+    NUM_PROCESSES = 16
 
-    SENSORS = [
-        RGBSensorHabitat(
-            {
-                "height": SCREEN_SIZE,
-                "width": SCREEN_SIZE,
-                "use_resnet_normalization": True,
-            }
-        ),
-        TargetCoordinatesSensorHabitat({"coordinate_dims": 2}),
-    ]
-
-    PREPROCESSORS = [
-        Builder(ResnetPreProcessorHabitat,
-            dict(config={
-                "input_height": SCREEN_SIZE,
-                "input_width": SCREEN_SIZE,
-                "output_width": 1,
-                "output_height": 1,
-                "output_dims": 2048,
-                "pool": True,
-                "torchvision_resnet_model": models.resnet50,
-                "input_uuids": ["rgb"],
-                "output_uuid": "rgb_resnet",
-                "parallel": False,
-            })
-        ),
-    ]
-
-    OBSERVATIONS = [
-        "rgb_resnet",
-        "target_coordinates_ind",
-    ]
-
-    CONFIG = habitat.get_config('configs/gibson.yaml')
+    CONFIG = habitat.get_config('configs/mp3d.yaml')
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
-    CONFIG.SIMULATOR_GPU_IDS = [1]
+    CONFIG.SIMULATOR_GPU_IDS = [0, 1, 2, 3, 4, 5, 6, 7]
+    CONFIG.DATASET.TYPE = 'ObjectNav-v1'
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
-    CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['*']
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
-    CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
-    CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = SCREEN_SIZE
-    CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = SCREEN_SIZE
+    CONFIG.SIMULATOR.AGENT_0.HEIGHT = 0.88
+    CONFIG.SIMULATOR.AGENT_0.RADIUS = 0.18
+    CONFIG.SIMULATOR.HABITAT_SIM_V0.ALLOW_SLIDING = False
+
     CONFIG.SIMULATOR.TURN_ANGLE = 45
+    CONFIG.SIMULATOR.TILT_ANGLE = 30
+    CONFIG.SIMULATOR.ACTION_SPACE_CONFIG = "v1"
     CONFIG.SIMULATOR.FORWARD_STEP_SIZE = 0.25
     CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS = MAX_STEPS
 
-    CONFIG.TASK.TYPE = 'Nav-v0'
+    CONFIG.TASK.TYPE = 'ObjectNav-v1'
+    CONFIG.TASK.POSSIBLE_ACTIONS = ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "LOOK_UP", "LOOK_DOWN"]
     CONFIG.TASK.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
-    CONFIG.TASK.SENSORS = ['POINTGOAL_WITH_GPS_COMPASS_SENSOR']
+    CONFIG.TASK.SENSORS = ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR']
     CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.GOAL_FORMAT = "POLAR"
     CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.DIMENSIONALITY = 2
-    CONFIG.TASK.GOAL_SENSOR_UUID = 'pointgoal_with_gps_compass'
+    CONFIG.TASK.GOAL_SENSOR_UUID = 'objectgoal'
     CONFIG.TASK.MEASUREMENTS = ['DISTANCE_TO_GOAL', 'SPL']
     CONFIG.TASK.SPL.TYPE = 'SPL'
-    CONFIG.TASK.SPL.SUCCESS_DISTANCE = 0.2
+    CONFIG.TASK.SPL.DISTANCE_TO = 'VIEW_POINTS'
+    CONFIG.TASK.SPL.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
+    CONFIG.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "VIEW_POINTS"
 
     @classmethod
     def tag(cls):
-        return "PointNav"
+        return "ObjectNav"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
@@ -143,29 +112,29 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else self.NUM_PROCESSES
-            gpu_ids = [] if not torch.cuda.is_available() else [0]
+            nprocesses = 1 if not torch.cuda.is_available() else [2,2,2,2,2,2,2,2]
+            gpu_ids = [] if not torch.cuda.is_available() else self.CONFIG.SIMULATOR_GPU_IDS
             render_video = False
         elif mode == "valid":
             nprocesses = 1
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
-                gpu_ids = [0]
+                gpu_ids = [7]
             render_video = False
         elif mode == "test":
             nprocesses = 1
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
-                gpu_ids = [0]
+                gpu_ids = [7]
             render_video = True
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
-        observation_set = Builder(ObservationSet, kwargs=dict(
-            source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
-        )) # if mode == 'train' or nprocesses > 0 else None
+        observation_set = ObservationSet(
+            self.OBSERVATIONS, self.PREPROCESSORS, self.SENSORS
+        )
 
         return {
             "nprocesses": nprocesses,
@@ -177,8 +146,8 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return PointNavActorCriticResNet50GRU(
-            action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
-            observation_space=kwargs["observation_set"].observation_spaces, #SensorSuite(cls.SENSORS).observation_spaces,
+            action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
             embed_coordinates=False,
@@ -187,7 +156,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return PointNavTaskSampler(**kwargs)
+        return ObjectNavTaskSampler(**kwargs)
 
     def train_task_sampler_args(
         self,
@@ -202,7 +171,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
         }
 
@@ -222,23 +191,6 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
-            "distance_to_goal": self.DISTANCE_TO_GOAL,
-        }
-
-    def test_task_sampler_args(
-        self,
-        process_ind: int,
-        total_processes: int,
-        devices: Optional[List[int]] = None,
-        seeds: Optional[List[int]] = None,
-        deterministic_cudnn: bool = False,
-    ) -> Dict[str, Any]:
-        config = self.TEST_CONFIGS[process_ind]
-        return {
-            "env_config": config,
-            "max_steps": self.MAX_STEPS,
-            "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
         }

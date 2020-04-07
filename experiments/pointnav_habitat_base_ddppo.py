@@ -22,7 +22,7 @@ from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
+class PointNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     """A Point Navigation experiment configuraqtion in Habitat"""
 
     TRAIN_SCENES = "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
@@ -33,7 +33,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.2
 
-    NUM_PROCESSES = 6
+    NUM_PROCESSES = 32
 
     SENSORS = [
         RGBSensorHabitat(
@@ -71,7 +71,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     CONFIG = habitat.get_config('configs/gibson.yaml')
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
-    CONFIG.SIMULATOR_GPU_IDS = [1]
+    CONFIG.SIMULATOR_GPU_IDS = [0, 1, 2, 3, 4, 5, 6, 7]
     CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
     CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['*']
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
@@ -143,15 +143,15 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else self.NUM_PROCESSES
-            gpu_ids = [] if not torch.cuda.is_available() else [0]
+            nprocesses = 1 if not torch.cuda.is_available() else [4, 4, 4, 4, 4, 4, 4, 4] # self.NUM_PROCESSES
+            gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7]
             render_video = False
         elif mode == "valid":
             nprocesses = 1
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
-                gpu_ids = [0]
+                gpu_ids = [7]
             render_video = False
         elif mode == "test":
             nprocesses = 1
@@ -234,6 +234,10 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
+        # config = self.CONFIG.clone()
+        # config.defrost()
+        # config.DATASET.DATA_PATH = self.VALID_SCENES
+        # config.freeze()
         config = self.TEST_CONFIGS[process_ind]
         return {
             "env_config": config,
