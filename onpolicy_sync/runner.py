@@ -6,9 +6,11 @@ import shutil
 import time
 import traceback
 from multiprocessing.context import BaseContext
-from typing import Optional, Dict, Union, Tuple, Sequence
+from typing import Optional, Dict, Union, Tuple, Sequence, List, Any
 from collections import OrderedDict, defaultdict
 import signal
+import json
+import copy
 
 import torch
 import torch.distributions
@@ -244,7 +246,18 @@ class OnPolicyRunner(object):
         for _ in range(num_testers):
             self.queues["checkpoints"].put(("quit", None))
 
-        self.log(self.checkpoint_start_time_str(checkpoints[0]), num_testers, steps)
+        metric_folder = self.metric_path(experiment_date)
+        os.makedirs(metric_folder, exist_ok=True)
+        suffix = "__test_{}".format(self.local_start_time_str)
+        fname = os.path.join(metric_folder, "metrics" + suffix + ".json")
+
+        LOGGER.info("Saving metrics in {}".format(fname))
+
+        # Check output file can be written
+        with open(fname, "w") as f:
+            json.dump([], f, indent=4, sort_keys=True)
+
+        self.log(self.checkpoint_start_time_str(checkpoints[0]), num_testers, steps, fname)
 
     @staticmethod
     def checkpoint_start_time_str(checkpoint_file_name):
@@ -278,6 +291,14 @@ class OnPolicyRunner(object):
             start_time_str,
         )
 
+    def metric_path(self, start_time_str) -> str:
+        return os.path.join(
+            self.output_dir,
+            "metrics",
+            self.experiment_name,
+            start_time_str
+        )
+
     def save_config_files(self):
         basefolder = os.path.join(
                     self.output_dir,
@@ -304,7 +325,7 @@ class OnPolicyRunner(object):
 
         LOGGER.info("Config files saved to {}".format(basefolder))
 
-    def process_eval_package(self, log_writer, pkg):
+    def process_eval_package(self, log_writer, pkg, all_results: Optional[List[Any]]=None):
         pkg_type, payload, steps = pkg
         metrics_pkg, task_outputs, render, checkpoint_file_name = payload
 
@@ -317,6 +338,11 @@ class OnPolicyRunner(object):
                 [(k, v) for k, v in metrics_payload.items() if k != "task_info"], key=lambda x: x[0]
             )
         )
+
+        if all_results is not None:
+            results = copy.deepcopy(metrics)
+            results.update({"training_steps": steps, "tasks": task_outputs})
+            all_results.append(results)
 
         message = ["{} {} steps:".format(mode, steps)]
         for k in metrics:
@@ -380,7 +406,7 @@ class OnPolicyRunner(object):
 
         return steps, current_time
 
-    def log(self, start_time_str: str, nworkers: int, test_steps: Sequence[int]=()):
+    def log(self, start_time_str: str, nworkers: int, test_steps: Sequence[int]=(), metrics_file: Optional[str]=None):
         finalized = False
 
         log_writer = SummaryWriter(
@@ -388,11 +414,12 @@ class OnPolicyRunner(object):
             filename_suffix="__{}_{}".format(self.mode, self.local_start_time_str),
         )
 
-        # To aggregate metrics from trainers
+        # To aggregate/buffer metrics from trainers/testers
         collected = []
         last_train_steps = 0
         last_train_time = time.time()
         test_steps = sorted(test_steps, reverse=True)
+        test_results = []
 
         try:
             while True:
@@ -418,29 +445,32 @@ class OnPolicyRunner(object):
                             collected = collected[nworkers:]
                         elif len(collected) > 2 * nworkers:
                             raise Exception("Unable to aggregate train packages from {} workers".format(nworkers))
-                elif package[0] == "valid_package":
+                elif package[0] == "valid_package":  # they all come from a single worker
                     if package[1] is not None:  # no validation samplers
                         self.process_eval_package(log_writer, package)
                     if finalized and self.queues["checkpoints"].empty():  # assume queue is actually empty after trainer finished and no checkpoints in queue
                         break
-                elif package[0] == "test_package":
+                elif package[0] == "test_package":  # multiple workers with varying average episode length (reorder)
                     assert package[2] in test_steps, "unexpected test package for {} steps".format(package[2])
                     if package[2] == test_steps[-1]:
-                        self.process_eval_package(log_writer, package)
-                        test_steps.pop()
+                        processed = []
+                        self.process_eval_package(log_writer, package, test_results)
+                        processed.append(test_steps.pop())
                         if len(test_steps) == 0:
                             finalized = True
                             time.sleep(2)  # give some time for testers to terminate after consuming the kill pill
                             break
                         if len(collected) > 0:
                             collected = sorted(collected, key=lambda x: x[2], reverse=True)
-                            processed = []
                             while collected[-1][2] == test_steps[-1]:
-                                self.process_eval_package(log_writer, package)
+                                self.process_eval_package(log_writer, collected.pop(), test_results)
                                 processed.append(test_steps.pop())
                                 if len(test_steps) == 0:
                                     break
                             LOGGER.info("Processed metrics for steps {}".format(processed))
+                        with open(metrics_file, "w") as f:
+                            json.dump(test_results, f, indent=4, sort_keys=True)
+                            LOGGER.info("Updated {} up to step {}".format(metrics_file, processed[-1]))
                     else:
                         collected.append(package)
                         LOGGER.info("Collected metrics for step {}".format(package[2]))
