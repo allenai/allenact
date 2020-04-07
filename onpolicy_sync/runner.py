@@ -1,47 +1,26 @@
-"""Defines the reinforcement learning `OnPolicyRLEngine`."""
+"""Defines the reinforcement learning `OnPolicyRunner`."""
 import glob
 import os
 import queue
-import random
 import shutil
-import sys
 import time
 import traceback
-import typing
-import warnings
 from multiprocessing.context import BaseContext
-from typing import Optional, Any, Dict, Union, List, Tuple, Set, Callable
-import json
+from typing import Optional, Dict, Union, Tuple, Sequence
 from collections import OrderedDict, defaultdict
 import signal
 
 import torch
 import torch.distributions
 import torch.multiprocessing as mp
-import torch.nn as nn
 import torch.optim
 from setproctitle import setproctitle as ptitle
-from torch import optim
-from torch.optim.lr_scheduler import _LRScheduler
-import numpy as np
 
-from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
-from onpolicy_sync.storage import RolloutStorage
-from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks, ThreadedVectorSampledTasks
-from onpolicy_sync.vector_preprocessed_tasks import VectorPreprocessedTasks, ThreadedVectorPreprocessedTasks
 from rl_base.experiment_config import ExperimentConfig
-from utils.experiment_utils import (
-    ScalarMeanTracker,
-    LinearDecay,
-    set_deterministic_cudnn,
-    set_seed,
-    Builder,
-    TrainingPipeline,
-    PipelineStage,
-)
-from utils.tensor_utils import batch_observations, SummaryWriter, tensor_to_video
+from utils.experiment_utils import ScalarMeanTracker, set_deterministic_cudnn, set_seed
+from utils.tensor_utils import SummaryWriter
 from utils.system import LOGGER, init_logging, find_free_port
-from onpolicy_sync.light_engine import OnPolicyRLEngine, OnPolicyTrainer, OnPolicyInference
+from onpolicy_sync.light_engine import OnPolicyTrainer, OnPolicyInference
 
 
 # Has results queue (aggregated per trainer), checkpoints queue and mp context
@@ -67,8 +46,10 @@ class OnPolicyRunner(object):
         self.seed = seed
         self.deterministic_cudnn = deterministic_cudnn
         self.mp_ctx = self.init_context(mp_ctx, multiprocessing_start_method)
-        self.mode = self.init_mode(mode)
         self.extra_tag = extra_tag
+        self.mode = mode
+
+        assert self.mode in ["train", "test"], "Only 'train' and 'test' modes supported in runner"
 
         if self.deterministic_cudnn:
             set_deterministic_cudnn()
@@ -111,25 +92,16 @@ class OnPolicyRunner(object):
 
         return mp_ctx
 
-    @staticmethod
-    def init_mode(mode: str="train", supported: Tuple[str, ...] = ("train", "test")):
-        mode = mode.lower()
-        assert mode in supported, "Only {} modes supported in runner".format(supported)
-        return mode
-
-    @staticmethod
-    def worker_devices(machine_params):
-        devices = [torch.device("cpu")]
-        LOGGER.debug("requested GPUs {}".format(machine_params["gpu_ids"]))
-        if len(machine_params["gpu_ids"]) > 0:
-            assert all([id >= 0 for id in machine_params["gpu_ids"]]), "all gpu_ids must be >= 0"
-            assert torch.cuda.device_count() > max(set(machine_params["gpu_ids"])),\
-                "{} CUDA devices available for requested gpu ids {}".format(
-                        torch.cuda.device_count(), machine_params["gpu_ids"]
-                    )
-            # devices = [torch.device("cuda:{}".format(id)) for id in machine_params["gpu_ids"]]
-            devices = [id for id in machine_params["gpu_ids"]]
-        LOGGER.info("Using {} workers on devices {}".format(len(devices), devices))
+    def worker_devices(self, mode: str):
+        # Note: Avoid instantiating preprocessors in machine_params (use Builder if needed)
+        devices = self.config.machine_params(mode)["gpu_ids"]
+        if len(devices) > 0:
+            assert all([gpu_id >= 0 for gpu_id in devices]), "all gpu_ids must be >= 0"
+            assert torch.cuda.device_count() > max(set(devices)),\
+                "{} CUDA devices available for requested {} gpu ids {}".format(torch.cuda.device_count(), mode, devices)
+        else:
+            devices = [torch.device("cpu")]
+        LOGGER.info("Using {} {} workers on devices {}".format(len(devices), mode, devices))
         return devices
 
     @staticmethod
@@ -172,22 +144,21 @@ class OnPolicyRunner(object):
     def start_train(self, checkpoint: Optional[str] = None):
         self.save_config_files()
 
-        machine_params = self.config.machine_params("train")  # TODO make sure nothing (preprocessors, etc) is instantiated in this call!!!
-        devices = self.worker_devices(machine_params)
-        nworkers = len(devices)
+        devices = self.worker_devices("train")
+        num_trainers = len(devices)
 
         seed = self.seed  # same for all workers. used during initialization of the model
 
         distributed_port = 0
         distributed_barrier = None
-        if nworkers > 1:
+        if num_trainers > 1:
             distributed_port = find_free_port()
-            distributed_barrier = self.mp_ctx.Barrier(nworkers)
+            distributed_barrier = self.mp_ctx.Barrier(num_trainers)
 
-        for wit in range(nworkers):
+        for tit in range(num_trainers):
             train: mp.Process = self.mp_ctx.Process(
                 target=self.start_train_loop,
-                args=(wit, checkpoint),
+                args=(tit, checkpoint),
                 kwargs=dict(
                     experiment_name=self.experiment_name,
                     config=self.config,
@@ -197,21 +168,19 @@ class OnPolicyRunner(object):
                     seed=seed,
                     deterministic_cudnn=self.deterministic_cudnn,
                     mp_ctx=self.mp_ctx,
-                    num_workers=nworkers,
-                    device=devices[wit],
+                    num_workers=num_trainers,
+                    device=devices[tit],
                     distributed_port=distributed_port,
                     distributed_barrier=distributed_barrier
                 )
             )
             train.start()
-            self.processes['train'].append(train)
+            self.processes["train"].append(train)
 
         LOGGER.info('Started {} train processes'.format(len(self.processes['train'])))
 
         # Validation
-        # TODO assume always single process?
-        machine_params = self.config.machine_params("valid")
-        device = self.worker_devices(machine_params)[0]
+        device = self.worker_devices("valid")[0]
         valid: mp.Process = self.mp_ctx.Process(
             target=self.start_valid_loop,
             args=(0,),
@@ -225,29 +194,74 @@ class OnPolicyRunner(object):
             )
         )
         valid.start()
-        self.processes['valid'].append(valid)
+        self.processes["valid"].append(valid)
 
         LOGGER.info('Started {} valid processes'.format(len(self.processes['valid'])))
 
-        self.log(nworkers)
+        self.log(self.local_start_time_str, num_trainers)
+
+    def start_test(self,
+                   experiment_date: Optional[str] = None,
+                   checkpoint: Optional[str] = None,
+                   skip_checkpoints: int = 0,
+                   ):
+        devices = self.worker_devices("test")
+        num_testers = len(devices)
+
+        for tit in range(num_testers):
+            test: mp.Process = self.mp_ctx.Process(
+                target=self.start_test_loop,
+                args=(tit,),
+                kwargs=dict(
+                    config=self.config,
+                    results_queue=self.queues["results"],
+                    checkpoints_queue=self.queues["checkpoints"],
+                    seed=12345,  # TODO allow same order for randomly sampled tasks? Is this any useful anyway?
+                    mp_ctx=self.mp_ctx,
+                    device=devices[tit],
+                )
+            )
+            test.start()
+            self.processes['test'].append(test)
+
+        LOGGER.info('Started {} test processes'.format(len(self.processes['test'])))
+
+        assert experiment_date is not None or checkpoint is not None,\
+            "One of experiment_date and checkpoint must be given"
+        assert not(experiment_date is not None and checkpoint is not None),\
+            "Only one of experiment_date and checkpoint can be given"
+        if experiment_date is None:
+            experiment_date = self.checkpoint_start_time_str(checkpoint)
+
+        checkpoints = self.get_checkpoint_files(experiment_date, checkpoint, skip_checkpoints)
+        steps = [self.step_from_checkpoint(checkpoint) for checkpoint in checkpoints]
+
+        LOGGER.info("Running test on {} steps {}".format(len(steps), steps))
+
+        for checkpoint in checkpoints:
+            self.queues["checkpoints"].put(("eval", checkpoint))
+        # Allow all testers to terminate cleanly
+        for _ in range(num_testers):
+            self.queues["checkpoints"].put(("quit", None))
+
+        self.log(self.checkpoint_start_time_str(checkpoints[0]), num_testers, steps)
 
     @staticmethod
     def checkpoint_start_time_str(checkpoint_file_name):
         parts = checkpoint_file_name.split(os.path.sep)
-        assert len(parts) > 1, "{} is not a valid path)".format(checkpoint_file_name)
+        assert len(parts) > 1, "{} is not a valid checkpoint path".format(checkpoint_file_name)
         start_time_str = parts[-2]
-        LOGGER.info("Using start time {}".format(start_time_str))
+        LOGGER.info("Using checkpoint start time {}".format(start_time_str))
         return start_time_str
 
     @property
-    def experiment_name(self):  # only used by train
+    def experiment_name(self):
         if len(self.extra_tag) > 0:
             return "{}_{}".format(self.config.tag(), self.extra_tag)
         return self.config.tag()
 
-
     @property
-    def checkpoint_dir(self):  # only used by train
+    def checkpoint_dir(self):
         folder = os.path.join(
             self.output_dir,
             "checkpoints",
@@ -256,12 +270,12 @@ class OnPolicyRunner(object):
         os.makedirs(folder, exist_ok=True)
         return folder
 
-    def log_writer_path(self, local_start_time_str) -> str:
+    def log_writer_path(self, start_time_str) -> str:
         return os.path.join(
             self.output_dir,
             "tb",
             self.experiment_name,
-            local_start_time_str,
+            start_time_str,
         )
 
     def save_config_files(self):
@@ -276,8 +290,7 @@ class OnPolicyRunner(object):
             parts = module.split(".")
 
             src_file = os.path.sep.join([base] + parts) + ".py"
-            if not os.path.isfile(src_file):
-                LOGGER.error("Config file {} not found".format(src_file))
+            assert os.path.isfile(src_file), "Config file {} not found".format(src_file)
 
             dst_file = (
                 os.path.join(
@@ -287,7 +300,6 @@ class OnPolicyRunner(object):
                 + ".py"
             )
             os.makedirs(os.path.dirname(dst_file), exist_ok=True)
-
             shutil.copy(src_file, dst_file)
 
         LOGGER.info("Config files saved to {}".format(basefolder))
@@ -368,33 +380,29 @@ class OnPolicyRunner(object):
 
         return steps, current_time
 
-    def log(self, nworkers, checkpoints=None):
-        if checkpoints is None:
-            checkpoints = []
+    def log(self, start_time_str: str, nworkers: int, test_steps: Sequence[int]=()):
         finalized = False
 
-        if len(checkpoints) == 0:
-            folder = self.local_start_time_str
-        else:
-            folder = self.checkpoint_start_time_str(checkpoints[0])
-
         log_writer = SummaryWriter(
-            log_dir=self.log_writer_path(folder),
+            log_dir=self.log_writer_path(start_time_str),
             filename_suffix="__{}_{}".format(self.mode, self.local_start_time_str),
         )
 
+        # To aggregate metrics from trainers
+        collected = []
         last_train_steps = 0
         last_train_time = time.time()
+        test_steps = sorted(test_steps, reverse=True)
 
         try:
-            collected = []
             while True:
                 try:
-                    package = self.queues["results"].get(timeout=10)  # TODO wait for 10 seconds, then check all workers are alive
+                    package = self.queues["results"].get(timeout=10)
                 except queue.Empty:
-                    for process_type in self.processes:
-                        for it, process in enumerate(self.processes[process_type]):
-                            assert process.is_alive(), "Process {} {} dead!".format(process_type, it)
+                    if not finalized:  # when finalized, it's ok if trainers are no longer alive
+                        for process_type in ["train", "valid"]:  # self.processes
+                            for it, process in enumerate(self.processes[process_type]):
+                                assert process.is_alive(), "Process {} {} dead!".format(process_type, it)
                     continue
                 if package[0] == "train_package":
                     collected.append(package)
@@ -416,7 +424,26 @@ class OnPolicyRunner(object):
                     if finalized and self.queues["checkpoints"].empty():  # assume queue is actually empty after trainer finished and no checkpoints in queue
                         break
                 elif package[0] == "test_package":
-                    pass
+                    assert package[2] in test_steps, "unexpected test package for {} steps".format(package[2])
+                    if package[2] == test_steps[-1]:
+                        self.process_eval_package(log_writer, package)
+                        test_steps.pop()
+                        if len(test_steps) == 0:
+                            finalized = True
+                            time.sleep(2)  # give some time for testers to terminate after consuming the kill pill
+                            break
+                        if len(collected) > 0:
+                            collected = sorted(collected, key=lambda x: x[2], reverse=True)
+                            processed = []
+                            while collected[-1][2] == test_steps[-1]:
+                                self.process_eval_package(log_writer, package)
+                                processed.append(test_steps.pop())
+                                if len(test_steps) == 0:
+                                    break
+                            LOGGER.info("Processed metrics for steps {}".format(processed))
+                    else:
+                        collected.append(package)
+                        LOGGER.info("Collected metrics for step {}".format(package[2]))
                 elif package[0] == "training_stopped":
                     if package[1] == 0:
                         finalized = True
@@ -436,133 +463,35 @@ class OnPolicyRunner(object):
                 log_writer.close()
             self.close()
 
-    def start_test(self,
-                   test_date: Optional[str] = None,
-                   checkpoint: Optional[str] = None,
-                   skip_checkpoints: int = 0,
-                   ):
-        pass
+    def get_checkpoint_files(
+        self,
+        experiment_date: str,
+        checkpoint_file_name: Optional[str] = None,
+        skip_checkpoints: int = 0,
+    ):
+        if checkpoint_file_name is not None:
+            return [checkpoint_file_name]
+        files = glob.glob(
+            os.path.join(self.output_dir, "checkpoints", experiment_date, "exp_*.pt")
+        )
+        files = sorted(files)
+        return (
+            files[:: skip_checkpoints + 1]
+            + (
+                [files[-1]]
+                if skip_checkpoints > 0 and len(files) % (skip_checkpoints + 1) != 1
+                else []
+            )
+            if len(files) > 0
+            else files
+        )
 
-    # # TODO
-    # def start_test(self,
-    #                test_date: Optional[str] = None,
-    #                checkpoint: Optional[str] = None,
-    #                skip_checkpoints: int = 0,
-    #                ):
-    #     assert self.mode == "test", "run_test only to be called from a test instance"
-    #
-    #     test_start_time_str = time.strftime(
-    #         "%Y-%m-%d_%H-%M-%S", time.localtime(time.time())
-    #     )
-    #
-    #     self.local_start_time_str = experiment_date
-    #
-    #     checkpoints = self.get_checkpoint_files(
-    #         experiment_date, checkpoint_file_name, skip_checkpoints
-    #     )
-    #
-    #     suffix = "__test_{}".format(test_start_time_str)
-    #     self.log_writer = SummaryWriter(
-    #         log_dir=self.log_writer_path, filename_suffix=suffix,
-    #     )
-    #
-    #     os.makedirs(self.metric_path, exist_ok=True)
-    #     fname = os.path.join(self.metric_path, "metrics" + suffix + ".json")
-    #
-    #     LOGGER.info("Saving metrics in {}".format(fname))
-    #
-    #     all_results = []
-    #     for it, checkpoint_file_name in enumerate(checkpoints):
-    #         step = self.step_from_checkpoint(checkpoint_file_name)
-    #         LOGGER.info("{}/{} {} steps".format(it + 1, len(checkpoints), step,))
-    #
-    #         scalars, render, samples = self.run_eval(
-    #             checkpoint_file_name, rollout_steps
-    #         )
-    #
-    #         self.vector_tasks.metrics_out_queue.put(("test_metrics", (scalars, render)))
-    #
-    #         results = {scalar: scalars[scalar][0] for scalar in scalars}
-    #         results.update({"training_steps": step, "tasks": samples})
-    #         all_results.append(results)
-    #
-    #         with open(fname, "w") as f:
-    #             json.dump(all_results, f, indent=4)
-    #
-    #         self.log(count=1)
-    #
-    #         with open(fname, "w") as f:
-    #             json.dump(all_results, f, indent=4)
-    #
-    #     LOGGER.info("Metrics saved in {}".format(fname))
-
-
-    # @property
-    # def metric_path(self) -> str:
-    #     return os.path.join(
-    #         self.output_dir, "metrics", self.experiment_name, self.local_start_time_str
-    #     )
-
-    # def get_checkpoint_path(self, checkpoint_file_name: str) -> str:
-    #     checkpoint_start_time = [
-    #         s for s in checkpoint_file_name.split("__") if "time_" in s
-    #     ][0].replace("time_", "")
-    #
-    #     expected_path = os.path.join(
-    #         self.output_dir, "checkpoints", checkpoint_start_time, checkpoint_file_name
-    #     )
-    #     if os.path.exists(expected_path):
-    #         return expected_path
-    #     else:
-    #         print(
-    #             (
-    #                 "Could not find checkpoint with file name {}\n"
-    #                 "under expected path {}.\n"
-    #                 "Attempting to find the checkpoint elsewhere under the working directory.\n"
-    #             ).format(checkpoint_file_name, expected_path)
-    #         )
-    #
-    #         ckpts = glob.glob("./**/{}".format(checkpoint_file_name), recursive=True)
-    #
-    #         if len(ckpts) == 0:
-    #             raise RuntimeError(
-    #                 "Could not find {} anywhere"
-    #                 " the working directory.".format(checkpoint_file_name)
-    #             )
-    #         elif len(ckpts) > 1:
-    #             raise RuntimeError("Found too many checkpoint paths {}.".format(ckpts))
-    #         else:
-    #             return ckpts[0]
-
-    # def get_checkpoint_files(
-    #     self,
-    #     experiment_date: str,
-    #     checkpoint_file_name: Optional[str] = None,
-    #     skip_checkpoints: int = 0,
-    # ):
-    #     if checkpoint_file_name is not None:
-    #         return [checkpoint_file_name]
-    #     files = glob.glob(
-    #         os.path.join(self.output_dir, "checkpoints", experiment_date, "exp_*.pt")
-    #     )
-    #     files = sorted(files)
-    #     return (
-    #         files[:: skip_checkpoints + 1]
-    #         + (
-    #             [files[-1]]
-    #             if skip_checkpoints > 0 and len(files) % (skip_checkpoints + 1) != 1
-    #             else []
-    #         )
-    #         if len(files) > 0
-    #         else files
-    #     )
-
-    # def step_from_checkpoint(self, name):
-    #     parts = name.split("__")
-    #     for part in parts:
-    #         if "steps_" in part:
-    #             return int(part.split("_")[-1])
-    #     return -1
+    def step_from_checkpoint(self, name):
+        parts = name.split("__")
+        for part in parts:
+            if "steps_" in part:
+                return int(part.split("_")[-1])
+        return -1
 
     def close(self, verbose=True):
         if self._is_closed:
