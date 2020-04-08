@@ -390,7 +390,7 @@ class OnPolicyRunner(object):
             collected = []
             while True:
                 try:
-                    package = self.queues["results"].get(timeout=1)  # TODO wait for 10 seconds, then check all workers are alive
+                    package = self.queues["results"].get(timeout=10)  # TODO wait for 10 seconds, then check all workers are alive
                 except queue.Empty:
                     for process_type in self.processes:
                         for it, process in enumerate(self.processes[process_type]):
