@@ -255,7 +255,7 @@ class OnPolicyRLEngine(object):
             fn(
                 process_ind=process_offset + it,
                 total_processes=total_processes,
-                devices=[self.device] if self.is_distributed else devices,
+                devices=[self.device] if self.is_distributed or self.mode == "test" else devices,
                 seeds=seeds,
             )
             for it in range(self.num_samplers)
