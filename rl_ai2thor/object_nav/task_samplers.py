@@ -178,8 +178,6 @@ class ObjectNavTaskSampler(TaskSampler):
 
         task_info["start_pose"] = pose
 
-        task_info["actions"] = []
-
         self._last_sampled_task = ObjectNavTask(
             env=self.env,
             sensors=self.sensors,

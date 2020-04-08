@@ -69,7 +69,7 @@ class ObjectNavHabitatDepthDeterministicResNet50GRUPPOExperimentConfig(
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return ObjectNavResNetActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            action_space=gym.spaces.Discrete(len(ObjectNavTask.class_action_names())),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             goal_sensor_uuid="target_object_id",
             hidden_size=512,

@@ -33,6 +33,9 @@ setuptools = "*"
 setproctitle = "*"
 moviepy = "*"
 filelock = "*"
+pandas = "*"
+seaborn = "*"
+statsmodels = "*"
 
 [requires]
 python_version = "3.6"

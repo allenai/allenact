@@ -1,11 +1,10 @@
 import abc
 
 import torch
-import torch.nn as nn
+from torch import nn as nn
 from torch.distributions.utils import lazy_property
 
 from utils.model_utils import init_linear_layer
-from models.basic_models import AddBias
 
 """
 Modify standard PyTorch distributions so they are compatible with this code.
@@ -118,3 +117,28 @@ class Bernoulli(nn.Module):
     def forward(self, x):
         x = self.linear(x)
         return FixedBernoulli(logits=x)
+
+
+class AddBias(nn.Module):
+    """Adding bias parameters to input values."""
+
+    def __init__(self, bias: torch.FloatTensor):
+        """Initializer.
+
+        # Parameters
+
+        bias : data to use as the initial values of the bias.
+        """
+        super(AddBias, self).__init__()
+        self._bias = nn.Parameter(bias.unsqueeze(1))
+
+    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        """Adds the stored bias parameters to `x`."""
+        assert x.dim() in [2, 4]
+
+        if x.dim() == 2:
+            bias = self._bias.t().view(1, -1)
+        else:
+            bias = self._bias.t().view(1, -1, 1, 1)
+
+        return x + bias

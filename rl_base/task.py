@@ -106,7 +106,7 @@ class Task(Generic[EnvType]):
         """Take an action in the environment.
 
         Takes the action in the environment corresponding to
-        `self.action_names()[action]` and returns
+        `self.class_action_names()[action]` and returns
         observations (& rewards and any additional information)
         corresponding to the agent's new state. Note that this function
         should not be overwritten without care (instead
@@ -123,7 +123,6 @@ class Task(Generic[EnvType]):
         """
         assert not self.is_done()
         sr = self._step(action=action)
-        self.task_info["actions"].append(self.action_names()[action])
         self._total_reward += float(sr.reward)
         self._increment_num_steps_taken()
         return sr
@@ -133,7 +132,7 @@ class Task(Generic[EnvType]):
         """Helper function called by `step` to take a step in the environment.
 
         Takes the action in the environment corresponding to
-        `self.action_names()[action]` and returns
+        `self.class_action_names()[action]` and returns
         observations (& rewards and any additional information)
         corresponding to the agent's new state. This function is called
         by the (public) `step` function and is what should be implemented
@@ -174,25 +173,37 @@ class Task(Generic[EnvType]):
 
     @classmethod
     @abstractmethod
-    def action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
         """A tuple of action names.
+
+        # Parameters
+
+        kwargs : Keyword arguments.
 
         # Returns
 
         Tuple of (ordered) action names so that taking action
-            running `task.step(i)` corresponds to taking action task.action_names()[i].
+            running `task.step(i)` corresponds to taking action task.class_action_names()[i].
         """
         raise NotImplementedError()
+
+    def action_names(self) -> Tuple[str, ...]:
+        """Action names of the Task instance.
+
+        This method should be overwritten if `class_action_names`
+        requires key word arguments to determine the number of actions.
+        """
+        return self.class_action_names()
 
     @property
     def total_actions(self) -> int:
         """Total number of actions available to an agent in this Task."""
-        return len(self.action_names())
+        return len(self.class_action_names())
 
     def index_to_action(self, index: int) -> str:
         """Returns the action name correspond to `index`."""
         assert 0 <= index < self.total_actions
-        return self.action_names()[index]
+        return self.class_action_names()[index]
 
     @abstractmethod
     def close(self) -> None:
@@ -217,7 +228,7 @@ class Task(Generic[EnvType]):
             "task_info": self.task_info,
         }
 
-    def query_expert(self) -> Tuple[Any, bool]:
+    def query_expert(self, **kwargs) -> Tuple[Any, bool]:
         """Query the expert policy for this task.
 
         # Returns

@@ -10,8 +10,8 @@ import torchvision.models as models
 from torchvision import transforms
 
 from rl_habitat.habitat_environment import HabitatEnvironment
-from rl_habitat.habitat_tasks import HabitatTask, PointNavTask
 from rl_base.sensor import Sensor
+from rl_habitat.habitat_tasks import PointNavTask, HabitatTask  # type: ignore
 from utils.tensor_utils import ScaleBothSides
 
 
@@ -59,7 +59,7 @@ class RGBSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def _get_observation_space(self) -> gym.spaces.Box:
         return self.observation_space
 
-    def get_observation(
+    def get_observation(  # type: ignore
         self,
         env: HabitatEnvironment,
         task: Optional[HabitatTask],
@@ -136,7 +136,7 @@ class RGBResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def _get_observation_space(self) -> gym.spaces.Box:
         return self.observation_space
 
-    def get_observation(
+    def get_observation(  # type: ignore
         self,
         env: HabitatEnvironment,
         task: Optional[HabitatTask],
@@ -209,7 +209,7 @@ class DepthSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def _get_observation_space(self) -> gym.spaces.Box:
         return self.observation_space
 
-    def get_observation(
+    def get_observation(  # type: ignore
         self,
         env: HabitatEnvironment,
         task: Optional[HabitatTask],
@@ -288,7 +288,7 @@ class DepthResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def _get_observation_space(self) -> gym.spaces.Box:
         return self.observation_space
 
-    def get_observation(
+    def get_observation(  # type: ignore
         self,
         env: HabitatEnvironment,
         task: Optional[HabitatTask],

@@ -1,13 +1,17 @@
 """Basic building block torch networks that can be used across a variety of
 tasks."""
-
+import typing
 from typing import Sequence, Tuple, Dict, Union, cast, List
 
+import gym
 import numpy as np
 import torch
-from torch import nn as nn
+from torch import nn
 from gym.spaces.dict import Dict as SpaceDict
 
+from onpolicy_sync.policy import ActorCriticModel, DistributionType
+from rl_base.common import ActorCriticOutput
+from rl_base.distributions import CategoricalDistr
 from utils.model_utils import make_cnn
 
 
@@ -432,26 +436,53 @@ class RNNStateEncoder(nn.Module):
             return self.seq_forward(x, hidden_states, masks)
 
 
-class AddBias(nn.Module):
-    """Adding bias parameters to input values."""
+class LinearActorCritic(ActorCriticModel[CategoricalDistr]):
+    def __init__(
+        self,
+        input_key: str,
+        action_space: gym.spaces.Discrete,
+        observation_space: SpaceDict,
+    ):
+        super().__init__(action_space=action_space, observation_space=observation_space)
 
-    def __init__(self, bias: torch.FloatTensor):
-        """Initializer.
+        assert (
+            input_key in observation_space.spaces
+        ), "LinearActorCritic expects only a single observational input."
+        self.key = input_key
 
-        # Parameters
+        box_space: gym.spaces.Box = observation_space[self.key]
+        assert isinstance(box_space, gym.spaces.Box), (
+            "LinearActorCritic requires that"
+            "observation space corresponding to the input key is a Box space."
+        )
+        assert len(box_space.shape) == 1
+        self.in_dim = box_space.shape[0]
 
-        bias : data to use as the initial values of the bias.
-        """
-        super(AddBias, self).__init__()
-        self._bias = nn.Parameter(bias.unsqueeze(1))
+        self.linear = nn.Linear(self.in_dim, action_space.n + 1)
 
-    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
-        """Adds the stored bias parameters to `x`."""
-        assert x.dim() in [2, 4]
+        nn.init.orthogonal_(self.linear.weight)
+        nn.init.constant_(self.linear.bias, 0)
 
-        if x.dim() == 2:
-            bias = self._bias.t().view(1, -1)
-        else:
-            bias = self._bias.t().view(1, -1, 1, 1)
+    @property
+    def recurrent_hidden_state_size(self) -> int:
+        return 0
 
-        return x + bias
+    def forward(  # type: ignore
+        self,
+        observations: Dict[str, torch.FloatTensor],
+        recurrent_hidden_states: torch.FloatTensor,
+        prev_actions: torch.LongTensor,
+        masks: torch.FloatTensor,
+        **kwargs
+    ) -> typing.Tuple[ActorCriticOutput[DistributionType], typing.Any]:
+        out = self.linear(observations[self.key])
+
+        # noinspection PyArgumentList
+        return (
+            ActorCriticOutput(
+                distributions=CategoricalDistr(logits=out[:, :-1]),
+                values=out[:, -1:],
+                extras={},
+            ),
+            None,
+        )

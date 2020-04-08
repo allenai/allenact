@@ -104,7 +104,10 @@ class RolloutStorage:
                 )
             self.observations[sensor][self.step + 1].copy_(observations[sensor])
 
-        self.recurrent_hidden_states[self.step + 1].copy_(recurrent_hidden_states)
+        if recurrent_hidden_states is not None:
+            self.recurrent_hidden_states[self.step + 1].copy_(recurrent_hidden_states)
+        else:
+            assert self.recurrent_hidden_states.shape[1] == 0
         self.actions[self.step].copy_(actions)
         self.prev_actions[self.step + 1].copy_(actions)
         self.action_log_probs[self.step].copy_(action_log_probs)
@@ -115,6 +118,8 @@ class RolloutStorage:
         self.step = (self.step + 1) % self.num_steps
 
     def reshape(self, keep_list):
+        if self.actions.shape[1] == len(keep_list):
+            return
         for sensor in self.observations:
             self.observations[sensor] = self.observations[sensor][:, keep_list]
         self.recurrent_hidden_states = self.recurrent_hidden_states[:, :, keep_list]

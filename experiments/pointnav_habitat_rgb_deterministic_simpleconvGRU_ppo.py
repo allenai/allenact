@@ -46,7 +46,7 @@ class PointNavHabitatRGBeterministicSimpleConvGRUPPOExperimentConfig(
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return PointNavActorCriticSimpleConvLSTM(
-            action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
+            action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,

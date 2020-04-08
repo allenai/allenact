@@ -8,7 +8,9 @@ from torchvision import transforms
 from rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
 from rl_ai2thor.object_nav.tasks import ObjectNavTask
 from rl_base.sensor import Sensor
+from rl_base.task import Task
 from utils.tensor_utils import ScaleBothSides
+
 
 class RGBSensorThor(Sensor[AI2ThorEnvironment, Task[AI2ThorEnvironment]]):
     """Sensor for RGB images in AI2-THOR.

@@ -107,7 +107,11 @@ class A2C(A2CACKTR):
 
 
 class ACKTR(A2CACKTR):
-    """ACKTR Loss. This code is not supported as it currently lacks an implementation for recurrent models."""
+    """ACKTR Loss.
+
+    This code is not supported as it currently lacks an implementation
+    for recurrent models.
+    """
 
     def __init__(self, value_loss_coef, entropy_coef, *args, **kwargs):
         super().__init__(
