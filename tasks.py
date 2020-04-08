@@ -193,3 +193,58 @@ def reachable_pos(ctx, scene="FloorPlan_Train2_3", editor_mode=False, local_buil
     #     task = sampler.next_task()
     #     # LOGGER.info("{}".format(task.task_info))
     #     # LOGGER.info("{}".format(task.env.dist_to_object(task.task_info['object_type'])))
+
+@task
+def dataset_stats(ctx, in_dataset="rl_robothor/data/val.json", out_dataset="rl_robothor/data/ordered_val.json"):
+    import json
+    import numpy as np
+
+    from utils.system import init_logging, LOGGER
+
+    init_logging()
+
+    with open(in_dataset, "r") as f:
+        orig = json.load(f)
+
+    nsum = 0
+    for object in set([ep["object_type"] for ep in orig]):
+        message = [object + ":"]
+        object_eps = [ep for ep in orig if ep["object_type"] == object]
+        all_scenes = set([ep["scene"] for ep in object_eps])
+        message.append(str(len(all_scenes)))
+        message.append("scenes")
+        for level in ["easy", "medium", "hard"]:
+            neps = len([1 for ep in object_eps if ep["difficulty"] == level])
+            message.append(str(neps))
+            message.append(level)
+            nsum += neps
+        LOGGER.info(" ".join(message))
+        del object_eps, all_scenes
+    assert nsum == len(orig), "miscounted episodes: {} vs {}".format(nsum, len(orig))
+    LOGGER.info("{} episodes in {}".format(nsum, in_dataset))
+
+    for level in ["easy", "medium", "hard"]:
+        message = [level + ":"]
+
+        level_eps = [ep for ep in orig if ep["difficulty"] == level]
+
+        message.append("episodes")
+        message.append(str(len(level_eps)))
+
+        message.append("mean_shortest_path_length")
+        message.append(str(np.mean([ep["shortest_path_length"] for ep in level_eps])))
+
+        message.append("mean_num_path_corners")
+        message.append(str(np.mean([len(ep["shortest_path"]) for ep in level_eps])))
+
+        LOGGER.info(" ".join(message))
+        del message, level_eps
+    obj_types = set([ep["object_type"] for ep in orig])
+    LOGGER.info("{} object types: {}".format(len(obj_types), obj_types))
+
+    # ordered = sorted(orig, key=lambda x: x["scene"])
+    # LOGGER.info("{} episodes in {}".format(nsum, out_dataset))
+    # with open(out_dataset, "w") as f:
+    #     json.dump(ordered, f, indent=4, sort_keys=True)
+
+    LOGGER.info("Done")
