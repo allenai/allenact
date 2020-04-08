@@ -432,7 +432,7 @@ class OnPolicyRLEngine(object):
                 if count < 0:
                     metric = self.vector_tasks.metrics_out_queue.get_nowait()
                 else:
-                    metric = self.vector_tasks.metrics_out_queue.get(timeout=1)
+                    metric = self.vector_tasks.metrics_out_queue.get(timeout=10)
                 if (
                         isinstance(metric, tuple) and metric[0] == "test_metrics"
                 ):  # queue reused for test

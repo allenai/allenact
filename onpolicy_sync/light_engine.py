@@ -294,7 +294,7 @@ class OnPolicyRLEngine(object):
                 if count == -1:
                     task_output = self.vector_tasks.metrics_out_queue.get_nowait()
                 else:
-                    task_output = self.vector_tasks.metrics_out_queue.get(timeout=1)
+                    task_output = self.vector_tasks.metrics_out_queue.get(timeout=10)
                     count -= 1
                 task_outputs.append(task_output)
             except queue.Empty:
