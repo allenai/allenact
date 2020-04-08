@@ -117,13 +117,13 @@ class OnPolicyRunner(object):
         init_logging()
 
     @staticmethod
-    def start_train_loop(id: int=0, checkpoint: Optional[str]=None, *engine_args, **engine_kwargs):
+    def start_train_loop(id: int=0, checkpoint: Optional[str]=None, restart: bool=False, *engine_args, **engine_kwargs):
         OnPolicyRunner.init_process("Train", id)
         engine_kwargs["mode"] = "train"
         engine_kwargs["worker_id"] = id
         LOGGER.info("train {} args {}".format(id, engine_kwargs))
         trainer = OnPolicyTrainer(*engine_args, **engine_kwargs)
-        trainer.run_pipeline(checkpoint)
+        trainer.run_pipeline(checkpoint, restart)
 
     @staticmethod
     def start_valid_loop(id: int=0, *engine_args, **engine_kwargs):
@@ -143,7 +143,7 @@ class OnPolicyRunner(object):
         test = OnPolicyInference(*engine_args, **engine_kwargs)
         test.process_checkpoints()  # gets checkpoints via queue
 
-    def start_train(self, checkpoint: Optional[str] = None):
+    def start_train(self, checkpoint: Optional[str] = None, restart: bool=False):
         self.save_config_files()
 
         devices = self.worker_devices("train")
@@ -160,7 +160,7 @@ class OnPolicyRunner(object):
         for tit in range(num_trainers):
             train: mp.Process = self.mp_ctx.Process(
                 target=self.start_train_loop,
-                args=(tit, checkpoint),
+                args=(tit, checkpoint, restart),
                 kwargs=dict(
                     experiment_name=self.experiment_name,
                     config=self.config,

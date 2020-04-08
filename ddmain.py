@@ -3,7 +3,6 @@
 import argparse
 import importlib
 import inspect
-import logging
 import os
 import sys
 from typing import Dict, Tuple
@@ -64,6 +63,16 @@ def _get_args():
         type=str,
         help="optional checkpoint file name to resume training",
     )
+    parser.add_argument(
+        "-r",
+        "--restart",
+        dest="restart",
+        action="store_true",
+        required=False,
+        help="for training, if checkpoint is specified, use it as model initialization and "
+             "restart training with current config",
+    )
+    parser.set_defaults(restart=False)
 
     parser.add_argument(
         "-d",
@@ -173,7 +182,7 @@ def main():
             mode="train",
             deterministic_cudnn=args.deterministic_cudnn,
             extra_tag=args.extra_tag,
-        ).start_train(args.checkpoint)
+        ).start_train(args.checkpoint, args.restart)
     else:
         OnPolicyRunner(
             config=cfg,

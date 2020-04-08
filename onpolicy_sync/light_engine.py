@@ -616,22 +616,27 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         torch.save(save_dict, model_path)
         return model_path
 
-    def checkpoint_load(self, ckpt: Union[str, Dict[str, Any]]) -> Dict[
+    def checkpoint_load(self, ckpt: Union[str, Dict[str, Any]], restart: bool=False) -> Dict[
         str, Union[Dict[str, Any], torch.Tensor, float, int, str, typing.List]
     ]:
+        if restart:
+            step_count, total_steps = self.step_count, self.total_steps
+
         ckpt = super().checkpoint_load(ckpt)  # loads model, total_steps, step_count
 
-        self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])  # type: ignore
-        self.tstate.total_updates = ckpt["total_updates"]  # type: ignore
-        self.tstate.pipeline_stage = ckpt["pipeline_stage"]  # type: ignore
-        self.tstate.rollout_count = ckpt["rollout_count"]  # type: ignore
-        self.tstate.backprop_count = ckpt["backprop_count"]  # type: ignore
-        self.seed = typing.cast(int, ckpt["trainer_seed"])
+        if not restart:
+            self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])  # type: ignore
+            self.tstate.total_updates = ckpt["total_updates"]  # type: ignore
+            self.tstate.pipeline_stage = ckpt["pipeline_stage"]  # type: ignore
+            self.tstate.rollout_count = ckpt["rollout_count"]  # type: ignore
+            self.tstate.backprop_count = ckpt["backprop_count"]  # type: ignore
+            self.seed = typing.cast(int, ckpt["trainer_seed"])
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
+        else:
+            self.step_count, self.total_steps = step_count, total_steps
 
         self.deterministic_seeds()
-
-        if self.lr_scheduler is not None:
-            self.lr_scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
 
         return ckpt
 
@@ -970,13 +975,13 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.vector_tasks.next_task(force_advance_scene=True)
                 self.initialize_rollouts(rollouts)
 
-    def run_pipeline(self, checkpoint_file_name: Optional[str] = None):
+    def run_pipeline(self, checkpoint_file_name: Optional[str] = None, restart: bool=False):
         assert self.mode == "train", "run_pipeline only to be called from a train instance"
 
         finalized = False
         try:
             if checkpoint_file_name is not None:
-                self.checkpoint_load(checkpoint_file_name)
+                self.checkpoint_load(checkpoint_file_name, restart)
 
             for stage_num, stage in self.training_pipeline.iterator_starting_at(self.tstate.pipeline_stage):
                 assert stage_num == self.tstate.pipeline_stage, "stage_num {} differs from pipeline_stage {}".format(
