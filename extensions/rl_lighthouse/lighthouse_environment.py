@@ -3,11 +3,11 @@ import curses
 import itertools
 import random
 import time
+import typing
 from functools import lru_cache
 from typing import Optional, Tuple, Any, List, Union
 
 import numpy as np
-import typing
 
 EMPTY = 0
 GOAL = 1

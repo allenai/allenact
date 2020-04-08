@@ -5,11 +5,11 @@ from typing import List, Dict, Any, Optional, Tuple, Union
 import gym
 import numpy as np
 
+from extensions.rl_lighthouse.lighthouse_environment import LightHouseEnvironment
+from extensions.rl_lighthouse.lighthouse_sensors import get_corner_observation
 from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor
 from rl_base.task import Task, TaskSampler
-from rl_lighthouse.lighthouse_environment import LightHouseEnvironment
-from rl_lighthouse.lighthouse_sensors import get_corner_observation
 from utils.experiment_utils import set_seed
 
 

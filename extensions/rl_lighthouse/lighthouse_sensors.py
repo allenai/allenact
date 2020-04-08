@@ -7,9 +7,9 @@ import numpy as np
 import pandas as pd
 import patsy
 
+from extensions.rl_lighthouse.lighthouse_environment import LightHouseEnvironment
 from rl_base.sensor import Sensor
 from rl_base.task import Task
-from rl_lighthouse.lighthouse_environment import LightHouseEnvironment
 
 
 def get_corner_observation(
