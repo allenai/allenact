@@ -31,8 +31,8 @@ def _get_args():
         default="",
         required=False,
         help="Add an extra tag to the experiment when trying out new ideas (will be used"
-        "as a subdirectory of the tensorboard path so you will be able to"
-        "search tensorboard logs using this extra tag).",
+             "as a suffix of the experiment name). It also has to be provided when testing on"
+             "the trained model.",
     )
 
     parser.add_argument(
@@ -61,7 +61,7 @@ def _get_args():
         required=False,
         default=None,
         type=str,
-        help="optional checkpoint file name to resume training",
+        help="optional checkpoint file name to resume training or test",
     )
     parser.add_argument(
         "-r",
@@ -87,7 +87,8 @@ def _get_args():
     parser.add_argument(
         "-t",
         "--test_date",
-        default="",
+        default=None,
+        type=str,
         required=False,
         help="tests the experiment run on specified date (formatted as %%Y-%%m-%%d_%%H-%%M-%%S), assuming it was "
         "previously trained. If no checkpoint is specified, it will run on all checkpoints enabled by "
