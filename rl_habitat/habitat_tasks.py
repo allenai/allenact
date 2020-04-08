@@ -195,8 +195,12 @@ class ObjectNavTask(Task[HabitatTask]):
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
-        self.last_geodesic_distance = env.get_geodesic_distance() # self.env.get_current_episode().info['geodesic_distance']
+
+        # self.last_geodesic_distance = env.get_geodesic_distance() # self.env.get_current_episode().info['geodesic_distance']
         # self.last_distance_to_goal = self.env.get_current_episode().info['geodesic_distance'] #self.env.env.get_metrics()["distance_to_goal"]
+
+        self.last_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
+
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
@@ -246,9 +250,10 @@ class ObjectNavTask(Task[HabitatTask]):
     def judge(self) -> float:
         reward = -0.01
 
-        last_geodesic_distance = self.env.last_geodesic_distance
-        new_geodesic_distance = self.env.get_geodesic_distance()
-        delta_distance_reward = last_geodesic_distance - new_geodesic_distance
+        # last_geodesic_distance = self.env.last_geodesic_distance
+        # new_geodesic_distance = self.env.get_geodesic_distance()
+        new_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
+        delta_distance_reward = self.last_geodesic_distance - new_geodesic_distance
 
         reward += delta_distance_reward
 
@@ -256,6 +261,7 @@ class ObjectNavTask(Task[HabitatTask]):
             reward += 10.0 if self._success else 0.0
 
         self._rewards.append(float(reward))
+        self.last_geodesic_distance = new_geodesic_distance
 
         return float(reward)
 
