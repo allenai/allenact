@@ -59,7 +59,7 @@ class ObjectNavHabitatRGBDeterministicTrainResNet50GRUDDPPOExperimentConfig(Obje
     def create_model(cls, **kwargs) -> nn.Module:
         return ObjectNavActorCriticTrainResNet50GRU(
             action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
-            observation_space=SensorSuite(cls.SENSORS).observation_spaces,
+            observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="target_object_id",
             hidden_size=512,
             object_type_embedding_dim=32,
