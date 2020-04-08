@@ -237,7 +237,7 @@ class ObjectNavRoboThorRGBDDPPOCVPRExperimentConfig(ExperimentConfig):
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
-                gpu_ids = [0, 1, 2, 3, 4, 5, 6, 7]  # test on all available GPUs
+                gpu_ids = [0, 1, 2, 3, 4, 5, 6]  # TODO vs4 only has 7 gpus
             render_video = False
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
