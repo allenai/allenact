@@ -182,7 +182,7 @@ class OnPolicyRunner(object):
         distributed_barrier = None
         if nworkers > 1:
             distributed_port = find_free_port()
-            distributed_barrier = self.mp_ctx.Barrier(nworkers, timeout=100)
+            distributed_barrier = self.mp_ctx.Barrier(nworkers)
 
         for wit in range(nworkers):
             train: mp.Process = self.mp_ctx.Process(
