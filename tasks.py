@@ -242,6 +242,21 @@ def dataset_stats(ctx, in_dataset="rl_robothor/data/val.json", out_dataset="rl_r
     obj_types = set([ep["object_type"] for ep in orig])
     LOGGER.info("{} object types: {}".format(len(obj_types), obj_types))
 
+    all_scenes = sorted(set([ep["scene"] for ep in orig]))
+    all_objects = sorted(set([ep["object_type"] for ep in orig]))
+    nsum = 0
+    for scene in all_scenes:
+        scene_eps = [ep for ep in orig if ep["scene"] == scene]
+        for level in ["easy", "medium", "hard"]:
+            level_eps = [ep for ep in scene_eps if ep["difficulty"] == level]
+            message = [scene, level]
+            for object in all_objects:
+                nobj = len([1 for ep in level_eps if ep["object_type"] == object])
+                message += [str(nobj), object]
+                nsum += nobj
+            print(" ".join(message))
+    assert nsum == len(orig), "miscounted episodes: {} vs {}".format(nsum, len(orig))
+
     # ordered = sorted(orig, key=lambda x: x["scene"])
     # LOGGER.info("{} episodes in {}".format(nsum, out_dataset))
     # with open(out_dataset, "w") as f:

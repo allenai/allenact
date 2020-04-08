@@ -46,6 +46,8 @@ class ObjectNavTaskSampler(TaskSampler):
         self.scenes_is_dataset = (dataset_first >= 0) or (dataset_last >= 0)
 
         if not self.scenes_is_dataset:
+            assert isinstance(self.scenes, List),\
+                "When not using a dataset, scenes ({}) must be a list".format(self.scenes)
             self.scene_counter: Optional[int] = None
             self.scene_order: Optional[List[str]] = None
             self.scene_id: Optional[int] = None
@@ -55,6 +57,8 @@ class ObjectNavTaskSampler(TaskSampler):
             self.max_tasks: Optional[int] = None
             self.reset_tasks = max_tasks
         else:
+            assert isinstance(self.scenes, str), \
+                "When using a dataset, scenes ({}) must be a json file name string".format(self.scenes)
             with open(self.scenes, "r") as f:
                 self.dataset_episodes = json.load(f)
                 LOGGER.info("Loaded {} object nav episodes".format(len(self.dataset_episodes)))
