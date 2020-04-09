@@ -897,20 +897,16 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
             if self.is_distributed:
                 # Mark that a worker is done collecting experience
-                before_ndone = int(self.num_workers_done.get("done"))
                 self.num_workers_done.add("done", 1)
                 self.num_workers_steps.add("steps", self.step_count - self.tstate.former_steps)
 
                 # Ensure all workers are done before resetting num_workers_steps
                 idx = self.distributed_barrier.wait()  # here we synchronize
-                after_ndone = int(self.num_workers_done.get("done"))
-                print("# workers done before {} ---- # wo0rkers done after {}".format(before_ndone, after_ndone))
+                if idx == 0:
+                    self.distributed_barrier.reset()
 
                 ndone = int(self.num_workers_done.get("done"))
                 assert ndone == self.num_workers, "# workers done {} {} # workers".format(ndone, self.num_workers)
-
-                if idx == 0:
-                    self.distributed_barrier.reset()
 
                 # get the actual step_count
                 new_worker_steps = self.step_count - self.tstate.former_steps
