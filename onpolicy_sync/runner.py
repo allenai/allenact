@@ -520,7 +520,7 @@ class OnPolicyRunner(object):
         parts = name.split("__")
         for part in parts:
             if "steps_" in part:
-                return int(part.split("_")[-1])
+                return int(part.split("_")[-1].split(".")[0])
         return -1
 
     def close(self, verbose=True):
