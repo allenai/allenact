@@ -8,6 +8,7 @@ from rl_habitat.habitat_tasks import ObjectNavTask
 from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetObjectSensorHabitat
 from rl_habitat.habitat_utils import construct_env_configs
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
+from rl_base.preprocessor import ObservationSet
 from experiments.objectnav_habitat_base_ddppo import ObjectNavHabitatDDPPOBaseExperimentConfig
 
 
