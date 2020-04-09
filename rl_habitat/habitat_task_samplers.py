@@ -175,7 +175,6 @@ class ObjectNavTaskSampler(TaskSampler):
         return True
 
     def next_task(self, force_advance_scene=False) -> ObjectNavTask:
-        print("Max Tasks:", self.max_tasks)
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
 

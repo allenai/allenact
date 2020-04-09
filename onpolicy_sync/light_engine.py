@@ -337,6 +337,7 @@ class OnPolicyRLEngine(object):
             self.vector_tasks.pause_at(p)
 
         batch = batch_observations(running, device=self.device)
+        print("PAUSED:", paused)
 
         return len(paused), keep, batch
 
