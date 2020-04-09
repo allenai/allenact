@@ -872,21 +872,17 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_steps.set("steps", str(0))
 
             self.tstate.former_steps = self.step_count
-            try:
-                for step in range(self.tstate.steps_in_rollout):
-                    self.collect_rollout_step(rollouts)
-                    if self.is_distributed:
-                        # Preempt stragglers
-                        if (
-                            int(self.num_workers_done.get("done")) > self.distributed_preemption_threshold * self.num_workers
-                            and self.tstate.steps_in_rollout / 4 <= step < 0.95 * self.tstate.steps_in_rollout
-                        ):
-                            rollouts.narrow()
-                            LOGGER.debug("{} worker {} narrowed rollouts at step {} ({})".format(self.mode, self.worker_id, rollouts.step, step))
-                            break
-            except Exception:
-                LOGGER.error("Encountered Exception Inside Environment Rollout")
-                LOGGER.exception(traceback.format_exc())
+            for step in range(self.tstate.steps_in_rollout):
+                self.collect_rollout_step(rollouts)
+                if self.is_distributed:
+                    # Preempt stragglers
+                    if (
+                        int(self.num_workers_done.get("done")) > self.distributed_preemption_threshold * self.num_workers
+                        and self.tstate.steps_in_rollout / 4 <= step < 0.95 * self.tstate.steps_in_rollout
+                    ):
+                        rollouts.narrow()
+                        LOGGER.debug("{} worker {} narrowed rollouts at step {} ({})".format(self.mode, self.worker_id, rollouts.step, step))
+                        break
 
             with torch.no_grad():
                 actor_critic_output, _ = self.actor_critic(
@@ -898,7 +894,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
             if self.is_distributed:
                 # Mark that a worker is done collecting experience
+                before_ndone = int(self.num_workers_done.get("done"))
                 self.num_workers_done.add("done", 1)
+                after_ndone = int(self.num_workers_done.get("done"))
+                print("# workers done before {} ---- # wo0rkers done after {}".format(before_ndone, after_ndone))
                 self.num_workers_steps.add("steps", self.step_count - self.tstate.former_steps)
 
                 # Ensure all workers are done before resetting num_workers_steps
