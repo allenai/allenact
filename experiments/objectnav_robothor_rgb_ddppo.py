@@ -37,11 +37,13 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
         for furniture in range(5)
     ]
 
-    TEST_SCENES = [
-        "FloorPlan_test-dev%d_%d" % (wall + 1, furniture + 1)
-        for wall in range(2)
-        for furniture in range(2)
-    ]
+    # TEST_SCENES = [
+    #     "FloorPlan_test-dev%d_%d" % (wall + 1, furniture + 1)
+    #     for wall in range(2)
+    #     for furniture in range(2)
+    # ]
+    TEST_SCENES = "rl_robothor/data/val.json"
+    NUM_TEST_SCENES = 6116
 
     SCREEN_SIZE = 256
 
@@ -355,13 +357,20 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
             else:
                 gpu_ids = [0]
             render_video = False
+        # elif mode == "test":
+        #     nprocesses = 1
+        #     if not torch.cuda.is_available():
+        #         gpu_ids = []
+        #     else:
+        #         gpu_ids = [0]
+        #     render_video = True
         elif mode == "test":
-            nprocesses = 1
+            nprocesses = 8
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
-                gpu_ids = [0]
-            render_video = True
+                gpu_ids = [0, 1, 2, 3, 4, 5, 6, 7]  # TODO vs4 only has 7 gpus
+            render_video = False
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -372,7 +381,7 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
 
         observation_set = Builder(ObservationSet, kwargs=dict(
             source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
-        )) if mode == 'train' or nprocesses > 0 else None
+        )) if nprocesses > 0 else None
 
         return {
             "nprocesses": nprocesses,
@@ -506,6 +515,39 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
         )
         res["scene_period"] = self.VALIDATION_SAMPLES_PER_SCENE
         res["max_tasks"] = self.VALIDATION_SAMPLES_PER_SCENE * len(res["scenes"])
+        res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
+        res["env_args"]["x_display"] = (
+            ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
+        )
+        return res
+
+    def test_task_sampler_args(
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]] = None,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
+    ) -> Dict[str, Any]:
+        inds = self._partition_inds(self.NUM_TEST_SCENES, total_processes)
+        res = dict(
+            scenes=self.TEST_SCENES,  # special case: dataset file name (triggered by dataset_first, dataset_last >=0)
+            object_types=self.TARGET_TYPES,
+            max_steps=self.MAX_STEPS,
+            sensors=self.SENSORS,
+            action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            seed=seeds[process_ind] if seeds is not None else None,
+            deterministic_cudnn=deterministic_cudnn,
+            dataset_first=inds[process_ind],
+            dataset_last=inds[process_ind + 1] - 1,
+            rewards_config={
+                "step_penalty": -0.01,
+                "goal_success_reward": 10.0,
+                "failed_stop_reward": 0.0,
+                "shaping_weight": 1.0,  # applied to the decrease in distance to target
+            },
+        )
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
