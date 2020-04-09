@@ -337,7 +337,6 @@ class OnPolicyRLEngine(object):
             self.vector_tasks.pause_at(p)
 
         batch = batch_observations(running, device=self.device)
-        print("PAUSED:", paused)
 
         return len(paused), keep, batch
 
@@ -873,17 +872,21 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_steps.set("steps", str(0))
 
             self.tstate.former_steps = self.step_count
-            for step in range(self.tstate.steps_in_rollout):
-                self.collect_rollout_step(rollouts)
-                if self.is_distributed:
-                    # Preempt stragglers
-                    if (
-                        int(self.num_workers_done.get("done")) > self.distributed_preemption_threshold * self.num_workers
-                        and self.tstate.steps_in_rollout / 4 <= step < 0.95 * self.tstate.steps_in_rollout
-                    ):
-                        rollouts.narrow()
-                        LOGGER.debug("{} worker {} narrowed rollouts at step {} ({})".format(self.mode, self.worker_id, rollouts.step, step))
-                        break
+            try:
+                for step in range(self.tstate.steps_in_rollout):
+                    self.collect_rollout_step(rollouts)
+                    if self.is_distributed:
+                        # Preempt stragglers
+                        if (
+                            int(self.num_workers_done.get("done")) > self.distributed_preemption_threshold * self.num_workers
+                            and self.tstate.steps_in_rollout / 4 <= step < 0.95 * self.tstate.steps_in_rollout
+                        ):
+                            rollouts.narrow()
+                            LOGGER.debug("{} worker {} narrowed rollouts at step {} ({})".format(self.mode, self.worker_id, rollouts.step, step))
+                            break
+            except Exception:
+                LOGGER.error("Encountered Exception Inside Environment Rollout")
+                LOGGER.exception(traceback.format_exc())
 
             with torch.no_grad():
                 actor_critic_output, _ = self.actor_critic(
