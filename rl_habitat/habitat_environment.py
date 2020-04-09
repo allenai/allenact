@@ -95,10 +95,10 @@ class HabitatEnvironment(object):
 
     def reset(self):
         self._current_frame = self.env.reset()
-        # Set the target to a random goal from the provided list for this episode
-        self.goal_index = random.randint(0, len(self.get_current_episode().goals) - 1)
-        # Reset the last distance to target
-        self.get_geodesic_distance()
+        # # Set the target to a random goal from the provided list for this episode
+        # self.goal_index = random.randint(0, len(self.get_current_episode().goals) - 1)
+        # # Reset the last distance to target
+        # self.get_geodesic_distance()
 
     @property
     def last_action_success(self) -> bool:

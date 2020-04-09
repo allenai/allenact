@@ -174,10 +174,8 @@ class ObjectNavTaskSampler(TaskSampler):
         """
         return True
 
-    def next_task(self, force_advance_scene=False) -> PointNavTask:
-        print("IN TASK SAMPLER")
+    def next_task(self, force_advance_scene=False) -> ObjectNavTask:
         if self.max_tasks is not None and self.max_tasks <= 0:
-            print("RETURNING NONE")
             return None
 
         if self.env is not None:
@@ -205,7 +203,6 @@ class ObjectNavTaskSampler(TaskSampler):
         if self.max_tasks is not None:
             self.max_tasks -= 1
 
-        print("LAST SAMPLED TASK:", self._last_sampled_task)
         return self._last_sampled_task
 
     def reset(self):

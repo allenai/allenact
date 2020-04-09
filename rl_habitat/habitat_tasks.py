@@ -248,6 +248,7 @@ class ObjectNavTask(Task[HabitatTask]):
         return bool(self.env.env.get_metrics()['spl'])
 
     def judge(self) -> float:
+        print("JUDGING!")
         reward = -0.01
 
         # last_geodesic_distance = self.env.last_geodesic_distance
