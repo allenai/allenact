@@ -172,7 +172,10 @@ class OnPolicyRLEngine(object):
         if seed is None:
             return seed
         seed = (seed ^ (self.total_steps + self.step_count + 1)) % (2 ** 31 - 1)  # same seed for all workers
-        return self.worker_seeds(self.num_workers, seed)[self.worker_id]  # doesn't modify the current rng state
+        if self.mode == "train":
+            return self.worker_seeds(self.num_workers, seed)[self.worker_id]  # doesn't modify the current rng state
+        else:
+            return self.worker_seeds(1, seed)[0]  # doesn't modify the current rng state
 
     @property
     def vector_tasks(self, debug=False):  # TODO debug
