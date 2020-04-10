@@ -289,7 +289,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         reward_configs: Dict[str, Any],
         **kwargs
     ) -> None:
-        # print("task info in objectnavtask %s" % task_info)
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )

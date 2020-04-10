@@ -67,6 +67,7 @@ class ObjectNavTaskSampler(TaskSampler):
             assert 0 <= self.dataset_first <= self.dataset_last,\
                 "dataset_last {} must be >= dataset_first {} >= 0".format(dataset_last, dataset_first)
             self.reset_tasks = self.dataset_last - self.dataset_first + 1
+            # LOGGER.debug("{} tasks ({}, {}) in sampler".format(self.reset_tasks, self.dataset_first, self.dataset_last))
 
         self._last_sampled_task: Optional[ObjectNavTask] = None
 
@@ -164,6 +165,7 @@ class ObjectNavTaskSampler(TaskSampler):
 
     def next_task(self, force_advance_scene: bool = False) -> Optional[ObjectNavTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
+            # LOGGER.debug("max_tasks {}".format(self.max_tasks))
             return None
 
         if not self.scenes_is_dataset:
@@ -200,10 +202,30 @@ class ObjectNavTaskSampler(TaskSampler):
             task_info['initial_orientation'] = pose["rotation"]["y"]
         else:
             next_task_id = self.dataset_first + self.max_tasks - 1
+            # LOGGER.debug("task {}".format(next_task_id))
             assert self.dataset_first <= next_task_id <= self.dataset_last, "wrong task_id {} for min {} max {}".format(
                 next_task_id, self.dataset_first, self.dataset_last
             )
             task_info = copy.deepcopy(self.dataset_episodes[next_task_id])
+
+            scene = task_info["scene"]
+            if self.env is not None:
+                if scene.replace("_physics", "") != self.env.scene_name.replace(
+                    "_physics", ""
+                ):
+                    self.env.reset(scene)
+            else:
+                self.env = self._create_environment()
+                self.env.reset(scene_name=scene)
+
+            self.env.step({
+                "action": "TeleportFull",
+                **{k: float(v) for k, v in task_info["initial_position"].items()},
+                "rotation": {"x": 0.0, "y": float(task_info["initial_orientation"]), "z": 0.0},
+                "horizon": 0.0,
+            })
+            assert self.env.last_action_success, "Failed to reset agent for {}".format(task_info)
+
             self.max_tasks -= 1
 
         task_info["actions"] = []  # TODO populated by Task(Generic[EnvType]).step(...) but unused
@@ -213,8 +235,8 @@ class ObjectNavTaskSampler(TaskSampler):
         else:
             task_info["mirrored"] = False
 
-        if self.reset_tasks is not None:
-            LOGGER.debug("valid task_info {}".format(task_info))
+        # if self.reset_tasks is not None:
+        #     LOGGER.debug("valid task_info {}".format(task_info))
 
         self._last_sampled_task = ObjectNavTask(
             env=self.env,
