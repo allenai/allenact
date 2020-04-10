@@ -174,7 +174,7 @@ def main():
 
     cfg, srcs = _load_config(args)
 
-    if args.test_date == "":
+    if args.test_date in [None, ""]:
         OnPolicyRunner(
             config=cfg,
             output_dir=args.output_dir,
