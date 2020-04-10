@@ -443,15 +443,7 @@ class OnPolicyRunner(object):
 
         try:
             while True:
-                # try:
-                package = self.queues["results"].get()  # timeout=10)
-                # except queue.Empty:
-                #     # # if not finalized:  # when finalized, it's ok if trainers are no longer alive
-                #     # for process_type in ["train", "valid"]:  # self.processes
-                #     #     for it, process in enumerate(self.processes[process_type]):
-                #     #         assert process.is_alive(), "Process {} {} dead!".format(process_type, it)
-                #     raise Exception("Broken queue")
-                #     # continue
+                package = self.queues["results"].get()
                 if package[0] == "train_package":
                     collected.append(package)
                     if len(collected) >= nworkers:
@@ -485,10 +477,6 @@ class OnPolicyRunner(object):
                                 if len(collected) == 0:
                                     break
                             LOGGER.debug("Processed metrics for steps {}".format(processed))
-                        if len(test_steps) == 0:
-                            finalized = True
-                            time.sleep(2)  # give some time for testers to terminate after consuming the kill pill
-                            break
                         with open(metrics_file, "w") as f:
                             json.dump(test_results, f, indent=4, sort_keys=True)
                             LOGGER.debug("Updated {} up to step {}".format(metrics_file, processed[-1]))
@@ -507,11 +495,12 @@ class OnPolicyRunner(object):
                         nworkers -= 1
                         if nworkers == 0:
                             LOGGER.info("Last tester finished. Terminating")
+                            finalized = True
                             break
                     else:
                         raise Exception("Test worker {} abnormally terminated".format(package[1] - 1))
                 else:
-                    LOGGER.warning("Runner received unknown package type {}".format(package[0]))
+                    LOGGER.error("Runner received unknown package type {}".format(package[0]))
         except KeyboardInterrupt:
             LOGGER.info("KeyboardInterrupt. Terminating runner")
         except Exception:
