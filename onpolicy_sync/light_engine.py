@@ -877,11 +877,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_done.set("done", str(0))
                 self.num_workers_steps.set("steps", str(0))
 
-                # Ensure all workers are done before incrementing num_workers_{steps, done}
-                idx = self.distributed_barrier.wait()  # here we synchronize
-                if idx == 0:
-                    self.distributed_barrier.reset()
-
             self.tstate.former_steps = self.step_count
             for step in range(self.tstate.steps_in_rollout):
                 self.collect_rollout_step(rollouts)
