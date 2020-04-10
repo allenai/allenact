@@ -61,6 +61,8 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     CONFIG.TASK.SPL.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
     CONFIG.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "VIEW_POINTS"
 
+    CONFIG.MODE = 'train'
+
     @classmethod
     def tag(cls):
         return "ObjectNav"
@@ -186,6 +188,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
         config = self.CONFIG.clone()
         config.defrost()
         config.DATASET.DATA_PATH = self.VALID_SCENES
+        config.MODE = 'validate'
         config.freeze()
         return {
             "env_config": config,

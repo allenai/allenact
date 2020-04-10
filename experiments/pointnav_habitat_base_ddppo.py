@@ -92,6 +92,8 @@ class PointNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     CONFIG.TASK.SPL.TYPE = 'SPL'
     CONFIG.TASK.SPL.SUCCESS_DISTANCE = 0.2
 
+    CONFIG.MODE = 'train'
+
     @classmethod
     def tag(cls):
         return "PointNav"
@@ -217,6 +219,7 @@ class PointNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
         config = self.CONFIG.clone()
         config.defrost()
         config.DATASET.DATA_PATH = self.VALID_SCENES
+        config.MODE = 'validate'
         config.freeze()
         return {
             "env_config": config,
