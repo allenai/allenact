@@ -41,7 +41,7 @@ class PointNavTaskSampler(TaskSampler):
             config=self.env_config,
             dataset=dataset
         )
-        self.max_tasks = env.num_episodes
+        self.max_tasks =  None if self.env_config.MODE == 'train' else env.num_episodes  # env.num_episodes
         self.reset_tasks = self.max_tasks
         return env
 
@@ -143,7 +143,7 @@ class ObjectNavTaskSampler(TaskSampler):
             config=self.env_config,
             dataset=dataset
         )
-        self.max_tasks = env.num_episodes  # mp3d objectnav val -> 2184
+        self.max_tasks = None if self.env_config.MODE == 'train' else env.num_episodes  # mp3d objectnav val -> 2184
         self.reset_tasks = self.max_tasks
         return env
 
