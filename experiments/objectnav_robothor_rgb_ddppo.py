@@ -43,11 +43,11 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
     #     for furniture in range(2)
     # ]
     TEST_SCENES = "rl_robothor/data/val.json"
-    NUM_TEST_SCENES = 6116
+    NUM_TEST_SCENES = 6116  # 6116
 
     SCREEN_SIZE = 256
 
-    MAX_STEPS = 500
+    MAX_STEPS = 200
 
     # It also ignores the empirical success of all episodes with length > num_steps * ADVANCE_SCENE_ROLLOUT_PERIOD and
     # some with shorter lengths
@@ -181,158 +181,6 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
             ),
         )
 
-    # def split_num_processes(self, ndevices):
-    #     assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(self.NUM_PROCESSES, ndevices)
-    #     res = [0] * ndevices
-    #     for it in range(self.NUM_PROCESSES):
-    #         res[it % ndevices] += 1
-    #     return res
-    #
-    # def machine_params(self, mode="train", **kwargs):
-    #     if mode == "train":
-    #         workers_per_device = 1
-    #         # gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7] * workers_per_device  # TODO vs4 only has 7 gpus
-    #         gpu_ids = [] if not torch.cuda.is_available() else [0, 1] * workers_per_device  # TODO vs4 only has 7 gpus
-    #         nprocesses = 2 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
-    #         sampler_devices = [0, 1, 2, 3, 4, 5, 6, 7]  # TODO vs4 only has 7 gpus (ignored with > 1 gpu_ids)
-    #         render_video = False
-    #     elif mode == "valid":
-    #         nprocesses = 1  # TODO debugging (0)
-    #         gpu_ids = [] if not torch.cuda.is_available() else [0]
-    #         render_video = False
-    #     elif mode == "test":
-    #         nprocesses = 1
-    #         gpu_ids = [] if not torch.cuda.is_available() else [0]
-    #         render_video = True
-    #     else:
-    #         raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
-    #
-    #     # Disable parallelization for validation process
-    #     if mode == "valid":
-    #         for prep in self.PREPROCESSORS:
-    #             prep.kwargs["config"]["parallel"] = False
-    #
-    #     observation_set = Builder(ObservationSet, kwargs=dict(
-    #         source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
-    #     )) if mode == 'train' or nprocesses > 0 else None
-    #
-    #     return {
-    #         "nprocesses": nprocesses,
-    #         "gpu_ids": gpu_ids,
-    #         "sampler_devices": sampler_devices if mode == "train" else gpu_ids,  # ignored with > 1 gpu_ids
-    #         "observation_set": observation_set,
-    #         "render_video": render_video,
-    #     }
-    #
-    # @classmethod
-    # def create_model(cls, **kwargs) -> nn.Module:
-    #     return ResnetTensorObjectNavActorCritic(
-    #         action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
-    #         observation_space=kwargs["observation_set"].observation_spaces,
-    #         goal_sensor_uuid="goal_object_type_ind",
-    #         resnet_preprocessor_uuid="rgb_resnet",
-    #         rnn_hidden_size=512,
-    #         goal_dims=32,
-    #     )
-    #
-    # @classmethod
-    # def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-    #     return ObjectNavTaskSampler(**kwargs)
-    #
-    # @staticmethod
-    # def _partition_inds(n: int, num_parts: int):
-    #     return np.round(np.linspace(0, n, num_parts + 1, endpoint=True)).astype(
-    #         np.int32
-    #     )
-    #
-    # def _get_sampler_args_for_scene_split(
-    #     self,
-    #     scenes: List[str],
-    #     process_ind: int,
-    #     total_processes: int,
-    #     seeds: Optional[List[int]] = None,
-    #     deterministic_cudnn: bool = False,
-    # ) -> Dict[str, Any]:
-    #     if total_processes > len(scenes):  # oversample some scenes -> bias
-    #         if total_processes % len(scenes) != 0:
-    #             print(
-    #                 "Warning: oversampling some of the scenes to feed all processes."
-    #                 " You can avoid this by setting a number of workers divisible by the number of scenes"
-    #             )
-    #         scenes = scenes * int(ceil(total_processes / len(scenes)))
-    #         scenes = scenes[: total_processes * (len(scenes) // total_processes)]
-    #     else:
-    #         if len(scenes) % total_processes != 0:
-    #             print(
-    #                 "Warning: oversampling some of the scenes to feed all processes."
-    #                 " You can avoid this by setting a number of workers divisor of the number of scenes"
-    #             )
-    #     inds = self._partition_inds(len(scenes), total_processes)
-    #
-    #     return {
-    #         "scenes": scenes[inds[process_ind]:inds[process_ind + 1]],
-    #         "object_types": self.TARGET_TYPES,
-    #         "max_steps": self.MAX_STEPS,
-    #         "sensors": self.SENSORS,
-    #         "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
-    #         "seed": seeds[process_ind] if seeds is not None else None,
-    #         "deterministic_cudnn": deterministic_cudnn,
-    #         "rewards_config": {
-    #             "step_penalty": -0.01,
-    #             "goal_success_reward": 10.0,
-    #             "failed_stop_reward": 0.0,
-    #             "shaping_weight": 1.0,  # applied to the decrease in distance to target
-    #         },
-    #     }
-    #
-    # def train_task_sampler_args(
-    #     self,
-    #     process_ind: int,
-    #     total_processes: int,
-    #     devices: Optional[List[int]] = None,
-    #     seeds: Optional[List[int]] = None,
-    #     deterministic_cudnn: bool = False,
-    # ) -> Dict[str, Any]:
-    #     res = self._get_sampler_args_for_scene_split(
-    #         self.TRAIN_SCENES,
-    #         process_ind,
-    #         total_processes,
-    #         seeds=seeds,
-    #         deterministic_cudnn=deterministic_cudnn,
-    #     )
-    #     res["scene_period"] = "manual"  # uses ADVANCE_SCENE_ROLLOUT_PERIOD
-    #     res["env_args"] = {}
-    #     res["env_args"].update(self.ENV_ARGS)
-    #     res["env_args"]["x_display"] = (
-    #         ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
-    #     )
-    #     res["allow_flipping"] = True
-    #     return res
-    #
-    # def valid_task_sampler_args(
-    #     self,
-    #     process_ind: int,
-    #     total_processes: int,
-    #     devices: Optional[List[int]] = None,
-    #     seeds: Optional[List[int]] = None,
-    #     deterministic_cudnn: bool = False,
-    # ) -> Dict[str, Any]:
-    #     res = self._get_sampler_args_for_scene_split(
-    #         self.VALID_SCENES,
-    #         process_ind,
-    #         total_processes,
-    #         seeds=seeds,
-    #         deterministic_cudnn=deterministic_cudnn,
-    #     )
-    #     res["scene_period"] = self.VALIDATION_SAMPLES_PER_SCENE
-    #     res["max_tasks"] = self.VALIDATION_SAMPLES_PER_SCENE * len(res["scenes"])
-    #     res["env_args"] = {}
-    #     res["env_args"].update(self.ENV_ARGS)
-    #     res["env_args"]["x_display"] = (
-    #         ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
-    #     )
-    #     return res
-
     def split_num_processes(self, ndevices):
         assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(self.NUM_PROCESSES, ndevices)
         res = [0] * ndevices
@@ -342,12 +190,7 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            # gpu_ids = [] if not torch.cuda.is_available() else [0]
-            # nprocesses = 1 if not torch.cuda.is_available() else self.NUM_PROCESSES
-            # sampler_devices = [1]
-            # render_video = False
-            workers_per_device = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7] * workers_per_device  # TODO vs4 only has 7 gpus
+            gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7]  # TODO vs4 only has 7 gpus
             nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
             render_video = False
         elif mode == "valid":
@@ -357,15 +200,8 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
             else:
                 gpu_ids = [0]
             render_video = False
-        # elif mode == "test":
-        #     nprocesses = 1
-        #     if not torch.cuda.is_available():
-        #         gpu_ids = []
-        #     else:
-        #         gpu_ids = [0]
-        #     render_video = True
         elif mode == "test":
-            nprocesses = 8
+            nprocesses = min(self.NUM_TEST_SCENES, 16)  # per gpu
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
@@ -450,13 +286,6 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": {
-                # "step_penalty": -0.01,
-                # "goal_success_reward": 10.0,
-                # "unsuccessful_action_penalty": 0.0,
-                # "failed_stop_reward": 0.0,
-                # "shaping_weight": 1.0,  # applied to the decrease in distance to target
-                # "exploration_shaping_weight": 0.0,  # relative to shaping weight
-
                 "step_penalty": -0.01,
                 "goal_success_reward": 10.0,
                 "failed_stop_reward": 0.0,

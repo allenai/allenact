@@ -61,7 +61,7 @@ class ObjectNavTaskSampler(TaskSampler):
                 "When using a dataset, scenes ({}) must be a json file name string".format(self.scenes)
             with open(self.scenes, "r") as f:
                 self.dataset_episodes = json.load(f)
-                LOGGER.info("Loaded {} object nav episodes".format(len(self.dataset_episodes)))
+                # LOGGER.debug("Loaded {} object nav episodes".format(len(self.dataset_episodes)))
             self.dataset_first = dataset_first if dataset_first >= 0 else 0
             self.dataset_last = dataset_last if dataset_last >= 0 else len(self.dataset_episodes) - 1
             assert 0 <= self.dataset_first <= self.dataset_last,\
