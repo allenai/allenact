@@ -1,7 +1,6 @@
 """Defines the reinforcement learning `OnPolicyRunner`."""
 import glob
 import os
-import queue
 import shutil
 import time
 import traceback
@@ -117,31 +116,52 @@ class OnPolicyRunner(object):
         init_logging()
 
     @staticmethod
-    def start_train_loop(id: int=0, checkpoint: Optional[str]=None, restart: bool=False, *engine_args, **engine_kwargs):
+    def init_worker(engine_class, args, kwargs):
+        mode = kwargs["mode"]
+        id = kwargs["worker_id"]
+
+        worker = None
+        try:
+            worker = engine_class(*args, **kwargs)
+        except Exception:
+            LOGGER.error("Encountered Exception. Terminating {} worker {}".format(mode, id))
+            LOGGER.exception(traceback.format_exc())
+            kwargs["results_queue"].put(("{}_stopped".format(mode), 1 + id))
+        finally:
+            return worker
+
+    @staticmethod
+    def train_loop(id: int=0, checkpoint: Optional[str]=None, restart: bool=False, *engine_args, **engine_kwargs):
         OnPolicyRunner.init_process("Train", id)
         engine_kwargs["mode"] = "train"
         engine_kwargs["worker_id"] = id
         LOGGER.info("train {} args {}".format(id, engine_kwargs))
-        trainer = OnPolicyTrainer(*engine_args, **engine_kwargs)
-        trainer.run_pipeline(checkpoint, restart)
+
+        trainer = OnPolicyRunner.init_worker(OnPolicyTrainer, engine_args, engine_kwargs)
+        if trainer is not None:
+            trainer.run_pipeline(checkpoint, restart)
 
     @staticmethod
-    def start_valid_loop(id: int=0, *engine_args, **engine_kwargs):
+    def valid_loop(id: int=0, *engine_args, **engine_kwargs):
         OnPolicyRunner.init_process("Valid", id)
         engine_kwargs["mode"] = "valid"
         engine_kwargs["worker_id"] = id
         LOGGER.info("valid {} args {}".format(id, engine_kwargs))
-        valid = OnPolicyInference(*engine_args, **engine_kwargs)
-        valid.process_checkpoints()  # gets checkpoints via queue
+
+        valid = OnPolicyRunner.init_worker(OnPolicyInference, engine_args, engine_kwargs)
+        if valid is not None:
+            valid.process_checkpoints()  # gets checkpoints via queue
 
     @staticmethod
-    def start_test_loop(id: int=0, *engine_args, **engine_kwargs):
+    def test_loop(id: int=0, *engine_args, **engine_kwargs):
         OnPolicyRunner.init_process("Test", id)
         engine_kwargs["mode"] = "test"
         engine_kwargs["worker_id"] = id
         LOGGER.info("test {} args {}".format(id, engine_kwargs))
-        test = OnPolicyInference(*engine_args, **engine_kwargs)
-        test.process_checkpoints()  # gets checkpoints via queue
+
+        test = OnPolicyRunner.init_worker(OnPolicyInference, engine_args, engine_kwargs)
+        if test is not None:
+            test.process_checkpoints()  # gets checkpoints via queue
 
     def start_train(self, checkpoint: Optional[str] = None, restart: bool=False):
         self.save_config_files()
@@ -159,7 +179,7 @@ class OnPolicyRunner(object):
 
         for tit in range(num_trainers):
             train: mp.Process = self.mp_ctx.Process(
-                target=self.start_train_loop,
+                target=self.train_loop,
                 args=(tit, checkpoint, restart),
                 kwargs=dict(
                     experiment_name=self.experiment_name,
@@ -184,7 +204,7 @@ class OnPolicyRunner(object):
         # Validation
         device = self.worker_devices("valid")[0]
         valid: mp.Process = self.mp_ctx.Process(
-            target=self.start_valid_loop,
+            target=self.valid_loop,
             args=(0,),
             kwargs=dict(
                 config=self.config,
@@ -212,7 +232,7 @@ class OnPolicyRunner(object):
 
         for tit in range(num_testers):
             test: mp.Process = self.mp_ctx.Process(
-                target=self.start_test_loop,
+                target=self.test_loop,
                 args=(tit,),
                 kwargs=dict(
                     config=self.config,
@@ -423,14 +443,15 @@ class OnPolicyRunner(object):
 
         try:
             while True:
-                try:
-                    package = self.queues["results"].get(timeout=10)
-                except queue.Empty:
-                    if not finalized:  # when finalized, it's ok if trainers are no longer alive
-                        for process_type in ["train", "valid"]:  # self.processes
-                            for it, process in enumerate(self.processes[process_type]):
-                                assert process.is_alive(), "Process {} {} dead!".format(process_type, it)
-                    continue
+                # try:
+                package = self.queues["results"].get()  # timeout=10)
+                # except queue.Empty:
+                #     # # if not finalized:  # when finalized, it's ok if trainers are no longer alive
+                #     # for process_type in ["train", "valid"]:  # self.processes
+                #     #     for it, process in enumerate(self.processes[process_type]):
+                #     #         assert process.is_alive(), "Process {} {} dead!".format(process_type, it)
+                #     raise Exception("Broken queue")
+                #     # continue
                 if package[0] == "train_package":
                     collected.append(package)
                     if len(collected) >= nworkers:
@@ -456,29 +477,39 @@ class OnPolicyRunner(object):
                         processed = []
                         self.process_eval_package(log_writer, package, test_results)
                         processed.append(test_steps.pop())
-                        if len(test_steps) == 0:
-                            finalized = True
-                            time.sleep(2)  # give some time for testers to terminate after consuming the kill pill
-                            break
                         if len(collected) > 0:
                             collected = sorted(collected, key=lambda x: x[2], reverse=True)
                             while collected[-1][2] == test_steps[-1]:
                                 self.process_eval_package(log_writer, collected.pop(), test_results)
                                 processed.append(test_steps.pop())
-                                if len(test_steps) == 0:
+                                if len(collected) == 0:
                                     break
-                            LOGGER.info("Processed metrics for steps {}".format(processed))
+                            LOGGER.debug("Processed metrics for steps {}".format(processed))
+                        if len(test_steps) == 0:
+                            finalized = True
+                            time.sleep(2)  # give some time for testers to terminate after consuming the kill pill
+                            break
                         with open(metrics_file, "w") as f:
                             json.dump(test_results, f, indent=4, sort_keys=True)
-                            LOGGER.info("Updated {} up to step {}".format(metrics_file, processed[-1]))
+                            LOGGER.debug("Updated {} up to step {}".format(metrics_file, processed[-1]))
                     else:
                         collected.append(package)
-                        LOGGER.info("Collected metrics for step {}".format(package[2]))
-                elif package[0] == "training_stopped":
+                        LOGGER.debug("Collected metrics for step {}".format(package[2]))
+                elif package[0] == "train_stopped":
                     if package[1] == 0:
                         finalized = True
                     else:
                         raise Exception("Train worker {} abnormally terminated".format(package[1] - 1))
+                elif package[0] == "valid_stopped":
+                    raise Exception("Valid worker {} abnormally terminated".format(package[1] - 1))
+                elif package[0] == "test_stopped":
+                    if package[1] == 0:
+                        nworkers -= 1
+                        if nworkers == 0:
+                            LOGGER.info("Last tester finished. Terminating")
+                            break
+                    else:
+                        raise Exception("Test worker {} abnormally terminated".format(package[1] - 1))
                 else:
                     LOGGER.warning("Runner received unknown package type {}".format(package[0]))
         except KeyboardInterrupt:

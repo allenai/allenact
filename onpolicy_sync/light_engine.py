@@ -414,7 +414,7 @@ class OnPolicyRLEngine(object):
         return npaused
 
     def close(self, verbose=True):
-        if self._is_closed:
+        if "_is_closed" in self.__dict__ and self._is_closed:
             return
 
         def logif(s: Union[str, Exception]):
@@ -426,10 +426,10 @@ class OnPolicyRLEngine(object):
                 else:
                     raise NotImplementedError()
 
-        if self.vector_tasks is not None:
+        if "_vector_tasks" in self.__dict__ and self._vector_tasks is not None:
             try:
                 logif("{} worker {} Closing OnPolicyRLEngine.vector_tasks.".format(self.mode, self.worker_id))
-                self.vector_tasks.close()
+                self._vector_tasks.close()
                 logif("{} worker {} Closed.".format(self.mode, self.worker_id))
             except Exception as e:
                 logif("{} worker {} Exception raised when closing OnPolicyRLEngine.vector_tasks:".format(self.mode, self.worker_id))
@@ -451,7 +451,6 @@ class OnPolicyRLEngine(object):
 class OnPolicyTrainer(OnPolicyRLEngine):
     class TrainState:
         def __init__(self,
-                     num_samplers: int = -1,
                      losses: Optional[Dict[str, AbstractActorCriticLoss]] = None,
                      loss_weights: Optional[Dict[str, float]] = None,
                      steps_in_rollout: int = -1,
@@ -499,16 +498,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.tracking_info = {type: [] for type in self.tracking_types}
             self.former_steps = former_steps
 
-            # self.num_samplers = num_samplers
-            # self.num_rollouts = (int(self.stage_task_steps) // self.steps_in_rollout) // self.num_samplers
             if self.steps_in_rollout > 0:
                 LOGGER.info("tstate {}".format(self.__dict__))
-                # LOGGER.info("Stage {} using >= {} rollouts ({} steps out of {} requested)".format(
-                #     self.pipeline_stage,
-                #     self.num_rollouts,
-                #     self.num_rollouts * self.num_samplers * self.steps_in_rollout,
-                #     self.stage_task_steps,
-                # ))
 
     def __init__(
             self,
@@ -562,7 +553,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             )
 
         self.tstate: OnPolicyTrainer.TrainState = OnPolicyTrainer.TrainState(
-            num_samplers=self.num_samplers,
             save_interval=self.training_pipeline.save_interval,
             log_interval=self.training_pipeline.log_interval,
         )
@@ -882,6 +872,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_done.set("done", str(0))
                 self.num_workers_steps.set("steps", str(0))
 
+                # Ensure all workers are done before incrementing num_workers_{steps, done}
+                idx = self.distributed_barrier.wait()  # here we synchronize
+                if idx == 0:
+                    self.distributed_barrier.reset()
+
             self.tstate.former_steps = self.step_count
             for step in range(self.tstate.steps_in_rollout):
                 self.collect_rollout_step(rollouts)
@@ -908,7 +903,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_done.add("done", 1)
                 self.num_workers_steps.add("steps", self.step_count - self.tstate.former_steps)
 
-                # Ensure all workers are done before resetting num_workers_steps
+                # Ensure all workers are done before updating step counter
                 idx = self.distributed_barrier.wait()  # here we synchronize
                 if idx == 0:
                     self.distributed_barrier.reset()
@@ -994,7 +989,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 stage_losses, stage_weights = self._load_losses(stage)
 
                 self.tstate = OnPolicyTrainer.TrainState(
-                    num_samplers=self.num_samplers,
                     losses=stage_losses,
                     loss_weights=stage_weights,
                     steps_in_rollout=self._stage_value(stage, "num_steps"),
@@ -1045,10 +1039,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         finally:
             if finalized:
                 if self.worker_id == 0:
-                    self.results_queue.put(("training_stopped", 0))
+                    self.results_queue.put(("train_stopped", 0))
                 LOGGER.info("{} worker {} COMPLETE".format(self.mode, self.worker_id))
             else:
-                self.results_queue.put(("training_stopped", 1 + self.worker_id))
+                self.results_queue.put(("train_stopped", 1 + self.worker_id))
             self.close()
 
 
@@ -1065,6 +1059,7 @@ class OnPolicyInference(OnPolicyRLEngine):
         mp_ctx: Optional[BaseContext] = None,
         device: Union[str, torch.device, int] = 'cpu',
         deterministic_agent: bool = True,
+        worker_id: int = 0,
         **kwargs,
     ):
         super().__init__(
@@ -1079,12 +1074,13 @@ class OnPolicyInference(OnPolicyRLEngine):
             mp_ctx=mp_ctx,
             deterministic_agent=deterministic_agent,
             device=device,
+            worker_id=worker_id,
             **kwargs,
         )
         if self.actor_critic is not None:
             self.actor_critic.eval()
 
-        LOGGER.info("{} worker {} using device {}".format(self.mode, self.worker_id, self.device))
+        LOGGER.debug("{} worker {} using device {}".format(self.mode, self.worker_id, self.device))
 
         self.deterministic_agent = deterministic_agent
 
@@ -1136,8 +1132,9 @@ class OnPolicyInference(OnPolicyRLEngine):
                 command: Optional[str] = None
                 data: Any = None
                 command, data = self.checkpoints_queue.get()  # block until first command arrives
+                # LOGGER.debug("{} {} command {} data {}".format(self.mode, self.worker_id, command, data))
 
-                cond = self.mode == "valid"  # for valid, forward to latest requested checkpoint
+                cond = (self.mode == "valid")  # for valid, forward to latest requested checkpoint
                 while cond:
                     try:
                         command, data = self.checkpoints_queue.get_nowait()
@@ -1154,8 +1151,8 @@ class OnPolicyInference(OnPolicyRLEngine):
                     else:
                         self.results_queue.put(("{}_package".format(self.mode), None, -1))
                 elif command in ["quit", "exit", "close"]:
-                    self.close(verbose=False)
                     finalized = True
+                    break
                 else:
                     raise NotImplementedError()
         except KeyboardInterrupt:
@@ -1165,5 +1162,10 @@ class OnPolicyInference(OnPolicyRLEngine):
             LOGGER.exception(traceback.format_exc())
         finally:
             if finalized:
+                if self.mode == "test":
+                    self.results_queue.put(("test_stopped", 0))
                 LOGGER.info("{} worker {} complete".format(self.mode, self.worker_id))
+            else:
+                if self.mode == "test":
+                    self.results_queue.put(("test_stopped", self.worker_id + 1))
             self.close()
