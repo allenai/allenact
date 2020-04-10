@@ -4,7 +4,6 @@ import os
 import shutil
 import time
 import traceback
-import queue
 from multiprocessing.context import BaseContext
 from typing import Optional, Dict, Union, Tuple, Sequence, List, Any
 from collections import OrderedDict, defaultdict
@@ -444,16 +443,7 @@ class OnPolicyRunner(object):
 
         try:
             while True:
-                # package = self.queues["results"].get()
-
-                try:
-                    package = self.queues["results"].get(timeout=100)  # TODO wait for 10 seconds, then check all workers are alive
-                except queue.Empty:
-                    for process_type in self.processes:
-                        for it, process in enumerate(self.processes[process_type]):
-                            assert process.is_alive(), "Process {} {} dead!".format(process_type, it)
-                    continue
-
+                package = self.queues["results"].get()
                 if package[0] == "train_package":
                     collected.append(package)
                     if len(collected) >= nworkers:
