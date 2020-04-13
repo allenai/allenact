@@ -21,7 +21,7 @@ def construct_env_configs(config: Config) -> List[Config]:
     configs = []
     dataset = habitat.make_dataset(config.DATASET.TYPE)
     # scenes = dataset.get_scenes_to_load(config.DATASET)
-    scenes = ['17DRP5sb8fy', '29hnd4uzFmX', '5q7pvUzZiYa', '759xd9YjKW5', '82sE5b5pLXE', '8WUmhLawc2A', 'D7N2EKCX4Sj', 'GdvgFV5R1Z5', 'HxpKQynjfin', 'JF19kD82Mey', 'JeFG25nYj2p', 'Pm6F8kyY3z2', 'S9hNv5qa7GM', 'SN83YJsR3w2', 'Uxmj2M2itWa', 'V2XKFyX4ASd', 'VFuaQ6m2Qom', 'VVfe2KiqLaN', 'XcA2TqTSSAj', 'YmJkqBEsHnH', 'ZMojNkEp431', 'aayBHfsNo7d', 'b8cTxDM8gDG', 'cV4RVeZvu5T', 'e9zR4mvMWw7', 'gZ6f7yhEvPG', 'i5noydFURQK', 'jh4fc5c5qoQ', 'pRbA3pwrgk9', 'qoiz87JEwZ2', 'rPc6DW4iMge', 's8pcmisQ38h']
+    scenes = [['HxpKQynjfin', 'gZ6f7yhEvPG', 'GdvgFV5R1Z5', 'JF19kD82Mey', 'Pm6F8kyY3z2', '29hnd4uzFmX', 'VVfe2KiqLaN', 'jh4fc5c5qoQ', 'YmJkqBEsHnH', 'i5noydFURQK', 'cV4RVeZvu5T', 'aayBHfsNo7d', 'pRbA3pwrgk9', '82sE5b5pLXE', 'S9hNv5qa7GM', 'sT4fr6TAbpF', 'b8cTxDM8gDG', 'D7N2EKCX4Sj', 'Uxmj2M2itWa', '17DRP5sb8fy', 'JeFG25nYj2p', '8WUmhLawc2A', 'SN83YJsR3w2', 'XcA2TqTSSAj', '5q7pvUzZiYa', '759xd9YjKW5', 's8pcmisQ38h', 'sKLMLpTHeUy', 'qoiz87JEwZ2', 'uNb9QFRL6hY', 'e9zR4mvMWw7', 'rPc6DW4iMge']
 
     if len(scenes) > 0:
         random.shuffle(scenes)
