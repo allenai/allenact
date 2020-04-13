@@ -29,7 +29,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.1
 
-    NUM_PROCESSES = 48
+    NUM_PROCESSES = 40
 
     CONFIG = habitat.get_config('configs/mp3d.yaml')
     CONFIG.defrost()
@@ -114,7 +114,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else [6, 6, 6, 6, 6, 6, 6, 6]
+            nprocesses = 1 if not torch.cuda.is_available() else [5, 5, 5, 5, 5, 5, 5, 5]
             gpu_ids = [] if not torch.cuda.is_available() else self.CONFIG.SIMULATOR_GPU_IDS
             render_video = False
         elif mode == "valid":
