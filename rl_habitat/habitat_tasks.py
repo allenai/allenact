@@ -200,6 +200,8 @@ class ObjectNavTask(Task[HabitatTask]):
         # self.last_distance_to_goal = self.env.get_current_episode().info['geodesic_distance'] #self.env.env.get_metrics()["distance_to_goal"]
 
         self.last_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
+        if self.last_geodesic_distance in [float('-inf'), float('inf')] or np.isnan(self.last_geodesic_distance):
+            self.last_geodesic_distance = 0.0
 
         self._rewards = []
         self._distance_to_goal = []
@@ -253,7 +255,11 @@ class ObjectNavTask(Task[HabitatTask]):
         # last_geodesic_distance = self.env.last_geodesic_distance
         # new_geodesic_distance = self.env.get_geodesic_distance()
         new_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
+        if new_geodesic_distance in [float('-inf'), float('inf')] or np.isnan(new_geodesic_distance):
+            new_geodesic_distance = 0.0
         delta_distance_reward = self.last_geodesic_distance - new_geodesic_distance
+        print("Old Distance: %.4f   New Distance: %.4f   Delta %.4f" %
+              (self.last_geodesic_distance, new_geodesic_distance, delta_distance_reward))
 
         reward += delta_distance_reward
 
