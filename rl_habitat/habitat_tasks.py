@@ -258,9 +258,6 @@ class ObjectNavTask(Task[HabitatTask]):
         if new_geodesic_distance in [float('-inf'), float('inf')] or np.isnan(new_geodesic_distance):
             new_geodesic_distance = 0.0
         delta_distance_reward = self.last_geodesic_distance - new_geodesic_distance
-        print("Old Distance: %.4f   New Distance: %.4f   Delta %.4f" %
-              (self.last_geodesic_distance, new_geodesic_distance, delta_distance_reward))
-
         reward += delta_distance_reward
 
         if self._took_end_action:
