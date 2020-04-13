@@ -20,7 +20,8 @@ def construct_env_configs(config: Config) -> List[Config]:
     num_processes = config.NUM_PROCESSES
     configs = []
     dataset = habitat.make_dataset(config.DATASET.TYPE)
-    scenes = dataset.get_scenes_to_load(config.DATASET)
+    # scenes = dataset.get_scenes_to_load(config.DATASET)
+    scenes = ['17DRP5sb8fy', '29hnd4uzFmX', '5q7pvUzZiYa', '759xd9YjKW5', '82sE5b5pLXE', '8WUmhLawc2A', 'D7N2EKCX4Sj', 'GdvgFV5R1Z5', 'HxpKQynjfin', 'JF19kD82Mey', 'JeFG25nYj2p', 'Pm6F8kyY3z2', 'S9hNv5qa7GM', 'SN83YJsR3w2', 'Uxmj2M2itWa', 'V2XKFyX4ASd', 'VFuaQ6m2Qom', 'VVfe2KiqLaN', 'XcA2TqTSSAj', 'YmJkqBEsHnH', 'ZMojNkEp431', 'aayBHfsNo7d', 'b8cTxDM8gDG', 'cV4RVeZvu5T', 'e9zR4mvMWw7', 'gZ6f7yhEvPG', 'i5noydFURQK', 'jh4fc5c5qoQ', 'pRbA3pwrgk9', 'qoiz87JEwZ2', 'rPc6DW4iMge', 's8pcmisQ38h']
 
     if len(scenes) > 0:
         random.shuffle(scenes)
