@@ -21,7 +21,14 @@ def construct_env_configs(config: Config) -> List[Config]:
     configs = []
     # dataset = habitat.make_dataset(config.DATASET.TYPE)
     # scenes = dataset.get_scenes_to_load(config.DATASET)
-    scenes = ['HxpKQynjfin', 'gZ6f7yhEvPG', 'GdvgFV5R1Z5', 'JF19kD82Mey', 'Pm6F8kyY3z2', '29hnd4uzFmX', 'VVfe2KiqLaN', 'jh4fc5c5qoQ', 'YmJkqBEsHnH', 'i5noydFURQK', 'cV4RVeZvu5T', 'aayBHfsNo7d', 'pRbA3pwrgk9', '82sE5b5pLXE', 'S9hNv5qa7GM', 'sT4fr6TAbpF', 'b8cTxDM8gDG', 'D7N2EKCX4Sj', 'Uxmj2M2itWa', '17DRP5sb8fy', 'JeFG25nYj2p', '8WUmhLawc2A', 'SN83YJsR3w2', 'XcA2TqTSSAj', '5q7pvUzZiYa', '759xd9YjKW5', 's8pcmisQ38h', 'sKLMLpTHeUy', 'qoiz87JEwZ2', 'uNb9QFRL6hY', 'e9zR4mvMWw7', 'rPc6DW4iMge']
+    scenes = ['HxpKQynjfin', 'gZ6f7yhEvPG', 'GdvgFV5R1Z5', 'JF19kD82Mey', 'Pm6F8kyY3z2', '29hnd4uzFmX', 'VVfe2KiqLaN',
+              'jh4fc5c5qoQ', 'YmJkqBEsHnH', 'i5noydFURQK', 'cV4RVeZvu5T', 'aayBHfsNo7d', 'pRbA3pwrgk9', '82sE5b5pLXE',
+              'S9hNv5qa7GM', 'sT4fr6TAbpF', 'b8cTxDM8gDG', 'D7N2EKCX4Sj', 'Uxmj2M2itWa', '17DRP5sb8fy', 'JeFG25nYj2p',
+              '8WUmhLawc2A', 'SN83YJsR3w2', 'XcA2TqTSSAj', '5q7pvUzZiYa', '759xd9YjKW5', 's8pcmisQ38h', 'sKLMLpTHeUy',
+              'qoiz87JEwZ2', 'uNb9QFRL6hY', 'e9zR4mvMWw7', 'rPc6DW4iMge', 'vyrNrziPKCB', 'V2XKFyX4ASd', 'VFuaQ6m2Qom',
+              'ZMojNkEp431', '5LpN3gDmAk7', 'r47D5H71a5s', 'ULsKaCPVFJR', 'E9uDoFAP3SH', 'kEZ7cmS4wCh', 'ac26ZMwG7aT',
+              'dhjEzFoUFzH', 'mJXqzFtmKg4', 'p5wJjkQkbXX', 'Vvot9Ly1tCj', 'EDJbREhghzL', 'VzqfbhrpDEA', '7y3sRwLe3Va',
+              'ur6pFq6Qu1A', 'PX4nDJXEHrG', 'PuKPg4mmafe', 'VLzqgDo317F', '1LXtFkjw3qL', 'r1Q1Z4BcV1o', 'gTV8FGcVJC9']
 
     if len(scenes) > 0:
         random.shuffle(scenes)

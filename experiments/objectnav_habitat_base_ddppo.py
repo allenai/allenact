@@ -57,9 +57,9 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     CONFIG.TASK.GOAL_SENSOR_UUID = 'objectgoal'
     CONFIG.TASK.MEASUREMENTS = ['DISTANCE_TO_GOAL', 'SPL']
     CONFIG.TASK.SPL.TYPE = 'SPL'
-    CONFIG.TASK.SPL.DISTANCE_TO = 'VIEW_POINTS'
+    CONFIG.TASK.SPL.DISTANCE_TO = 'POINT'
     CONFIG.TASK.SPL.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
-    CONFIG.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "VIEW_POINTS"
+    CONFIG.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "POINT"
 
     CONFIG.MODE = 'train'
 
@@ -114,7 +114,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else [4, 4, 4, 4, 4, 4, 4, 4]
+            nprocesses = 1 if not torch.cuda.is_available() else [7, 7, 7, 7, 7, 7, 7, 7]
             gpu_ids = [] if not torch.cuda.is_available() else self.CONFIG.SIMULATOR_GPU_IDS
             render_video = False
         elif mode == "valid":
