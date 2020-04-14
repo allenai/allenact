@@ -797,16 +797,13 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
                 if isinstance(total_loss, torch.Tensor):
                     self.optimizer.zero_grad()  # type: ignore
-
                     total_loss.backward()  # synchronize
-
                     nn.utils.clip_grad_norm_(
                         self.actor_critic.parameters(), self.tstate.max_grad_norm,  # type: ignore
                     )
                     self.optimizer.step()  # type: ignore
                     self.tstate.backprop_count += 1
                 else:
-                    # TODO This is fatal for DD-PPO
                     LOGGER.warning(
                         "{} worker {}"
                         "Total loss ({}) is not a FloatTensor, it is a {}. This can happen when using teacher"
@@ -814,6 +811,18 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                             self.mode, self.worker_id, total_loss, type(total_loss)
                         )
                     )
+                    if self.is_distributed:
+                        # TODO test the hack actually works
+                        zero_loss = (torch.zeros_like(
+                            actor_critic_output.distributions) * actor_critic_output.distributions + torch.zeros_like(
+                            actor_critic_output.values) * actor_critic_output.values).sum()
+                        self.optimizer.zero_grad()  # type: ignore
+                        zero_loss.backward()  # synchronize
+                        nn.utils.clip_grad_norm_(
+                            self.actor_critic.parameters(), self.tstate.max_grad_norm,  # type: ignore
+                        )
+                        self.optimizer.step()  # type: ignore
+                        self.tstate.backprop_count += 1
 
             # nn.utils.clip_grad_norm_(
             #     self.actor_critic.parameters(), self.tstate.max_grad_norm,  # type: ignore
