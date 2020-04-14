@@ -223,8 +223,8 @@ class OnPolicyRunner(object):
         self.log(self.local_start_time_str, num_trainers)
 
     def start_test(self,
-                   experiment_date: Optional[str] = None,
-                   checkpoint: Optional[str] = None,
+                   experiment_date: str,
+                   cp: Optional[str] = None,
                    skip_checkpoints: int = 0,
                    ):
         devices = self.worker_devices("test")
@@ -248,20 +248,13 @@ class OnPolicyRunner(object):
 
         LOGGER.info('Started {} test processes'.format(len(self.processes['test'])))
 
-        assert experiment_date is not None or checkpoint is not None,\
-            "One of experiment_date and checkpoint must be given"
-        assert not(experiment_date is not None and checkpoint is not None),\
-            "Only one of experiment_date and checkpoint can be given"
-        if experiment_date is None:
-            experiment_date = self.checkpoint_start_time_str(checkpoint)
-
-        checkpoints = self.get_checkpoint_files(experiment_date, checkpoint, skip_checkpoints)
-        steps = [self.step_from_checkpoint(checkpoint) for checkpoint in checkpoints]
+        checkpoints = self.get_checkpoint_files(experiment_date, cp, skip_checkpoints)
+        steps = [self.step_from_checkpoint(cp) for cp in checkpoints]
 
         LOGGER.info("Running test on {} steps {}".format(len(steps), steps))
 
-        for checkpoint in checkpoints:
-            self.queues["checkpoints"].put(("eval", checkpoint))
+        for cp in checkpoints:
+            self.queues["checkpoints"].put(("eval", cp))
         # Allow all testers to terminate cleanly
         for _ in range(num_testers):
             self.queues["checkpoints"].put(("quit", None))

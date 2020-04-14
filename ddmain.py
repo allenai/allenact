@@ -151,16 +151,6 @@ def _load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
     return config, sources
 
 
-def _download_ai2thor():
-    from ai2thor.controller import Controller
-
-    try:
-        c = Controller(download_only=True, include_private_scenes=True)
-        c.stop_unity()
-    except Exception as _:
-        pass
-
-
 def main():
     init_logging()
 
@@ -168,13 +158,11 @@ def main():
 
     LOGGER.info("Running with args {}".format(args))
 
-    # _download_ai2thor()
-
-    ptitle("Master: {}".format("Training" if not args.test_date != "" else "Testing"))
+    ptitle("Master: {}".format("Training" if args.test_date is None else "Testing"))
 
     cfg, srcs = _load_config(args)
 
-    if args.test_date == "":
+    if args.test_date is None:
         OnPolicyRunner(
             config=cfg,
             output_dir=args.output_dir,
