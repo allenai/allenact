@@ -89,7 +89,9 @@ class PointNavTask(Task[HabitatTask]):
 
         # self.last_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
         self.last_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
-        if self.last_geodesic_distance in [float('-inf'), float('inf')] or np.isnan(self.last_geodesic_distance):
+        if self.last_geodesic_distance is None \
+                or self.last_geodesic_distance in [float('-inf'), float('inf')] \
+                or np.isnan(self.last_geodesic_distance):
             self.last_geodesic_distance = 0.0
 
         self._rewards = []
@@ -142,7 +144,9 @@ class PointNavTask(Task[HabitatTask]):
         reward = -0.01
 
         new_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
-        if new_geodesic_distance in [float('-inf'), float('inf')] or np.isnan(new_geodesic_distance):
+        if new_geodesic_distance is None \
+                or new_geodesic_distance in [float('-inf'), float('inf')] \
+                or np.isnan(new_geodesic_distance):
             new_geodesic_distance = self.last_geodesic_distance
         delta_distance_reward = self.last_geodesic_distance - new_geodesic_distance
         reward += delta_distance_reward
@@ -207,7 +211,9 @@ class ObjectNavTask(Task[HabitatTask]):
         # self.last_distance_to_goal = self.env.get_current_episode().info['geodesic_distance'] #self.env.env.get_metrics()["distance_to_goal"]
 
         self.last_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
-        if self.last_geodesic_distance in [float('-inf'), float('inf')] or np.isnan(self.last_geodesic_distance):
+        if self.last_geodesic_distance is None \
+                or self.last_geodesic_distance in [float('-inf'), float('inf')] \
+                or np.isnan(self.last_geodesic_distance):
             self.last_geodesic_distance = 0.0
 
         self._rewards = []
@@ -262,7 +268,9 @@ class ObjectNavTask(Task[HabitatTask]):
         # last_geodesic_distance = self.env.last_geodesic_distance
         # new_geodesic_distance = self.env.get_geodesic_distance()
         new_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
-        if new_geodesic_distance in [float('-inf'), float('inf')] or np.isnan(new_geodesic_distance):
+        if new_geodesic_distance is None \
+                or new_geodesic_distance in [float('-inf'), float('inf')] \
+                or np.isnan(new_geodesic_distance):
             new_geodesic_distance = self.last_geodesic_distance
         delta_distance_reward = self.last_geodesic_distance - new_geodesic_distance
         reward += delta_distance_reward
