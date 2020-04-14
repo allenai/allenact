@@ -2,7 +2,7 @@ import gym
 import torch.nn as nn
 from torchvision import models
 
-from models.point_nav_models import PointNavActorCriticTrainResNet50GRU
+from models.point_nav_models import PointNavActorCriticSimpleConvLSTM
 from rl_base.sensor import SensorSuite
 from rl_habitat.habitat_tasks import PointNavTask
 from rl_habitat.habitat_sensors import DepthSensorHabitat, TargetCoordinatesSensorHabitat
@@ -25,25 +25,10 @@ class PointNavHabitatDepthDeterministicResNet50GRUDDPPOExperimentConfig(PointNav
         TargetCoordinatesSensorHabitat({"coordinate_dims": 2}),
     ]
 
-    PREPROCESSORS = [
-        ResnetPreProcessorHabitat(
-            config={
-                "input_height": PointNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
-                "input_width": PointNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
-                "output_width": 1,
-                "output_height": 1,
-                "output_dims": 2048,
-                "pool": False,
-                "torchvision_resnet_model": models.resnet50,
-                "input_uuids": ["depth"],
-                "output_uuid": "depth_resnet",
-                "parallel": False,
-            }
-        ),
-    ]
+    PREPROCESSORS = []
 
     OBSERVATIONS = [
-        "depth_resnet",
+        "depth",
         "target_coordinates_ind",
     ]
 
@@ -54,7 +39,7 @@ class PointNavHabitatDepthDeterministicResNet50GRUDDPPOExperimentConfig(PointNav
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return PointNavActorCriticTrainResNet50GRU(
+        return PointNavActorCriticSimpleConvLSTM(
             action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
