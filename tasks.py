@@ -263,3 +263,241 @@ def dataset_stats(ctx, in_dataset="rl_robothor/data/val.json", out_dataset="rl_r
     #     json.dump(ordered, f, indent=4, sort_keys=True)
 
     LOGGER.info("Done")
+
+@task
+def dataset_hists(ctx, train_dataset="rl_robothor/data/train.json", val_dataset="rl_robothor/data/val.json", sampling=6):  # 4 fo val only, 6 for train+val
+    import json
+    import numpy as np
+    import matplotlib
+    matplotlib.use('TkAgg')  # for GUI
+    import matplotlib.pyplot as plt
+
+    with open(val_dataset, "r") as f:
+        orig = json.load(f)
+
+    eps = {level: [ep for ep in orig if ep["difficulty"] == level] for level in ["easy", "medium", "hard"]}
+    del orig
+
+    with open(train_dataset, "r") as f:
+        orig = json.load(f)
+
+    # TODO Combine all episodes from val and train in the same chard
+    for level in ["easy", "medium", "hard"]:
+        eps[level] = [ep for ep in orig if ep["difficulty"] == level]
+    del orig
+
+    # def geo_dist(ep):
+    #     path = ep["shortest_path"]
+    #     dist = 0.0
+    #     for it in range(len(path) - 1):
+    #         sx, sz = (ep["shortest_path"][it][x] for x in ["x", "z"])
+    #         tx, tz = (ep["shortest_path"][it + 1][x] for x in ["x", "z"])
+    #         dist += np.sqrt((sx-tx)*(sx-tx) + (sz-tz)*(sz-tz))
+    #     return dist
+
+    def euc_dist(ep):
+        sx, sz = (ep["initial_position"][x] for x in ["x", "z"])
+        tx, tz = (ep["shortest_path"][-1][x] for x in ["x", "z"])  # assume we want it to be strictly smaller than the geodesic
+        return np.sqrt((sx-tx)*(sx-tx) + (sz-tz)*(sz-tz))
+
+    def dist_to_path(ep):
+        sx, sz = (ep["initial_position"][x] for x in ["x", "z"])
+        tx, tz = (ep["shortest_path"][0][x] for x in ["x", "z"])  # assume we want it to be strictly smaller than the geodesic
+        return np.sqrt((sx-tx)*(sx-tx) + (sz-tz)*(sz-tz))
+
+    # fig, axes = plt.subplots(nrows=3, ncols=4, figsize=(10, 6), sharey=False)
+    #
+    # level2col={level: col for col, level in enumerate(["easy", "medium", "hard"])}
+    # level2col["all"] = 3
+    #
+    # all_geo = []
+    # all_euc = []
+    # all_rat = []
+    # for level in eps:
+    #     geo = np.array([ep["shortest_path_length"] for ep in eps[level]])
+    #     # geo = np.array([geo_dist(ep) for ep in eps[level]])
+    #     # print(max(abs(geo - np.array([ep["shortest_path_length"] for ep in eps[level]]))))
+    #     euc = np.array([euc_dist(ep) for ep in eps[level]])
+    #     assert min(geo) > 0
+    #     rat = euc / geo
+    #
+    #     all_geo.append(geo)
+    #     all_euc.append(euc)
+    #     all_rat.append(rat)
+    #
+    #     # for it, r in enumerate(zip(geo, rat)):
+    #     #     if r[1] > 1.0:
+    #     #         print(it, r)
+    #
+    #     nbins = int(np.sqrt(len(geo)) + 0.5) // sampling
+    #     axes[0, level2col[level]].hist(geo, bins=nbins, alpha=0.5, label='geodesic {}'.format(level), density=False, histtype='bar', edgecolor='white')
+    #     # axes[0, level2col[level]].legend(loc='upper right')
+    #     axes[1, level2col[level]].hist(euc, bins=nbins, alpha=0.5, label='Euclidean {}'.format(level), density=False,
+    #                                    histtype='bar', edgecolor='white')
+    #     axes[2, level2col[level]].hist(rat, bins=nbins, range=(min(rat), 1.0), alpha=0.5, label='ratio {}'.format(level), density=False,
+    #                                    histtype='bar', edgecolor='white')
+    #
+    # level = "all"
+    # all_geo = np.concatenate(all_geo)
+    # all_euc = np.concatenate(all_euc)
+    # all_rat = np.concatenate(all_rat)
+    # nbins = int(np.sqrt(len(all_geo)) + 0.5) // sampling
+    # axes[0, level2col[level]].hist(all_geo, bins=nbins, alpha=0.5, label='geodesic {}'.format(level), density=False, histtype='bar', edgecolor='white')
+    # # axes[0, level2col[level]].legend(loc='upper right')
+    # axes[1, level2col[level]].hist(all_euc, bins=nbins, alpha=0.5, label='Euclidean {}'.format(level), density=False,
+    #                                histtype='bar', edgecolor='white')
+    # axes[2, level2col[level]].hist(all_rat, bins=nbins, range=(min(all_rat), 1.0), alpha=0.5, label='ratio {}'.format(level), density=False,
+    #                                histtype='bar', edgecolor='white')
+    #
+    # axes[0, 0].set_ylabel('Geodesic')
+    # axes[1, 0].set_ylabel('Euclidean')
+    # axes[2, 0].set_ylabel('ratio')
+    #
+    # axes[-1, 0].set_xlabel('easy')
+    # axes[-1, 1].set_xlabel('medium')
+    # axes[-1, 2].set_xlabel('hard')
+    # axes[-1, 3].set_xlabel('all')
+
+
+    # fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(12, 6), sharey=False)
+
+    all_geo = []
+    all_euc = []
+    all_rat = []
+    for level in eps:
+        geo = np.array([ep["shortest_path_length"] + dist_to_path(ep) for ep in eps[level]])
+        # geo = np.array([geo_dist(ep) for ep in eps[level]])
+        # print(max(abs(geo - np.array([ep["shortest_path_length"] for ep in eps[level]]))))
+        euc = np.array([euc_dist(ep) for ep in eps[level]])
+        assert min(geo) > 0
+        rat = euc / geo
+
+        all_geo.append(geo)
+        all_euc.append(euc)
+        all_rat.append(rat)
+
+        # for it, r in enumerate(zip(geo, rat)):
+        #     if r[1] > 1.0:
+        #         print(it, r)
+
+
+        # if level == "hard":
+        #     thres = 1.0
+        #     same = []
+        #     nosame = []
+        #     dist_same = []
+        #     dist_nosame = []
+        #
+        #     from matplotlib import collections as mc
+        #
+        #     fig, ax = plt.subplots()
+        #     colorsame = [(1, 0, 0, 1.0)]
+        #     colornosame = [(0, 0, 1, 1.0)]
+        #
+        #     for it, r in enumerate(zip(geo, rat)):
+        #         # if r[1] > 0.98:
+        #         ep = eps["hard"][it]
+        #         if len(ep["shortest_path"]) > 2:
+        #             # print(it, r[1], ep["shortest_path"])
+        #             sx, sz = (ep["initial_position"][x] for x in ["x", "z"])
+        #             tx, tz = (ep["shortest_path"][-1][x] for x in["x", "z"])
+        #             dv = (tx-sx, tz-sz)
+        #             norm = np.sqrt(dv[0]*dv[0] + dv[1]*dv[1])
+        #             assert norm > 0
+        #             dv = (dv[0] / norm, dv[1] / norm)
+        #             offset = (tx * sz - tz * sx) / norm
+        #             clist = []
+        #             lines = []
+        #             for it in range(len(ep["shortest_path"]) - 1):
+        #                 proj = dv[1] * ep["shortest_path"][it]['x'] - dv[0] * ep["shortest_path"][it]['z']
+        #                 dist = abs(proj + offset)
+        #                 clist.append(dist)
+        #                 lines.append(
+        #                     [(ep["shortest_path"][it]['x'], ep["shortest_path"][it]['z']),
+        #                      (ep["shortest_path"][it + 1]['x'], ep["shortest_path"][it + 1]['z'])]
+        #                 )
+        #             if r[1] >= thres:
+        #                 dist_same.append(r[0])
+        #                 same.append(max(clist))
+        #
+        #                 import random
+        #                 color = (random.random(), random.random(), random.random(), 1.0)
+        #                 lc = mc.LineCollection(lines, colors=color, linewidths=2)
+        #                 print(ep["shortest_path"], euc_dist(ep), r[0], ep["initial_position"], ep["shortest_path"][0])
+        #                 print(ep)
+        #                 ax.add_collection(lc)
+        #
+        #             else:
+        #                 dist_nosame.append(r[0])
+        #                 nosame.append(max(clist))
+        #
+        #                 # lc = mc.LineCollection(lines, colors=colornosame, linewidths=1)
+        #                 # ax.add_collection(lc)
+        #
+        #     # nbins = int(np.sqrt((min(len(same), len(nosame)))) + 0.5)
+        #
+        #     # print(nbins)
+        #
+        #     # nbins = int(np.sqrt(len(same)) + 0.5)
+        #     # plt.hist(dist_same, bins=nbins, alpha=0.5, label='same',
+        #     #                        density=False, histtype='bar')
+        #     # nbins = int(np.sqrt(len(nosame)) + 0.5)
+        #     # plt.hist(dist_nosame, bins=nbins, alpha=0.5, label='nosame',
+        #     #                        density=False, histtype='bar')
+        #
+        #
+        #     ax.autoscale()
+        #     ax.margins(0.1)
+        #
+        #
+        #
+        #                 # deltas = []
+        #                 # for it in range(len(ep["shortest_path"]) - 1):
+        #                 #     sx, sz = (ep["shortest_path"][it][x] for x in ["x", "z"])
+        #                 #     tx, tz = (ep["shortest_path"][it + 1][x] for x in ["x", "z"])
+        #                 #     if sx != tx:
+        #                 #         deltas.append(('x', (sz-tz)/(sx-tx)))
+        #                 #     elif sz != tz:
+        #                 #         deltas.append(('z', (sx-tx)/(sz-tz)))
+        #                 #     else:
+        #                 #         assert False
+        #                 # print(deltas, ep["shortest_path_length"])
+        #
+        # # nbins = int(np.sqrt(len(geo)) + 0.5) // sampling
+        # # axes[0, level2col[level]].hist(geo, bins=nbins, alpha=0.5, label='geodesic {}'.format(level), density=False, histtype='bar', edgecolor='white')
+        # # # axes[0, level2col[level]].legend(loc='upper right')
+        # # axes[1, level2col[level]].hist(euc, bins=nbins, alpha=0.5, label='Euclidean {}'.format(level), density=False,
+        # #                                histtype='bar', edgecolor='white')
+        # # axes[2, level2col[level]].hist(rat, bins=nbins, range=(min(rat), 1.0), alpha=0.5, label='ratio {}'.format(level), density=False,
+        # #                                histtype='bar', edgecolor='white')
+
+    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(13, 4), sharey=False)
+
+    level = "all"
+    all_geo = np.concatenate(all_geo)
+    all_euc = np.concatenate(all_euc)
+    all_rat = np.concatenate(all_rat)
+    nbins = int(np.sqrt(len(all_geo)) + 0.5) // sampling
+    axes[0].hist(all_geo, bins=nbins, alpha=1.0, label='geodesic {}'.format(level), density=False, histtype='bar', edgecolor=(199/255,209/255,227/255,1.0), color=(183/255,198/255,222/255,1.0))
+    axes[0].set_xticks([])
+    # axes[0, level2col[level]].legend(loc='upper right')
+    axes[1].hist(all_euc, bins=nbins, alpha=1.0, label='Euclidean {}'.format(level), density=False, histtype='bar', edgecolor=(199/255,209/255,227/255,1.0), color=(183/255,198/255,222/255,1.0))
+    axes[1].set_xticks([])
+    # axes[2].hist(all_rat, bins=nbins, range=(min(all_rat), 1.0), alpha=0.5, label='ratio {}'.format(level), density=False, histtype='bar', edgecolor='white')
+    axes[2].hist(all_rat, bins=nbins, alpha=1.0, label='ratio {}'.format(level), density=False, histtype='bar', edgecolor=(199/255,209/255,227/255,1.0), color=(183/255,198/255,222/255,1.0))
+    axes[2].set_xticks([])
+
+    axes[0].set_ylabel('RoboTHOR\nNumber of episodes', fontsize=16)
+
+    axes[0].tick_params(axis='y', labelsize=14)
+    axes[0].yaxis.set_ticks_position('none')
+    axes[1].tick_params(axis='y', labelsize=14)
+    axes[1].yaxis.set_ticks_position('none')
+    axes[2].tick_params(axis='y', labelsize=14)
+    axes[2].yaxis.set_ticks_position('none')
+    # axes[1].yticks(fontsize=14)
+    # axes[2].yticks(fontsize=14)
+
+    fig.subplots_adjust(wspace=0.3, top=0.97, right=0.99, bottom=0.03, left=0.09)
+
+    plt.show()
