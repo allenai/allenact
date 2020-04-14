@@ -500,4 +500,7 @@ def dataset_hists(ctx, train_dataset="rl_robothor/data/train.json", val_dataset=
 
     fig.subplots_adjust(wspace=0.3, top=0.97, right=0.99, bottom=0.03, left=0.09)
 
+    # print("Max geo:", max(all_geo), "min geo:", min(all_geo), "Max Euc:", max(all_euc), "min Euc:", min(all_euc))
+    print("Max geo:", np.max(all_geo), "min geo:", np.min(all_geo), "Max Euc:", np.max(all_euc), "min Euc:", np.min(all_euc))
+
     plt.show()
