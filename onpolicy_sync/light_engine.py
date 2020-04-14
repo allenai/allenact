@@ -814,8 +814,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     if self.is_distributed:
                         # TODO test the hack actually works
                         zero_loss = (torch.zeros_like(
-                            actor_critic_output.distributions) * actor_critic_output.distributions + torch.zeros_like(
-                            actor_critic_output.values) * actor_critic_output.values).sum()
+                            actor_critic_output.distributions) * actor_critic_output.distributions).sum() + (
+                                                torch.zeros_like(
+                                                    actor_critic_output.values) * actor_critic_output.values).sum()
                         self.optimizer.zero_grad()  # type: ignore
                         zero_loss.backward()  # synchronize
                         nn.utils.clip_grad_norm_(
