@@ -172,6 +172,7 @@ class OnPolicyRLEngine(object):
         if seed is None:
             return seed
         seed = (seed ^ (self.total_steps + self.step_count + 1)) % (2 ** 31 - 1)  # same seed for all workers
+        # TODO: fix for distributed test
         if self.mode == "train":
             return self.worker_seeds(self.num_workers, seed)[self.worker_id]  # doesn't modify the current rng state
         else:
@@ -258,6 +259,7 @@ class OnPolicyRLEngine(object):
             fn(
                 process_ind=process_offset + it,
                 total_processes=total_processes,
+                # TODO: fix for distributed test
                 devices=[self.device] if self.is_distributed or self.mode == "test" else devices,
                 seeds=seeds,
             )
