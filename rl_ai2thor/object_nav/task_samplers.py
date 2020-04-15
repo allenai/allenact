@@ -177,8 +177,6 @@ class ObjectNavTaskSampler(TaskSampler):
             sorted([(k, float(v)) for k, v in pose.items()], key=lambda x: x[0])
         )
 
-        task_info["actions"] = []
-
         self._last_sampled_task = ObjectNavTask(
             env=self.env,
             sensors=self.sensors,

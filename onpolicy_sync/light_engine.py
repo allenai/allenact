@@ -139,6 +139,7 @@ class OnPolicyRLEngine(object):
         self.is_distributed = False
         self.store: Optional[torch.distributed.TCPStore] = None
         if self.num_workers > 1:
+            # TODO if training
             self.store = torch.distributed.TCPStore(
                 "localhost",
                 self.distributed_port,
