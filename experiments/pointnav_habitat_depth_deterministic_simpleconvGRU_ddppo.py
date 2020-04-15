@@ -11,7 +11,7 @@ from rl_habitat.habitat_utils import construct_env_configs
 from experiments.pointnav_habitat_base_ddppo import PointNavHabitatDDPPOBaseExperimentConfig
 
 
-class PointNavHabitatDepthDeterministicResNet50GRUDDPPOExperimentConfig(PointNavHabitatDDPPOBaseExperimentConfig):
+class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(PointNavHabitatDDPPOBaseExperimentConfig):
     """A Point Navigation experiment configuraqtion in Habitat"""
 
     SENSORS = [
