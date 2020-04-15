@@ -123,7 +123,6 @@ class Task(Generic[EnvType]):
         """
         assert not self.is_done()
         sr = self._step(action=action)
-        self.task_info["actions"].append(self.action_names()[action])
         self._total_reward += float(sr.reward)
         self._increment_num_steps_taken()
         return sr
