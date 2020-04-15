@@ -309,6 +309,8 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         # pose = self.env.agent_state()
         # self.path = [{k: pose[k] for k in ['x', 'y', 'z']}]
         self.path = []  # the initial coordinate will be directly taken from the optimal path
+        self.task_info["followed_path"] = [self.env.agent_state()]
+        self.task_info["taken_actions"] = []
 
     @property
     def action_space(self):
@@ -333,6 +335,8 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             elif action_str == ROTATE_LEFT:
                 action_str = ROTATE_RIGHT
 
+        self.task_info["taken_actions"].append(action_str)
+
         if action_str == END:
             self._took_end_action = True
             self._success = self._is_goal_in_range()
@@ -342,6 +346,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             self.last_action_success = self.env.last_action_success
             pose = self.env.agent_state()
             self.path.append({k: pose[k] for k in ['x', 'y', 'z']})
+            self.task_info["followed_path"].append(pose)
 
         step_result = RLStepResult(
             observation=self.get_observations(),
