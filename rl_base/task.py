@@ -125,7 +125,10 @@ class Task(Generic[EnvType]):
         sr = self._step(action=action)
         self._total_reward += float(sr.reward)
         self._increment_num_steps_taken()
-        return sr
+        # TODO: Rather than cloning should be increment the step
+        #   count before running `self._step(...)`? Alternatively
+        #   we can make RLStepResult mutable.
+        return sr.clone({"done": sr.done or self.is_done()})
 
     @abstractmethod
     def _step(self, action: int) -> RLStepResult:
