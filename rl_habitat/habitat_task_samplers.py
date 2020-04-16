@@ -184,6 +184,9 @@ class ObjectNavTaskSampler(TaskSampler):
             self.env = self._create_environment()
             self.env.reset()
         ep_info = self.env.get_current_episode()
+        while ep_info.goals[0].object_category != 'chair':
+            self.env.reset()
+            ep_info = self.env.get_current_episode()
         target = ep_info.goals[0].position
 
         task_info = {
