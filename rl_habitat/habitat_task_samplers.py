@@ -187,6 +187,8 @@ class ObjectNavTaskSampler(TaskSampler):
         while ep_info.goals[0].object_category != 'chair':
             self.env.reset()
             ep_info = self.env.get_current_episode()
+            if self.max_tasks is not None:
+                self.max_tasks -= 1
         target = ep_info.goals[0].position
 
         task_info = {
