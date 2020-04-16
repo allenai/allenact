@@ -5,7 +5,7 @@ import shutil
 import time
 import traceback
 from multiprocessing.context import BaseContext
-from typing import Optional, Dict, Union, Tuple, Sequence, List, Any
+from typing import Optional, Dict, Union, Tuple, Sequence, List, Any, Callable
 from collections import OrderedDict, defaultdict
 import signal
 import json
@@ -49,6 +49,7 @@ class OnPolicyRunner(object):
         self.mp_ctx = self.init_context(mp_ctx, multiprocessing_start_method)
         self.extra_tag = extra_tag
         self.mode = mode
+        self.trajectory_renderer: Optional[Callable[..., None]] = None
 
         assert self.mode in ["train", "test"], "Only 'train' and 'test' modes supported in runner"
 
@@ -104,6 +105,12 @@ class OnPolicyRunner(object):
             devices = [torch.device("cpu")]
         LOGGER.info("Using {} {} workers on devices {}".format(len(devices), mode, devices))
         return devices
+
+    def get_trajectory_renderer(self, mode: str):
+        # Note: Avoid instantiating preprocessors in machine_params (use Builder if needed)
+        params = self.config.machine_params(mode)
+        if "trajectory_renderer" in params and params["trajectory_renderer"] is not None:
+            self.trajectory_renderer = params["trajectory_renderer"]()  # it's a Builder!
 
     @staticmethod
     def init_process(mode, id):
@@ -177,10 +184,10 @@ class OnPolicyRunner(object):
             distributed_port = find_free_port()
             distributed_barrier = self.mp_ctx.Barrier(num_trainers)
 
-        for tit in range(num_trainers):
+        for trainer_it in range(num_trainers):
             train: mp.Process = self.mp_ctx.Process(
                 target=self.train_loop,
-                args=(tit, checkpoint, restart),
+                args=(trainer_it, checkpoint, restart),
                 kwargs=dict(
                     experiment_name=self.experiment_name,
                     config=self.config,
@@ -191,7 +198,7 @@ class OnPolicyRunner(object):
                     deterministic_cudnn=self.deterministic_cudnn,
                     mp_ctx=self.mp_ctx,
                     num_workers=num_trainers,
-                    device=devices[tit],
+                    device=devices[trainer_it],
                     distributed_port=distributed_port,
                     distributed_barrier=distributed_barrier
                 )
@@ -203,6 +210,7 @@ class OnPolicyRunner(object):
 
         # Validation
         device = self.worker_devices("valid")[0]
+        self.get_trajectory_renderer("valid")
         valid: mp.Process = self.mp_ctx.Process(
             target=self.valid_loop,
             args=(0,),
@@ -228,19 +236,20 @@ class OnPolicyRunner(object):
                    skip_checkpoints: int = 0,
                    ):
         devices = self.worker_devices("test")
+        self.get_trajectory_renderer("test")
         num_testers = len(devices)
 
-        for tit in range(num_testers):
+        for tester_it in range(num_testers):
             test: mp.Process = self.mp_ctx.Process(
                 target=self.test_loop,
-                args=(tit,),
+                args=(tester_it,),
                 kwargs=dict(
                     config=self.config,
                     results_queue=self.queues["results"],
                     checkpoints_queue=self.queues["checkpoints"],
                     seed=12345,  # TODO allow same order for randomly sampled tasks? Is this any useful anyway?
                     mp_ctx=self.mp_ctx,
-                    device=devices[tit],
+                    device=devices[tester_it],
                 )
             )
             test.start()
@@ -366,6 +375,9 @@ class OnPolicyRunner(object):
 
         if render is not None:
             log_writer.add_vid("{}/agent_view".format(mode), render, steps)
+
+        if self.trajectory_renderer is not None:
+            self.trajectory_renderer(log_writer, task_outputs, steps)
 
     def aggregate_infos(self, log_writer, infos, steps):
         nsamples = sum(info[2] for info in infos)

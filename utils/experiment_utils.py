@@ -5,13 +5,19 @@ from collections import OrderedDict
 import copy
 import random
 import typing
-from typing import NamedTuple, Dict, Any, Union, Iterator, Optional, List, Tuple
+from typing import NamedTuple, Dict, Any, Union, Iterator, Optional, List, Tuple, Sequence
 
 import numpy as np
 import torch
 from torch import optim
+# import matplotlib
+# matplotlib.use('TkAgg')  # for GUI in OSX
+# matplotlib.use('AGG')
+from matplotlib import pyplot as plt
+from matplotlib.collections import LineCollection
 
 from rl_base.common import Loss
+from utils.tensor_utils import SummaryWriter
 
 
 def recursive_update(
@@ -328,3 +334,103 @@ class TrainingPipeline(typing.Iterable):
             range(start_stage_num, len(self.pipeline_stages)),
             self.pipeline_stages[start_stage_num:],
         )
+
+
+class SimpleTrajectoryRenderer:
+    def __init__(
+            self,
+            episode_ids: Sequence[Union[Sequence[str], str]],
+            x: str = "x",
+            y: str = "z",
+            path_to_trajectory: Sequence[str] = ("task_info", "followed_path"),
+            path_to_id: Sequence[str] = ("task_info", "id"),
+            path_to_target_location: Optional[Sequence[str]] = None,
+            mode: str = "valid",
+            label: str = "trajectories",
+            figsize: Tuple[int, int] = (2, 2),
+            fontsize: int = 5,
+    ):
+        self.episode_ids = episode_ids if isinstance(episode_ids[0], Sequence) else [episode_ids]
+        self.x = x
+        self.y = y
+        self.path_to_trajectory = path_to_trajectory
+        self.path_to_id = path_to_id
+        self.path_to_target_location = path_to_target_location
+        self.mode = mode
+        self.label = label
+        self.figsize = figsize
+        self.fontsize = fontsize
+
+    @staticmethod
+    def _access(episode, path):
+        if len(path) == 1:
+            return episode[path[0]]
+        else:
+            return SimpleTrajectoryRenderer._access(episode[path[0]], path[1:])
+
+    def __call__(self, log_writer: SummaryWriter, task_outputs: List[Any], num_steps: int):
+        all_episodes = {self._access(episode, self.path_to_id): episode for episode in task_outputs}
+
+        for page, current_ids in enumerate(self.episode_ids):
+            figs = []
+            for episode_id in current_ids:
+                assert episode_id in all_episodes
+                figs.append(self.make_fig(all_episodes[episode_id], episode_id))
+            log_writer.add_figure("{}/{}_{}".format(self.mode, self.label, page), figs, global_step=num_steps)
+            plt.close("all")  # close all current figures (tensorboardX already closes all figures we render)
+
+    def make_fig(self, episode, episode_id):
+        # From https://nbviewer.jupyter.org/github/dpsanders/matplotlib-examples/blob/master/colorline.ipynb
+        def colorline(x, y, z=None, cmap=plt.get_cmap('cool'), norm=plt.Normalize(0.0, 1.0), linewidth=2, alpha=1.0):
+            """
+            Plot a colored line with coordinates x and y
+            Optionally specify colors in the array z
+            Optionally specify a colormap, a norm function and a line width
+            """
+            def make_segments(x, y):
+                """
+                Create list of line segments from x and y coordinates, in the correct format for LineCollection:
+                an array of the form   numlines x (points per line) x 2 (x and y) array
+                """
+                points = np.array([x, y]).T.reshape(-1, 1, 2)
+                segments = np.concatenate([points[:-1], points[1:]], axis=1)
+                return segments
+
+            # Default colors equally spaced on [0,1]:
+            if z is None:
+                z = np.linspace(0.0, 1.0, len(x))
+
+            # Special case if a single number:
+            if not hasattr(z, "__iter__"):  # to check for numerical input -- this is a hack
+                z = np.array([z])
+
+            z = np.asarray(z)
+
+            segments = make_segments(x, y)
+            lc = LineCollection(segments, array=z, cmap=cmap, norm=norm, linewidth=linewidth, alpha=alpha)
+
+            ax.add_collection(lc)
+
+            return lc
+
+        trajectory = self._access(episode, self.path_to_trajectory)
+
+        x, y = [], []
+        for xy in trajectory:
+            x.append(xy[self.x])
+            y.append(xy[self.y])
+
+        fig, ax = plt.subplots(figsize=self.figsize)
+        colorline(x, y)
+        ax.scatter([x[0]], [y[0]], marker=">")  # play
+        ax.scatter([x[-1]], [y[-1]], marker="s")  # stop
+
+        if self.path_to_target_location is not None:
+            target = self._access(episode, self.path_to_target_location)
+            ax.scatter([target[self.x]], [target[self.y]], marker="*")
+
+        ax.set_title(episode_id, fontsize=self.fontsize)
+        ax.tick_params(axis='x', labelsize=self.fontsize)
+        ax.tick_params(axis='y', labelsize=self.fontsize)
+
+        return fig
