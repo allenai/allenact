@@ -350,7 +350,7 @@ class SimpleTrajectoryRenderer:
             figsize: Tuple[int, int] = (2, 2),
             fontsize: int = 5,
     ):
-        self.episode_ids = episode_ids if isinstance(episode_ids[0], Sequence) else [episode_ids]
+        self.episode_ids = episode_ids if not isinstance(episode_ids[0], str) else [episode_ids]
         self.x = x
         self.y = y
         self.path_to_trajectory = path_to_trajectory
