@@ -22,8 +22,8 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     """A Point Navigation experiment configuraqtion in Habitat"""
 
-    TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/train/train.json.gz"
-    VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val/val.json.gz"
+    TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/train_chair/train.json.gz"
+    VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_chair/val.json.gz"
 
     SCREEN_SIZE = 256
     MAX_STEPS = 500
