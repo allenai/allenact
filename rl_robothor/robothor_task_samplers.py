@@ -187,15 +187,12 @@ class ObjectNavTaskSampler(TaskSampler):
         task_info['initial_position'] = {k: pose[k] for k in ['x', 'y', 'z']}
         task_info['initial_orientation'] = pose["rotation"]["y"]
 
-        task_info["actions"] = []
-
         if self.allow_flipping and random.random() > 0.5:
             task_info["mirrored"] = True
         else:
             task_info["mirrored"] = False
 
         # task_info = copy.deepcopy(self.sample_episode(scene))
-        # task_info['actions'] = []
         #
         # pose = {**task_info['initial_position'], 'rotation': {'x': 0.0, 'y': task_info['initial_orientation'], 'z': 0.0}, 'horizon': 0.0}
         # self.env.step({"action": "TeleportFull", **pose})
@@ -394,7 +391,6 @@ class PointNavTaskSampler(TaskSampler):
 
         # task_info = copy.deepcopy(self.sample_episode(scene))
         # task_info['target'] = task_info['target_position']
-        # task_info['actions'] = []
 
         locs = self.env.known_good_locations_list()
         # LOGGER.debug("locs[0] {} locs[-1] {}".format(locs[0], locs[-1]))
@@ -419,7 +415,6 @@ class PointNavTaskSampler(TaskSampler):
         task_info['initial_position'] = {k: pose[k] for k in ['x', 'y', 'z']}
         task_info['initial_orientation'] = pose["rotation"]["y"]
         task_info['target'] = target
-        task_info['actions'] = []
 
         if cond:
             LOGGER.warning("No path for sampled episode {}".format(task_info))

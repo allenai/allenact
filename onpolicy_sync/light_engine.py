@@ -139,6 +139,7 @@ class OnPolicyRLEngine(object):
         self.is_distributed = False
         self.store: Optional[torch.distributed.TCPStore] = None
         if self.num_workers > 1:
+            # TODO if training
             self.store = torch.distributed.TCPStore(
                 "localhost",
                 self.distributed_port,
@@ -172,6 +173,7 @@ class OnPolicyRLEngine(object):
         if seed is None:
             return seed
         seed = (seed ^ (self.total_steps + self.step_count + 1)) % (2 ** 31 - 1)  # same seed for all workers
+        # TODO: fix for distributed test
         if self.mode == "train":
             return self.worker_seeds(self.num_workers, seed)[self.worker_id]  # doesn't modify the current rng state
         else:
@@ -258,6 +260,7 @@ class OnPolicyRLEngine(object):
             fn(
                 process_ind=process_offset + it,
                 total_processes=total_processes,
+                # TODO: fix for distributed test
                 devices=[self.device] if self.is_distributed or self.mode == "test" else devices,
                 seeds=seeds,
             )
@@ -798,16 +801,13 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
                 if isinstance(total_loss, torch.Tensor):
                     self.optimizer.zero_grad()  # type: ignore
-
                     total_loss.backward()  # synchronize
-
                     nn.utils.clip_grad_norm_(
                         self.actor_critic.parameters(), self.tstate.max_grad_norm,  # type: ignore
                     )
                     self.optimizer.step()  # type: ignore
                     self.tstate.backprop_count += 1
                 else:
-                    # TODO This is fatal for DD-PPO
                     LOGGER.warning(
                         "{} worker {}"
                         "Total loss ({}) is not a FloatTensor, it is a {}. This can happen when using teacher"
@@ -815,6 +815,19 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                             self.mode, self.worker_id, total_loss, type(total_loss)
                         )
                     )
+                    if self.is_distributed:
+                        # TODO test the hack actually works
+                        zero_loss = (torch.zeros_like(
+                            actor_critic_output.distributions) * actor_critic_output.distributions).sum() + (
+                                                torch.zeros_like(
+                                                    actor_critic_output.values) * actor_critic_output.values).sum()
+                        self.optimizer.zero_grad()  # type: ignore
+                        zero_loss.backward()  # synchronize
+                        nn.utils.clip_grad_norm_(
+                            self.actor_critic.parameters(), self.tstate.max_grad_norm,  # type: ignore
+                        )
+                        self.optimizer.step()  # type: ignore
+                        self.tstate.backprop_count += 1
 
             # nn.utils.clip_grad_norm_(
             #     self.actor_critic.parameters(), self.tstate.max_grad_norm,  # type: ignore
