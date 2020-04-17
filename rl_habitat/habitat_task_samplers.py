@@ -183,7 +183,7 @@ class ObjectNavTaskSampler(TaskSampler):
             self.env = self._create_environment()
             self.env.reset()
         ep_info = self.env.get_current_episode()
-        while ep_info.goals[0].object_category != 'chair':
+        while ep_info.goals[0].object_category != 'table':
             self.env.reset()
             ep_info = self.env.get_current_episode()
             print("Got", ep_info.goals[0].object_category)
