@@ -122,7 +122,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
-                gpu_ids = [7]
+                gpu_ids = [0]
             render_video = False
         elif mode == "test":
             nprocesses = 1
