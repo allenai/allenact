@@ -6,7 +6,7 @@ from models.object_nav_models import ResnetTensorObjectNavActorCritic
 from rl_base.sensor import SensorSuite
 from rl_habitat.habitat_tasks import ObjectNavTask
 from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetObjectSensorHabitat
-from rl_habitat.habitat_utils import construct_env_configs
+from rl_habitat.habitat_utils import construct_env_configs, construct_env_configs_mp3d
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from rl_base.preprocessor import ObservationSet
 from experiments.objectnav_habitat_base_ddppo import ObjectNavHabitatDDPPOBaseExperimentConfig
@@ -72,7 +72,7 @@ class ObjectNavHabitatRGBDeterministicTrainResNetJordiGRUDDPPOExperimentConfig(O
     CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE
     CONFIG.SIMULATOR.RGB_SENSOR.POSITION = [0, 0.88, 0]
 
-    TRAIN_CONFIGS = construct_env_configs(CONFIG)
+    TRAIN_CONFIGS = construct_env_configs_mp3d(CONFIG)
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
