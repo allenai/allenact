@@ -349,16 +349,18 @@ class OnPolicyRLEngine(object):
 
         return len(paused), keep, batch
 
-    def initialize_rollouts(self, rollouts, render: Optional[List[np.ndarray]] = None):
+    def initialize_rollouts(self, rollouts, visualizer=None):
         observations = self.vector_tasks.get_observations()
         npaused, keep, batch = self.remove_paused(observations)
-        if render is not None and len(keep) > 0:
-            render.append(self.vector_tasks.render(mode="rgb_array"))
+        # if render is not None and len(keep) > 0:
+        #     render.append(self.vector_tasks.render(mode="rgb_array"))
         rollouts.reshape(keep)
         rollouts.to(self.device)
         rollouts.insert_initial_observations(
             self._preprocess_observations(batch) if len(keep) > 0 else batch
         )
+        if visualizer is not None and len(keep) > 0:
+            visualizer.collect(vector_task=self.vector_tasks, alive=keep)
         return npaused
 
     def act(self, rollouts: RolloutStorage):
@@ -379,7 +381,7 @@ class OnPolicyRLEngine(object):
 
         return actions, actor_critic_output, recurrent_hidden_states, step_observation
 
-    def collect_rollout_step(self, rollouts: RolloutStorage, render=None):
+    def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None):
         actions, actor_critic_output, recurrent_hidden_states, _ = self.act(rollouts)
 
         outputs = self.vector_tasks.step([a[0].item() for a in actions])
@@ -399,8 +401,8 @@ class OnPolicyRLEngine(object):
 
         npaused, keep, batch = self.remove_paused(observations)
 
-        if render is not None and len(keep) > 0:
-            render.append(self.vector_tasks.render(mode="rgb_array"))
+        # if render is not None and len(keep) > 0:
+        #     render.append(self.vector_tasks.render(mode="rgb_array"))
 
         rollouts.reshape(keep)
 
@@ -413,6 +415,12 @@ class OnPolicyRLEngine(object):
             rewards=rewards[keep],
             masks=masks[keep],
         )
+
+        # TODO we always miss tensors for the last action in the last episode of each worker
+        if visualizer is not None and len(keep) > 0:
+            visualizer.collect(
+                rollout=rollouts, vector_task=self.vector_tasks, alive=keep, actor_critic=actor_critic_output
+            )
 
         return npaused
 
@@ -1097,7 +1105,7 @@ class OnPolicyInference(OnPolicyRLEngine):
 
         self.deterministic_agent = deterministic_agent
 
-    def run_eval(self, checkpoint_file_name: str, rollout_steps=1, max_clip_len=500, render_video=False):
+    def run_eval(self, checkpoint_file_name: str, rollout_steps=1, visualizer=None):
         assert self.actor_critic is not None, "called run_eval with no actor_critic"
 
         self.checkpoint_load(checkpoint_file_name)
@@ -1110,11 +1118,14 @@ class OnPolicyInference(OnPolicyRLEngine):
             num_recurrent_layers=self.actor_critic.num_recurrent_layers if not self.is_distributed else self.actor_critic.module.num_recurrent_layers,
         )
 
-        render: Union[None, np.ndarray, List[np.ndarray]] = [] if render_video else None
-        num_paused = self.initialize_rollouts(rollouts, render=render)
+        # render: Union[None, np.ndarray, List[np.ndarray]] = [] if render_video else None
+        if visualizer is not None:
+            assert visualizer.empty()
+
+        num_paused = self.initialize_rollouts(rollouts, visualizer=visualizer)
         steps = 0
         while num_paused < self.num_samplers:
-            num_paused += self.collect_rollout_step(rollouts, render=render)
+            num_paused += self.collect_rollout_step(rollouts, visualizer=visualizer)
             steps += 1
             if steps % rollout_steps == 0:
                 rollouts.after_update()
@@ -1127,17 +1138,19 @@ class OnPolicyInference(OnPolicyRLEngine):
         total_tasks = sum(num_tasks)
         metrics_pkg, task_outputs = self.aggregate_task_metrics(count=total_tasks)
 
-        if render_video:
-            render = process_video(render, max_clip_len)
+        # if render_video:
+        #     render = process_video(render, max_clip_len)  # TODO: leave this to logger by just sending raw frames
 
         pkg_type = "{}_package".format(self.mode)
-        payload = (metrics_pkg, task_outputs, render, checkpoint_file_name)
+        payload = (metrics_pkg, task_outputs, visualizer.read_and_reset(), checkpoint_file_name)
         nsteps = self.total_steps + self.step_count
 
         return pkg_type, payload, nsteps
 
     def process_checkpoints(self):
         assert self.mode != "train", "process_checkpoints only to be called from a valid or test instance"
+
+        visualizer = None
 
         finalized = False
         try:
@@ -1158,8 +1171,9 @@ class OnPolicyInference(OnPolicyRLEngine):
 
                 if command == "eval":
                     if self.num_samplers > 0:
-                        render_video = "render_video" in self.machine_params and self.machine_params["render_video"]
-                        eval_package = self.run_eval(checkpoint_file_name=data, render_video=render_video)
+                        if visualizer is None and "visualizer" in self.machine_params and self.machine_params["visualizer"] is not None:
+                            visualizer = self.machine_params["visualizer"]()  # builder object
+                        eval_package = self.run_eval(checkpoint_file_name=data, visualizer=visualizer)
                         self.results_queue.put(eval_package)
                     else:
                         self.results_queue.put(("{}_package".format(self.mode), None, -1))

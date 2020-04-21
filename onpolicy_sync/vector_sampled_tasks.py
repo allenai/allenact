@@ -619,6 +619,9 @@ class VectorSampledTasks(object):
             write_fn((RENDER_COMMAND, (args, {"mode": "rgb", **kwargs})))
         images: List[np.ndarray] = [read_fn() for read_fn in self._connection_read_fns]
 
+        if mode == "raw_rgb_list":
+            return images
+
         for index, _, _, _ in reversed(self._paused):
             images.insert(index, np.zeros_like(images[0]))
 

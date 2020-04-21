@@ -4,7 +4,7 @@
 import random
 from collections import defaultdict
 import typing
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Tuple, DefaultDict
 
 import torch
 import numpy as np
@@ -52,12 +52,13 @@ class RolloutStorage:
         self.masks = torch.ones(num_steps + 1, num_processes, 1)
 
         self.flattened_spaces: Dict[str, List[str]] = dict()
+        self.reverse_flattened_spaces: Dict[Tuple, str] = dict()
 
         self.num_steps = num_steps
         self.step = 0
         self.flatten_separator = flatten_separator
 
-        self.unnarrow_data: Dict[str, Union[int, torch.Tensor]] = defaultdict(dict)
+        self.unnarrow_data: DefaultDict[str, Union[int, torch.Tensor]] = defaultdict(dict)
 
     def to(self, device):
         for sensor in self.observations:
@@ -118,6 +119,7 @@ class RolloutStorage:
                         assert sensor_name not in self.flattened_spaces,\
                             "new flattened name {} already existing in flattened spaces".format(sensor_name)
                         self.flattened_spaces[sensor_name] = path + [sensor]
+                        self.reverse_flattened_spaces[tuple(path + [sensor])] = sensor_name
 
                 self.observations[sensor_name][time_step].copy_(observations[sensor])
 

@@ -49,7 +49,7 @@ class OnPolicyRunner(object):
         self.mp_ctx = self.init_context(mp_ctx, multiprocessing_start_method)
         self.extra_tag = extra_tag
         self.mode = mode
-        self.trajectory_renderer: Optional[Callable[..., None]] = None
+        self.visualizer: Optional[Callable[..., None]] = None
 
         assert self.mode in ["train", "test"], "Only 'train' and 'test' modes supported in runner"
 
@@ -106,11 +106,11 @@ class OnPolicyRunner(object):
         LOGGER.info("Using {} {} workers on devices {}".format(len(devices), mode, devices))
         return devices
 
-    def get_trajectory_renderer(self, mode: str):
+    def get_visualizer(self, mode: str):
         # Note: Avoid instantiating preprocessors in machine_params (use Builder if needed)
         params = self.config.machine_params(mode)
-        if "trajectory_renderer" in params and params["trajectory_renderer"] is not None:
-            self.trajectory_renderer = params["trajectory_renderer"]()  # it's a Builder!
+        if "visualizer" in params and params["visualizer"] is not None:
+            self.visualizer = params["visualizer"]()  # it's a Builder!
 
     @staticmethod
     def init_process(mode, id):
@@ -210,7 +210,7 @@ class OnPolicyRunner(object):
 
         # Validation
         device = self.worker_devices("valid")[0]
-        self.get_trajectory_renderer("valid")
+        self.get_visualizer("valid")
         valid: mp.Process = self.mp_ctx.Process(
             target=self.valid_loop,
             args=(0,),
@@ -236,7 +236,7 @@ class OnPolicyRunner(object):
                    skip_checkpoints: int = 0,
                    ):
         devices = self.worker_devices("test")
-        self.get_trajectory_renderer("test")
+        self.get_visualizer("test")
         num_testers = len(devices)
 
         for tester_it in range(num_testers):
@@ -373,11 +373,11 @@ class OnPolicyRunner(object):
         message.append("tasks {} checkpoint {}".format(num_tasks, checkpoint_file_name))
         LOGGER.info(" ".join(message))
 
-        if render is not None:
-            log_writer.add_vid("{}/agent_view".format(mode), render, steps)
+        # if render is not None:
+        #     log_writer.add_vid("{}/agent_view".format(mode), render, steps)
 
-        if self.trajectory_renderer is not None:
-            self.trajectory_renderer(log_writer, task_outputs, steps)
+        if self.visualizer is not None:
+            self.visualizer.log(log_writer, task_outputs, render, steps)
 
     def aggregate_infos(self, log_writer, infos, steps):
         nsamples = sum(info[2] for info in infos)
