@@ -1071,7 +1071,7 @@ class OnPolicyInference(OnPolicyRLEngine):
         deterministic_cudnn: bool = False,
         mp_ctx: Optional[BaseContext] = None,
         device: Union[str, torch.device, int] = 'cpu',
-        deterministic_agent: bool = False,
+        deterministic_agent: bool = True,
         worker_id: int = 0,
         **kwargs,
     ):
