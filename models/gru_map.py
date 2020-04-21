@@ -12,11 +12,15 @@ class RNNMap(nn.Module):
             input_size=512,
             rnn_type='GRU',
             num_rnn_layers=1,
+            map_width = 32,
+            map_height = 32,
     ):
         super().__init__()
         self.rnn = getattr(nn, rnn_type)(
             input_size=input_size, hidden_size=embedding_size, num_layers=num_rnn_layers
         )
+        self.map_width = map_width
+        self.map_height = map_height
 
     def layer_init(self):
         """Initialize the RNN parameters in the model."""
@@ -60,12 +64,20 @@ class RNNMap(nn.Module):
             return cast(Tuple[torch.FloatTensor, torch.FloatTensor], new_hidden_states)
         return hidden_states
 
+    def fold_map(self, hidden_state: torch.FloatTensor) -> torch.FloatTensor:
+        """Folds GRU Map into single dimensional tensor to have the same shape as regular GRU memory"""
+        return hidden_state.view(hidden_state.size(0), hidden_state.size(1), -1)
+
+    def unfold_map(self, hidden_state: torch.FloatTensor) -> torch.FloatTensor:
+        """Unfolds single dimensional tensor into the shape of the GRU Map"""
+        return hidden_state.view(hidden_state.size(0), hidden_state.size(1), self.map_width, self.map_height, -1)
+
     def single_forward(
             self,
             x: torch.Tensor,
             memory_map: torch.FloatTensor,
             position: Tuple[int, int]
-    ) -> (torch.FloatTensor, torch.FloatTensor):
+    ) -> (torch.FloatTens or, torch.FloatTensor):
 
         memory = memory_map[position]
         x_out, memory_out = self.rnn(x, memory)
