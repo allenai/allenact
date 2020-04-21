@@ -72,7 +72,7 @@ class ObjectNavHabitatRGBDeterministicTrainResNetJordiGRUDDPPOExperimentConfig(O
     CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE
     CONFIG.SIMULATOR.RGB_SENSOR.POSITION = [0, 0.88, 0]
 
-    TRAIN_CONFIGS = construct_env_configs_mp3d(CONFIG)
+    TRAIN_CONFIGS = construct_env_configs(CONFIG)
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
