@@ -1,9 +1,9 @@
-from typing import Dict, Any, Union, Optional, List, Tuple, Sequence
+from typing import Dict, Any, Union, Optional, List, Tuple, Sequence, Callable
 import abc
 import json
 
 import numpy as np
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, markers
 from matplotlib.collections import LineCollection
 
 from utils.tensor_utils import SummaryWriter, tile_images, process_video
@@ -71,17 +71,25 @@ class TrajectoryViz(AbstractViz):
             path_to_target_location: Optional[Sequence[str]] = ("task_info", "target_position"),
             x: str = "x",
             y: str = "z",
-            label: str = "trajectories",
+            path_to_rot_degrees: Optional[Sequence[str]] = ("rotation", "y"),
+            adapt_rotation: Optional[Callable[[float], float]] = None,
+            label: str = "trajectory",
             figsize: Tuple[int, int] = (2, 2),
             fontsize: int = 5,
+            start_marker_shape: str = "$\spadesuit$",
+            start_marker_scale: int = 100,
     ):
         super().__init__(label)
-        self.x = x
-        self.y = y
         self.path_to_trajectory = list(path_to_trajectory)
         self.path_to_target_location = list(path_to_target_location) if path_to_target_location is not None else None
+        self.adapt_rotation = adapt_rotation
+        self.x = x
+        self.y = y
+        self.path_to_rot_degrees = list(path_to_rot_degrees) if path_to_rot_degrees is not None else None
         self.figsize = figsize
         self.fontsize = fontsize
+        self.start_marker_shape = start_marker_shape
+        self.start_marker_scale = start_marker_scale
 
     def log(
             self,
@@ -105,7 +113,7 @@ class TrajectoryViz(AbstractViz):
 
     def make_fig(self, episode, episode_id):
         # From https://nbviewer.jupyter.org/github/dpsanders/matplotlib-examples/blob/master/colorline.ipynb
-        def colorline(x, y, z=None, cmap=plt.get_cmap('cool'), norm=plt.Normalize(0.0, 1.0), linewidth=2, alpha=1.0):
+        def colorline(x, y, z=None, cmap=plt.get_cmap('cool'), norm=plt.Normalize(0.0, 1.0), linewidth=2, alpha=1.0, zorder=1):
             """
             Plot a colored line with coordinates x and y
             Optionally specify colors in the array z
@@ -132,7 +140,7 @@ class TrajectoryViz(AbstractViz):
             z = np.asarray(z)
 
             segments = make_segments(x, y)
-            lc = LineCollection(segments, array=z, cmap=cmap, norm=norm, linewidth=linewidth, alpha=alpha)
+            lc = LineCollection(segments, array=z, cmap=cmap, norm=norm, linewidth=linewidth, alpha=alpha, zorder=zorder)
 
             ax = plt.gca()
             ax.add_collection(lc)
@@ -147,8 +155,16 @@ class TrajectoryViz(AbstractViz):
             y.append(xy[self.y])
 
         fig, ax = plt.subplots(figsize=self.figsize)
-        colorline(x, y)
-        ax.scatter([x[0]], [y[0]], marker=">")  # play
+        colorline(x, y, zorder=1)
+
+        start_marker = markers.MarkerStyle(marker=self.start_marker_shape)
+        if self.path_to_rot_degrees is not None:
+            rot_degrees = float(self.access(trajectory[0], self.path_to_rot_degrees))
+            if self.adapt_rotation is not None:
+                rot_degrees = self.adapt_rotation(rot_degrees)
+            start_marker._transform = start_marker.get_transform().rotate_deg(rot_degrees)
+
+        ax.scatter([x[0]], [y[0]], marker=start_marker, zorder=2, s=self.start_marker_scale)
         ax.scatter([x[-1]], [y[-1]], marker="s")  # stop
 
         if self.path_to_target_location is not None:
