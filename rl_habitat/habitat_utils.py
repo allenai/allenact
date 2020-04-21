@@ -21,7 +21,7 @@ def construct_env_configs(config: Config) -> List[Config]:
     configs = []
     dataset = habitat.make_dataset(config.DATASET.TYPE)
     scenes = dataset.get_scenes_to_load(config.DATASET)
-    scenes = scenes + scenes + scenes + scenes[:2]
+    scenes = scenes * num_processes
     # scenes = ['HxpKQynjfin', 'GdvgFV5R1Z5', 'JF19kD82Mey', 'Pm6F8kyY3z2', '29hnd4uzFmX', 'VVfe2KiqLaN',
     #           'jh4fc5c5qoQ', 'YmJkqBEsHnH', 'i5noydFURQK', 'cV4RVeZvu5T', 'aayBHfsNo7d', 'pRbA3pwrgk9',
     #           '82sE5b5pLXE', 'S9hNv5qa7GM', 'sT4fr6TAbpF', 'b8cTxDM8gDG', 'D7N2EKCX4Sj', 'Uxmj2M2itWa',
