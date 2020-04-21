@@ -25,14 +25,14 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/train_chair/train.json.gz"
     VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_chair/val.json.gz"
 
-    TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_chair/val_one_task.json.gz"
-    VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_chair/val_one_task.json.gz"
+    TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_chair/val_ten_task.json.gz"
+    VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_chair/val_ten_task.json.gz"
 
     SCREEN_SIZE = 256
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.1
 
-    NUM_PROCESSES = 20
+    NUM_PROCESSES = 32
 
     CONFIG = habitat.get_config('configs/mp3d.yaml')
     CONFIG.defrost()
@@ -117,7 +117,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else [4, 4, 3, 2, 2, 2, 2, 1]
+            nprocesses = 1 if not torch.cuda.is_available() else [4, 4, 4, 4, 4, 4, 4, 4]
             gpu_ids = [] if not torch.cuda.is_available() else self.CONFIG.SIMULATOR_GPU_IDS
             render_video = False
         elif mode == "valid":
