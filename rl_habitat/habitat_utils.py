@@ -28,6 +28,7 @@ def construct_env_configs(config: Config) -> List[Config]:
     #           '759xd9YjKW5', 's8pcmisQ38h', 'sKLMLpTHeUy', 'qoiz87JEwZ2', 'uNb9QFRL6hY', 'e9zR4mvMWw7',
     #           'rPc6DW4iMge', 'vyrNrziPKCB']
 
+    print("SCENES:", scenes)
     if len(scenes) > 0:
         # random.shuffle(scenes)
 
