@@ -169,10 +169,13 @@ class AgentViewViz(AbstractViz):
             max_clip_length: int = 100,  # control memory used when converting groups of images into clips
             max_video_length: int = -1,  # no limit, if > 0, limit the maximum video length (discard last frames)
             vector_task_source: Tuple[str, Dict[str, Any]] = ("render", {"mode": "raw_rgb_list"}),
+            episode_ids: Optional[Sequence[Union[Sequence[str], str]]] = None,
     ):
         super().__init__(label, vector_task_sources=[vector_task_source])
         self.max_clip_length = max_clip_length
         self.max_video_length = max_video_length
+
+        self.episode_ids = list(episode_ids) if not isinstance(episode_ids[0], str) else [list(episode_ids)]
 
     def log(
             self,
@@ -379,11 +382,15 @@ class SimpleViz(AbstractViz):
             episode_ids: Sequence[Union[Sequence[str], str]],
             path_to_id: Sequence[str] = ("task_info", "id"),
             mode: str = "valid",
+            force_episodes: bool = False,
             *viz,
             **kw_viz,
     ):
         super().__init__()
         self.setup(mode, path_to_id, episode_ids)
+        self.force_episodes = force_episodes
+
+        self.all_episode_ids = self._episodes_set()
 
         self.viz = [
             v() if isinstance(v, Builder) else v
@@ -398,19 +405,32 @@ class SimpleViz(AbstractViz):
         self.data = {}  # dict of episode id to list of dicts with collected data
         self.last_it2epid = []
 
-        self.all_episode_ids = self._episodes_set()
-
     def _setup_sources(self):
         rollout_sources, vector_task_sources = [], []
         labels = []
         actor_critic_source = False
+        new_episodes = []
         for v in self.viz:
-            v.setup(self.mode, self.path_to_id, self.episode_ids)
             labels.append(v.label)
             rollout_sources += v.rollout_sources
             vector_task_sources += v.vector_task_sources
             actor_critic_source |= v.actor_critic_source
+
+            if v.episode_ids is not None and not self.force_episodes:
+                cur_episodes = self._episodes_set(v.episode_ids)
+                for ep in cur_episodes:
+                    if ep not in self.all_episode_ids:
+                        new_episodes.append(ep)
+                        LOGGER.info("Added new episodes {} from {}".format(new_episodes, v.label))
+
+            v.setup(self.mode, self.path_to_id, self.episode_ids, force=self.force_episodes)
+
         LOGGER.info("Logging labels {}".format(labels))
+
+        if len(new_episodes) > 0:
+            LOGGER.info("Added new episodes {}".format(new_episodes))
+            self.episode_ids.append(new_episodes)
+            self.all_episode_ids = self._episodes_set()
 
         LOGGER.debug("rollout sources {}".format(rollout_sources))
         LOGGER.debug("vector task sources {}".format(vector_task_sources))
@@ -424,48 +444,54 @@ class SimpleViz(AbstractViz):
 
         return [rol_flat[k] for k in rol_keys], [vt_flat[k] for k in vt_keys], actor_critic_source
 
-    def _episodes_set(self):
+    def _episodes_set(self, episode_list=None):
         all_episode_ids = []
-        for group in self.episode_ids:
+        source = self.episode_ids if episode_list is None else episode_list
+        for group in source:
             all_episode_ids += group
         return set(all_episode_ids)
 
     def empty(self):
         return len(self.data) == 0
 
-    # to be called by engine
-    def collect(self, vector_task, alive, rollout=None, actor_critic=None):
-        # TODO we miss tensors for the last step in the last episode of each sampler
-        # TODO assume we never revisit same episode? we have one entry per episode id in data
-        LOGGER.debug("Data entries: {}".format(list(self.data.keys())))
-        for entry in self.data:
-            LOGGER.debug("{}: {} steps, last {}".format(entry, len(self.data[entry]), list(self.data[entry][-1].keys())))
+    def update(self, collected_data):
+        for epid in collected_data:
+            assert epid in self.data
+            LOGGER.debug("Updating {} to {} ({} steps)".format(list(collected_data[epid].keys()), epid, len(self.data[epid])))
+            self.data[epid][-1].update(collected_data[epid])
 
-        # 1. find the identifiers of current episodes through vector_task
-        infos = vector_task.attr("task_info")
-        it2epid = [self.access(info, self.path_to_id[1:]) for info in infos]
+    def append(self, vector_task_data):
+        for epid in vector_task_data:
+            if epid in self.data:
+                LOGGER.debug("Appending {} to {} ({} steps)".format(list(vector_task_data[epid].keys()), epid, len(self.data[epid])))
+                self.data[epid].append(vector_task_data[epid])
+            else:
+                LOGGER.debug("Append {} to new episode {}".format(list(vector_task_data[epid].keys()), epid))
+                self.data[epid] = [vector_task_data[epid]]
 
-        assert len(alive) == len(it2epid)
-        assert len(alive) <= len(self.last_it2epid) or len(self.last_it2epid) == 0
+    def collect_actor_critic(self, actor_critic):
+        actor_critic_data = {epid: dict() for epid in self.last_it2epid if epid in self.all_episode_ids}
+        if len(actor_critic_data) > 0 and actor_critic is not None:
+            if self.actor_critic_source:
+                probs = actor_critic.distributions.probs
+                values = actor_critic.values
+                for it, epid in enumerate(self.last_it2epid):
+                    if epid in actor_critic_data:
+                        # Select current episode (sampler axis will be reused as step axis)
+                        prob = probs.narrow(dim=0, start=it, length=1).to("cpu").detach().numpy()
+                        assert "actor_probs" not in actor_critic_data[epid]
+                        actor_critic_data[epid]["actor_probs"] = prob
+                        val = values.narrow(dim=0, start=it, length=1).to("cpu").detach().numpy()
+                        assert "critic_value" not in actor_critic_data[epid]
+                        actor_critic_data[epid]["critic_value"] = val
 
-        # 2. gather vector_task_sources (in phase with it2epid)
-        vector_task_data = {epid: dict() for epid in it2epid if epid in self.all_episode_ids}
-        if len(vector_task_data) > 0:
-            for source in self.vector_task_sources:  # these are observations for next step!
-                datum_id = self.source_to_str(source, is_vector_task=True)
-                method, kwargs = source
-                res = getattr(vector_task, method)(**kwargs)
-                assert len(res) == len(it2epid)
-                for datum, epid in zip(res, it2epid):
-                    if epid in vector_task_data:
-                        assert datum_id not in vector_task_data[epid]
-                        vector_task_data[epid][datum_id] = datum
+        self.update(actor_critic_data)
 
-        # 3. gather rollout_sources (in phase with last_it2epid that stay alive)
+    def collect_rollout(self, rollout, alive):
         alive_set = set(alive)
         assert len(alive_set) == len(alive)
         alive_it2epid = [epid for it, epid in enumerate(self.last_it2epid) if it in alive_set]
-        assert len(alive_it2epid) == len(it2epid) or len(self.last_it2epid) == 0
+        # assert len(alive_it2epid) == len(it2epid) or len(self.last_it2epid) == 0
         rollout_data = {epid: dict() for epid in alive_it2epid if epid in self.all_episode_ids}
         if len(rollout_data) > 0 and rollout is not None:
             for source in self.rollout_sources:
@@ -489,43 +515,52 @@ class SimpleViz(AbstractViz):
                         assert datum_id not in rollout_data[epid]
                         rollout_data[epid][datum_id] = datum
 
-        # 4. gather actor_critic_sources (in phase with last_it2epid)
-        actor_critic_data = {epid: dict() for epid in self.last_it2epid if epid in self.all_episode_ids}
-        if len(actor_critic_data) > 0 and actor_critic is not None:
-            if self.actor_critic_source:
-                probs = actor_critic.distributions.probs
-                values = actor_critic.values
-                for it, epid in enumerate(self.last_it2epid):
-                    if epid in actor_critic_data:
-                        # Select current episode (sampler axis will be reused as step axis)
-                        prob = probs.narrow(dim=0, start=it, length=1).to("cpu").detach().numpy()
-                        assert "actor_probs" not in actor_critic_data[epid]
-                        actor_critic_data[epid]["actor_probs"] = prob
-                        val = values.narrow(dim=0, start=it, length=1).to("cpu").detach().numpy()
-                        assert "critic_value" not in actor_critic_data[epid]
-                        actor_critic_data[epid]["critic_value"] = val
+        self.update(rollout_data)
 
-        # 5. append collected data to corresponding episodes
-        for epid in vector_task_data:
-            if epid in self.data:
-                LOGGER.debug("Appending {} to {} with {}".format(list(vector_task_data[epid].keys()), epid, len(self.data[epid])))
-                self.data[epid].append(vector_task_data[epid])
-            else:
-                LOGGER.debug("Starting appending {} to {}".format(list(vector_task_data[epid].keys()), epid))
-                self.data[epid] = [vector_task_data[epid]]
+    def collect_vector_task(self, vector_task):
+        it2epid = [self.access(info, self.path_to_id[1:]) for info in vector_task.attr("task_info")]
 
-        # e.g. update previous steps by storing tensors after pre-stored observation
-        for epid in rollout_data:
-            assert epid in self.data
-            LOGGER.debug("Rollout updating {} to {} with {}".format(list(rollout_data[epid].keys()), epid, len(self.data[epid])))
-            self.data[epid][-1].update(rollout_data[epid])
+        vector_task_data = {epid: dict() for epid in it2epid if epid in self.all_episode_ids}
+        if len(vector_task_data) > 0:
+            for source in self.vector_task_sources:  # these are observations for next step!
+                datum_id = self.source_to_str(source, is_vector_task=True)
+                method, kwargs = source
+                res = getattr(vector_task, method)(**kwargs)
+                assert len(res) == len(it2epid)
+                for datum, epid in zip(res, it2epid):
+                    if epid in vector_task_data:
+                        assert datum_id not in vector_task_data[epid]
+                        vector_task_data[epid][datum_id] = datum
 
-        for epid in actor_critic_data:
-            assert epid in self.data
-            LOGGER.debug("Actor-critic updating {} to {} with {}".format(list(actor_critic_data[epid].keys()), epid, len(self.data[epid])))
-            self.data[epid][-1].update(actor_critic_data[epid])
+        self.append(vector_task_data)
 
-        self.last_it2epid = it2epid
+        return it2epid
+
+    # to be called by engine
+    def collect(self, vector_task=None, alive=None, rollout=None, actor_critic=None):
+        # TODO assume we never revisit same episode? we have one entry per episode id in data
+        LOGGER.debug("Data entries: {}".format(list(self.data.keys())))
+        for entry in self.data:
+            LOGGER.debug("{}: {} steps, last {}".format(entry, len(self.data[entry]), list(self.data[entry][-1].keys())))
+
+        if actor_critic is not None:
+            # in phase with last_it2epid
+            self.collect_actor_critic(actor_critic)
+
+        if alive is not None and rollout is not None:
+            # in phase with last_it2epid that stay alive
+            self.collect_rollout(rollout, alive)
+
+        # Always call this one last!
+        if vector_task is not None:
+            # in phase with identifiers of current episodes from vector_task
+            self.last_it2epid = self.collect_vector_task(vector_task)
+
+        # TODO Post checks for debugging
+        if alive is not None:
+            assert len(alive) <= len(self.last_it2epid) or len(self.last_it2epid) == 0
+            if vector_task is not None:
+                assert len(alive) == len(self.last_it2epid)
 
     # to be called by engine
     def read_and_reset(self):

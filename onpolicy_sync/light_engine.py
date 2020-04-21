@@ -417,10 +417,13 @@ class OnPolicyRLEngine(object):
         )
 
         # TODO we always miss tensors for the last action in the last episode of each worker
-        if visualizer is not None and len(keep) > 0:
-            visualizer.collect(
-                rollout=rollouts, vector_task=self.vector_tasks, alive=keep, actor_critic=actor_critic_output
-            )
+        if visualizer is not None:
+            if len(keep) > 0:
+                visualizer.collect(
+                    rollout=rollouts, vector_task=self.vector_tasks, alive=keep, actor_critic=actor_critic_output
+                )
+            else:
+                visualizer.collect(actor_critic=actor_critic_output)
 
         return npaused
 
