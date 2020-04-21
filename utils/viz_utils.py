@@ -46,10 +46,12 @@ class AbstractViz:
             mode: str,
             path_to_id: Sequence[str],
             episode_ids: Sequence[Union[Sequence[str], str]],
+            force: bool = False,
     ):
         self.mode = mode
         self.path_to_id = list(path_to_id)
-        self.episode_ids = list(episode_ids) if not isinstance(episode_ids[0], str) else [list(episode_ids)]
+        if self.episode_ids is None or force:
+            self.episode_ids = list(episode_ids) if not isinstance(episode_ids[0], str) else [list(episode_ids)]
 
     @abc.abstractmethod
     def log(
@@ -293,12 +295,15 @@ class ActorViz(AbstractViz):
     def __init__(
             self,
             label: str = "action_probs",
-            figsize: Tuple[int, int] = (1, 4),
+            action_names_path: Optional[Sequence[str]] = ("task_info", "action_names"),
+            figsize: Tuple[int, int] = (1, 5),
             fontsize: int = 5,
     ):
         super().__init__(label, actor_critic_source=True)
+        self.action_names_path = list(action_names_path) if action_names_path is not None else None
         self.figsize = figsize
         self.fontsize = fontsize
+        self.action_names = None
 
     def log(
             self,
@@ -309,6 +314,14 @@ class ActorViz(AbstractViz):
     ):
         if render is None:
             return
+
+        if (
+                self.action_names is None
+                and task_outputs is not None
+                and len(task_outputs) > 0
+                and self.action_names_path is not None
+        ):
+            self.action_names = list(self.access(task_outputs[0], self.action_names_path))
 
         for page, current_ids in enumerate(self.episode_ids):
             figs = []
@@ -339,10 +352,24 @@ class ActorViz(AbstractViz):
 
         fig, ax = plt.subplots(figsize=self.figsize)
         ax.matshow(mat)
-        ax.set_aspect('auto')
-        ax.set_title(episode_id, fontsize=self.fontsize)
+
+        if self.action_names is not None:
+            assert len(self.action_names) == mat.shape[1]
+            ax.set_xticklabels([''] + self.action_names, rotation='vertical')
+
+        ax.set_xlabel(episode_id, fontsize=self.fontsize)
         ax.tick_params(axis='x', labelsize=self.fontsize)
         ax.tick_params(axis='y', labelsize=self.fontsize)
+        ax.tick_params(bottom=False)
+
+        # Gridlines based on minor ticks
+        ax.set_yticks(np.arange(-.5, mat.shape[0], 1), minor=True)
+        ax.set_xticks(np.arange(-.5, mat.shape[1], 1), minor=True)
+        ax.grid(which='minor', color='w', linestyle='-', linewidth=0.05)
+        ax.tick_params(axis='both', which="minor", left=False, top=False, right=False, bottom=False)
+
+        ax.set_aspect('auto')
+        plt.tight_layout()
         return fig
 
 
