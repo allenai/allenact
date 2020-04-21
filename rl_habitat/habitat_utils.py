@@ -29,13 +29,13 @@ def construct_env_configs(config: Config) -> List[Config]:
     #           'rPc6DW4iMge', 'vyrNrziPKCB']
 
     print("SCENES:", scenes)
-    if len(scenes) > 0:
-        # random.shuffle(scenes)
-
-        assert len(scenes) >= num_processes, (
-            "reduce the number of processes as there "
-            "aren't enough number of scenes"
-        )
+    # if len(scenes) > 0:
+    #     # random.shuffle(scenes)
+    #
+    #     assert len(scenes) >= num_processes, (
+    #         "reduce the number of processes as there "
+    #         "aren't enough number of scenes"
+    #     )
 
     scene_splits = [[] for _ in range(num_processes)]
     for idx, scene in enumerate(scenes):
