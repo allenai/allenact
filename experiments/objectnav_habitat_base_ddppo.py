@@ -125,14 +125,14 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
-                gpu_ids = [0]
+                gpu_ids = [1]
             render_video = False
         elif mode == "test":
             nprocesses = 1
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
-                gpu_ids = [7]
+                gpu_ids = [1]
             render_video = True
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
@@ -192,6 +192,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
         config.defrost()
         config.DATASET.DATA_PATH = self.VALID_SCENES
         config.MODE = 'validate'
+        config.SIMULATOR_GPU_IDS = [1]
         config.freeze()
         return {
             "env_config": config,
