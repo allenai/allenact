@@ -25,8 +25,8 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/train_chair/train.json.gz"
     VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_chair/val.json.gz"
 
-    TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_chair/val_four_scene.json.gz"
-    VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_chair/val_four_scene.json.gz"
+    TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_chair/val_chair.json.gz"
+    VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_chair/val_chair.json.gz"
 
     SCREEN_SIZE = 256
     MAX_STEPS = 500
