@@ -1,6 +1,6 @@
 import abc
 import typing
-from typing import Dict, Any, TypeVar
+from typing import Dict, Any, TypeVar, Sequence, Tuple, NamedTuple, Optional
 
 import torch
 
@@ -8,11 +8,11 @@ EnvType = TypeVar("EnvType")
 DistributionType = TypeVar("DistributionType")
 
 
-class RLStepResult(typing.NamedTuple):
-    observation: typing.Optional[Any]
-    reward: typing.Optional[float]
-    done: typing.Optional[bool]
-    info: typing.Optional[Dict[str, Any]]
+class RLStepResult(NamedTuple):
+    observation: Optional[Any]
+    reward: Optional[float]
+    done: Optional[bool]
+    info: Optional[Dict[str, Any]]
 
     def clone(self, new_info: Dict[str, Any]):
         return RLStepResult(
@@ -71,3 +71,43 @@ class Loss(abc.ABC):
     @abc.abstractmethod
     def loss(self, *args, **kwargs):
         raise NotImplementedError()
+
+
+class Memory(Dict):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        if len(args) > 0:
+            assert len(args) == 1, "Only 1 Sequence[Tuple[str, torch.Tensor, int]]" \
+                                   "or Dict[str, Tuple[torch.Tensor, int]] accepted as unnamed args"
+            if isinstance(args[0], Sequence):
+                for key, tensor, dim in args[0]:
+                    self.check_append(key, tensor, dim)
+            elif isinstance(args[0], Dict):
+                for key in args[0]:
+                    assert len(args[0][key]) == 2, "Only Tuple[torch.Tensor, int]] accepted as values in Dict"
+                    tensor, dim = args[0][key]
+                    self.check_append(key, tensor, dim)
+        elif len(kwargs) > 0:
+            for key in kwargs:
+                assert len(kwargs[key]) == 2, "Only Tuple[torch.Tensor, int]] accepted as keyword arg"
+                tensor, dim = kwargs[key]
+                self.check_append(key, tensor, dim)
+
+    def check_append(self, key, tensor, sampler_dim):
+        assert isinstance(key, str), "key {} must be str".format(key)
+        assert isinstance(tensor, torch.Tensor), "tensor {} must be torch.Tensor".format(tensor)
+        assert isinstance(sampler_dim, int), "sampler_dim {} must be int".format(sampler_dim)
+
+        assert key not in self, "Reused name {}".format(key)
+        assert 0 <= sampler_dim < len(tensor.shape),\
+            "Got sampler_dim {} for tensor with shape {}".format(sampler_dim, tensor.shape)
+
+        self[key] = (tensor, sampler_dim)
+
+    def tensor(self, key):
+        assert key in self, "Missing key {}".format(key)
+        return self[key][0]
+
+    def sampler_dim(self, key):
+        assert key in self, "Missing key {}".format(key)
+        return self[key][1]
