@@ -98,7 +98,7 @@ class Memory(Dict):
         assert isinstance(tensor, torch.Tensor), "tensor {} must be torch.Tensor".format(tensor)
         assert isinstance(sampler_dim, int), "sampler_dim {} must be int".format(sampler_dim)
 
-        assert key not in self, "Reused name {}".format(key)
+        assert key not in self, "Reused key {}".format(key)
         assert 0 <= sampler_dim < len(tensor.shape),\
             "Got sampler_dim {} for tensor with shape {}".format(sampler_dim, tensor.shape)
 
