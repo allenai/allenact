@@ -123,5 +123,4 @@ def distribute(data, scene_splits, num_gpus=8, procs_per_gpu=4, proc_offset=0, s
     for idx, scene in enumerate(data):
         i = (idx // num_gpus) % scenes_per_process
         j = idx % num_gpus
-        print(j*procs_per_gpu + i + proc_offset)
         scene_splits[j*procs_per_gpu + i + proc_offset].append(scene)
