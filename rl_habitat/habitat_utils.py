@@ -73,10 +73,10 @@ def construct_env_configs_mp3d(config: Config) -> List[Config]:
              '5q7pvUzZiYa', 'XcA2TqTSSAj', 'SN83YJsR3w2', '8WUmhLawc2A', 'JeFG25nYj2p', '17DRP5sb8fy', 'Uxmj2M2itWa',
              'D7N2EKCX4Sj', 'b8cTxDM8gDG', 'sT4fr6TAbpF', 'S9hNv5qa7GM', '82sE5b5pLXE', 'pRbA3pwrgk9', 'aayBHfsNo7d',
              'cV4RVeZvu5T', 'i5noydFURQK', 'YmJkqBEsHnH', 'jh4fc5c5qoQ', 'VVfe2KiqLaN', '29hnd4uzFmX', 'Pm6F8kyY3z2',
-             'JF19kD82Mey', 'GdvgFV5R1Z5', 'gZ6f7yhEvPG', 'HxpKQynjfin']
-    med = ['vyrNrziPKCB', 'V2XKFyX4ASd', 'VFuaQ6m2Qom', 'ZMojNkEp431', '5LpN3gDmAk7', 'r47D5H71a5s', 'ULsKaCPVFJR',
+             'JF19kD82Mey', 'GdvgFV5R1Z5', 'HxpKQynjfin', 'vyrNrziPKCB']
+    med = ['V2XKFyX4ASd', 'VFuaQ6m2Qom', 'ZMojNkEp431', '5LpN3gDmAk7', 'r47D5H71a5s', 'ULsKaCPVFJR',
            'E9uDoFAP3SH', 'kEZ7cmS4wCh', 'ac26ZMwG7aT', 'dhjEzFoUFzH', 'mJXqzFtmKg4', 'p5wJjkQkbXX', 'Vvot9Ly1tCj',
-           'EDJbREhghzL', 'VzqfbhrpDEA']
+           'EDJbREhghzL', 'VzqfbhrpDEA', '7y3sRwLe3Va']
 
     scene_splits = [[] for _ in range(config.NUM_PROCESSES)]
     distribute(small, scene_splits, num_gpus=8, procs_per_gpu=3, proc_offset=1, scenes_per_process=2)
