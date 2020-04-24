@@ -69,11 +69,11 @@ def construct_env_configs_mp3d(config: Config) -> List[Config]:
     num_processes = config.NUM_PROCESSES
     configs = []
 
-    small = ['HxpKQynjfin', 'gZ6f7yhEvPG', 'GdvgFV5R1Z5', 'JF19kD82Mey', 'Pm6F8kyY3z2', '29hnd4uzFmX', 'VVfe2KiqLaN',
-             'jh4fc5c5qoQ', 'YmJkqBEsHnH', 'i5noydFURQK', 'cV4RVeZvu5T', 'aayBHfsNo7d', 'pRbA3pwrgk9', '82sE5b5pLXE',
-             'S9hNv5qa7GM', 'sT4fr6TAbpF', 'b8cTxDM8gDG', 'D7N2EKCX4Sj', 'Uxmj2M2itWa', '17DRP5sb8fy', 'JeFG25nYj2p',
-             '8WUmhLawc2A', 'SN83YJsR3w2', 'XcA2TqTSSAj', '5q7pvUzZiYa', '759xd9YjKW5', 's8pcmisQ38h', 'sKLMLpTHeUy',
-             'qoiz87JEwZ2', 'uNb9QFRL6hY', 'e9zR4mvMWw7', 'rPc6DW4iMge']
+    small = ['rPc6DW4iMge', 'e9zR4mvMWw7', 'uNb9QFRL6hY', 'qoiz87JEwZ2', 'sKLMLpTHeUy', 's8pcmisQ38h', '759xd9YjKW5',
+             '5q7pvUzZiYa', 'XcA2TqTSSAj', 'SN83YJsR3w2', '8WUmhLawc2A', 'JeFG25nYj2p', '17DRP5sb8fy', 'Uxmj2M2itWa',
+             'D7N2EKCX4Sj', 'b8cTxDM8gDG', 'sT4fr6TAbpF', 'S9hNv5qa7GM', '82sE5b5pLXE', 'pRbA3pwrgk9', 'aayBHfsNo7d',
+             'cV4RVeZvu5T', 'i5noydFURQK', 'YmJkqBEsHnH', 'jh4fc5c5qoQ', 'VVfe2KiqLaN', '29hnd4uzFmX', 'Pm6F8kyY3z2',
+             'JF19kD82Mey', 'GdvgFV5R1Z5', 'gZ6f7yhEvPG', 'HxpKQynjfin']
     med = ['vyrNrziPKCB', 'V2XKFyX4ASd', 'VFuaQ6m2Qom', 'ZMojNkEp431', '5LpN3gDmAk7', 'r47D5H71a5s', 'ULsKaCPVFJR',
            'E9uDoFAP3SH', 'kEZ7cmS4wCh', 'ac26ZMwG7aT', 'dhjEzFoUFzH', 'mJXqzFtmKg4', 'p5wJjkQkbXX', 'Vvot9Ly1tCj',
            'EDJbREhghzL', 'VzqfbhrpDEA']
