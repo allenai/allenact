@@ -120,7 +120,6 @@ def construct_env_configs_mp3d(config: Config) -> List[Config]:
     return configs
 
 def distribute(data, scene_splits, num_gpus=8, procs_per_gpu=4, proc_offset=0, scenes_per_process=1):
-    print("Length of scene_splits", len(scene_splits))
     for idx, scene in enumerate(data):
         i = (idx // num_gpus) % scenes_per_process
         j = idx % num_gpus
