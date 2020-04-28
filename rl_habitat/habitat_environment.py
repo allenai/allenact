@@ -2,7 +2,6 @@
 
 from typing import Dict, Union, List
 import numpy as np
-import random
 
 import habitat
 from habitat.config import Config
@@ -51,14 +50,10 @@ class HabitatEnvironment(object):
     def get_location(self) -> AgentState:
         return self.env.sim.get_agent_state().position
 
-    def get_shortest_path(
-        self,
-        source_state: AgentState,
-        target_state: AgentState,
-    ) -> List[ShortestPathPoint]:
-        return self.env.sim.action_space_shortest_path(source_state, [target_state])
+    def get_rotation(self) -> AgentState:
+        return self.env.sim.get_agent_state().rotation
 
-    def get_current_episode(self) -> [Episode]:
+    def get_current_episode(self) -> Episode:
         return self.env.current_episode
 
     def start(self):
