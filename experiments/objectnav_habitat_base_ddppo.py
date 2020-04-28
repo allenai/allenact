@@ -22,14 +22,14 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     """A Point Navigation experiment configuraqtion in Habitat"""
 
-    TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/train_two/train.json.gz"
-    VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_two/val.json.gz"
+    TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/train_chair/train.json.gz"
+    VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_chair/val_four_scenes.json.gz"
 
     SCREEN_SIZE = 256
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.1
 
-    NUM_PROCESSES = 24
+    NUM_PROCESSES = 32
 
     CONFIG = habitat.get_config('configs/mp3d.yaml')
     CONFIG.defrost()
@@ -104,7 +104,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     @classmethod
     def evaluation_params(cls, **kwargs):
         nprocesses = 1
-        gpu_ids = [] if not torch.cuda.is_available() else [1]
+        gpu_ids = [] if not torch.cuda.is_available() else [0]
         res = cls.training_pipeline()
         del res["pipeline"]
         del res["optimizer"]
