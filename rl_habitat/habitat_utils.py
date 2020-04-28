@@ -70,7 +70,7 @@ def construct_env_configs_mp3d(config: Config) -> List[Config]:
     scenes = dataset.get_scenes_to_load(config.DATASET)
 
     if config.NUM_PROCESSES == 1:
-        scene_splits = [scenes]
+        scene_splits = [['pRbA3pwrgk9']]
     else:
         small = ['rPc6DW4iMge', 'e9zR4mvMWw7', 'uNb9QFRL6hY', 'qoiz87JEwZ2', 'sKLMLpTHeUy', 's8pcmisQ38h', '759xd9YjKW5',
                  '5q7pvUzZiYa', 'XcA2TqTSSAj', 'SN83YJsR3w2', '8WUmhLawc2A', 'JeFG25nYj2p', '17DRP5sb8fy', 'Uxmj2M2itWa',
