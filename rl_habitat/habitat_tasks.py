@@ -15,6 +15,7 @@ from rl_habitat.habitat_environment import HabitatEnvironment
 from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor
 from rl_base.task import Task
+from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 
 
 class HabitatTask(Task[HabitatEnvironment]):
@@ -68,7 +69,7 @@ class HabitatTask(Task[HabitatEnvironment]):
             raise NotImplementedError()
 
 
-class PointNavTask(Task[HabitatTask]):
+class PointNavTask(Task[HabitatEnvironment]):
     _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT, END)
 
     def __init__(
@@ -79,7 +80,6 @@ class PointNavTask(Task[HabitatTask]):
         max_steps: int,
         **kwargs
     ) -> None:
-        # print("task info in objectnavtask %s" % task_info)
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
@@ -87,15 +87,20 @@ class PointNavTask(Task[HabitatTask]):
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
 
-        # self.last_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
+        # Get the geodesic distance to target from the environemnt and make sure it is
+        # a valid value
         self.last_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
         if self.last_geodesic_distance is None \
                 or self.last_geodesic_distance in [float('-inf'), float('inf')] \
                 or np.isnan(self.last_geodesic_distance):
             self.last_geodesic_distance = 0.0
 
-        self._rewards = []
-        self._distance_to_goal = []
+        self._shortest_path_follower = ShortestPathFollower(env.env.sim,
+                                                            env.env._config.TASK.SUCCESS_DISTANCE,
+                                                            False)
+        self._shortest_path_follower.mode = "geodesic_path"
+
+        self._rewards: List[float] = []
         self._metrics = None
 
     @property
@@ -178,17 +183,11 @@ class PointNavTask(Task[HabitatTask]):
             return self.action_names().index(END), True
 
         target = self.task_info["target"]
-        current_location = self.env.get_location()
-        path = self.env.get_shortest_path(
-            source_state=current_location, goal_state=target
-        )
-        # TODO convert returned path to optimal action
-        print("path:", path)
-        exit()
-        return path[0], True
+        action = self._shortest_path_follower.get_next_action(target)
+        return action, action is not None
 
 
-class ObjectNavTask(Task[HabitatTask]):
+class ObjectNavTask(Task[HabitatEnvironment]):
     _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT, END, LOOK_UP, LOOK_DOWN)
 
     def __init__(
@@ -199,7 +198,6 @@ class ObjectNavTask(Task[HabitatTask]):
         max_steps: int,
         **kwargs
     ) -> None:
-        # print("task info in objectnavtask %s" % task_info)
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
@@ -207,17 +205,20 @@ class ObjectNavTask(Task[HabitatTask]):
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
 
-        # self.last_geodesic_distance = env.get_geodesic_distance() # self.env.get_current_episode().info['geodesic_distance']
-        # self.last_distance_to_goal = self.env.get_current_episode().info['geodesic_distance'] #self.env.env.get_metrics()["distance_to_goal"]
-
+        # Get the geodesic distance to target from the environemnt and make sure it is
+        # a valid value
         self.last_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
         if self.last_geodesic_distance is None \
                 or self.last_geodesic_distance in [float('-inf'), float('inf')] \
                 or np.isnan(self.last_geodesic_distance):
             self.last_geodesic_distance = 0.0
 
-        self._rewards = []
-        self._distance_to_goal = []
+        self._shortest_path_follower = ShortestPathFollower(env.env.sim,
+                                                            env.env._config.TASK.SUCCESS_DISTANCE,
+                                                            False)
+        self._shortest_path_follower.mode = "geodesic_path"
+
+        self._rewards: List[float] = []
         self._metrics = None
 
     @property
@@ -303,11 +304,5 @@ class ObjectNavTask(Task[HabitatTask]):
             return self.action_names().index(END), True
 
         target = self.task_info["target"]
-        current_location = self.env.get_location()
-        path = self.env.get_shortest_path(
-            source_state=current_location, goal_state=target
-        )
-        # TODO convert returned path to optimal action
-        print("path:", path)
-        exit()
-        return path[0], True
+        action = self._shortest_path_follower.get_next_action(target)
+        return action, action is not None
