@@ -8,7 +8,7 @@ from torch.optim.lr_scheduler import LambdaLR
 
 import habitat
 from onpolicy_sync.losses.ppo import PPOConfig
-from models.point_nav_models import PointNavActorCriticResNet50GRU
+from models.point_nav_models import PointNavActorCriticResNet50RNN
 from onpolicy_sync.losses import PPO
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.sensor import SensorSuite
@@ -147,7 +147,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return PointNavActorCriticResNet50GRU(
+        return PointNavActorCriticResNet50RNN(
             action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",

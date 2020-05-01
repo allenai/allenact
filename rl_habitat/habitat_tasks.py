@@ -238,9 +238,10 @@ class ObjectNavTask(Task[HabitatEnvironment]):
     def _step(self, action: int) -> RLStepResult:
         action_str = self.action_names()[action]
 
-        self.env.step({"action": action_str})
+        if action_str != END:
+            self.env.step({"action": action_str})
 
-        if action_str == END or self.env.env.get_metrics()['distance_to_goal'] <= 0.2:
+        if self.env.env.get_metrics()['distance_to_goal'] <= 0.2:
             self._took_end_action = True
             self._success = self.env.env.get_metrics()['distance_to_goal'] <= 0.2
             self.last_action_success = self._success
