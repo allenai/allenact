@@ -72,10 +72,10 @@ def construct_env_configs_mp3d(config: Config) -> List[Config]:
     config.freeze()
     num_processes = config.NUM_PROCESSES
     configs = []
-    dataset = habitat.make_dataset(config.DATASET.TYPE)
-    scenes = dataset.get_scenes_to_load(config.DATASET)
+    # dataset = habitat.make_dataset(config.DATASET.TYPE)
+    # scenes = dataset.get_scenes_to_load(config.DATASET)
 
-    if config.NUM_PROCESSES == 1:
+    if num_processes == 1:
         scene_splits = [['pRbA3pwrgk9']]
     else:
         small = ['rPc6DW4iMge', 'e9zR4mvMWw7', 'uNb9QFRL6hY', 'qoiz87JEwZ2', 'sKLMLpTHeUy', 's8pcmisQ38h', '759xd9YjKW5',
@@ -87,7 +87,7 @@ def construct_env_configs_mp3d(config: Config) -> List[Config]:
                'E9uDoFAP3SH', 'kEZ7cmS4wCh', 'ac26ZMwG7aT', 'dhjEzFoUFzH', 'mJXqzFtmKg4', 'p5wJjkQkbXX', 'Vvot9Ly1tCj',
                'EDJbREhghzL', 'VzqfbhrpDEA', '7y3sRwLe3Va']
 
-        scene_splits: List[List] = [[] for _ in range(config.NUM_PROCESSES)]
+        scene_splits = [[] for _ in range(config.NUM_PROCESSES)]
         distribute(small, scene_splits, num_gpus=8, procs_per_gpu=3, proc_offset=1, scenes_per_process=2)
         distribute(med, scene_splits, num_gpus=8, procs_per_gpu=3, proc_offset=0, scenes_per_process=1)
 

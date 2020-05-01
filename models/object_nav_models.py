@@ -55,25 +55,25 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
 
         self.goal_sensor_uuid = goal_sensor_uuid
         self._n_object_types = self.observation_space.spaces[self.goal_sensor_uuid].n
-        self.hidden_size = hidden_size
+        self._hidden_size = hidden_size
         self.object_type_embedding_size = object_type_embedding_dim
 
-        self.visual_encoder = SimpleCNN(self.observation_space, hidden_size)
+        self.visual_encoder = SimpleCNN(self.observation_space, self._hidden_size)
 
         self.state_encoder = RNNStateEncoder(
-            (0 if self.is_blind else self.recurrent_hidden_state_size)
+            (0 if self.is_blind else self._hidden_size)
             + object_type_embedding_dim,
-            self.recurrent_hidden_state_size,
+            self._hidden_size,
             trainable_masked_hidden_state=trainable_masked_hidden_state,
             num_layers=num_rnn_layers,
             rnn_type=rnn_type
         )
 
         self.actor = LinearActorHead(
-            self.recurrent_hidden_state_size, action_space.n
+            self._hidden_size, action_space.n
         )
         self.critic = LinearCriticHead(
-            self.recurrent_hidden_state_size
+            self._hidden_size
         )
 
         self.object_type_embedding = nn.Embedding(
@@ -86,7 +86,7 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
     @property
     def recurrent_hidden_state_size(self) -> int:
         """The recurrent hidden state size of the model."""
-        return self.hidden_size
+        return self._hidden_size
 
     @property
     def is_blind(self) -> bool:
@@ -178,7 +178,7 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
 
         self.goal_sensor_uuid = goal_sensor_uuid
         self._n_object_types = self.observation_space.spaces[self.goal_sensor_uuid].n
-        self.hidden_size = hidden_size
+        self._hidden_size = hidden_size
         self.object_type_embedding_size = object_type_embedding_dim
 
         if 'rgb_resnet' in observation_space.spaces and 'depth_resnet' in observation_space.spaces:
@@ -187,9 +187,9 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
             self.visual_encoder = nn.Linear(2048, hidden_size)
 
         self.state_encoder = RNNStateEncoder(
-            (0 if self.is_blind else self.recurrent_hidden_state_size)
+            (0 if self.is_blind else self._hidden_size)
             + object_type_embedding_dim,
-            self.recurrent_hidden_state_size,
+            self._hidden_size,
             trainable_masked_hidden_state=trainable_masked_hidden_state,
             num_layers=num_rnn_layers,
             rnn_type=rnn_type
@@ -209,7 +209,7 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
     @property
     def recurrent_hidden_state_size(self) -> int:
         """The recurrent hidden state size of the model."""
-        return self.hidden_size
+        return self._hidden_size
 
     @property
     def is_blind(self) -> bool:
@@ -288,7 +288,7 @@ class ObjectNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
 
         self.goal_sensor_uuid = goal_sensor_uuid
         self._n_object_types = self.observation_space.spaces[self.goal_sensor_uuid].n
-        self.recurrent_hidden_state_size = hidden_size
+        self._hidden_size = hidden_size
         self.object_type_embedding_size = object_type_embedding_dim
 
         self.visual_encoder = nn.Sequential(
@@ -310,19 +310,19 @@ class ObjectNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
         )
 
         self.state_encoder = RNNStateEncoder(
-            (0 if self.is_blind else self.recurrent_hidden_state_size)
+            (0 if self.is_blind else self._hidden_size)
             + object_type_embedding_dim,
-            self.recurrent_hidden_state_size,
+            self._hidden_size,
             trainable_masked_hidden_state=trainable_masked_hidden_state,
             num_layers=num_rnn_layers,
             rnn_type=rnn_type
         )
 
         self.actor = LinearActorHead(
-            self.recurrent_hidden_state_size, action_space.n
+            self._hidden_size, action_space.n
         )
         self.critic = LinearCriticHead(
-            self.recurrent_hidden_state_size
+            self._hidden_size
         )
 
         self.object_type_embedding = nn.Embedding(
@@ -334,7 +334,7 @@ class ObjectNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
 
     @property
     def output_size(self):
-        return self.recurrent_hidden_state_size
+        return self._hidden_size
 
     @property
     def is_blind(self):
@@ -385,7 +385,7 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
             observation_space: SpaceDict,
             goal_sensor_uuid: str,
             resnet_preprocessor_uuid: str,
-            rnn_hidden_size: int = 512,
+            hidden_size: int = 512,
             goal_dims: int = 32,
             resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
             combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
@@ -395,7 +395,7 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
             action_space=action_space, observation_space=observation_space,
         )
 
-        self.hidden_size = rnn_hidden_size
+        self._hidden_size = hidden_size
         self.goal_visual_encoder = ResnetTensorGoalEncoder(
             self.observation_space,
             goal_sensor_uuid,
@@ -405,16 +405,16 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
             combiner_hidden_out_dims,
         )
         self.state_encoder = RNNStateEncoder(
-            self.goal_visual_encoder.output_dims, rnn_hidden_size,
+            self.goal_visual_encoder.output_dims, self._hidden_size,
         )
-        self.actor = LinearActorHead(self.hidden_size, action_space.n)
-        self.critic = LinearCriticHead(self.hidden_size)
+        self.actor = LinearActorHead(self._hidden_size, action_space.n)
+        self.critic = LinearCriticHead(self._hidden_size)
         self.train()
 
     @property
     def recurrent_hidden_state_size(self) -> int:
         """The recurrent hidden state size of the model."""
-        return self.hidden_size
+        return self._hidden_size
 
     @property
     def is_blind(self) -> bool:

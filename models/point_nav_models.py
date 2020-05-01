@@ -14,7 +14,7 @@ from habitat_baselines.rl.ddppo.policy.resnet_policy import (
 )
 
 
-class PointNavActorCriticSimpleConvLSTM(ActorCriticModel[CategoricalDistr]):
+class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
     def __init__(
         self,
         action_space: gym.spaces.Discrete,
@@ -30,7 +30,7 @@ class PointNavActorCriticSimpleConvLSTM(ActorCriticModel[CategoricalDistr]):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
         self.goal_sensor_uuid = goal_sensor_uuid
-        self.recurrent_hidden_state_size = hidden_size
+        self._hidden_size = hidden_size
         self.embed_coordinates = embed_coordinates
         if self.embed_coordinates:
             self.coorinate_embedding_size = coordinate_embedding_dim
@@ -47,16 +47,16 @@ class PointNavActorCriticSimpleConvLSTM(ActorCriticModel[CategoricalDistr]):
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self.recurrent_hidden_state_size)
             + self.coorinate_embedding_size,
-            self.recurrent_hidden_state_size,
+            self._hidden_size,
             num_layers=num_rnn_layers,
             rnn_type=rnn_type
         )
 
         self.actor = LinearActorHead(
-            self.recurrent_hidden_state_size, action_space.n
+            self._hidden_size, action_space.n
         )
         self.critic = LinearCriticHead(
-            self.recurrent_hidden_state_size
+            self._hidden_size
         )
 
         if self.embed_coordinates:
@@ -66,7 +66,7 @@ class PointNavActorCriticSimpleConvLSTM(ActorCriticModel[CategoricalDistr]):
 
     @property
     def output_size(self):
-        return self.recurrent_hidden_state_size
+        return self._hidden_size
 
     @property
     def is_blind(self):
@@ -123,7 +123,7 @@ class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
 
         self.goal_sensor_uuid = goal_sensor_uuid
         self.embed_coordinates = embed_coordinates
-        self.recurrent_hidden_state_size = hidden_size + coordinate_dims
+        self._hidden_size = hidden_size + coordinate_dims
         if self.embed_coordinates:
             self.coorinate_embedding_size = coordinate_embedding_dim
         else:
@@ -135,10 +135,10 @@ class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
             self.visual_encoder = nn.Linear(2048, hidden_size)
 
         self.actor = LinearActorHead(
-            self.recurrent_hidden_state_size, action_space.n
+            self._hidden_size, action_space.n
         )
         self.critic = LinearCriticHead(
-            self.recurrent_hidden_state_size
+            self._hidden_size
         )
 
         if self.embed_coordinates:
@@ -148,7 +148,7 @@ class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
 
     @property
     def output_size(self):
-        return self.recurrent_hidden_state_size
+        return self._hidden_size
 
     @property
     def is_blind(self):
@@ -189,11 +189,11 @@ class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
             ActorCriticOutput(
                 distributions=self.actor(x), values=self.critic(x), extras={}
             ),
-            torch.zeros((1, x.shape[0], self.recurrent_hidden_state_size))
+            torch.zeros((1, x.shape[0], self._hidden_size))
         )
 
 
-class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
+class PointNavActorCriticResNet50RNN(ActorCriticModel[CategoricalDistr]):
     def __init__(
         self,
         action_space: gym.spaces.Discrete,
@@ -209,7 +209,7 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
         self.goal_sensor_uuid = goal_sensor_uuid
-        self.recurrent_hidden_state_size = hidden_size
+        self._hidden_size = hidden_size
         self.embed_coordinates = embed_coordinates
         if self.embed_coordinates:
             self.coorinate_embedding_size = coordinate_embedding_dim
@@ -224,16 +224,16 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self.recurrent_hidden_state_size)
             + self.coorinate_embedding_size,
-            self.recurrent_hidden_state_size,
+            self._hidden_size,
             num_layers=num_rnn_layers,
             rnn_type=rnn_type
         )
 
         self.actor = LinearActorHead(
-            self.recurrent_hidden_state_size, action_space.n
+            self._hidden_size, action_space.n
         )
         self.critic = LinearCriticHead(
-            self.recurrent_hidden_state_size
+            self._hidden_size
         )
 
         if self.embed_coordinates:
@@ -288,7 +288,7 @@ class PointNavActorCriticResNet50GRU(ActorCriticModel[CategoricalDistr]):
         )
 
 
-class PointNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
+class PointNavActorCriticTrainResNet50RNN(ActorCriticModel[CategoricalDistr]):
     def __init__(
         self,
         action_space: gym.spaces.Discrete,
@@ -304,7 +304,7 @@ class PointNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
         self.goal_sensor_uuid = goal_sensor_uuid
-        self.recurrent_hidden_state_size = hidden_size
+        self._hidden_size = hidden_size
         self.embed_coordinates = embed_coordinates
         if self.embed_coordinates:
             self.coorinate_embedding_size = coordinate_embedding_dim
@@ -332,16 +332,16 @@ class PointNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self.recurrent_hidden_state_size)
             + self.coorinate_embedding_size,
-            self.recurrent_hidden_state_size,
+            self._hidden_size,
             num_layers=num_rnn_layers,
             rnn_type=rnn_type
         )
 
         self.actor = LinearActorHead(
-            self.recurrent_hidden_state_size, action_space.n
+            self._hidden_size, action_space.n
         )
         self.critic = LinearCriticHead(
-            self.recurrent_hidden_state_size
+            self._hidden_size
         )
 
         if self.embed_coordinates:
@@ -396,7 +396,7 @@ class PointNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
         )
 
 
-class PointNavActorCriticResNeXTPreTrained(ActorCriticModel[CategoricalDistr]):
+class PointNavActorCriticResNeXTPreTrainedRNN(ActorCriticModel[CategoricalDistr]):
     def __init__(
         self,
         action_space: gym.spaces.Discrete,
@@ -412,7 +412,7 @@ class PointNavActorCriticResNeXTPreTrained(ActorCriticModel[CategoricalDistr]):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
         self.goal_sensor_uuid = goal_sensor_uuid
-        self.recurrent_hidden_state_size = hidden_size
+        self._hidden_size = hidden_size
         self.embed_coordinates = embed_coordinates
         if self.embed_coordinates:
             self.coorinate_embedding_size = coordinate_embedding_dim
@@ -455,16 +455,16 @@ class PointNavActorCriticResNeXTPreTrained(ActorCriticModel[CategoricalDistr]):
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self.recurrent_hidden_state_size)
             + self.coorinate_embedding_size,
-            self.recurrent_hidden_state_size,
+            self._hidden_size,
             num_layers=num_rnn_layers,
             rnn_type=rnn_type
         )
 
         self.actor = LinearActorHead(
-            self.recurrent_hidden_state_size, action_space.n
+            self._hidden_size, action_space.n
         )
         self.critic = LinearCriticHead(
-            self.recurrent_hidden_state_size
+            self._hidden_size
         )
 
         if self.embed_coordinates:
@@ -474,7 +474,7 @@ class PointNavActorCriticResNeXTPreTrained(ActorCriticModel[CategoricalDistr]):
 
     @property
     def output_size(self):
-        return self.recurrent_hidden_state_size
+        return self._hidden_size
 
     @property
     def is_blind(self):

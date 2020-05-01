@@ -10,7 +10,7 @@ from torchvision.models.detection.faster_rcnn import FasterRCNN
 
 class CachelessAnchorGenerator(AnchorGenerator):
     def forward(self, image_list, feature_maps):
-        # type: (ImageList, List[Tensor])
+        # type: (ImageList, List[Tensor]) -> torch.Tensor
         grid_sizes = list([feature_map.shape[-2:] for feature_map in feature_maps])
         image_size = image_list.tensors.shape[-2:]
         strides = [[int(image_size[0] / g[0]), int(image_size[1] / g[1])] for g in grid_sizes]

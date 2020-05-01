@@ -19,11 +19,6 @@ class ResNetEmbedder(nn.Module):
 
     def forward(self, x):
         with torch.no_grad():
-            # # TODO Debug
-            # import cv2
-            # for it in range(x.shape[0]):
-            #     cvim = 255.0 * (0.5 + 0.22 * x[it].to('cpu').permute(1, 2, 0).numpy()[:, :, ::-1])
-            #     cv2.imwrite('test_lores{}.png'.format(it), cvim)
 
             x = self.model.conv1(x)
             x = self.model.bn1(x)
@@ -68,7 +63,7 @@ class ResnetPreProcessorHabitat(Preprocessor):
         self.device: torch.device = torch.device(optf(config, "device", "cuda" if self.parallel and torch.cuda.is_available() else "cpu"))
         self.device_ids: Optional[List[Union[torch.device, int]]] = optf(config, "device_ids", list(range(torch.cuda.device_count())))
 
-        self.resnet = ResNetEmbedder(
+        self.resnet: Union[ResNetEmbedder, torch.nn.DataParallel[ResNetEmbedder]] = ResNetEmbedder(
             self.make_model(pretrained=True).to(self.device), pool=self.pool
         )
 
@@ -77,11 +72,7 @@ class ResnetPreProcessorHabitat(Preprocessor):
             LOGGER.info("Distributing resnet")
             self.resnet = self.resnet.to(torch.device("cuda"))
 
-            # store = torch.distributed.TCPStore("localhost", 4712, 1, True)
-            # torch.distributed.init_process_group(backend="nccl", store=store, rank=0, world_size=1)
-            # self.model = DistributedDataParallel(self.frcnn, device_ids=self.device_ids)
-
-            self.resnet = torch.nn.DataParallel(self.resnet, device_ids=self.device_ids)  #, output_device=torch.cuda.device_count() - 1)
+            self.resnet = torch.nn.DataParallel(self.resnet, device_ids=self.device_ids)
             LOGGER.info("Detected {} devices".format(torch.cuda.device_count()))
 
         low = -np.inf
@@ -97,7 +88,7 @@ class ResnetPreProcessorHabitat(Preprocessor):
 
         super().__init__(config, *args, **kwargs)
 
-    def to(self, device: torch.device) -> "ResnetPreProcessorThor":
+    def to(self, device: torch.device) -> "ResnetPreProcessorHabitat":
         if not self.parallel:
             self.resnet = self.resnet.to(device)
             self.device = device

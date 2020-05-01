@@ -34,7 +34,7 @@ class ScaleBothSides(object):
         return img.resize((self.width, self.height), self.interpolation)
 
 
-class RGBSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
+class RGBSensorHabitat(Sensor[HabitatEnvironment, HabitatTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
@@ -103,7 +103,7 @@ class RGBSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         return rgb
 
 
-class RGBResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
+class RGBResNetSensorHabitat(Sensor[HabitatEnvironment, HabitatTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
@@ -185,7 +185,7 @@ class RGBResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         return rgb
 
 
-class DepthSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
+class DepthSensorHabitat(Sensor[HabitatEnvironment, HabitatTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
@@ -255,7 +255,7 @@ class DepthSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         return depth
 
 
-class DepthResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
+class DepthResNetSensorHabitat(Sensor[HabitatEnvironment, HabitatTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
@@ -339,7 +339,7 @@ class DepthResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         return depth
 
 
-class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
+class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, HabitatTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
@@ -354,7 +354,7 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def get_observation(
         self,
         env: HabitatEnvironment,
-        task: Optional[PointNavTask],
+        task: Optional[HabitatTask],
         *args: Any,
         **kwargs: Any
     ) -> Any:
@@ -363,7 +363,7 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         return goal
 
 
-class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
+class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, HabitatTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
@@ -378,7 +378,7 @@ class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def get_observation(
         self,
         env: HabitatEnvironment,
-        task: Optional[PointNavTask],
+        task: Optional[HabitatTask],
         *args: Any,
         **kwargs: Any
     ) -> Any:
@@ -387,7 +387,7 @@ class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         return goal
 
 
-class AgentCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
+class AgentCoordinatesSensorHabitat(Sensor[HabitatEnvironment, HabitatTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
@@ -402,7 +402,7 @@ class AgentCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def get_observation(
         self,
         env: HabitatEnvironment,
-        task: Optional[PointNavTask],
+        task: Optional[HabitatTask],
         *args: Any,
         **kwargs: Any
     ) -> Any:

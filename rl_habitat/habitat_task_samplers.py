@@ -107,8 +107,8 @@ class PointNavTaskSampler(TaskSampler):
 
     def set_seed(self, seed: int):
         self.seed = seed
-        # if seed is not None:
-        #     set_seed(seed)
+        if seed is not None:
+            self.env.env.seed(seed)
 
 
 class ObjectNavTaskSampler(TaskSampler):
@@ -132,7 +132,7 @@ class ObjectNavTaskSampler(TaskSampler):
         self.env_config = env_config
         self.distance_to_goal = distance_to_goal
 
-        self._last_sampled_task: Optional[PointNavTask] = None
+        self._last_sampled_task: Optional[ObjectNavTask] = None
 
     def _create_environment(self) -> HabitatEnvironment:
         dataset = habitat.make_dataset(
@@ -158,7 +158,7 @@ class ObjectNavTaskSampler(TaskSampler):
         return self.env.num_episodes
 
     @property
-    def last_sampled_task(self) -> Optional[PointNavTask]:
+    def last_sampled_task(self) -> Optional[ObjectNavTask]:
         return self._last_sampled_task
 
     def close(self) -> None:
@@ -208,5 +208,5 @@ class ObjectNavTaskSampler(TaskSampler):
 
     def set_seed(self, seed: int):
         self.seed = seed
-        # if seed is not None:
-        #     set_seed(seed)
+        if seed is not None:
+            self.env.env.seed(seed)
