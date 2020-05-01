@@ -114,7 +114,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else [4, 4, 3, 2, 2, 2, 2, 1]
+            nprocesses = 1 if not torch.cuda.is_available() else [4, 4, 4, 4, 4, 4, 4, 4]
             gpu_ids = [] if not torch.cuda.is_available() else self.CONFIG.SIMULATOR_GPU_IDS
             render_video = False
         elif mode == "valid":
