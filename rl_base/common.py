@@ -4,6 +4,8 @@ from typing import Dict, Any, TypeVar, Sequence, Tuple, NamedTuple, Optional
 
 import torch
 
+from utils.system import LOGGER
+
 EnvType = TypeVar("EnvType")
 DistributionType = TypeVar("DistributionType")
 
@@ -76,6 +78,7 @@ class Loss(abc.ABC):
 class Memory(Dict):
     def __init__(self, *args, **kwargs):
         super().__init__()
+        # LOGGER.debug("{} ".format(args))
         if len(args) > 0:
             assert len(args) == 1, "Only 1 Sequence[Tuple[str, torch.Tensor, int]]" \
                                    "or Dict[str, Tuple[torch.Tensor, int]] accepted as unnamed args"

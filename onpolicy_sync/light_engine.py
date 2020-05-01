@@ -12,11 +12,14 @@ from collections import OrderedDict, namedtuple
 import torch
 import torch.distributions
 import torch.multiprocessing as mp
-import torch.nn as nn
+from torch import nn
 import torch.optim
 from torch import optim
 from torch.optim.lr_scheduler import _LRScheduler
 import numpy as np
+from torch.nn.parallel import DistributedDataParallel
+from torch.nn.parallel.scatter_gather import scatter_kwargs
+from torch.nn.parallel._functions import Scatter
 
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from onpolicy_sync.storage import RolloutStorage
@@ -34,8 +37,58 @@ from utils.experiment_utils import (
 )
 from utils.tensor_utils import batch_observations, process_video
 from utils.system import LOGGER
+from rl_base.common import Memory
 
 
+# class LoggedDistributedDataParallel(DistributedDataParallel):
+#     def scatter(self, inputs, kwargs, device_ids):
+#         return logged_scatter_kwargs(inputs, kwargs, device_ids, dim=self.dim)
+#
+#
+# def logged_scatter_kwargs(inputs, kwargs, target_gpus, dim=0):
+#     r"""Scatter with support for kwargs dictionary"""
+#     inputs = scatter(inputs, target_gpus, dim) if inputs else []
+#     kwargs = scatter(kwargs, target_gpus, dim) if kwargs else []
+#     if len(inputs) < len(kwargs):
+#         inputs.extend([() for _ in range(len(kwargs) - len(inputs))])
+#     elif len(kwargs) < len(inputs):
+#         kwargs.extend([{} for _ in range(len(inputs) - len(kwargs))])
+#     inputs = tuple(inputs)
+#     kwargs = tuple(kwargs)
+#     return inputs, kwargs
+#
+#
+# def scatter(inputs, target_gpus, dim=0):
+#     r"""
+#     Slices tensors into approximately equal chunks and
+#     distributes them across given GPUs. Duplicates
+#     references to objects that are not tensors.
+#     """
+#
+#     def scatter_map(obj):
+#         if isinstance(obj, torch.Tensor):
+#             return Scatter.apply(target_gpus, None, dim, obj)
+#         if isinstance(obj, tuple) and len(obj) > 0:
+#             return list(zip(*map(scatter_map, obj)))
+#         if isinstance(obj, list) and len(obj) > 0:
+#             return list(map(list, zip(*map(scatter_map, obj))))
+#         if isinstance(obj, dict) and len(obj) > 0:
+#             LOGGER.debug("{}".format(obj))
+#             return list(map(type(obj), zip(*map(scatter_map, obj.items()))))
+#         return [obj for targets in target_gpus]
+#
+#     # After scatter_map is called, a scatter_map cell will exist. This cell
+#     # has a reference to the actual function scatter_map, which has references
+#     # to a closure that has a reference to the scatter_map cell (because the
+#     # fn is recursive). To avoid this reference cycle, we set the function to
+#     # None, clearing the cell
+#     try:
+#         res = scatter_map(inputs)
+#     finally:
+#         scatter_map = None
+#     return res
+#
+#
 class OnPolicyRLEngine(object):
     """The reinforcement learning primary controller.
 
@@ -151,7 +204,7 @@ class OnPolicyRLEngine(object):
                 rank=self.worker_id,
                 world_size=self.num_workers
             )
-            self.actor_critic = torch.nn.parallel.DistributedDataParallel(
+            self.actor_critic = DistributedDataParallel(
                 self.actor_critic,
                 device_ids=[self.device],
                 output_device=self.device
@@ -290,24 +343,61 @@ class OnPolicyRLEngine(object):
 
         return ckpt
 
+    # # aggregates task metrics currently in queue
+    # def aggregate_task_metrics(self, count=-1) -> Tuple[Tuple[str, Dict[str, float], int], List[Dict[str, Any]]]:
+    #     assert self.scalars.empty, "found non-empty scalars {}".format(self.scalars._counts)
+    #
+    #     task_outputs = []
+    #     while (count == -1 and not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
+    #         try:
+    #             if count == -1:
+    #                 task_output = self.vector_tasks.metrics_out_queue.get_nowait()
+    #             else:
+    #                 task_output = self.vector_tasks.metrics_out_queue.get(timeout=5)
+    #                 count -= 1
+    #             task_outputs.append(task_output)
+    #         except queue.Empty:
+    #             if count != -1:
+    #                 LOGGER.error("{}-{} Missing {} task metrics due to timeout".format(
+    #                     self.mode, self.worker_id, count
+    #                 ))
+    #
+    #     nsamples = 0
+    #     for task_output in task_outputs:
+    #         if len(task_output) == 0\
+    #                 or (len(task_output) == 1 and "task_info" in task_output)\
+    #                 or ("success" in task_output and task_output["success"] is None):
+    #             continue
+    #         self.scalars.add_scalars(
+    #             {k: v for k, v in task_output.items() if k != "task_info"}
+    #         )
+    #         nsamples += 1
+    #
+    #     if nsamples < len(task_outputs):
+    #         LOGGER.warning("Discarded {} empty task metrics".format(len(task_outputs) - nsamples))
+    #
+    #     pkg_type = "task_metrics_package"
+    #     payload = self.scalars.pop_and_reset() if len(task_outputs) > 0 else None
+    #
+    #     return (pkg_type, payload, nsamples), task_outputs
+
     # aggregates task metrics currently in queue
-    def aggregate_task_metrics(self, count=-1) -> Tuple[Tuple[str, Dict[str, float], int], List[Dict[str, Any]]]:
+    def aggregate_task_metrics(self) -> Tuple[Tuple[str, Dict[str, float], int], List[Dict[str, Any]]]:
         assert self.scalars.empty, "found non-empty scalars {}".format(self.scalars._counts)
 
+        sentinel = ("aggregate.AUTO.sentinel", time.time())
+        self.vector_tasks.metrics_out_queue.put(sentinel)  # valid since a single training process is the only consumer
+
         task_outputs = []
-        while (count == -1 and not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
-            try:
-                if count == -1:
-                    task_output = self.vector_tasks.metrics_out_queue.get_nowait()
-                else:
-                    task_output = self.vector_tasks.metrics_out_queue.get(timeout=5)
-                    count -= 1
-                task_outputs.append(task_output)
-            except queue.Empty:
-                if count != -1:
-                    LOGGER.error("{}-{} Missing {} task metrics due to timeout".format(
-                        self.mode, self.worker_id, count
-                    ))
+
+        done = False
+        while not done:
+            item = self.vector_tasks.metrics_out_queue.get()  # at least, there'll be a sentinel
+            if item[0] == "aggregate.AUTO.sentinel":
+                assert item[1] == sentinel[1], "wrong sentinel found: {} vs {}".format(item[1], sentinel[1])
+                done = True
+            else:
+                task_outputs.append(item)
 
         nsamples = 0
         for task_output in task_outputs:
@@ -354,7 +444,8 @@ class OnPolicyRLEngine(object):
         npaused, keep, batch = self.remove_paused(observations)
         # if render is not None and len(keep) > 0:
         #     render.append(self.vector_tasks.render(mode="rgb_array"))
-        rollouts.reshape(keep)
+        if npaused > 0:
+            rollouts.reshape(keep)
         rollouts.to(self.device)
         rollouts.insert_initial_observations(
             self._preprocess_observations(batch) if len(keep) > 0 else batch
@@ -363,12 +454,37 @@ class OnPolicyRLEngine(object):
             visualizer.collect(vector_task=self.vector_tasks, alive=keep)
         return npaused
 
+    # def empty_memory(self):
+    #     model = self.actor_critic if not self.is_distributed else self.actor_critic.module
+    #     num_recurrent_layers = model.num_recurrent_layers
+    #     if num_recurrent_layers > 0:
+    #         rnn_size = model.recurrent_hidden_state_size
+    #         assert isinstance(rnn_size, int)
+    #         return torch.zeros(
+    #             num_recurrent_layers,
+    #             self.num_samplers,
+    #             rnn_size,
+    #         ).to(self.device)
+    #     else:
+    #         spec = model.recurrent_hidden_state_size
+    #         assert isinstance(spec, Dict)
+    #         memory = Memory()
+    #         for key in spec:
+    #             other_dims, sampler_dim, dtype = spec[key]
+    #             all_dims = other_dims[:sampler_dim] + [self.num_samplers] + other_dims[sampler_dim:]
+    #             tensor = torch.zeros(*all_dims, dtype=dtype, device=self.device)
+    #             memory.check_append(key, tensor, sampler_dim)
+    #         return memory
+
     def act(self, rollouts: RolloutStorage):
         with torch.no_grad():
             step_observation = rollouts.pick_observation_step(rollouts.step)
-            actor_critic_output, recurrent_hidden_states = self.actor_critic(
+            memory = rollouts.pick_memory_step(rollouts.step)
+            # if memory is None or (isinstance(memory, Memory) and len(memory) == 0):
+            #     memory = self.empty_memory()
+            actor_critic_output, memory = self.actor_critic(
                 step_observation,
-                rollouts.recurrent_hidden_states[rollouts.step],
+                memory,
                 rollouts.prev_actions[rollouts.step],
                 rollouts.masks[rollouts.step],
             )
@@ -379,10 +495,25 @@ class OnPolicyRLEngine(object):
             else actor_critic_output.distributions.mode()
         )
 
-        return actions, actor_critic_output, recurrent_hidden_states, step_observation
+        return actions, actor_critic_output, memory, step_observation
+
+    @staticmethod
+    def _active_memory(memory, keep):
+        if isinstance(memory, torch.Tensor):
+            # rnn hidden state
+            LOGGER.info("memory {} keep {}".format(memory.shape, len(keep)))
+            return memory[:, keep] if memory.shape[1] > len(keep) else memory
+
+        # arbitrary memory
+        for name in memory:
+            kept_memory = memory.tensor(name).index_select(
+                dim=memory.sampler_dim(name),
+                index=torch.as_tensor(keep, dtype=torch.int64, device=memory.tensor(name).device)
+            )
+            memory[name] = (kept_memory, memory.sampler_dim(name))
 
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None):
-        actions, actor_critic_output, recurrent_hidden_states, _ = self.act(rollouts)
+        actions, actor_critic_output, memory, _ = self.act(rollouts)
 
         outputs = self.vector_tasks.step([a[0].item() for a in actions])
 
@@ -404,11 +535,12 @@ class OnPolicyRLEngine(object):
         # if render is not None and len(keep) > 0:
         #     render.append(self.vector_tasks.render(mode="rgb_array"))
 
-        rollouts.reshape(keep)
+        if npaused > 0:
+            rollouts.reshape(keep)
 
         rollouts.insert(
             observations=self._preprocess_observations(batch) if len(keep) > 0 else batch,
-            recurrent_hidden_states=recurrent_hidden_states[:, keep],
+            memory=self._active_memory(memory, keep),
             actions=actions[keep],
             action_log_probs=actor_critic_output.distributions.log_probs(actions)[keep],
             value_preds=actor_critic_output.values[keep],
@@ -696,7 +828,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             raise RuntimeError("missing value for {}".format(field))
 
     def act(self, rollouts: RolloutStorage):
-        actions, actor_critic_output, recurrent_hidden_states, step_observation = super().act(rollouts)
+        actions, actor_critic_output, memory, step_observation = super().act(rollouts)
 
         if self.is_distributed:
             # TODO this is inaccurate/hacky, but gets synchronized after each rollout
@@ -721,7 +853,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         self.step_count += actions.nelement()
 
-        return actions, actor_critic_output, recurrent_hidden_states, step_observation
+        return actions, actor_critic_output, memory, step_observation
 
     # aggregates info of specific type from TrainState list
     def aggregate_info(self, type: str = "update") -> Tuple[str, Dict[str, float], int]:
@@ -752,29 +884,23 @@ class OnPolicyTrainer(OnPolicyRLEngine):
     def update(self, rollouts: RolloutStorage):
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
 
-        # # TODO this is inaccurate/hacky (we can also synchronize before and do this accurately)
-        # if self.is_distributed:
-        #   approx_steps = (self.step_count - self.tstate.former_steps) * self.num_workers + self.tstate.former_steps
-        # else:
-        #   approx_steps = self.step_count
-
         for e in range(self.tstate.update_epochs):
             data_generator = rollouts.recurrent_generator(
                 advantages, self.tstate.update_mini_batches
             )
 
-            # self.optimizer.zero_grad()  # type: ignore
-
             for bit, batch in enumerate(data_generator):
                 # TODO: check recursively within batch
+                bsize = None
                 for key in batch:
                     if isinstance(batch[key], torch.Tensor):
                         bsize = batch[key].shape[0]
                         break
+                assert bsize is not None, "TODO check recursively for batch size"
 
-                actor_critic_output, hidden_states = self.actor_critic(
+                actor_critic_output, memory = self.actor_critic(
                     batch["observations"],
-                    batch["recurrent_hidden_states"],
+                    batch["memory"],
                     batch["prev_actions"],
                     batch["masks"],
                 )
@@ -792,7 +918,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     )
 
                     current_loss, current_info = loss.loss(
-                        step_count=self.step_count,  # TODO use approx_steps (hacky) if we synchronize after update
+                        step_count=self.step_count,
                         batch=batch,
                         actor_critic_output=actor_critic_output,
                     )
@@ -839,12 +965,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         self.optimizer.step()  # type: ignore
                         self.tstate.backprop_count += 1
 
-            # nn.utils.clip_grad_norm_(
-            #     self.actor_critic.parameters(), self.tstate.max_grad_norm,  # type: ignore
-            # )
-            # self.optimizer.step()  # type: ignore
-            # self.tstate.backprop_count += 1
-
+        # # TODO Useful for ensuring correctness of distributed infrastructure
         # target = self.actor_critic.module if self.is_distributed else self.actor_critic
         # state_dict = target.state_dict()
         # keys = sorted(list(state_dict.keys()))
@@ -917,7 +1038,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             with torch.no_grad():
                 actor_critic_output, _ = self.actor_critic(
                     rollouts.pick_observation_step(-1),
-                    rollouts.recurrent_hidden_states[-1],
+                    rollouts.pick_memory_step(-1),
                     rollouts.prev_actions[-1],
                     rollouts.masks[-1],
                 )
@@ -984,9 +1105,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     model_path = self.checkpoint_save()
                     self.checkpoints_queue.put(("eval", model_path))
                 self.tstate.last_save = self.step_count
-                # if self.tstate.last_log < self.step_count:  # TODO only one is sent!
-                #     self.send_package()
-                #     self.tstate.last_log = self.step_count
 
             if (self.tstate.advance_scene_rollout_period is not None) and (
                     self.tstate.rollout_count % self.tstate.advance_scene_rollout_period == 0
@@ -1043,9 +1161,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     RolloutStorage(
                         self.tstate.steps_in_rollout,
                         self.num_samplers,
-                        self.actor_critic.action_space if not self.is_distributed else self.actor_critic.module.action_space,
-                        self.actor_critic.recurrent_hidden_state_size if not self.is_distributed else self.actor_critic.module.recurrent_hidden_state_size,
-                        num_recurrent_layers=self.actor_critic.num_recurrent_layers if not self.is_distributed else self.actor_critic.module.num_recurrent_layers,
+                        # self.actor_critic.action_space if not self.is_distributed else self.actor_critic.module.action_space,
+                        self.actor_critic if not self.is_distributed else self.actor_critic.module,
                     )
                 )
 
@@ -1104,7 +1221,7 @@ class OnPolicyInference(OnPolicyRLEngine):
         if self.actor_critic is not None:
             self.actor_critic.eval()
 
-        LOGGER.debug("{} worker {} using device {}".format(self.mode, self.worker_id, self.device))
+        # LOGGER.debug("{} worker {} using device {}".format(self.mode, self.worker_id, self.device))
 
         self.deterministic_agent = deterministic_agent
 
@@ -1116,12 +1233,10 @@ class OnPolicyInference(OnPolicyRLEngine):
         rollouts = RolloutStorage(
             rollout_steps,
             self.num_samplers,
-            self.actor_critic.action_space if not self.is_distributed else self.actor_critic.module.action_space,
-            self.actor_critic.recurrent_hidden_state_size if not self.is_distributed else self.actor_critic.module.recurrent_hidden_state_size,
-            num_recurrent_layers=self.actor_critic.num_recurrent_layers if not self.is_distributed else self.actor_critic.module.num_recurrent_layers,
+            # self.actor_critic.action_space if not self.is_distributed else self.actor_critic.module.action_space,
+            self.actor_critic if not self.is_distributed else self.actor_critic.module,
         )
 
-        # render: Union[None, np.ndarray, List[np.ndarray]] = [] if render_video else None
         if visualizer is not None:
             assert visualizer.empty()
 
@@ -1137,18 +1252,33 @@ class OnPolicyInference(OnPolicyRLEngine):
         self.vector_tasks.set_seeds(self.worker_seeds(self.num_samplers, self.seed))
         self.vector_tasks.reset_all()
 
-        num_tasks = self.vector_tasks.attr("total_unique", call_sampler=True)
-        total_tasks = sum(num_tasks)
-        metrics_pkg, task_outputs = self.aggregate_task_metrics(count=total_tasks)
-
-        # if render_video:
-        #     render = process_video(render, max_clip_len)  # TODO: leave this to logger by just sending raw frames
+        # num_tasks = self.vector_tasks.attr("total_unique", call_sampler=True)
+        # total_tasks = sum(num_tasks)
+        # metrics_pkg, task_outputs = self.aggregate_task_metrics(count=total_tasks)
+        metrics_pkg, task_outputs = self.aggregate_task_metrics()
 
         pkg_type = "{}_package".format(self.mode)
         payload = (metrics_pkg, task_outputs, visualizer.read_and_reset(), checkpoint_file_name)
         nsteps = self.total_steps + self.step_count
 
         return pkg_type, payload, nsteps
+
+    def skip_to_latest(self, command, data):
+        sentinel = ("skip.AUTO.sentinel", time.time())
+        self.checkpoints_queue.put(sentinel)  # valid since a single valid process is the only consumer
+        forwarded = False
+        while not forwarded:
+            new_command: Optional[str] = None
+            new_data: Any = None
+            new_command, new_data = self.checkpoints_queue.get()  # block until next command arrives
+            if new_command == command:
+                data = new_data
+            elif new_command == "sentinel":
+                assert new_data == sentinel[1], "wrong sentinel found: {} vs {}".format(new_data, sentinel[1])
+                forwarded = True
+            else:
+                raise ValueError("Unexpected command {} with data {}".format(new_command, new_data))
+        return data
 
     def process_checkpoints(self):
         assert self.mode != "train", "process_checkpoints only to be called from a valid or test instance"
@@ -1163,19 +1293,18 @@ class OnPolicyInference(OnPolicyRLEngine):
                 command, data = self.checkpoints_queue.get()  # block until first command arrives
                 # LOGGER.debug("{} {} command {} data {}".format(self.mode, self.worker_id, command, data))
 
-                cond = (self.mode == "valid")  # for valid, forward to latest requested checkpoint
-                while cond:
-                    try:
-                        command, data = self.checkpoints_queue.get_nowait()
-                    except queue.Empty:
-                        time.sleep(1)  # there might be another command about to arrive
-                    finally:
-                        cond = not self.checkpoints_queue.empty()  # keep forwarding to latest command in queue
-
                 if command == "eval":
                     if self.num_samplers > 0:
-                        if visualizer is None and "visualizer" in self.machine_params and self.machine_params["visualizer"] is not None:
+                        if self.mode == "valid":
+                            # skip to latest using
+                            # 1. there's only consumer in valid
+                            # 2. there's no quit/exit/close message issued by runner nor trainer
+                            data = self.skip_to_latest(command, data)
+
+                        if visualizer is None and "visualizer" in self.machine_params\
+                                and self.machine_params["visualizer"] is not None:
                             visualizer = self.machine_params["visualizer"]()  # builder object
+
                         eval_package = self.run_eval(checkpoint_file_name=data, visualizer=visualizer)
                         self.results_queue.put(eval_package)
                     else:

@@ -5,24 +5,29 @@ import json
 import numpy as np
 from matplotlib import pyplot as plt, markers
 from matplotlib.collections import LineCollection
+from matplotlib.figure import Figure
 
 from utils.tensor_utils import SummaryWriter, tile_images, process_video
 from utils.experiment_utils import Builder
 from utils.system import LOGGER
+from onpolicy_sync.storage import RolloutStorage
 from rl_base.common import ActorCriticOutput
 
 
 class AbstractViz:
+    rollout_episode_default_axis: int = 1
+    rnn_hidden_memory: Tuple[str, str] = ("memory", RolloutStorage.rnn_memory_accessor)  # to be used to access rnn hidden from memory
+
     def __init__(
             self,
             label: Optional[str] = None,
             vector_task_sources: Sequence[Tuple[str, Dict[str, Any]]] = (),
-            rollout_sources: Sequence[Tuple[str, Sequence[str], int]] = (),
+            rollout_sources: Sequence[Union[str, Sequence[str]]] = (),
             actor_critic_source: bool = False,
     ):
         self.label = label
         self.vector_task_sources = list(vector_task_sources)
-        self.rollout_sources = list(rollout_sources)
+        self.rollout_sources = [[entry] if isinstance(entry, str) else list(entry) for entry in rollout_sources]
         self.actor_critic_source = actor_critic_source
 
         self.mode: Optional[str] = None
@@ -30,18 +35,18 @@ class AbstractViz:
         self.episode_ids: Optional[Sequence[Sequence[str]]] = None
 
     @staticmethod
-    def source_to_str(source, is_vector_task):
+    def _source_to_str(source, is_vector_task):
         source_type = "vector_task" if is_vector_task else "rollout"
-        return "__{}_sep__".format(source_type).join(["{}".format(s) for s in source])
+        return "{}__{}".format(source_type, "__{}_sep__".format(source_type).join(["{}".format(s) for s in source]))
 
     @staticmethod
-    def access(dictionary, path):
+    def _access(dictionary, path):
         path = path[::-1]
         while len(path) > 0:
             dictionary = dictionary[path.pop()]
         return dictionary
 
-    def setup(
+    def _setup(
             self,
             mode: str,
             path_to_id: Sequence[str],
@@ -61,7 +66,7 @@ class AbstractViz:
             render: Optional[Dict[str, List[Dict[str, Any]]]],
             num_steps: int,
     ):
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class TrajectoryViz(AbstractViz):
@@ -101,7 +106,7 @@ class TrajectoryViz(AbstractViz):
         if task_outputs is None:
             return
 
-        all_episodes = {self.access(episode, self.path_to_id): episode for episode in task_outputs}
+        all_episodes = {self._access(episode, self.path_to_id): episode for episode in task_outputs}
 
         for page, current_ids in enumerate(self.episode_ids):
             figs = []
@@ -147,7 +152,7 @@ class TrajectoryViz(AbstractViz):
 
             return lc
 
-        trajectory = self.access(episode, self.path_to_trajectory)
+        trajectory = self._access(episode, self.path_to_trajectory)
 
         x, y = [], []
         for xy in trajectory:
@@ -159,7 +164,7 @@ class TrajectoryViz(AbstractViz):
 
         start_marker = markers.MarkerStyle(marker=self.start_marker_shape)
         if self.path_to_rot_degrees is not None:
-            rot_degrees = float(self.access(trajectory[0], self.path_to_rot_degrees))
+            rot_degrees = float(self._access(trajectory[0], self.path_to_rot_degrees))
             if self.adapt_rotation is not None:
                 rot_degrees = self.adapt_rotation(rot_degrees)
             start_marker._transform = start_marker.get_transform().rotate_deg(rot_degrees)
@@ -168,7 +173,7 @@ class TrajectoryViz(AbstractViz):
         ax.scatter([x[-1]], [y[-1]], marker="s")  # stop
 
         if self.path_to_target_location is not None:
-            target = self.access(episode, self.path_to_target_location)
+            target = self._access(episode, self.path_to_target_location)
             ax.scatter([target[self.x]], [target[self.y]], marker="*")
 
         ax.set_title(episode_id, fontsize=self.fontsize)
@@ -203,13 +208,16 @@ class AgentViewViz(AbstractViz):
         if render is None:
             return
 
-        datum_id = self.source_to_str(self.vector_task_sources[0], is_vector_task=True)
+        datum_id = self._source_to_str(self.vector_task_sources[0], is_vector_task=True)
         for page, current_ids in enumerate(self.episode_ids):
             images = []  # list of lists of rgb frames
             for episode_id in current_ids:
                 assert episode_id in render
+                # TODO overlay episode id?
                 images.append([step[datum_id] for step in render[episode_id]])
-                # TODO overlay episode id
+            for saveit, image in enumerate(images[0]):
+                import cv2
+                cv2.imwrite("dump{}.png".format(saveit), image[:, :, ::-1])
             vid = self.make_vid(images)
             if vid is not None:
                 log_writer.add_vid("{}/{}_group{}".format(self.mode, self.label, page), vid, global_step=num_steps)
@@ -244,71 +252,109 @@ class AgentViewViz(AbstractViz):
         return process_video(frames, self.max_clip_length, self.max_video_length)
 
 
-# class TensorViz(AbstractViz):
-#     def __init__(
-#             self,
-#             label: str = "action_probs",
-#             rollout_source: Tuple[str, Sequence[str], int] = ("action_log_probs", [], 1),
-#             softmax_dim: Optional[int] = -1,
-#             figsize: Tuple[int, int] = (3, 3),
-#     ):
-#         super().__init__(label, rollout_sources=[rollout_source])
-#         self.softmax_dim = softmax_dim
-#         self.figsize = figsize
-#         self.datum_id = self.source_to_str(self.rollout_sources[0], is_vector_task=False)
-#
-#     def log(
-#             self,
-#             log_writer: SummaryWriter,
-#             task_outputs: Optional[List[Any]],
-#             render: Optional[Dict[str, List[Dict[str, Any]]]],
-#             num_steps: int,
-#     ):
-#         if render is None:
-#             return
-#
-#         for page, current_ids in enumerate(self.episode_ids):
-#             figs = []
-#             for episode_id in current_ids:
-#                 assert episode_id in render
-#                 # TODO store as list. there should never be a missing step except for sometimes at the end
-#                 episode_src = {
-#                     it: step[self.datum_id] for it, step in enumerate(render[episode_id]) if self.datum_id in step
-#                 }
-#                 figs.append(self.make_fig(episode_src, episode_id))
-#             log_writer.add_figure("{}/{}_group{}".format(self.mode, self.label, page), figs, global_step=num_steps)
-#             plt.close("all")  # close all current figures (SummaryWriter already closes all figures we log)
-#
-#     def make_fig(self, episode_src, episode_id):
-#         all_steps = sorted(list(episode_src.keys()))
-#
-#         # TODO no need to fill missing steps with zeros? They should only be missing at the end...
-#         LOGGER.debug("{} collected steps for {}: {}".format(len(all_steps), episode_id, all_steps))
-#         # assert all_steps[-1] == len(all_steps) - 1
-#
-#         mats = []
-#         for step in all_steps:
-#             LOGGER.debug("{} {} {}".format(episode_id, step, episode_src[step].shape))
-#             mats.append(episode_src[step])
-#
-#         # Concatenate along step axis (0)
-#         mat = np.concatenate(mats, axis=0)
-#
-#         # Convert to probabilities
-#         mat = self.softmax(mat)
-#
-#         # Remove episode/sampler axis
-#         mat = mat.squeeze(axis=self.rollout_sources[0][2])
-#
-#         fig, ax = plt.subplots(figsize=self.figsize)
-#         ax.matshow(mat)
-#         return fig
-#
-#     def softmax(self, x):
-#         if self.softmax_dim is not None:
-#             ex = np.exp(x - np.max(x, axis=self.softmax_dim, keepdims=True))
-#             return ex / ex.sum(axis=self.softmax_dim, keepdims=True)
-#         return x
+class AbstractTensorViz(AbstractViz):
+    def __init__(
+            self,
+            rollout_source: Union[str, Sequence[str]],
+            label: Optional[str] = None,
+            figsize: Tuple[int, int] = (3, 3),
+    ):
+        if label is None:
+            if isinstance(rollout_source, str):
+                label = rollout_source[:]
+            else:
+                label = "/".join(rollout_source)
+
+        super().__init__(label, rollout_sources=[rollout_source])
+
+        self.figsize = figsize
+        self.datum_id = self._source_to_str(self.rollout_sources[0], is_vector_task=False)
+
+    def log(
+            self,
+            log_writer: SummaryWriter,
+            task_outputs: Optional[List[Any]],
+            render: Optional[Dict[str, List[Dict[str, Any]]]],
+            num_steps: int,
+    ):
+        if render is None:
+            return
+
+        for page, current_ids in enumerate(self.episode_ids):
+            figs = []
+            for episode_id in current_ids:
+                assert episode_id in render and len(render[episode_id]) > 0,\
+                    "missing or empty episode {}".format(episode_id)
+                episode_src = [step[self.datum_id] for step in render[episode_id] if self.datum_id in step]
+
+                query = self._source_to_str(self.rnn_hidden_memory, is_vector_task=False)
+                assert query == self.datum_id
+                for debug_it in range(min(10, len(episode_src))):
+                    # LOGGER.debug("basic to_render {} {} {} {}".format(self.datum_id, episode_id, debug_it, episode_src[debug_it][..., 0]))
+
+                # TODO missing tensor for last step if this is last episode in sampler
+                # LOGGER.debug("found {} for {} steps from total {} steps".format(self.datum_id, len(episode_src), len(render[episode_id])))
+                figs.append(self.make_fig(episode_src, episode_id))
+            log_writer.add_figure("{}/{}_group{}".format(self.mode, self.label, page), figs, global_step=num_steps)
+            plt.close("all")  # close all current figures (SummaryWriter already closes all figures we log)
+
+    @abc.abstractmethod
+    def make_fig(self, episode_src: Sequence[np.ndarray], episode_id: str) -> Figure:
+        raise NotImplementedError()
+
+
+class TensorViz1D(AbstractTensorViz):
+    def __init__(
+            self,
+            rollout_source: Union[str, Sequence[str]] = "action_log_probs",
+            label: Optional[str] = None,
+            figsize: Tuple[int, int] = (3, 3),
+    ):
+        super().__init__(rollout_source, label, figsize)
+
+    def make_fig(self, episode_src, episode_id):
+        assert episode_src[0].size == 1
+
+        # Concatenate along step axis (0)
+        seq = np.concatenate(episode_src, axis=0)
+
+        fig, ax = plt.subplots(figsize=self.figsize)
+        ax.plot(seq)
+        ax.set_title(episode_id)
+        return fig
+
+
+class TensorViz2D(AbstractTensorViz):
+    def __init__(
+            self,
+            rollout_source: Union[str, Sequence[str]] = AbstractViz.rnn_hidden_memory,
+            label: Optional[str] = None,
+            figsize: Tuple[int, int] = (10, 10),
+            fontsize: int = 5
+    ):
+        super().__init__(rollout_source, label, figsize)
+        self.fontsize = fontsize
+
+    def make_fig(self, episode_src, episode_id):
+        # Concatenate along step axis (0)
+        seq = np.concatenate(episode_src, axis=0).squeeze()  # remove num_layers if it's equal to 1, else die
+        assert len(seq.shape) == 2, "No support for higher-dimensions"
+
+        # LOGGER.debug("basic {} h render {}".format(episode_id, seq[:10, 0]))
+
+        fig, ax = plt.subplots(figsize=self.figsize)
+        ax.matshow(seq)
+
+        ax.set_xlabel(episode_id, fontsize=self.fontsize)
+        ax.tick_params(axis='x', labelsize=self.fontsize)
+        ax.tick_params(axis='y', labelsize=self.fontsize)
+        ax.tick_params(bottom=False)
+
+        ax.set_aspect('auto')
+        plt.tight_layout()
+
+        return fig
+
 
 class ActorViz(AbstractViz):
     def __init__(
@@ -340,34 +386,21 @@ class ActorViz(AbstractViz):
                 and len(task_outputs) > 0
                 and self.action_names_path is not None
         ):
-            self.action_names = list(self.access(task_outputs[0], self.action_names_path))
+            self.action_names = list(self._access(task_outputs[0], self.action_names_path))
 
         for page, current_ids in enumerate(self.episode_ids):
             figs = []
             for episode_id in current_ids:
                 assert episode_id in render
-                # TODO store as list. there should never be a missing step except for sometimes at the end
-                episode_src = {
-                    it: step["actor_probs"] for it, step in enumerate(render[episode_id]) if "actor_probs" in step
-                }
+                episode_src = [step["actor_probs"] for step in render[episode_id] if "actor_probs" in step]
+                assert len(episode_src) == len(render[episode_id])
                 figs.append(self.make_fig(episode_src, episode_id))
             log_writer.add_figure("{}/{}_group{}".format(self.mode, self.label, page), figs, global_step=num_steps)
             plt.close("all")  # close all current figures (SummaryWriter already closes all figures we log)
 
     def make_fig(self, episode_src, episode_id):
-        all_steps = sorted(list(episode_src.keys()))
-
-        # TODO no need to fill missing steps with zeros? They should only be missing at the end...
-        LOGGER.debug("{} collected steps for {}: {}".format(len(all_steps), episode_id, all_steps))
-        # assert all_steps[-1] == len(all_steps) - 1
-
-        mats = []
-        for step in all_steps:
-            LOGGER.debug("{} {} {}".format(episode_id, step, episode_src[step].shape))
-            mats.append(episode_src[step])
-
-        # Concatenate along step axis (0, taken from sampler axis)
-        mat = np.concatenate(mats, axis=0)
+        # Concatenate along step axis (0, reused from kept sampler axis)
+        mat = np.concatenate(episode_src, axis=0)
 
         fig, ax = plt.subplots(figsize=self.figsize)
         ax.matshow(mat)
@@ -403,7 +436,7 @@ class SimpleViz(AbstractViz):
             **kw_viz,
     ):
         super().__init__()
-        self.setup(mode, path_to_id, episode_ids)
+        self._setup(mode, path_to_id, episode_ids)
         self.force_episodes = force_episodes
 
         self.all_episode_ids = self._episodes_set()
@@ -439,7 +472,7 @@ class SimpleViz(AbstractViz):
                         new_episodes.append(ep)
                         LOGGER.info("Added new episodes {} from {}".format(new_episodes, v.label))
 
-            v.setup(self.mode, self.path_to_id, self.episode_ids, force=self.force_episodes)
+            v._setup(self.mode, self.path_to_id, self.episode_ids, force=self.force_episodes)
 
         LOGGER.info("Logging labels {}".format(labels))
 
@@ -448,9 +481,9 @@ class SimpleViz(AbstractViz):
             self.episode_ids.append(new_episodes)
             self.all_episode_ids = self._episodes_set()
 
-        LOGGER.debug("rollout sources {}".format(rollout_sources))
-        LOGGER.debug("vector task sources {}".format(vector_task_sources))
-        LOGGER.debug("actor-critic source {}".format(actor_critic_source))
+        # LOGGER.debug("rollout sources {}".format(rollout_sources))
+        # LOGGER.debug("vector task sources {}".format(vector_task_sources))
+        # LOGGER.debug("actor-critic source {}".format(actor_critic_source))
 
         rol_flat = {json.dumps(src, sort_keys=True): src for src in rollout_sources}
         vt_flat = {json.dumps(src, sort_keys=True): src for src in vector_task_sources}
@@ -470,22 +503,25 @@ class SimpleViz(AbstractViz):
     def empty(self):
         return len(self.data) == 0
 
-    def update(self, collected_data):
+    def _update(self, collected_data):
         for epid in collected_data:
             assert epid in self.data
-            LOGGER.debug("Updating {} to {} ({} steps)".format(list(collected_data[epid].keys()), epid, len(self.data[epid])))
+            # LOGGER.debug("Updating {} to {} ({} steps)".format(list(collected_data[epid].keys()), epid, len(self.data[epid])))
             self.data[epid][-1].update(collected_data[epid])
+            # query = self._source_to_str(self.rnn_hidden_memory, is_vector_task=False)
+            # if query in collected_data[epid]:
+            #     LOGGER.debug("basic collected {} {}".format(epid, self.data[epid][-1][query][..., 0]))
 
-    def append(self, vector_task_data):
+    def _append(self, vector_task_data):
         for epid in vector_task_data:
             if epid in self.data:
-                LOGGER.debug("Appending {} to {} ({} steps)".format(list(vector_task_data[epid].keys()), epid, len(self.data[epid])))
+                # LOGGER.debug("Appending {} to {} ({} steps)".format(list(vector_task_data[epid].keys()), epid, len(self.data[epid])))
                 self.data[epid].append(vector_task_data[epid])
             else:
-                LOGGER.debug("Append {} to new episode {}".format(list(vector_task_data[epid].keys()), epid))
+                # LOGGER.debug("Append {} to new episode {}".format(list(vector_task_data[epid].keys()), epid))
                 self.data[epid] = [vector_task_data[epid]]
 
-    def collect_actor_critic(self, actor_critic):
+    def _collect_actor_critic(self, actor_critic):
         actor_critic_data = {epid: dict() for epid in self.last_it2epid if epid in self.all_episode_ids}
         if len(actor_critic_data) > 0 and actor_critic is not None:
             if self.actor_critic_source:
@@ -501,9 +537,9 @@ class SimpleViz(AbstractViz):
                         assert "critic_value" not in actor_critic_data[epid]
                         actor_critic_data[epid]["critic_value"] = val
 
-        self.update(actor_critic_data)
+        self._update(actor_critic_data)
 
-    def collect_rollout(self, rollout, alive):
+    def _collect_rollout(self, rollout, alive):
         alive_set = set(alive)
         assert len(alive_set) == len(alive)
         alive_it2epid = [epid for it, epid in enumerate(self.last_it2epid) if it in alive_set]
@@ -511,35 +547,54 @@ class SimpleViz(AbstractViz):
         rollout_data = {epid: dict() for epid in alive_it2epid if epid in self.all_episode_ids}
         if len(rollout_data) > 0 and rollout is not None:
             for source in self.rollout_sources:
-                datum_id = self.source_to_str(source, is_vector_task=False)
-                storage, path, episode_dim = source
+                datum_id = self._source_to_str(source, is_vector_task=False)
+
+                storage, path = source[0], source[1:]
+                if source == self.rnn_hidden_memory:
+                    path = rollout.rnn_memory_name
+
                 # Access storage
                 res = getattr(rollout, storage)
+                episode_dim = self.rollout_episode_default_axis
+
                 # Access sub-storage if path not empty
                 if len(path) > 0:
-                    res = res[rollout.reverse_flattened_spaces[tuple(path)]]
+                    # LOGGER.debug("storage {} keys {} key {}".format(storage, rollout.reverse_flattened_spaces[storage], tuple(path)))
+                    for path_step in rollout.reverse_flattened_spaces[storage][tuple(path)]:
+                        res = res[path_step]
+                    res, episode_dim = res
+
+                # LOGGER.debug("basic res shape")
+
                 # Select latest step
                 res = res.narrow(
                     dim=0,  # step dimension
                     start=rollout.step - 1 if rollout.step > 0 else rollout.num_steps - 1,
                     length=1
                 )
+
+                # LOGGER.debug("basic collect h {}".format(res[..., 0]))
+
                 for it, epid in enumerate(alive_it2epid):
                     if epid in rollout_data:
-                        # Select current episode
-                        datum = res.narrow(dim=episode_dim, start=it, length=1).to("cpu").detach().numpy()
+                        # Select current episode and remove episode/sampler axis
+                        datum = res.narrow(
+                            dim=episode_dim, start=it, length=1
+                        ).squeeze(axis=episode_dim).to("cpu").detach().numpy()
+                        # LOGGER.debug("basic collect ep {} h {}".format(epid, res[..., 0]))
                         assert datum_id not in rollout_data[epid]
-                        rollout_data[epid][datum_id] = datum
+                        rollout_data[epid][datum_id] = datum.copy()  # copy needed when running on CPU!
 
-        self.update(rollout_data)
+        self._update(rollout_data)
 
-    def collect_vector_task(self, vector_task):
-        it2epid = [self.access(info, self.path_to_id[1:]) for info in vector_task.attr("task_info")]
+    def _collect_vector_task(self, vector_task):
+        it2epid = [self._access(info, self.path_to_id[1:]) for info in vector_task.attr("task_info")]
+        # LOGGER.debug("basic epids {}".format(it2epid))
 
         vector_task_data = {epid: dict() for epid in it2epid if epid in self.all_episode_ids}
         if len(vector_task_data) > 0:
             for source in self.vector_task_sources:  # these are observations for next step!
-                datum_id = self.source_to_str(source, is_vector_task=True)
+                datum_id = self._source_to_str(source, is_vector_task=True)
                 method, kwargs = source
                 res = getattr(vector_task, method)(**kwargs)
                 assert len(res) == len(it2epid)
@@ -548,40 +603,40 @@ class SimpleViz(AbstractViz):
                         assert datum_id not in vector_task_data[epid]
                         vector_task_data[epid][datum_id] = datum
 
-        self.append(vector_task_data)
+        self._append(vector_task_data)
 
         return it2epid
 
     # to be called by engine
     def collect(self, vector_task=None, alive=None, rollout=None, actor_critic=None):
-        # TODO assume we never revisit same episode? we have one entry per episode id in data
-        LOGGER.debug("Data entries: {}".format(list(self.data.keys())))
-        for entry in self.data:
-            LOGGER.debug("{}: {} steps, last {}".format(entry, len(self.data[entry]), list(self.data[entry][-1].keys())))
+        # # TODO assume we never revisit same episode? we have one entry per episode id in data
+        # LOGGER.debug("Data entries: {}".format(list(self.data.keys())))
+        # for entry in self.data:
+        #     LOGGER.debug("{}: {} steps, last {}".format(entry, len(self.data[entry]), list(self.data[entry][-1].keys())))
 
         if actor_critic is not None:
             # in phase with last_it2epid
-            self.collect_actor_critic(actor_critic)
+            self._collect_actor_critic(actor_critic)
 
         if alive is not None and rollout is not None:
             # in phase with last_it2epid that stay alive
-            self.collect_rollout(rollout, alive)
+            self._collect_rollout(rollout, alive)
 
         # Always call this one last!
         if vector_task is not None:
             # in phase with identifiers of current episodes from vector_task
-            self.last_it2epid = self.collect_vector_task(vector_task)
+            self.last_it2epid = self._collect_vector_task(vector_task)
 
-        # TODO Post checks for debugging
-        if alive is not None:
-            assert len(alive) <= len(self.last_it2epid) or len(self.last_it2epid) == 0
-            if vector_task is not None:
-                assert len(alive) == len(self.last_it2epid)
+        # # TODO Post checks for debugging
+        # if alive is not None:
+        #     assert len(alive) <= len(self.last_it2epid) or len(self.last_it2epid) == 0
+        #     if vector_task is not None:
+        #         assert len(alive) == len(self.last_it2epid)
 
     # to be called by engine
     def read_and_reset(self):
         res, self.data = self.data, {}
-        LOGGER.debug("Returning episodes {}".format(list(res.keys())))
+        # LOGGER.debug("Returning episodes {}".format(list(res.keys())))
         return res
 
     # to be called by logger
@@ -593,5 +648,5 @@ class SimpleViz(AbstractViz):
             num_steps: int
     ):
         for v in self.viz:
-            LOGGER.debug("Logging {}".format(v.label))
+            # LOGGER.debug("Logging {}".format(v.label))
             v.log(log_writer, task_outputs, render, num_steps)

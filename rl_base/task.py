@@ -16,6 +16,7 @@ from gym.spaces.dict import Dict as SpaceDict
 
 from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor, SensorSuite
+from utils.system import LOGGER
 
 EnvType = TypeVar("EnvType")
 
@@ -122,13 +123,15 @@ class Task(Generic[EnvType]):
         (possibly) additional information.
         """
         assert not self.is_done()
+        # TODO: Here we increment step counter before step...
+        self._increment_num_steps_taken()  # to ensure subsequent calls to is_done() are valid in _step implementation
         sr = self._step(action=action)
         self._total_reward += float(sr.reward)
-        self._increment_num_steps_taken()
+        # self._increment_num_steps_taken()
         # TODO: Rather than cloning should be increment the step
         #   count before running `self._step(...)`? Alternatively
         #   we can make RLStepResult mutable.
-        return sr.clone({"done": sr.done or self.is_done()})
+        return sr.clone({"done": sr.done or self.is_done()})  # TODO Unnecessary if we're happy with pre-incrementing step counter
 
     @abstractmethod
     def _step(self, action: int) -> RLStepResult:
