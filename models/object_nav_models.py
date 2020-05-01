@@ -272,7 +272,7 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
         )
 
 
-class ObjectNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
+class ObjectNavActorCriticTrainResNet50RNN(ActorCriticModel[CategoricalDistr]):
     def __init__(
         self,
         action_space: gym.spaces.Discrete,

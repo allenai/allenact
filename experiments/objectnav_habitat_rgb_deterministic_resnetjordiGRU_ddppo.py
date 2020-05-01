@@ -81,7 +81,7 @@ class ObjectNavHabitatRGBDeterministicTrainResNetJordiGRUDDPPOExperimentConfig(O
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="target_object_id",
             resnet_preprocessor_uuid="rgb_resnet",
-            rnn_hidden_size=512,
+            hidden_size=512,
             goal_dims=32,
             resnet_compressor_hidden_out_dims=(128, 32),
             combiner_hidden_out_dims=(128, 32)
