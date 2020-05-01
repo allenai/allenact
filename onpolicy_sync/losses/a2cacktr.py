@@ -15,7 +15,7 @@ class A2CACKTR(AbstractActorCriticLoss):
 
     # Attributes
 
-    acktr : `True` if should use ACKTR loss, otherwise uses A2C loss.
+    acktr : `True` if should use ACKTR loss (currently not supported), otherwise uses A2C loss.
     value_loss_coef : Weight of value loss.
     entropy_coef : Weight of entropy (encouraging) loss.
     """
@@ -107,7 +107,7 @@ class A2C(A2CACKTR):
 
 
 class ACKTR(A2CACKTR):
-    """ACKTR Loss."""
+    """ACKTR Loss. This code is not supported as it currently lacks an implementation for recurrent models."""
 
     def __init__(self, value_loss_coef, entropy_coef, *args, **kwargs):
         super().__init__(

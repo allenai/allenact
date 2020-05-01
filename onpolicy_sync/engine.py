@@ -66,11 +66,11 @@ def validate(
 class OnPolicyRLEngine(object):
     """The reinforcement learning primary controller.
 
-    This `OnPolicyRLEngine` class handles all training, validation, and testing as
-    well as logging and checkpointing. You are not expected to
-    instantiate this class yourself, instead you should define an
-    experiment which will then be used to instantiate an `OnPolicyRLEngine` and
-    perform any desired tasks.
+    This `OnPolicyRLEngine` class handles all training, validation, and
+    testing as well as logging and checkpointing. You are not expected
+    to instantiate this class yourself, instead you should define an
+    experiment which will then be used to instantiate an
+    `OnPolicyRLEngine` and perform any desired tasks.
     """
 
     def __init__(
