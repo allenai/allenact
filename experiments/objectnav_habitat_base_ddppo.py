@@ -22,14 +22,14 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     """A Point Navigation experiment configuraqtion in Habitat"""
 
-    TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/train_chair/train.json.gz"
-    VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_chair/val_four_scenes.json.gz"
+    TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/train_single_target/train.json.gz"
+    VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_single_target/val.json.gz"
 
     SCREEN_SIZE = 256
     MAX_STEPS = 500
     DISTANCE_TO_GOAL = 0.1
 
-    NUM_PROCESSES = 32
+    NUM_PROCESSES = 30
 
     CONFIG = habitat.get_config('configs/mp3d.yaml')
     CONFIG.defrost()
@@ -114,7 +114,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else [4, 4, 4, 4, 4, 4, 4, 4]
+            nprocesses = 1 if not torch.cuda.is_available() else [3, 3, 4, 4, 4, 4, 4, 4]
             gpu_ids = [] if not torch.cuda.is_available() else self.CONFIG.SIMULATOR_GPU_IDS
             render_video = False
         elif mode == "valid":
