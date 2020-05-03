@@ -74,7 +74,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
         num_mini_batch = 1
         update_repeats = 4
         num_steps = 30
-        save_interval = 5000000
+        save_interval = 1000000
         log_interval = 10000
         gamma = 0.99
         use_gae = True
@@ -104,7 +104,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     @classmethod
     def evaluation_params(cls, **kwargs):
         nprocesses = 1
-        gpu_ids = [] if not torch.cuda.is_available() else [0]
+        gpu_ids = [] if not torch.cuda.is_available() else [7]
         res = cls.training_pipeline()
         del res["pipeline"]
         del res["optimizer"]
@@ -122,7 +122,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
-                gpu_ids = [0]
+                gpu_ids = [7]
             render_video = False
         elif mode == "test":
             nprocesses = 1
