@@ -29,8 +29,9 @@ def construct_env_configs(config: Config) -> List[Config]:
     #  'JF19kD82Mey', 'GdvgFV5R1Z5', 'HxpKQynjfin', 'vyrNrziPKCB']
 
     scenes = ['29hnd4uzFmX', 'i5noydFURQK', 'cV4RVeZvu5T', '82sE5b5pLXE', 'JeFG25nYj2p', '8WUmhLawc2A', 'uNb9QFRL6hY',
-              'rPc6DW4iMge', 'vyrNrziPKCB', 'VFuaQ6m2Qom', '29hnd4uzFmX', 'i5noydFURQK', 'cV4RVeZvu5T', '82sE5b5pLXE',
-              'JeFG25nYj2p', '8WUmhLawc2A', 'uNb9QFRL6hY', 'rPc6DW4iMge', 'vyrNrziPKCB', 'VFuaQ6m2Qom']
+              'rPc6DW4iMge', '29hnd4uzFmX', 'i5noydFURQK', 'cV4RVeZvu5T', '82sE5b5pLXE',
+              'JeFG25nYj2p', '8WUmhLawc2A', 'uNb9QFRL6hY', 'rPc6DW4iMge', '29hnd4uzFmX', 'i5noydFURQK', 'cV4RVeZvu5T',
+              '82sE5b5pLXE', 'JeFG25nYj2p', '8WUmhLawc2A', 'uNb9QFRL6hY', 'rPc6DW4iMge']
 
     if len(scenes) > 0:
         # random.shuffle(scenes)
