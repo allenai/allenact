@@ -28,10 +28,10 @@ def construct_env_configs(config: Config) -> List[Config]:
     #  'cV4RVeZvu5T', 'i5noydFURQK', 'YmJkqBEsHnH', 'jh4fc5c5qoQ', 'VVfe2KiqLaN', '29hnd4uzFmX', 'Pm6F8kyY3z2',
     #  'JF19kD82Mey', 'GdvgFV5R1Z5', 'HxpKQynjfin', 'vyrNrziPKCB']
 
-    scenes = ['29hnd4uzFmX', 'i5noydFURQK', 'cV4RVeZvu5T', '82sE5b5pLXE', 'JeFG25nYj2p', '8WUmhLawc2A', 'uNb9QFRL6hY',
+    scenes = ['29hnd4uzFmX', 'i5noydFURQK', 'cV4RVeZvu5T', '82sE5b5pLXE', 'JeFG25nYj2p', '8WUmhLawc2A', 'VFuaQ6m2Qom',
               'rPc6DW4iMge', '29hnd4uzFmX', 'i5noydFURQK', 'cV4RVeZvu5T', '82sE5b5pLXE',
-              'JeFG25nYj2p', '8WUmhLawc2A', 'uNb9QFRL6hY', 'rPc6DW4iMge', '29hnd4uzFmX', 'i5noydFURQK', 'cV4RVeZvu5T',
-              '82sE5b5pLXE', 'JeFG25nYj2p', '8WUmhLawc2A', 'uNb9QFRL6hY', 'rPc6DW4iMge']
+              'JeFG25nYj2p', '8WUmhLawc2A', 'VFuaQ6m2Qom', 'rPc6DW4iMge', '29hnd4uzFmX', 'i5noydFURQK', 'cV4RVeZvu5T',
+              '82sE5b5pLXE', 'JeFG25nYj2p', '8WUmhLawc2A', 'VFuaQ6m2Qom', 'rPc6DW4iMge']
 
     if len(scenes) > 0:
         # random.shuffle(scenes)
