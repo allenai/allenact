@@ -269,7 +269,7 @@ class ObjectNavTask(Task[HabitatEnvironment]):
             info={"last_action_success": self.last_action_success},
         )
         new_pos = self.get_observations()["agent_position_and_rotation"]
-        if old_pos == new_pos:
+        if np.all(old_pos == new_pos):
             self._num_invalid_actions += 1
         return step_result
 
