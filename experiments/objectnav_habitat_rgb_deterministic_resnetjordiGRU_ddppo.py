@@ -5,7 +5,7 @@ from torchvision import models
 from models.object_nav_models import ResnetTensorObjectNavActorCritic
 from rl_base.sensor import SensorSuite
 from rl_habitat.habitat_tasks import ObjectNavTask
-from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetObjectSensorHabitat
+from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetObjectSensorHabitat, AgentCoordinatesSensorHabitat
 from rl_habitat.habitat_utils import construct_env_configs, construct_env_configs_mp3d
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from rl_base.preprocessor import ObservationSet
@@ -25,6 +25,7 @@ class ObjectNavHabitatRGBDeterministicTrainResNetJordiGRUDDPPOExperimentConfig(O
             }
         ),
         TargetObjectSensorHabitat({}),
+        AgentCoordinatesSensorHabitat({})
     ]
 
     # PREPROCESSORS = [

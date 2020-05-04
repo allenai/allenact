@@ -212,6 +212,8 @@ class ObjectNavTask(Task[HabitatEnvironment]):
                 or self.last_geodesic_distance in [float('-inf'), float('inf')] \
                 or np.isnan(self.last_geodesic_distance):
             self.last_geodesic_distance = 0.0
+        self._min_distance_to_goal = self.last_geodesic_distance
+        self._num_invalid_actions = 0
 
         self._shortest_path_follower = ShortestPathFollower(env.env.sim,
                                                             env.env._config.TASK.SUCCESS_DISTANCE,
@@ -236,6 +238,9 @@ class ObjectNavTask(Task[HabitatEnvironment]):
         self.env.stop()
 
     def _step(self, action: int) -> RLStepResult:
+
+        old_pos = self.get_observations()["agent_position_and_rotation"]
+
         action_str = self.action_names()[action]
 
         self.env.step({"action": action_str})
@@ -263,6 +268,9 @@ class ObjectNavTask(Task[HabitatEnvironment]):
             done=self.is_done(),
             info={"last_action_success": self.last_action_success},
         )
+        new_pos = self.get_observations()["agent_position_and_rotation"]
+        if old_pos == new_pos:
+            self._num_invalid_actions += 1
         return step_result
 
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
@@ -276,9 +284,8 @@ class ObjectNavTask(Task[HabitatEnvironment]):
     def judge(self) -> float:
         reward = -0.01
 
-        # last_geodesic_distance = self.env.last_geodesic_distance
-        # new_geodesic_distance = self.env.get_geodesic_distance()
         new_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
+        self._min_distance_to_goal = min(new_geodesic_distance, self._min_distance_to_goal)
         if new_geodesic_distance is None \
                 or new_geodesic_distance in [float('-inf'), float('inf')] \
                 or np.isnan(new_geodesic_distance):
@@ -295,7 +302,6 @@ class ObjectNavTask(Task[HabitatEnvironment]):
         return float(reward)
 
     def metrics(self) -> Dict[str, Any]:
-        # print("Self Rewards:", self._rewards)
         if not self.is_done():
             return {}
         else:
@@ -304,7 +310,9 @@ class ObjectNavTask(Task[HabitatEnvironment]):
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
-                "spl": _metrics['spl'] if _metrics['spl'] is not None else 0.0
+                "spl": _metrics['spl'] if _metrics['spl'] is not None else 0.0,
+                "min_distance_to_target": self._min_distance_to_goal,
+                "num_invalid_actions": self._num_invalid_actions
             }
             self._rewards = []
             return metrics
