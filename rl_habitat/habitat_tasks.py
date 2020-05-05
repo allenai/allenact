@@ -35,8 +35,7 @@ class HabitatTask(Task[HabitatEnvironment]):
         self._last_action_ind: Optional[int] = None
         self._last_action_success: Optional[bool] = None
         self._actions_taken = []
-        pos = self.get_observations()["agent_position_and_rotation"]
-        self._positions = [{"x": pos[0], "y": pos[1], "path_to_rot_degrees": pos[3]}]
+        self._positions = []
         ep = self.env.get_current_episode()
         self._episode_id = ep.scene_id[-15:-4] + "_" + ep.episode_id
 
@@ -60,7 +59,6 @@ class HabitatTask(Task[HabitatEnvironment]):
         self._last_action_ind = action
         self.last_action = self.action_names()[action]
         self.last_action_success = None
-        self._taken_actions.append(self.last_action)
         step_result = super(HabitatTask, self).step(action=action)
         step_result.info["action"] = self._last_action_ind
         step_result.info["action_success"] = self.last_action_success
@@ -244,10 +242,13 @@ class ObjectNavTask(HabitatTask):
         self.env.stop()
 
     def _step(self, action: int) -> RLStepResult:
+        pos = self.get_observations()["agent_position_and_rotation"]
+        self._positions.append({"x": pos[0], "y": pos[1], "path_to_rot_degrees": pos[3]})
 
         old_pos = self.get_observations()["agent_position_and_rotation"]
 
         action_str = self.action_names()[action]
+        self._actions_taken.append(action_str)
 
         self.env.step({"action": action_str})
 
