@@ -309,6 +309,10 @@ class ObjectNavTask(HabitatTask):
         return float(reward)
 
     def metrics(self) -> Dict[str, Any]:
+        self.task_info["taken_actions"] = self._actions_taken
+        self.task_info["action_names"] = self.action_names()
+        self.task_info["followed_path"] = self._positions
+        self.task_info["episode_id"] = self._episode_id
         if not self.is_done():
             return {}
         else:
@@ -320,12 +324,7 @@ class ObjectNavTask(HabitatTask):
                 "spl": _metrics['spl'] if _metrics['spl'] is not None else 0.0,
                 "min_distance_to_target": self._min_distance_to_goal,
                 "num_invalid_actions": self._num_invalid_actions,
-                "task_info": {
-                    "taken_actions": self._actions_taken,
-                    "action_names": self.action_names(),
-                    "followed_path": self._positions,
-                    "episode_id": self._episode_id,
-                }
+                "task_info": self.task_info
             }
             self._rewards = []
             return metrics
