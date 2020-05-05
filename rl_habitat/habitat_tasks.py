@@ -34,6 +34,11 @@ class HabitatTask(Task[HabitatEnvironment]):
         self._last_action: Optional[str] = None
         self._last_action_ind: Optional[int] = None
         self._last_action_success: Optional[bool] = None
+        self._actions_taken = []
+        pos = self.get_observations()["agent_position_and_rotation"]
+        self._positions = [{"x": pos[0], "y": pos[1], "path_to_rot_degrees": pos[3]}]
+        ep = self.env.get_current_episode()
+        self._episode_id = ep.scene_id[-15:-4] + "_" + ep.episode_id
 
     @property
     def last_action(self):
@@ -55,6 +60,7 @@ class HabitatTask(Task[HabitatEnvironment]):
         self._last_action_ind = action
         self.last_action = self.action_names()[action]
         self.last_action_success = None
+        self._taken_actions.append(self.last_action)
         step_result = super(HabitatTask, self).step(action=action)
         step_result.info["action"] = self._last_action_ind
         step_result.info["action_success"] = self.last_action_success
@@ -187,7 +193,7 @@ class PointNavTask(Task[HabitatEnvironment]):
         return action, action is not None
 
 
-class ObjectNavTask(Task[HabitatEnvironment]):
+class ObjectNavTask(HabitatTask):
     _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT, END, LOOK_UP, LOOK_DOWN)
 
     def __init__(
@@ -312,7 +318,13 @@ class ObjectNavTask(Task[HabitatEnvironment]):
                 "total_reward": np.sum(self._rewards),
                 "spl": _metrics['spl'] if _metrics['spl'] is not None else 0.0,
                 "min_distance_to_target": self._min_distance_to_goal,
-                "num_invalid_actions": self._num_invalid_actions
+                "num_invalid_actions": self._num_invalid_actions,
+                "task_info": {
+                    "taken_actions": self._actions_taken,
+                    "action_names": self.action_names(),
+                    "followed_path": self._positions,
+                    "episode_id": self._episode_id,
+                }
             }
             self._rewards = []
             return metrics

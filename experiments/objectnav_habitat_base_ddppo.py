@@ -17,6 +17,7 @@ from rl_base.preprocessor import ObservationSet
 from rl_habitat.habitat_tasks import ObjectNavTask
 from rl_habitat.habitat_task_samplers import ObjectNavTaskSampler
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
+from utils.viz_utils import SimpleViz, AgentViewViz, TrajectoryViz, ActorViz
 
 
 class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
@@ -62,6 +63,17 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     CONFIG.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "VIEW_POINTS"  # "POINT"
 
     CONFIG.MODE = 'train'
+    VISUALIZATION_IDS =    ['oLBMNvg9in8_0',
+                            '8194nk5LbLH_0',
+                            '2azQ1b91cZZ_0',
+                            'QUCTc6BB5sX_0',
+                            'pLe4wQe7qrG_0',
+                            'TbHJrupSAjP_0',
+                            'X7HyMhZNoso_0',
+                            'zsNo4HB9uLZ_0',
+                            'Z6MFQCViBuw_0',
+                            'x8F5xyUWy9e_0',
+                            'EU6Fwq7SyZv_0']
 
     @classmethod
     def tag(cls):
@@ -137,6 +149,26 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
         observation_set = Builder(ObservationSet, kwargs=dict(
             source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
         )) if mode == 'train' or nprocesses > 0 else None
+
+        if mode == "valid":
+            visualizer = Builder(SimpleViz, dict(
+                episode_ids=self.VISUALIZATION_IDS,  # which episodes to log, List[str] or List[List[str]] to split into viz groups
+                mode="test",  # or valid
+                v1=Builder(TrajectoryViz, dict()),  # trajectory
+                v2=Builder(AgentViewViz, dict(max_video_length=100, episode_ids=self.VISUALIZATION_IDS)),  # first person videos
+                v3=Builder(ActorViz, dict()),  # action probs
+                # v4=Builder(TensorViz1D, dict()),  # visualize 1D tensor (time) from rollout
+                # v5=Builder(TensorViz1D, dict(rollout_source=("masks"))),
+                # v6=Builder(TensorViz2D, dict()),
+                # visualize 2D tensor (time + another dim, e.g. hidden states) from rollout
+            ))
+            return {
+                "nprocesses": nprocesses,
+                "gpu_ids": gpu_ids,
+                "observation_set": observation_set,
+                "render_video": render_video,
+                "visualizer": visualizer,
+            }
 
         return {
             "nprocesses": nprocesses,
