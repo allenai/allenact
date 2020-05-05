@@ -22,16 +22,15 @@ def construct_env_configs(config: Config) -> List[Config]:
     dataset = habitat.make_dataset(config.DATASET.TYPE)
     scenes = dataset.get_scenes_to_load(config.DATASET)
 
-    # scenes = ['rPc6DW4iMge', 'e9zR4mvMWw7', 'uNb9QFRL6hY', 'qoiz87JEwZ2', 'sKLMLpTHeUy', 's8pcmisQ38h', '759xd9YjKW5',
-    #  '5q7pvUzZiYa', 'XcA2TqTSSAj', 'SN83YJsR3w2', '8WUmhLawc2A', 'JeFG25nYj2p', '17DRP5sb8fy', 'Uxmj2M2itWa',
-    #  'D7N2EKCX4Sj', 'b8cTxDM8gDG', 'sT4fr6TAbpF', 'S9hNv5qa7GM', '82sE5b5pLXE', 'pRbA3pwrgk9', 'aayBHfsNo7d',
-    #  'cV4RVeZvu5T', 'i5noydFURQK', 'YmJkqBEsHnH', 'jh4fc5c5qoQ', 'VVfe2KiqLaN', '29hnd4uzFmX', 'Pm6F8kyY3z2',
-    #  'JF19kD82Mey', 'GdvgFV5R1Z5', 'HxpKQynjfin', 'vyrNrziPKCB']
+    scenes = ['rPc6DW4iMge', 'e9zR4mvMWw7', 'uNb9QFRL6hY', 'qoiz87JEwZ2', 'sKLMLpTHeUy', 's8pcmisQ38h', '759xd9YjKW5',
+              '5q7pvUzZiYa', 'XcA2TqTSSAj', 'SN83YJsR3w2', '8WUmhLawc2A', 'JeFG25nYj2p', '17DRP5sb8fy', 'Uxmj2M2itWa',
+              'D7N2EKCX4Sj', 'b8cTxDM8gDG', 'sT4fr6TAbpF', 'S9hNv5qa7GM', '82sE5b5pLXE', 'pRbA3pwrgk9', 'aayBHfsNo7d',
+              'cV4RVeZvu5T', 'i5noydFURQK', 'YmJkqBEsHnH', 'jh4fc5c5qoQ', 'VVfe2KiqLaN', '29hnd4uzFmX', 'Pm6F8kyY3z2',
+              'JF19kD82Mey', 'GdvgFV5R1Z5', 'HxpKQynjfin', 'vyrNrziPKCB']
 
-    scenes = ['29hnd4uzFmX', 'i5noydFURQK', 'cV4RVeZvu5T', '82sE5b5pLXE', 'JeFG25nYj2p', '8WUmhLawc2A', 'VFuaQ6m2Qom',
-              'rPc6DW4iMge', '29hnd4uzFmX', 'i5noydFURQK', 'cV4RVeZvu5T', '82sE5b5pLXE',
-              'JeFG25nYj2p', '8WUmhLawc2A', 'VFuaQ6m2Qom', 'rPc6DW4iMge', '29hnd4uzFmX', 'i5noydFURQK', 'cV4RVeZvu5T',
-              '82sE5b5pLXE', 'JeFG25nYj2p', '8WUmhLawc2A', 'VFuaQ6m2Qom', 'rPc6DW4iMge']
+    # scenes = ['29hnd4uzFmX', 'i5noydFURQK', 'cV4RVeZvu5T', '82sE5b5pLXE', 'JeFG25nYj2p', '8WUmhLawc2A', 'VFuaQ6m2Qom',
+    #           'rPc6DW4iMge', '29hnd4uzFmX', 'i5noydFURQK', 'cV4RVeZvu5T', '82sE5b5pLXE',
+    #           'JeFG25nYj2p', '8WUmhLawc2A', 'VFuaQ6m2Qom', 'rPc6DW4iMge']
 
     if len(scenes) > 0:
         # random.shuffle(scenes)
