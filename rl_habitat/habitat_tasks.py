@@ -226,6 +226,7 @@ class ObjectNavTask(HabitatTask):
 
         self._rewards: List[float] = []
         self._metrics = None
+        self.task_info["episode_id"] = self._episode_id
 
     @property
     def action_space(self):
@@ -312,7 +313,6 @@ class ObjectNavTask(HabitatTask):
         self.task_info["taken_actions"] = self._actions_taken
         self.task_info["action_names"] = self.action_names()
         self.task_info["followed_path"] = self._positions
-        self.task_info["episode_id"] = self._episode_id
         if not self.is_done():
             return {}
         else:
