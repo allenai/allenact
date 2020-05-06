@@ -363,7 +363,7 @@ class ActorViz(AbstractViz):
 
         mats = []
         for step in all_steps:
-            LOGGER.debug("{} {} {}".format(episode_id, step, episode_src[step].shape))
+            LOGGER.debug("{} {} {} LEN STEPS{}".format(episode_id, step, episode_src[step].shape, len(all_steps)))
             mats.append(episode_src[step])
 
         # Concatenate along step axis (0, taken from sampler axis)
