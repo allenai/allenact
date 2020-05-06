@@ -36,6 +36,8 @@ class AbstractViz:
 
     @staticmethod
     def access(dictionary, path):
+        print("\n\nDICTIONARY:", dictionary)
+        print("\n\nPATH:", path)
         path = path[::-1]
         while len(path) > 0:
             dictionary = dictionary[path.pop()]
@@ -363,7 +365,7 @@ class ActorViz(AbstractViz):
 
         mats = []
         for step in all_steps:
-            LOGGER.debug("{} {} {} LEN STEPS{}".format(episode_id, step, episode_src[step].shape, len(all_steps)))
+            LOGGER.debug("{} {} {}".format(episode_id, step, episode_src[step].shape))
             mats.append(episode_src[step])
 
         # Concatenate along step axis (0, taken from sampler axis)
