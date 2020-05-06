@@ -63,7 +63,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     CONFIG.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = 'POINT'  # 'VIEW_POINTS'
 
     CONFIG.MODE = 'train'
-    VISUALIZATION_IDS =    ['oLBMNvg9in8_0']
+    VISUALIZATION_IDS =    ['pLe4wQe7qrG_145']
 
     @classmethod
     def tag(cls):
