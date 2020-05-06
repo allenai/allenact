@@ -37,7 +37,7 @@ class HabitatTask(Task[HabitatEnvironment]):
         self._actions_taken = []
         self._positions = []
         pos = self.get_observations()["agent_position_and_rotation"]
-        self._positions.append({"x": pos[0], "y": pos[1], "z": pos[2], "path_to_rot_degrees": pos[3]})
+        self._positions.append({"x": pos[0], "y": pos[1], "z": pos[2], "rotation": pos[3]})
         ep = self.env.get_current_episode()
         self._episode_id = ep.scene_id[-15:-4] + "_" + ep.episode_id
 
@@ -280,7 +280,7 @@ class ObjectNavTask(HabitatTask):
             self._num_invalid_actions += 1
 
         pos = self.get_observations()["agent_position_and_rotation"]
-        self._positions.append({"x": pos[0], "y": pos[1], "z": pos[2], "path_to_rot_degrees": pos[3]})
+        self._positions.append({"x": pos[0], "y": pos[1], "z": pos[2], "rotation": pos[3]})
 
         return step_result
 
