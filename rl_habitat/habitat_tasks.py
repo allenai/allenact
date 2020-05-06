@@ -36,6 +36,8 @@ class HabitatTask(Task[HabitatEnvironment]):
         self._last_action_success: Optional[bool] = None
         self._actions_taken = []
         self._positions = []
+        pos = self.get_observations()["agent_position_and_rotation"]
+        self._positions.append({"x": pos[0], "y": pos[1], "z": pos[2], "path_to_rot_degrees": pos[3]})
         ep = self.env.get_current_episode()
         self._episode_id = ep.scene_id[-15:-4] + "_" + ep.episode_id
 
@@ -243,9 +245,6 @@ class ObjectNavTask(HabitatTask):
         self.env.stop()
 
     def _step(self, action: int) -> RLStepResult:
-        pos = self.get_observations()["agent_position_and_rotation"]
-        self._positions.append({"x": pos[0], "z": pos[2], "path_to_rot_degrees": pos[3]})
-
         old_pos = self.get_observations()["agent_position_and_rotation"]
 
         action_str = self.action_names()[action]
@@ -279,6 +278,10 @@ class ObjectNavTask(HabitatTask):
         new_pos = self.get_observations()["agent_position_and_rotation"]
         if np.all(old_pos == new_pos):
             self._num_invalid_actions += 1
+
+        pos = self.get_observations()["agent_position_and_rotation"]
+        self._positions.append({"x": pos[0], "y": pos[1], "z": pos[2], "path_to_rot_degrees": pos[3]})
+
         return step_result
 
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
