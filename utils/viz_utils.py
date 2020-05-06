@@ -71,7 +71,7 @@ class TrajectoryViz(AbstractViz):
     def __init__(
             self,
             path_to_trajectory: Sequence[str] = ("task_info", "followed_path"),
-            path_to_target_location: Optional[Sequence[str]] = ("task_info", "target"),
+            path_to_target_location: Optional[Sequence[str]] = ("task_info", "target_position"),
             x: str = "x",
             y: str = "z",
             path_to_rot_degrees: Optional[Sequence[str]] = ("rotation",),

@@ -229,6 +229,9 @@ class ObjectNavTask(HabitatTask):
         self._rewards: List[float] = []
         self._metrics = None
         self.task_info["episode_id"] = self._episode_id
+        self.task_info["target_position"] = {"x": self.task_info["target"][0],
+                                             "y": self.task_info["target"][1],
+                                             "z": self.task_info["target"][2]}
 
     @property
     def action_space(self):
