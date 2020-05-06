@@ -10,6 +10,7 @@ from utils.tensor_utils import SummaryWriter, tile_images, process_video
 from utils.experiment_utils import Builder
 from utils.system import LOGGER
 from rl_base.common import ActorCriticOutput
+import math
 
 
 class AbstractViz:
@@ -73,8 +74,8 @@ class TrajectoryViz(AbstractViz):
             path_to_target_location: Optional[Sequence[str]] = ("task_info", "target_position"),
             x: str = "x",
             y: str = "z",
-            path_to_rot_degrees: Optional[Sequence[str]] = ("rotation", "y"),
-            adapt_rotation: Optional[Callable[[float], float]] = None,
+            path_to_rot_degrees: Optional[Sequence[str]] = ("rotation",),
+            adapt_rotation: Optional[Callable[[float], float]] = lambda x: math.degrees(x),
             label: str = "trajectory",
             figsize: Tuple[int, int] = (2, 2),
             fontsize: int = 5,
