@@ -244,7 +244,7 @@ class ObjectNavTask(HabitatTask):
 
     def _step(self, action: int) -> RLStepResult:
         pos = self.get_observations()["agent_position_and_rotation"]
-        self._positions.append({"x": pos[0], "y": pos[1], "path_to_rot_degrees": pos[3]})
+        self._positions.append({"x": pos[0], "z": pos[2], "path_to_rot_degrees": pos[3]})
 
         old_pos = self.get_observations()["agent_position_and_rotation"]
 
