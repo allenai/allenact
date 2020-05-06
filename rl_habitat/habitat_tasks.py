@@ -39,6 +39,8 @@ class HabitatTask(Task[HabitatEnvironment]):
         pos = self.get_observations()["agent_position_and_rotation"]
         self._positions.append({"x": pos[0], "y": pos[1], "z": pos[2], "rotation": pos[3]})
         ep = self.env.get_current_episode()
+        # Extract the scene name from the scene path and append the episode id to generate
+        # a globally unique episode_id
         self._episode_id = ep.scene_id[-15:-4] + "_" + ep.episode_id
 
     @property

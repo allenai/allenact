@@ -37,8 +37,6 @@ class AbstractViz:
 
     @staticmethod
     def access(dictionary, path):
-        print("\n\nDICTIONARY:", dictionary)
-        print("\n\nPATH:", path)
         path = path[::-1]
         while len(path) > 0:
             dictionary = dictionary[path.pop()]
