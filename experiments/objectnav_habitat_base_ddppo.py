@@ -63,7 +63,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     CONFIG.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = 'POINT'  # 'VIEW_POINTS'
 
     CONFIG.MODE = 'train'
-    VISUALIZATION_IDS =    ['pLe4wQe7qrG_5', 'pLe4wQe7qrG_180', 'x8F5xyUWy9e_114', '8194nk5LbLH_170', 'TbHJrupSAjP_199']
+    VISUALIZATION_IDS =    ['pLe4wQe7qrG_5', 'x8F5xyUWy9e_204', '8194nk5LbLH_220', 'TbHJrupSAjP_237']
 
     @classmethod
     def tag(cls):
@@ -76,7 +76,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
         num_mini_batch = 1
         update_repeats = 4
         num_steps = 30
-        save_interval = 10000  # 1000000
+        save_interval = 1000000
         log_interval = 10000
         gamma = 0.99
         use_gae = True
