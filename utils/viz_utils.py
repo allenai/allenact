@@ -107,7 +107,7 @@ class TrajectoryViz(AbstractViz):
         for page, current_ids in enumerate(self.episode_ids):
             figs = []
             print("EPISODE IDS TO USE:", current_ids)
-            print("ALL EPISODES:", all_episodes)
+            print("ALL EPISODES:", all_episodes.keys())
             for episode_id in current_ids:
                 assert episode_id in all_episodes
                 figs.append(self.make_fig(all_episodes[episode_id], episode_id))
