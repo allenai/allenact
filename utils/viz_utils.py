@@ -73,7 +73,7 @@ class TrajectoryViz(AbstractViz):
             x: str = "x",
             y: str = "z",
             path_to_rot_degrees: Optional[Sequence[str]] = ("rotation",),
-            adapt_rotation: Optional[Callable[[float], float]] = lambda x: math.degrees(x),
+            adapt_rotation: Optional[Callable[[float], float]] = lambda x: math.degrees(x) - 90,
             label: str = "trajectory",
             figsize: Tuple[int, int] = (2, 2),
             fontsize: int = 5,
@@ -106,8 +106,6 @@ class TrajectoryViz(AbstractViz):
 
         for page, current_ids in enumerate(self.episode_ids):
             figs = []
-            print("EPISODE IDS TO USE:", current_ids)
-            print("ALL EPISODES:", all_episodes.keys())
             for episode_id in current_ids:
                 assert episode_id in all_episodes
                 figs.append(self.make_fig(all_episodes[episode_id], episode_id))

@@ -235,6 +235,8 @@ class ObjectNavTask(HabitatTask):
                                              "y": self.task_info["target"][1],
                                              "z": self.task_info["target"][2]}
 
+        self._coverage_map = np.zeros((150, 150))
+
     @property
     def action_space(self):
         return gym.spaces.Discrete(len(self._actions))
@@ -298,8 +300,10 @@ class ObjectNavTask(HabitatTask):
         return bool(self.env.env.get_metrics()['spl'])
 
     def judge(self) -> float:
+        # Set default reward
         reward = -0.01
 
+        # Get geodesic distance reward
         new_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
         self._min_distance_to_goal = min(new_geodesic_distance, self._min_distance_to_goal)
         if new_geodesic_distance is None \
@@ -312,8 +316,18 @@ class ObjectNavTask(HabitatTask):
         if self._took_end_action:
             reward += 10.0 if self._success else 0.0
 
+        # Get success reward
         self._rewards.append(float(reward))
         self.last_geodesic_distance = new_geodesic_distance
+
+        # Get coverage reward
+        pos = self.get_observations()["agent_position_and_rotation"]
+        # align current position with center of map
+        x = int(pos[0] + 75)
+        y = int(pos[2] + 75)
+        if self._coverage_map[x, y] == 0:
+            self._coverage_map[x, y] = 1
+            reward += 0.1
 
         return float(reward)
 
