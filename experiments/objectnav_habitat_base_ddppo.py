@@ -30,7 +30,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     MAX_STEPS = 5000
     DISTANCE_TO_GOAL = 0.1
 
-    NUM_PROCESSES = 8
+    NUM_PROCESSES = 27
 
     CONFIG = habitat.get_config('configs/mp3d.yaml')
     CONFIG.defrost()
@@ -63,7 +63,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     CONFIG.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = 'POINT'  # 'VIEW_POINTS'
 
     CONFIG.MODE = 'train'
-    VISUALIZATION_IDS =    ['pLe4wQe7qrG_5', 'x8F5xyUWy9e_204', '8194nk5LbLH_220', 'TbHJrupSAjP_237']
+    VISUALIZATION_IDS = ['pLe4wQe7qrG_5', 'x8F5xyUWy9e_204', '8194nk5LbLH_220', 'TbHJrupSAjP_237']
 
     @classmethod
     def tag(cls):
@@ -116,7 +116,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else [1, 1, 1, 1, 1, 1, 1, 1]
+            nprocesses = 1 if not torch.cuda.is_available() else [4, 4, 4, 3, 3, 3, 3, 3]
             gpu_ids = [] if not torch.cuda.is_available() else self.CONFIG.SIMULATOR_GPU_IDS
             render_video = False
         elif mode == "valid":
