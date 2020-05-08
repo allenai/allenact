@@ -27,10 +27,10 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_single_target/val.json.gz"
 
     SCREEN_SIZE = 256
-    MAX_STEPS = 500
+    MAX_STEPS = 5000
     DISTANCE_TO_GOAL = 0.1
 
-    NUM_PROCESSES = 27
+    NUM_PROCESSES = 8
 
     CONFIG = habitat.get_config('configs/mp3d.yaml')
     CONFIG.defrost()
@@ -43,7 +43,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     CONFIG.SIMULATOR.AGENT_0.RADIUS = 0.18
     CONFIG.SIMULATOR.HABITAT_SIM_V0.ALLOW_SLIDING = False
 
-    CONFIG.SIMULATOR.TURN_ANGLE = 45
+    CONFIG.SIMULATOR.TURN_ANGLE = 10
     CONFIG.SIMULATOR.TILT_ANGLE = 30
     CONFIG.SIMULATOR.ACTION_SPACE_CONFIG = "v1"
     CONFIG.SIMULATOR.FORWARD_STEP_SIZE = 0.25
@@ -75,8 +75,8 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
         lr = 2.5e-4
         num_mini_batch = 1
         update_repeats = 4
-        num_steps = 30
-        save_interval = 1000000
+        num_steps = 128
+        save_interval = 5000000
         log_interval = 10000
         gamma = 0.99
         use_gae = True
@@ -116,7 +116,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else [4, 4, 4, 3, 3, 3, 3, 3]
+            nprocesses = 1 if not torch.cuda.is_available() else [1, 1, 1, 1, 1, 1, 1, 1]
             gpu_ids = [] if not torch.cuda.is_available() else self.CONFIG.SIMULATOR_GPU_IDS
             render_video = False
         elif mode == "valid":
