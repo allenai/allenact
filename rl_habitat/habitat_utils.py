@@ -27,8 +27,6 @@ def construct_env_configs(config: Config) -> List[Config]:
               'sT4fr6TAbpF', 'HxpKQynjfin', '8WUmhLawc2A', 'r47D5H71a5s',
               'Pm6F8kyY3z2', '17DRP5sb8fy', 'Vvot9Ly1tCj', 'GdvgFV5R1Z5',
               'sT4fr6TAbpF', 'HxpKQynjfin', '8WUmhLawc2A', 'r47D5H71a5s',
-              'Pm6F8kyY3z2', '17DRP5sb8fy', 'Vvot9Ly1tCj', 'GdvgFV5R1Z5',
-              'sT4fr6TAbpF', 'HxpKQynjfin', '8WUmhLawc2A', 'r47D5H71a5s',
               'Pm6F8kyY3z2', '17DRP5sb8fy', 'Vvot9Ly1tCj', 'GdvgFV5R1Z5']
 
     # scenes = ['rPc6DW4iMge', 'e9zR4mvMWw7', 'uNb9QFRL6hY', 'sKLMLpTHeUy', 's8pcmisQ38h', '759xd9YjKW5',
