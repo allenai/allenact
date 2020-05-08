@@ -23,14 +23,14 @@ from utils.viz_utils import SimpleViz, AgentViewViz, TrajectoryViz, ActorViz
 class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     """A Point Navigation experiment configuraqtion in Habitat"""
 
-    TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/train_single_target/train.json.gz"
-    VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_single_target/val.json.gz"
+    TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/train_rooms/train.json.gz"
+    VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_rooms/val.json.gz"
 
     SCREEN_SIZE = 256
     MAX_STEPS = 5000
-    DISTANCE_TO_GOAL = 0.1
+    DISTANCE_TO_GOAL = 0.2
 
-    NUM_PROCESSES = 27
+    NUM_PROCESSES = 32
 
     CONFIG = habitat.get_config('configs/mp3d.yaml')
     CONFIG.defrost()
@@ -60,10 +60,10 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     CONFIG.TASK.SPL.TYPE = 'SPL'
     CONFIG.TASK.SPL.DISTANCE_TO = 'VIEW_POINTS'  # "POINT"
     CONFIG.TASK.SPL.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
-    CONFIG.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = 'POINT'  # 'VIEW_POINTS'
+    CONFIG.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = 'VIEW_POINTS'  # 'POINT'
 
     CONFIG.MODE = 'train'
-    VISUALIZATION_IDS = ['pLe4wQe7qrG_5', 'x8F5xyUWy9e_204', '8194nk5LbLH_220', 'TbHJrupSAjP_237']
+    VISUALIZATION_IDS = ['x8F5xyUWy9e_170', 'zsNo4HB9uLZ_70']
 
     @classmethod
     def tag(cls):
@@ -116,7 +116,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            nprocesses = 1 if not torch.cuda.is_available() else [4, 4, 4, 3, 3, 3, 3, 3]
+            nprocesses = 1 if not torch.cuda.is_available() else [4, 4, 4, 4, 4, 4, 4, 4]
             gpu_ids = [] if not torch.cuda.is_available() else self.CONFIG.SIMULATOR_GPU_IDS
             render_video = False
         elif mode == "valid":
