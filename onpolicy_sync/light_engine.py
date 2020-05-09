@@ -1148,7 +1148,7 @@ class OnPolicyInference(OnPolicyRLEngine):
         if visualizer is not None:
             payload = (metrics_pkg, task_outputs, visualizer.read_and_reset(), checkpoint_file_name)
         else:
-            payload = (metrics_pkg, task_outputs, checkpoint_file_name)
+            payload = (metrics_pkg, task_outputs, None, checkpoint_file_name)
         nsteps = self.total_steps + self.step_count
 
         return pkg_type, payload, nsteps
