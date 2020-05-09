@@ -140,26 +140,26 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
             source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
         )) if mode == 'train' or nprocesses > 0 else None
 
-        if mode == "valid":
-            visualizer = Builder(SimpleViz, dict(
-                episode_ids=self.VISUALIZATION_IDS,  # which episodes to log, List[str] or List[List[str]] to split into viz groups
-                mode="valid",  # or valid
-                v1=Builder(TrajectoryViz, dict()),  # trajectory
-                v2=Builder(AgentViewViz, dict(max_video_length=100, episode_ids=self.VISUALIZATION_IDS)),  # first person videos
-                v3=Builder(ActorViz, dict()),  # action probs
-                # v4=Builder(TensorViz1D, dict()),  # visualize 1D tensor (time) from rollout
-                # v5=Builder(TensorViz1D, dict(rollout_source=("masks"))),
-                # v6=Builder(TensorViz2D, dict()),
-                # visualize 2D tensor (time + another dim, e.g. hidden states) from rollout
-                path_to_id=('task_info', 'episode_id')
-            ))
-            return {
-                "nprocesses": nprocesses,
-                "gpu_ids": gpu_ids,
-                "observation_set": observation_set,
-                "render_video": render_video,
-                "visualizer": visualizer,
-            }
+        # if mode == "valid":
+        #     visualizer = Builder(SimpleViz, dict(
+        #         episode_ids=self.VISUALIZATION_IDS,  # which episodes to log, List[str] or List[List[str]] to split into viz groups
+        #         mode="valid",  # or valid
+        #         v1=Builder(TrajectoryViz, dict()),  # trajectory
+        #         v2=Builder(AgentViewViz, dict(max_video_length=100, episode_ids=self.VISUALIZATION_IDS)),  # first person videos
+        #         v3=Builder(ActorViz, dict()),  # action probs
+        #         # v4=Builder(TensorViz1D, dict()),  # visualize 1D tensor (time) from rollout
+        #         # v5=Builder(TensorViz1D, dict(rollout_source=("masks"))),
+        #         # v6=Builder(TensorViz2D, dict()),
+        #         # visualize 2D tensor (time + another dim, e.g. hidden states) from rollout
+        #         path_to_id=('task_info', 'episode_id')
+        #     ))
+        #     return {
+        #         "nprocesses": nprocesses,
+        #         "gpu_ids": gpu_ids,
+        #         "observation_set": observation_set,
+        #         "render_video": render_video,
+        #         "visualizer": visualizer,
+        #     }
 
         return {
             "nprocesses": nprocesses,
