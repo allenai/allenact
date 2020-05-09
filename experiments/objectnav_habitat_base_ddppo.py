@@ -27,8 +27,8 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_rooms/val.json.gz"
 
     SCREEN_SIZE = 256
-    MAX_STEPS = 5000
-    DISTANCE_TO_GOAL = 0.2
+    MAX_STEPS = 2000
+    DISTANCE_TO_GOAL = 0.5
 
     NUM_PROCESSES = 24
 
@@ -43,7 +43,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     CONFIG.SIMULATOR.AGENT_0.RADIUS = 0.18
     CONFIG.SIMULATOR.HABITAT_SIM_V0.ALLOW_SLIDING = False
 
-    CONFIG.SIMULATOR.TURN_ANGLE = 45
+    CONFIG.SIMULATOR.TURN_ANGLE = 10
     CONFIG.SIMULATOR.TILT_ANGLE = 30
     CONFIG.SIMULATOR.ACTION_SPACE_CONFIG = "v1"
     CONFIG.SIMULATOR.FORWARD_STEP_SIZE = 0.25
