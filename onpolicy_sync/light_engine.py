@@ -1145,7 +1145,10 @@ class OnPolicyInference(OnPolicyRLEngine):
         #     render = process_video(render, max_clip_len)  # TODO: leave this to logger by just sending raw frames
 
         pkg_type = "{}_package".format(self.mode)
-        payload = (metrics_pkg, task_outputs, visualizer.read_and_reset(), checkpoint_file_name)
+        if visualizer is not None:
+            payload = (metrics_pkg, task_outputs, visualizer.read_and_reset(), checkpoint_file_name)
+        else:
+            payload = (metrics_pkg, task_outputs, checkpoint_file_name)
         nsteps = self.total_steps + self.step_count
 
         return pkg_type, payload, nsteps
