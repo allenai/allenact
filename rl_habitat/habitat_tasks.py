@@ -327,9 +327,9 @@ class ObjectNavTask(HabitatTask):
         y = int(pos[2] + 75)
         if self._coverage_map[x, y] == 0:
             self._coverage_map[x, y] = 1
-            reward += 0.2
+            reward += 0.1
         else:
-            reward -= 0.1
+            reward -= 0.0
 
         return float(reward)
 
