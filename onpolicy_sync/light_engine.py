@@ -1258,7 +1258,8 @@ class OnPolicyInference(OnPolicyRLEngine):
         metrics_pkg, task_outputs = self.aggregate_task_metrics()
 
         pkg_type = "{}_package".format(self.mode)
-        payload = (metrics_pkg, task_outputs, visualizer.read_and_reset(), checkpoint_file_name)
+        viz_package = visualizer.read_and_reset() if visualizer is not None else None
+        payload = (metrics_pkg, task_outputs, viz_package, checkpoint_file_name)
         nsteps = self.total_steps + self.step_count
 
         return pkg_type, payload, nsteps
