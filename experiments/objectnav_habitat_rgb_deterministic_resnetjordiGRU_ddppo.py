@@ -19,8 +19,8 @@ class ObjectNavHabitatRGBDeterministicTrainResNetJordiGRUDDPPOExperimentConfig(O
     SENSORS = [
         RGBSensorHabitat(
             {
-                "height": ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
-                "width": ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
+                "height": 640,  # ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
+                "width": 480,  # ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
                 "use_resnet_normalization": True,
             }
         ),
@@ -48,10 +48,10 @@ class ObjectNavHabitatRGBDeterministicTrainResNetJordiGRUDDPPOExperimentConfig(O
     PREPROCESSORS = [
         Builder(ResnetPreProcessorHabitat,
                 dict(config={
-                    "input_height": ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
-                    "input_width": ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
-                    "output_width": 8,
-                    "output_height": 8,
+                    "input_height": 640,  # ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
+                    "input_width": 480,  # ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
+                    "output_width": 20,  # 8,
+                    "output_height": 15,  # 8,
                     "output_dims": 512,
                     "pool": False,
                     "torchvision_resnet_model": models.resnet18,
@@ -69,8 +69,8 @@ class ObjectNavHabitatRGBDeterministicTrainResNetJordiGRUDDPPOExperimentConfig(O
 
     CONFIG = ObjectNavHabitatDDPPOBaseExperimentConfig.CONFIG.clone()
     CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
-    CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE
-    CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE
+    CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = 640  # ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE
+    CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = 480  # ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE
     CONFIG.SIMULATOR.RGB_SENSOR.POSITION = [0, 0.88, 0]
 
     TRAIN_CONFIGS = construct_env_configs(CONFIG)

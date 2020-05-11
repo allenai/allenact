@@ -512,8 +512,8 @@ class ResnetTensorGoalEncoder(nn.Module):
 
     def distribute_target(self, observations):
         target_emb = self.embed_class(observations[self.goal_uuid])
-        return target_emb.view(-1, self.class_dims, 1, 1).expand(-1, -1, self.resnet_tensor_shape[-2],
-                                                                 self.resnet_tensor_shape[-1])
+        return target_emb.view(-1, self.class_dims, 1, 1).expand(-1, -1, self.resnet_tensor_shape[-1],
+                                                                 self.resnet_tensor_shape[-2])
 
     def forward(self, observations):
         if self.blind:
