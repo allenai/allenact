@@ -321,15 +321,15 @@ class ObjectNavTask(HabitatTask):
         self.last_geodesic_distance = new_geodesic_distance
 
         # # Get coverage reward
-        pos = self.get_observations()["agent_position_and_rotation"]
-        # align current position with center of map
-        x = int(pos[0] + 75)
-        y = int(pos[2] + 75)
-        if self._coverage_map[x, y] == 0:
-            self._coverage_map[x, y] = 1
-            reward += 0.1
-        else:
-            reward -= 0.0
+        # pos = self.get_observations()["agent_position_and_rotation"]
+        # # align current position with center of map
+        # x = int(pos[0] + 75)
+        # y = int(pos[2] + 75)
+        # if self._coverage_map[x, y] == 0:
+        #     self._coverage_map[x, y] = 1
+        #     reward += 0.1
+        # else:
+        #     reward -= 0.0
 
         return float(reward)
 

@@ -24,7 +24,7 @@ class ObjectNavHabitatDDPPOBaseExperimentConfig(ExperimentConfig):
     """A Point Navigation experiment configuraqtion in Habitat"""
 
     TRAIN_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/train_rooms/train.json.gz"
-    VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_rooms/val.json.gz"
+    VALID_SCENES = "habitat/habitat-api/data/datasets/objectnav/mp3d/v0/val_rooms/train.json.gz"
 
     SCREEN_SIZE = 256
     MAX_STEPS = 2000
