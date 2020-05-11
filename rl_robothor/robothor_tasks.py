@@ -289,7 +289,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         reward_configs: Dict[str, Any],
         **kwargs
     ) -> None:
-        # print("task info in objectnavtask %s" % task_info)
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
@@ -311,6 +310,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self.path = []  # the initial coordinate will be directly taken from the optimal path
         self.task_info["followed_path"] = [self.env.agent_state()]
         self.task_info["taken_actions"] = []
+        self.task_info["action_names"] = self.action_names()
 
     @property
     def action_space(self):
@@ -471,5 +471,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 "spl": self.spl() if len(self.episode_optimal_corners) > 1 else 0.0,
                 "task_info": self.task_info,
             }
+            # LOGGER.debug("{} Metrics {}".format(self.task_info["id"], {k: v for k, v in metrics.items() if k != "task_info"}))
             self._rewards = []
             return metrics
