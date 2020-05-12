@@ -393,7 +393,7 @@ class OnPolicyRLEngine(object):
         done = False
         while not done:
             item = self.vector_tasks.metrics_out_queue.get()  # at least, there'll be a sentinel
-            if item[0] == "aggregate.AUTO.sentinel":
+            if isinstance(item, tuple) and item[0] == "aggregate.AUTO.sentinel":
                 assert item[1] == sentinel[1], "wrong sentinel found: {} vs {}".format(item[1], sentinel[1])
                 done = True
             else:
@@ -501,7 +501,7 @@ class OnPolicyRLEngine(object):
     def _active_memory(memory, keep):
         if isinstance(memory, torch.Tensor):
             # rnn hidden state
-            LOGGER.info("memory {} keep {}".format(memory.shape, len(keep)))
+            # LOGGER.info("memory {} keep {}".format(memory.shape, len(keep)))
             return memory[:, keep] if memory.shape[1] > len(keep) else memory
 
         # arbitrary memory

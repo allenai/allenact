@@ -153,7 +153,8 @@ class RoboThorEnvironment:
                 assert abs(new_pose['rotation']['z'] - pose['rotation']['z']) < 1e-5, "wrong rotation z"
                 assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
             except Exception:
-                LOGGER.error("new_pose {} old_pose {} in {}".format(new_pose, pose, self.scene_name))
+                # LOGGER.error("new_pose {} old_pose {} in {}".format(new_pose, pose, self.scene_name))
+                pass
             # if abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) > 1e-5:
             #     LOGGER.debug("wrong horizon {} vs {} after path to object {} from {} in {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360), target, position, self.scene_name))
             # else:
