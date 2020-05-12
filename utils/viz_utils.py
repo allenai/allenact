@@ -287,10 +287,10 @@ class AbstractTensorViz(AbstractViz):
                     "missing or empty episode {}".format(episode_id)
                 episode_src = [step[self.datum_id] for step in render[episode_id] if self.datum_id in step]
 
-                query = self._source_to_str(self.rnn_hidden_memory, is_vector_task=False)
-                assert query == self.datum_id
-                for debug_it in range(min(10, len(episode_src))):
-                    # LOGGER.debug("basic to_render {} {} {} {}".format(self.datum_id, episode_id, debug_it, episode_src[debug_it][..., 0]))
+                # query = self._source_to_str(self.rnn_hidden_memory, is_vector_task=False)
+                # assert query == self.datum_id
+                # for debug_it in range(min(10, len(episode_src))):
+                #     LOGGER.debug("basic to_render {} {} {} {}".format(self.datum_id, episode_id, debug_it, episode_src[debug_it][..., 0]))
 
                 # TODO missing tensor for last step if this is last episode in sampler
                 # LOGGER.debug("found {} for {} steps from total {} steps".format(self.datum_id, len(episode_src), len(render[episode_id])))
