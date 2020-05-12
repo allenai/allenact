@@ -48,8 +48,8 @@ class ObjectNavHabitatRGBDeterministicTrainResNetJordiGRUDDPPOExperimentConfig(O
     PREPROCESSORS = [
         Builder(ResnetPreProcessorHabitat,
                 dict(config={
-                    "input_height": 640,  # ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
-                    "input_width": 480,  # ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
+                    "input_height": ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
+                    "input_width": ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
                     "output_width": 20,  # 8,
                     "output_height": 15,  # 8,
                     "output_dims": 512,
