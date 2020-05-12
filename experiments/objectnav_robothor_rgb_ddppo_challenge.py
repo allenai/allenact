@@ -164,23 +164,14 @@ class ObjectNav_RoboThor_RGB_DDPPO_Challenge_ExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            workers_per_device = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7] * workers_per_device  # TODO vs4 only has 7 gpus
+            gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7]  # TODO vs4 only has 7 gpus
             nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
-            visualizer = None
         elif mode == "valid":
             nprocesses = 1
-            if not torch.cuda.is_available():
-                gpu_ids = []
-            else:
-                gpu_ids = [7]  # TODO vs4 only has 7 GPUs
-            visualizer = None
+            gpu_ids = [] if not torch.cuda.is_available() else [7]  # TODO vs4 only has 7 GPUs
         elif mode == "test":
             nprocesses = 1
-            if not torch.cuda.is_available():
-                gpu_ids = []
-            else:
-                gpu_ids = [0, 1, 2, 3, 4, 5, 6, 7]  # TODO vs4 only has 7 gpus
+            gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7]  # TODO vs4 only has 7 gpus
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 

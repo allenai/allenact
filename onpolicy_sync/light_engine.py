@@ -1155,7 +1155,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     log_interval=self.tstate.log_interval,
                     save_interval=self.tstate.save_interval,
                     last_log=self.step_count - self.tstate.log_interval,
-                    last_save=self.step_count,
+                    last_save=self.step_count - (self.tstate.log_interval if stage_num == 0 else 0),  # enforce early val
                     tracking_types=('update',) if stage.teacher_forcing is None else ('update', 'teacher'),
                     former_steps=self.step_count,
                 )
@@ -1277,7 +1277,7 @@ class OnPolicyInference(OnPolicyRLEngine):
             new_command, new_data = self.checkpoints_queue.get()  # block until next command arrives
             if new_command == command:
                 data = new_data
-            elif new_command == "sentinel":
+            elif new_command == sentinel[0]:
                 assert new_data == sentinel[1], "wrong sentinel found: {} vs {}".format(new_data, sentinel[1])
                 forwarded = True
             else:
