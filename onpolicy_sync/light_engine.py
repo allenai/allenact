@@ -343,61 +343,24 @@ class OnPolicyRLEngine(object):
 
         return ckpt
 
-    # aggregates task metrics currently in queue
-    def aggregate_task_metrics(self, count=-1) -> Tuple[Tuple[str, Dict[str, float], int], List[Dict[str, Any]]]:
-        assert self.scalars.empty, "found non-empty scalars {}".format(self.scalars._counts)
-
-        task_outputs = []
-        while (count == -1 and not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
-            try:
-                if count == -1:
-                    task_output = self.vector_tasks.metrics_out_queue.get_nowait()
-                else:
-                    task_output = self.vector_tasks.metrics_out_queue.get(timeout=5)
-                    count -= 1
-                task_outputs.append(task_output)
-            except queue.Empty:
-                if count != -1:
-                    LOGGER.error("{}-{} Missing {} task metrics due to timeout".format(
-                        self.mode, self.worker_id, count
-                    ))
-
-        nsamples = 0
-        for task_output in task_outputs:
-            if len(task_output) == 0\
-                    or (len(task_output) == 1 and "task_info" in task_output)\
-                    or ("success" in task_output and task_output["success"] is None):
-                continue
-            self.scalars.add_scalars(
-                {k: v for k, v in task_output.items() if k != "task_info"}
-            )
-            nsamples += 1
-
-        if nsamples < len(task_outputs):
-            LOGGER.warning("Discarded {} empty task metrics".format(len(task_outputs) - nsamples))
-
-        pkg_type = "task_metrics_package"
-        payload = self.scalars.pop_and_reset() if len(task_outputs) > 0 else None
-
-        return (pkg_type, payload, nsamples), task_outputs
-
     # # aggregates task metrics currently in queue
-    # def aggregate_task_metrics(self) -> Tuple[Tuple[str, Dict[str, float], int], List[Dict[str, Any]]]:
+    # def aggregate_task_metrics(self, count=-1) -> Tuple[Tuple[str, Dict[str, float], int], List[Dict[str, Any]]]:
     #     assert self.scalars.empty, "found non-empty scalars {}".format(self.scalars._counts)
     #
-    #     sentinel = ("aggregate.AUTO.sentinel", time.time())
-    #     self.vector_tasks.metrics_out_queue.put(sentinel)  # valid since a single training process is the only consumer
-    #
     #     task_outputs = []
-    #
-    #     done = False
-    #     while not done:
-    #         item = self.vector_tasks.metrics_out_queue.get()  # at least, there'll be a sentinel
-    #         if isinstance(item, tuple) and item[0] == "aggregate.AUTO.sentinel":
-    #             assert item[1] == sentinel[1], "wrong sentinel found: {} vs {}".format(item[1], sentinel[1])
-    #             done = True
-    #         else:
-    #             task_outputs.append(item)
+    #     while (count == -1 and not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
+    #         try:
+    #             if count == -1:
+    #                 task_output = self.vector_tasks.metrics_out_queue.get_nowait()
+    #             else:
+    #                 task_output = self.vector_tasks.metrics_out_queue.get(timeout=5)
+    #                 count -= 1
+    #             task_outputs.append(task_output)
+    #         except queue.Empty:
+    #             if count != -1:
+    #                 LOGGER.error("{}-{} Missing {} task metrics due to timeout".format(
+    #                     self.mode, self.worker_id, count
+    #                 ))
     #
     #     nsamples = 0
     #     for task_output in task_outputs:
@@ -417,6 +380,43 @@ class OnPolicyRLEngine(object):
     #     payload = self.scalars.pop_and_reset() if len(task_outputs) > 0 else None
     #
     #     return (pkg_type, payload, nsamples), task_outputs
+
+    # aggregates task metrics currently in queue
+    def aggregate_task_metrics(self) -> Tuple[Tuple[str, Dict[str, float], int], List[Dict[str, Any]]]:
+        assert self.scalars.empty, "found non-empty scalars {}".format(self.scalars._counts)
+
+        sentinel = ("aggregate.AUTO.sentinel", time.time())
+        self.vector_tasks.metrics_out_queue.put(sentinel)  # valid since a single training process is the only consumer
+
+        task_outputs = []
+
+        done = False
+        while not done:
+            item = self.vector_tasks.metrics_out_queue.get()  # at least, there'll be a sentinel
+            if isinstance(item, tuple) and item[0] == "aggregate.AUTO.sentinel":
+                assert item[1] == sentinel[1], "wrong sentinel found: {} vs {}".format(item[1], sentinel[1])
+                done = True
+            else:
+                task_outputs.append(item)
+
+        nsamples = 0
+        for task_output in task_outputs:
+            if len(task_output) == 0\
+                    or (len(task_output) == 1 and "task_info" in task_output)\
+                    or ("success" in task_output and task_output["success"] is None):
+                continue
+            self.scalars.add_scalars(
+                {k: v for k, v in task_output.items() if k != "task_info"}
+            )
+            nsamples += 1
+
+        if nsamples < len(task_outputs):
+            LOGGER.warning("Discarded {} empty task metrics".format(len(task_outputs) - nsamples))
+
+        pkg_type = "task_metrics_package"
+        payload = self.scalars.pop_and_reset() if len(task_outputs) > 0 else None
+
+        return (pkg_type, payload, nsamples), task_outputs
 
     def _preprocess_observations(self, batched_observations):
         if self.observation_set is None:
@@ -1255,10 +1255,10 @@ class OnPolicyInference(OnPolicyRLEngine):
         self.vector_tasks.set_seeds(self.worker_seeds(self.num_samplers, self.seed))
         self.vector_tasks.reset_all()
 
-        num_tasks = self.vector_tasks.attr("total_unique", call_sampler=True)
-        total_tasks = sum(num_tasks)
-        metrics_pkg, task_outputs = self.aggregate_task_metrics(count=total_tasks)
-        # metrics_pkg, task_outputs = self.aggregate_task_metrics()
+        # num_tasks = self.vector_tasks.attr("total_unique", call_sampler=True)
+        # total_tasks = sum(num_tasks)
+        # metrics_pkg, task_outputs = self.aggregate_task_metrics(count=total_tasks)
+        metrics_pkg, task_outputs = self.aggregate_task_metrics()
 
         pkg_type = "{}_package".format(self.mode)
         viz_package = visualizer.read_and_reset() if visualizer is not None else None
