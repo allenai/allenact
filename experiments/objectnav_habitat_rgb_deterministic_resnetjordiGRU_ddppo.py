@@ -50,8 +50,8 @@ class ObjectNavHabitatRGBDeterministicTrainResNetJordiGRUDDPPOExperimentConfig(O
                 dict(config={
                     "input_height": ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
                     "input_width": ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
-                    "output_width": 20,  # 8,
-                    "output_height": 15,  # 8,
+                    "output_width": 8,
+                    "output_height": 8,
                     "output_dims": 512,
                     "pool": False,
                     "torchvision_resnet_model": models.resnet18,
