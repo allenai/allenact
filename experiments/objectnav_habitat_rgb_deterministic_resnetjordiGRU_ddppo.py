@@ -19,8 +19,8 @@ class ObjectNavHabitatRGBDeterministicTrainResNetJordiGRUDDPPOExperimentConfig(O
     SENSORS = [
         RGBSensorHabitat(
             {
-                "height": 640,  # ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
-                "width": 480,  # ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
+                "height": ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
+                "width": ObjectNavHabitatDDPPOBaseExperimentConfig.SCREEN_SIZE,
                 "use_resnet_normalization": True,
             }
         ),
