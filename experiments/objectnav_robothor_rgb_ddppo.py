@@ -66,7 +66,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     VALIDATION_SAMPLES_PER_SCENE = 10
 
-    NUM_PROCESSES = 4  # TODO 2 for debugging
+    NUM_PROCESSES = 60  # TODO 2 for debugging
 
     TARGET_TYPES = sorted(
         [
@@ -184,13 +184,13 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         if mode == "train":
             workers_per_device = 1
             # gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7] * workers_per_device  # TODO vs4 only has 7 gpus
-            gpu_ids = [] if not torch.cuda.is_available() else [0, 1] * workers_per_device  # TODO vs4 only has 7 gpus
+            gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6] * workers_per_device  # TODO vs4 only has 7 gpus
             nprocesses = 2 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
-            sampler_devices = [0, 1, 2, 3, 4, 5, 6, 7]  # TODO vs4 only has 7 gpus (ignored with > 1 gpu_ids)
+            sampler_devices = [0, 1, 2, 3, 4, 5, 6]  # TODO vs4 only has 7 gpus (ignored with > 1 gpu_ids)
             render_video = False
         elif mode == "valid":
-            nprocesses = 1  # TODO debugging (0)
-            gpu_ids = [] if not torch.cuda.is_available() else [0]
+            nprocesses = 8  # TODO debugging (0)
+            gpu_ids = [] if not torch.cuda.is_available() else [7]
             render_video = False
         elif mode == "test":
             nprocesses = 1
