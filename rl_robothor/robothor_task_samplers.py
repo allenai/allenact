@@ -1,6 +1,8 @@
 from typing import List, Optional, Union, Dict, Any
 import random
 import copy
+import json
+import gzip
 
 import gym
 
@@ -229,6 +231,169 @@ class ObjectNavTaskSampler(TaskSampler):
         #     random.shuffle(self.scene_to_episodes[scene])
         # for scene in self.scene_counters:
         #     self.scene_counters[scene] = -1
+
+    def set_seed(self, seed: int):
+        self.seed = seed
+        if seed is not None:
+            set_seed(seed)
+
+
+class ObjectNavDatasetTaskSampler(TaskSampler):
+    def __init__(
+        self,
+        scenes: List[str],
+        scene_directory: str,
+        sensors: List[Sensor],
+        max_steps: int,
+        env_args: Dict[str, Any],
+        action_space: gym.Space,
+        rewards_config: Dict,
+        seed: Optional[int] = None,
+        deterministic_cudnn: bool = False,
+        loop_dataset: bool = True,
+        allow_flipping = False,
+        *args,
+        **kwargs
+    ) -> None:
+        self.rewards_config = rewards_config
+        self.env_args = env_args
+        self.scenes = scenes
+        self.episodes = {scene: self._load_dataset(scene, scene_directory) for scene in scenes}
+        self.object_types = [ep["object_type"] for scene in self.episodes for ep in self.episodes[scene]]
+        # self.scene_to_episodes = scene_to_episodes
+        # self.scene_counters = {scene: -1 for scene in self.scene_to_episodes}
+        # self.scenes = list(self.scene_to_episodes.keys())
+        self.env: Optional[RoboThorEnvironment] = None
+        self.sensors = sensors
+        self.max_steps = max_steps
+        self._action_space = action_space
+        self.allow_flipping = allow_flipping
+        self.scene_counter: Optional[int] = None
+        self.scene_order: Optional[List[str]] = None
+        self.scene_id: Optional[int] = None
+        # get the total number of tasks assigned to this process
+        if loop_dataset:
+            self.max_tasks = None
+        else:
+            self.max_tasks = sum(len(scene_episodes) for scene_episodes in self.episodes)
+        self.reset_tasks = self.max_tasks
+        self.scene_index = 0
+        self.episode_index = 0
+
+        self._last_sampled_task: Optional[ObjectNavTask] = None
+
+        self.seed: Optional[int] = None
+        self.set_seed(seed)
+
+        if deterministic_cudnn:
+            set_deterministic_cudnn()
+
+        self.reset()
+
+    def _create_environment(self) -> RoboThorEnvironment:
+        env = RoboThorEnvironment(**self.env_args)
+        return env
+
+    def _load_dataset(self, scene: str, base_directory: str) -> List[Dict]:
+        filename = "/".join([base_directory, scene]) if base_directory[-1] != '/' else "".join([base_directory, scene])
+        filename += ".json.gz"
+        with gzip.GzipFile(filename, 'r') as fin:
+            json_bytes = fin.read()
+        json_str = json_bytes.decode('utf-8')
+        data = json.loads(json_str)
+        return data
+
+    @property
+    def __len__(self) -> Union[int, float]:
+        """Length.
+
+        # Returns
+
+        Number of total tasks remaining that can be sampled. Can be float('inf').
+        """
+        return float("inf") if self.max_tasks is None else self.max_tasks
+
+    @property
+    def total_unique(self) -> Optional[Union[int, float]]:
+        return self.reset_tasks
+
+    @property
+    def last_sampled_task(self) -> Optional[ObjectNavTask]:
+        return self._last_sampled_task
+
+    def close(self) -> None:
+        if self.env is not None:
+            self.env.stop()
+
+    @property
+    def all_observation_spaces_equal(self) -> bool:
+        """Check if observation spaces equal.
+
+        # Returns
+
+        True if all Tasks that can be sampled by this sampler have the
+            same observation space. Otherwise False.
+        """
+        return True
+
+    def next_task(self, force_advance_scene: bool = False) -> Optional[ObjectNavTask]:
+        if self.max_tasks is not None and self.max_tasks <= 0:
+            return None
+
+        if self.episode_index > len(self.scenes[self.scene_index]):
+            self.scene_index = (self.scene_index + 1) % len(self.scenes)
+            self.episode_index = 0
+
+        scene = self.scenes[self.scene_index]
+        episode = self.episodes[scene][self.episode_index]
+
+        if self.env is not None:
+            if scene.replace("_physics", "") != self.env.scene_name.replace("_physics", ""):
+                self.env.reset(scene)
+        else:
+            self.env = self._create_environment()
+            self.env.reset(scene_name=scene)
+
+        task_info = {
+            "scene": scene,
+            "object_type": episode["object_type"]
+        }
+
+        if len(task_info) == 0:
+            LOGGER.warning(
+                "Scene {} does not contain any"
+                " objects of any of the types {}.".format(scene, self.object_types)
+            )
+
+        task_info['initial_position'] = episode['initial_position']
+        task_info['initial_orientation'] = episode['initial_orientation']
+
+        if self.allow_flipping and random.random() > 0.5:
+            task_info["mirrored"] = True
+        else:
+            task_info["mirrored"] = False
+
+        if self.reset_tasks is not None:
+            LOGGER.debug("valid task_info {}".format(task_info))
+
+        self.episode_index += 1
+        if self.max_tasks is not None:
+            self.max_tasks -= 1
+
+        self._last_sampled_task = ObjectNavTask(
+            env=self.env,
+            sensors=self.sensors,
+            task_info=task_info,
+            max_steps=self.max_steps,
+            action_space=self._action_space,
+            reward_configs=self.rewards_config
+        )
+        return self._last_sampled_task
+
+    def reset(self):
+        self.episode_index = 0
+        self.scene_index = 0
+        self.max_tasks = self.reset_tasks
 
     def set_seed(self, seed: int):
         self.seed = seed

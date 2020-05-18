@@ -9,15 +9,16 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 import numpy as np
+import glob
 
 from onpolicy_sync.losses.ppo import PPOConfig
-from models.tensor_object_nav_models import ResnetTensorObjectNavActorCritic
+from models.object_nav_models import ResnetTensorObjectNavActorCritic
 from onpolicy_sync.losses import PPO
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
 from rl_robothor.robothor_tasks import ObjectNavTask
-from rl_robothor.robothor_task_samplers import ObjectNavTaskSampler
+from rl_robothor.robothor_task_samplers import ObjectNavTaskSampler, ObjectNavDatasetTaskSampler
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
@@ -67,31 +68,20 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     NUM_PROCESSES = 4  # TODO 2 for debugging
 
-    # TARGET_TYPES = sorted(
-    #     [
-    #         "AlarmClock",
-    #         "Apple",
-    #         "BaseballBat",
-    #         "BasketBall",
-    #         "Bowl",
-    #         "GarbageCan",
-    #         "HousePlant",
-    #         "Laptop",
-    #         "Mug",
-    #         "Remote",
-    #         "SprayBottle",
-    #         "Television",
-    #         "Vase",
-    #         # 'AlarmClock',
-    #         # 'Apple',
-    #         # 'BasketBall',
-    #         # 'Mug',
-    #         # 'Television',
-    #     ]
-    # )
     TARGET_TYPES = sorted(
         [
-            "Television",
+            'AlarmClock',
+            'Apple',
+            'BaseballBat',
+            'BasketBall',
+            'Bowl',
+            'GarbageCan',
+            'HousePlant',
+            'Laptop',
+            'Mug',
+            'SprayBottle',
+            'Television',
+            'Vase'
         ]
     )
 
@@ -142,7 +132,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         gridSize=0.25,
         snapToGrid=False,
         agentMode="bot",
-        include_private_scenes=True,
+        include_private_scenes=False,
     )
 
     @classmethod
@@ -151,13 +141,13 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        ppo_steps = int(10000)
+        ppo_steps = int(300000000)
         lr = 3e-4
         num_mini_batch = 1
         update_repeats = 3
         num_steps = 30
-        save_interval = cls.NUM_PROCESSES * num_steps * 10  # every >= 10 rollouts
-        log_interval = 1  # log every rollout
+        save_interval = 5000000
+        log_interval = 1000000
         gamma = 0.99
         use_gae = True
         gae_lambda = 0.95
@@ -233,13 +223,13 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="goal_object_type_ind",
             resnet_preprocessor_uuid="rgb_resnet",
-            rnn_hidden_size=512,
+            hidden_size=512,
             goal_dims=32,
         )
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return ObjectNavTaskSampler(**kwargs)
+        return ObjectNavDatasetTaskSampler(**kwargs)
 
     @staticmethod
     def _partition_inds(n: int, num_parts: int):
@@ -249,12 +239,14 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     def _get_sampler_args_for_scene_split(
         self,
-        scenes: List[str],
+        scenes_dir: str,
         process_ind: int,
         total_processes: int,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
+        path = scenes_dir + "*.json.gz" if scenes_dir[-1] == "/" else scenes_dir + "/*.json.gz"
+        scenes = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(path)]
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
                 print(
@@ -296,13 +288,14 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.TRAIN_SCENES,
+            "dataset/robothor/objectnav/train/content",
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_period"] = "manual"  # uses ADVANCE_SCENE_ROLLOUT_PERIOD
+        res["scene_directory"] = "dataset/robothor/objectnav/train/content"
+        res["loop_dataset"] = True
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
@@ -320,14 +313,14 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.VALID_SCENES,
+            "dataset/robothor/objectnav/val/content",
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_period"] = self.VALIDATION_SAMPLES_PER_SCENE
-        res["max_tasks"] = self.VALIDATION_SAMPLES_PER_SCENE * len(res["scenes"])
+        res["scene_directory"] = "dataset/robothor/objectnav/val/content"
+        res["loop_dataset"] = False
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
