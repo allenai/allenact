@@ -301,6 +301,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             json_bytes = fin.read()
         json_str = json_bytes.decode('utf-8')
         data = json.loads(json_str)
+        random.shuffle(data)
         return data
 
     @property
