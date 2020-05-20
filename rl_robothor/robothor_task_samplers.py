@@ -343,6 +343,8 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
 
         if self.episode_index > len(self.scenes[self.scene_index]):
             self.scene_index = (self.scene_index + 1) % len(self.scenes)
+            # shuffle the new list of episodes to train on
+            random.shuffle(self.episodes[self.scenes[self.scene_index]])
             self.episode_index = 0
 
         scene = self.scenes[self.scene_index]
@@ -380,6 +382,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         self.episode_index += 1
         if self.max_tasks is not None:
             self.max_tasks -= 1
+        self.env.teleport(episode['initial_position'], episode['initial_orientation'])
 
         self._last_sampled_task = ObjectNavTask(
             env=self.env,

@@ -259,6 +259,9 @@ class RoboThorEnvironment:
             "horizon": round(float(agent_meta["cameraHorizon"]), 1),
         }
 
+    def teleport(self, pose: Dict[str,float], rotation: Dict[str,float], horizon: float=0.0):
+        self.controller.step("TeleportFull", x=pose["x"], y=pose["y"], z=pose["z"], rotation=rotation, horizon=horizon)
+
     def reset(self, scene_name: str = None) -> None:
         """Resets scene to a known initial state."""
         if scene_name is not None and scene_name != self.scene_name:
