@@ -382,7 +382,9 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         self.episode_index += 1
         if self.max_tasks is not None:
             self.max_tasks -= 1
-        self.env.teleport(episode['initial_position'], episode['initial_orientation'])
+
+        if not self.env.teleport(episode['initial_position'], episode['initial_orientation']):
+            return self.next_task()
 
         self._last_sampled_task = ObjectNavTask(
             env=self.env,

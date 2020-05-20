@@ -260,7 +260,13 @@ class RoboThorEnvironment:
         }
 
     def teleport(self, pose: Dict[str,float], rotation: Dict[str,float], horizon: float=0.0):
-        self.controller.step("TeleportFull", x=pose["x"], y=pose["y"], z=pose["z"], rotation=rotation, horizon=horizon)
+        e = self.controller.step("TeleportFull",
+                                 x=pose["x"],
+                                 y=pose["y"],
+                                 z=pose["z"],
+                                 rotation=rotation,
+                                 horizon=horizon)
+        return e.metadata["lastActionSuccess"]
 
     def reset(self, scene_name: str = None) -> None:
         """Resets scene to a known initial state."""
