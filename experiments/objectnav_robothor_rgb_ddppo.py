@@ -53,8 +53,8 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         for furniture in range(2)
     ]
 
-    CAMERA_WIDTH = 400
-    CAMERA_HEIGHT = 300
+    CAMERA_WIDTH = 640  # 400
+    CAMERA_HEIGHT = 480  # 300
 
     SCREEN_SIZE = 224
 
