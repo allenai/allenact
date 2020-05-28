@@ -189,13 +189,13 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             sampler_devices = [0, 1, 2, 3, 4, 5, 6]  # TODO vs4 only has 7 gpus (ignored with > 1 gpu_ids)
             render_video = False
         elif mode == "valid":
-            nprocesses = 8  # TODO debugging (0)
+            nprocesses = 15  # TODO debugging (0)
             gpu_ids = [] if not torch.cuda.is_available() else [7]
             render_video = False
         elif mode == "test":
-            nprocesses = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [0]
-            render_video = True
+            nprocesses = 15
+            gpu_ids = [] if not torch.cuda.is_available() else [7]
+            render_video = False
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -326,4 +326,31 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         res["env_args"]["x_display"] = (
             ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
         )
+        return res
+
+    def test_task_sampler_args(
+            self,
+            process_ind: int,
+            total_processes: int,
+            devices: Optional[List[int]] = None,
+            seeds: Optional[List[int]] = None,
+            deterministic_cudnn: bool = False,
+    ) -> Dict[str, Any]:
+        res = self._get_sampler_args_for_scene_split(
+            "dataset/robothor/objectnav/val/content",
+            process_ind,
+            total_processes,
+            seeds=seeds,
+            deterministic_cudnn=deterministic_cudnn,
+        )
+        res["scene_directory"] = "dataset/robothor/objectnav/val/content"
+        res["loop_dataset"] = False
+        res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
+        # res["env_args"]["x_display"] = (
+        #     ("0.%d" % devices[process_ind % len(devices)])
+        #     if devices is not None and len(devices) > 0
+        #     else None
+        # )
+        res["env_args"]["x_display"] = "10.0"
         return res
