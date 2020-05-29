@@ -101,6 +101,7 @@ class DepthSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
         def f(x, k, default):
             return x[k] if k in x else default
 
+        self.uuid = f(config, "uuid", None)
         self.height: Optional[int] = f(config, "height", None)
         self.width: Optional[int] = f(config, "width", None)
         self.should_normalize = f(config, "use_resnet_normalization", False)
@@ -132,7 +133,7 @@ class DepthSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
         self.to_pil = transforms.ToPILImage()
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "depth"
+        return "depth_lowres"
 
     def _get_observation_space(self) -> gym.spaces.Box:
         return typing.cast(gym.spaces.Box, self.observation_space)
