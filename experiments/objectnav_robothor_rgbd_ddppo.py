@@ -18,40 +18,15 @@ from rl_base.experiment_config import ExperimentConfig
 from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
 from rl_robothor.robothor_tasks import ObjectNavTask
-from rl_robothor.robothor_task_samplers import ObjectNavTaskSampler, ObjectNavDatasetTaskSampler
+from rl_robothor.robothor_task_samplers import ObjectNavDatasetTaskSampler
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
+from rl_robothor.robothor_sensors import DepthSensorRoboThor
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
 class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     """An Object Navigation experiment configuration in RoboThor"""
-
-    # TRAIN_SCENES = [
-    #     "FloorPlan_Train%d_%d" % (wall + 1, furniture + 1)
-    #     for wall in range(12)
-    #     for furniture in range(5)
-    # ]
-    #
-    # VALID_SCENES = [
-    #     "FloorPlan_Val%d_%d" % (wall + 1, furniture + 1)
-    #     for wall in range(3)
-    #     for furniture in range(5)
-    # ]
-
-    TRAIN_SCENES = [
-        "FloorPlan_Train%d_%d" % (wall + 1, furniture + 1)
-        for wall in range(1)
-        for furniture in range(1)
-    ]
-
-    VALID_SCENES = TRAIN_SCENES
-
-    TEST_SCENES = [
-        "FloorPlan_test-dev%d_%d" % (wall + 1, furniture + 1)
-        for wall in range(2)
-        for furniture in range(2)
-    ]
 
     CAMERA_WIDTH = 640  # 400
     CAMERA_HEIGHT = 480  # 300
@@ -94,6 +69,14 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 "uuid": "rgb_lowres",
             }
         ),
+        DepthSensorRoboThor(
+            {
+                "height": SCREEN_SIZE,
+                "width": SCREEN_SIZE,
+                "use_resnet_normalization": True,
+                "uuid": "depth_lowres",
+            }
+        ),
         GoalObjectTypeThorSensor({
             "object_types": TARGET_TYPES,
         }),
@@ -114,10 +97,25 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                     "parallel": False,  # TODO False for debugging
             })
         ),
+        Builder(ResnetPreProcessorHabitat,
+                dict(config={
+                    "input_height": SCREEN_SIZE,
+                    "input_width": SCREEN_SIZE,
+                    "output_width": 7,
+                    "output_height": 7,
+                    "output_dims": 512,
+                    "pool": False,
+                    "torchvision_resnet_model": models.resnet18,
+                    "input_uuids": ["depth_lowres"],
+                    "output_uuid": "depth_resnet",
+                    "parallel": False,  # TODO False for debugging
+                })
+                ),
     ]
 
     OBSERVATIONS = [
         "rgb_resnet",
+        "depth_resnet",
         "goal_object_type_ind",
     ]
 
@@ -133,6 +131,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         snapToGrid=False,
         agentMode="bot",
         include_private_scenes=False,
+        renderDepthImage=True
     )
 
     @classmethod
@@ -223,6 +222,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="goal_object_type_ind",
             rgb_resnet_preprocessor_uuid="rgb_resnet",
+            depth_resnet_preprocessor_uuid="depth_resnet",
             hidden_size=512,
             goal_dims=32,
         )
