@@ -397,7 +397,7 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         )
 
         self._hidden_size = hidden_size
-        if rgb_resnet_preprocessor_uuid is None or depth_resnet_preprocessor_uuid:
+        if rgb_resnet_preprocessor_uuid is None or depth_resnet_preprocessor_uuid is None:
             resnet_preprocessor_uuid = rgb_resnet_preprocessor_uuid if rgb_resnet_preprocessor_uuid is None else \
                 depth_resnet_preprocessor_uuid
             self.goal_visual_encoder = ResnetTensorGoalEncoder(
@@ -634,7 +634,7 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         self.blind = self.rgb_resnet_uuid not in observation_spaces.spaces or \
                      self.depth_resnet_uuid not in observation_spaces.spaces
         if not self.blind:
-            self.resnet_tensor_shape = observation_spaces.spaces[self.resnet_uuid].shape
+            self.resnet_tensor_shape = observation_spaces.spaces[self.rgb_resnet_uuid].shape
             self.rgb_resnet_compressor = nn.Sequential(
                 nn.Conv2d(self.resnet_tensor_shape[0], self.resnet_hid_out_dims[0], 1),
                 nn.ReLU(),
@@ -693,10 +693,10 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         )
 
     def compress_rgb_resnet(self, observations):
-        return self.resnet_compressor(observations[self.rgb_resnet_uuid])
+        return self.rgb_resnet_compressor(observations[self.rgb_resnet_uuid])
 
     def compress_depth_resnet(self, observations):
-        return self.resnet_compressor(observations[self.depth_resnet_uuid])
+        return self.depth_resnet_compressor(observations[self.depth_resnet_uuid])
 
     def distribute_target(self, observations):
         target_emb = self.embed_class(observations[self.goal_uuid])
@@ -710,11 +710,11 @@ class ResnetDualTensorGoalEncoder(nn.Module):
             self.compress_rgb_resnet(observations),
             self.distribute_target(observations),
         ]
-        rgb_x = self.target_obs_combiner(torch.cat(rgb_embs, dim=1, ))
+        rgb_x = self.rgb_target_obs_combiner(torch.cat(rgb_embs, dim=1, ))
         depth_embs = [
             self.compress_depth_resnet(observations),
             self.distribute_target(observations),
         ]
-        depth_x = self.target_obs_combiner(torch.cat(depth_embs, dim=1, ))
+        depth_x = self.depth_target_obs_combiner(torch.cat(depth_embs, dim=1, ))
         x = torch.cat([rgb_x, depth_x])
         return x.view(x.size(0), -1)  # flatten

@@ -410,7 +410,6 @@ class PointNavActorCriticResNeXTPreTrainedRNN(ActorCriticModel[CategoricalDistr]
         rnn_type='GRU'
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
-
         self.goal_sensor_uuid = goal_sensor_uuid
         self._hidden_size = hidden_size
         self.embed_coordinates = embed_coordinates
