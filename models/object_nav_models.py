@@ -716,5 +716,5 @@ class ResnetDualTensorGoalEncoder(nn.Module):
             self.distribute_target(observations),
         ]
         depth_x = self.depth_target_obs_combiner(torch.cat(depth_embs, dim=1, ))
-        x = torch.cat([rgb_x, depth_x])
+        x = torch.cat([rgb_x, depth_x], dim=1)
         return x.view(x.size(0), -1)  # flatten
