@@ -12,15 +12,14 @@ import numpy as np
 import glob
 
 from onpolicy_sync.losses.ppo import PPOConfig
-from models.object_nav_models import ResnetTensorObjectNavActorCritic
+from models.point_nav_models import ResnetTensorPointNavActorCritic
 from onpolicy_sync.losses import PPO
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
-from rl_robothor.robothor_tasks import ObjectNavTask
-from rl_robothor.robothor_task_samplers import ObjectNavDatasetTaskSampler
-from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
-from rl_robothor.robothor_sensors import DepthSensorRoboThor
+from rl_robothor.robothor_tasks import PointNavTask
+from rl_robothor.robothor_task_samplers import PointNavDatasetTaskSampler
+from rl_robothor.robothor_sensors import DepthSensorRoboThor, GPSCompassSensorRoboThor
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
@@ -43,32 +42,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     NUM_PROCESSES = 60  # TODO 2 for debugging
 
-    TARGET_TYPES = sorted(
-        [
-            'AlarmClock',
-            'Apple',
-            'BaseballBat',
-            'BasketBall',
-            'Bowl',
-            'GarbageCan',
-            'HousePlant',
-            'Laptop',
-            'Mug',
-            'SprayBottle',
-            'Television',
-            'Vase'
-        ]
-    )
-
     SENSORS = [
-        RGBSensorThor(
-            {
-                "height": SCREEN_SIZE,
-                "width": SCREEN_SIZE,
-                "use_resnet_normalization": True,
-                "uuid": "rgb_lowres",
-            }
-        ),
         DepthSensorRoboThor(
             {
                 "height": SCREEN_SIZE,
@@ -77,26 +51,10 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 "uuid": "depth_lowres",
             }
         ),
-        GoalObjectTypeThorSensor({
-            "object_types": TARGET_TYPES,
-        }),
+        GPSCompassSensorRoboThor({}),
     ]
 
     PREPROCESSORS = [
-        Builder(ResnetPreProcessorHabitat,
-                dict(config={
-                    "input_height": SCREEN_SIZE,
-                    "input_width": SCREEN_SIZE,
-                    "output_width": 7,
-                    "output_height": 7,
-                    "output_dims": 512,
-                    "pool": False,
-                    "torchvision_resnet_model": models.resnet18,
-                    "input_uuids": ["rgb_lowres"],
-                    "output_uuid": "rgb_resnet",
-                    "parallel": False,  # TODO False for debugging
-            })
-        ),
         Builder(ResnetPreProcessorHabitat,
                 dict(config={
                     "input_height": SCREEN_SIZE,
@@ -114,9 +72,8 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     ]
 
     OBSERVATIONS = [
-        "rgb_resnet",
         "depth_resnet",
-        "goal_object_type_ind",
+        "target_coordinates_ind",
     ]
 
     ENV_ARGS = dict(
@@ -136,11 +93,11 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def tag(cls):
-        return "ObjectNavRobothorRGBPPO"
+        return "PointNavRobothorDepthPPO"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        ppo_steps = int(300000000)
+        ppo_steps = int(250000000)
         lr = 3e-4
         num_mini_batch = 1
         update_repeats = 3
@@ -217,11 +174,10 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ResnetTensorObjectNavActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+        return ResnetTensorPointNavActorCritic(
+            action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
-            goal_sensor_uuid="goal_object_type_ind",
-            rgb_resnet_preprocessor_uuid="rgb_resnet",
+            goal_sensor_uuid="target_coordinates_ind",
             depth_resnet_preprocessor_uuid="depth_resnet",
             hidden_size=512,
             goal_dims=32,
@@ -229,7 +185,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return ObjectNavDatasetTaskSampler(**kwargs)
+        return PointNavDatasetTaskSampler(**kwargs)
 
     @staticmethod
     def _partition_inds(n: int, num_parts: int):
@@ -265,10 +221,9 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
         return {
             "scenes": scenes[inds[process_ind]:inds[process_ind + 1]],
-            "object_types": self.TARGET_TYPES,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": {
@@ -288,13 +243,13 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            "dataset/robothor/objectnav/train/content",
+            "dataset/robothor/pointnav/train/content",
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = "dataset/robothor/objectnav/train/content"
+        res["scene_directory"] = "dataset/robothor/pointnav/train/content"
         res["loop_dataset"] = True
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
@@ -313,13 +268,13 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            "dataset/robothor/objectnav/val/content",
+            "dataset/robothor/pointnav/val/content",
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = "dataset/robothor/objectnav/val/content"
+        res["scene_directory"] = "dataset/robothor/pointnav/val/content"
         res["loop_dataset"] = False
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
@@ -337,13 +292,14 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            "dataset/robothor/objectnav/val/content",
+            "dataset/robothor/pointnav/val/content",
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = "dataset/robothor/objectnav/val/content"
+        res["scene_directory"] = "dataset/robothor/pointnav/val/content"
+        res["scene_directory"] = "dataset/robothor/pointnav/val/content"
         res["loop_dataset"] = False
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
