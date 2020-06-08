@@ -757,7 +757,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
             "scene": scene,
             "initial_position": ['initial_position'],
             "initial_orientation": episode['initial_orientation'],
-            "target": episode['target']
+            "target": episode['target_position']
         }
 
         if self.allow_flipping and random.random() > 0.5:
@@ -782,7 +782,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
             max_steps=self.max_steps,
             action_space=self._action_space,
             reward_configs=self.rewards_config,
-            path_cache=self.caches[self.scene_index]
+            path_cache=self.caches[self.scenes[self.scene_index]]
         )
         return self._last_sampled_task
 

@@ -610,7 +610,7 @@ class ResnetTensorGoalEncoder(nn.Module):
         self.goal_dims = goal_dims
         self.resnet_hid_out_dims = resnet_compressor_hidden_out_dims
         self.combine_hid_out_dims = combiner_hidden_out_dims
-        self.embed_goal = nn.Linear(3, self.goal_dims)
+        self.embed_goal = nn.Linear(2, self.goal_dims)
         self.blind = self.resnet_uuid not in observation_spaces.spaces
         if not self.blind:
             self.resnet_tensor_shape = observation_spaces.spaces[self.resnet_uuid].shape
@@ -691,7 +691,7 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         self.goal_dims = goal_dims
         self.resnet_hid_out_dims = resnet_compressor_hidden_out_dims
         self.combine_hid_out_dims = combiner_hidden_out_dims
-        self.embed_goal = nn.Linear(3, self.goal_dims)
+        self.embed_goal = nn.Linear(2, self.goal_dims)
         self.blind = self.rgb_resnet_uuid not in observation_spaces.spaces or \
                      self.depth_resnet_uuid not in observation_spaces.spaces
         if not self.blind:
