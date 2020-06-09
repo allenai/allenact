@@ -299,7 +299,6 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             deterministic_cudnn=deterministic_cudnn,
         )
         res["scene_directory"] = "dataset/robothor/pointnav/val/content"
-        res["scene_directory"] = "dataset/robothor/pointnav/val/content"
         res["loop_dataset"] = False
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
