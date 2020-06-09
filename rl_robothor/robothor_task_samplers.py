@@ -736,7 +736,9 @@ class PointNavDatasetTaskSampler(TaskSampler):
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
 
+        BOOM = False
         if self.episode_index > len(self.episodes[self.scenes[self.scene_index]]):
+            BOOM = True
             self.scene_index = (self.scene_index + 1) % len(self.scenes)
             # shuffle the new list of episodes to train on
             if self.shuffle_dataset:
@@ -744,7 +746,8 @@ class PointNavDatasetTaskSampler(TaskSampler):
             self.episode_index = 0
 
         scene = self.scenes[self.scene_index]
-        print("SCENE:", scene, "EPISODE INDEX:", self.episode_index)
+        print("SCENE:", scene, "EPISODE INDEX:", self.episode_index,
+              "LENGTH EPISODES:", len(self.episodes[self.scenes[self.scene_index]]), "BOOM:", BOOM)
         episode = self.episodes[scene][self.episode_index]
 
         if self.env is not None:
