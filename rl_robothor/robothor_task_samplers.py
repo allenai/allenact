@@ -746,8 +746,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
             self.episode_index = 0
 
         scene = self.scenes[self.scene_index]
-        print("SCENE:", scene, "EPISODE INDEX:", self.episode_index,
-              "LENGTH EPISODES:", len(self.episodes[self.scenes[self.scene_index]]), "BOOM:", BOOM)
+        print(self.episodes)
         episode = self.episodes[scene][self.episode_index]
 
         if self.env is not None:
