@@ -742,10 +742,16 @@ class PointNavDatasetTaskSampler(TaskSampler):
             if self.shuffle_dataset:
                 random.shuffle(self.episodes[self.scenes[self.scene_index]])
             self.episode_index = 0
-            print("Moving on to next scene", len(self.episodes[self.scenes[self.scene_index]]))
 
         scene = self.scenes[self.scene_index]
-        episode = self.episodes[scene][self.episode_index]
+        try:
+            episode = self.episodes[scene][self.episode_index]
+        except:
+            print("\\n\n\n\n\n AN ERROR HAS OCCURED!")
+            print("--------------------------")
+            print("Scene:", scene, "Scenes:", self.scenes, "Scene Index:", self.scene_index)
+            print("Episode Index:", self.episode_index, "Episodes Length:", self.episodes[scene])
+            print("\n\n\n\n\n")
 
         if self.env is not None:
             if scene.replace("_physics", "") != self.env.scene_name.replace("_physics", ""):
