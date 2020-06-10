@@ -750,7 +750,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
             print("\\n\n\n\n\n AN ERROR HAS OCCURED!")
             print("--------------------------")
             print("Scene:", scene, "Scenes:", self.scenes, "Scene Index:", self.scene_index)
-            print("Episode Index:", self.episode_index, "Episodes Length:", self.episodes[scene])
+            print("Episode Index:", self.episode_index, "Episodes Length:", len(self.episodes[scene]))
             print("\n\n\n\n\n")
 
         if self.env is not None:
