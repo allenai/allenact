@@ -2,6 +2,7 @@ from typing import Tuple, List, Dict, Any, Optional
 
 import gym
 import numpy as np
+import math
 from ai2thor.util.metrics import compute_single_spl
 
 from rl_robothor.robothor_constants import (
@@ -184,9 +185,15 @@ class PointNavTask(Task[RoboThorEnvironment]):
             return rew
 
         if self.path_cache:
-            curr_pose = self.env.controller.last_event.pose
-            curr_pose = {"x": curr_pose[0]/1000, "y": 0.9009997, "z": curr_pose[1]/1000}
+            curr_pose = self.env.agent_state()
+            curr_pose = {
+                "x": 0.25*math.ceil(curr_pose["x"]/0.25),
+                "y": curr_pose["y"],
+                "z": 0.25*math.ceil(curr_pose["z"]/0.25)
+            }
             geodesic_distance = self._get_shortest_path_distance_from_cache(curr_pose, self.task_info['target'])
+            if geodesic_distance == -1.0:
+                geodesic_distance = self.last_geodesic_distance
             rew += self.last_geodesic_distance - geodesic_distance
         else:
             geodesic_distance = self.env.dist_to_point(self.task_info['target'])
@@ -283,7 +290,10 @@ class PointNavTask(Task[RoboThorEnvironment]):
             }
 
     def _get_shortest_path_distance_from_cache(self, position: Dict[str, float], target: Dict[str, float]) -> float:
-        return self.path_cache[self._pos_to_str(position)][self._pos_to_str(target)]["distance"]
+        try:
+            return self.path_cache[self._pos_to_str(position)][self._pos_to_str(target)]["distance"]
+        except:
+            return -1.0
 
     @staticmethod
     def _pos_to_str(pos: Dict[str, float]) -> str:
