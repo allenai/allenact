@@ -184,20 +184,20 @@ class PointNavTask(Task[RoboThorEnvironment]):
             return rew
 
         if self.path_cache:
-            geodesic_distance = self.env.dist_to_point(self.task_info['target'])
-            if self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5:  # (robothor limits)
-                rew += self.last_geodesic_distance - geodesic_distance
-                # if self.last_geodesic_distance > geodesic_distance:
-                #     rew += self.reward_configs["delta_dist_reward_closer"]
-                # elif self.last_geodesic_distance == geodesic_distance:
-                #     rew += self.reward_configs["delta_dist_reward_same"]
-                # else:
-                #     rew += self.reward_configs["delta_dist_reward_further"]
-        else:
             curr_pose = self.env.controller.last_event.pose
-            curr_pose = {"x": curr_pose[0], "y": curr_pose[1], "z": curr_pose[2]}
-            geodesic_distance = self._get_shortest_path_from_cache(curr_pose, self.task_info['target'])
+            curr_pose = {"x": curr_pose[0]/1000, "y": 0.9009997, "z": curr_pose[1]/1000}
+            geodesic_distance = self._get_shortest_path_distance_from_cache(curr_pose, self.task_info['target'])
             rew += self.last_geodesic_distance - geodesic_distance
+        else:
+            geodesic_distance = self.env.dist_to_point(self.task_info['target'])
+        if self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5:  # (robothor limits)
+            rew += self.last_geodesic_distance - geodesic_distance
+            # if self.last_geodesic_distance > geodesic_distance:
+            #     rew += self.reward_configs["delta_dist_reward_closer"]
+            # elif self.last_geodesic_distance == geodesic_distance:
+            #     rew += self.reward_configs["delta_dist_reward_same"]
+            # else:
+            #     rew += self.reward_configs["delta_dist_reward_further"]
         self.last_geodesic_distance = geodesic_distance
 
         # # ...and also exploring! We won't be able to hit the optimal path in test
@@ -282,8 +282,8 @@ class PointNavTask(Task[RoboThorEnvironment]):
                 "spl": spl,
             }
 
-    def _get_shortest_path(self, position: Dict[str, float], target: Dict[str, float]) -> float:
-        return self.path_cache[self._pos_to_str(position)][self._pos_to_str(target)]
+    def _get_shortest_path_distance_from_cache(self, position: Dict[str, float], target: Dict[str, float]) -> float:
+        return self.path_cache[self._pos_to_str(position)][self._pos_to_str(target)]["distance"]
 
     @staticmethod
     def _pos_to_str(pos: Dict[str, float]) -> str:
