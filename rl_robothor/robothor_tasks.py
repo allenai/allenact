@@ -287,6 +287,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
                 "total_reward": total_reward,
                 "dist_to_target": dist2tget,
                 "spl": spl,
+                "task_info": self.task_info,
             }
 
     def _get_shortest_path_distance_from_cache(self, position: Dict[str, float], target: Dict[str, float]) -> float:
