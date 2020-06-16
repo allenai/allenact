@@ -290,44 +290,6 @@ class OnPolicyRLEngine(object):
 
         return ckpt
 
-    # # aggregates task metrics currently in queue
-    # def aggregate_task_metrics(self, count=-1) -> Tuple[Tuple[str, Dict[str, float], int], List[Dict[str, Any]]]:
-    #     assert self.scalars.empty, "found non-empty scalars {}".format(self.scalars._counts)
-    #
-    #     task_outputs = []
-    #     while (count == -1 and not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
-    #         try:
-    #             if count == -1:
-    #                 task_output = self.vector_tasks.metrics_out_queue.get_nowait()
-    #             else:
-    #                 task_output = self.vector_tasks.metrics_out_queue.get(timeout=5)
-    #                 count -= 1
-    #             task_outputs.append(task_output)
-    #         except queue.Empty:
-    #             if count != -1:
-    #                 LOGGER.error("{}-{} Missing {} task metrics due to timeout".format(
-    #                     self.mode, self.worker_id, count
-    #                 ))
-    #
-    #     nsamples = 0
-    #     for task_output in task_outputs:
-    #         if len(task_output) == 0\
-    #                 or (len(task_output) == 1 and "task_info" in task_output)\
-    #                 or ("success" in task_output and task_output["success"] is None):
-    #             continue
-    #         self.scalars.add_scalars(
-    #             {k: v for k, v in task_output.items() if k != "task_info"}
-    #         )
-    #         nsamples += 1
-    #
-    #     if nsamples < len(task_outputs):
-    #         LOGGER.warning("Discarded {} empty task metrics".format(len(task_outputs) - nsamples))
-    #
-    #     pkg_type = "task_metrics_package"
-    #     payload = self.scalars.pop_and_reset() if len(task_outputs) > 0 else None
-    #
-    #     return (pkg_type, payload, nsamples), task_outputs
-
     # aggregates task metrics currently in queue
     def aggregate_task_metrics(self) -> Tuple[Tuple[str, Dict[str, float], int], List[Dict[str, Any]]]:
         assert self.scalars.empty, "found non-empty scalars {}".format(self.scalars._counts)
@@ -389,8 +351,6 @@ class OnPolicyRLEngine(object):
     def initialize_rollouts(self, rollouts, visualizer=None):
         observations = self.vector_tasks.get_observations()
         npaused, keep, batch = self.remove_paused(observations)
-        # if render is not None and len(keep) > 0:
-        #     render.append(self.vector_tasks.render(mode="rgb_array"))
         if npaused > 0:
             rollouts.reshape(keep)
         rollouts.to(self.device)
@@ -401,34 +361,10 @@ class OnPolicyRLEngine(object):
             visualizer.collect(vector_task=self.vector_tasks, alive=keep)
         return npaused
 
-    # def empty_memory(self):
-    #     model = self.actor_critic if not self.is_distributed else self.actor_critic.module
-    #     num_recurrent_layers = model.num_recurrent_layers
-    #     if num_recurrent_layers > 0:
-    #         rnn_size = model.recurrent_hidden_state_size
-    #         assert isinstance(rnn_size, int)
-    #         return torch.zeros(
-    #             num_recurrent_layers,
-    #             self.num_samplers,
-    #             rnn_size,
-    #         ).to(self.device)
-    #     else:
-    #         spec = model.recurrent_hidden_state_size
-    #         assert isinstance(spec, Dict)
-    #         memory = Memory()
-    #         for key in spec:
-    #             other_dims, sampler_dim, dtype = spec[key]
-    #             all_dims = other_dims[:sampler_dim] + [self.num_samplers] + other_dims[sampler_dim:]
-    #             tensor = torch.zeros(*all_dims, dtype=dtype, device=self.device)
-    #             memory.check_append(key, tensor, sampler_dim)
-    #         return memory
-
     def act(self, rollouts: RolloutStorage):
         with torch.no_grad():
             step_observation = rollouts.pick_observation_step(rollouts.step)
             memory = rollouts.pick_memory_step(rollouts.step)
-            # if memory is None or (isinstance(memory, Memory) and len(memory) == 0):
-            #     memory = self.empty_memory()
             actor_critic_output, memory = self.actor_critic(
                 step_observation,
                 memory,
@@ -479,9 +415,6 @@ class OnPolicyRLEngine(object):
         )
 
         npaused, keep, batch = self.remove_paused(observations)
-
-        # if render is not None and len(keep) > 0:
-        #     render.append(self.vector_tasks.render(mode="rgb_array"))
 
         if npaused > 0:
             rollouts.reshape(keep)
@@ -1023,17 +956,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
             self.update(rollouts)  # here we synchronize
 
-            # if self.is_distributed:
-            #     ndone = self.num_workers_done.get("done")
-            #     assert ndone == self.num_workers, "# workers done {} <> # workers".format(ndone, self.num_workers)
-            #
-            #     self.step_count += self.num_workers_steps.get("steps") - self.tstate.former_steps
-            #
-            #     # Ensure all workers are done before resetting num_workers_steps
-            #     idx = self.distributed_barrier.wait()
-            #     if idx == 0:
-            #         self.distributed_barrier.reset()
-
             rollouts.after_update()
             self.tstate.rollout_count += 1
 
@@ -1112,7 +1034,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     RolloutStorage(
                         self.tstate.steps_in_rollout,
                         self.num_samplers,
-                        # self.actor_critic.action_space if not self.is_distributed else self.actor_critic.module.action_space,
                         self.actor_critic if not self.is_distributed else self.actor_critic.module,
                     )
                 )
@@ -1184,7 +1105,6 @@ class OnPolicyInference(OnPolicyRLEngine):
         rollouts = RolloutStorage(
             rollout_steps,
             self.num_samplers,
-            # self.actor_critic.action_space if not self.is_distributed else self.actor_critic.module.action_space,
             self.actor_critic if not self.is_distributed else self.actor_critic.module,
         )
 
@@ -1203,9 +1123,6 @@ class OnPolicyInference(OnPolicyRLEngine):
         self.vector_tasks.set_seeds(self.worker_seeds(self.num_samplers, self.seed))
         self.vector_tasks.reset_all()
 
-        # num_tasks = self.vector_tasks.attr("total_unique", call_sampler=True)
-        # total_tasks = sum(num_tasks)
-        # metrics_pkg, task_outputs = self.aggregate_task_metrics(count=total_tasks)
         metrics_pkg, task_outputs = self.aggregate_task_metrics()
 
         pkg_type = "{}_package".format(self.mode)
