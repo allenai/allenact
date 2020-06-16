@@ -16,7 +16,7 @@ from rl_base.common import ActorCriticOutput
 
 class AbstractViz:
     rollout_episode_default_axis: int = 1
-    rnn_hidden_memory: Tuple[str, str] = ("memory", RolloutStorage.rnn_memory_accessor)  # to be used to access rnn hidden from memory
+    rnn_hidden_memory: Tuple[str, str] = ("memory", RolloutStorage.DEFAULT_RNN_MEMORY_ACCESSOR)  # to be used to access rnn hidden from memory
 
     def __init__(
             self,
@@ -551,7 +551,7 @@ class SimpleViz(AbstractViz):
 
                 storage, path = source[0], source[1:]
                 if source == self.rnn_hidden_memory:
-                    path = rollout.rnn_memory_name
+                    path = rollout.DEFAULT_RNN_MEMORY_NAME
 
                 # Access storage
                 res = getattr(rollout, storage)
