@@ -78,11 +78,22 @@ class Loss(abc.ABC):
 class Memory(Dict):
     def __init__(self, *args, **kwargs):
         super().__init__()
-        # LOGGER.debug("{} ".format(args))
         if len(args) > 0:
             assert len(args) == 1, "Only 1 Sequence[Tuple[str, torch.Tensor, int]]" \
                                    "or Dict[str, Tuple[torch.Tensor, int]] accepted as unnamed args"
             if isinstance(args[0], Sequence):
+                # HACK for distributed data parallel
+                while not isinstance(args[0][0][0], str):
+                    args = (args[0][0],)
+                if len(args[0][0]) == 2:  # key, tuple
+                    new_args = []
+                    for key, tup in args[0]:
+                        assert isinstance(tup, tuple) and len(tup) == 2
+                        new_args.append((key,) + tup)
+                    args = (new_args,)
+                    # LOGGER.debug("HACK {}".format(args))
+                # HACK end
+
                 for key, tensor, dim in args[0]:
                     self.check_append(key, tensor, dim)
             elif isinstance(args[0], Dict):
