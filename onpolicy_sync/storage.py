@@ -103,7 +103,7 @@ class RolloutStorage:
         self.masks = self.masks.to(device)
 
     def rnn_to_memory(self, rnn):
-        return Memory([(self.rnn_memory_name, rnn, self.rnn_memory_sampler_axis)])
+        return Memory([(self.rnn_memory_name, (rnn, self.rnn_memory_sampler_axis))])
 
     # TODO unused?!
     @staticmethod
