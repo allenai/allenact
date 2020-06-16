@@ -16,10 +16,7 @@ from torch import nn
 import torch.optim
 from torch import optim
 from torch.optim.lr_scheduler import _LRScheduler
-import numpy as np
 from torch.nn.parallel import DistributedDataParallel
-from torch.nn.parallel.scatter_gather import scatter_kwargs
-from torch.nn.parallel._functions import Scatter
 
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from onpolicy_sync.storage import RolloutStorage
@@ -35,60 +32,10 @@ from utils.experiment_utils import (
     TrainingPipeline,
     PipelineStage,
 )
-from utils.tensor_utils import batch_observations, process_video
+from utils.tensor_utils import batch_observations
 from utils.system import LOGGER
-from rl_base.common import Memory
 
 
-# class LoggedDistributedDataParallel(DistributedDataParallel):
-#     def scatter(self, inputs, kwargs, device_ids):
-#         return logged_scatter_kwargs(inputs, kwargs, device_ids, dim=self.dim)
-#
-#
-# def logged_scatter_kwargs(inputs, kwargs, target_gpus, dim=0):
-#     r"""Scatter with support for kwargs dictionary"""
-#     inputs = scatter(inputs, target_gpus, dim) if inputs else []
-#     kwargs = scatter(kwargs, target_gpus, dim) if kwargs else []
-#     if len(inputs) < len(kwargs):
-#         inputs.extend([() for _ in range(len(kwargs) - len(inputs))])
-#     elif len(kwargs) < len(inputs):
-#         kwargs.extend([{} for _ in range(len(inputs) - len(kwargs))])
-#     inputs = tuple(inputs)
-#     kwargs = tuple(kwargs)
-#     return inputs, kwargs
-#
-#
-# def scatter(inputs, target_gpus, dim=0):
-#     r"""
-#     Slices tensors into approximately equal chunks and
-#     distributes them across given GPUs. Duplicates
-#     references to objects that are not tensors.
-#     """
-#
-#     def scatter_map(obj):
-#         if isinstance(obj, torch.Tensor):
-#             return Scatter.apply(target_gpus, None, dim, obj)
-#         if isinstance(obj, tuple) and len(obj) > 0:
-#             return list(zip(*map(scatter_map, obj)))
-#         if isinstance(obj, list) and len(obj) > 0:
-#             return list(map(list, zip(*map(scatter_map, obj))))
-#         if isinstance(obj, dict) and len(obj) > 0:
-#             LOGGER.debug("{}".format(obj))
-#             return list(map(type(obj), zip(*map(scatter_map, obj.items()))))
-#         return [obj for targets in target_gpus]
-#
-#     # After scatter_map is called, a scatter_map cell will exist. This cell
-#     # has a reference to the actual function scatter_map, which has references
-#     # to a closure that has a reference to the scatter_map cell (because the
-#     # fn is recursive). To avoid this reference cycle, we set the function to
-#     # None, clearing the cell
-#     try:
-#         res = scatter_map(inputs)
-#     finally:
-#         scatter_map = None
-#     return res
-#
-#
 class OnPolicyRLEngine(object):
     """The reinforcement learning primary controller.
 
@@ -499,18 +446,19 @@ class OnPolicyRLEngine(object):
 
     @staticmethod
     def _active_memory(memory, keep):
-        if isinstance(memory, torch.Tensor):
-            # rnn hidden state
-            # LOGGER.info("memory {} keep {}".format(memory.shape, len(keep)))
+        if isinstance(memory, torch.Tensor):  # rnn hidden state
             return memory[:, keep] if memory.shape[1] > len(keep) else memory
 
         # arbitrary memory
         for name in memory:
-            kept_memory = memory.tensor(name).index_select(
-                dim=memory.sampler_dim(name),
-                index=torch.as_tensor(keep, dtype=torch.int64, device=memory.tensor(name).device)
-            )
-            memory[name] = (kept_memory, memory.sampler_dim(name))
+            if memory.tensor(name).shape[memory.sampler_dim(name)] > len(keep):
+                kept_memory = memory.tensor(name).index_select(
+                    dim=memory.sampler_dim(name),
+                    index=torch.as_tensor(keep, dtype=torch.int64, device=memory.tensor(name).device)
+                )
+                memory[name] = (kept_memory, memory.sampler_dim(name))
+
+        return memory
 
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None):
         actions, actor_critic_output, memory, _ = self.act(rollouts)

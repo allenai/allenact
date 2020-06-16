@@ -195,7 +195,7 @@ class ResnetTensorObjectNavActorCriticMemory(ResnetTensorObjectNavActorCritic):
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
         x = self.goal_visual_encoder(observations)
 
-        x, mem_return = self.state_encoder(x, rnn_hidden_states["rnn_hidden"], masks)
+        x, mem_return = self.state_encoder(x, rnn_hidden_states.tensor("rnn_hidden"), masks)
         rnn_hidden_states["rnn_hidden"] = (mem_return, rnn_hidden_states.sampler_dim("rnn_hidden"))
 
         return (
