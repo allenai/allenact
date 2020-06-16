@@ -82,17 +82,6 @@ class Memory(Dict):
             assert len(args) == 1, "Only 1 Sequence[Tuple[str, Tuple[torch.Tensor, int]]]" \
                                    "or Dict[str, Tuple[torch.Tensor, int]] accepted as unnamed args"
             if isinstance(args[0], Sequence):
-                # # HACK for distributed data parallel
-                # # while not isinstance(args[0][0][0], str):
-                # #     args = (args[0][0],)
-                # if len(args[0][0]) == 2:  # key, tuple
-                #     new_args = []
-                #     for key, tup in args[0]:
-                #         assert isinstance(tup, tuple) and len(tup) == 2
-                #         new_args.append((key,) + tup)
-                #     args = (new_args,)
-                #     # LOGGER.debug("HACK {}".format(args))
-                # # HACK end
                 for key, tensor_dim in args[0]:
                     assert len(tensor_dim) == 2, "Only Tuple[torch.Tensor, int]] accepted as second item in Tuples"
                     tensor, dim = tensor_dim
