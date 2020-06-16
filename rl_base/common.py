@@ -97,7 +97,7 @@ class Memory(Dict):
                 tensor, dim = kwargs[key]
                 self.check_append(key, tensor, dim)
 
-    def check_append(self, key, tensor, sampler_dim):
+    def check_append(self, key: str, tensor: torch.Tensor, sampler_dim: int):
         assert isinstance(key, str), "key {} must be str".format(key)
         assert isinstance(tensor, torch.Tensor), "tensor {} must be torch.Tensor".format(tensor)
         assert isinstance(sampler_dim, int), "sampler_dim {} must be int".format(sampler_dim)
@@ -108,10 +108,23 @@ class Memory(Dict):
 
         self[key] = (tensor, sampler_dim)
 
-    def tensor(self, key):
+    def tensor(self, key: str):
         assert key in self, "Missing key {}".format(key)
         return self[key][0]
 
-    def sampler_dim(self, key):
+    def sampler_dim(self, key: str):
         assert key in self, "Missing key {}".format(key)
         return self[key][1]
+
+    def index_select(self, keep: Sequence[int]):
+        res = Memory()
+        for name in self:
+            sampler_dim = self.sampler_dim(name)
+            tensor = self.tensor(name)
+            if tensor.shape[sampler_dim] > len(keep):
+                tensor = tensor.index_select(
+                    dim=sampler_dim,
+                    index=torch.as_tensor(list(keep), dtype=torch.int64, device=tensor.device)
+                )
+                res.check_append(name, tensor, sampler_dim)
+        return res

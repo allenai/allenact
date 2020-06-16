@@ -384,17 +384,7 @@ class OnPolicyRLEngine(object):
     def _active_memory(memory, keep):
         if isinstance(memory, torch.Tensor):  # rnn hidden state
             return memory[:, keep] if memory.shape[1] > len(keep) else memory
-
-        # arbitrary memory
-        for name in memory:
-            if memory.tensor(name).shape[memory.sampler_dim(name)] > len(keep):
-                kept_memory = memory.tensor(name).index_select(
-                    dim=memory.sampler_dim(name),
-                    index=torch.as_tensor(keep, dtype=torch.int64, device=memory.tensor(name).device)
-                )
-                memory[name] = (kept_memory, memory.sampler_dim(name))
-
-        return memory
+        return memory.index_select(keep)  # arbitrary memory
 
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None):
         actions, actor_critic_output, memory, _ = self.act(rollouts)
