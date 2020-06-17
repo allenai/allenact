@@ -1,9 +1,0 @@
-vs4
-
-# sudo python rl_robothor/docker/startx.py &> ~/logxserver &
-ofolder=~/work/data/embodied-rl/ppo-nav/
-mkdir -p $ofolder
-tensorboard --bind_all --logdir $ofolder &> ~/logtensorboard &
-rm -r $ofolder/*
-python main.py -o $ofolder -s 12345 objectnav_robothor_rgb_ppo &> $ofolder/log_exp &
-tail -f $ofolder/log_exp

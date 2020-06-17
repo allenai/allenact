@@ -65,13 +65,7 @@ class RolloutStorage:
 
         self.masks = torch.ones(num_steps + 1, num_processes, 1)
 
-        self.flattened_spaces: Dict[str, List[str]] = dict()
-
-        self.num_steps = num_steps
         self.step = 0
-        self.flatten_separator = flatten_separator
-
-        self.unnarrow_data: Dict[str, Union[int, torch.Tensor]] = defaultdict(dict)
 
         self.unnarrow_data: DefaultDict[str, Union[int, torch.Tensor, dict]] = defaultdict(dict)
 
@@ -318,79 +312,7 @@ class RolloutStorage:
 
         assert len(self.unnarrow_data) == 0
 
-    def narrow(self):
-        assert len(self.unnarrow_data) == 0, "attempting to narrow narrowed rollouts"
-
-        if self.step == 0:  # we're actually done
-            return
-
-        for sensor in self.observations:
-            self.unnarrow_data["observations"][sensor] = self.observations[sensor]
-            self.observations[sensor] = self.observations[sensor].narrow(0, 0, self.step + 1)
-
-        self.unnarrow_data["recurrent_hidden_states"] = self.recurrent_hidden_states
-        self.recurrent_hidden_states = self.recurrent_hidden_states.narrow(0, 0, self.step + 1)
-
-        self.unnarrow_data["actions"] = self.actions
-        self.actions = self.actions.narrow(0, 0, self.step)
-
-        self.unnarrow_data["prev_actions"] = self.prev_actions
-        self.prev_actions = self.prev_actions.narrow(0, 0, self.step + 1)
-
-        self.unnarrow_data["action_log_probs"] = self.action_log_probs
-        self.action_log_probs = self.action_log_probs.narrow(0, 0, self.step)
-
-        self.unnarrow_data["value_preds"] = self.value_preds
-        self.value_preds = self.value_preds.narrow(0, 0, self.step)
-
-        self.unnarrow_data["rewards"] = self.rewards
-        self.rewards = self.rewards.narrow(0, 0, self.step)
-
-        self.unnarrow_data["masks"] = self.masks
-        self.masks = self.masks.narrow(0, 0, self.step + 1)
-
-        self.unnarrow_data["num_steps"] = self.num_steps
-        self.num_steps = self.step
-
-    def unnarrow(self):
-        assert len(self.unnarrow_data) > 0, "attempting to unnarrow unnarrowed rollouts"
-
-        for sensor in self.observations:
-            self.observations[sensor] = self.unnarrow_data["observations"][sensor]
-            del self.unnarrow_data["observations"][sensor]
-
-        assert len(self.unnarrow_data["observations"]) == 0, "unnarrow_data contains observations {}".format(self.unnarrow_data["observations"])
-        del self.unnarrow_data["observations"]
-
-        self.recurrent_hidden_states = self.unnarrow_data["recurrent_hidden_states"]
-        del self.unnarrow_data["recurrent_hidden_states"]
-
-        self.actions = self.unnarrow_data["actions"]
-        del self.unnarrow_data["actions"]
-
-        self.prev_actions = self.unnarrow_data["prev_actions"]
-        del self.unnarrow_data["prev_actions"]
-
-        self.action_log_probs = self.unnarrow_data["action_log_probs"]
-        del self.unnarrow_data["action_log_probs"]
-
-        self.value_preds = self.unnarrow_data["value_preds"]
-        del self.unnarrow_data["value_preds"]
-
-        self.rewards = self.unnarrow_data["rewards"]
-        del self.unnarrow_data["rewards"]
-
-        self.masks = self.unnarrow_data["masks"]
-        del self.unnarrow_data["masks"]
-
-        self.num_steps = self.unnarrow_data["num_steps"]
-        del self.unnarrow_data["num_steps"]
-
-        assert len(self.unnarrow_data) == 0
-
     def after_update(self):
-        assert self.step == 0, "wrong number of steps {} in rollouts storage with capacity {}".format(self.step, self.num_steps)
-
         for sensor in self.observations:
             self.observations[sensor][0][0].copy_(self.observations[sensor][0][-1])
 

@@ -1,7 +1,0 @@
-vs9
-python -c "import torch; print(torch.cuda.is_available())"
-ofolder=~/work/data/embodied-rl/object_nav_image_camera_ready_cvpr2020
-rm -rf $ofolder
-mkdir -p $ofolder
-python main.py -o $ofolder -s 12345 objectnav_robothor_camera_ready_image &> $ofolder/log_exp &
-tail -f $ofolder/log_exp
