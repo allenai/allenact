@@ -127,4 +127,6 @@ class Memory(Dict):
                     index=torch.as_tensor(list(keep), dtype=torch.int64, device=tensor.device)
                 )
                 res.check_append(name, tensor, sampler_dim)
-        return res
+        if len(res) > 0:
+            return res
+        return self
