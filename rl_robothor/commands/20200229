@@ -1,0 +1,40 @@
+nav-ablation-11
+rm -r ~/work/data/embodied-rl/*
+python main.py -o ~/work/data/embodied-rl pointnav_robothor_rgb_deterministic_simpleconvGRU_ppo -s 12345 &> ~/work/data/embodied-rl/logexp &
+tail -f ~/work/data/embodied-rl/logexp
+
+nav-ablation-12
+rm -r ~/work/data/embodied-rl/*
+python main.py -o ~/work/data/embodied-rl pointnav_robothor_depth_deterministic_simpleconvGRU_ppo -s 12345 &> ~/work/data/embodied-rl/logexp &
+tail -f ~/work/data/embodied-rl/logexp
+
+nav-ablation-13
+rm -r ~/work/data/embodied-rl/*
+python main.py -o ~/work/data/embodied-rl pointnav_robothor_rgb_deterministic_resnet50GRU_ppo -s 12345 &> ~/work/data/embodied-rl/logexp &
+tail -f ~/work/data/embodied-rl/logexp
+
+nav-ablation-14
+rm -r ~/work/data/embodied-rl/*
+python main.py -o ~/work/data/embodied-rl pointnav_robothor_depth_deterministic_resnet50GRU_ppo -s 12345 &> ~/work/data/embodied-rl/logexp &
+tail -f ~/work/data/embodied-rl/logexp
+
+
+nav-ablation-15
+rm -r ~/work/data/embodied-rl/*
+python main.py -o ~/work/data/embodied-rl objectnav_robothor_rgb_deterministic_simpleconvGRU_ppo -s 12345 &> ~/work/data/embodied-rl/logexp &
+tail -f ~/work/data/embodied-rl/logexp
+
+nav-ablation-16
+rm -r ~/work/data/embodied-rl/*
+python main.py -o ~/work/data/embodied-rl objectnav_robothor_depth_deterministic_simpleconvGRU_ppo -s 12345 &> ~/work/data/embodied-rl/logexp &
+tail -f ~/work/data/embodied-rl/logexp
+
+nav-ablation-17
+rm -r ~/work/data/embodied-rl/*
+python main.py -o ~/work/data/embodied-rl objectnav_robothor_rgb_deterministic_resnet50GRU_ppo -s 12345 &> ~/work/data/embodied-rl/logexp &
+tail -f ~/work/data/embodied-rl/logexp
+
+nav-ablation-18
+rm -r ~/work/data/embodied-rl/*
+python main.py -o ~/work/data/embodied-rl objectnav_robothor_depth_deterministic_resnet50GRU_ppo -s 12345 &> ~/work/data/embodied-rl/logexp &
+tail -f ~/work/data/embodied-rl/logexp
