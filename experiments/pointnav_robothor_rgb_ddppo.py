@@ -89,7 +89,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         snapToGrid=False,
         agentMode="bot",
         include_private_scenes=False,
-        renderDepthImage=True
+        renderDepthImage=False
     )
 
     @classmethod
