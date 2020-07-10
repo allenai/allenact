@@ -205,6 +205,7 @@ class RoboThorEnvironment:
 
     def path_corners_to_dist(self, corners: Collection[Dict[str, float]]) -> float:
         """Computes the distance covered by the given path described by its corners."""
+
         if len(corners) == 0:
             return float("inf")
 
