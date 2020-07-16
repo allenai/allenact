@@ -137,7 +137,7 @@ class RoboThorEnvironment:
             else:
                 path = metrics.get_shortest_path_to_point(self.controller, position, target)
         except ValueError:
-            # LOGGER.debug("No path to object {} from {} in {}".format(target, position, self.scene_name))
+            LOGGER.debug("No path to object {} from {} in {}".format(target, position, self.scene_name))
             path = []
         finally:
             if isinstance(target, str):
