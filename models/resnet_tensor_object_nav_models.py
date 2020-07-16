@@ -178,7 +178,10 @@ class ResnetTensorGoalEncoder(nn.Module):
 class ResnetTensorObjectNavActorCriticMemory(ResnetTensorObjectNavActorCritic):
     @property
     def recurrent_hidden_state_size(self) -> Dict[str, Tuple[Tuple[int, ...], int, torch.dtype]]:
-        """The memory spec of the model."""
+        """The memory spec of the model: A dictionary with string keys and tuple values, each with the dimensions of the
+        memory, e.g. (2, 32) for two layers of 32-dimensional recurrent hidden states; an integer indicating the index
+        of the sampler in a batch, e.g. 1 for RNNs; the data type, e.g. torch.float32.
+        """
         return {"rnn_hidden": ((self.state_encoder.num_recurrent_layers, self.hidden_size), 1, torch.float32)}
 
     @property

@@ -72,7 +72,7 @@ class RolloutStorage:
     def create_memory(
             self,
             num_recurrent_layers: int,
-            spec: Dict[str, Tuple[Tuple[int, ...], int, torch.dtype]],
+            spec: Union[Dict[str, Tuple[Tuple[int, ...], int, torch.dtype]], int],
             num_processes: int
     ):
         if num_recurrent_layers > 0:
