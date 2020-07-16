@@ -3,27 +3,27 @@ from math import ceil, gcd
 
 import gym
 import torch
-from torch import nn as nn
+import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
-from torchvision import models
 import numpy as np
+from torchvision import models as models
 
 from onpolicy_sync.losses.ppo import PPOConfig
-from models.object_nav_models import ObjectNavActorCriticTrainResNet50GRU
+from models.point_nav_models import PointNavActorCriticTrainResNet50GRU
 from onpolicy_sync.losses import PPO
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
-from rl_robothor.robothor_tasks import ObjectNavTask
-from rl_robothor.robothor_task_samplers import ObjectNavTaskSampler
-from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
+from rl_robothor.robothor_tasks import PointNavTask
+from rl_robothor.robothor_task_samplers import PointNavTaskSampler
+from rl_robothor.robothor_sensors import GPSCompassSensorRoboThor, DepthSensorRoboThor
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
-    """An Object Navigation experiment configuration in RoboThor"""
+class PointNavRoboThorDepthPPOExperimentConfig(ExperimentConfig):
+    """A Point Navigation experiment configuration in RoboThor"""
 
     TRAIN_SCENES = [
         "FloorPlan_Train%d_%d" % (wall + 1, furniture + 1)
@@ -37,66 +37,23 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
         for furniture in range(5)
     ]
 
-    # TEST_SCENES = [
-    #     "FloorPlan_test-dev%d_%d" % (wall + 1, furniture + 1)
-    #     for wall in range(2)
-    #     for furniture in range(2)
-    # ]
-    TEST_SCENES = "rl_robothor/data/val.json"
-    NUM_TEST_SCENES = 6116  # 6116
-
     SCREEN_SIZE = 256
-
-    MAX_STEPS = 200
-
-    # It also ignores the empirical success of all episodes with length > num_steps * ADVANCE_SCENE_ROLLOUT_PERIOD and
-    # some with shorter lengths
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000000000  # generally useful if more than 1 scene per worker
+    MAX_STEPS = 500
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 6  # if more than 1 scene per sampler
 
     VALIDATION_SAMPLES_PER_SCENE = 1
 
-    NUM_PROCESSES = 60  # TODO 2 for debugging
-
-    TARGET_TYPES = sorted(
-        [
-            "AlarmClock",
-            "Apple",
-            "BaseballBat",
-            "BasketBall",
-            "Bowl",
-            "GarbageCan",
-            "HousePlant",
-            "Laptop",
-            "Mug",
-            "Remote",
-            "SprayBottle",
-            "Television",
-            "Vase",
-            # 'AlarmClock',
-            # 'Apple',
-            # 'BasketBall',
-            # 'Mug',
-            # 'Television',
-        ]
-    )
-    # TARGET_TYPES = sorted(
-    #     [
-    #         "Television",
-    #     ]
-    # )
+    NUM_PROCESSES = 36
 
     SENSORS = [
-        RGBSensorThor(
+        DepthSensorRoboThor(
             {
                 "height": SCREEN_SIZE,
                 "width": SCREEN_SIZE,
                 "use_resnet_normalization": True,
-                "uuid": "rgb_lowres",
             }
         ),
-        GoalObjectTypeThorSensor({
-            "object_types": TARGET_TYPES,
-        }),
+        GPSCompassSensorRoboThor({}),
     ]
 
     PREPROCESSORS = [
@@ -109,23 +66,19 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
                     "output_dims": 2048,
                     "pool": False,
                     "torchvision_resnet_model": models.resnet50,
-                    "input_uuids": ["rgb_lowres"],
-                    "output_uuid": "rgb_resnet",
+                    "input_uuids": ["depth"],
+                    "output_uuid": "depth_resnet",
                     "parallel": False,  # TODO False for debugging
             })
         ),
     ]
 
     OBSERVATIONS = [
-        "rgb_resnet",
-        "goal_object_type_ind",
+        "depth_resnet",
+        "target_coordinates_ind",
     ]
 
     ENV_ARGS = dict(
-        # width=CAMERA_WIDTH,
-        # height=CAMERA_HEIGHT,
-        # visibilityDistance=1.5,
-        # include_private_scenes=True,
         width=max(300, SCREEN_SIZE),
         height=max(300, SCREEN_SIZE),
         fieldOfView=79.0,
@@ -141,20 +94,21 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
         movementGaussianSigma=1e-20,  # almost deterministic
         rotateGaussianMu=1e-20,  # almost deterministic
         rotateGaussianSigma=1e-20,  # almost deterministic
+        renderDepthImage=True,
     )
 
     @classmethod
     def tag(cls):
-        return "ObjectNavRobothorRGBDDPPO"
+        return "PointNavRoboThorDepthPPO"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
         ppo_steps = int(7.5e7)
-        lr = 2.5e-4  # 2.5e-4 for 12 workers, 1 batch
-        num_mini_batch = 1  # 31 fps for 3 (36 workers), 6 (6GB with 36 workers)
+        lr = 3e-4  # 2.5e-4 for 12 workers, 1 batch
+        num_mini_batch = 6  # 31 fps for 3 (36 workers), 6 (6GB with 36 workers)
         update_repeats = 4
         num_steps = 128
-        save_interval = 100000
+        save_interval = 50000
         log_interval = 1  # log every rollout
         gamma = 0.99
         use_gae = True
@@ -168,7 +122,7 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
+            named_losses={"ppo_loss": Builder(PPO, kwargs={"use_clipped_value_loss": True}, default=PPOConfig,)},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
@@ -181,32 +135,26 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
             ),
         )
 
-    def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(self.NUM_PROCESSES, ndevices)
-        res = [0] * ndevices
-        for it in range(self.NUM_PROCESSES):
-            res[it % ndevices] += 1
-        return res
-
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7]  # TODO vs4 only has 7 gpus
-            nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
+            gpu_ids = [] if not torch.cuda.is_available() else [0]
+            nprocesses = 1 if not torch.cuda.is_available() else self.NUM_PROCESSES
+            sampler_devices = [1]
             render_video = False
         elif mode == "valid":
             nprocesses = 1
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
-                gpu_ids = [0]
+                gpu_ids = [1]
             render_video = False
         elif mode == "test":
-            nprocesses = min(self.NUM_TEST_SCENES, 16)  # per gpu
+            nprocesses = 1
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
-                gpu_ids = [0, 1, 2, 3, 4, 5, 6, 7]  # TODO vs4 only has 7 gpus
-            render_video = False
+                gpu_ids = [0]
+            render_video = True
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -217,31 +165,33 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
 
         observation_set = Builder(ObservationSet, kwargs=dict(
             source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
-        )) if nprocesses > 0 else None
+        )) if mode == 'train' or nprocesses > 0 else None
 
         return {
             "nprocesses": nprocesses,
             "gpu_ids": gpu_ids,
+            "sampler_devices": sampler_devices if mode == "train" else gpu_ids,
             "observation_set": observation_set,
             "render_video": render_video,
         }
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ObjectNavActorCriticTrainResNet50GRU(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+        return PointNavActorCriticTrainResNet50GRU(
+            action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
-            goal_sensor_uuid="goal_object_type_ind",
+            goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
-            object_type_embedding_dim=32,
-            trainable_masked_hidden_state=False,
+            embed_coordinates=False,
+            coordinate_embedding_dim=8,
+            coordinate_dims=2,
             num_rnn_layers=1,
             rnn_type='GRU'
         )
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return ObjectNavTaskSampler(**kwargs)
+        return PointNavTaskSampler(**kwargs)
 
     @staticmethod
     def _partition_inds(n: int, num_parts: int):
@@ -279,17 +229,18 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
 
         return {
             "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
-            "object_types": self.TARGET_TYPES,
             "sensors": self.SENSORS,
             "max_steps": self.MAX_STEPS,
-            "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": {
                 "step_penalty": -0.01,
                 "goal_success_reward": 10.0,
+                "unsuccessful_action_penalty": 0.0,
                 "failed_stop_reward": 0.0,
                 "shaping_weight": 1.0,  # applied to the decrease in distance to target
+                "exploration_shaping_weight": 0.0,  # relative to shaping weight
             },
         }
 
@@ -324,7 +275,7 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
         res["env_args"]["x_display"] = (
             ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
         )
-        res["allow_flipping"] = True
+        res["allow_flipping"] = False
         return res
 
     def valid_task_sampler_args(
@@ -344,39 +295,6 @@ class ObjectNavRoboThorRGBDDPPOExperimentConfig(ExperimentConfig):
         )
         res["scene_period"] = self.VALIDATION_SAMPLES_PER_SCENE
         res["max_tasks"] = self.VALIDATION_SAMPLES_PER_SCENE * len(res["scenes"])
-        res["env_args"] = {}
-        res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
-        )
-        return res
-
-    def test_task_sampler_args(
-        self,
-        process_ind: int,
-        total_processes: int,
-        devices: Optional[List[int]] = None,
-        seeds: Optional[List[int]] = None,
-        deterministic_cudnn: bool = False,
-    ) -> Dict[str, Any]:
-        inds = self._partition_inds(self.NUM_TEST_SCENES, total_processes)
-        res = dict(
-            scenes=self.TEST_SCENES,  # special case: dataset file name (triggered by dataset_first, dataset_last >=0)
-            object_types=self.TARGET_TYPES,
-            max_steps=self.MAX_STEPS,
-            sensors=self.SENSORS,
-            action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
-            seed=seeds[process_ind] if seeds is not None else None,
-            deterministic_cudnn=deterministic_cudnn,
-            dataset_first=inds[process_ind],
-            dataset_last=inds[process_ind + 1] - 1,
-            rewards_config={
-                "step_penalty": -0.01,
-                "goal_success_reward": 10.0,
-                "failed_stop_reward": 0.0,
-                "shaping_weight": 1.0,  # applied to the decrease in distance to target
-            },
-        )
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
