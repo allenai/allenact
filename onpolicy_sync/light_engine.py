@@ -6,7 +6,7 @@ import time
 import traceback
 import typing
 from multiprocessing.context import BaseContext
-from typing import Optional, Any, Dict, Union, List, Tuple
+from typing import Optional, Any, Dict, Union, List, Tuple, Sequence
 from collections import OrderedDict, namedtuple
 
 import torch
@@ -106,7 +106,12 @@ class OnPolicyRLEngine(object):
             self.all_samplers = self.machine_params["nprocesses"]
             self.num_samplers = self.all_samplers[self.worker_id]
         else:
-            self.num_samplers = self.machine_params["nprocesses"]
+            if isinstance(self.machine_params["nprocesses"], Sequence):
+                self.num_samplers = self.machine_params["nprocesses"][self.worker_id]
+            elif isinstance(self.machine_params["nprocesses"], int):
+                self.num_samplers = self.machine_params["nprocesses"]
+            else:
+                raise Exception("Only list and int are valid nprocesses")
         self._vector_tasks: Optional[VectorSampledTasks] = None
 
         self.observation_set = None
