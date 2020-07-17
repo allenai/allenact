@@ -185,7 +185,7 @@ class OnPolicyRunner(object):
             distributed_barrier = self.mp_ctx.Barrier(num_trainers)
 
         for trainer_it in range(num_trainers):
-            train: mp.Process = self.mp_ctx.Process(
+            train: mp.process.BaseProcess = self.mp_ctx.Process(
                 target=self.train_loop,
                 args=(trainer_it, checkpoint, restart),
                 kwargs=dict(
@@ -211,7 +211,7 @@ class OnPolicyRunner(object):
         # Validation
         device = self.worker_devices("valid")[0]
         self.get_visualizer("valid")
-        valid: mp.Process = self.mp_ctx.Process(
+        valid: mp.process.BaseProcess = self.mp_ctx.Process(
             target=self.valid_loop,
             args=(0,),
             kwargs=dict(
@@ -241,7 +241,7 @@ class OnPolicyRunner(object):
         num_testers = len(devices)
 
         for tester_it in range(num_testers):
-            test: mp.Process = self.mp_ctx.Process(
+            test: mp.process.BaseProcess = self.mp_ctx.Process(
                 target=self.test_loop,
                 args=(tester_it,),
                 kwargs=dict(
@@ -265,6 +265,7 @@ class OnPolicyRunner(object):
         LOGGER.info("Running test on {} steps {}".format(len(steps), steps))
 
         for cp in checkpoints:
+            # TODO for tester_it in range(num_testers): # to move to distributed test
             self.queues["checkpoints"].put(("eval", cp))
         # Allow all testers to terminate cleanly
         for _ in range(num_testers):
@@ -471,6 +472,7 @@ class OnPolicyRunner(object):
                     if finalized and self.queues["checkpoints"].empty():  # assume queue is actually empty after trainer finished and no checkpoints in queue
                         break
                 elif package[0] == "test_package":  # multiple workers with varying average episode length (reorder)
+                    # TODO make test package processing similar to training to move to distributed test
                     assert package[2] in test_steps, "unexpected test package for {} steps".format(package[2])
                     if package[2] == test_steps[-1]:
                         processed = []
