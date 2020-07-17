@@ -6,7 +6,7 @@ We in the Perceptural Reasoning and Interaction Research (PRIOR) group at the
  [issue](https://github.com/allenai/embodied-rl/issues) describing your proposed improvement.
  Doing so can ensure we can validate your suggestions before you spend a great deal of time
  upon them. Small (or validated) improvements and bug fixes should be made via a pull request
- from your fork of this repository.
+ from your fork of the repository at [https://github.com/allenai/embodied-rl](https://github.com/allenai/embodied-rl).
  
 All code in pull requests should adhere to the following guidelines.
 

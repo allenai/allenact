@@ -1,4 +1,5 @@
-"""Entry point to training/validating/testing for a user given experiment name"""
+"""Entry point to training/validating/testing for a user given experiment
+name."""
 
 import argparse
 import importlib
@@ -94,6 +95,12 @@ def _get_args():
         help="optional number of skipped checkpoints between runs in test if no checkpoint specified",
     )
 
+    parser.add_argument(
+        "--single_process_training",
+        action="store_true",
+        help="whether or not to train with a single process (useful for debugging).",
+    )
+
     return parser.parse_args()
 
 
@@ -130,7 +137,7 @@ def _load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
     experiments = [
         m[1]
         for m in inspect.getmembers(module, inspect.isclass)
-        if m[1].__module__ == module.__name__
+        if m[1].__module__ == module.__name__ and issubclass(m[1], ExperimentConfig)
     ]
     assert (
         len(experiments) == 1
@@ -172,7 +179,8 @@ def main():
             seed=args.seed,
             deterministic_cudnn=args.deterministic_cudnn,
             extra_tag=args.extra_tag,
-        ).run_pipeline(args.checkpoint)
+            single_process_training=args.single_process_training,
+        ).run_pipeline(checkpoint_file_name=args.checkpoint)
     else:
         OnPolicyTester(
             config=cfg,
@@ -180,7 +188,11 @@ def main():
             loaded_config_src_files=srcs,
             seed=args.seed,
             deterministic_cudnn=args.deterministic_cudnn,
-        ).run_test(args.test_date, args.checkpoint, args.skip_checkpoints)
+        ).run_test(
+            experiment_date=args.test_date,
+            checkpoint_file_name=args.checkpoint,
+            skip_checkpoints=args.skip_checkpoints,
+        )
 
 
 if __name__ == "__main__":

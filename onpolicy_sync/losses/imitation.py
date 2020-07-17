@@ -29,8 +29,8 @@ class Imitation(AbstractActorCriticLoss):
             over a fixed number of steps. In particular this batch should have the same format as that returned by
             `RolloutStorage.recurrent_generator`.
             Here `batch["observations"]` must contain `"expert_action"` observations
-            or `"expert_policy"` observations. See `ExpertActionSensor` for an example of a sensor
-            producing such observations.
+            or `"expert_policy"` observations. See `ExpertActionSensor` (or `ExpertPolicySensor`) for an example of
+            a sensor producing such observations.
         actor_critic_output : The output of calling an ActorCriticModel on the observations in `batch`.
         args : Extra args. Ignored.
         kwargs : Extra kwargs. Ignored.
@@ -66,13 +66,21 @@ class Imitation(AbstractActorCriticLoss):
                 )
             ).sum() / torch.clamp(expert_successes, min=1)
         elif "expert_policy" in observations:
-            raise NotImplementedError()
-            # expert_policies = batch["observations"]["expert_policy"]
-            # total_loss = (
-            #     -(actor_critic_output.distributions.log_probs_tensor * expert_policies)
-            #     .sum(-1)
-            #     .mean()
-            # )
+            expert_policies = typing.cast(
+                Dict[str, torch.Tensor], batch["observations"]
+            )["expert_policy"][:, :-1]
+            expert_actions_masks = typing.cast(
+                Dict[str, torch.Tensor], batch["observations"]
+            )["expert_policy"][:, -1:]
+
+            expert_successes = expert_actions_masks.sum()
+            if expert_successes.item() == 0:
+                return 0, {}
+
+            total_loss = (
+                -(actor_critic_output.distributions.log_probs_tensor * expert_policies)
+                * expert_actions_masks
+            ).sum() / expert_successes
         else:
             raise NotImplementedError(
                 "Imitation loss requires either `expert_action` or `expert_policy`"

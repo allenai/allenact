@@ -1,6 +1,7 @@
 import random
 from typing import List, Dict, Optional, Any, Union
 from collections import OrderedDict
+import copy
 
 import gym
 
@@ -161,7 +162,7 @@ class ObjectNavTaskSampler(TaskSampler):
             [o["objectType"] for o in self.env.last_event.metadata["objects"]]
         )
 
-        task_info = {}
+        task_info: Dict[str, Any] = {}
         for ot in random.sample(self.object_types, len(self.object_types)):
             if ot in object_types_in_scene:
                 task_info["object_type"] = ot
@@ -173,9 +174,7 @@ class ObjectNavTaskSampler(TaskSampler):
                 " objects of any of the types {}.".format(scene, self.object_types)
             )
 
-        task_info["start_pose"] = OrderedDict(
-            sorted([(k, float(v)) for k, v in pose.items()], key=lambda x: x[0])
-        )
+        task_info["start_pose"] = copy.copy(pose)
 
         self._last_sampled_task = ObjectNavTask(
             env=self.env,

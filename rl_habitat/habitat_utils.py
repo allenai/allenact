@@ -1,3 +1,5 @@
+# TODO: @klemenkotar please fix all type errors
+
 import random
 from typing import List
 
@@ -6,14 +8,18 @@ from habitat import Config
 
 
 def construct_env_configs(config: Config) -> List[Config]:
-    r"""Create list of Habitat Configs for training on multiple processes
-    To allow better performance, dataset are split into small ones for
-    each individual env, grouped by scenes.
-    Args:
-        config: configs that contain num_processes as well as information
-        necessary to create individual environments.
-    Returns:
-        List of Configs, one for each process
+    """Create list of Habitat Configs for training on multiple processes To
+    allow better performance, dataset are split into small ones for each
+    individual env, grouped by scenes.
+
+    # Parameters
+
+    config : configs that contain num_processes as well as information
+             necessary to create individual environments.
+
+    # Returns
+
+    List of Configs, one for each process.
     """
 
     config.freeze()
@@ -26,8 +32,7 @@ def construct_env_configs(config: Config) -> List[Config]:
         random.shuffle(scenes)
 
         assert len(scenes) >= num_processes, (
-            "reduce the number of processes as there "
-            "aren't enough number of scenes"
+            "reduce the number of processes as there " "aren't enough number of scenes"
         )
 
     scene_splits = [[] for _ in range(num_processes)]
@@ -43,11 +48,12 @@ def construct_env_configs(config: Config) -> List[Config]:
         if len(scenes) > 0:
             task_config.DATASET.CONTENT_SCENES = scene_splits[i]
 
-        task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = config.SIMULATOR_GPU_IDS[i % len(config.SIMULATOR_GPU_IDS)]
+        task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = config.SIMULATOR_GPU_IDS[
+            i % len(config.SIMULATOR_GPU_IDS)
+        ]
 
         task_config.freeze()
 
         configs.append(task_config.clone())
 
     return configs
-

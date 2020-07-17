@@ -28,7 +28,7 @@ nav:
 - Changing rewards and losses: overview/changing-rewards-and-losses.md
 - Defining a new model: overview/defining-a-new-model.md
 - Defining a new task: overview/defining-a-new-task.md
-- FAQ: overview/FAQ.md
+#- FAQ: overview/FAQ.md
 - Roadmap: ROADMAP.md
 - Contributing: CONTRIBUTING.md
 - Licence: LICENSE.md

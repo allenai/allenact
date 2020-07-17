@@ -41,8 +41,8 @@ class RolloutStorage:
         }
 
         action_space = actor_critic.action_space
-        num_recurrent_layers = actor_critic.num_recurrent_layers
-        spec = actor_critic.recurrent_hidden_state_size  # actually a memory spec if num_rnn_layers is 0
+        num_recurrent_layers = actor_critic.num_recurrent_layers if "num_recurrent_layers" in dir(actor_critic) else 0
+        spec = actor_critic.recurrent_hidden_state_size if "num_recurrent_layers" in dir(actor_critic) else 0  # actually a memory spec if num_rnn_layers is < 0
         self.memory: Dict[str, Tuple[torch.Tensor, int]] = self.create_memory(num_recurrent_layers, spec, num_processes)
 
         self.observations: Dict[str, Tuple[torch.Tensor, int]] = Memory()
@@ -75,7 +75,7 @@ class RolloutStorage:
             spec: Union[Dict[str, Tuple[Tuple[int, ...], int, torch.dtype]], int],
             num_processes: int
     ):
-        if num_recurrent_layers > 0:
+        if num_recurrent_layers >= 0:
             assert isinstance(spec, int)
             all_dims = [self.num_steps + 1, num_recurrent_layers, num_processes, spec]
             tensor = torch.zeros(*all_dims, dtype=torch.float32)
@@ -218,11 +218,14 @@ class RolloutStorage:
 
         self.insert_observations(observations, time_step=self.step + 1)
 
-        # Support for single RNN memory
-        if isinstance(memory, torch.Tensor):
-            memory = self.rnn_to_memory(memory)
+        if memory is not None:
+            # Support for single RNN memory
+            if isinstance(memory, torch.Tensor):
+                memory = self.rnn_to_memory(memory)
 
-        self.insert_memory(memory, time_step=self.step + 1)
+            self.insert_memory(memory, time_step=self.step + 1)
+        else:
+            assert self.memory[self.DEFAULT_RNN_MEMORY_NAME].shape[self.DEFAULT_RNN_MEMORY_SAMPLER_AXIS] == 0
 
         self.actions[self.step].copy_(actions)
         self.prev_actions[self.step + 1].copy_(actions)
@@ -235,6 +238,8 @@ class RolloutStorage:
 
     def reshape(self, keep_list: Sequence[int]):
         keep_list = list(keep_list)
+        if self.actions.shape[1] == len(keep_list):
+            return
         for sensor in self.observations:
             self.observations[sensor] = (self.observations[sensor][0][:, keep_list], self.observations[sensor][1])
         memory_index = torch.as_tensor(keep_list, dtype=torch.int64, device=self.masks.device)

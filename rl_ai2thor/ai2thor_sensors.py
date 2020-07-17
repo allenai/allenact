@@ -1,37 +1,18 @@
 from typing import Any, Dict, Optional, List
 
-import PIL
 import gym
 import numpy as np
 import typing
-from PIL import Image
 from torchvision import transforms
 
 from rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
-from rl_ai2thor.ai2thor_tasks import AI2ThorTask
 from rl_ai2thor.object_nav.tasks import ObjectNavTask
 from rl_base.sensor import Sensor
+from rl_base.task import Task
+from utils.tensor_utils import ScaleBothSides
 
 
-class ScaleBothSides(object):
-    """Rescales the input PIL.Image to the given 'width' and `height`.
-
-    Attributes
-        width: new width
-        height: new height
-        interpolation: Default: PIL.Image.BILINEAR
-    """
-
-    def __init__(self, width: int, height: int, interpolation=Image.BILINEAR):
-        self.width = width
-        self.height = height
-        self.interpolation = interpolation
-
-    def __call__(self, img: PIL.Image) -> PIL.Image:
-        return img.resize((self.width, self.height), self.interpolation)
-
-
-class RGBSensorThor(Sensor[AI2ThorEnvironment, AI2ThorTask]):
+class RGBSensorThor(Sensor[AI2ThorEnvironment, Task[AI2ThorEnvironment]]):
     """Sensor for RGB images in AI2-THOR.
 
     Returns from a running AI2ThorEnvironment instance, the current RGB
@@ -119,7 +100,7 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment, AI2ThorTask]):
     def get_observation(
         self,
         env: AI2ThorEnvironment,
-        task: Optional[AI2ThorTask],
+        task: Optional[Task[AI2ThorEnvironment]],
         *args: Any,
         **kwargs: Any
     ) -> Any:

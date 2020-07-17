@@ -79,7 +79,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         num_mini_batch = 1 if not torch.cuda.is_available() else 6
         update_repeats = 4
         num_steps = 128
-        log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
+        metric_accumulate_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
         save_interval = 10000 if cls.EASY else 500000
         gamma = 0.99
         use_gae = True
@@ -88,7 +88,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
         return TrainingPipeline(
             save_interval=save_interval,
-            log_interval=log_interval,
+            metric_accumulate_interval=metric_accumulate_interval,
             optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
@@ -106,7 +106,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             gae_lambda=gae_lambda,
             advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
-                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps,),
+                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps,),
             ],
             lr_scheduler_builder=Builder(
                 LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
@@ -132,7 +132,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return ObjectNavBaselineActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            action_space=gym.spaces.Discrete(len(ObjectNavTask.class_action_names())),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             goal_sensor_uuid="goal_object_type_ind",
             hidden_size=512,
@@ -179,7 +179,9 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             "env_args": self.ENV_ARGS,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(
+                len(ObjectNavTask.class_action_names())
+            ),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
         }

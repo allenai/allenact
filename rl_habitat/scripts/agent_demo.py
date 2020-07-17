@@ -5,10 +5,10 @@ import cv2
 from pyquaternion import Quaternion
 
 
-FORWARD_KEY="w"
-LEFT_KEY="a"
-RIGHT_KEY="d"
-FINISH="f"
+FORWARD_KEY = "w"
+LEFT_KEY = "a"
+RIGHT_KEY = "d"
+FINISH = "f"
 
 
 def transform_rgb_bgr(image):
@@ -18,14 +18,14 @@ def transform_rgb_bgr(image):
 def agent_demo():
     config = habitat.get_config("habitat/habitat-api/configs/tasks/pointnav.yaml")
     config.defrost()
-    config.DATASET.DATA_PATH = "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
-    config.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
+    config.DATASET.DATA_PATH = (
+        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
+    )
+    config.DATASET.SCENES_DIR = "habitat/habitat-api/data/scene_datasets/"
     config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = 0
     config.SIMULATOR.TURN_ANGLE = 45
     config.freeze()
-    env = habitat.Env(
-        config=config
-    )
+    env = habitat.Env(config=config)
 
     print("Environment creation successful")
     observations = env.reset()

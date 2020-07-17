@@ -90,14 +90,14 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         return self._took_end_action
 
     @classmethod
-    def action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
         return cls._actions
 
     def close(self) -> None:
         self.env.stop()
 
     def _step(self, action: int) -> RLStepResult:
-        action_str = self.action_names()[action]
+        action_str = self.class_action_names()[action]
 
         if action_str == END:
             self._took_end_action = True
@@ -149,11 +149,11 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
         else:
             return {"success": self._success, **super(ObjectNavTask, self).metrics()}
 
-    def query_expert(self) -> Tuple[int, bool]:
+    def query_expert(self, **kwargs) -> Tuple[int, bool]:
         target = self.task_info["object_type"]
 
         if self._is_goal_object_visible():
-            return self.action_names().index(END), True
+            return self.class_action_names().index(END), True
         else:
             key = (self.env.scene_name, target)
             if self._subsampled_locations_from_which_obj_visible is None:
@@ -239,7 +239,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
 
             next_key_on_shortest_path = paths[shortest_path_ind][1]
             return (
-                self.action_names().index(
+                self.class_action_names().index(
                     self.env.action_transitioning_between_keys(
                         current_loc_key, next_key_on_shortest_path
                     )

@@ -77,15 +77,15 @@ class MyExperimentConfig(rl_base.experiment_config.ExperimentConfig):
                     teacher_forcing=utils.experiment_utils.LinearDecay(
                         startp=1.0, endp=0.0, steps=dagger_steps,
                     ),
-                    end_criterion=dagger_steps,
+                    max_stage_steps=dagger_steps,
                 ),
                 utils.experiment_utils.PipelineStage(
                     loss_names=["ppo_loss", "imitation_loss"],
-                    end_criterion=ppo_steps
+                    max_stage_steps=ppo_steps
                 ),
                 utils.experiment_utils.PipelineStage(
                     loss_names=["ppo_loss"],
-                    end_criterion=ppo_steps2,
+                    max_stage_steps=ppo_steps2,
                 ),
             ],
         )

@@ -15,6 +15,8 @@ from tensorboardX.utils import _prepare_video as tbx_prepare_video
 from tensorboardX.proto.summary_pb2 import Summary as TBXSummary
 from moviepy import editor as mpy
 from moviepy.editor import concatenate_videoclips
+import PIL
+from PIL import Image
 
 from utils.system import LOGGER
 
@@ -324,3 +326,21 @@ def process_video(render, max_clip_len=500, max_video_len=-1):
         result = None
 
     return result
+
+
+class ScaleBothSides(object):
+    """Rescales the input PIL.Image to the given 'width' and `height`.
+
+    Attributes
+        width: new width
+        height: new height
+        interpolation: Default: PIL.Image.BILINEAR
+    """
+
+    def __init__(self, width: int, height: int, interpolation=Image.BILINEAR):
+        self.width = width
+        self.height = height
+        self.interpolation = interpolation
+
+    def __call__(self, img: PIL.Image) -> PIL.Image:
+        return img.resize((self.width, self.height), self.interpolation)

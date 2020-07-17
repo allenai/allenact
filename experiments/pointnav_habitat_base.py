@@ -1,4 +1,5 @@
 from typing import Dict, Any, List, Optional
+from abc import abstractmethod
 
 import gym
 import torch
@@ -23,11 +24,17 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 
 
 class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
-    """A Point Navigation experiment configuraqtion in Habitat"""
+    """A Point Navigation experiment configuraqtion in Habitat."""
 
-    TRAIN_SCENES = "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
-    VALID_SCENES = "habitat/habitat-api/data/datasets/pointnav/gibson/v1/val/val.json.gz"
-    TEST_SCENES = "habitat/habitat-api/data/datasets/pointnav/gibson/v1/test/test.json.gz"
+    TRAIN_SCENES = (
+        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
+    )
+    VALID_SCENES = (
+        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/val/val.json.gz"
+    )
+    TEST_SCENES = (
+        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/test/test.json.gz"
+    )
 
     SCREEN_SIZE = 256
     MAX_STEPS = 500
@@ -67,28 +74,28 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
         "target_coordinates_ind",
     ]
 
-    CONFIG = habitat.get_config('configs/gibson.yaml')
+    CONFIG = habitat.get_config("rl_habitat/configs/gibson.yaml")
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
     CONFIG.SIMULATOR_GPU_IDS = [1, 2, 3, 4, 5, 6]
-    CONFIG.DATASET.SCENES_DIR = 'habitat/habitat-api/data/scene_datasets/'
-    CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ['*']
+    CONFIG.DATASET.SCENES_DIR = "habitat/habitat-api/data/scene_datasets/"
+    CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
-    CONFIG.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR']
+    CONFIG.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
     CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = SCREEN_SIZE
     CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = SCREEN_SIZE
     CONFIG.SIMULATOR.TURN_ANGLE = 45
     CONFIG.SIMULATOR.FORWARD_STEP_SIZE = 0.25
     CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS = MAX_STEPS
 
-    CONFIG.TASK.TYPE = 'Nav-v0'
+    CONFIG.TASK.TYPE = "Nav-v0"
     CONFIG.TASK.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
-    CONFIG.TASK.SENSORS = ['POINTGOAL_WITH_GPS_COMPASS_SENSOR']
+    CONFIG.TASK.SENSORS = ["POINTGOAL_WITH_GPS_COMPASS_SENSOR"]
     CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.GOAL_FORMAT = "POLAR"
     CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.DIMENSIONALITY = 2
-    CONFIG.TASK.GOAL_SENSOR_UUID = 'pointgoal_with_gps_compass'
-    CONFIG.TASK.MEASUREMENTS = ['DISTANCE_TO_GOAL', 'SPL']
-    CONFIG.TASK.SPL.TYPE = 'SPL'
+    CONFIG.TASK.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
+    CONFIG.TASK.MEASUREMENTS = ["DISTANCE_TO_GOAL", "SPL"]
+    CONFIG.TASK.SPL.TYPE = "SPL"
     CONFIG.TASK.SPL.SUCCESS_DISTANCE = 0.2
 
     @classmethod
@@ -103,26 +110,30 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
         update_repeats = 4
         num_steps = 128
         save_interval = 1000000
-        log_interval = 10000
+        metric_accumulate_interval = 10000
         gamma = 0.99
         use_gae = True
         gae_lambda = 0.95
         max_grad_norm = 0.5
         return TrainingPipeline(
             save_interval=save_interval,
-            log_interval=log_interval,
+            metric_accumulate_interval=metric_accumulate_interval,
             optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={"use_clipped_value_loss": True}, default=PPOConfig,)},
+            named_losses={
+                "ppo_loss": Builder(
+                    PPO, kwargs={"use_clipped_value_loss": True}, default=PPOConfig,
+                )
+            },
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
             advance_scene_rollout_period=None,
             pipeline_stages=[
-                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps)
+                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps)
             ],
             lr_scheduler_builder=Builder(
                 LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
@@ -176,7 +187,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return PointNavActorCriticResNet50GRU(
-            action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
+            action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
@@ -188,6 +199,11 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
         return PointNavTaskSampler(**kwargs)
 
+    @classmethod
+    @abstractmethod
+    def train_config(cls, process_ind: int) -> habitat.Config:
+        raise NotImplementedError
+
     def train_task_sampler_args(
         self,
         process_ind: int,
@@ -196,12 +212,12 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        config = self.TRAIN_CONFIGS[process_ind]
+        config = self.train_config(process_ind)
         return {
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
         }
 
@@ -221,7 +237,7 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
         }
 
@@ -241,6 +257,6 @@ class PointNavHabitatBaseExperimentConfig(ExperimentConfig):
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
         }

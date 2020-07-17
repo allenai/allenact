@@ -44,11 +44,11 @@ class ResNetEmbedder(nn.Module):
 
 
 class ResnetPreProcessorHabitat(Preprocessor):
-    """Preprocess RGB image using a ResNet model."""
+    """Preprocess RGB or depth image using a ResNet model."""
 
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         def f(x, k):
-            assert k in x, "{} must be set in ResnetPreProcessorThor".format(k)
+            assert k in x, "{} must be set in ResnetPreProcessorHabitat".format(k)
             return x[k]
 
         def optf(x, k, default):
@@ -97,7 +97,7 @@ class ResnetPreProcessorHabitat(Preprocessor):
 
         super().__init__(config, *args, **kwargs)
 
-    def to(self, device: torch.device) -> "ResnetPreProcessorThor":
+    def to(self, device: torch.device) -> "ResnetPreProcessorHabitat":
         if not self.parallel:
             self.resnet = self.resnet.to(device)
             self.device = device

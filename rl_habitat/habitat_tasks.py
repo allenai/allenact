@@ -1,3 +1,5 @@
+# TODO: @klemenkotar please fix all type errors
+
 from typing import Tuple, List, Dict, Any, Optional
 
 import gym
@@ -50,15 +52,6 @@ class HabitatTask(Task[HabitatEnvironment]):
     def last_action_success(self, value: Optional[bool]):
         self._last_action_success = value
 
-    def _step(self, action: int) -> RLStepResult:
-        self._last_action_ind = action
-        self.last_action = self.action_names()[action]
-        self.last_action_success = None
-        step_result = super(HabitatTask, self).step(action=action)
-        step_result.info["action"] = self._last_action_ind
-        step_result.info["action_success"] = self.last_action_success
-        return step_result
-
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         if mode == "rgb":
             return self.env.current_frame["rgb"]
@@ -86,7 +79,7 @@ class PointNavTask(Task[HabitatTask]):
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
-        self.last_geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
+        self.last_geodesic_distance = self.env.env.get_metrics()["distance_to_goal"]
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
@@ -99,14 +92,14 @@ class PointNavTask(Task[HabitatTask]):
         return self.env.env.episode_over
 
     @classmethod
-    def action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls) -> Tuple[str, ...]:
         return cls._actions
 
     def close(self) -> None:
         self.env.stop()
 
     def _step(self, action: int) -> RLStepResult:
-        action_str = self.action_names()[action]
+        action_str = self.class_action_names()[action]
 
         self.env.step({"action": action_str})
 
@@ -127,16 +120,16 @@ class PointNavTask(Task[HabitatTask]):
 
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         assert mode in ["rgb", "depth"], "only rgb and depth rendering is implemented"
-        return self.env.current_frame['rgb']
+        return self.env.current_frame["rgb"]
 
     def _is_goal_in_range(self) -> bool:
         # The habitat simulator will return an SPL value of 0.0 whenever the goal is not in range
-        return bool(self.env.env.get_metrics()['spl'])
+        return bool(self.env.env.get_metrics()["spl"])
 
     def judge(self) -> float:
         reward = -0.01
 
-        geodesic_distance = self.env.env.get_metrics()['distance_to_goal']
+        geodesic_distance = self.env.env.get_metrics()["distance_to_goal"]
         delta_distance_reward = self.last_geodesic_distance - geodesic_distance
         reward += delta_distance_reward
         self.last_geodesic_distance = geodesic_distance
@@ -157,14 +150,14 @@ class PointNavTask(Task[HabitatTask]):
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
-                "spl": _metrics['spl'] if _metrics['spl'] is not None else 0.0
+                "spl": _metrics["spl"] if _metrics["spl"] is not None else 0.0,
             }
             self._rewards = []
             return metrics
 
-    def query_expert(self) -> Tuple[int, bool]:
+    def query_expert(self, **kwargs) -> Tuple[int, bool]:
         if self._is_goal_in_range():
-            return self.action_names().index(END), True
+            return self.class_action_names().index(END), True
 
         target = self.task_info["target"]
         current_location = self.env.get_location()
@@ -195,8 +188,12 @@ class ObjectNavTask(Task[HabitatTask]):
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
-        self.last_geodesic_distance = self.env.get_current_episode().info['geodesic_distance']
-        self.last_distance_to_goal = self.env.get_current_episode().info['geodesic_distance'] #self.env.env.get_metrics()["distance_to_goal"]
+        self.last_geodesic_distance = self.env.get_current_episode().info[
+            "geodesic_distance"
+        ]
+        self.last_distance_to_goal = self.env.get_current_episode().info[
+            "geodesic_distance"
+        ]  # self.env.env.get_metrics()["distance_to_goal"]
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
@@ -209,14 +206,14 @@ class ObjectNavTask(Task[HabitatTask]):
         return self.env.env.episode_over
 
     @classmethod
-    def action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls) -> Tuple[str, ...]:
         return cls._actions
 
     def close(self) -> None:
         self.env.stop()
 
     def _step(self, action: int) -> RLStepResult:
-        action_str = self.action_names()[action]
+        action_str = self.class_action_names()[action]
 
         self.env.step({"action": action_str})
 
@@ -237,24 +234,22 @@ class ObjectNavTask(Task[HabitatTask]):
 
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         assert mode in ["rgb", "depth"], "only rgb and depth rendering is implemented"
-        return self.env.current_frame['rgb']
+        return self.env.current_frame["rgb"]
 
     def _is_goal_in_range(self) -> bool:
         # The habitat simulator will return an SPL value of 0.0 whenever the goal is not in range
-        return bool(self.env.env.get_metrics()['spl'])
+        return bool(self.env.env.get_metrics()["spl"])
 
     def judge(self) -> float:
         reward = -0.01
 
-        # distance_to_goal = self.env.get_distance_to_target() # self.env.env.get_metrics()["distance_to_goal"]
         distance_to_goal = self.env.env.get_metrics()["distance_to_goal"]
-        if distance_to_goal in [float('-inf'), float('inf')] or np.isnan(distance_to_goal):
+        if distance_to_goal in [float("-inf"), float("inf")] or np.isnan(
+            distance_to_goal
+        ):
             distance_to_goal = self.last_distance_to_goal
         delta_distance_reward = self.last_distance_to_goal - distance_to_goal
-        # delta_distance_reward = self.last_distance_to_goal- distance_to_goal
-        # print("Geodesic Distance:", geodesic_distance, "--- Last Geodesic Distance:", self.last_geodesic_distance, "--- Delta:", delta_distance_reward)
         reward += delta_distance_reward
-        # self.last_distance_to_goal = distance_to_goal
         self.last_distance_to_goal = distance_to_goal
 
         if self._took_end_action:
@@ -265,7 +260,6 @@ class ObjectNavTask(Task[HabitatTask]):
         return float(reward)
 
     def metrics(self) -> Dict[str, Any]:
-        # print("Self Rewards:", self._rewards)
         if not self.is_done():
             return {}
         else:
@@ -274,14 +268,14 @@ class ObjectNavTask(Task[HabitatTask]):
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
-                "spl": _metrics['spl'] if _metrics['spl'] is not None else 0.0
+                "spl": _metrics["spl"] if _metrics["spl"] is not None else 0.0,
             }
             self._rewards = []
             return metrics
 
-    def query_expert(self) -> Tuple[int, bool]:
+    def query_expert(self, **kwargs) -> Tuple[int, bool]:
         if self._is_goal_in_range():
-            return self.action_names().index(END), True
+            return self.class_action_names().index(END), True
 
         target = self.task_info["target"]
         current_location = self.env.get_location()
