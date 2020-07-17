@@ -7,9 +7,10 @@
 import time
 from multiprocessing.connection import Connection
 from multiprocessing.context import BaseContext
+import queue
 from queue import Queue
 from threading import Thread
-from typing import Any, Callable, List, Optional, Sequence, Set, Tuple, Union, Dict
+from typing import Any, Callable, List, Optional, Sequence, Set, Tuple, Union, Dict, Generator
 import logging
 
 import numpy as np
@@ -22,8 +23,7 @@ from rl_base.task import TaskSampler
 from setproctitle import setproctitle as ptitle
 
 from utils.tensor_utils import tile_images
-import queue
-from typing import Generator
+from utils.system import init_logging, LOGGER
 
 try:
     # Use torch.multiprocessing if we can.
@@ -34,8 +34,8 @@ try:
 except ImportError:
     import multiprocessing as mp  # type: ignore
 
-LOGGER = logging.getLogger("embodiedrl")
 DEFAULT_MP_CONTEXT_TYPE = "forkserver"
+
 
 STEP_COMMAND = "step"
 NEXT_TASK_COMMAND = "next_task"
@@ -44,7 +44,9 @@ CLOSE_COMMAND = "close"
 OBSERVATION_SPACE_COMMAND = "observation_space"
 ACTION_SPACE_COMMAND = "action_space"
 CALL_COMMAND = "call"
+SAMPLER_COMMAND = "call_sampler"
 ATTR_COMMAND = "attr"
+SAMPLER_ATTR_COMMAND = "sampler_attr"
 # EPISODE_COMMAND = "current_episode"
 RESET_COMMAND = "reset"
 SEED_COMMAND = "seed"
@@ -92,6 +94,7 @@ class VectorSampledTasks(object):
         auto_resample_when_done: bool = True,
         multiprocessing_start_method: Optional[str] = "forkserver",
         mp_ctx: Optional[BaseContext] = None,
+        metrics_out_queue: mp.Queue = None,
     ) -> None:
 
         self._is_waiting = False
@@ -114,7 +117,7 @@ class VectorSampledTasks(object):
             self._mp_ctx = mp.get_context(multiprocessing_start_method)
         else:
             self._mp_ctx = typing.cast(BaseContext, mp_ctx)
-        self.metrics_out_queue = self._mp_ctx.Queue()
+        self.metrics_out_queue = metrics_out_queue or self._mp_ctx.Queue()
         self._workers = []
         (
             self._connection_read_fns,
@@ -195,6 +198,8 @@ class VectorSampledTasks(object):
 
         ptitle("VectorSampledTask: {}".format(worker_id))
 
+        init_logging()
+
         task_sampler = make_sampler_fn(**sampler_fn_args)
         current_task = task_sampler.next_task()
 
@@ -247,9 +252,23 @@ class VectorSampledTasks(object):
                         result = getattr(current_task, function_name)(*function_args)
                     connection_write_fn(result)
 
+                elif command == SAMPLER_COMMAND:
+                    function_name, function_args = data
+                    if function_args is None or len(function_args) == 0:
+                        result = getattr(task_sampler, function_name)()
+                    else:
+                        result = getattr(task_sampler, function_name)(*function_args)
+                    connection_write_fn(result)
+
                 elif command == ATTR_COMMAND:
                     property_name = data
                     result = getattr(current_task, property_name)
+                    connection_write_fn(result)
+
+                elif command == SAMPLER_ATTR_COMMAND:
+                    property_name = data
+                    result = getattr(task_sampler, property_name)
+                    # LOGGER.debug("task_sampler {} {}".format(property_name, result))
                     connection_write_fn(result)
 
                 # TODO: update CALL_COMMAND for getting attribute like this
@@ -291,6 +310,7 @@ class VectorSampledTasks(object):
             worker_conn, parent_conn, current_sampler_fn_args = stuff  # type: ignore
             LOGGER.info(
                 "Starting {}-th worker with args {}".format(id, current_sampler_fn_args)
+                # "Starting {}-th worker".format(id)
             )
             ps = self._mp_ctx.Process(  # type: ignore
                 target=self._task_sampling_loop_worker,
@@ -500,7 +520,7 @@ class VectorSampledTasks(object):
         self._paused = []
 
     def call_at(
-        self, index: int, function_name: str, function_args: Optional[List[Any]] = None
+        self, index: int, function_name: str, function_args: Optional[List[Any]] = None, call_sampler: bool=False
     ) -> Any:
         """Calls a function (which is passed by name) on the selected task and
         returns the result.
@@ -517,7 +537,7 @@ class VectorSampledTasks(object):
         """
         self._is_waiting = True
         self._connection_write_fns[index](
-            (CALL_COMMAND, (function_name, function_args))
+            (CALL_COMMAND if not call_sampler else SAMPLER_COMMAND, (function_name, function_args))
         )
         result = self._connection_read_fns[index]()
         self._is_waiting = False
@@ -527,6 +547,7 @@ class VectorSampledTasks(object):
         self,
         function_names: Union[str, List[str]],
         function_args_list: Optional[List[Any]] = None,
+        call_sampler: bool = False,
     ) -> List[Any]:
         """Calls a list of functions (which are passed by name) on the
         corresponding task (by index).
@@ -551,14 +572,14 @@ class VectorSampledTasks(object):
         assert len(function_names) == len(function_args_list)
         func_args = zip(function_names, function_args_list)
         for write_fn, func_args_on in zip(self._connection_write_fns, func_args):
-            write_fn((CALL_COMMAND, func_args_on))
+            write_fn((CALL_COMMAND if not call_sampler else SAMPLER_COMMAND, func_args_on))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
         self._is_waiting = False
         return results
 
-    def attr_at(self, index: int, attr_name: str) -> Any:
+    def attr_at(self, index: int, attr_name: str, call_sampler: bool=False) -> Any:
         """Gets the attribute (specified by name) on the selected task and
         returns it.
 
@@ -572,12 +593,12 @@ class VectorSampledTasks(object):
          Result of calling the function.
         """
         self._is_waiting = True
-        self._connection_write_fns[index]((ATTR_COMMAND, attr_name))
+        self._connection_write_fns[index]((ATTR_COMMAND if not call_sampler else SAMPLER_ATTR_COMMAND, attr_name))
         result = self._connection_read_fns[index]()
         self._is_waiting = False
         return result
 
-    def attr(self, attr_names: Union[List[str], str]) -> List[Any]:
+    def attr(self, attr_names: Union[List[str], str], call_sampler: bool=False) -> List[Any]:
         """Gets the attributes (specified by name) on the tasks.
 
         # Parameters
@@ -594,21 +615,27 @@ class VectorSampledTasks(object):
             attr_names = [attr_names] * self.num_unpaused_tasks
 
         for write_fn, attr_name in zip(self._connection_write_fns, attr_names):
-            write_fn((ATTR_COMMAND, attr_name))
+            write_fn((ATTR_COMMAND if not call_sampler else SAMPLER_ATTR_COMMAND, attr_name))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
         self._is_waiting = False
         return results
 
-    def render(self, mode: str = "human", *args, **kwargs) -> Union[np.ndarray, None]:
+    def render(self, mode: str = "human", *args, **kwargs) -> Union[np.ndarray, None, List[np.ndarray]]:
         """Render observations from all Tasks in a tiled image."""
         for write_fn in self._connection_write_fns:
             write_fn((RENDER_COMMAND, (args, {"mode": "rgb", **kwargs})))
-        images = [read_fn() for read_fn in self._connection_read_fns]
+        images: List[np.ndarray] = [read_fn() for read_fn in self._connection_read_fns]
+
+        if mode == "raw_rgb_list":
+            return images
 
         for index, _, _, _ in reversed(self._paused):
             images.insert(index, np.zeros_like(images[0]))
+
+        if mode == "rgb_list":
+            return images
 
         tile = tile_images(images)
         if mode == "human":
@@ -1108,18 +1135,21 @@ class ThreadedVectorSampledTasks(VectorSampledTasks):
             *[(Queue(), Queue()) for _ in range(self._num_processes)]
         )
         self._workers = []
-        # noinspection PyShadowingBuiltins
         for id, stuff in enumerate(
-            zip(parent_read_queues, parent_write_queues, sampler_fn_args)
+                zip(parent_read_queues, parent_write_queues, sampler_fn_args)
         ):
-            parent_read_queue, parent_write_queue, sampler_fn_args = stuff  # type: ignore
+            parent_read_queue, parent_write_queue, current_sampler_fn_args = stuff  # type: ignore
+            LOGGER.info(
+                "Starting {}-th worker with args {}".format(id, current_sampler_fn_args)
+            )
             thread = Thread(
                 target=self._task_sampling_loop_worker,
                 args=(
+                    id,
                     parent_write_queue.get,
                     parent_read_queue.put,
                     make_sampler_fn,
-                    sampler_fn_args,
+                    current_sampler_fn_args,
                     self._auto_resample_when_done,
                     self.metrics_out_queue,
                 ),

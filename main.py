@@ -13,8 +13,7 @@ from setproctitle import setproctitle as ptitle
 
 from onpolicy_sync.engine import OnPolicyTrainer, OnPolicyTester
 from rl_base.experiment_config import ExperimentConfig
-
-logger = logging.getLogger("embodiedrl")
+from utils.system import init_logging, LOGGER
 
 
 def _get_args():
@@ -149,53 +148,24 @@ def _load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
     return config, sources
 
 
-def _init_logging(log_format="default", log_level="debug"):
-    if log_level == "debug":
-        base_logging_level = logging.DEBUG
-    elif log_level == "info":
-        base_logging_level = logging.INFO
-    elif log_level == "warning":
-        base_logging_level = logging.WARNING
-    else:
-        raise TypeError("%s is an incorrect logging type!", log_level)
-    if len(logger.handlers) == 0:
-        ch = logging.StreamHandler()
-        logger.setLevel(base_logging_level)
-        ch.setLevel(base_logging_level)
-        if log_format == "default":
-            formatter = logging.Formatter(
-                fmt="%(asctime)s: %(levelname)s: %(message)s \t[%(filename)s: %(lineno)d]",
-                datefmt="%m/%d %H:%M:%S",
-            )
-        elif log_format == "defaultMilliseconds":
-            formatter = logging.Formatter(
-                fmt="%(asctime)s: %(levelname)s: %(message)s \t[%(filename)s: %(lineno)d]"
-            )
-        else:
-            formatter = logging.Formatter(fmt=log_format, datefmt="%m/%d %H:%M:%S")
-
-        ch.setFormatter(formatter)
-        logger.addHandler(ch)
-
-
 def _download_ai2thor():
     from ai2thor.controller import Controller
 
     try:
-        c = Controller(download_only=True)
+        c = Controller(download_only=True, include_private_scenes=True)
         c.stop_unity()
     except Exception as _:
         pass
 
 
 def main():
-    _init_logging()
+    init_logging()
 
     args = _get_args()
 
-    logger.info("Running with args {}".format(args))
+    LOGGER.info("Running with args {}".format(args))
 
-    # _download_ai2thor()
+    _download_ai2thor()
 
     ptitle("Master: {}".format("Training" if not args.test_date != "" else "Testing"))
 

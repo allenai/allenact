@@ -1,8 +1,7 @@
-import logging
 import random
-import warnings
 from typing import List, Dict, Optional, Any, Union
 from collections import OrderedDict
+import copy
 
 import gym
 
@@ -11,8 +10,7 @@ from rl_ai2thor.object_nav.tasks import ObjectNavTask
 from rl_base.sensor import Sensor
 from rl_base.task import TaskSampler
 from utils.experiment_utils import set_deterministic_cudnn, set_seed
-
-LOGGER = logging.getLogger("embodiedrl")
+from utils.system import LOGGER
 
 
 class ObjectNavTaskSampler(TaskSampler):
@@ -176,7 +174,7 @@ class ObjectNavTaskSampler(TaskSampler):
                 " objects of any of the types {}.".format(scene, self.object_types)
             )
 
-        task_info["start_pose"] = pose
+        task_info["start_pose"] = copy.copy(pose)
 
         self._last_sampled_task = ObjectNavTask(
             env=self.env,

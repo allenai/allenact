@@ -84,7 +84,6 @@ class PointNavTaskSampler(TaskSampler):
         task_info = {
             "target": target,
             "distance_to_goal": self.distance_to_goal,
-            "actions": [],
         }
 
         self._last_sampled_task = PointNavTask(
@@ -181,7 +180,6 @@ class ObjectNavTaskSampler(TaskSampler):
         task_info = {
             "target": target,
             "distance_to_goal": self.distance_to_goal,
-            "actions": [],
         }
 
         self._last_sampled_task = ObjectNavTask(

@@ -287,3 +287,109 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
             ActorCriticOutput(distributions=distributions, values=values, extras={}),
             cast(torch.FloatTensor, rnn_hidden_states),
         )
+
+
+class ObjectNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
+    def __init__(
+        self,
+        action_space: gym.spaces.Discrete,
+        observation_space: SpaceDict,
+        goal_sensor_uuid: str,
+        hidden_size=512,
+        object_type_embedding_dim=8,
+        trainable_masked_hidden_state: bool = False,
+        num_rnn_layers=1,
+        rnn_type='GRU'
+    ):
+        super().__init__(action_space=action_space, observation_space=observation_space)
+
+        self.goal_sensor_uuid = goal_sensor_uuid
+        self._n_object_types = self.observation_space.spaces[self.goal_sensor_uuid].n
+        self.recurrent_hidden_state_size = hidden_size
+        self.object_type_embedding_size = object_type_embedding_dim
+
+        self.visual_encoder = nn.Sequential(
+            nn.Conv2d(2048, 2048, (1, 1)),
+            nn.ReLU(),
+            nn.Conv2d(2048, 2048, (1, 1)),
+            nn.ReLU(),
+            nn.Conv2d(2048, 1024, (1, 1)),
+            nn.ReLU(),
+            nn.Conv2d(1024, 1024, (1, 1)),
+            nn.ReLU(),
+            nn.Conv2d(1024, 1024, (1, 1)),
+            nn.ReLU(),
+            nn.Conv2d(1024, 32, (1, 1)),
+            nn.ReLU(),
+            # nn.AdaptiveAvgPool2d((1,1)),
+            nn.Flatten(),
+            nn.Linear(2048, 512)
+        )
+
+        self.state_encoder = RNNStateEncoder(
+            (0 if self.is_blind else self.recurrent_hidden_state_size)
+            + object_type_embedding_dim,
+            self.recurrent_hidden_state_size,
+            trainable_masked_hidden_state=trainable_masked_hidden_state,
+            num_layers=num_rnn_layers,
+            rnn_type=rnn_type
+        )
+
+        self.actor = LinearActorHead(
+            self.recurrent_hidden_state_size, action_space.n
+        )
+        self.critic = LinearCriticHead(
+            self.recurrent_hidden_state_size
+        )
+
+        self.object_type_embedding = nn.Embedding(
+            num_embeddings=self._n_object_types,
+            embedding_dim=object_type_embedding_dim,
+        )
+
+        self.train()
+
+    @property
+    def output_size(self):
+        return self.recurrent_hidden_state_size
+
+    @property
+    def is_blind(self):
+        return False
+
+    @property
+    def num_recurrent_layers(self):
+        return self.state_encoder.num_recurrent_layers
+
+    def get_object_type_encoding(
+        self, observations: Dict[str, torch.FloatTensor]
+    ) -> torch.FloatTensor:
+        """Get the object type encoding from input batched observations."""
+        return self.object_type_embedding(
+            observations[self.goal_sensor_uuid].to(torch.int64)
+        )
+
+    def recurrent_hidden_state_size(self):
+        return self._hidden_size
+
+    def forward(self, observations, rnn_hidden_states, prev_actions, masks):
+        target_encoding = self.get_object_type_encoding(observations)
+        x = [target_encoding]
+
+        embs = []
+        if "rgb_resnet" in observations:
+            embs.append(self.visual_encoder(observations["rgb_resnet"]))
+        if "depth_resnet" in observations:
+            embs.append(self.visual_encoder(observations["depth_resnet"]))
+        perception_emb = torch.cat(embs, dim=1)
+        x = [perception_emb] + x
+
+        x_cat = cast(torch.FloatTensor, torch.cat(x, dim=1))  # type: ignore
+        x_out, rnn_hidden_states = self.state_encoder(x_cat, rnn_hidden_states, masks)
+
+        return (
+            ActorCriticOutput(
+                distributions=self.actor(x_out), values=self.critic(x_out), extras={}
+            ),
+            rnn_hidden_states,
+        )
