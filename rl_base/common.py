@@ -121,6 +121,7 @@ class Memory(Dict):
         for name in self:
             sampler_dim = self.sampler_dim(name)
             tensor = self.tensor(name)
+            assert 0 <= min(keep) and max(keep) < tensor.shape[sampler_dim]
             if tensor.shape[sampler_dim] > len(keep):
                 tensor = tensor.index_select(
                     dim=sampler_dim,
