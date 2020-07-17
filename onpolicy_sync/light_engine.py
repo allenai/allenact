@@ -576,7 +576,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         self.tstate: OnPolicyTrainer.TrainState = OnPolicyTrainer.TrainState(
             save_interval=self.training_pipeline.save_interval,
-            log_interval=self.training_pipeline.log_interval,
+            log_interval=self.training_pipeline.metric_accumulate_interval,
         )
 
         self.distributed_barrier = distributed_barrier
@@ -1002,7 +1002,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     losses=stage_losses,
                     loss_weights=stage_weights,
                     steps_in_rollout=self._stage_value(stage, "num_steps"),
-                    stage_task_steps=self._stage_value(stage, "end_criterion"),
+                    stage_task_steps=self._stage_value(stage, "max_stage_steps"),
                     update_epochs=self._stage_value(stage, "update_repeats"),
                     update_mini_batches=self._stage_value(stage, "num_mini_batch"),
                     gamma=self._stage_value(stage, "gamma"),

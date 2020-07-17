@@ -109,8 +109,11 @@ class PointNavTask(Task[RoboThorEnvironment]):
     def reached_terminal_state(self) -> bool:
         return self._took_end_action
 
+    # @classmethod
+    # def action_names(cls) -> Tuple[str, ...]:
+    #     return cls._actions
     @classmethod
-    def action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
         return cls._actions
 
     def close(self) -> None:
@@ -320,7 +323,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         return self._took_end_action
 
     @classmethod
-    def action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
         return cls._actions
 
     def close(self) -> None:

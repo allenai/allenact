@@ -4,7 +4,7 @@ import collections.abc
 import copy
 import random
 import typing
-from typing import NamedTuple, Dict, Any, Union, Iterator, Optional, List
+from typing import NamedTuple, Dict, Any, Union, Iterator, Optional, List, Tuple
 
 import numpy as np
 import torch
