@@ -165,7 +165,9 @@ class ScalarMeanTracker(object):
 
     @property
     def empty(self):
-        assert len(self._sums) == len(self._counts), "Mismatched length of _sums {} and _counts {}".format(
+        assert len(self._sums) == len(
+            self._counts
+        ), "Mismatched length of _sums {} and _counts {}".format(
             len(self._sums), len(self._counts)
         )
         return len(self._sums) == 0
@@ -220,7 +222,7 @@ def set_deterministic_cudnn() -> None:
         torch.backends.cudnn.benchmark = False  # type: ignore
 
 
-def set_seed(seed: Optional[int]=None) -> None:
+def set_seed(seed: Optional[int] = None) -> None:
     """Set seeds for multiple (cpu) sources of randomness.
 
     Sets seeds for (cpu) `pytorch`, base `random`, and `numpy`.

@@ -131,7 +131,9 @@ class Task(Generic[EnvType]):
         # TODO: Rather than cloning should be increment the step
         #   count before running `self._step(...)`? Alternatively
         #   we can make RLStepResult mutable.
-        return sr.clone({"done": sr.done or self.is_done()})  # TODO Unnecessary if we're happy with pre-incrementing step counter
+        return sr.clone(
+            {"done": sr.done or self.is_done()}
+        )  # TODO Unnecessary if we're happy with pre-incrementing step counter
 
     @abstractmethod
     def _step(self, action: int) -> RLStepResult:

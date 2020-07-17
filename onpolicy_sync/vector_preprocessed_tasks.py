@@ -20,7 +20,10 @@ import torch.multiprocessing as mp
 from rl_base.common import RLStepResult
 from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
-from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks, ThreadedVectorSampledTasks
+from onpolicy_sync.vector_sampled_tasks import (
+    VectorSampledTasks,
+    ThreadedVectorSampledTasks,
+)
 from utils.tensor_utils import tile_images, batch_observations
 from utils.system import init_logging, LOGGER
 
@@ -166,7 +169,9 @@ class VectorPreprocessedTasks(object):
         for read_fn in self._connection_read_fns:
             self.action_spaces += read_fn()
 
-        self._original_id: List[int] = list(range(self._num_processes))  # when pause, pop item from _original_id
+        self._original_id: List[int] = list(
+            range(self._num_processes)
+        )  # when pause, pop item from _original_id
 
     @property
     def num_unpaused_tasks(self) -> int:
@@ -202,7 +207,7 @@ class VectorPreprocessedTasks(object):
         mp_ctx: BaseContext,
         child_pipe: Optional[Connection] = None,
         parent_pipe: Optional[Connection] = None,
-        vectorized_class: Any = VectorSampledTasks
+        vectorized_class: Any = VectorSampledTasks,
     ) -> None:
         """process worker for creating and interacting with the
         Tasks/TaskSampler."""
@@ -217,7 +222,7 @@ class VectorPreprocessedTasks(object):
             multiprocessing_start_method=None,
             mp_ctx=mp_ctx,
             auto_resample_when_done=auto_resample_when_done,
-            metrics_out_queue=metrics_out_queue
+            metrics_out_queue=metrics_out_queue,
         )
 
         def update_observations(observations):
@@ -251,7 +256,9 @@ class VectorPreprocessedTasks(object):
 
             npaused, keep, batched_observations = _remove_paused(observations)
             if len(keep) > 0:
-                batched_observations = observation_set.get_observations(batched_observations)
+                batched_observations = observation_set.get_observations(
+                    batched_observations
+                )
                 unbatched_obs = unbatch_observations(batched_observations, len(keep))
                 for it, pos in enumerate(keep):
                     observations[pos] = unbatched_obs[it]
@@ -265,19 +272,34 @@ class VectorPreprocessedTasks(object):
                 if command == STEP_COMMAND:
                     if vector_task_sampler.num_unpaused_tasks == 0:
                         connection_write_fn([])  # empty list
-                        assert len(data[1]) == 0, "Passing actions to manager with 0 unpaused tasks"
+                        assert (
+                            len(data[1]) == 0
+                        ), "Passing actions to manager with 0 unpaused tasks"
                     else:
                         if data[0] == -1:
-                            step_result = vector_task_sampler.step(data[1])  # data[1] is a list of actions for the workers of this manager
+                            step_result = vector_task_sampler.step(
+                                data[1]
+                            )  # data[1] is a list of actions for the workers of this manager
                         else:
-                            step_result = vector_task_sampler.step_at(data[0], data[1])  # data[1] is an int (action for specific worker)
+                            step_result = vector_task_sampler.step_at(
+                                data[0], data[1]
+                            )  # data[1] is an int (action for specific worker)
 
-                        observations, rewards, dones, infos = [list(x) for x in zip(*step_result)]
+                        observations, rewards, dones, infos = [
+                            list(x) for x in zip(*step_result)
+                        ]
                         observations = update_observations(observations)
 
-                        step_result = [RLStepResult(obs, reward, done, info) for obs, reward, done, info in zip(observations, rewards, dones, infos)]
+                        step_result = [
+                            RLStepResult(obs, reward, done, info)
+                            for obs, reward, done, info in zip(
+                                observations, rewards, dones, infos
+                            )
+                        ]
 
-                        connection_write_fn(step_result)  # step result is a list of results
+                        connection_write_fn(
+                            step_result
+                        )  # step result is a list of results
 
                 elif command == NEXT_TASK_COMMAND:
                     if vector_task_sampler.num_unpaused_tasks == 0:
@@ -285,9 +307,15 @@ class VectorPreprocessedTasks(object):
                     else:
                         if data[1] is not None:
                             if data[0] == -1:
-                                vector_task_sampler.next_task(**data)  # data is a kwargs shared by all subworkers
+                                vector_task_sampler.next_task(
+                                    **data
+                                )  # data is a kwargs shared by all subworkers
                             else:
-                                LOGGER.error("passing arguments to directed next_task (worker {}, args {})".format(data[0], data[1]))
+                                LOGGER.error(
+                                    "passing arguments to directed next_task (worker {}, args {})".format(
+                                        data[0], data[1]
+                                    )
+                                )
                         else:
                             if data[0] == -1:
                                 vector_task_sampler.next_task()
@@ -305,7 +333,9 @@ class VectorPreprocessedTasks(object):
                     else:
                         # TODO support other modes, never using human!
                         # same args and kwargs for all workers
-                        res = vector_task_sampler.render(mode="rgb_list", *data[0], **data[1])
+                        res = vector_task_sampler.render(
+                            mode="rgb_list", *data[0], **data[1]
+                        )
                         connection_write_fn(res)  # res is a list
                 elif (
                     command == OBSERVATION_SPACE_COMMAND
@@ -314,7 +344,10 @@ class VectorPreprocessedTasks(object):
                     for write_fn in vector_task_sampler._connection_write_fns:
                         write_fn((command, None))
 
-                    res = [read_fn() for read_fn in vector_task_sampler._connection_read_fns]
+                    res = [
+                        read_fn()
+                        for read_fn in vector_task_sampler._connection_read_fns
+                    ]
 
                     connection_write_fn(res)
 
@@ -324,11 +357,17 @@ class VectorPreprocessedTasks(object):
                     else:
                         if data[0] == -1:
                             function_names, function_args = data[1]
-                            results = vector_task_sampler.call(function_names, function_args)
-                            connection_write_fn(results)  # list of results for all active workers
+                            results = vector_task_sampler.call(
+                                function_names, function_args
+                            )
+                            connection_write_fn(
+                                results
+                            )  # list of results for all active workers
                         else:
                             function_name, function_args = data[1]
-                            result = vector_task_sampler.call_at(data[0], function_name, function_args)
+                            result = vector_task_sampler.call_at(
+                                data[0], function_name, function_args
+                            )
                             connection_write_fn([result])  # result is not a list
 
                 elif command == SAMPLER_COMMAND:
@@ -337,11 +376,17 @@ class VectorPreprocessedTasks(object):
                     else:
                         if data[0] == -1:
                             function_names, function_args = data[1]
-                            results = vector_task_sampler.call(function_names, function_args, call_sampler=True)
-                            connection_write_fn(results)  # list of results for all active workers
+                            results = vector_task_sampler.call(
+                                function_names, function_args, call_sampler=True
+                            )
+                            connection_write_fn(
+                                results
+                            )  # list of results for all active workers
                         else:
                             function_name, function_args = data[1]
-                            result = vector_task_sampler.call_at(data[0], function_name, function_args, call_sampler=True)
+                            result = vector_task_sampler.call_at(
+                                data[0], function_name, function_args, call_sampler=True
+                            )
                             connection_write_fn([result])  # result is not a list
 
                 elif command == ATTR_COMMAND:
@@ -351,7 +396,9 @@ class VectorPreprocessedTasks(object):
                         if data[0] == -1:
                             property_name = data[1]
                             results = vector_task_sampler.attr(property_name)
-                            connection_write_fn(results)  # list of results for all active workers
+                            connection_write_fn(
+                                results
+                            )  # list of results for all active workers
                         else:
                             property_name = data[1]
                             result = vector_task_sampler.attr_at(data[0], property_name)
@@ -363,11 +410,17 @@ class VectorPreprocessedTasks(object):
                     else:
                         if data[0] == -1:
                             property_name = data[1]
-                            results = vector_task_sampler.attr(property_name, call_sampler=True)
-                            connection_write_fn(results)  # list of results for all active workers
+                            results = vector_task_sampler.attr(
+                                property_name, call_sampler=True
+                            )
+                            connection_write_fn(
+                                results
+                            )  # list of results for all active workers
                         else:
                             property_name = data[1]
-                            result = vector_task_sampler.attr_at(data[0], property_name, call_sampler=True)
+                            result = vector_task_sampler.attr_at(
+                                data[0], property_name, call_sampler=True
+                            )
                             connection_write_fn([result])  # result is not a list
 
                 elif command == RESET_COMMAND:
@@ -407,12 +460,15 @@ class VectorPreprocessedTasks(object):
         )
         self._workers = []
         for id, stuff in enumerate(
-            zip(worker_connections, parent_connections, make_preprocessors_fn, task_sampler_ids)
+            zip(
+                worker_connections,
+                parent_connections,
+                make_preprocessors_fn,
+                task_sampler_ids,
+            )
         ):
             worker_conn, parent_conn, cur_make_preprocessors_fn, cur_task_sampler_ids = stuff  # type: ignore
-            LOGGER.info(
-                "Starting {}-th preprocessor manager".format(id)
-            )
+            LOGGER.info("Starting {}-th preprocessor manager".format(id))
             ps = self._mp_ctx.Process(  # type: ignore
                 target=self._task_sampling_loop_worker,
                 args=(
@@ -434,9 +490,7 @@ class VectorPreprocessedTasks(object):
             ps.daemon = False
             ps.start()
             worker_conn.close()
-            time.sleep(
-                0.1
-            )  # Useful to reduce the level of rush in our modern life
+            time.sleep(0.1)  # Useful to reduce the level of rush in our modern life
         return (
             [p.recv for p in parent_connections],
             [p.send for p in parent_connections],
@@ -485,7 +539,9 @@ class VectorPreprocessedTasks(object):
         """
         self._is_waiting = True
         manager = self.manager(index_process)
-        self._connection_write_fns[manager]((NEXT_TASK_COMMAND, (self.manager_worker(index_process), None)))
+        self._connection_write_fns[manager](
+            (NEXT_TASK_COMMAND, (self.manager_worker(index_process), None))
+        )
         results = self._connection_read_fns[manager]()  # it's already a list
         self._is_waiting = False
         return results
@@ -504,7 +560,9 @@ class VectorPreprocessedTasks(object):
         """
         self._is_waiting = True
         manager = self.manager(index_process)
-        self._connection_write_fns[manager]((STEP_COMMAND, (self.manager_worker(index_process), action)))
+        self._connection_write_fns[manager](
+            (STEP_COMMAND, (self.manager_worker(index_process), action))
+        )
         results = self._connection_read_fns[manager]()  # it's already a list
         self._is_waiting = False
         return results
@@ -540,8 +598,12 @@ class VectorPreprocessedTasks(object):
         List of outputs from the step method of tasks.
         """
 
-        action_lists = [[] * len(self.manager_to_task_sampler)]  # empty action list for each manager
-        assert len(action_lists) == len(self._connection_write_fns), "Mismatch between number of managers and pipes"
+        action_lists = [
+            [] * len(self.manager_to_task_sampler)
+        ]  # empty action list for each manager
+        assert len(action_lists) == len(
+            self._connection_write_fns
+        ), "Mismatch between number of managers and pipes"
 
         for it, action in enumerate(actions):
             action_lists[self.manager(it)].append(action)
@@ -646,7 +708,11 @@ class VectorPreprocessedTasks(object):
         self._original_id = list(range(self._num_processes))
 
     def call_at(
-        self, index: int, function_name: str, function_args: Optional[List[Any]] = None, call_sampler: bool = False
+        self,
+        index: int,
+        function_name: str,
+        function_args: Optional[List[Any]] = None,
+        call_sampler: bool = False,
     ) -> Any:
         """Calls a function (which is passed by name) on the selected task and
         returns the result.
@@ -664,8 +730,10 @@ class VectorPreprocessedTasks(object):
         self._is_waiting = True
         manager = self.manager(index)
         self._connection_write_fns[manager](
-            (CALL_COMMAND if not call_sampler else SAMPLER_COMMAND,
-             (self.manager_worker(index), (function_name, function_args)))
+            (
+                CALL_COMMAND if not call_sampler else SAMPLER_COMMAND,
+                (self.manager_worker(index), (function_name, function_args)),
+            )
         )
         result = self._connection_read_fns[index]()[0]  # it's a list
         self._is_waiting = False
@@ -675,7 +743,7 @@ class VectorPreprocessedTasks(object):
         self,
         function_names: Union[str, List[str]],
         function_args_list: Optional[List[Any]] = None,
-        call_sampler: bool = False
+        call_sampler: bool = False,
     ) -> List[Any]:
         """Calls a list of functions (which are passed by name) on the
         corresponding task (by index).
@@ -700,14 +768,19 @@ class VectorPreprocessedTasks(object):
         assert len(function_names) == len(function_args_list)
         func_args = zip(function_names, function_args_list)
         for write_fn, func_args_on in zip(self._connection_write_fns, func_args):
-            write_fn((CALL_COMMAND if not call_sampler else SAMPLER_COMMAND, (-1, func_args_on)))
+            write_fn(
+                (
+                    CALL_COMMAND if not call_sampler else SAMPLER_COMMAND,
+                    (-1, func_args_on),
+                )
+            )
         results = []
         for read_fn in self._connection_read_fns:
             results += read_fn()  # it already returns list
         self._is_waiting = False
         return results
 
-    def attr_at(self, index: int, attr_name: str, call_sampler: bool=False) -> Any:
+    def attr_at(self, index: int, attr_name: str, call_sampler: bool = False) -> Any:
         """Gets the attribute (specified by name) on the selected task and
         returns it.
 
@@ -722,8 +795,12 @@ class VectorPreprocessedTasks(object):
         """
         self._is_waiting = True
         manager = self.manager(index)
-        self._connection_write_fns[manager]((ATTR_COMMAND if not call_sampler else SAMPLER_ATTR_COMMAND,
-                                             (self.manager_worker(index), attr_name)))
+        self._connection_write_fns[manager](
+            (
+                ATTR_COMMAND if not call_sampler else SAMPLER_ATTR_COMMAND,
+                (self.manager_worker(index), attr_name),
+            )
+        )
         result = self._connection_read_fns[index]()[0]  # already a list
         self._is_waiting = False
         return result
@@ -745,14 +822,21 @@ class VectorPreprocessedTasks(object):
             attr_names = [attr_names] * self.num_unpaused_tasks
 
         for write_fn, attr_name in zip(self._connection_write_fns, attr_names):
-            write_fn((ATTR_COMMAND if not call_sampler else SAMPLER_ATTR_COMMAND, (-1, attr_name)))
+            write_fn(
+                (
+                    ATTR_COMMAND if not call_sampler else SAMPLER_ATTR_COMMAND,
+                    (-1, attr_name),
+                )
+            )
         results = []
         for read_fn in self._connection_read_fns:
             results += read_fn()  # it's already a list
         self._is_waiting = False
         return results
 
-    def render(self, mode: str = "human", *args, **kwargs) -> Union[np.ndarray, None, List[np.ndarray]]:
+    def render(
+        self, mode: str = "human", *args, **kwargs
+    ) -> Union[np.ndarray, None, List[np.ndarray]]:
         """Render observations from all Tasks in a tiled image."""
         for write_fn in self._connection_write_fns:
             write_fn((RENDER_COMMAND, (args, {"mode": "rgb_list", **kwargs})))
@@ -772,9 +856,11 @@ class VectorPreprocessedTasks(object):
                 for wit in range(len(self.manager_to_task_sampler[it])):
                     flat_list.append(np.zeros_like(valid_image))
             else:
-                assert len(manager_lists[it]) == len(self.manager_to_task_sampler[it]),\
-                    "number of rendered images {} not matching number of workers {}".format(
-                        len(manager_lists[it]), len(self.manager_to_task_sampler[it]))
+                assert len(manager_lists[it]) == len(
+                    self.manager_to_task_sampler[it]
+                ), "number of rendered images {} not matching number of workers {}".format(
+                    len(manager_lists[it]), len(self.manager_to_task_sampler[it])
+                )
                 flat_list += manager_lists[it]
 
         if mode == "rgb_list":
@@ -828,12 +914,15 @@ class ThreadedVectorPreprocessedTasks(VectorPreprocessedTasks):
         )
         self._workers = []
         for id, stuff in enumerate(
-                zip(parent_read_queues, parent_write_queues, make_preprocessors_fn, task_sampler_ids)
+            zip(
+                parent_read_queues,
+                parent_write_queues,
+                make_preprocessors_fn,
+                task_sampler_ids,
+            )
         ):
             parent_read_queue, parent_write_queue, cur_make_preprocessors_fn, cur_task_sampler_ids = stuff  # type: ignore
-            LOGGER.info(
-                "Starting {}-th preprocessor manager".format(id)
-            )
+            LOGGER.info("Starting {}-th preprocessor manager".format(id))
             thread = Thread(
                 target=self._task_sampling_loop_worker,
                 args=(
@@ -847,9 +936,7 @@ class ThreadedVectorPreprocessedTasks(VectorPreprocessedTasks):
                     self._auto_resample_when_done,
                     self.metrics_out_queue,
                 ),
-                kwargs=dict(
-                    vectorized_class=ThreadedVectorSampledTasks
-                ),
+                kwargs=dict(vectorized_class=ThreadedVectorSampledTasks),
             )
             self._workers.append(thread)
             thread.daemon = False

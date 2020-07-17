@@ -30,12 +30,15 @@ from torch.optim.lr_scheduler import _LRScheduler
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from onpolicy_sync.policy import ActorCriticModel
 from onpolicy_sync.storage import RolloutStorage
-from onpolicy_sync.vector_preprocessed_tasks import VectorPreprocessedTasks, ThreadedVectorPreprocessedTasks
+from onpolicy_sync.vector_preprocessed_tasks import (
+    VectorPreprocessedTasks,
+    ThreadedVectorPreprocessedTasks,
+)
 from onpolicy_sync.vector_sampled_tasks import (
     VectorSampledTasks,
     DEFAULT_MP_CONTEXT_TYPE,
     SingleProcessVectorSampledTasks,
-    ThreadedVectorSampledTasks
+    ThreadedVectorSampledTasks,
 )
 from rl_base.experiment_config import ExperimentConfig
 from utils.experiment_utils import (
@@ -235,16 +238,21 @@ class OnPolicyRLEngine(object):
 
         self.observation_set = None
         self.actor_critic: ActorCriticModel
-        if ('make_preprocessors_fns' in self.machine_params
-                and self.machine_params["make_preprocessors_fns"] is not None
-                and len(self.machine_params["make_preprocessors_fns"]) > 0):
+        if (
+            "make_preprocessors_fns" in self.machine_params
+            and self.machine_params["make_preprocessors_fns"] is not None
+            and len(self.machine_params["make_preprocessors_fns"]) > 0
+        ):
             self.actor_critic = typing.cast(
                 ActorCriticModel,
-                config.create_model(observation_set=self.machine_params["make_preprocessors_fns"][0]()).to(
-                    self.device
-                ),
+                config.create_model(
+                    observation_set=self.machine_params["make_preprocessors_fns"][0]()
+                ).to(self.device),
             )
-        elif "observation_set" in self.machine_params and self.machine_params["observation_set"] is not None:
+        elif (
+            "observation_set" in self.machine_params
+            and self.machine_params["observation_set"] is not None
+        ):
             self.observation_set = self.machine_params["observation_set"].to(
                 self.device
             )
@@ -259,9 +267,11 @@ class OnPolicyRLEngine(object):
                 ActorCriticModel, config.create_model().to(self.device)
             )
 
-        if ('make_preprocessors_fns' in self.machine_params
-                and self.machine_params["make_preprocessors_fns"] is not None
-                and len(self.machine_params["make_preprocessors_fns"]) == 0):
+        if (
+            "make_preprocessors_fns" in self.machine_params
+            and self.machine_params["make_preprocessors_fns"] is not None
+            and len(self.machine_params["make_preprocessors_fns"]) == 0
+        ):
             LOGGER.warning("Found empty make_preprocessors_fns list in machine_params")
 
         # if self.mode == "train" and len(self.machine_params["gpu_ids"]) > 0:
@@ -294,20 +304,26 @@ class OnPolicyRLEngine(object):
             seeds = self.worker_seeds(
                 self.machine_params["nprocesses"], initial_seed=self.seed
             )
-            
+
             if self.single_process_training:
                 self._vector_tasks = SingleProcessVectorSampledTasks(
                     make_sampler_fn=self.config.make_sampler_fn,
                     sampler_fn_args=self.get_sampler_fn_args(self.config, seeds),
                 )
             else:
-                if ('make_preprocessors_fns' in self.machine_params
-                        and self.machine_params["make_preprocessors_fns"] is not None
-                        and len(self.machine_params["make_preprocessors_fns"]) > 0):
-                    assert "task_sampler_ids" in self.machine_params, "Missing task_sampler_ids for machine_params with make_preprocessors_fns"
+                if (
+                    "make_preprocessors_fns" in self.machine_params
+                    and self.machine_params["make_preprocessors_fns"] is not None
+                    and len(self.machine_params["make_preprocessors_fns"]) > 0
+                ):
+                    assert (
+                        "task_sampler_ids" in self.machine_params
+                    ), "Missing task_sampler_ids for machine_params with make_preprocessors_fns"
                     # self._vector_tasks = ThreadedVectorPreprocessedTasks(  # TODO Debugging
                     self._vector_tasks = VectorPreprocessedTasks(
-                        make_preprocessors_fn=self.machine_params["make_preprocessors_fns"],
+                        make_preprocessors_fn=self.machine_params[
+                            "make_preprocessors_fns"
+                        ],
                         task_sampler_ids=self.machine_params["task_sampler_ids"],
                         make_sampler_fn=self.config.make_sampler_fn,
                         sampler_fn_args=self.get_sampler_fn_args(self.config, seeds),
@@ -317,10 +333,14 @@ class OnPolicyRLEngine(object):
                         mp_ctx=self.mp_ctx,
                     )
                 else:
-                    if ('make_preprocessors_fns' in self.machine_params
-                            and self.machine_params["make_preprocessors_fns"] is not None
-                            and len(self.machine_params["make_preprocessors_fns"]) == 0):
-                        LOGGER.warning("Found empty make_preprocessors_fns list in machine_params")
+                    if (
+                        "make_preprocessors_fns" in self.machine_params
+                        and self.machine_params["make_preprocessors_fns"] is not None
+                        and len(self.machine_params["make_preprocessors_fns"]) == 0
+                    ):
+                        LOGGER.warning(
+                            "Found empty make_preprocessors_fns list in machine_params"
+                        )
 
                     # self._vector_tasks = ThreadedVectorSampledTasks(  # TODO Debugging
                     self._vector_tasks = VectorSampledTasks(
@@ -410,7 +430,9 @@ class OnPolicyRLEngine(object):
             "step_count": self.step_count,
             "local_start_time_str": self.local_start_time_str,
             "optimizer_state_dict": self.optimizer.state_dict(),  # type: ignore
-            "model_state_dict": self.actor_critic.state_dict() if not self.is_data_parallel else self.actor_critic.module,
+            "model_state_dict": self.actor_critic.state_dict()
+            if not self.is_data_parallel
+            else self.actor_critic.module,
             "trainer_seed": self.seed,
             "extra_tag": self.extra_tag,
         }
@@ -473,7 +495,9 @@ class OnPolicyRLEngine(object):
     def process_eval_metrics(self, count=-1):
         unused = []
         used = []
-        while (count < 0 and not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
+        while (count < 0 and not self.vector_tasks.metrics_out_queue.empty()) or (
+            count > 0
+        ):
             try:
                 if count < 0:
                     metric = self.vector_tasks.metrics_out_queue.get_nowait()
@@ -947,7 +971,9 @@ class OnPolicyRLEngine(object):
             if (self.advance_scene_rollout_period is not None) and (
                 self.rollout_count % self.advance_scene_rollout_period == 0
             ):
-                LOGGER.info("Force advance tasks with {} rollouts".format(self.rollout_count))
+                LOGGER.info(
+                    "Force advance tasks with {} rollouts".format(self.rollout_count)
+                )
                 self.vector_tasks.next_task(force_advance_scene=True)
                 self.initialize_rollouts(rollouts)
 
@@ -1186,7 +1212,9 @@ class OnPolicyRLEngine(object):
                     RolloutStorage(
                         self.steps_in_rollout,
                         self.num_processes,
-                        self.actor_critic if not self.is_data_parallel else self.actor_critic.module,
+                        self.actor_critic
+                        if not self.is_data_parallel
+                        else self.actor_critic.module,
                     )
                 )
 
@@ -1289,7 +1317,9 @@ class OnPolicyRLEngine(object):
         rollouts = RolloutStorage(
             rollout_steps,
             self.num_processes,
-            self.actor_critic if not self.is_data_parallel else self.actor_critic.module,
+            self.actor_critic
+            if not self.is_data_parallel
+            else self.actor_critic.module,
         )
 
         render: Union[None, np.ndarray, List[np.ndarray]] = [] if render_video else None

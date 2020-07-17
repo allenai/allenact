@@ -10,7 +10,18 @@ from multiprocessing.context import BaseContext
 import queue
 from queue import Queue
 from threading import Thread
-from typing import Any, Callable, List, Optional, Sequence, Set, Tuple, Union, Dict, Generator
+from typing import (
+    Any,
+    Callable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    Dict,
+    Generator,
+)
 import logging
 
 import numpy as np
@@ -520,7 +531,11 @@ class VectorSampledTasks(object):
         self._paused = []
 
     def call_at(
-        self, index: int, function_name: str, function_args: Optional[List[Any]] = None, call_sampler: bool=False
+        self,
+        index: int,
+        function_name: str,
+        function_args: Optional[List[Any]] = None,
+        call_sampler: bool = False,
     ) -> Any:
         """Calls a function (which is passed by name) on the selected task and
         returns the result.
@@ -537,7 +552,10 @@ class VectorSampledTasks(object):
         """
         self._is_waiting = True
         self._connection_write_fns[index](
-            (CALL_COMMAND if not call_sampler else SAMPLER_COMMAND, (function_name, function_args))
+            (
+                CALL_COMMAND if not call_sampler else SAMPLER_COMMAND,
+                (function_name, function_args),
+            )
         )
         result = self._connection_read_fns[index]()
         self._is_waiting = False
@@ -572,14 +590,16 @@ class VectorSampledTasks(object):
         assert len(function_names) == len(function_args_list)
         func_args = zip(function_names, function_args_list)
         for write_fn, func_args_on in zip(self._connection_write_fns, func_args):
-            write_fn((CALL_COMMAND if not call_sampler else SAMPLER_COMMAND, func_args_on))
+            write_fn(
+                (CALL_COMMAND if not call_sampler else SAMPLER_COMMAND, func_args_on)
+            )
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
         self._is_waiting = False
         return results
 
-    def attr_at(self, index: int, attr_name: str, call_sampler: bool=False) -> Any:
+    def attr_at(self, index: int, attr_name: str, call_sampler: bool = False) -> Any:
         """Gets the attribute (specified by name) on the selected task and
         returns it.
 
@@ -593,12 +613,16 @@ class VectorSampledTasks(object):
          Result of calling the function.
         """
         self._is_waiting = True
-        self._connection_write_fns[index]((ATTR_COMMAND if not call_sampler else SAMPLER_ATTR_COMMAND, attr_name))
+        self._connection_write_fns[index](
+            (ATTR_COMMAND if not call_sampler else SAMPLER_ATTR_COMMAND, attr_name)
+        )
         result = self._connection_read_fns[index]()
         self._is_waiting = False
         return result
 
-    def attr(self, attr_names: Union[List[str], str], call_sampler: bool=False) -> List[Any]:
+    def attr(
+        self, attr_names: Union[List[str], str], call_sampler: bool = False
+    ) -> List[Any]:
         """Gets the attributes (specified by name) on the tasks.
 
         # Parameters
@@ -615,14 +639,18 @@ class VectorSampledTasks(object):
             attr_names = [attr_names] * self.num_unpaused_tasks
 
         for write_fn, attr_name in zip(self._connection_write_fns, attr_names):
-            write_fn((ATTR_COMMAND if not call_sampler else SAMPLER_ATTR_COMMAND, attr_name))
+            write_fn(
+                (ATTR_COMMAND if not call_sampler else SAMPLER_ATTR_COMMAND, attr_name)
+            )
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())
         self._is_waiting = False
         return results
 
-    def render(self, mode: str = "human", *args, **kwargs) -> Union[np.ndarray, None, List[np.ndarray]]:
+    def render(
+        self, mode: str = "human", *args, **kwargs
+    ) -> Union[np.ndarray, None, List[np.ndarray]]:
         """Render observations from all Tasks in a tiled image."""
         for write_fn in self._connection_write_fns:
             write_fn((RENDER_COMMAND, (args, {"mode": "rgb", **kwargs})))
@@ -1136,7 +1164,7 @@ class ThreadedVectorSampledTasks(VectorSampledTasks):
         )
         self._workers = []
         for id, stuff in enumerate(
-                zip(parent_read_queues, parent_write_queues, sampler_fn_args)
+            zip(parent_read_queues, parent_write_queues, sampler_fn_args)
         ):
             parent_read_queue, parent_write_queue, current_sampler_fn_args = stuff  # type: ignore
             LOGGER.info(

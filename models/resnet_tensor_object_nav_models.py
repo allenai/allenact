@@ -159,7 +159,9 @@ class ResnetTensorGoalEncoder(nn.Module):
 
     def distribute_target(self, observations):
         target_emb = self.embed_class(observations[self.goal_uuid])
-        return target_emb.view(-1, self.class_dims, 1, 1).expand(-1, -1, self.resnet_tensor_shape[-2], self.resnet_tensor_shape[-1])
+        return target_emb.view(-1, self.class_dims, 1, 1).expand(
+            -1, -1, self.resnet_tensor_shape[-2], self.resnet_tensor_shape[-1]
+        )
 
     def forward(self, observations):
         if self.blind:
@@ -177,12 +179,20 @@ class ResnetTensorGoalEncoder(nn.Module):
 
 class ResnetTensorObjectNavActorCriticMemory(ResnetTensorObjectNavActorCritic):
     @property
-    def recurrent_hidden_state_size(self) -> Dict[str, Tuple[Tuple[int, ...], int, torch.dtype]]:
+    def recurrent_hidden_state_size(
+        self,
+    ) -> Dict[str, Tuple[Tuple[int, ...], int, torch.dtype]]:
         """The memory spec of the model: A dictionary with string keys and tuple values, each with the dimensions of the
         memory, e.g. (2, 32) for two layers of 32-dimensional recurrent hidden states; an integer indicating the index
         of the sampler in a batch, e.g. 1 for RNNs; the data type, e.g. torch.float32.
         """
-        return {"rnn_hidden": ((self.state_encoder.num_recurrent_layers, self.hidden_size), 1, torch.float32)}
+        return {
+            "rnn_hidden": (
+                (self.state_encoder.num_recurrent_layers, self.hidden_size),
+                1,
+                torch.float32,
+            )
+        }
 
     @property
     def num_recurrent_layers(self) -> int:
@@ -198,8 +208,13 @@ class ResnetTensorObjectNavActorCriticMemory(ResnetTensorObjectNavActorCritic):
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
         x = self.goal_visual_encoder(observations)
 
-        x, mem_return = self.state_encoder(x, rnn_hidden_states.tensor("rnn_hidden"), masks)
-        rnn_hidden_states["rnn_hidden"] = (mem_return, rnn_hidden_states.sampler_dim("rnn_hidden"))
+        x, mem_return = self.state_encoder(
+            x, rnn_hidden_states.tensor("rnn_hidden"), masks
+        )
+        rnn_hidden_states["rnn_hidden"] = (
+            mem_return,
+            rnn_hidden_states.sampler_dim("rnn_hidden"),
+        )
 
         return (
             ActorCriticOutput(

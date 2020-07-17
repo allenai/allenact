@@ -65,7 +65,9 @@ class PreprocessorGraph:
     preprocessors: Dict[str, Preprocessor]
     observation_spaces: SpaceDict
 
-    def __init__(self, preprocessors: List[Union[Preprocessor, Builder[Preprocessor]]],) -> None:
+    def __init__(
+        self, preprocessors: List[Union[Preprocessor, Builder[Preprocessor]]],
+    ) -> None:
         """Initializer.
 
         # Parameters

@@ -99,7 +99,7 @@ class ResnetFasterRCNNTensorsGoalEncoder(nn.Module):
         resnet_preprocessor_uuid: str,
         detector_preprocessor_uuid: str,
         class_dims: int = 32,
-        max_dets: int=3,
+        max_dets: int = 3,
         resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
         box_embedder_hidden_out_dims: Tuple[int, int] = (128, 32),
         class_embedder_hidden_out_dims: Tuple[int, int] = (128, 32),
@@ -124,7 +124,9 @@ class ResnetFasterRCNNTensorsGoalEncoder(nn.Module):
             embedding_dim=self.class_dims,
         )
 
-        self.blind = (self.resnet_uuid not in observation_spaces.spaces) and (self.detector_uuid not in observation_spaces.spaces)
+        self.blind = (self.resnet_uuid not in observation_spaces.spaces) and (
+            self.detector_uuid not in observation_spaces.spaces
+        )
 
         if not self.blind:
             self.resnet_tensor_shape = observation_spaces.spaces[self.resnet_uuid].shape
@@ -136,11 +138,16 @@ class ResnetFasterRCNNTensorsGoalEncoder(nn.Module):
                 nn.ReLU(),
             )
 
-            self.box_tensor_shape = observation_spaces.spaces[self.detector_uuid].spaces['frcnn_boxes'].shape
-            assert self.box_tensor_shape[1:] == self.resnet_tensor_shape[1:],\
-                "Spatial dimensions of object detector and resnet tensor do not match: {} vs {}".format(
-                    self.box_tensor_shape, self.resnet_tensor_shape
-                )
+            self.box_tensor_shape = (
+                observation_spaces.spaces[self.detector_uuid]
+                .spaces["frcnn_boxes"]
+                .shape
+            )
+            assert (
+                self.box_tensor_shape[1:] == self.resnet_tensor_shape[1:]
+            ), "Spatial dimensions of object detector and resnet tensor do not match: {} vs {}".format(
+                self.box_tensor_shape, self.resnet_tensor_shape
+            )
 
             self.box_embedder = nn.Sequential(
                 nn.Conv2d(self.box_tensor_shape[0], self.box_hid_out_dims[0], 1),
@@ -150,7 +157,9 @@ class ResnetFasterRCNNTensorsGoalEncoder(nn.Module):
             )
 
             self.class_combiner = nn.Sequential(
-                nn.Conv2d(self.max_dets * self.class_dims, self.class_hid_out_dims[0], 1),
+                nn.Conv2d(
+                    self.max_dets * self.class_dims, self.class_hid_out_dims[0], 1
+                ),
                 nn.ReLU(),
                 nn.Conv2d(*self.class_hid_out_dims[0:2], 1),
                 nn.ReLU(),
@@ -158,8 +167,10 @@ class ResnetFasterRCNNTensorsGoalEncoder(nn.Module):
 
             self.target_obs_combiner = nn.Sequential(
                 nn.Conv2d(
-                    self.resnet_hid_out_dims[1] + self.box_hid_out_dims[1] + self.class_hid_out_dims[1] +
-                    self.class_dims,
+                    self.resnet_hid_out_dims[1]
+                    + self.box_hid_out_dims[1]
+                    + self.class_hid_out_dims[1]
+                    + self.class_dims,
                     self.combine_hid_out_dims[0],
                     1,
                 ),
@@ -196,15 +207,21 @@ class ResnetFasterRCNNTensorsGoalEncoder(nn.Module):
 
     def distribute_target(self, observations):
         target_emb = self.embed_class(observations[self.goal_uuid])
-        return target_emb.view(-1, self.class_dims, 1, 1).expand(-1, -1, self.resnet_tensor_shape[-2], self.resnet_tensor_shape[-1])
+        return target_emb.view(-1, self.class_dims, 1, 1).expand(
+            -1, -1, self.resnet_tensor_shape[-2], self.resnet_tensor_shape[-1]
+        )
 
     def embed_classes(self, observations):
         classes = observations[self.detector_uuid]["frcnn_classes"]
         classes = classes.permute(0, 2, 3, 1).contiguous()  # move classes to last dim
         classes_shape = classes.shape
         class_emb = self.embed_class(classes.view(-1))  # (flattened)
-        class_emb = class_emb.view(classes_shape[:-1] + (self.max_dets * class_emb.shape[-1],))  # align embedding along last dimension
-        class_emb = class_emb.permute(0, 3, 1, 2).contiguous()  # convert into image tensor
+        class_emb = class_emb.view(
+            classes_shape[:-1] + (self.max_dets * class_emb.shape[-1],)
+        )  # align embedding along last dimension
+        class_emb = class_emb.permute(
+            0, 3, 1, 2
+        ).contiguous()  # convert into image tensor
         return self.class_combiner(class_emb)
 
     def embed_boxes(self, observations):
@@ -226,7 +243,9 @@ class ResnetFasterRCNNTensorsGoalEncoder(nn.Module):
         return x.view(x.size(0), -1)  # flatten
 
 
-class ResnetFasterRCNNTensorsObjectNavActorCriticCVPR2020(ActorCriticModel[CategoricalDistr]):
+class ResnetFasterRCNNTensorsObjectNavActorCriticCVPR2020(
+    ActorCriticModel[CategoricalDistr]
+):
     def __init__(
         self,
         action_space: gym.spaces.Discrete,
@@ -306,17 +325,17 @@ class ResnetFasterRCNNTensorsObjectNavActorCriticCVPR2020(ActorCriticModel[Categ
 
 class ResnetFasterRCNNTensorsGoalEncoderCVPR2020(nn.Module):
     def __init__(
-            self,
-            observation_spaces: SpaceDict,
-            goal_sensor_uuid: str,
-            resnet_preprocessor_uuid: str,
-            detector_preprocessor_uuid: str,
-            class_dims: int = 32,
-            max_dets: int = 3,
-            resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
-            box_embedder_hidden_out_dims: Tuple[int, int] = (128, 32),
-            class_embedder_hidden_out_dims: Tuple[int, int] = (128, 32),
-            combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
+        self,
+        observation_spaces: SpaceDict,
+        goal_sensor_uuid: str,
+        resnet_preprocessor_uuid: str,
+        detector_preprocessor_uuid: str,
+        class_dims: int = 32,
+        max_dets: int = 3,
+        resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
+        box_embedder_hidden_out_dims: Tuple[int, int] = (128, 32),
+        class_embedder_hidden_out_dims: Tuple[int, int] = (128, 32),
+        combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
     ) -> None:
         super().__init__()
 
@@ -338,13 +357,14 @@ class ResnetFasterRCNNTensorsGoalEncoderCVPR2020(nn.Module):
         # )
         self.embed_classes = nn.Embedding(
             num_embeddings=observation_spaces.spaces[self.goal_uuid].n,
-            embedding_dim=self.class_dims
+            embedding_dim=self.class_dims,
         )
 
         self.box_emb_dims = 8
 
         self.blind = (self.resnet_uuid not in observation_spaces.spaces) and (
-                    self.detector_uuid not in observation_spaces.spaces)
+            self.detector_uuid not in observation_spaces.spaces
+        )
 
         if not self.blind:
             self.resnet_tensor_shape = observation_spaces.spaces[self.resnet_uuid].shape
@@ -389,29 +409,34 @@ class ResnetFasterRCNNTensorsGoalEncoderCVPR2020(nn.Module):
 
             inter = (self.box_emb_dims + 5) // 2
             self.embed_boxes = nn.Sequential(
-                nn.Conv2d(self.max_dets * 5, self.max_dets * inter, 1, groups=self.max_dets),
+                nn.Conv2d(
+                    self.max_dets * 5, self.max_dets * inter, 1, groups=self.max_dets
+                ),
                 nn.ReLU(),
-                nn.Conv2d(self.max_dets * inter, self.max_dets * self.box_emb_dims, 1, groups=self.max_dets)
+                nn.Conv2d(
+                    self.max_dets * inter,
+                    self.max_dets * self.box_emb_dims,
+                    1,
+                    groups=self.max_dets,
+                ),
             )
 
             self.compressor = nn.Conv2d(512, 128, 1)
 
             self.combiner = nn.Sequential(
-                nn.Conv2d(self.max_dets * (self.class_dims + self.box_emb_dims) + 128, 128, 1),
+                nn.Conv2d(
+                    self.max_dets * (self.class_dims + self.box_emb_dims) + 128, 128, 1
+                ),
                 nn.ReLU(),
-                nn.Conv2d(128, 64, 1)
+                nn.Conv2d(128, 64, 1),
             )
 
             self.mapper = nn.Sequential(
-                nn.Linear(self.class_dims, 64),
-                nn.ReLU(),
-                nn.Linear(64, 64),
+                nn.Linear(self.class_dims, 64), nn.ReLU(), nn.Linear(64, 64),
             )
 
             self.target_viz_projector = nn.Sequential(
-                nn.Conv2d(64 * 2, 192, 1),
-                nn.ReLU(),
-                nn.Conv2d(192, 64, 1)
+                nn.Conv2d(64 * 2, 192, 1), nn.ReLU(), nn.Conv2d(192, 64, 1)
             )
 
             # self.lstm = nn.LSTMCell(64 * self.resnet_tensor_shape[1] * self.resnet_tensor_shape[2], self.hidden_sz)
@@ -425,14 +450,10 @@ class ResnetFasterRCNNTensorsGoalEncoderCVPR2020(nn.Module):
         if self.blind:
             return self.class_dims
         else:
-            return (
-                    64
-                    * self.resnet_tensor_shape[1]
-                    * self.resnet_tensor_shape[2]
-            )
+            return 64 * self.resnet_tensor_shape[1] * self.resnet_tensor_shape[2]
 
     def get_object_type_encoding(
-            self, observations: Dict[str, torch.FloatTensor]
+        self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
         return typing.cast(
@@ -472,8 +493,12 @@ class ResnetFasterRCNNTensorsGoalEncoderCVPR2020(nn.Module):
         classes = classes.permute(0, 2, 3, 1).contiguous()  # move classes to last dim
         classes_shape = classes.shape
         class_emb = self.embed_classes(classes.view(-1))  # flatten
-        class_emb = class_emb.view(classes_shape[:-1] + (self.max_dets * class_emb.shape[-1],))  # align embedding along last dimension
-        class_emb = class_emb.permute(0, 3, 1, 2).contiguous()  # convert into image tensor
+        class_emb = class_emb.view(
+            classes_shape[:-1] + (self.max_dets * class_emb.shape[-1],)
+        )  # align embedding along last dimension
+        class_emb = class_emb.permute(
+            0, 3, 1, 2
+        ).contiguous()  # convert into image tensor
 
         boxes = observations[self.detector_uuid]["frcnn_boxes"]
         box_emb = self.embed_boxes(boxes)
@@ -481,8 +506,15 @@ class ResnetFasterRCNNTensorsGoalEncoderCVPR2020(nn.Module):
         im = observations[self.resnet_uuid]
         im = self.compressor(im)
 
-        x = torch.cat((im, class_emb, box_emb), dim=-3)  # concat image feats, class and box embeddings
-        x = self.target_viz_projector(torch.cat((self.combiner(x), target_emb.expand(-1, -1, x.shape[-2], x.shape[-1])), dim=-3))  # project features to 64-d and add projected target
+        x = torch.cat(
+            (im, class_emb, box_emb), dim=-3
+        )  # concat image feats, class and box embeddings
+        x = self.target_viz_projector(
+            torch.cat(
+                (self.combiner(x), target_emb.expand(-1, -1, x.shape[-2], x.shape[-1])),
+                dim=-3,
+            )
+        )  # project features to 64-d and add projected target
         x = x.view(x.size(0), -1)  # flatten
 
         return x

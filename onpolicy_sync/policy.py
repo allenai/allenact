@@ -44,7 +44,9 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
 
     @property
     @abc.abstractmethod
-    def recurrent_hidden_state_size(self) -> Union[int, Dict[str, Tuple[Sequence[int], int, torch.dtype]]]:
+    def recurrent_hidden_state_size(
+        self,
+    ) -> Union[int, Dict[str, Tuple[Sequence[int], int, torch.dtype]]]:
         """Non-negative integer corresponding to the dimension of the hidden
         state used by the agent or mapping from string memory names to Tuples
         of (0) sequences of axes dimensions excluding sampler axis;
@@ -59,7 +61,9 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
     @abc.abstractmethod
     def forward(
         self, *args, **kwargs
-    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Union[torch.Tensor, Memory]]]:
+    ) -> Tuple[
+        ActorCriticOutput[DistributionType], Optional[Union[torch.Tensor, Memory]]
+    ]:
         """Transforms input observations (& previous hidden state) into action
         probabilities and the state value.
 

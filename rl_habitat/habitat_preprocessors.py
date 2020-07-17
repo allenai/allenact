@@ -65,15 +65,25 @@ class ResnetPreProcessorHabitat(Preprocessor):
         )
         # self.device: torch.device = optf(config, "device", "cpu")
         self.parallel: bool = optf(config, "parallel", True)
-        self.device: torch.device = torch.device(optf(config, "device", "cuda" if self.parallel and torch.cuda.is_available() else "cpu"))
-        self.device_ids: Optional[List[Union[torch.device, int]]] = optf(config, "device_ids", list(range(torch.cuda.device_count())))
+        self.device: torch.device = torch.device(
+            optf(
+                config,
+                "device",
+                "cuda" if self.parallel and torch.cuda.is_available() else "cpu",
+            )
+        )
+        self.device_ids: Optional[List[Union[torch.device, int]]] = optf(
+            config, "device_ids", list(range(torch.cuda.device_count()))
+        )
 
         self.resnet = ResNetEmbedder(
             self.make_model(pretrained=True).to(self.device), pool=self.pool
         )
 
         if self.parallel:
-            assert torch.cuda.is_available(), "attempt to parallelize resnet without cuda"
+            assert (
+                torch.cuda.is_available()
+            ), "attempt to parallelize resnet without cuda"
             LOGGER.info("Distributing resnet")
             self.resnet = self.resnet.to(torch.device("cuda"))
 
@@ -81,7 +91,9 @@ class ResnetPreProcessorHabitat(Preprocessor):
             # torch.distributed.init_process_group(backend="nccl", store=store, rank=0, world_size=1)
             # self.model = DistributedDataParallel(self.frcnn, device_ids=self.device_ids)
 
-            self.resnet = torch.nn.DataParallel(self.resnet, device_ids=self.device_ids)  #, output_device=torch.cuda.device_count() - 1)
+            self.resnet = torch.nn.DataParallel(
+                self.resnet, device_ids=self.device_ids
+            )  # , output_device=torch.cuda.device_count() - 1)
             LOGGER.info("Detected {} devices".format(torch.cuda.device_count()))
 
         low = -np.inf
