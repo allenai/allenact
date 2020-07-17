@@ -186,8 +186,8 @@ class ResnetTensorObjectNavActorCriticMemory(ResnetTensorObjectNavActorCritic):
 
     @property
     def num_recurrent_layers(self) -> int:
-        """Returns 0, indicating we are using a memory specification in recurrent_hidden_state_size."""
-        return 0
+        """Returns -1, indicating we are using a memory specification in recurrent_hidden_state_size."""
+        return -1
 
     def get_object_type_encoding(
         self, observations: Dict[str, torch.FloatTensor]
