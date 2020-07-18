@@ -1,9 +1,9 @@
 """Defining imitation losses for actor critic type models."""
 
+import typing
 from typing import Dict, Union
 
 import torch
-import typing
 
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from rl_base.common import ActorCriticOutput

@@ -1,31 +1,37 @@
-from typing import Dict, Any, List, Optional
 import json
 from math import ceil
+from typing import Dict, Any, List, Optional
 
 import gym
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
-import numpy as np
 
-from onpolicy_sync.losses.ppo import PPOConfig
 from models.resnet_tensor_object_nav_models import ResnetTensorObjectNavActorCritic
 from onpolicy_sync.losses import PPO
-from rl_base.experiment_config import ExperimentConfig
-from rl_base.task import TaskSampler
-from rl_base.preprocessor import ObservationSet
-from rl_robothor.robothor_tasks import ObjectNavTask
-from rl_robothor.robothor_task_samplers import ObjectNavTaskSampler
+from onpolicy_sync.losses.ppo import PPOConfig
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
+from rl_base.experiment_config import ExperimentConfig
+from rl_base.preprocessor import ObservationSet
+from rl_base.task import TaskSampler
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
+from rl_robothor.robothor_task_samplers import ObjectNavTaskSampler
+from rl_robothor.robothor_tasks import ObjectNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
-from utils.viz_utils import SimpleViz, TrajectoryViz, ActorViz, AgentViewViz, TensorViz1D, TensorViz2D
+from utils.viz_utils import (
+    SimpleViz,
+    TrajectoryViz,
+    ActorViz,
+    AgentViewViz,
+    TensorViz2D,
+)
 
 
 class ObjectNavRoboThorRGBDDPPOCVPRExperimentConfig(ExperimentConfig):
-    """An Object Navigation experiment configuration in RoboThor"""
+    """An Object Navigation experiment configuration in RoboThor."""
 
     TRAIN_SCENES = [
         "FloorPlan_Train%d_%d" % (wall + 1, furniture + 1)
@@ -94,14 +100,14 @@ class ObjectNavRoboThorRGBDDPPOCVPRExperimentConfig(ExperimentConfig):
                 "uuid": "rgb_lowres",
             }
         ),
-        GoalObjectTypeThorSensor({
-            "object_types": TARGET_TYPES,
-        }),
+        GoalObjectTypeThorSensor({"object_types": TARGET_TYPES,}),
     ]
 
     PREPROCESSORS = [
-        Builder(ResnetPreProcessorHabitat,
-                dict(config={
+        Builder(
+            ResnetPreProcessorHabitat,
+            dict(
+                config={
                     "input_height": SCREEN_SIZE,
                     "input_width": SCREEN_SIZE,
                     "output_width": 7,
@@ -112,7 +118,8 @@ class ObjectNavRoboThorRGBDDPPOCVPRExperimentConfig(ExperimentConfig):
                     "input_uuids": ["rgb_lowres"],
                     "output_uuid": "rgb_resnet",
                     "parallel": False,  # TODO False for debugging
-            })
+                }
+            ),
         ),
     ]
 
@@ -213,7 +220,9 @@ class ObjectNavRoboThorRGBDDPPOCVPRExperimentConfig(ExperimentConfig):
     #     }
 
     def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(self.NUM_PROCESSES, ndevices)
+        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
+            self.NUM_PROCESSES, ndevices
+        )
         res = [0] * ndevices
         for it in range(self.NUM_PROCESSES):
             res[it % ndevices] += 1
@@ -226,8 +235,16 @@ class ObjectNavRoboThorRGBDDPPOCVPRExperimentConfig(ExperimentConfig):
             # sampler_devices = [1]
             # render_video = False
             workers_per_device = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6] * workers_per_device  # TODO vs4 only has 7 gpus
-            nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
+            gpu_ids = (
+                []
+                if not torch.cuda.is_available()
+                else [0, 1, 2, 3, 4, 5, 6] * workers_per_device
+            )  # TODO vs4 only has 7 gpus
+            nprocesses = (
+                1
+                if not torch.cuda.is_available()
+                else self.split_num_processes(len(gpu_ids))
+            )
             render_video = False
             visualizer = None
         elif mode == "valid":
@@ -246,26 +263,39 @@ class ObjectNavRoboThorRGBDDPPOCVPRExperimentConfig(ExperimentConfig):
                 gpu_ids = [0, 1, 2, 3, 4, 5, 6]  # TODO vs4 only has 7 gpus
             render_video = False
             if self.ep_ids is None:
-                with open(self.TEST_SCENES, 'r') as f:
-                    all_eps = json.load(f)[self.TEST_SHIFT:self.TEST_SHIFT + self.NUM_TEST_SCENES]  # TODO take a small number of samples from shifted starting point
-                    self.ep_ids = [ep["id"] for ep in all_eps[:self.NUM_TEST_SCENES // 2]]  # TODO keep only first half for first group
-                    self.ep_ids = [self.ep_ids, [ep["id"] for ep in all_eps[self.NUM_TEST_SCENES // 2:]]]  # TODO keep only second half for second group
+                with open(self.TEST_SCENES, "r") as f:
+                    all_eps = json.load(f)[
+                        self.TEST_SHIFT : self.TEST_SHIFT + self.NUM_TEST_SCENES
+                    ]  # TODO take a small number of samples from shifted starting point
+                    self.ep_ids = [
+                        ep["id"] for ep in all_eps[: self.NUM_TEST_SCENES // 2]
+                    ]  # TODO keep only first half for first group
+                    self.ep_ids = [
+                        self.ep_ids,
+                        [ep["id"] for ep in all_eps[self.NUM_TEST_SCENES // 2 :]],
+                    ]  # TODO keep only second half for second group
                     self.video_ids = [ep["id"] for ep in all_eps[-1:]]
 
             self.video_ids = ["Val_2_1_Garbage Can_0"]
 
             # print(self.video_ids)
 
-            visualizer = Builder(SimpleViz, dict(
-                episode_ids=self.ep_ids,
-                mode="test",
-                v1=Builder(TrajectoryViz, dict()),
-                v2=Builder(AgentViewViz, dict(max_video_length=100, episode_ids=self.video_ids)),
-                v3=Builder(ActorViz, dict()),
-                # v4=Builder(TensorViz1D, dict()),
-                # v5=Builder(TensorViz1D, dict(rollout_source=("masks"))),
-                v6=Builder(TensorViz2D, dict()),
-            ))
+            visualizer = Builder(
+                SimpleViz,
+                dict(
+                    episode_ids=self.ep_ids,
+                    mode="test",
+                    v1=Builder(TrajectoryViz, dict()),
+                    v2=Builder(
+                        AgentViewViz,
+                        dict(max_video_length=100, episode_ids=self.video_ids),
+                    ),
+                    v3=Builder(ActorViz, dict()),
+                    # v4=Builder(TensorViz1D, dict()),
+                    # v5=Builder(TensorViz1D, dict(rollout_source=("masks"))),
+                    v6=Builder(TensorViz2D, dict()),
+                ),
+            )
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -274,9 +304,18 @@ class ObjectNavRoboThorRGBDDPPOCVPRExperimentConfig(ExperimentConfig):
             for prep in self.PREPROCESSORS:
                 prep.kwargs["config"]["parallel"] = False
 
-        observation_set = Builder(ObservationSet, kwargs=dict(
-            source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
-        )) if nprocesses > 0 else None
+        observation_set = (
+            Builder(
+                ObservationSet,
+                kwargs=dict(
+                    source_ids=self.OBSERVATIONS,
+                    all_preprocessors=self.PREPROCESSORS,
+                    all_sensors=self.SENSORS,
+                ),
+            )
+            if nprocesses > 0
+            else None
+        )
 
         return {
             "nprocesses": nprocesses,
@@ -332,7 +371,7 @@ class ObjectNavRoboThorRGBDDPPOCVPRExperimentConfig(ExperimentConfig):
         inds = self._partition_inds(len(scenes), total_processes)
 
         return {
-            "scenes": scenes[inds[process_ind]:inds[process_ind + 1]],
+            "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
             "object_types": self.TARGET_TYPES,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
@@ -366,7 +405,9 @@ class ObjectNavRoboThorRGBDDPPOCVPRExperimentConfig(ExperimentConfig):
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
         )
         res["allow_flipping"] = True
         return res
@@ -391,7 +432,9 @@ class ObjectNavRoboThorRGBDDPPOCVPRExperimentConfig(ExperimentConfig):
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
         )
         return res
 
@@ -412,8 +455,11 @@ class ObjectNavRoboThorRGBDDPPOCVPRExperimentConfig(ExperimentConfig):
             action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
             seed=seeds[process_ind] if seeds is not None else None,
             deterministic_cudnn=deterministic_cudnn,
-            dataset_first=inds[process_ind] + self.TEST_SHIFT,  # TODO sample other episodes
-            dataset_last=inds[process_ind + 1] - 1 + self.TEST_SHIFT,  # TODO sample other episodes
+            dataset_first=inds[process_ind]
+            + self.TEST_SHIFT,  # TODO sample other episodes
+            dataset_last=inds[process_ind + 1]
+            - 1
+            + self.TEST_SHIFT,  # TODO sample other episodes
             rewards_config={
                 "step_penalty": -0.01,
                 "goal_success_reward": 10.0,
@@ -425,7 +471,9 @@ class ObjectNavRoboThorRGBDDPPOCVPRExperimentConfig(ExperimentConfig):
         res["env_args"].update(self.ENV_ARGS)
         if isinstance(devices[0], int):
             res["env_args"]["x_display"] = (
-                ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
+                ("0.%d" % devices[process_ind % len(devices)])
+                if devices is not None and len(devices) > 0
+                else None
             )
         else:
             print("Got devices {}".format(devices))

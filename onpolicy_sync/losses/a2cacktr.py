@@ -1,13 +1,13 @@
 """Implementation of A2C and ACKTR losses."""
 import typing
-import warnings
-from typing import Tuple, Dict, Union
+from typing import Tuple, Dict, Union, Optional
 
 import torch
 
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
+from utils.system import LOGGER
 
 
 class A2CACKTR(AbstractActorCriticLoss):
@@ -27,9 +27,43 @@ class A2CACKTR(AbstractActorCriticLoss):
         """
         super().__init__(*args, **kwargs)
         self.acktr = acktr
+        self.loss_key = "a2c_total" if not acktr else "aktr_total"
 
         self.value_loss_coef = value_loss_coef
         self.entropy_coef = entropy_coef
+
+    def loss_per_step(  # type: ignore
+        self,
+        step_count: int,
+        batch: Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]],
+        actor_critic_output: ActorCriticOutput[CategoricalDistr],
+    ) -> Dict[str, Tuple[torch.Tensor, Optional[float]]]:
+        actions = typing.cast(torch.LongTensor, batch["actions"])
+        values = actor_critic_output.values
+        action_log_probs = actor_critic_output.distributions.log_probs(actions)
+
+        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy()
+        value_loss = 0.5 * (
+            typing.cast(torch.FloatTensor, batch["returns"]) - values
+        ).pow(2)
+
+        # TODO: Decided not to use normalized advantages here,
+        #   is this correct? (it's how it's done in Kostrikov's)
+        action_loss = -(
+            typing.cast(torch.FloatTensor, batch["adv_targ"]).detach()
+            * action_log_probs
+        )
+
+        if self.acktr:
+            # TODO: Currently acktr doesn't really work because of this natural gradient stuff
+            #   that we should figure out how to integrate properly.
+            LOGGER.warning("acktr is only partially supported.")
+
+        return {
+            "value": (value_loss, self.value_loss_coef),
+            "action": (action_loss, None),
+            "entropy": (dist_entropy.mul_(-1.0), self.entropy_coef),  # type: ignore
+        }
 
     def loss(  # type: ignore
         self,
@@ -38,61 +72,28 @@ class A2CACKTR(AbstractActorCriticLoss):
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
         **kwargs,
-    ) -> Tuple[torch.FloatTensor, Dict[str, float]]:
-        actions = typing.cast(torch.LongTensor, batch["actions"])
-        values = actor_critic_output.values
-        action_log_probs = actor_critic_output.distributions.log_probs(actions)
-
-        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy().mean()
-
-        value_loss = (
-            0.5
-            * (typing.cast(torch.FloatTensor, batch["returns"]) - values).pow(2).mean()
+    ):
+        losses_per_step = self.loss_per_step(
+            step_count=step_count, batch=batch, actor_critic_output=actor_critic_output,
         )
+        losses = {
+            key: (loss.mean(), weight)
+            for (key, (loss, weight)) in losses_per_step.items()
+        }
 
-        # TODO: Decided not to use normalized advantages here, is this correct? (it's how it's done in Kostrikov's)
-        action_loss = -(
-            typing.cast(torch.FloatTensor, batch["adv_targ"]).detach()
-            * action_log_probs
-        ).mean()
-
-        if self.acktr:
-            warnings.warn("acktr is only partially supported.")
-        # TODO: Currently acktr doesn't really work because of this natural gradient stuff
-        #   that we should figure out how to integrate properly.
-        # if self.acktr and self.optimizer.steps % self.optimizer.Ts == 0:
-        #     # Sampled fisher, see Martens 2014
-        #     self.actor_critic.zero_grad()
-        #     pg_fisher_loss = -action_log_probs.mean()
-        #
-        #     value_noise = torch.randn(values.size())
-        #     if values.is_cuda:
-        #         value_noise = value_noise.cuda()
-        #
-        #     sample_values = values + value_noise
-        #     vf_fisher_loss = -(values - sample_values.detach()).pow(2).mean()
-        #
-        #     fisher_loss = pg_fisher_loss + vf_fisher_loss
-        #     self.optimizer.acc_stats = True
-        #     fisher_loss.backward(retain_graph=True)
-        #     self.optimizer.acc_stats = False
-        #
-        # if self.acktr == False:
-        #     nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
-
-        total_loss = (
-            value_loss * self.value_loss_coef
-            + action_loss
-            - dist_entropy * self.entropy_coef
+        total_loss = typing.cast(
+            torch.Tensor,
+            sum(
+                loss * weight if weight is not None else loss
+                for loss, weight in losses.values()
+            ),
         )
 
         return (
             total_loss,
             {
-                "total": total_loss.item(),
-                "value": value_loss.item(),
-                "action": action_loss.item(),
-                "entropy": -dist_entropy.item(),
+                self.loss_key: total_loss.item(),
+                **{key: loss.item() for key, (loss, _) in losses.items()},
             },
         )
 

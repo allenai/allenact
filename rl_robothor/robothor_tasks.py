@@ -4,6 +4,9 @@ import gym
 import numpy as np
 from ai2thor.util.metrics import compute_single_spl
 
+from rl_base.common import RLStepResult
+from rl_base.sensor import Sensor
+from rl_base.task import Task
 from rl_robothor.robothor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
@@ -13,10 +16,8 @@ from rl_robothor.robothor_constants import (
     LOOK_DOWN,
 )
 from rl_robothor.robothor_environment import RoboThorEnvironment
-from rl_base.common import RLStepResult
-from rl_base.sensor import Sensor
-from rl_base.task import Task
 from utils.system import LOGGER
+
 
 # class RoboThorTask(Task[RoboThorEnvironment]):
 #     def __init__(
@@ -89,18 +90,26 @@ class PointNavTask(Task[RoboThorEnvironment]):
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
-        self.episode_optimal_corners = self.env.path_corners(task_info["target"])  # assume it's valid (sampler must take care)!
+        self.episode_optimal_corners = self.env.path_corners(
+            task_info["target"]
+        )  # assume it's valid (sampler must take care)!
         dist = self.env.path_corners_to_dist(self.episode_optimal_corners)
         if dist == float("inf"):
             dist = -1.0  # -1.0 for unreachable
-            LOGGER.warning("No path for {} from {} to {}".format(self.env.scene_name, self.env.agent_state(), task_info["target"]))
+            LOGGER.warning(
+                "No path for {} from {} to {}".format(
+                    self.env.scene_name, self.env.agent_state(), task_info["target"]
+                )
+            )
         self.last_geodesic_distance = dist
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
         # pose = self.env.agent_state()
         # self.path = [{k: pose[k] for k in ['x', 'y', 'z']}]
-        self.path = []  # the initial coordinate will be directly taken from the optimal path
+        self.path = (
+            []
+        )  # the initial coordinate will be directly taken from the optimal path
 
     @property
     def action_space(self):
@@ -130,7 +139,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
             self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
             pose = self.env.agent_state()
-            self.path.append({k: pose[k] for k in ['x', 'y', 'z']})
+            self.path.append({k: pose[k] for k in ["x", "y", "z"]})
 
         step_result = RLStepResult(
             observation=self.get_observations(),
@@ -158,11 +167,11 @@ class PointNavTask(Task[RoboThorEnvironment]):
         elif dist > 0.2:
             return False
         else:
-            LOGGER.warning("No path for {} from {} to {}".format(
-                self.env.scene_name,
-                self.env.agent_state(),
-                tget
-            ))
+            LOGGER.warning(
+                "No path for {} from {} to {}".format(
+                    self.env.scene_name, self.env.agent_state(), tget
+                )
+            )
             return None
 
     # def judge(self) -> float:
@@ -186,8 +195,10 @@ class PointNavTask(Task[RoboThorEnvironment]):
         if self.reward_configs["shaping_weight"] == 0.0:
             return rew
 
-        geodesic_distance = self.env.dist_to_point(self.task_info['target'])
-        if self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5:  # (robothor limits)
+        geodesic_distance = self.env.dist_to_point(self.task_info["target"])
+        if (
+            self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5
+        ):  # (robothor limits)
             rew += self.last_geodesic_distance - geodesic_distance
             # if self.last_geodesic_distance > geodesic_distance:
             #     rew += self.reward_configs["delta_dist_reward_closer"]
@@ -209,7 +220,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         return rew * self.reward_configs["shaping_weight"]
 
     def judge(self) -> float:
-        """ Judge the last event. """
+        """Judge the last event."""
         reward = self.reward_configs["step_penalty"]
 
         reward += self.shaping()
@@ -237,7 +248,9 @@ class PointNavTask(Task[RoboThorEnvironment]):
             return 0.0
 
         # pose = self.env.agent_state()
-        res = compute_single_spl(self.path, self.episode_optimal_corners, self._success)  # no controller involved
+        res = compute_single_spl(
+            self.path, self.episode_optimal_corners, self._success
+        )  # no controller involved
 
         # # self.env.step({"action": "TeleportFull", **pose})
         # new_pose = self.env.agent_state()
@@ -250,7 +263,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         return res
 
     def dist_to_target(self):
-        res = self.env.dist_to_point(self.task_info['target'])
+        res = self.env.dist_to_point(self.task_info["target"])
         return res if res > -0.5 else None
 
     def metrics(self) -> Dict[str, Any]:
@@ -299,8 +312,10 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
-        self.episode_optimal_corners = self.env.path_corners(task_info["object_type"])  # assume it's valid (sampler must take care)!
-        self.mirror = task_info['mirrored']
+        self.episode_optimal_corners = self.env.path_corners(
+            task_info["object_type"]
+        )  # assume it's valid (sampler must take care)!
+        self.mirror = task_info["mirrored"]
         dist = self.env.path_corners_to_dist(self.episode_optimal_corners)
         if dist == float("inf"):
             dist = -1.0  # -1.0 for unreachable
@@ -310,7 +325,9 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self._metrics = None
         # pose = self.env.agent_state()
         # self.path = [{k: pose[k] for k in ['x', 'y', 'z']}]
-        self.path = []  # the initial coordinate will be directly taken from the optimal path
+        self.path = (
+            []
+        )  # the initial coordinate will be directly taken from the optimal path
         self.task_info["followed_path"] = [self.env.agent_state()]
         self.task_info["taken_actions"] = []
         self.task_info["action_names"] = self.action_names()
@@ -348,7 +365,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
             pose = self.env.agent_state()
-            self.path.append({k: pose[k] for k in ['x', 'y', 'z']})
+            self.path.append({k: pose[k] for k in ["x", "y", "z"]})
             self.task_info["followed_path"].append(pose)
 
         step_result = RLStepResult(
@@ -408,7 +425,9 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         # self.last_geodesic_distance = geodesic_distance
 
         geodesic_distance = self.env.dist_to_object(self.task_info["object_type"])
-        if self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5:  # (robothor limits)
+        if (
+            self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5
+        ):  # (robothor limits)
             rew += self.last_geodesic_distance - geodesic_distance
         self.last_geodesic_distance = geodesic_distance
 
@@ -424,7 +443,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         return rew * self.reward_configs["shaping_weight"]
 
     def judge(self) -> float:
-        """ Judge the last event. """
+        """Judge the last event."""
         reward = self.reward_configs["step_penalty"]
 
         reward += self.shaping()
@@ -454,8 +473,10 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         if self.mirror:
             # flipped = []
             for o in obs:
-                if ('rgb' in o or 'depth' in o) and isinstance(obs[o], np.ndarray):
-                    if len(obs[o].shape) == 3:  # heuristic to determine this is a visual sensor
+                if ("rgb" in o or "depth" in o) and isinstance(obs[o], np.ndarray):
+                    if (
+                        len(obs[o].shape) == 3
+                    ):  # heuristic to determine this is a visual sensor
                         obs[o] = obs[o][:, ::-1, :].copy()  # horizontal flip
                     elif len(obs[o].shape) == 2:  # perhaps only two axes for depth?
                         obs[o] = obs[o][:, ::-1].copy()  # horizontal flip

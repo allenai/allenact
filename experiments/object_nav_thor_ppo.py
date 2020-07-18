@@ -9,7 +9,6 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
 from models.object_nav_models import ObjectNavBaselineActorCritic
-
 from onpolicy_sync.losses import PPO
 from onpolicy_sync.losses.ppo import PPOConfig
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
@@ -139,8 +138,8 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             object_type_embedding_dim=8,
         )
 
-    @staticmethod
-    def make_sampler_fn(**kwargs) -> TaskSampler:
+    @classmethod
+    def make_sampler_fn(cls, **kwargs) -> TaskSampler:
         return ObjectNavTaskSampler(**kwargs)
 
     @staticmethod

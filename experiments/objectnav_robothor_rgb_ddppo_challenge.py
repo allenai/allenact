@@ -1,31 +1,29 @@
-from typing import Dict, Any, List, Optional
-import json
 from math import ceil
+from typing import Dict, Any, List, Optional
 
 import gym
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
-import numpy as np
 
-from onpolicy_sync.losses.ppo import PPOConfig
 from models.resnet_tensor_object_nav_models import ResnetTensorObjectNavActorCritic
 from onpolicy_sync.losses import PPO
-from rl_base.experiment_config import ExperimentConfig
-from rl_base.task import TaskSampler
-from rl_base.preprocessor import ObservationSet
-from rl_robothor.robothor_tasks import ObjectNavTask
-from rl_robothor.robothor_task_samplers import ObjectNavTaskSampler
+from onpolicy_sync.losses.ppo import PPOConfig
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
+from rl_base.experiment_config import ExperimentConfig
+from rl_base.preprocessor import ObservationSet
+from rl_base.task import TaskSampler
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
+from rl_robothor.robothor_task_samplers import ObjectNavTaskSampler
+from rl_robothor.robothor_tasks import ObjectNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
-from utils.viz_utils import SimpleViz, TrajectoryViz, ActorViz, AgentViewViz, TensorViz1D, TensorViz2D
 
 
 class ObjectNav_RoboThor_RGB_DDPPO_Challenge_ExperimentConfig(ExperimentConfig):
-    """An Object Navigation experiment configuration in RoboThor"""
+    """An Object Navigation experiment configuration in RoboThor."""
 
     TRAIN_SCENES = [
         "FloorPlan_Train%d_%d" % (wall + 1, furniture + 1)
@@ -78,14 +76,14 @@ class ObjectNav_RoboThor_RGB_DDPPO_Challenge_ExperimentConfig(ExperimentConfig):
                 "uuid": "rgb_lowres",
             }
         ),
-        GoalObjectTypeThorSensor({
-            "object_types": TARGET_TYPES,
-        }),
+        GoalObjectTypeThorSensor({"object_types": TARGET_TYPES,}),
     ]
 
     PREPROCESSORS = [
-        Builder(ResnetPreProcessorHabitat,
-                dict(config={
+        Builder(
+            ResnetPreProcessorHabitat,
+            dict(
+                config={
                     "input_height": SCREEN_SIZE,
                     "input_width": SCREEN_SIZE,
                     "output_width": 7,
@@ -96,7 +94,8 @@ class ObjectNav_RoboThor_RGB_DDPPO_Challenge_ExperimentConfig(ExperimentConfig):
                     "input_uuids": ["rgb_lowres"],
                     "output_uuid": "rgb_resnet",
                     "parallel": False,  # TODO False for debugging or dd-ppo
-            })
+                }
+            ),
         ),
     ]
 
@@ -156,7 +155,9 @@ class ObjectNav_RoboThor_RGB_DDPPO_Challenge_ExperimentConfig(ExperimentConfig):
         )
 
     def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(self.NUM_PROCESSES, ndevices)
+        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
+            self.NUM_PROCESSES, ndevices
+        )
         res = [0] * ndevices
         for it in range(self.NUM_PROCESSES):
             res[it % ndevices] += 1
@@ -164,14 +165,24 @@ class ObjectNav_RoboThor_RGB_DDPPO_Challenge_ExperimentConfig(ExperimentConfig):
 
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
-            gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7]  # TODO vs4 only has 7 gpus
-            nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
+            gpu_ids = (
+                [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7]
+            )  # TODO vs4 only has 7 gpus
+            nprocesses = (
+                1
+                if not torch.cuda.is_available()
+                else self.split_num_processes(len(gpu_ids))
+            )
         elif mode == "valid":
             nprocesses = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [7]  # TODO vs4 only has 7 GPUs
+            gpu_ids = (
+                [] if not torch.cuda.is_available() else [7]
+            )  # TODO vs4 only has 7 GPUs
         elif mode == "test":
             nprocesses = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7]  # TODO vs4 only has 7 gpus
+            gpu_ids = (
+                [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7]
+            )  # TODO vs4 only has 7 gpus
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -179,9 +190,18 @@ class ObjectNav_RoboThor_RGB_DDPPO_Challenge_ExperimentConfig(ExperimentConfig):
         for prep in self.PREPROCESSORS:
             prep.kwargs["config"]["parallel"] = False
 
-        observation_set = Builder(ObservationSet, kwargs=dict(
-            source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
-        )) if mode == "train" or nprocesses > 0 else None
+        observation_set = (
+            Builder(
+                ObservationSet,
+                kwargs=dict(
+                    source_ids=self.OBSERVATIONS,
+                    all_preprocessors=self.PREPROCESSORS,
+                    all_sensors=self.SENSORS,
+                ),
+            )
+            if mode == "train" or nprocesses > 0
+            else None
+        )
 
         return {
             "nprocesses": nprocesses,
@@ -236,7 +256,7 @@ class ObjectNav_RoboThor_RGB_DDPPO_Challenge_ExperimentConfig(ExperimentConfig):
         inds = self._partition_inds(len(scenes), total_processes)
 
         return {
-            "scenes": scenes[inds[process_ind]:inds[process_ind + 1]],
+            "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
             "object_types": self.TARGET_TYPES,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
@@ -270,7 +290,9 @@ class ObjectNav_RoboThor_RGB_DDPPO_Challenge_ExperimentConfig(ExperimentConfig):
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
         )
         res["allow_flipping"] = True
         return res
@@ -305,7 +327,9 @@ class ObjectNav_RoboThor_RGB_DDPPO_Challenge_ExperimentConfig(ExperimentConfig):
         res["env_args"].update(self.ENV_ARGS)
         if isinstance(devices[0], int):
             res["env_args"]["x_display"] = (
-                ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
+                ("0.%d" % devices[process_ind % len(devices)])
+                if devices is not None and len(devices) > 0
+                else None
             )
         # else:
         #     print("Got devices {}".format(devices))

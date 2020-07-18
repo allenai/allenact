@@ -2,18 +2,21 @@
 name."""
 
 import argparse
+import glob
 import importlib
 import inspect
 import logging
 import os
+import re
 import sys
 from typing import Dict, Tuple
 
+import gin
 from setproctitle import setproctitle as ptitle
 
 from onpolicy_sync.engine import OnPolicyTrainer, OnPolicyTester
 from rl_base.experiment_config import ExperimentConfig
-from utils.system import init_logging, LOGGER
+from utils.system import LOGGER
 
 
 def _get_args():
@@ -24,7 +27,7 @@ def _get_args():
     )
 
     parser.add_argument(
-        "experiment", type=str, help="experiment configuration file name",
+        "--experiment", type=str, help="experiment configuration file name",
     )
 
     parser.add_argument(
@@ -83,7 +86,22 @@ def _get_args():
         required=False,
         help="tests the experiment run on specified date (formatted as %%Y-%%m-%%d_%%H-%%M-%%S), assuming it was "
         "previously trained. If no checkpoint is specified, it will run on all checkpoints enabled by "
-        "skip_checkpoints",
+        "`skip_checkpoints` or on the single checkpoint saved after a known `test_ckpt_steps` number of steps.",
+    )
+
+    parser.add_argument(
+        "--env_name",
+        required=False,
+        type=str,
+        default="",
+        help="environment name to be sent to any helper scripts (eg. minigrid_random_hp_search)",
+    )
+
+    parser.add_argument(
+        "--test_ckpt_steps",
+        default=None,
+        required=False,
+        help="when testing, will load the checkpoint with this number of steps.",
     )
 
     parser.add_argument(
@@ -99,6 +117,31 @@ def _get_args():
         "--single_process_training",
         action="store_true",
         help="whether or not to train with a single process (useful for debugging).",
+    )
+
+    parser.add_argument(
+        "--disable_logging",
+        action="store_true",
+        default=False,
+        help="whether or not to disable logging.",
+    )
+
+    parser.add_argument(
+        "--deterministic_agent",
+        action="store_true",
+        help="whether or not to train with a single process (useful for debugging).",
+    )
+
+    parser.add_argument(
+        "--max_training_processes",
+        required=False,
+        default=None,
+        type=int,
+        help="maximal number of processes to spawn when training.",
+    )
+
+    parser.add_argument(
+        "--gp", default=None, action="append", help="values to be used by gin-config.",
     )
 
     return parser.parse_args()
@@ -143,36 +186,83 @@ def _load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
         len(experiments) == 1
     ), "Too many or two few experiments defined in {}".format(module_path)
 
+    gin.parse_config_files_and_bindings(None, args.gp)
+
     config = experiments[0]()
     sources = _config_source(args)
     return config, sources
 
 
-def _download_ai2thor():
-    from ai2thor.controller import Controller
+def _init_logging(log_format="default", log_level="debug"):
+    if log_level == "debug":
+        base_logging_level = logging.DEBUG
+    elif log_level == "info":
+        base_logging_level = logging.INFO
+    elif log_level == "warning":
+        base_logging_level = logging.WARNING
+    else:
+        raise TypeError("%s is an incorrect logging type!", log_level)
+    if len(LOGGER.handlers) == 0:
+        ch = logging.StreamHandler()
+        LOGGER.setLevel(base_logging_level)
+        ch.setLevel(base_logging_level)
+        if log_format == "default":
+            formatter = logging.Formatter(
+                fmt="%(asctime)s: %(levelname)s: %(message)s \t[%(filename)s: %(lineno)d]",
+                datefmt="%m/%d %H:%M:%S",
+            )
+        elif log_format == "defaultMilliseconds":
+            formatter = logging.Formatter(
+                fmt="%(asctime)s: %(levelname)s: %(message)s \t[%(filename)s: %(lineno)d]"
+            )
+        else:
+            formatter = logging.Formatter(fmt=log_format, datefmt="%m/%d %H:%M:%S")
 
-    try:
-        c = Controller(download_only=True, include_private_scenes=True)
-        c.stop_unity()
-    except Exception as _:
-        pass
+        ch.setFormatter(formatter)
+        LOGGER.addHandler(ch)
+
+
+def find_checkpoint(base_dir, date, steps):
+    ckpts = glob.glob(
+        os.path.join(
+            base_dir, "**", "*time_{}_*steps*{}__seed*.pt".format(date, steps)
+        ),
+        recursive=True,
+    )
+
+    ckpts = [
+        ckpt
+        for ckpt in ckpts
+        if re.match(".*steps_0*{}_.*".format(steps), os.path.basename(ckpt))
+    ]
+    if len(ckpts) == 0:
+        raise FileExistsError(
+            "Could not find checkpoint with date {} and {} steps in directory {}.".format(
+                date, steps, base_dir
+            )
+        )
+    elif len(ckpts) > 1:
+        raise FileExistsError(
+            "Too many checkpoints with date {} and {} steps found in directory {}."
+            " We found:\n{}".format(date, steps, base_dir, "\n".join(ckpts))
+        )
+
+    return ckpts[0]
 
 
 def main():
-    init_logging()
+    _init_logging()
 
     args = _get_args()
 
     LOGGER.info("Running with args {}".format(args))
-
-    _download_ai2thor()
 
     ptitle("Master: {}".format("Training" if not args.test_date != "" else "Testing"))
 
     cfg, srcs = _load_config(args)
 
     if args.test_date == "":
-        OnPolicyTrainer(
+        trainer = OnPolicyTrainer(
             config=cfg,
             output_dir=args.output_dir,
             loaded_config_src_files=srcs,
@@ -180,19 +270,40 @@ def main():
             deterministic_cudnn=args.deterministic_cudnn,
             extra_tag=args.extra_tag,
             single_process_training=args.single_process_training,
-        ).run_pipeline(checkpoint_file_name=args.checkpoint)
+            max_training_processes=args.max_training_processes,
+        )
+
+        trainer.run_pipeline(
+            checkpoint_file_name=args.checkpoint, disable_logging=args.disable_logging
+        )
     else:
-        OnPolicyTester(
+        checkpoint = args.checkpoint
+        if args.test_ckpt_steps is not None:
+            assert (
+                args.checkpoint is None
+            ), "When testing, either specify `checkpoint` or `test_ckpt_steps` but not both."
+            checkpoint = find_checkpoint(
+                os.path.join(args.output_dir, "checkpoints"),
+                date=args.test_date,
+                steps=args.test_ckpt_steps,
+            )
+
+        test_results = OnPolicyTester(
             config=cfg,
             output_dir=args.output_dir,
             loaded_config_src_files=srcs,
             seed=args.seed,
             deterministic_cudnn=args.deterministic_cudnn,
+            single_process_training=args.single_process_training,
+            should_log=not args.disable_logging,
         ).run_test(
             experiment_date=args.test_date,
-            checkpoint_file_name=args.checkpoint,
+            checkpoint_file_name=checkpoint,
             skip_checkpoints=args.skip_checkpoints,
+            deterministic_agent=args.deterministic_agent,
         )
+
+        LOGGER.info("Test results: {}".format(test_results))
 
 
 if __name__ == "__main__":

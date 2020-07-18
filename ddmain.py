@@ -1,4 +1,5 @@
-"""Entry point to training/validating/testing for a user given experiment name"""
+"""Entry point to training/validating/testing for a user given experiment
+name."""
 
 import argparse
 import importlib
@@ -31,8 +32,8 @@ def _get_args():
         default="",
         required=False,
         help="Add an extra tag to the experiment when trying out new ideas (will be used"
-             "as a suffix of the experiment name). It also has to be provided when testing on"
-             "the trained model.",
+        "as a suffix of the experiment name). It also has to be provided when testing on"
+        "the trained model.",
     )
 
     parser.add_argument(
@@ -70,7 +71,7 @@ def _get_args():
         action="store_true",
         required=False,
         help="for training, if checkpoint is specified, use it as model initialization and "
-             "restart training with current config",
+        "restart training with current config",
     )
     parser.set_defaults(restart=False)
 

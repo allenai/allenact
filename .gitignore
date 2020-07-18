@@ -136,3 +136,15 @@ dmypy.json
 
 # Default output dir
 experiment_output
+
+# PDFs
+*.pdf
+
+# Tensorboard logs
+events.out.tfevents.*
+
+# TSV files
+*.tsv
+
+# tmp directory
+tmp/

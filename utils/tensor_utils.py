@@ -1,24 +1,127 @@
 """Functions used to manipulate pytorch tensors and numpy arrays."""
 
 import numbers
-from collections import defaultdict
-import typing
-from typing import List, Dict, Optional, DefaultDict, Union, Any
 import os
 import tempfile
+import typing
+from collections import defaultdict
+from typing import List, Dict, Optional, DefaultDict, Union, Any
 
+import PIL
 import numpy as np
 import torch
-from tensorboardX import SummaryWriter as TBXSummaryWriter, summary as tbxsummary
-from tensorboardX.x2num import make_np as tbxmake_np
-from tensorboardX.utils import _prepare_video as tbx_prepare_video
-from tensorboardX.proto.summary_pb2 import Summary as TBXSummary
+from PIL import Image
 from moviepy import editor as mpy
 from moviepy.editor import concatenate_videoclips
-import PIL
-from PIL import Image
+from tensorboardX import SummaryWriter as TBXSummaryWriter, summary as tbxsummary
+from tensorboardX.proto.summary_pb2 import Summary as TBXSummary
+from tensorboardX.utils import _prepare_video as tbx_prepare_video
+from tensorboardX.x2num import make_np as tbxmake_np
 
 from utils.system import LOGGER
+
+
+def to_device_recursively(input: Any, device: str, inplace: bool = True):
+    """Recursively places tensors on the appropriate device."""
+    if input is None:
+        return input
+    elif isinstance(input, torch.Tensor):
+        return input.to(device)
+    elif isinstance(input, tuple):
+        return tuple(
+            to_device_recursively(input=subinput, device=device, inplace=inplace)
+            for subinput in input
+        )
+    elif isinstance(input, list):
+        if inplace:
+            for i in range(len(input)):
+                input[i] = to_device_recursively(
+                    input=input[i], device=device, inplace=inplace
+                )
+            return input
+        else:
+            return [
+                to_device_recursively(input=subpart, device=device, inplace=inplace)
+                for subpart in input
+            ]
+    elif isinstance(input, dict):
+        if inplace:
+            for key in input:
+                input[key] = to_device_recursively(
+                    input=input[key], device=device, inplace=inplace
+                )
+            return input
+        else:
+            return {
+                k: to_device_recursively(input=input[k], device=device, inplace=inplace)
+                for k in input
+            }
+    elif isinstance(input, set):
+        if inplace:
+            for element in list(input):
+                input.remove(element)
+                input.add(
+                    to_device_recursively(element, device=device, inplace=inplace)
+                )
+        else:
+            return set(
+                to_device_recursively(k, device=device, inplace=inplace) for k in input
+            )
+    elif isinstance(input, np.ndarray) or np.isscalar(input) or isinstance(input, str):
+        return input
+    elif hasattr(input, "to"):
+        # noinspection PyCallingNonCallable
+        return input.to(device=device, inplace=inplace)
+    else:
+        raise NotImplementedError(
+            "Sorry, value of type {} is not supported.".format(type(input))
+        )
+
+
+def detach_recursively(input: Any, inplace=True):
+    """Recursively detaches tensors in some data structure from their
+    computation graph."""
+    if input is None:
+        return input
+    elif isinstance(input, torch.Tensor):
+        return input.detach()
+    elif isinstance(input, tuple):
+        return tuple(
+            detach_recursively(input=subinput, inplace=inplace) for subinput in input
+        )
+    elif isinstance(input, list):
+        if inplace:
+            for i in range(len(input)):
+                input[i] = detach_recursively(input[i], inplace=inplace)
+            return input
+        else:
+            return [
+                detach_recursively(input=subinput, inplace=inplace)
+                for subinput in input
+            ]
+    elif isinstance(input, dict):
+        if inplace:
+            for key in input:
+                input[key] = detach_recursively(input[key], inplace=inplace)
+            return input
+        else:
+            return {k: detach_recursively(input[k], inplace=inplace) for k in input}
+    elif isinstance(input, set):
+        if inplace:
+            for element in list(input):
+                input.remove(element)
+                input.add(detach_recursively(element, inplace=inplace))
+        else:
+            return set(detach_recursively(k, inplace=inplace) for k in input)
+    elif isinstance(input, np.ndarray) or np.isscalar(input) or isinstance(input, str):
+        return input
+    elif hasattr(input, "detach_recursively"):
+        # noinspection PyCallingNonCallable
+        return input.detach_recursively(inplace=inplace)
+    else:
+        raise NotImplementedError(
+            "Sorry, hidden state of type {} is not supported.".format(type(input))
+        )
 
 
 def batch_observations(
@@ -46,7 +149,9 @@ def batch_observations(
     # for sensor in batch:
     #     batch[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)
 
-    def dict_from_observation(observation: Dict[str, Any]) -> Dict[str, Union[Dict, List]]:
+    def dict_from_observation(
+        observation: Dict[str, Any]
+    ) -> Dict[str, Union[Dict, List]]:
         batch: DefaultDict = defaultdict(list)
 
         for sensor in observation:
@@ -57,14 +162,18 @@ def batch_observations(
 
         return batch
 
-    def fill_dict_from_observations(batch: Dict[str, Union[Dict, List]], observation: Dict[str, Any]) -> None:
+    def fill_dict_from_observations(
+        batch: Dict[str, Union[Dict, List]], observation: Dict[str, Any]
+    ) -> None:
         for sensor in observation:
             if isinstance(observation[sensor], Dict):
                 fill_dict_from_observations(batch[sensor], observation[sensor])
             else:
                 batch[sensor].append(to_tensor(observation[sensor]))
 
-    def dict_to_batch(batch: Dict[str, Union[Dict, List]], device: Optional[torch.device]=None) -> None:
+    def dict_to_batch(
+        batch: Dict[str, Union[Dict, List]], device: Optional[torch.device] = None
+    ) -> None:
         batch = typing.cast(Union[Dict, List, torch.Tensor], batch)
         for sensor in batch:
             if isinstance(batch[sensor], Dict):
@@ -146,17 +255,20 @@ class SummaryWriter(TBXSummaryWriter):
             self._video(tag, vid), global_step, walltime
         )
 
-    def add_image(self, tag, img_tensor, global_step=None, walltime=None, dataformats='CHW'):
+    def add_image(
+        self, tag, img_tensor, global_step=None, walltime=None, dataformats="CHW"
+    ):
         self._get_file_writer().add_summary(
             image(tag, img_tensor, dataformats=dataformats), global_step, walltime
         )
 
 
-def image(tag, tensor, rescale=1, dataformats='CHW'):
-    """Outputs a `Summary` protocol buffer with images.
-    The summary has up to `max_images` summary values containing images. The
-    images are built from `tensor` which must be 3-D with shape `[height, width,
-    channels]` and where `channels` can be:
+def image(tag, tensor, rescale=1, dataformats="CHW"):
+    """Outputs a `Summary` protocol buffer with images. The summary has up to
+    `max_images` summary values containing images. The images are built from
+    `tensor` which must be 3-D with shape `[height, width, channels]` and where
+    `channels` can be:
+
     *  1: `tensor` is interpreted as Grayscale.
     *  3: `tensor` is interpreted as RGB.
     *  4: `tensor` is interpreted as RGBA.
@@ -186,27 +298,36 @@ def image(tag, tensor, rescale=1, dataformats='CHW'):
 
 def convert_to_HWC(tensor, input_format):  # tensor: numpy array
     import numpy as np
-    assert(len(set(input_format)) == len(input_format)), "You can not use the same dimension shordhand twice. \
-        input_format: {}".format(input_format)
-    assert(len(tensor.shape) == len(input_format)), "size of input tensor and input format are different. \
-        tensor shape: {}, input_format: {}".format(tensor.shape, input_format)
+
+    assert len(set(input_format)) == len(
+        input_format
+    ), "You can not use the same dimension shordhand twice. \
+        input_format: {}".format(
+        input_format
+    )
+    assert len(tensor.shape) == len(
+        input_format
+    ), "size of input tensor and input format are different. \
+        tensor shape: {}, input_format: {}".format(
+        tensor.shape, input_format
+    )
     input_format = input_format.upper()
 
     if len(input_format) == 4:
-        index = [input_format.find(c) for c in 'NCHW']
+        index = [input_format.find(c) for c in "NCHW"]
         tensor_NCHW = tensor.transpose(index)
         tensor_CHW = make_grid(tensor_NCHW)
         return tensor_CHW.transpose(1, 2, 0)
 
     if len(input_format) == 3:
-        index = [input_format.find(c) for c in 'HWC']
+        index = [input_format.find(c) for c in "HWC"]
         tensor_HWC = tensor.transpose(index)
         if tensor_HWC.shape[2] == 1:
             tensor_HWC = np.concatenate([tensor_HWC, tensor_HWC, tensor_HWC], 2)
         return tensor_HWC
 
     if len(input_format) == 2:
-        index = [input_format.find(c) for c in 'HW']
+        index = [input_format.find(c) for c in "HW"]
         tensor = tensor.transpose(index)
         tensor = np.stack([tensor, tensor, tensor], 2)
         return tensor
@@ -215,8 +336,8 @@ def convert_to_HWC(tensor, input_format):  # tensor: numpy array
 def make_grid(I, ncols=8):
     # I: N1HW or N3HW
     import numpy as np
-    assert isinstance(
-        I, np.ndarray), 'plugin error, should pass numpy array here'
+
+    assert isinstance(I, np.ndarray), "plugin error, should pass numpy array here"
     if I.shape[1] == 1:
         I = np.concatenate([I, I, I], 1)
     assert I.ndim == 4 and I.shape[1] == 3 or I.shape[1] == 4
@@ -231,7 +352,7 @@ def make_grid(I, ncols=8):
         for x in range(ncols):
             if i >= nimg:
                 break
-            canvas[:, y * H:(y + 1) * H, x * W:(x + 1) * W] = I[i]
+            canvas[:, y * H : (y + 1) * H, x * W : (x + 1) * W] = I[i]
             i = i + 1
     return canvas
 
@@ -281,7 +402,9 @@ def clips_to_video(clips, h, w, c):
     except OSError:
         LOGGER.warning("The temporary file used by moviepy cannot be deleted.")
 
-    return TBXSummary.Image(height=h, width=w, colorspace=c, encoded_image_string=tensor_string)
+    return TBXSummary.Image(
+        height=h, width=w, colorspace=c, encoded_image_string=tensor_string
+    )
 
 
 def process_video(render, max_clip_len=500, max_video_len=-1):
@@ -289,12 +412,14 @@ def process_video(render, max_clip_len=500, max_video_len=-1):
     hwc = None
     if len(render) > 0:
         if len(render) > max_video_len > 0:
-            LOGGER.warning("Clipping video to first {} frames out of {} original frames".format(
-                max_video_len, len(render)
-            ))
+            LOGGER.warning(
+                "Clipping video to first {} frames out of {} original frames".format(
+                    max_video_len, len(render)
+                )
+            )
             render = render[:max_video_len]
         for clipstart in range(0, len(render), max_clip_len):
-            clip = render[clipstart:clipstart + max_clip_len]
+            clip = render[clipstart : clipstart + max_clip_len]
             try:
                 current = np.stack(clip, axis=0)  # T, H, W, C
                 current = current.transpose((0, 3, 1, 2))  # T, C, H, W
@@ -304,12 +429,18 @@ def process_video(render, max_clip_len=500, max_video_len=-1):
                 if hwc is None:
                     hwc = cur_hwc
                 else:
-                    assert hwc == cur_hwc, "Inconsistent clip shape: previous {} current {}".format(hwc, cur_hwc)
+                    assert (
+                        hwc == cur_hwc
+                    ), "Inconsistent clip shape: previous {} current {}".format(
+                        hwc, cur_hwc
+                    )
 
                 output.append(current)
             except MemoryError:
                 LOGGER.error(
-                    "Skipping video due to memory error with clip of length {}".format(len(clip))
+                    "Skipping video due to memory error with clip of length {}".format(
+                        len(clip)
+                    )
                 )
                 return None
     else:

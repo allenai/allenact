@@ -1,7 +1,5 @@
 import random
 from typing import List, Dict, Optional, Any, Union
-from collections import OrderedDict
-import copy
 
 import gym
 
@@ -68,7 +66,7 @@ class ObjectNavTaskSampler(TaskSampler):
         return env
 
     @property
-    def __len__(self) -> Union[int, float]:
+    def length(self) -> Union[int, float]:
         """Length.
 
         # Returns

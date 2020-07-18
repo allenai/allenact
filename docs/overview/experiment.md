@@ -193,8 +193,8 @@ defined which task we wish to train our agent to complete. This is done by imple
 ```python
 class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfig):
     ...
-    @staticmethod
-    def make_sampler_fn(**kwargs) -> rl_base.task.TaskSampler:
+    @classmethod
+    def make_sampler_fn(cls, **kwargs) -> rl_base.task.TaskSampler:
         return rl_ai2thor.object_nav.task_samplers.ObjectNavTaskSampler(**kwargs)
     ...
 ```
