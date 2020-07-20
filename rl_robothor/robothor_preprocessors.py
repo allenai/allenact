@@ -8,7 +8,7 @@ from gym.spaces.dict import Dict as SpaceDict
 
 from rl_base.preprocessor import Preprocessor
 from utils.cacheless_frcnn import fasterrcnn_resnet50_fpn
-from utils.system import LOGGER
+from utils.system import get_logger
 
 
 class BatchedFasterRCNN(torch.nn.Module):
@@ -192,7 +192,7 @@ class FasterRCNNPreProcessorRoboThor(Preprocessor):
             assert (
                 torch.cuda.is_available()
             ), "attempt to parallelize detector without cuda"
-            LOGGER.info("Distributing detector")
+            get_logger().info("Distributing detector")
             self.frcnn = self.frcnn.to(torch.device("cuda"))
 
             # store = torch.distributed.TCPStore("localhost", 4712, 1, True)
@@ -202,11 +202,11 @@ class FasterRCNNPreProcessorRoboThor(Preprocessor):
             self.frcnn = torch.nn.DataParallel(
                 self.frcnn, device_ids=self.device_ids
             )  # , output_device=torch.cuda.device_count() - 1)
-            LOGGER.info("Detected {} devices".format(torch.cuda.device_count()))
+            get_logger().info("Detected {} devices".format(torch.cuda.device_count()))
             # images = torch.cat([(1. / (1. + it)) * torch.ones(1, 3, 300, 400) for it in range(24)], dim=0)
             # self.frcnn(images[:timages, ...])
 
-            # LOGGER.info("Detector distributed")
+            # get_logger().info("Detector distributed")
 
         spaces: OrderedDict[str, gym.Space] = OrderedDict()
         shape = (self.max_dets, self.detector_spatial_res, self.detector_spatial_res)

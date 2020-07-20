@@ -10,7 +10,7 @@ from torchvision.models.utils import load_state_dict_from_url
 
 class CachelessAnchorGenerator(AnchorGenerator):
     def forward(self, image_list, feature_maps):
-        # type: (ImageList, List[Tensor])
+        # type -> Tuple[ImageList, List[Tensor]]
         grid_sizes = list([feature_map.shape[-2:] for feature_map in feature_maps])
         image_size = image_list.tensors.shape[-2:]
         strides = [

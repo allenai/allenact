@@ -18,7 +18,7 @@ from tensorboardX.proto.summary_pb2 import Summary as TBXSummary
 from tensorboardX.utils import _prepare_video as tbx_prepare_video
 from tensorboardX.x2num import make_np as tbxmake_np
 
-from utils.system import LOGGER
+from utils.system import get_logger
 
 
 def to_device_recursively(input: Any, device: str, inplace: bool = True):
@@ -391,7 +391,9 @@ def clips_to_video(clips, h, w, c):
     try:
         clip.write_gif(filename, verbose=False, logger=None)
     except TypeError:
-        LOGGER.warning("Upgrade to moviepy >= 1.0.0 to suppress the progress bar.")
+        get_logger().warning(
+            "Upgrade to moviepy >= 1.0.0 to suppress the progress bar."
+        )
         clip.write_gif(filename, verbose=False)
 
     with open(filename, "rb") as f:
@@ -400,7 +402,7 @@ def clips_to_video(clips, h, w, c):
     try:
         os.remove(filename)
     except OSError:
-        LOGGER.warning("The temporary file used by moviepy cannot be deleted.")
+        get_logger().warning("The temporary file used by moviepy cannot be deleted.")
 
     return TBXSummary.Image(
         height=h, width=w, colorspace=c, encoded_image_string=tensor_string
@@ -412,7 +414,7 @@ def process_video(render, max_clip_len=500, max_video_len=-1):
     hwc = None
     if len(render) > 0:
         if len(render) > max_video_len > 0:
-            LOGGER.warning(
+            get_logger().warning(
                 "Clipping video to first {} frames out of {} original frames".format(
                     max_video_len, len(render)
                 )
@@ -437,14 +439,14 @@ def process_video(render, max_clip_len=500, max_video_len=-1):
 
                 output.append(current)
             except MemoryError:
-                LOGGER.error(
+                get_logger().error(
                     "Skipping video due to memory error with clip of length {}".format(
                         len(clip)
                     )
                 )
                 return None
     else:
-        LOGGER.warning("Calling process_video with 0 frames")
+        get_logger().warning("Calling process_video with 0 frames")
         return None
 
     assert len(output) > 0, "No clips to concatenate"
@@ -453,7 +455,7 @@ def process_video(render, max_clip_len=500, max_video_len=-1):
     try:
         result = clips_to_video(output, *hwc)
     except MemoryError:
-        LOGGER.error("Skipping video due to memory error calling clips_to_video")
+        get_logger().error("Skipping video due to memory error calling clips_to_video")
         result = None
 
     return result

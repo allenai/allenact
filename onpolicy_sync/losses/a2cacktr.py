@@ -7,7 +7,7 @@ import torch
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
-from utils.system import LOGGER
+from utils.system import get_logger
 
 
 class A2CACKTR(AbstractActorCriticLoss):
@@ -57,7 +57,7 @@ class A2CACKTR(AbstractActorCriticLoss):
         if self.acktr:
             # TODO: Currently acktr doesn't really work because of this natural gradient stuff
             #   that we should figure out how to integrate properly.
-            LOGGER.warning("acktr is only partially supported.")
+            get_logger().warning("acktr is only partially supported.")
 
         return {
             "value": (value_loss, self.value_loss_coef),

@@ -20,7 +20,7 @@ from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
 from rl_base.common import RLStepResult
 from rl_base.preprocessor import ObservationSet
 from rl_base.task import TaskSampler
-from utils.system import init_logging, LOGGER
+from utils.system import get_logger
 from utils.tensor_utils import tile_images, batch_observations
 
 STEP_COMMAND = "step"
@@ -209,8 +209,6 @@ class VectorPreprocessedTasks(object):
         Tasks/TaskSampler."""
         ptitle("VectorPreprocessedTasks: {}".format(worker_id))
 
-        init_logging()
-
         observation_set = make_preprocessors_fn(worker_id)
         vector_task_sampler = vectorized_class(
             make_sampler_fn=make_sampler_fn,
@@ -307,7 +305,7 @@ class VectorPreprocessedTasks(object):
                                     **data
                                 )  # data is a kwargs shared by all subworkers
                             else:
-                                LOGGER.error(
+                                get_logger().error(
                                     "passing arguments to directed next_task (worker {}, args {})".format(
                                         data[0], data[1]
                                     )
@@ -464,7 +462,7 @@ class VectorPreprocessedTasks(object):
             )
         ):
             worker_conn, parent_conn, cur_make_preprocessors_fn, cur_task_sampler_ids = stuff  # type: ignore
-            LOGGER.info("Starting {}-th preprocessor manager".format(id))
+            get_logger().info("Starting {}-th preprocessor manager".format(id))
             ps = self._mp_ctx.Process(  # type: ignore
                 target=self._task_sampling_loop_worker,
                 args=(

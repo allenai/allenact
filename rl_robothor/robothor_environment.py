@@ -9,7 +9,7 @@ from ai2thor.controller import Controller
 from ai2thor.util import metrics
 
 from utils.experiment_utils import recursive_update
-from utils.system import LOGGER
+from utils.system import get_logger
 
 
 class RoboThorEnvironment:
@@ -50,9 +50,9 @@ class RoboThorEnvironment:
         #     if 'Painting' in oname:
         #         self.controller.step("RemoveFromScene", objectId=oname)
         #         removed.append(oname)
-        # LOGGER.info("Removed {} Paintings from {}".format(len(removed), self.scene_name))
+        # get_logger().info("Removed {} Paintings from {}".format(len(removed), self.scene_name))
 
-        # LOGGER.warning("init to scene {} in pos {}".format(self.scene_name, self.agent_state()))
+        # get_logger().warning("init to scene {} in pos {}".format(self.scene_name, self.agent_state()))
         # npoints = len(self.currently_reachable_points)
         # assert npoints > 100, "only {} reachable points after init".format(npoints)
         self.grids: Dict[str, Tuple[Dict[str, np.array], int, int, int, int]] = {}
@@ -129,7 +129,7 @@ class RoboThorEnvironment:
         type or end point location."""
         pose = self.agent_state()
         position = {k: float(pose[k]) for k in ["x", "y", "z"]}
-        # LOGGER.debug("initial pos in path corners {} target {}".format(pose, target))
+        # get_logger().debug("initial pos in path corners {} target {}".format(pose, target))
         try:
             if isinstance(target, str):
                 path = metrics.get_shortest_path_to_object_type(
@@ -143,7 +143,7 @@ class RoboThorEnvironment:
                     self.controller, position, target
                 )
         except ValueError:
-            LOGGER.debug(
+            get_logger().debug(
                 "No path to object {} from {} in {}".format(
                     target, position, self.scene_name
                 )
@@ -173,12 +173,12 @@ class RoboThorEnvironment:
                     (new_pose["horizon"] % 360), (pose["horizon"] % 360)
                 )
             except Exception:
-                # LOGGER.error("new_pose {} old_pose {} in {}".format(new_pose, pose, self.scene_name))
+                # get_logger().error("new_pose {} old_pose {} in {}".format(new_pose, pose, self.scene_name))
                 pass
             # if abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) > 1e-5:
-            #     LOGGER.debug("wrong horizon {} vs {} after path to object {} from {} in {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360), target, position, self.scene_name))
+            #     get_logger().debug("wrong horizon {} vs {} after path to object {} from {} in {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360), target, position, self.scene_name))
             # else:
-            #     LOGGER.debug("correct horizon {} vs {} after path to object {} from {} in {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360), target, position, self.scene_name))
+            #     get_logger().debug("correct horizon {} vs {} after path to object {} from {} in {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360), target, position, self.scene_name))
             # assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
 
             # # TODO: the agent will continue with a random horizon from here on
@@ -194,7 +194,7 @@ class RoboThorEnvironment:
             #         old = update_horizon
             #         new_pose = self.agent_state()['horizon']
             #         update_horizon = (new_pose % 360) - (360 if (new_pose % 360) >= 180 else 0)
-            #         LOGGER.debug("LookDown horizon {} -> {} ({})".format(old, update_horizon, target_horizon))
+            #         get_logger().debug("LookDown horizon {} -> {} ({})".format(old, update_horizon, target_horizon))
             #         nmovements += 1
             #         cond = abs(target_horizon - update_horizon) > 1e-5 and target_horizon > update_horizon
             #
@@ -204,24 +204,24 @@ class RoboThorEnvironment:
             #         old = update_horizon
             #         new_pose = self.agent_state()['horizon']
             #         update_horizon = (new_pose % 360) - (360 if (new_pose % 360) >= 180 else 0)
-            #         LOGGER.debug("LookUp horizon {} -> {} ({})".format(old, update_horizon, target_horizon))
+            #         get_logger().debug("LookUp horizon {} -> {} ({})".format(old, update_horizon, target_horizon))
             #         nmovements += 1
             #         cond = abs(target_horizon - update_horizon) > 1e-5 and target_horizon < update_horizon
             #
             #     cond = abs(target_horizon - update_horizon) > 1e-5
-            # LOGGER.debug("nmovements {}".format(nmovements))
+            # get_logger().debug("nmovements {}".format(nmovements))
             # new_pose = self.agent_state()
             # assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
 
             # try:
             #     assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
             # except Exception:
-            #     LOGGER.error("wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360)))
+            #     get_logger().error("wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360)))
             #     self.controller.step("TeleportFull", **pose)
             #     assert abs(
             #         (new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {} after teleport full".format(
             #         (new_pose['horizon'] % 360), (pose['horizon'] % 360))
-        #     # LOGGER.debug("initial pos in path corners {} current pos {} path {}".format(pose, self.agent_state(), path))
+        #     # get_logger().debug("initial pos in path corners {} current pos {} path {}".format(pose, self.agent_state(), path))
         return path
 
     def path_corners_to_dist(self, corners: Collection[Dict[str, float]]) -> float:
@@ -305,13 +305,13 @@ class RoboThorEnvironment:
             #     if 'Painting' in oname:
             #         self.controller.step("RemoveFromScene", objectId=oname)
             #         removed.append(oname)
-            # LOGGER.info("Removed {} Paintings from {}".format(len(removed), scene_name))
+            # get_logger().info("Removed {} Paintings from {}".format(len(removed), scene_name))
 
         # else:
         # assert (
         #     self.scene_name in self.known_good_locations
         # ), "Resetting scene without known good location"
-        # LOGGER.warning("Resetting {} to {}".format(self.scene_name, self.known_good_locations[self.scene_name]))
+        # get_logger().warning("Resetting {} to {}".format(self.scene_name, self.known_good_locations[self.scene_name]))
         # self.controller.step("TeleportFull", **self.known_good_locations[self.scene_name])
         # assert self.last_action_success, "Could not reset to known good location"
 
@@ -332,12 +332,12 @@ class RoboThorEnvironment:
         while k == 0 or (not self.last_action_success and k < 10):
             # self.reset()
             state = {**self.random_reachable_state(seed=seed), **partial_position}
-            # LOGGER.debug("picked target location {}".format(state))
+            # get_logger().debug("picked target location {}".format(state))
             self.controller.step("TeleportFull", **state)
             k += 1
 
         if not self.last_action_success:
-            LOGGER.warning(
+            get_logger().warning(
                 (
                     "Randomize agent location in scene {} and current random state {}"
                     " with seed {} and partial position {} failed in "
@@ -347,9 +347,9 @@ class RoboThorEnvironment:
             self.controller.step("TeleportFull", **state, force_action=True)  # type: ignore
             assert self.last_action_success, "Force action failed with {}".format(state)
 
-        # LOGGER.debug("location after teleport full {}".format(self.agent_state()))
+        # get_logger().debug("location after teleport full {}".format(self.agent_state()))
         # self.controller.step("TeleportFull", **self.agent_state())  # TODO only for debug
-        # LOGGER.debug("location after re-teleport full {}".format(self.agent_state()))
+        # get_logger().debug("location after re-teleport full {}".format(self.agent_state()))
 
         return self.agent_state()
 
@@ -432,7 +432,7 @@ class RoboThorEnvironment:
         try:
             self.controller.stop()
         except Exception as e:
-            LOGGER.warning(str(e))
+            get_logger().warning(str(e))
 
     def all_objects(self) -> List[Dict[str, Any]]:
         """Return all object metadata."""

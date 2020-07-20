@@ -11,7 +11,7 @@ import torch
 
 from onpolicy_sync.policy import ActorCriticModel
 from rl_base.common import Memory
-from utils.system import LOGGER
+from utils.system import get_logger
 
 
 class RolloutStorage:
@@ -52,7 +52,7 @@ class RolloutStorage:
             if "num_recurrent_layers" in dir(actor_critic)
             else 0
         )  # actually a memory spec if num_rnn_layers is < 0
-        self.memory: Dict[str, Tuple[torch.Tensor, int]] = self.create_memory(
+        self.memory: Memory = self.create_memory(
             num_recurrent_layers, spec, num_processes
         )
 
@@ -284,7 +284,7 @@ class RolloutStorage:
         memory_index = torch.as_tensor(
             keep_list, dtype=torch.int64, device=self.masks.device
         )
-        # LOGGER.debug("keep_list {} memory_index {}".format(keep_list, memory_index))
+        # get_logger().debug("keep_list {} memory_index {}".format(keep_list, memory_index))
         for name in self.memory:
             self.memory[name] = (
                 self.memory[name][0].index_select(
@@ -304,7 +304,7 @@ class RolloutStorage:
         assert len(self.unnarrow_data) == 0, "attempting to narrow narrowed rollouts"
 
         if self.step == 0:  # we're actually done
-            LOGGER.warning("Called narrow with self.step == 0")
+            get_logger().warning("Called narrow with self.step == 0")
             return
 
         for sensor in self.observations:

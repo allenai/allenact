@@ -28,7 +28,7 @@ from setproctitle import setproctitle as ptitle
 from rl_base.common import RLStepResult
 from rl_base.task import TaskSampler
 from utils.misc_utils import partition_sequence
-from utils.system import LOGGER
+from utils.system import get_logger
 from utils.tensor_utils import tile_images
 
 try:
@@ -309,10 +309,10 @@ class VectorSampledTasks(object):
                 child_pipe.close()
         except KeyboardInterrupt:
             if should_log:
-                LOGGER.info("Worker {} KeyboardInterrupt".format(worker_id))
+                get_logger().info("Worker {} KeyboardInterrupt".format(worker_id))
         finally:
             if should_log:
-                LOGGER.info("""Worker {} closing.""".format(worker_id))
+                get_logger().info("""Worker {} closing.""".format(worker_id))
 
     def _spawn_workers(
         self,
@@ -333,7 +333,7 @@ class VectorSampledTasks(object):
 
             worker_conn, parent_conn, current_sampler_fn_args_list = stuff  # type: ignore
             if self.should_log:
-                LOGGER.info(
+                get_logger().info(
                     "Starting {}-th worker with args {}".format(
                         id, current_sampler_fn_args_list
                     )
@@ -916,14 +916,14 @@ class SingleProcessVectorSampledTasks(object):
 
         except KeyboardInterrupt:
             if should_log:
-                LOGGER.info(
+                get_logger().info(
                     "SingleProcessVectorSampledTask {} KeyboardInterrupt".format(
                         worker_id
                     )
                 )
         finally:
             if should_log:
-                LOGGER.info(
+                get_logger().info(
                     "SingleProcessVectorSampledTask {} closing.".format(worker_id)
                 )
             task_sampler.close()
@@ -937,7 +937,7 @@ class SingleProcessVectorSampledTasks(object):
         generators = []
         for id, current_sampler_fn_args in enumerate(sampler_fn_args):
             if self.should_log:
-                LOGGER.info(
+                get_logger().info(
                     "Starting {}-th worker with args {}".format(
                         id, current_sampler_fn_args
                     )

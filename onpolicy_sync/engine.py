@@ -53,7 +53,7 @@ from utils.experiment_utils import (
     NeverEarlyStoppingCriterion,
     OffPolicyPipelineComponent,
 )
-from utils.system import LOGGER
+from utils.system import get_logger
 from utils.tensor_utils import (
     batch_observations,
     SummaryWriter,
@@ -148,7 +148,7 @@ class OnPolicyRLEngine(object):
         self.device = "cpu"
         if len(self.machine_params["gpu_ids"]) > 0:
             if not torch.cuda.is_available():
-                LOGGER.warning(
+                get_logger().warning(
                     "Warning: no CUDA devices available for gpu ids {}".format(
                         self.machine_params["gpu_ids"]
                     )
@@ -261,7 +261,7 @@ class OnPolicyRLEngine(object):
 
             if self.config.machine_params("valid")["nprocesses"] <= 0:
                 if self.is_logging:
-                    LOGGER.info(
+                    get_logger().info(
                         "No processes allocated to validation, no validation will be run."
                     )
             else:
@@ -578,7 +578,7 @@ class OnPolicyRLEngine(object):
                             cscalars = {k: v for k, v in info.items()}
                             teachers.append(cscalars)
                         else:
-                            LOGGER.warning("Unknown info package {}".format(info))
+                            get_logger().warning("Unknown info package {}".format(info))
                 else:
                     train_metrics.append(metric)
             except queue.Empty:
@@ -624,7 +624,7 @@ class OnPolicyRLEngine(object):
                     tag=key, vid=metric, global_step=metric_steps,
                 )
         for message in valid_test_messages:
-            LOGGER.info(message)
+            get_logger().info(message)
 
         if train_scalar_tracker is not None:
             tracked_means = train_scalar_tracker.means()
@@ -656,7 +656,7 @@ class OnPolicyRLEngine(object):
 
             train_message = " ".join(train_message_list)
 
-            LOGGER.info(train_message)
+            get_logger().info(train_message)
 
     def update(self, rollouts: RolloutStorage) -> None:
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
@@ -1101,7 +1101,7 @@ class OnPolicyRLEngine(object):
             % (self.num_rollouts, self.max_stage_steps, max_stage_steps,)
         )
         if self.is_logging:
-            LOGGER.info(message)
+            get_logger().info(message)
 
         self.early_stopping_criterion = (
             early_stopping_criterion
@@ -1236,7 +1236,7 @@ class OnPolicyRLEngine(object):
 
             src_file = os.path.sep.join([base] + parts) + ".py"
             if not os.path.isfile(src_file):
-                LOGGER.error("Config file {} not found".format(src_file))
+                get_logger().error("Config file {} not found".format(src_file))
 
             dst_file = (
                 os.path.join(
@@ -1277,7 +1277,9 @@ class OnPolicyRLEngine(object):
             with open(sha_path, "w") as f:
                 f.write(short_sha)
         except subprocess.CalledProcessError as _:
-            LOGGER.warning("Could not save git diff of current project. Continuing...")
+            get_logger().warning(
+                "Could not save git diff of current project. Continuing..."
+            )
 
     def _acquire_unique_local_start_time_string(self) -> str:
         """Creates a (unique) local start time string for this experiment.
@@ -1318,7 +1320,7 @@ class OnPolicyRLEngine(object):
                 ) as f:
                     f.write(candidate_str)
         except Timeout as e:
-            LOGGER.exception(
+            get_logger().exception(
                 "Could not acquire the lock for {} for 60 seconds,"
                 " this suggests an unexpected deadlock. Please close all embodied-rl training processes,"
                 " delete this lockfile, and try again.".format(
@@ -1417,10 +1419,10 @@ class OnPolicyRLEngine(object):
         finally:
             if not encountered_exception:
                 if self.is_logging:
-                    LOGGER.info("\n\nTRAINING COMPLETE.\n\n")
+                    get_logger().info("\n\nTRAINING COMPLETE.\n\n")
             else:
-                LOGGER.info("\n\nENCOUNTERED EXCEPTION DURING TRAINING!\n\n")
-                LOGGER.exception(traceback.format_exc())
+                get_logger().info("\n\nENCOUNTERED EXCEPTION DURING TRAINING!\n\n")
+                get_logger().exception(traceback.format_exc())
             self.close(verbose=self.is_logging)
 
     def process_checkpoints(
@@ -1474,7 +1476,7 @@ class OnPolicyRLEngine(object):
         if len(render) > 0:
             nt = len(render)
             if nt > max_clip_len:
-                LOGGER.info(
+                get_logger().info(
                     "Cutting video with length {} to {}".format(nt, max_clip_len)
                 )
                 render = render[:max_clip_len]
@@ -1484,7 +1486,7 @@ class OnPolicyRLEngine(object):
                 render = np.expand_dims(render, axis=0)  # 1, T, C, H, W
                 render = tensor_to_video(render, fps=4)
             except MemoryError:
-                LOGGER.warning(
+                get_logger().warning(
                     "Skipped video with length {} (cut to {})".format(nt, max_clip_len)
                 )
                 render = None
@@ -1626,7 +1628,7 @@ class OnPolicyRLEngine(object):
 
         def info_log(message):
             if self.is_logging:
-                LOGGER.info(message)
+                get_logger().info(message)
 
         if self.is_logging:
             self.log_writer = SummaryWriter(
@@ -1677,9 +1679,9 @@ class OnPolicyRLEngine(object):
         def logif(s: Union[str, Exception]):
             if verbose:
                 if isinstance(s, str):
-                    LOGGER.info(s)
+                    get_logger().info(s)
                 elif isinstance(s, Exception):
-                    LOGGER.exception(traceback.format_exc())
+                    get_logger().exception(traceback.format_exc())
                 else:
                     raise NotImplementedError()
 

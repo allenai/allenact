@@ -5,7 +5,6 @@ import argparse
 import glob
 import importlib
 import inspect
-import logging
 import os
 import re
 import sys
@@ -16,7 +15,7 @@ from setproctitle import setproctitle as ptitle
 
 from onpolicy_sync.engine import OnPolicyTrainer, OnPolicyTester
 from rl_base.experiment_config import ExperimentConfig
-from utils.system import LOGGER
+from utils.system import get_logger
 
 
 def _get_args():
@@ -193,35 +192,6 @@ def _load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
     return config, sources
 
 
-def _init_logging(log_format="default", log_level="debug"):
-    if log_level == "debug":
-        base_logging_level = logging.DEBUG
-    elif log_level == "info":
-        base_logging_level = logging.INFO
-    elif log_level == "warning":
-        base_logging_level = logging.WARNING
-    else:
-        raise TypeError("%s is an incorrect logging type!", log_level)
-    if len(LOGGER.handlers) == 0:
-        ch = logging.StreamHandler()
-        LOGGER.setLevel(base_logging_level)
-        ch.setLevel(base_logging_level)
-        if log_format == "default":
-            formatter = logging.Formatter(
-                fmt="%(asctime)s: %(levelname)s: %(message)s \t[%(filename)s: %(lineno)d]",
-                datefmt="%m/%d %H:%M:%S",
-            )
-        elif log_format == "defaultMilliseconds":
-            formatter = logging.Formatter(
-                fmt="%(asctime)s: %(levelname)s: %(message)s \t[%(filename)s: %(lineno)d]"
-            )
-        else:
-            formatter = logging.Formatter(fmt=log_format, datefmt="%m/%d %H:%M:%S")
-
-        ch.setFormatter(formatter)
-        LOGGER.addHandler(ch)
-
-
 def find_checkpoint(base_dir, date, steps):
     ckpts = glob.glob(
         os.path.join(
@@ -251,11 +221,9 @@ def find_checkpoint(base_dir, date, steps):
 
 
 def main():
-    _init_logging()
-
     args = _get_args()
 
-    LOGGER.info("Running with args {}".format(args))
+    get_logger().info("Running with args {}".format(args))
 
     ptitle("Master: {}".format("Training" if not args.test_date != "" else "Testing"))
 
@@ -303,7 +271,7 @@ def main():
             deterministic_agent=args.deterministic_agent,
         )
 
-        LOGGER.info("Test results: {}".format(test_results))
+        get_logger().info("Test results: {}".format(test_results))
 
 
 if __name__ == "__main__":
