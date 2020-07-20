@@ -56,22 +56,6 @@ def get_logger() -> logging.Logger:
     return _LOGGER
 
 
-def log_info(msg: str, *args, **kwargs):
-    get_logger().info(msg, *args, **kwargs)
-
-
-def log_warning(msg: str, *args, **kwargs):
-    get_logger().warning(msg, *args, **kwargs)
-
-
-def log_exception(msg: str, *args, exc_info=True, **kwargs):
-    get_logger().exception(msg, *args, exc_info=True, **kwargs)
-
-
-def log_error(msg: str, *args, **kwargs):
-    get_logger().error(msg, *args, **kwargs)
-
-
 def find_free_port(address="localhost"):
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
         s.bind((address, 0))
