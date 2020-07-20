@@ -1,4 +1,4 @@
-"""Defines the reinforcement learning `OnPolicyRLEngine`."""
+"""Defines the reinforcement learning `UndistributedOnPolicyRLEngine`."""
 import copy
 import glob
 import itertools
@@ -31,6 +31,7 @@ from torch.distributions import Categorical
 from torch.optim.lr_scheduler import _LRScheduler
 
 from offpolicy_sync.losses.abstract_offpolicy_loss import AbstractOffPolicyLoss
+from onpolicy_sync.light_engine import OnPolicyRLEngine
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from onpolicy_sync.policy import ActorCriticModel
 from onpolicy_sync.storage import RolloutStorage
@@ -73,7 +74,7 @@ def validate(
     mp_ctx: Optional[BaseContext] = None,
 ):
     ptitle("Validation")
-    evaluator = OnPolicyValidator(
+    evaluator = UndistributedOnPolicyValidator(
         config=config,
         output_dir=output_dir,
         seed=seed,
@@ -83,14 +84,14 @@ def validate(
     evaluator.process_checkpoints(read_from_parent, write_to_parent)
 
 
-class OnPolicyRLEngine(object):
+class UndistributedOnPolicyRLEngine(object):
     """The reinforcement learning primary controller.
 
-    This `OnPolicyRLEngine` class handles all training, validation, and
-    testing as well as logging and checkpointing. You are not expected
-    to instantiate this class yourself, instead you should define an
-    experiment which will then be used to instantiate an
-    `OnPolicyRLEngine` and perform any desired tasks.
+    This `UndistributedOnPolicyRLEngine` class handles all training,
+    validation, and testing as well as logging and checkpointing. You
+    are not expected to instantiate this class yourself, instead you
+    should define an experiment which will then be used to instantiate
+    an `UndistributedOnPolicyRLEngine` and perform any desired tasks.
     """
 
     def __init__(
@@ -669,7 +670,7 @@ class OnPolicyRLEngine(object):
             for bit, batch in enumerate(data_generator):
                 actor_critic_output, _ = self.actor_critic(
                     batch["observations"],
-                    batch["recurrent_hidden_states"],
+                    batch["memory"],
                     batch["prev_actions"],
                     batch["masks"],
                 )
@@ -854,13 +855,11 @@ class OnPolicyRLEngine(object):
 
         # sample actions
         with torch.no_grad():
-            step_observation = {
-                k: v[rollouts.step] for k, v in rollouts.observations.items()
-            }
+            step_observation = rollouts.pick_observation_step(rollouts.step)
 
-            actor_critic_output, recurrent_hidden_states = self.actor_critic(
+            actor_critic_output, memory = self.actor_critic(
                 step_observation,
-                rollouts.recurrent_hidden_states[rollouts.step],
+                rollouts.pick_memory_step(rollouts.step),
                 rollouts.prev_actions[rollouts.step],
                 rollouts.masks[rollouts.step],
             )
@@ -926,14 +925,12 @@ class OnPolicyRLEngine(object):
             observations=self._preprocess_observations(batch)
             if len(keep) > 0
             else batch,
-            recurrent_hidden_states=index_kept(recurrent_hidden_states, True),
-            actions=index_kept(actions, False),
-            action_log_probs=index_kept(
-                actor_critic_output.distributions.log_probs(actions), False
-            ),
-            value_preds=index_kept(actor_critic_output.values, False),
-            rewards=index_kept(rewards, False),
-            masks=index_kept(masks, False),
+            memory=OnPolicyRLEngine._active_memory(memory, keep),
+            actions=actions[keep],
+            action_log_probs=actor_critic_output.distributions.log_probs(actions)[keep],
+            value_preds=actor_critic_output.values[keep],
+            rewards=rewards[keep],
+            masks=masks[keep],
         )
 
         if return_ac_out:
@@ -989,8 +986,8 @@ class OnPolicyRLEngine(object):
                 step_observation = {k: v[-1] for k, v in rollouts.observations.items()}
 
                 actor_critic_output, _ = self.actor_critic(
-                    step_observation,
-                    rollouts.recurrent_hidden_states[-1],
+                    rollouts.pick_observation_step(-1),
+                    rollouts.pick_memory_step(-1),
                     rollouts.prev_actions[-1],
                     rollouts.masks[-1],
                 )
@@ -1396,13 +1393,9 @@ class OnPolicyRLEngine(object):
 
                 self.train(
                     RolloutStorage(
-                        self.steps_in_rollout,
-                        self.num_processes,
-                        self.actor_critic.action_space,
-                        self.actor_critic.recurrent_hidden_state_size,
-                        num_recurrent_layers=self.actor_critic.num_recurrent_layers
-                        if "num_recurrent_layers" in dir(self.actor_critic)
-                        else 0,
+                        num_steps=self.steps_in_rollout,
+                        num_processes=self.num_processes,
+                        actor_critic=self.actor_critic,
                     )
                 )
 
@@ -1686,17 +1679,19 @@ class OnPolicyRLEngine(object):
                     raise NotImplementedError()
 
         try:
-            logif("Closing OnPolicyRLEngine.vector_tasks.")
+            logif("Closing UndistributedOnPolicyRLEngine.vector_tasks.")
             self.vector_tasks.close()
             logif("Closed.")
         except Exception as e:
-            logif("Exception raised when closing OnPolicyRLEngine.vector_tasks:")
+            logif(
+                "Exception raised when closing UndistributedOnPolicyRLEngine.vector_tasks:"
+            )
             logif(e)
             pass
 
         logif("\n\n")
         try:
-            logif("Closing OnPolicyRLEngine.eval_process")
+            logif("Closing UndistributedOnPolicyRLEngine.eval_process")
             eval: mp.Process = getattr(self, "eval_process", None)
             if eval is not None:
                 self.write_to_eval.put(("exit", None))
@@ -1704,20 +1699,24 @@ class OnPolicyRLEngine(object):
                 self.eval_process = None
             logif("Closed.")
         except Exception as e:
-            logif("Exception raised when closing OnPolicyRLEngine.vector_tasks:")
+            logif(
+                "Exception raised when closing UndistributedOnPolicyRLEngine.vector_tasks:"
+            )
             logif(e)
             pass
 
         logif("\n\n")
         try:
-            logif("Closing OnPolicyRLEngine.log_writer")
+            logif("Closing UndistributedOnPolicyRLEngine.log_writer")
             log_writer = getattr(self, "log_writer", None)
             if log_writer is not None:
                 log_writer.close()
                 self.log_writer = None
             logif("Closed.")
         except Exception as e:
-            logif("Exception raised when closing OnPolicyRLEngine.log_writer:")
+            logif(
+                "Exception raised when closing UndistributedOnPolicyRLEngine.log_writer:"
+            )
             logif(e)
             pass
 
@@ -1733,7 +1732,7 @@ class OnPolicyRLEngine(object):
         self.close(verbose=False)
 
 
-class OnPolicyTrainer(OnPolicyRLEngine):
+class UndistributedOnPolicyTrainer(UndistributedOnPolicyRLEngine):
     def __init__(
         self,
         config: ExperimentConfig,
@@ -1756,7 +1755,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         )
 
 
-class OnPolicyValidator(OnPolicyRLEngine):
+class UndistributedOnPolicyValidator(UndistributedOnPolicyRLEngine):
     def __init__(
         self,
         config: ExperimentConfig,
@@ -1781,7 +1780,7 @@ class OnPolicyValidator(OnPolicyRLEngine):
         self.is_logging = should_log
 
 
-class OnPolicyTester(OnPolicyRLEngine):
+class UndistributedOnPolicyTester(UndistributedOnPolicyRLEngine):
     def __init__(
         self,
         config: ExperimentConfig,

@@ -14,7 +14,7 @@ def get_logger() -> logging.Logger:
     log_format = "default"
     log_level = "debug"
 
-    if len(get_logger().handlers) > 0:
+    if len(_LOGGER.handlers) > 0:
         return _LOGGER
 
     if log_level == "debug":

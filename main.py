@@ -13,7 +13,10 @@ from typing import Dict, Tuple
 import gin
 from setproctitle import setproctitle as ptitle
 
-from onpolicy_sync.engine import OnPolicyTrainer, OnPolicyTester
+from onpolicy_sync.engine import (
+    UndistributedOnPolicyTrainer,
+    UndistributedOnPolicyTester,
+)
 from rl_base.experiment_config import ExperimentConfig
 from utils.system import get_logger
 
@@ -230,7 +233,7 @@ def main():
     cfg, srcs = _load_config(args)
 
     if args.test_date == "":
-        trainer = OnPolicyTrainer(
+        trainer = UndistributedOnPolicyTrainer(
             config=cfg,
             output_dir=args.output_dir,
             loaded_config_src_files=srcs,
@@ -256,7 +259,7 @@ def main():
                 steps=args.test_ckpt_steps,
             )
 
-        test_results = OnPolicyTester(
+        test_results = UndistributedOnPolicyTester(
             config=cfg,
             output_dir=args.output_dir,
             loaded_config_src_files=srcs,
