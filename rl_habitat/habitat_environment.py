@@ -1,12 +1,12 @@
 """A wrapper for interacting with the Habitat environment."""
 
 from typing import Dict, Union, List
-import numpy as np
 
 import habitat
+import numpy as np
 from habitat.config import Config
-from habitat.core.simulator import Observations, AgentState, ShortestPathPoint
 from habitat.core.dataset import Episode, Dataset
+from habitat.core.simulator import Observations, AgentState, ShortestPathPoint
 
 
 class HabitatEnvironment(object):

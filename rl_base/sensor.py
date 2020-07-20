@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import OrderedDict
-from typing import Generic, Dict, Any, List, Optional, TYPE_CHECKING, TypeVar, Sequence
+from typing import Generic, Dict, Any, Optional, TYPE_CHECKING, TypeVar, Sequence
 
 import gym
 from gym.spaces import Dict as SpaceDict
@@ -115,7 +115,7 @@ class SensorSuite(Generic[EnvType]):
         return self.sensors[uuid]
 
     def get_observations(
-        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
+        self, env: EnvType, task: Optional[SubTaskType], **kwargs: Any
     ) -> Dict[str, Any]:
         """Get all observations corresponding to the sensors in the suite.
 
@@ -129,7 +129,7 @@ class SensorSuite(Generic[EnvType]):
         Data from all sensors packaged inside a Dict.
         """
         return {
-            uuid: sensor.get_observation(env=env, task=task, *args, **kwargs)  # type: ignore
+            uuid: sensor.get_observation(env=env, task=task, **kwargs)  # type: ignore
             for uuid, sensor in self.sensors.items()
         }
 
@@ -161,6 +161,10 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
     def get_observation(
         self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
     ) -> Any:
+        # If the task is completed, we needn't (perhaps can't) find the expert
+        # action from the (current) terminal state.
+        if task.is_done():
+            return np.array([-1, False], dtype=np.int64)
         action, expert_was_successful = task.query_expert(**self.expert_args)
         assert isinstance(action, int), (
             "In expert action sensor, `task.query_expert()` "
@@ -191,7 +195,11 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
         """
         return gym.spaces.Tuple(
             (
-                gym.spaces.Box(low=0, high=1, shape=(self.config["nactions"],)),
+                gym.spaces.Box(
+                    low=np.float32(0.0),
+                    high=np.float32(1.0),
+                    shape=(self.config["nactions"],),
+                ),
                 gym.spaces.Discrete(2),
             )
         )

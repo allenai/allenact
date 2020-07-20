@@ -1,4 +1,5 @@
-"""Entry point to training/validating/testing for a user given experiment name"""
+"""Entry point to training/validating/testing for a user given experiment
+name."""
 
 import argparse
 import importlib
@@ -11,7 +12,7 @@ from setproctitle import setproctitle as ptitle
 
 from onpolicy_sync.runner import OnPolicyRunner
 from rl_base.experiment_config import ExperimentConfig
-from utils.system import init_logging, LOGGER
+from utils.system import get_logger
 
 
 def _get_args():
@@ -31,8 +32,8 @@ def _get_args():
         default="",
         required=False,
         help="Add an extra tag to the experiment when trying out new ideas (will be used"
-             "as a suffix of the experiment name). It also has to be provided when testing on"
-             "the trained model.",
+        "as a suffix of the experiment name). It also has to be provided when testing on"
+        "the trained model.",
     )
 
     parser.add_argument(
@@ -70,7 +71,7 @@ def _get_args():
         action="store_true",
         required=False,
         help="for training, if checkpoint is specified, use it as model initialization and "
-             "restart training with current config",
+        "restart training with current config",
     )
     parser.set_defaults(restart=False)
 
@@ -152,11 +153,9 @@ def _load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
 
 
 def main():
-    init_logging()
-
     args = _get_args()
 
-    LOGGER.info("Running with args {}".format(args))
+    get_logger().info("Running with args {}".format(args))
 
     ptitle("Master: {}".format("Training" if args.test_date is None else "Testing"))
 

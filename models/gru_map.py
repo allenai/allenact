@@ -1,9 +1,9 @@
 # TODO: @klemenkotar please fix all type errors.
 
+from typing import Tuple, Union, Sequence, cast
+
 import torch
 import torch.nn as nn
-
-from typing import Tuple, Union, Sequence, cast
 
 
 class RNNMap(nn.Module):

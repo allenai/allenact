@@ -1,17 +1,15 @@
-import typing
-from typing import Any, Optional, Dict, List, Union, Iterable, Tuple, Sized, Collection
-import random
 import copy
-from collections import OrderedDict
 import math
+import random
+from typing import Any, Optional, Dict, List, Union, Tuple, Collection
 
 import ai2thor
+import numpy as np
 from ai2thor.controller import Controller
 from ai2thor.util import metrics
-import numpy as np
 
 from utils.experiment_utils import recursive_update
-from utils.system import LOGGER
+from utils.system import get_logger
 
 
 class RoboThorEnvironment:
@@ -41,7 +39,9 @@ class RoboThorEnvironment:
         )
         recursive_update(self.config, {**kwargs, "agentMode": "bot"})
         self.controller = Controller(**self.config)
-        self.known_good_locations: Dict[str, Any] = {self.scene_name: copy.deepcopy(self.currently_reachable_points)}
+        self.known_good_locations: Dict[str, Any] = {
+            self.scene_name: copy.deepcopy(self.currently_reachable_points)
+        }
         assert len(self.known_good_locations[self.scene_name]) > 100
 
         # onames = [o['objectId'] for o in self.last_event.metadata['objects']]
@@ -50,9 +50,9 @@ class RoboThorEnvironment:
         #     if 'Painting' in oname:
         #         self.controller.step("RemoveFromScene", objectId=oname)
         #         removed.append(oname)
-        # LOGGER.info("Removed {} Paintings from {}".format(len(removed), self.scene_name))
+        # get_logger().info("Removed {} Paintings from {}".format(len(removed), self.scene_name))
 
-        # LOGGER.warning("init to scene {} in pos {}".format(self.scene_name, self.agent_state()))
+        # get_logger().warning("init to scene {} in pos {}".format(self.scene_name, self.agent_state()))
         # npoints = len(self.currently_reachable_points)
         # assert npoints > 100, "only {} reachable points after init".format(npoints)
         self.grids: Dict[str, Tuple[Dict[str, np.array], int, int, int, int]] = {}
@@ -61,7 +61,8 @@ class RoboThorEnvironment:
     def initialize_grid_dimensions(
         self, reachable_points: Collection[Dict[str, float]]
     ) -> Tuple[int, int, int, int]:
-        """Computes bounding box for reachable points quantized with the current gridSize."""
+        """Computes bounding box for reachable points quantized with the
+        current gridSize."""
         points = {
             (
                 round(p["x"] / self.config["gridSize"]),
@@ -78,8 +79,9 @@ class RoboThorEnvironment:
         return xmin, xmax, zmin, zmax
 
     def access_grid(self, target: str) -> float:
-        """Returns the geodesic distance from the quantized location of the agent in the current scene's grid to the
-         target object of given type."""
+        """Returns the geodesic distance from the quantized location of the
+        agent in the current scene's grid to the target object of given
+        type."""
         if target not in self.grids[self.scene_name][0]:
             xmin, xmax, zmin, zmax = self.grids[self.scene_name][1:5]
             nx = xmax - xmin + 1
@@ -108,24 +110,26 @@ class RoboThorEnvironment:
         self.grids[self.scene_name] = ({},) + self.initialize_grid_dimensions(self.known_good_locations[self.scene_name])  # type: ignore
 
     def object_reachable(self, object_type: str) -> bool:
-        """Determines whether a path can be computed from the discretized current agent location to the target object
-         of given type."""
+        """Determines whether a path can be computed from the discretized
+        current agent location to the target object of given type."""
         return (
             self.access_grid(object_type) > -0.5
         )  # -1.0 for unreachable, 0.0 for end point
 
     def point_reachable(self, xyz: Dict[str, float]) -> bool:
-        """Determines whether a path can be computed from the current agent location to the target point."""
-        return (
-            self.dist_to_point(xyz) > -0.5
-        )  # -1.0 for unreachable, 0.0 for end point
+        """Determines whether a path can be computed from the current agent
+        location to the target point."""
+        return self.dist_to_point(xyz) > -0.5  # -1.0 for unreachable, 0.0 for end point
 
-    def path_corners(self, target: Union[str, Dict[str, float]]) -> Collection[Dict[str, float]]:
-        """Returns an array with a sequence of xyz dictionaries objects representing the corners of the shortest path
-         to the object of given type or end point location."""
+    def path_corners(
+        self, target: Union[str, Dict[str, float]]
+    ) -> Collection[Dict[str, float]]:
+        """Returns an array with a sequence of xyz dictionaries objects
+        representing the corners of the shortest path to the object of given
+        type or end point location."""
         pose = self.agent_state()
         position = {k: float(pose[k]) for k in ["x", "y", "z"]}
-        # LOGGER.debug("initial pos in path corners {} target {}".format(pose, target))
+        # get_logger().debug("initial pos in path corners {} target {}".format(pose, target))
         try:
             if isinstance(target, str):
                 path = metrics.get_shortest_path_to_object_type(
@@ -135,9 +139,15 @@ class RoboThorEnvironment:
                     {**pose["rotation"]} if "rotation" in pose else None,
                 )
             else:
-                path = metrics.get_shortest_path_to_point(self.controller, position, target)
+                path = metrics.get_shortest_path_to_point(
+                    self.controller, position, target
+                )
         except ValueError:
-            LOGGER.debug("No path to object {} from {} in {}".format(target, position, self.scene_name))
+            get_logger().debug(
+                "No path to object {} from {} in {}".format(
+                    target, position, self.scene_name
+                )
+            )
             path = []
         finally:
             if isinstance(target, str):
@@ -145,20 +155,30 @@ class RoboThorEnvironment:
                 # pass
             new_pose = self.agent_state()
             try:
-                assert abs(new_pose['x'] - pose['x']) < 1e-5, "wrong x"
-                assert abs(new_pose['y'] - pose['y']) < 1e-5, "wrong y"
-                assert abs(new_pose['z'] - pose['z']) < 1e-5, "wrong z"
-                assert abs(new_pose['rotation']['x'] - pose['rotation']['x']) < 1e-5, "wrong rotation x"
-                assert abs(new_pose['rotation']['y'] - pose['rotation']['y']) < 1e-5, "wrong rotation y"
-                assert abs(new_pose['rotation']['z'] - pose['rotation']['z']) < 1e-5, "wrong rotation z"
-                assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
+                assert abs(new_pose["x"] - pose["x"]) < 1e-5, "wrong x"
+                assert abs(new_pose["y"] - pose["y"]) < 1e-5, "wrong y"
+                assert abs(new_pose["z"] - pose["z"]) < 1e-5, "wrong z"
+                assert (
+                    abs(new_pose["rotation"]["x"] - pose["rotation"]["x"]) < 1e-5
+                ), "wrong rotation x"
+                assert (
+                    abs(new_pose["rotation"]["y"] - pose["rotation"]["y"]) < 1e-5
+                ), "wrong rotation y"
+                assert (
+                    abs(new_pose["rotation"]["z"] - pose["rotation"]["z"]) < 1e-5
+                ), "wrong rotation z"
+                assert (
+                    abs((new_pose["horizon"] % 360) - (pose["horizon"] % 360)) < 1e-5
+                ), "wrong horizon {} vs {}".format(
+                    (new_pose["horizon"] % 360), (pose["horizon"] % 360)
+                )
             except Exception:
-                # LOGGER.error("new_pose {} old_pose {} in {}".format(new_pose, pose, self.scene_name))
+                # get_logger().error("new_pose {} old_pose {} in {}".format(new_pose, pose, self.scene_name))
                 pass
             # if abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) > 1e-5:
-            #     LOGGER.debug("wrong horizon {} vs {} after path to object {} from {} in {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360), target, position, self.scene_name))
+            #     get_logger().debug("wrong horizon {} vs {} after path to object {} from {} in {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360), target, position, self.scene_name))
             # else:
-            #     LOGGER.debug("correct horizon {} vs {} after path to object {} from {} in {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360), target, position, self.scene_name))
+            #     get_logger().debug("correct horizon {} vs {} after path to object {} from {} in {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360), target, position, self.scene_name))
             # assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
 
             # # TODO: the agent will continue with a random horizon from here on
@@ -174,7 +194,7 @@ class RoboThorEnvironment:
             #         old = update_horizon
             #         new_pose = self.agent_state()['horizon']
             #         update_horizon = (new_pose % 360) - (360 if (new_pose % 360) >= 180 else 0)
-            #         LOGGER.debug("LookDown horizon {} -> {} ({})".format(old, update_horizon, target_horizon))
+            #         get_logger().debug("LookDown horizon {} -> {} ({})".format(old, update_horizon, target_horizon))
             #         nmovements += 1
             #         cond = abs(target_horizon - update_horizon) > 1e-5 and target_horizon > update_horizon
             #
@@ -184,28 +204,29 @@ class RoboThorEnvironment:
             #         old = update_horizon
             #         new_pose = self.agent_state()['horizon']
             #         update_horizon = (new_pose % 360) - (360 if (new_pose % 360) >= 180 else 0)
-            #         LOGGER.debug("LookUp horizon {} -> {} ({})".format(old, update_horizon, target_horizon))
+            #         get_logger().debug("LookUp horizon {} -> {} ({})".format(old, update_horizon, target_horizon))
             #         nmovements += 1
             #         cond = abs(target_horizon - update_horizon) > 1e-5 and target_horizon < update_horizon
             #
             #     cond = abs(target_horizon - update_horizon) > 1e-5
-            # LOGGER.debug("nmovements {}".format(nmovements))
+            # get_logger().debug("nmovements {}".format(nmovements))
             # new_pose = self.agent_state()
             # assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
 
             # try:
             #     assert abs((new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360))
             # except Exception:
-            #     LOGGER.error("wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360)))
+            #     get_logger().error("wrong horizon {} vs {}".format((new_pose['horizon'] % 360), (pose['horizon'] % 360)))
             #     self.controller.step("TeleportFull", **pose)
             #     assert abs(
             #         (new_pose['horizon'] % 360) - (pose['horizon'] % 360)) < 1e-5, "wrong horizon {} vs {} after teleport full".format(
             #         (new_pose['horizon'] % 360), (pose['horizon'] % 360))
-        #     # LOGGER.debug("initial pos in path corners {} current pos {} path {}".format(pose, self.agent_state(), path))
+        #     # get_logger().debug("initial pos in path corners {} current pos {} path {}".format(pose, self.agent_state(), path))
         return path
 
     def path_corners_to_dist(self, corners: Collection[Dict[str, float]]) -> float:
-        """Computes the distance covered by the given path described by its corners."""
+        """Computes the distance covered by the given path described by its
+        corners."""
         if len(corners) == 0:
             return float("inf")
 
@@ -220,9 +241,10 @@ class RoboThorEnvironment:
     def quantized_agent_state(
         self, xz_subsampling: int = 1, rot_subsampling: int = 1
     ) -> Tuple[int, int, int]:
-        """Quantizes agent location (x, z) to a (subsampled) position in a fixed size grid derived from the initial set
-         of reachable points; and rotation (around y axis) as a (subsampled) discretized angle given the current
-          `rotateStepDegrees`."""
+        """Quantizes agent location (x, z) to a (subsampled) position in a
+        fixed size grid derived from the initial set of reachable points; and
+        rotation (around y axis) as a (subsampled) discretized angle given the
+        current `rotateStepDegrees`."""
         pose = self.agent_state()
         p = {k: float(pose[k]) for k in ["x", "y", "z"]}
 
@@ -238,13 +260,19 @@ class RoboThorEnvironment:
         return (x - xmin) // xz_subsampling, (z - zmin) // xz_subsampling, r
 
     def dist_to_object(self, object_type: str) -> float:
-        """Minimal geodesic distance to object of given type from agent's current location. It might return -1.0 for
-         unreachable targets."""
+        """Minimal geodesic distance to object of given type from agent's
+        current location.
+
+        It might return -1.0 for unreachable targets.
+        """
         return self.access_grid(object_type)
 
     def dist_to_point(self, xyz: Dict[str, float]) -> float:
-        """Minimal geodesic distance to end point from agent's current location. It might return -1.0 for
-         unreachable targets."""
+        """Minimal geodesic distance to end point from agent's current
+        location.
+
+        It might return -1.0 for unreachable targets.
+        """
         corners = self.path_corners(xyz)
         dist = self.path_corners_to_dist(corners)
         if dist == float("inf"):
@@ -266,7 +294,9 @@ class RoboThorEnvironment:
             self.controller.reset(scene_name)
             assert self.last_action_success, "Could not reset to new scene"
             if scene_name not in self.known_good_locations:
-                self.known_good_locations[scene_name] = copy.deepcopy(self.currently_reachable_points)
+                self.known_good_locations[scene_name] = copy.deepcopy(
+                    self.currently_reachable_points
+                )
                 assert len(self.known_good_locations[scene_name]) > 100
 
             # onames = [o['objectId'] for o in self.last_event.metadata['objects']]
@@ -275,15 +305,15 @@ class RoboThorEnvironment:
             #     if 'Painting' in oname:
             #         self.controller.step("RemoveFromScene", objectId=oname)
             #         removed.append(oname)
-            # LOGGER.info("Removed {} Paintings from {}".format(len(removed), scene_name))
+            # get_logger().info("Removed {} Paintings from {}".format(len(removed), scene_name))
 
         # else:
-            # assert (
-            #     self.scene_name in self.known_good_locations
-            # ), "Resetting scene without known good location"
-            # LOGGER.warning("Resetting {} to {}".format(self.scene_name, self.known_good_locations[self.scene_name]))
-            # self.controller.step("TeleportFull", **self.known_good_locations[self.scene_name])
-            # assert self.last_action_success, "Could not reset to known good location"
+        # assert (
+        #     self.scene_name in self.known_good_locations
+        # ), "Resetting scene without known good location"
+        # get_logger().warning("Resetting {} to {}".format(self.scene_name, self.known_good_locations[self.scene_name]))
+        # self.controller.step("TeleportFull", **self.known_good_locations[self.scene_name])
+        # assert self.last_action_success, "Could not reset to known good location"
 
         # npoints = len(self.currently_reachable_points)
         # assert npoints > 100, "only {} reachable points after reset".format(npoints)
@@ -302,12 +332,12 @@ class RoboThorEnvironment:
         while k == 0 or (not self.last_action_success and k < 10):
             # self.reset()
             state = {**self.random_reachable_state(seed=seed), **partial_position}
-            # LOGGER.debug("picked target location {}".format(state))
+            # get_logger().debug("picked target location {}".format(state))
             self.controller.step("TeleportFull", **state)
             k += 1
 
         if not self.last_action_success:
-            LOGGER.warning(
+            get_logger().warning(
                 (
                     "Randomize agent location in scene {} and current random state {}"
                     " with seed {} and partial position {} failed in "
@@ -317,9 +347,9 @@ class RoboThorEnvironment:
             self.controller.step("TeleportFull", **state, force_action=True)  # type: ignore
             assert self.last_action_success, "Force action failed with {}".format(state)
 
-        # LOGGER.debug("location after teleport full {}".format(self.agent_state()))
+        # get_logger().debug("location after teleport full {}".format(self.agent_state()))
         # self.controller.step("TeleportFull", **self.agent_state())  # TODO only for debug
-        # LOGGER.debug("location after re-teleport full {}".format(self.agent_state()))
+        # get_logger().debug("location after re-teleport full {}".format(self.agent_state()))
 
         return self.agent_state()
 
@@ -402,7 +432,7 @@ class RoboThorEnvironment:
         try:
             self.controller.stop()
         except Exception as e:
-            LOGGER.warning(str(e))
+            get_logger().warning(str(e))
 
     def all_objects(self) -> List[Dict[str, Any]]:
         """Return all object metadata."""

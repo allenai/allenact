@@ -1,7 +1,6 @@
+import copy
 import random
 from typing import List, Dict, Optional, Any, Union
-from collections import OrderedDict
-import copy
 
 import gym
 
@@ -10,7 +9,7 @@ from rl_ai2thor.object_nav.tasks import ObjectNavTask
 from rl_base.sensor import Sensor
 from rl_base.task import TaskSampler
 from utils.experiment_utils import set_deterministic_cudnn, set_seed
-from utils.system import LOGGER
+from utils.system import get_logger
 
 
 class ObjectNavTaskSampler(TaskSampler):
@@ -68,7 +67,7 @@ class ObjectNavTaskSampler(TaskSampler):
         return env
 
     @property
-    def __len__(self) -> Union[int, float]:
+    def length(self) -> Union[int, float]:
         """Length.
 
         # Returns
@@ -103,7 +102,7 @@ class ObjectNavTaskSampler(TaskSampler):
     def sample_scene(self, force_advance_scene: bool):
         if force_advance_scene:
             if self.scene_period != "manual":
-                LOGGER.warning(
+                get_logger().warning(
                     "When sampling scene, have `force_advance_scene == True`"
                     "but `self.scene_period` is not equal to 'manual',"
                     "this may cause unexpected behavior."
@@ -169,7 +168,7 @@ class ObjectNavTaskSampler(TaskSampler):
                 break
 
         if len(task_info) == 0:
-            LOGGER.warning(
+            get_logger().warning(
                 "Scene {} does not contain any"
                 " objects of any of the types {}.".format(scene, self.object_types)
             )

@@ -188,7 +188,7 @@ Finally, we need to define methods to determine the number of available tasks (p
 ```python
 
     @property
-    def __len__(self) -> Union[int, float]:
+    def length(self) -> Union[int, float]:
         return float("inf")
 
     @property

@@ -1,13 +1,12 @@
 import random
 import warnings
 from typing import Dict, Tuple, List, Any, Optional
-import os
-import pickle
 
 import gym
 import numpy as np
-import networkx as nx
 
+from rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
+from rl_ai2thor.ai2thor_util import round_to_factor
 from rl_ai2thor.ithor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
@@ -16,8 +15,6 @@ from rl_ai2thor.ithor_constants import (
     LOOK_UP,
     END,
 )
-from rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
-from rl_ai2thor.ai2thor_util import round_to_factor
 from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor
 from rl_base.task import Task

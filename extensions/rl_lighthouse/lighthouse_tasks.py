@@ -7,6 +7,11 @@ import numpy as np
 
 from extensions.rl_lighthouse.lighthouse_environment import LightHouseEnvironment
 from extensions.rl_lighthouse.lighthouse_sensors import get_corner_observation
+from projects.advisor.lighthouse_constants import (
+    DISCOUNT_FACTOR,
+    STEP_PENALTY,
+    FOUND_TARGET_REWARD,
+)
 from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor
 from rl_base.task import Task, TaskSampler

@@ -1,9 +1,6 @@
-import habitat
-import random
-import time
 import cv2
+import habitat
 from pyquaternion import Quaternion
-
 
 FORWARD_KEY = "w"
 LEFT_KEY = "a"

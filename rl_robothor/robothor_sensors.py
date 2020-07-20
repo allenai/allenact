@@ -1,15 +1,15 @@
+import typing
 from typing import Any, Dict, Optional
 
 import gym
 import numpy as np
 import quaternion  # noqa # pylint: disable=unused-import
-import typing
 from torchvision import transforms
 
+from rl_ai2thor.ai2thor_sensors import ScaleBothSides
+from rl_base.sensor import Sensor
 from rl_robothor.robothor_environment import RoboThorEnvironment
 from rl_robothor.robothor_tasks import PointNavTask
-from rl_base.sensor import Sensor
-from rl_ai2thor.ai2thor_sensors import ScaleBothSides
 
 
 class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
@@ -20,7 +20,8 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             shape=(2,),
-            dtype=np.float32,)
+            dtype=np.float32,
+        )
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "target_coordinates_ind"
@@ -28,9 +29,7 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
     def _get_observation_space(self) -> gym.spaces.Box:
         return typing.cast(gym.spaces.Box, self.observation_space)
 
-    def _compute_pointgoal(
-            self, source_position, source_rotation, goal_position
-    ):
+    def _compute_pointgoal(self, source_position, source_rotation, goal_position):
         direction_vector = goal_position - source_position
         direction_vector_agent = quaternion_rotate_vector(
             source_rotation.inverse(), direction_vector
@@ -50,10 +49,10 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
     ) -> Any:
 
         agent_state = env.agent_state()
-        agent_position = np.array([agent_state[k] for k in ['x', 'y', 'z']])
-        rotation_world_agent = quaternion_from_y_angle(agent_state['rotation']['y'])
+        agent_position = np.array([agent_state[k] for k in ["x", "y", "z"]])
+        rotation_world_agent = quaternion_from_y_angle(agent_state["rotation"]["y"])
 
-        goal_position = np.array([task.task_info["target"][k] for k in ['x', 'y', 'z']])
+        goal_position = np.array([task.task_info["target"][k] for k in ["x", "y", "z"]])
 
         return self._compute_pointgoal(
             agent_position, rotation_world_agent, goal_position
@@ -63,7 +62,11 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
 def quaternion_from_y_angle(angle: float) -> np.quaternion:
     r"""Creates a quaternion from rotation angle around y axis
     """
-    return quaternion_from_coeff(np.array([0.0, np.sin(np.pi*angle/360.0), 0.0, np.cos(np.pi*angle/360.0)]))
+    return quaternion_from_coeff(
+        np.array(
+            [0.0, np.sin(np.pi * angle / 360.0), 0.0, np.cos(np.pi * angle / 360.0)]
+        )
+    )
 
 
 def quaternion_from_coeff(coeffs: np.ndarray) -> np.quaternion:
@@ -138,11 +141,11 @@ class DepthSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
         return typing.cast(gym.spaces.Box, self.observation_space)
 
     def get_observation(
-            self,
-            env: RoboThorEnvironment,
-            task: Optional[PointNavTask]=None,
-            *args: Any,
-            **kwargs: Any
+        self,
+        env: RoboThorEnvironment,
+        task: Optional[PointNavTask] = None,
+        *args: Any,
+        **kwargs: Any
     ) -> Any:
         depth = env.current_depth.copy()
 

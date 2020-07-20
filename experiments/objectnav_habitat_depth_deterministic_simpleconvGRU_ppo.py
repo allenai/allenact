@@ -1,14 +1,13 @@
 import gym
+import habitat
 import torch.nn as nn
 
-import habitat
-
+from experiments.objectnav_habitat_base import ObjectNavHabitatBaseExperimentConfig
 from models.object_nav_models import ObjectNavBaselineActorCritic
 from rl_base.sensor import SensorSuite
-from rl_habitat.habitat_tasks import ObjectNavTask
 from rl_habitat.habitat_sensors import DepthSensorHabitat, TargetObjectSensorHabitat
+from rl_habitat.habitat_tasks import ObjectNavTask
 from rl_habitat.habitat_utils import construct_env_configs
-from experiments.objectnav_habitat_base import ObjectNavHabitatBaseExperimentConfig
 
 
 class ObjectNavHabitatDebthDeterministicSimpleConvGRUPPOExperimentConfig(

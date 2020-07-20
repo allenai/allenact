@@ -1,13 +1,22 @@
 """Basic building block torch networks that can be used across a variety of
 tasks."""
-import typing
-from typing import Sequence, Tuple, Dict, Union, cast, List
+from typing import (
+    Sequence,
+    Dict,
+    Union,
+    cast,
+    List,
+    Callable,
+    Optional,
+    Tuple,
+    Any,
+)
 
 import gym
 import numpy as np
 import torch
-from torch import nn
 from gym.spaces.dict import Dict as SpaceDict
+from torch import nn
 
 from onpolicy_sync.policy import ActorCriticModel, DistributionType
 from rl_base.common import ActorCriticOutput
@@ -187,7 +196,7 @@ class SimpleCNN(nn.Module):
         `"depth"`."""
         return self._n_input_rgb + self._n_input_depth == 0
 
-    def forward(self, observations: Dict[str, torch.Tensor]):
+    def forward(self, observations: Dict[str, torch.Tensor]):  # type: ignore
         cnn_output_list = []
         if self._n_input_rgb > 0:
             rgb_observations = observations["rgb"]
@@ -418,7 +427,7 @@ class RNNStateEncoder(nn.Module):
         hidden_states = self._pack_hidden(unpacked_hidden_states)
         return x, hidden_states
 
-    def forward(
+    def forward(  # type: ignore
         self,
         x: torch.FloatTensor,
         hidden_states: torch.FloatTensor,
@@ -474,15 +483,111 @@ class LinearActorCritic(ActorCriticModel[CategoricalDistr]):
         prev_actions: torch.LongTensor,
         masks: torch.FloatTensor,
         **kwargs
-    ) -> typing.Tuple[ActorCriticOutput[DistributionType], typing.Any]:
+    ) -> Tuple[ActorCriticOutput[DistributionType], Any]:
         out = self.linear(observations[self.key])
 
         # noinspection PyArgumentList
         return (
             ActorCriticOutput(
                 distributions=CategoricalDistr(logits=out[:, :-1]),
-                values=out[:, -1:],
+                values=cast(torch.FloatTensor, out[:, -1:]),
                 extras={},
             ),
             None,
+        )
+
+
+class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
+    def __init__(
+        self,
+        input_key: str,
+        action_space: gym.spaces.Discrete,
+        observation_space: SpaceDict,
+        hidden_size: int = 128,
+        num_layers: int = 1,
+        rnn_type: str = "GRU",
+        head_type: Callable[
+            ..., ActorCriticModel[CategoricalDistr]
+        ] = LinearActorCritic,
+    ):
+        super().__init__(action_space=action_space, observation_space=observation_space)
+        self.hidden_size = hidden_size
+        self.rnn_type = rnn_type
+
+        assert (
+            input_key in observation_space.spaces
+        ), "LinearActorCritic expects only a single observational input."
+        self.key = input_key
+
+        box_space: gym.spaces.Box = observation_space[self.key]
+        assert isinstance(box_space, gym.spaces.Box), (
+            "RNNActorCritic requires that"
+            "observation space corresponding to the input key is a Box space."
+        )
+        assert len(box_space.shape) == 1
+        self.in_dim = box_space.shape[0]
+
+        self.state_encoder = RNNStateEncoder(
+            input_size=self.in_dim,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            rnn_type=rnn_type,
+            trainable_masked_hidden_state=True,
+        )
+
+        self.head_key = "{}_{}".format("rnn", input_key)
+        self._head_observation_dict: Dict[str, Optional[torch.Tensor]] = {
+            self.head_key: None
+        }
+
+        self.ac_nonrecurrent_head: ActorCriticModel[CategoricalDistr] = head_type(
+            input_key=self.head_key,
+            action_space=action_space,
+            observation_space=SpaceDict(
+                {
+                    self.head_key: gym.spaces.Box(
+                        low=np.float32(0.0), high=np.float32(1.0), shape=(hidden_size,)
+                    )
+                }
+            ),
+        )
+
+    @property
+    def recurrent_hidden_state_size(self) -> int:
+        return self.hidden_size
+
+    @property
+    def num_recurrent_layers(self) -> int:
+        return self.state_encoder.num_recurrent_layers
+
+    def forward(  # type: ignore
+        self,
+        observations: Dict[str, torch.FloatTensor],
+        recurrent_hidden_states: torch.FloatTensor,
+        prev_actions: torch.LongTensor,
+        masks: torch.FloatTensor,
+        **kwargs
+    ) -> Tuple[ActorCriticOutput[DistributionType], Any]:
+
+        rnn_out, recurrent_hidden_states = self.state_encoder(
+            x=observations[self.key],
+            hidden_states=recurrent_hidden_states,
+            masks=masks,
+        )
+
+        self._head_observation_dict[self.head_key] = rnn_out
+
+        out, _ = self.ac_nonrecurrent_head(
+            observations=self._head_observation_dict,
+            recurrent_hidden_states=None,
+            prev_actions=prev_actions,
+            masks=masks,
+        )
+
+        self._head_observation_dict[self.head_key] = None
+
+        # noinspection PyArgumentList
+        return (
+            out,
+            recurrent_hidden_states,
         )

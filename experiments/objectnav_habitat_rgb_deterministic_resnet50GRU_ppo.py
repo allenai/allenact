@@ -1,16 +1,15 @@
 import gym
+import habitat
 import torch.nn as nn
 from torchvision import models
 
-import habitat
-
+from experiments.objectnav_habitat_base import ObjectNavHabitatBaseExperimentConfig
 from models.object_nav_models import ObjectNavResNetActorCritic
 from rl_base.sensor import SensorSuite
-from rl_habitat.habitat_tasks import ObjectNavTask
-from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetObjectSensorHabitat
-from rl_habitat.habitat_utils import construct_env_configs
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
-from experiments.objectnav_habitat_base import ObjectNavHabitatBaseExperimentConfig
+from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetObjectSensorHabitat
+from rl_habitat.habitat_tasks import ObjectNavTask
+from rl_habitat.habitat_utils import construct_env_configs
 
 
 class ObjectNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(

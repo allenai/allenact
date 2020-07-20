@@ -2,7 +2,7 @@
 interactive version of AI2-THOR."""
 
 from collections import OrderedDict
-from typing import Set, Tuple, Dict
+from typing import Set, Dict
 
 MOVE_AHEAD = "MoveAhead"
 ROTATE_LEFT = "RotateLeft"

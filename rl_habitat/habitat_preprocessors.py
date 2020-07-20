@@ -1,13 +1,13 @@
 from typing import Dict, Any, Callable, Optional, List, Union
 
+import gym
+import numpy as np
 import torch
 import torch.nn as nn
 from torchvision import models
-import numpy as np
-import gym
 
 from rl_base.preprocessor import Preprocessor
-from utils.system import LOGGER
+from utils.system import get_logger
 
 
 class ResNetEmbedder(nn.Module):
@@ -65,24 +65,36 @@ class ResnetPreProcessorHabitat(Preprocessor):
         )
         # self.device: torch.device = optf(config, "device", "cpu")
         self.parallel: bool = optf(config, "parallel", True)
-        self.device: torch.device = torch.device(optf(config, "device", "cuda" if self.parallel and torch.cuda.is_available() else "cpu"))
-        self.device_ids: Optional[List[Union[torch.device, int]]] = optf(config, "device_ids", list(range(torch.cuda.device_count())))
+        self.device: torch.device = torch.device(
+            optf(
+                config,
+                "device",
+                "cuda" if self.parallel and torch.cuda.is_available() else "cpu",
+            )
+        )
+        self.device_ids: Optional[List[Union[torch.device, int]]] = optf(
+            config, "device_ids", list(range(torch.cuda.device_count()))
+        )
 
         self.resnet = ResNetEmbedder(
             self.make_model(pretrained=True).to(self.device), pool=self.pool
         )
 
         if self.parallel:
-            assert torch.cuda.is_available(), "attempt to parallelize resnet without cuda"
-            LOGGER.info("Distributing resnet")
+            assert (
+                torch.cuda.is_available()
+            ), "attempt to parallelize resnet without cuda"
+            get_logger().info("Distributing resnet")
             self.resnet = self.resnet.to(torch.device("cuda"))
 
             # store = torch.distributed.TCPStore("localhost", 4712, 1, True)
             # torch.distributed.init_process_group(backend="nccl", store=store, rank=0, world_size=1)
             # self.model = DistributedDataParallel(self.frcnn, device_ids=self.device_ids)
 
-            self.resnet = torch.nn.DataParallel(self.resnet, device_ids=self.device_ids)  #, output_device=torch.cuda.device_count() - 1)
-            LOGGER.info("Detected {} devices".format(torch.cuda.device_count()))
+            self.resnet = torch.nn.DataParallel(
+                self.resnet, device_ids=self.device_ids
+            )  # , output_device=torch.cuda.device_count() - 1)
+            get_logger().info("Detected {} devices".format(torch.cuda.device_count()))
 
         low = -np.inf
         high = np.inf

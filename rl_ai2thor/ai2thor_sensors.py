@@ -1,8 +1,8 @@
+import typing
 from typing import Any, Dict, Optional, List
 
 import gym
 import numpy as np
-import typing
 from torchvision import transforms
 
 from rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
@@ -32,6 +32,7 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment, Task[AI2ThorEnvironment]]):
         args : Extra args. Currently unused.
         kwargs : Extra kwargs. Currently unused.
         """
+
         def f(x, k, default):
             return x[k] if k in x else default
 
@@ -52,11 +53,15 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment, Task[AI2ThorEnvironment]]):
         if not self._should_normalize:
             low = 0.0
             high = 1.0
-            self.observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
+            self.observation_space = gym.spaces.Box(
+                low=np.float32(low), high=np.float32(high), shape=shape
+            )
         else:
             low = np.tile(-self._norm_means / self._norm_sds, shape[:-1] + (1,))
             high = np.tile((1 - self._norm_means) / self._norm_sds, shape[:-1] + (1,))
-            self.observation_space = gym.spaces.Box(low=low, high=high)
+            self.observation_space = gym.spaces.Box(
+                low=np.float32(low), high=np.float32(high)
+            )
 
         self._scaler = (
             None
@@ -69,7 +74,9 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment, Task[AI2ThorEnvironment]]):
 
         self._to_pil = transforms.ToPILImage()
 
-        super().__init__(config, *args, **kwargs)  # call it last so that user can assign a uuid
+        super().__init__(
+            config, *args, **kwargs
+        )  # call it last so that user can assign a uuid
 
     @property
     def height(self) -> Optional[int]:
@@ -137,7 +144,9 @@ class GoalObjectTypeThorSensor(Sensor):
 
             self.observation_space = gym.spaces.Discrete(len(self.ordered_object_types))
         else:
-            assert "detector_types" in self.config, "Missing detector_types for map {}".format(
+            assert (
+                "detector_types" in self.config
+            ), "Missing detector_types for map {}".format(
                 self.config["target_to_detector_map"]
             )
             self.target_to_detector = self.config["target_to_detector_map"]
@@ -145,7 +154,8 @@ class GoalObjectTypeThorSensor(Sensor):
 
             detector_index = {ot: i for i, ot in enumerate(self.detector_types)}
             self.object_type_to_ind = {
-                ot: detector_index[self.target_to_detector[ot]] for ot in self.ordered_object_types
+                ot: detector_index[self.target_to_detector[ot]]
+                for ot in self.ordered_object_types
             }
 
             self.observation_space = gym.spaces.Discrete(len(self.detector_types))

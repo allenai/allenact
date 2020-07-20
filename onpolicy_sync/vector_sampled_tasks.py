@@ -1,29 +1,35 @@
-#!/usr/bin/env python3
-
 # Original work Copyright (c) Facebook, Inc. and its affiliates.
 # Modified work Copyright (c) Allen Institute for AI
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+import queue
 import time
+import typing
 from multiprocessing.connection import Connection
 from multiprocessing.context import BaseContext
-import queue
-from queue import Queue
 from threading import Thread
-from typing import Any, Callable, List, Optional, Sequence, Set, Tuple, Union, Dict, Generator
-import logging
+from typing import (
+    Any,
+    Callable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    Dict,
+    Generator,
+)
 
 import numpy as np
-import typing
 from gym.spaces.dict import Dict as SpaceDict
+from setproctitle import setproctitle as ptitle
 
 from rl_base.common import RLStepResult
 from rl_base.task import TaskSampler
-
-from setproctitle import setproctitle as ptitle
-
+from utils.misc_utils import partition_sequence
+from utils.system import get_logger
 from utils.tensor_utils import tile_images
-from utils.system import init_logging, LOGGER
 
 try:
     # Use torch.multiprocessing if we can.
@@ -36,7 +42,6 @@ except ImportError:
 
 DEFAULT_MP_CONTEXT_TYPE = "forkserver"
 
-
 STEP_COMMAND = "step"
 NEXT_TASK_COMMAND = "next_task"
 RENDER_COMMAND = "render"
@@ -47,9 +52,10 @@ CALL_COMMAND = "call"
 SAMPLER_COMMAND = "call_sampler"
 ATTR_COMMAND = "attr"
 SAMPLER_ATTR_COMMAND = "sampler_attr"
-# EPISODE_COMMAND = "current_episode"
 RESET_COMMAND = "reset"
 SEED_COMMAND = "seed"
+PAUSE_COMMAND = "pause"
+RESUME_COMMAND = "resume"
 
 
 class VectorSampledTasks(object):
@@ -81,7 +87,7 @@ class VectorSampledTasks(object):
     metrics_out_queue: mp.Queue
     _workers: List[Union[mp.Process, Thread]]
     _is_waiting: bool
-    _num_processes: int
+    _num_task_samplers: int
     _auto_resample_when_done: bool
     _mp_ctx: BaseContext
     _connection_read_fns: List[Callable[[], Any]]
@@ -95,16 +101,26 @@ class VectorSampledTasks(object):
         multiprocessing_start_method: Optional[str] = "forkserver",
         mp_ctx: Optional[BaseContext] = None,
         metrics_out_queue: mp.Queue = None,
+        should_log: bool = True,
+        max_processes: Optional[int] = None,
     ) -> None:
 
         self._is_waiting = False
         self._is_closed = True
+        self.should_log = should_log
+        self.max_processes = max_processes
 
         assert (
             sampler_fn_args is not None and len(sampler_fn_args) > 0
         ), "number of processes to be created should be greater than 0"
 
-        self._num_processes = len(sampler_fn_args)
+        self._num_task_samplers = len(sampler_fn_args)
+        self._num_processes = (
+            self._num_task_samplers
+            if max_processes is None
+            else min(max_processes, self._num_task_samplers)
+        )
+
         self._auto_resample_when_done = auto_resample_when_done
 
         assert (multiprocessing_start_method is None) != (
@@ -117,15 +133,23 @@ class VectorSampledTasks(object):
             self._mp_ctx = mp.get_context(multiprocessing_start_method)
         else:
             self._mp_ctx = typing.cast(BaseContext, mp_ctx)
+
         self.metrics_out_queue = metrics_out_queue or self._mp_ctx.Queue()
-        self._workers = []
+
+        self.npaused_per_process = [0] * self._num_processes
+        self.sampler_index_to_process_ind_and_subprocess_ind: Optional[List[int]] = None
+        self._reset_sampler_index_to_process_ind_and_subprocess_ind()
+
+        self._workers: Optional[List] = None
+        for args in sampler_fn_args:
+            args["mp_ctx"] = self._mp_ctx
         (
             self._connection_read_fns,
             self._connection_write_fns,
         ) = self._spawn_workers(  # noqa
             make_sampler_fn=make_sampler_fn,
-            sampler_fn_args=[
-                {"mp_ctx": self._mp_ctx, **args} for args in sampler_fn_args
+            sampler_fn_args_list=[
+                args_list for args_list in self._partition_to_processes(sampler_fn_args)
             ],
         )
 
@@ -134,7 +158,9 @@ class VectorSampledTasks(object):
         for write_fn in self._connection_write_fns:
             write_fn((OBSERVATION_SPACE_COMMAND, None))
 
-        observation_spaces = [read_fn() for read_fn in self._connection_read_fns]
+        observation_spaces = [
+            space for read_fn in self._connection_read_fns for space in read_fn()
+        ]
 
         if any(os is None for os in observation_spaces):
             raise NotImplementedError(
@@ -153,8 +179,32 @@ class VectorSampledTasks(object):
         self.observation_space = observation_spaces[0]
         for write_fn in self._connection_write_fns:
             write_fn((ACTION_SPACE_COMMAND, None))
-        self.action_spaces = [read_fn() for read_fn in self._connection_read_fns]
-        self._paused: List[Tuple[int, Callable, Callable, mp.Process]] = []
+        self.action_spaces = [
+            space for read_fn in self._connection_read_fns for space in read_fn()
+        ]
+
+    def _reset_sampler_index_to_process_ind_and_subprocess_ind(self):
+        self.sampler_index_to_process_ind_and_subprocess_ind = [
+            [i, j]
+            for i, part in enumerate(
+                partition_sequence([1] * self._num_task_samplers, self._num_processes)
+            )
+            for j in range(len(part))
+        ]
+
+    def _partition_to_processes(self, input: typing.Iterator):
+        subparts_list = [[] for _ in range(self._num_processes)]
+
+        input = list(input)
+        assert len(input) == len(self.sampler_index_to_process_ind_and_subprocess_ind)
+
+        for sampler_index, (process_ind, subprocess_ind) in enumerate(
+            self.sampler_index_to_process_ind_and_subprocess_ind
+        ):
+            assert len(subparts_list[process_ind]) == subprocess_ind
+            subparts_list[process_ind].append(input[sampler_index])
+
+        return subparts_list
 
     @property
     def is_closed(self) -> bool:
@@ -169,7 +219,7 @@ class VectorSampledTasks(object):
 
         Number of unpaused processes.
         """
-        return self._num_processes - len(self._paused)
+        return self._num_task_samplers - sum(self.npaused_per_process)
 
     @property
     def mp_ctx(self):
@@ -183,13 +233,14 @@ class VectorSampledTasks(object):
 
     @staticmethod
     def _task_sampling_loop_worker(
-        worker_id: int,
+        worker_id: Union[int, str],
         connection_read_fn: Callable,
         connection_write_fn: Callable,
         make_sampler_fn: Callable[..., TaskSampler],
-        sampler_fn_args: Dict[str, Any],
+        sampler_fn_args_list: List[Dict[str, Any]],
         auto_resample_when_done: bool,
         metrics_out_queue: mp.Queue,
+        should_log: bool,
         child_pipe: Optional[Connection] = None,
         parent_pipe: Optional[Connection] = None,
     ) -> None:
@@ -198,120 +249,95 @@ class VectorSampledTasks(object):
 
         ptitle("VectorSampledTask: {}".format(worker_id))
 
-        init_logging()
-
-        task_sampler = make_sampler_fn(**sampler_fn_args)
-        current_task = task_sampler.next_task()
+        sp_vector_sampled_tasks = SingleProcessVectorSampledTasks(
+            make_sampler_fn=make_sampler_fn,
+            sampler_fn_args_list=sampler_fn_args_list,
+            auto_resample_when_done=auto_resample_when_done,
+            should_log=should_log,
+            metrics_out_queue=metrics_out_queue,
+        )
 
         if parent_pipe is not None:
             parent_pipe.close()
         try:
-            command, data = connection_read_fn()
-            while command != CLOSE_COMMAND:
-                if command == STEP_COMMAND:
-                    step_result = current_task.step(data)
-                    if current_task.is_done():
-                        metrics = current_task.metrics()
-                        if metrics is not None and len(metrics) != 0:
-                            metrics_out_queue.put(metrics)
+            while True:
+                read_input = connection_read_fn()
 
-                        if auto_resample_when_done:
-                            current_task = task_sampler.next_task()
-                            if current_task is None:
-                                step_result = step_result.clone({"observation": None})
-                            else:
-                                step_result = step_result.clone(
-                                    {"observation": current_task.get_observations()}
-                                )
+                if len(read_input) == 3:
+                    sampler_index, command, data = read_input
 
-                    connection_write_fn(step_result)
+                    assert command != CLOSE_COMMAND, "Must close all processes at once."
+                    assert (
+                        command != RESUME_COMMAND
+                    ), "Must resume all task samplers at once."
 
-                elif command == NEXT_TASK_COMMAND:
-                    if data is not None:
-                        current_task = task_sampler.next_task(**data)
+                    if command == PAUSE_COMMAND:
+                        sp_vector_sampled_tasks.pause_at(sampler_index=sampler_index)
+                        connection_write_fn("done")
                     else:
-                        current_task = task_sampler.next_task()
-                    observations = current_task.get_observations()
-                    connection_write_fn(observations)
-
-                elif command == RENDER_COMMAND:
-                    connection_write_fn(current_task.render(*data[0], **data[1]))
-
-                elif (
-                    command == OBSERVATION_SPACE_COMMAND
-                    or command == ACTION_SPACE_COMMAND
-                ):
-                    res = getattr(current_task, command)
-                    connection_write_fn(res)
-
-                elif command == CALL_COMMAND:
-                    function_name, function_args = data
-                    if function_args is None or len(function_args) == 0:
-                        result = getattr(current_task, function_name)()
-                    else:
-                        result = getattr(current_task, function_name)(*function_args)
-                    connection_write_fn(result)
-
-                elif command == SAMPLER_COMMAND:
-                    function_name, function_args = data
-                    if function_args is None or len(function_args) == 0:
-                        result = getattr(task_sampler, function_name)()
-                    else:
-                        result = getattr(task_sampler, function_name)(*function_args)
-                    connection_write_fn(result)
-
-                elif command == ATTR_COMMAND:
-                    property_name = data
-                    result = getattr(current_task, property_name)
-                    connection_write_fn(result)
-
-                elif command == SAMPLER_ATTR_COMMAND:
-                    property_name = data
-                    result = getattr(task_sampler, property_name)
-                    # LOGGER.debug("task_sampler {} {}".format(property_name, result))
-                    connection_write_fn(result)
-
-                # TODO: update CALL_COMMAND for getting attribute like this
-                # elif command == EPISODE_COMMAND:
-                #     connection_write_fn(current_task.current_episode)
-                elif command == RESET_COMMAND:
-                    task_sampler.reset()
-                    current_task = task_sampler.next_task()
-                    connection_write_fn("done")
-                elif command == SEED_COMMAND:
-                    task_sampler.set_seed(data)
-                    connection_write_fn("done")
+                        connection_write_fn(
+                            sp_vector_sampled_tasks.command_at(
+                                sampler_index=sampler_index, command=command, data=data
+                            )
+                        )
                 else:
-                    raise NotImplementedError()
+                    commands, data_list = read_input
 
-                command, data = connection_read_fn()
+                    assert (
+                        commands != PAUSE_COMMAND
+                    ), "Cannot pause all task samplers at once."
+
+                    if commands == CLOSE_COMMAND:
+                        sp_vector_sampled_tasks.close()
+                        break
+                    elif commands == RESUME_COMMAND:
+                        sp_vector_sampled_tasks.reset_all()
+                        connection_write_fn("done")
+                    else:
+                        if isinstance(commands, str):
+                            commands = [
+                                commands
+                            ] * sp_vector_sampled_tasks.num_unpaused_tasks
+
+                        connection_write_fn(
+                            sp_vector_sampled_tasks.command(
+                                commands=commands, data_list=data_list
+                            )
+                        )
 
             if child_pipe is not None:
                 child_pipe.close()
         except KeyboardInterrupt:
-            # logger.info("Worker KeyboardInterrupt")
-            print("Worker {} KeyboardInterrupt".format(worker_id))
+            if should_log:
+                get_logger().info("Worker {} KeyboardInterrupt".format(worker_id))
         finally:
-            """Worker {} closing.""".format(worker_id)
-            task_sampler.close()
+            if should_log:
+                get_logger().info("""Worker {} closing.""".format(worker_id))
 
     def _spawn_workers(
         self,
         make_sampler_fn: Callable[..., TaskSampler],
-        sampler_fn_args: Sequence[Dict[str, Any]],
+        sampler_fn_args_list: Sequence[Sequence[Dict[str, Any]]],
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
         parent_connections, worker_connections = zip(
             *[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_processes)]
         )
         self._workers = []
+        k = 0
         for id, stuff in enumerate(
-            zip(worker_connections, parent_connections, sampler_fn_args)
+            zip(worker_connections, parent_connections, sampler_fn_args_list)
         ):
-            worker_conn, parent_conn, current_sampler_fn_args = stuff  # type: ignore
-            LOGGER.info(
-                "Starting {}-th worker with args {}".format(id, current_sampler_fn_args)
-                # "Starting {}-th worker".format(id)
-            )
+            if len(sampler_fn_args_list) != 1:
+                id = "{}({}-{})".format(id, k, k + len(sampler_fn_args_list) - 1)
+                k += len(sampler_fn_args_list)
+
+            worker_conn, parent_conn, current_sampler_fn_args_list = stuff  # type: ignore
+            if self.should_log:
+                get_logger().info(
+                    "Starting {}-th worker with args {}".format(
+                        id, current_sampler_fn_args_list
+                    )
+                )
             ps = self._mp_ctx.Process(  # type: ignore
                 target=self._task_sampling_loop_worker,
                 args=(
@@ -319,9 +345,10 @@ class VectorSampledTasks(object):
                     worker_conn.recv,
                     worker_conn.send,
                     make_sampler_fn,
-                    current_sampler_fn_args,
+                    current_sampler_fn_args_list,
                     self._auto_resample_when_done,
                     self.metrics_out_queue,
+                    self.should_log,
                     worker_conn,
                     parent_conn,
                 ),
@@ -338,16 +365,6 @@ class VectorSampledTasks(object):
             [p.send for p in parent_connections],
         )
 
-    # def current_episodes(self):
-    #     self._is_waiting = True
-    #     for write_fn in self._connection_write_fns:
-    #         write_fn((EPISODE_COMMAND, None))
-    #     results = []
-    #     for read_fn in self._connection_read_fns:
-    #         results.append(read_fn())
-    #     self._is_waiting = False
-    #     return results
-
     def next_task(self, **kwargs):
         """Move to the the next Task for all TaskSamplers.
 
@@ -359,14 +376,9 @@ class VectorSampledTasks(object):
 
         List of initial observations for each of the new tasks.
         """
-        self._is_waiting = True
-        for write_fn in self._connection_write_fns:
-            write_fn((NEXT_TASK_COMMAND, kwargs))
-        results = []
-        for read_fn in self._connection_read_fns:
-            results.append(read_fn())
-        self._is_waiting = False
-        return results
+        return self.command(
+            commands=NEXT_TASK_COMMAND, data_list=[kwargs] * self.num_unpaused_tasks
+        )
 
     def get_observations(self):
         """Get observations for all unpaused tasks.
@@ -377,150 +389,33 @@ class VectorSampledTasks(object):
         """
         return self.call(["get_observations"] * self.num_unpaused_tasks,)
 
-    def next_task_at(self, index_process: int) -> List[RLStepResult]:
-        """Move to the the next Task from the TaskSampler in index_process
-        process in the vector.
+    def command_at(
+        self, sampler_index: int, command: str, data: Optional[Any] = None
+    ) -> Any:
+        """Runs the command on the selected task and returns the result.
 
         # Parameters
 
-        index_process : Index of the process to be reset.
 
         # Returns
 
-        List of length one containing the observations the newly sampled task.
+        Result of the command.
         """
         self._is_waiting = True
-        self._connection_write_fns[index_process]((NEXT_TASK_COMMAND, None))
-        results = [self._connection_read_fns[index_process]()]
+        (
+            process_ind,
+            subprocess_ind,
+        ) = self.sampler_index_to_process_ind_and_subprocess_ind[sampler_index]
+        self._connection_write_fns[process_ind]((subprocess_ind, command, data))
+        result = self._connection_read_fns[sampler_index]()
         self._is_waiting = False
-        return results
-
-    def step_at(self, index_process: int, action: int) -> List[RLStepResult]:
-        """Step in the index_process task in the vector.
-
-        # Parameters
-
-        index_process : Index of the process to be reset.
-        action : The action to take.
-
-        # Returns
-
-        List containing the output of step method on the task in the indexed process.
-        """
-        self._is_waiting = True
-        self._connection_write_fns[index_process]((STEP_COMMAND, action))
-        results = [self._connection_read_fns[index_process]()]
-        self._is_waiting = False
-        return results
-
-    def async_step(self, actions: List[int]) -> None:
-        """Asynchronously step in the vectorized Tasks.
-
-        # Parameters
-
-        actions : actions to be performed in the vectorized Tasks.
-        """
-        self._is_waiting = True
-        for write_fn, action in zip(self._connection_write_fns, actions):
-            write_fn((STEP_COMMAND, action))
-
-    def wait_step(self) -> List[Dict[str, Any]]:
-        """Wait until all the asynchronized processes have synchronized."""
-        observations = []
-        for read_fn in self._connection_read_fns:
-            observations.append(read_fn())
-        self._is_waiting = False
-        return observations
-
-    def step(self, actions: List[int]):
-        """Perform actions in the vectorized tasks.
-
-        # Parameters
-
-        actions: List of size _num_processes containing action to be taken in each task.
-
-        # Returns
-
-        List of outputs from the step method of tasks.
-        """
-        self.async_step(actions)
-        return self.wait_step()
-
-    def reset_all(self):
-        """Reset all task samplers to their initial state (except for the RNG
-        seed)."""
-        self._is_waiting = True
-        for write_fn in self._connection_write_fns:
-            write_fn((RESET_COMMAND, ""))
-        for read_fn in self._connection_read_fns:
-            read_fn()
-        self._is_waiting = False
-
-    def set_seeds(self, seeds: List[int]):
-        """Sets new tasks' RNG seeds.
-
-        # Parameters
-
-        seeds: List of size _num_processes containing new RNG seeds.
-        """
-        self._is_waiting = True
-        for write_fn, seed in zip(self._connection_write_fns, seeds):
-            write_fn((SEED_COMMAND, seed))
-        for read_fn in self._connection_read_fns:
-            read_fn()
-        self._is_waiting = False
-
-    def close(self) -> None:
-        if self._is_closed:
-            return
-
-        if self._is_waiting:
-            for read_fn in self._connection_read_fns:
-                read_fn()
-
-        for write_fn in self._connection_write_fns:
-            write_fn((CLOSE_COMMAND, None))
-
-        for _, _, write_fn, _ in self._paused:
-            write_fn((CLOSE_COMMAND, None))
-
-        for process in self._workers:
-            process.join()
-
-        for _, _, _, process in self._paused:
-            process.join()
-
-        self._is_closed = True
-
-    def pause_at(self, index: int) -> None:
-        """Pauses computation on the Task in process `index` without destroying
-        the Task. This is useful for not needing to call steps on all Tasks
-        when only some are active (for example during the last samples of
-        running eval).
-
-        # Parameters
-
-        index : which process to pause. All indexes after this
-            one will be shifted down by one.
-        """
-        if self._is_waiting:
-            for read_fn in self._connection_read_fns:
-                read_fn()
-        read_fn = self._connection_read_fns.pop(index)
-        write_fn = self._connection_write_fns.pop(index)
-        worker = self._workers.pop(index)
-        self._paused.append((index, read_fn, write_fn, worker))
-
-    def resume_all(self) -> None:
-        """Resumes any paused processes."""
-        for index, read_fn, write_fn, worker in reversed(self._paused):
-            self._connection_read_fns.insert(index, read_fn)
-            self._connection_write_fns.insert(index, write_fn)
-            self._workers.insert(index, worker)
-        self._paused = []
+        return result
 
     def call_at(
-        self, index: int, function_name: str, function_args: Optional[List[Any]] = None, call_sampler: bool=False
+        self,
+        sampler_index: int,
+        function_name: str,
+        function_args: Optional[List[Any]] = None,
     ) -> Any:
         """Calls a function (which is passed by name) on the selected task and
         returns the result.
@@ -535,19 +430,194 @@ class VectorSampledTasks(object):
 
         Result of calling the function.
         """
-        self._is_waiting = True
-        self._connection_write_fns[index](
-            (CALL_COMMAND if not call_sampler else SAMPLER_COMMAND, (function_name, function_args))
+        return self.command_at(
+            sampler_index=sampler_index,
+            command=CALL_COMMAND,
+            data=(function_name, function_args),
         )
-        result = self._connection_read_fns[index]()
+
+    def next_task_at(self, sampler_index: int) -> List[RLStepResult]:
+        """Move to the the next Task from the TaskSampler in index_process
+        process in the vector.
+
+        # Parameters
+
+        index_process : Index of the process to be reset.
+
+        # Returns
+
+        List of length one containing the observations the newly sampled task.
+        """
+        return [
+            self.command_at(
+                sampler_index=sampler_index, command=NEXT_TASK_COMMAND, data=None
+            )
+        ]
+
+    def step_at(self, sampler_index: int, action: int) -> List[RLStepResult]:
+        """Step in the index_process task in the vector.
+
+        # Parameters
+
+        sampler_index : Index of the sampler to be reset.
+        action : The action to take.
+
+        # Returns
+
+        List containing the output of step method on the task in the indexed process.
+        """
+        return [
+            self.command_at(
+                sampler_index=sampler_index, command=STEP_COMMAND, data=action
+            )
+        ]
+
+    def async_step(self, actions: List[int]) -> None:
+        """Asynchronously step in the vectorized Tasks.
+
+        # Parameters
+
+        actions : actions to be performed in the vectorized Tasks.
+        """
+        self._is_waiting = True
+        for write_fn, action_list in zip(
+            self._connection_write_fns, self._partition_to_processes(actions)
+        ):
+            write_fn((STEP_COMMAND, action_list))
+
+    def wait_step(self) -> List[Dict[str, Any]]:
+        """Wait until all the asynchronized processes have synchronized."""
+        observations = []
+        for read_fn in self._connection_read_fns:
+            observations.extend(read_fn())
         self._is_waiting = False
-        return result
+        return observations
+
+    def step(self, actions: List[int]):
+        """Perform actions in the vectorized tasks.
+
+        # Parameters
+
+        actions: List of size _num_samplers containing action to be taken in each task.
+
+        # Returns
+
+        List of outputs from the step method of tasks.
+        """
+        self.async_step(actions)
+        return self.wait_step()
+
+    def reset_all(self):
+        """Reset all task samplers to their initial state (except for the RNG
+        seed)."""
+        self.command(commands=RESET_COMMAND, data_list=None)
+
+    def set_seeds(self, seeds: List[int]):
+        """Sets new tasks' RNG seeds.
+
+        # Parameters
+
+        seeds: List of size _num_samplers containing new RNG seeds.
+        """
+        self.command(commands=SEED_COMMAND, data_list=seeds)
+
+    def close(self) -> None:
+        if self._is_closed:
+            return
+
+        if self._is_waiting:
+            for read_fn in self._connection_read_fns:
+                read_fn()
+
+        for write_fn in self._connection_write_fns:
+            write_fn((CLOSE_COMMAND, None))
+
+        for process in self._workers:
+            process.join()
+
+        self._is_closed = True
+
+    def pause_at(self, sampler_index: int) -> None:
+        """Pauses computation on the Task in process `index` without destroying
+        the Task. This is useful for not needing to call steps on all Tasks
+        when only some are active (for example during the last samples of
+        running eval).
+
+        # Parameters
+
+        index : which process to pause. All indexes after this
+            one will be shifted down by one.
+        """
+        if self._is_waiting:
+            for read_fn in self._connection_read_fns:
+                read_fn()
+
+        (
+            process_ind,
+            subprocess_ind,
+        ) = self.sampler_index_to_process_ind_and_subprocess_ind[sampler_index]
+
+        self.command_at(sampler_index=sampler_index, command=PAUSE_COMMAND, data=None)
+
+        for i in range(
+            sampler_index + 1, len(self.sampler_index_to_process_ind_and_subprocess_ind)
+        ):
+            other_process_and_sub_process_inds = (
+                self.sampler_index_to_process_ind_and_subprocess_ind
+            )
+            if other_process_and_sub_process_inds[0] == process_ind:
+                other_process_and_sub_process_inds[1] -= 1
+            else:
+                break
+
+        self.sampler_index_to_process_ind_and_subprocess_ind.pop(sampler_index)
+
+        self.npaused_per_process[process_ind] += 1
+
+    def resume_all(self) -> None:
+        """Resumes any paused processes."""
+        self._is_waiting = True
+        for connection_write_fn in self._connection_write_fns:
+            connection_write_fn((RESUME_COMMAND, None))
+
+        for connection_read_fn in self._connection_read_fns:
+            connection_read_fn()
+
+        self._is_waiting = False
+
+        self._reset_sampler_index_to_process_ind_and_subprocess_ind()
+
+        for i in range(len(self.npaused_per_process)):
+            self.npaused_per_process[i] = 0
+
+    def command(
+        self, commands: Union[List[str], str], data_list: Optional[List]
+    ) -> List[Any]:
+        """"""
+        self._is_waiting = True
+
+        if isinstance(commands, str):
+            commands = [commands] * self.num_unpaused_tasks
+
+        if data_list is None:
+            data_list = [None] * self.num_unpaused_tasks
+
+        for write_fn, subcommands, subdata_list in zip(
+            self._connection_write_fns,
+            self._partition_to_processes(commands),
+            self._partition_to_processes(data_list),
+        ):
+            write_fn((subcommands, data_list))
+        results = []
+        for read_fn in self._connection_read_fns:
+            results.extend(read_fn())
+        self._is_waiting = False
+        return results
 
     def call(
         self,
         function_names: Union[str, List[str]],
         function_args_list: Optional[List[Any]] = None,
-        call_sampler: bool = False,
     ) -> List[Any]:
         """Calls a list of functions (which are passed by name) on the
         corresponding task (by index).
@@ -570,16 +640,19 @@ class VectorSampledTasks(object):
         if function_args_list is None:
             function_args_list = [None] * len(function_names)
         assert len(function_names) == len(function_args_list)
-        func_args = zip(function_names, function_args_list)
-        for write_fn, func_args_on in zip(self._connection_write_fns, func_args):
-            write_fn((CALL_COMMAND if not call_sampler else SAMPLER_COMMAND, func_args_on))
+        func_names_and_args_list = zip(function_names, function_args_list)
+        for write_fn, func_names_and_args in zip(
+            self._connection_write_fns,
+            self._partition_to_processes(func_names_and_args_list),
+        ):
+            write_fn((CALL_COMMAND, func_names_and_args))
         results = []
         for read_fn in self._connection_read_fns:
-            results.append(read_fn())
+            results.extend(read_fn())
         self._is_waiting = False
         return results
 
-    def attr_at(self, index: int, attr_name: str, call_sampler: bool=False) -> Any:
+    def attr_at(self, sampler_index: int, attr_name: str) -> Any:
         """Gets the attribute (specified by name) on the selected task and
         returns it.
 
@@ -592,13 +665,9 @@ class VectorSampledTasks(object):
 
          Result of calling the function.
         """
-        self._is_waiting = True
-        self._connection_write_fns[index]((ATTR_COMMAND if not call_sampler else SAMPLER_ATTR_COMMAND, attr_name))
-        result = self._connection_read_fns[index]()
-        self._is_waiting = False
-        return result
+        return self.command_at(sampler_index, command=ATTR_COMMAND, data=attr_name)
 
-    def attr(self, attr_names: Union[List[str], str], call_sampler: bool=False) -> List[Any]:
+    def attr(self, attr_names: Union[List[str], str]) -> List[Any]:
         """Gets the attributes (specified by name) on the tasks.
 
         # Parameters
@@ -609,33 +678,18 @@ class VectorSampledTasks(object):
 
         List of results of calling the functions.
         """
-        self._is_waiting = True
-
         if isinstance(attr_names, str):
             attr_names = [attr_names] * self.num_unpaused_tasks
 
-        for write_fn, attr_name in zip(self._connection_write_fns, attr_names):
-            write_fn((ATTR_COMMAND if not call_sampler else SAMPLER_ATTR_COMMAND, attr_name))
-        results = []
-        for read_fn in self._connection_read_fns:
-            results.append(read_fn())
-        self._is_waiting = False
-        return results
+        return self.command(commands=ATTR_COMMAND, data_list=attr_names)
 
-    def render(self, mode: str = "human", *args, **kwargs) -> Union[np.ndarray, None, List[np.ndarray]]:
+    def render(self, mode: str = "human", *args, **kwargs) -> Union[np.ndarray, None]:
         """Render observations from all Tasks in a tiled image."""
-        for write_fn in self._connection_write_fns:
-            write_fn((RENDER_COMMAND, (args, {"mode": "rgb", **kwargs})))
-        images: List[np.ndarray] = [read_fn() for read_fn in self._connection_read_fns]
 
-        if mode == "raw_rgb_list":
-            return images
-
-        for index, _, _, _ in reversed(self._paused):
-            images.insert(index, np.zeros_like(images[0]))
-
-        if mode == "rgb_list":
-            return images
+        images = self.command(
+            commands=RENDER_COMMAND,
+            data_list=[(args, {"mode": "rgb", **kwargs})] * self.num_unpaused_tasks,
+        )
 
         tile = tile_images(images)
         if mode == "human":
@@ -691,23 +745,30 @@ class SingleProcessVectorSampledTasks(object):
     def __init__(
         self,
         make_sampler_fn: Callable[..., TaskSampler],
-        sampler_fn_args: Sequence[Dict[str, Any]] = None,
+        sampler_fn_args_list: Sequence[Dict[str, Any]] = None,
         auto_resample_when_done: bool = True,
+        should_log: bool = True,
+        metrics_out_queue: Optional[queue.Queue] = None,
     ) -> None:
 
         self._is_closed = True
 
         assert (
-            sampler_fn_args is not None and len(sampler_fn_args) > 0
+            sampler_fn_args_list is not None and len(sampler_fn_args_list) > 0
         ), "number of processes to be created should be greater than 0"
 
-        self._num_task_samplers = len(sampler_fn_args)
+        self._num_task_samplers = len(sampler_fn_args_list)
         self._auto_resample_when_done = auto_resample_when_done
 
-        self.metrics_out_queue = queue.Queue()
+        self.should_log = should_log
+        if metrics_out_queue is None:
+            self.metrics_out_queue = queue.Queue()
+        else:
+            self.metrics_out_queue = metrics_out_queue
+
         self._vector_task_generators: List[Generator] = self._create_generators(
             make_sampler_fn=make_sampler_fn,
-            sampler_fn_args=[{"mp_ctx": None, **args} for args in sampler_fn_args],
+            sampler_fn_args=[{"mp_ctx": None, **args} for args in sampler_fn_args_list],
         )
 
         self._is_closed = False
@@ -764,10 +825,9 @@ class SingleProcessVectorSampledTasks(object):
         sampler_fn_args: Dict[str, Any],
         auto_resample_when_done: bool,
         metrics_out_queue: queue.Queue,
+        should_log: bool,
     ) -> Generator:
         """Generator for working with Tasks/TaskSampler."""
-
-        ptitle("SingleProcessVectorSampledTask: {}".format(worker_id))
 
         task_sampler = make_sampler_fn(**sampler_fn_args)
         current_task = task_sampler.next_task()
@@ -821,15 +881,27 @@ class SingleProcessVectorSampledTasks(object):
                         result = getattr(current_task, function_name)(*function_args)
                     command, data = yield result
 
+                elif command == SAMPLER_COMMAND:
+                    function_name, function_args = data
+                    if function_args is None or len(function_args) == 0:
+                        result = getattr(task_sampler, function_name)()
+                    else:
+                        result = getattr(task_sampler, function_name)(*function_args)
+
+                    command, data = yield result
+
                 elif command == ATTR_COMMAND:
                     property_name = data
                     result = getattr(current_task, property_name)
 
                     command, data = yield result
 
-                # TODO: update CALL_COMMAND for getting attribute like this
-                # elif command == EPISODE_COMMAND:
-                #     connection_write_fn(current_task.current_episode)
+                elif command == SAMPLER_ATTR_COMMAND:
+                    property_name = data
+                    result = getattr(task_sampler, property_name)
+
+                    command, data = yield result
+
                 elif command == RESET_COMMAND:
                     task_sampler.reset()
                     current_task = task_sampler.next_task()
@@ -843,12 +915,17 @@ class SingleProcessVectorSampledTasks(object):
                     raise NotImplementedError()
 
         except KeyboardInterrupt:
-            # logger.info("Worker KeyboardInterrupt")
-            print(
-                "SingleProcessVectorSampledTask {} KeyboardInterrupt".format(worker_id)
-            )
+            if should_log:
+                get_logger().info(
+                    "SingleProcessVectorSampledTask {} KeyboardInterrupt".format(
+                        worker_id
+                    )
+                )
         finally:
-            """SingleProcessVectorSampledTask {} closing.""".format(worker_id)
+            if should_log:
+                get_logger().info(
+                    "SingleProcessVectorSampledTask {} closing.".format(worker_id)
+                )
             task_sampler.close()
 
     def _create_generators(
@@ -859,9 +936,12 @@ class SingleProcessVectorSampledTasks(object):
 
         generators = []
         for id, current_sampler_fn_args in enumerate(sampler_fn_args):
-            LOGGER.info(
-                "Starting {}-th worker with args {}".format(id, current_sampler_fn_args)
-            )
+            if self.should_log:
+                get_logger().info(
+                    "Starting {}-th worker with args {}".format(
+                        id, current_sampler_fn_args
+                    )
+                )
             generators.append(
                 self._task_sampling_loop_generator_fn(
                     worker_id=id,
@@ -869,6 +949,7 @@ class SingleProcessVectorSampledTasks(object):
                     sampler_fn_args=current_sampler_fn_args,
                     auto_resample_when_done=self._auto_resample_when_done,
                     metrics_out_queue=self.metrics_out_queue,
+                    should_log=self.should_log,
                 )
             )
 
@@ -936,7 +1017,7 @@ class SingleProcessVectorSampledTasks(object):
 
         # Parameters
 
-        actions: List of size _num_processes containing action to be taken in each task.
+        actions: List of size _num_samplers containing action to be taken in each task.
 
         # Returns
 
@@ -957,7 +1038,7 @@ class SingleProcessVectorSampledTasks(object):
 
         # Parameters
 
-        seeds: List of size _num_processes containing new RNG seeds.
+        seeds: List of size _num_samplers containing new RNG seeds.
         """
         return [
             g.send((SEED_COMMAND, seed))
@@ -976,7 +1057,7 @@ class SingleProcessVectorSampledTasks(object):
 
         self._is_closed = True
 
-    def pause_at(self, index: int) -> None:
+    def pause_at(self, sampler_index: int) -> None:
         """Pauses computation on the Task in process `index` without destroying
         the Task. This is useful for not needing to call steps on all Tasks
         when only some are active (for example during the last samples of
@@ -987,8 +1068,8 @@ class SingleProcessVectorSampledTasks(object):
         index : which process to pause. All indexes after this
             one will be shifted down by one.
         """
-        generator = self._vector_task_generators.pop(index)
-        self._paused.append((index, generator))
+        generator = self._vector_task_generators.pop(sampler_index)
+        self._paused.append((sampler_index, generator))
 
     def resume_all(self) -> None:
         """Resumes any paused processes."""
@@ -996,8 +1077,8 @@ class SingleProcessVectorSampledTasks(object):
             self._vector_task_generators.insert(index, generator)
         self._paused = []
 
-    def call_at(
-        self, index: int, function_name: str, function_args: Optional[List[Any]] = None
+    def command_at(
+        self, sampler_index: int, command: str, data: Optional[Any] = None
     ) -> Any:
         """Calls a function (which is passed by name) on the selected task and
         returns the result.
@@ -1012,7 +1093,45 @@ class SingleProcessVectorSampledTasks(object):
 
         Result of calling the function.
         """
-        return self._vector_task_generators[index].send(
+        return self._vector_task_generators[sampler_index].send((command, data))
+
+    def command(
+        self, commands: Union[List[str], str], data_list: Optional[List]
+    ) -> List[Any]:
+        """"""
+        if isinstance(commands, str):
+            commands = [commands] * self.num_unpaused_tasks
+
+        if data_list is None:
+            data_list = [None] * self.num_unpaused_tasks
+
+        return [
+            g.send((command, data))
+            for g, command, data in zip(
+                self._vector_task_generators, commands, data_list
+            )
+        ]
+
+    def call_at(
+        self,
+        sampler_index: int,
+        function_name: str,
+        function_args: Optional[List[Any]] = None,
+    ) -> Any:
+        """Calls a function (which is passed by name) on the selected task and
+        returns the result.
+
+        # Parameters
+
+        index : Which task to call the function on.
+        function_name : The name of the function to call on the task.
+        function_args : Optional function args.
+
+        # Returns
+
+        Result of calling the function.
+        """
+        return self._vector_task_generators[sampler_index].send(
             (CALL_COMMAND, (function_name, function_args))
         )
 
@@ -1049,7 +1168,7 @@ class SingleProcessVectorSampledTasks(object):
             )
         ]
 
-    def attr_at(self, index: int, attr_name: str) -> Any:
+    def attr_at(self, sampler_index: int, attr_name: str) -> Any:
         """Gets the attribute (specified by name) on the selected task and
         returns it.
 
@@ -1062,7 +1181,9 @@ class SingleProcessVectorSampledTasks(object):
 
          Result of calling the function.
         """
-        return self._vector_task_generators[index].send((ATTR_COMMAND, attr_name))
+        return self._vector_task_generators[sampler_index].send(
+            (ATTR_COMMAND, attr_name)
+        )
 
     def attr(self, attr_names: Union[List[str], str]) -> List[Any]:
         """Gets the attributes (specified by name) on the tasks.
@@ -1114,50 +1235,3 @@ class SingleProcessVectorSampledTasks(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
-
-
-class ThreadedVectorSampledTasks(VectorSampledTasks):
-    """Provides same functionality as ``VectorSampledTasks``, the only
-    difference is it runs in a multi-thread setup inside a single process.
-
-    ``VectorSampledTasks`` runs in a multi-proc setup. This makes it
-    much easier to debug when using ``VectorSampledTasks`` because you
-    can actually put break points in the Task methods. It should not be
-    used for best performance.
-    """
-
-    def _spawn_workers(
-        self,
-        make_sampler_fn: Callable[..., TaskSampler],
-        sampler_fn_args: Sequence[Dict[str, Any]],
-    ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
-        parent_read_queues, parent_write_queues = zip(
-            *[(Queue(), Queue()) for _ in range(self._num_processes)]
-        )
-        self._workers = []
-        for id, stuff in enumerate(
-                zip(parent_read_queues, parent_write_queues, sampler_fn_args)
-        ):
-            parent_read_queue, parent_write_queue, current_sampler_fn_args = stuff  # type: ignore
-            LOGGER.info(
-                "Starting {}-th worker with args {}".format(id, current_sampler_fn_args)
-            )
-            thread = Thread(
-                target=self._task_sampling_loop_worker,
-                args=(
-                    id,
-                    parent_write_queue.get,
-                    parent_read_queue.put,
-                    make_sampler_fn,
-                    current_sampler_fn_args,
-                    self._auto_resample_when_done,
-                    self.metrics_out_queue,
-                ),
-            )
-            self._workers.append(thread)
-            thread.daemon = True
-            thread.start()
-        return (
-            [q.get for q in parent_read_queues],
-            [q.put for q in parent_write_queues],
-        )
