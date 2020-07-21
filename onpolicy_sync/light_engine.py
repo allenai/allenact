@@ -163,23 +163,25 @@ class OnPolicyRLEngine(object):
         self.is_distributed = False
         self.store: Optional[torch.distributed.TCPStore] = None
         if self.num_workers > 1:
-            # TODO if training
-            self.store = torch.distributed.TCPStore(
-                "localhost",
-                self.distributed_port,
-                self.num_workers,
-                self.worker_id == 0,
-            )
-            torch.distributed.init_process_group(
-                backend="nccl",
-                store=self.store,
-                rank=self.worker_id,
-                world_size=self.num_workers,
-            )
-            self.actor_critic = DistributedDataParallel(
-                self.actor_critic, device_ids=[self.device], output_device=self.device
-            )
-            self.is_distributed = True
+            if self.mode == "train":
+                self.store = torch.distributed.TCPStore(
+                    "localhost",
+                    self.distributed_port,
+                    self.num_workers,
+                    self.worker_id == 0,
+                )
+                torch.distributed.init_process_group(
+                    backend="nccl",
+                    store=self.store,
+                    rank=self.worker_id,
+                    world_size=self.num_workers,
+                )
+                self.actor_critic = DistributedDataParallel(
+                    self.actor_critic,
+                    device_ids=[self.device],
+                    output_device=self.device,
+                )
+            self.is_distributed = True  # for testing, this only means we need to synchronize after each checkpoint
 
         self.deterministic_agent = False
 
@@ -270,7 +272,7 @@ class OnPolicyRLEngine(object):
 
     @staticmethod
     def worker_seeds(nprocesses: int, initial_seed: Optional[int]) -> List[int]:
-        """Create a collection of seeds for workers."""
+        """Create a collection of seeds for workers without modifying the RNG state."""
         if initial_seed is not None:
             rstate = random.getstate()
             random.seed(initial_seed)
@@ -1219,6 +1221,8 @@ class OnPolicyInference(OnPolicyRLEngine):
         device: Union[str, torch.device, int] = "cpu",
         deterministic_agent: bool = True,
         worker_id: int = 0,
+        num_workers: int = 1,
+        distributed_barrier: Optional[mp.Barrier] = None,
         **kwargs,
     ):
         super().__init__(
@@ -1234,6 +1238,7 @@ class OnPolicyInference(OnPolicyRLEngine):
             deterministic_agent=deterministic_agent,
             device=device,
             worker_id=worker_id,
+            num_workers=num_workers,
             **kwargs,
         )
         if self.actor_critic is not None:
@@ -1242,6 +1247,8 @@ class OnPolicyInference(OnPolicyRLEngine):
         # LOGGER.debug("{} worker {} using device {}".format(self.mode, self.worker_id, self.device))
 
         self.deterministic_agent = deterministic_agent
+
+        self.distributed_barrier = distributed_barrier
 
     def run_eval(self, checkpoint_file_name: str, rollout_steps=1, visualizer=None):
         assert self.actor_critic is not None, "called run_eval with no actor_critic"
@@ -1304,6 +1311,12 @@ class OnPolicyInference(OnPolicyRLEngine):
                 )
         return data
 
+    def barrier(self):
+        if self.is_distributed:
+            idx = self.distributed_barrier.wait()  # here we synchronize
+            if idx == 0:
+                self.distributed_barrier.reset()
+
     def process_checkpoints(self):
         assert (
             self.mode != "train"
@@ -1343,6 +1356,8 @@ class OnPolicyInference(OnPolicyRLEngine):
                             checkpoint_file_name=data, visualizer=visualizer
                         )
                         self.results_queue.put(eval_package)
+
+                        self.barrier()
                     else:
                         self.results_queue.put(
                             ("{}_package".format(self.mode), None, -1)
