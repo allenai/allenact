@@ -250,17 +250,10 @@ class ThorViz(TrajectoryViz):
     def get_translator(
         self, all_scenes: Sequence[Tuple[str, int, int, int, int]], cont: Controller
     ) -> Dict[str, Any]:
-        # TODO From the-robot-project (cached version):
-        # map_data = {"pos_translator": ThorPositionTo2DFrameTranslator(
-        #     self.viz_rows_cols,  # resolution (rows, cols)
-        #     (5.05, 7.614471, -5.663423),  # camera pos (x, y, z)
-        #     6.261584,  #
-        # )}
-
         roomname = list(ThorViz.iterate_scenes(all_scenes))[0]
         cont.reset(roomname)
         map_data = get_agent_map_data(cont, self.viz_rows_cols)
-        get_logger().debug("Using map_data {}".format(map_data))
+        # get_logger().debug("Using map_data {}".format(map_data))
         return map_data
 
     def make_top_down_views(
@@ -298,7 +291,7 @@ class ThorViz(TrajectoryViz):
         roomname = "FloorPlan_Val{}_{}".format(
             *episode_id.split("_")[1:3]
         )  # TODO HACK due to current episode id not including the full room name
-        get_logger().debug("episode {} rommname {}".format(episode_id, roomname))
+        # get_logger().debug("episode {} rommname {}".format(episode_id, roomname))
 
         im = visualize_agent_path(
             trajectory,
