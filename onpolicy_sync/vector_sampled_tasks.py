@@ -683,13 +683,18 @@ class VectorSampledTasks(object):
 
         return self.command(commands=ATTR_COMMAND, data_list=attr_names)
 
-    def render(self, mode: str = "human", *args, **kwargs) -> Union[np.ndarray, None]:
-        """Render observations from all Tasks in a tiled image."""
+    def render(
+        self, mode: str = "human", *args, **kwargs
+    ) -> Union[np.ndarray, None, List[np.ndarray]]:
+        """Render observations from all Tasks in a tiled image or list of images."""
 
         images = self.command(
             commands=RENDER_COMMAND,
             data_list=[(args, {"mode": "rgb", **kwargs})] * self.num_unpaused_tasks,
         )
+
+        if mode == "raw_rgb_list":
+            return images
 
         tile = tile_images(images)
         if mode == "human":
@@ -1204,13 +1209,18 @@ class SingleProcessVectorSampledTasks(object):
             for g, attr_name in zip(self._vector_task_generators, attr_names)
         ]
 
-    def render(self, mode: str = "human", *args, **kwargs) -> Union[np.ndarray, None]:
-        """Render observations from all Tasks in a tiled image."""
+    def render(
+        self, mode: str = "human", *args, **kwargs
+    ) -> Union[np.ndarray, None, List[np.ndarray]]:
+        """Render observations from all Tasks in a tiled image or a list of images."""
 
         images = [
             g.send((RENDER_COMMAND, (args, {"mode": "rgb", **kwargs})))
             for g in self._vector_task_generators
         ]
+
+        if mode == "raw_rgb_list":
+            return images
 
         for index, _ in reversed(self._paused):
             images.insert(index, np.zeros_like(images[0]))

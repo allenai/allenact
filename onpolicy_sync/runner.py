@@ -473,12 +473,12 @@ class OnPolicyRunner(object):
     ):
         pkg_types, payloads, all_steps = [vals for vals in zip(*pkgs)]
         steps = all_steps[0]
-        metrics_pkg, task_outputs, render, checkpoint_file_name = [], [], [], []
+        metrics_pkg, task_outputs, render, checkpoint_file_name = [], [], {}, []
         for payload in payloads:
             mpkg, touts, rndr, cpfname = payload
             metrics_pkg.append(mpkg)
             task_outputs.extend(touts)
-            render.extend(rndr)
+            render.update(rndr)
             checkpoint_file_name.append(cpfname)
 
         mode = pkg_types[0].split("_")[0]
