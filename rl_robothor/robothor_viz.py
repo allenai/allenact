@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw
 from ai2thor.controller import Controller
 
 from utils.viz_utils import TrajectoryViz
-from utils.system import LOGGER
+from utils.system import get_logger
 
 
 class ThorPositionTo2DFrameTranslator(object):
@@ -108,7 +108,7 @@ def add_agent_view_triangle(
     p1 = copy.copy(p0)
     p2 = copy.copy(p0)
 
-    theta = -2 * math.pi * (rotation / 360.0)
+    theta = -2 * math.pi * (rotation["y"] / 360.0)
     rotation_mat = np.array(
         [[math.cos(theta), -math.sin(theta)], [math.sin(theta), math.cos(theta)]]
     )
@@ -178,6 +178,10 @@ def visualize_agent_path(
 
 
 def dump_top_down_view(c, room_name, folder_name):
+    get_logger().debug(
+        "Dumping {}".format(os.path.join(folder_name, "{}.png".format(room_name)))
+    )
+
     os.makedirs(folder_name, exist_ok=True)
 
     c.reset(room_name)
@@ -195,12 +199,12 @@ class ThorViz(TrajectoryViz):
         self,
         path_to_trajectory: Sequence[str] = ("task_info", "followed_path"),
         label: str = "thor_trajectory",
-        figsize: Tuple[int, int] = (2, 2),
+        figsize: Tuple[int, int] = (4, 2),  # width, height
         fontsize: int = 5,
         scenes: Union[
             Tuple[str, int, int, int, int], Sequence[Tuple[str, int, int, int, int]]
         ] = ("FloorPlan_Val{}_{}", 1, 3, 1, 5),
-        room_path: Sequence[str] = ("rl_ai2thor", "data", "topdown"),
+        room_path: Sequence[str] = ("rl_robothor", "data", "topdown"),
         viz_rows_cols: Tuple[int, int] = (448, 448),
         single_color: bool = False,
         view_triangle_only_on_last: bool = True,
@@ -256,7 +260,7 @@ class ThorViz(TrajectoryViz):
         roomname = list(ThorViz.iterate_scenes(all_scenes))[0]
         cont.reset(roomname)
         map_data = get_agent_map_data(cont, self.viz_rows_cols)
-        LOGGER.debug("Using map_data {}".format(map_data))
+        get_logger().debug("Using map_data {}".format(map_data))
         return map_data
 
     def make_top_down_views(
@@ -267,10 +271,11 @@ class ThorViz(TrajectoryViz):
 
         top_downs = {}
         for roomname in self.iterate_scenes(all_scenes):
-            if not os.path.exists(
-                os.path.join(self.room_path, "{}.png".format(roomname))
-            ):
+            fname = os.path.join(self.room_path, "{}.png".format(roomname))
+            if not os.path.exists(fname):
                 top_downs[roomname] = dump_top_down_view(cont, roomname, self.room_path)
+            else:
+                top_downs[roomname] = cv2.imread(fname)
 
         return top_downs
 
@@ -290,9 +295,10 @@ class ThorViz(TrajectoryViz):
         if self.thor_top_downs is None:
             self.init_top_down_render()
 
-        roomname = "_".join(
-            episode_id.split("_")[:3]
-        )  # TODO change with new episode id template
+        roomname = "FloorPlan_Val{}_{}".format(
+            *episode_id.split("_")[1:3]
+        )  # TODO HACK due to current episode id not including the full room name
+        get_logger().debug("episode {} rommname {}".format(episode_id, roomname))
 
         im = visualize_agent_path(
             trajectory,
