@@ -5,6 +5,9 @@ from typing import Tuple, List, Dict, Any, Optional
 import gym
 import numpy as np
 
+from rl_base.common import RLStepResult
+from rl_base.sensor import Sensor
+from rl_base.task import Task
 from rl_habitat.habitat_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
@@ -14,9 +17,6 @@ from rl_habitat.habitat_constants import (
     LOOK_DOWN,
 )
 from rl_habitat.habitat_environment import HabitatEnvironment
-from rl_base.common import RLStepResult
-from rl_base.sensor import Sensor
-from rl_base.task import Task
 
 
 class HabitatTask(Task[HabitatEnvironment]):

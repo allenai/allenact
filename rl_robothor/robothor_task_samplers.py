@@ -1,16 +1,16 @@
-from typing import List, Optional, Union, Dict, Any
-import random
 import copy
 import json
+import random
+from typing import List, Optional, Union, Dict, Any
 
 import gym
 
-from rl_base.task import TaskSampler
-from rl_robothor.robothor_tasks import ObjectNavTask, PointNavTask
-from rl_robothor.robothor_environment import RoboThorEnvironment
 from rl_base.sensor import Sensor
+from rl_base.task import TaskSampler
+from rl_robothor.robothor_environment import RoboThorEnvironment
+from rl_robothor.robothor_tasks import ObjectNavTask, PointNavTask
 from utils.experiment_utils import set_seed, set_deterministic_cudnn
-from utils.system import LOGGER
+from utils.system import get_logger
 
 
 class ObjectNavTaskSampler(TaskSampler):
@@ -67,7 +67,7 @@ class ObjectNavTaskSampler(TaskSampler):
             )
             with open(self.scenes, "r") as f:
                 self.dataset_episodes = json.load(f)
-                # LOGGER.debug("Loaded {} object nav episodes".format(len(self.dataset_episodes)))
+                # get_logger().debug("Loaded {} object nav episodes".format(len(self.dataset_episodes)))
             self.dataset_first = dataset_first if dataset_first >= 0 else 0
             self.dataset_last = (
                 dataset_last if dataset_last >= 0 else len(self.dataset_episodes) - 1
@@ -78,7 +78,7 @@ class ObjectNavTaskSampler(TaskSampler):
                 dataset_last, dataset_first
             )
             self.reset_tasks = self.dataset_last - self.dataset_first + 1
-            # LOGGER.debug("{} tasks ({}, {}) in sampler".format(self.reset_tasks, self.dataset_first, self.dataset_last))
+            # get_logger().debug("{} tasks ({}, {}) in sampler".format(self.reset_tasks, self.dataset_first, self.dataset_last))
 
         self._last_sampled_task: Optional[ObjectNavTask] = None
 
@@ -95,9 +95,11 @@ class ObjectNavTaskSampler(TaskSampler):
         return env
 
     @property
-    def __len__(self) -> Union[int, float]:
+    def length(self) -> Union[int, float]:
         """Length.
+
         # Returns
+
         Number of total tasks remaining that can be sampled. Can be float('inf').
         """
         return float("inf") if self.max_tasks is None else self.max_tasks
@@ -117,16 +119,18 @@ class ObjectNavTaskSampler(TaskSampler):
     @property
     def all_observation_spaces_equal(self) -> bool:
         """Check if observation spaces equal.
+
         # Returns
+
         True if all Tasks that can be sampled by this sampler have the
-            same observation space. Otherwise False.
+        same observation space. Otherwise False.
         """
         return True
 
     def sample_scene(self, force_advance_scene: bool):
         if force_advance_scene:
             if self.scene_period != "manual":
-                LOGGER.warning(
+                get_logger().warning(
                     "When sampling scene, have `force_advance_scene == True`"
                     "but `self.scene_period` is not equal to 'manual',"
                     "this may cause unexpected behavior."
@@ -172,7 +176,7 @@ class ObjectNavTaskSampler(TaskSampler):
 
     def next_task(self, force_advance_scene: bool = False) -> Optional[ObjectNavTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
-            # LOGGER.debug("max_tasks {}".format(self.max_tasks))
+            # get_logger().debug("max_tasks {}".format(self.max_tasks))
             return None
 
         if not self.scenes_is_dataset:
@@ -200,7 +204,7 @@ class ObjectNavTaskSampler(TaskSampler):
                     break
 
             if len(task_info) == 0:
-                LOGGER.warning(
+                get_logger().warning(
                     "Scene {} does not contain any"
                     " objects of any of the types {}.".format(scene, self.object_types)
                 )
@@ -209,7 +213,7 @@ class ObjectNavTaskSampler(TaskSampler):
             task_info["initial_orientation"] = pose["rotation"]["y"]
         else:
             next_task_id = self.dataset_first + self.max_tasks - 1
-            # LOGGER.debug("task {}".format(next_task_id))
+            # get_logger().debug("task {}".format(next_task_id))
             assert (
                 self.dataset_first <= next_task_id <= self.dataset_last
             ), "wrong task_id {} for min {} max {}".format(
@@ -253,7 +257,7 @@ class ObjectNavTaskSampler(TaskSampler):
             task_info["mirrored"] = False
 
         # if self.reset_tasks is not None:
-        #     LOGGER.debug("valid task_info {}".format(task_info))
+        #     get_logger().debug("valid task_info {}".format(task_info))
 
         self._last_sampled_task = ObjectNavTask(
             env=self.env,
@@ -334,10 +338,13 @@ class PointNavTaskSampler(TaskSampler):
         return env
 
     @property
-    def __len__(self) -> Union[int, float]:
+    def length(self) -> Union[int, float]:
         """Length.
+
         # Returns
-        Number of total tasks remaining that can be sampled. Can be float('inf').
+
+        Number of total tasks remaining that can be sampled.
+        Can be float('inf').
         """
         return float("inf") if self.max_tasks is None else self.max_tasks
 
@@ -360,16 +367,18 @@ class PointNavTaskSampler(TaskSampler):
     @property
     def all_observation_spaces_equal(self) -> bool:
         """Check if observation spaces equal.
+
         # Returns
-        True if all Tasks that can be sampled by this sampler have the
-            same observation space. Otherwise False.
+
+        True if all Tasks that can be sampled by this sampler
+        have the     same observation space. Otherwise False.
         """
         return True
 
     def sample_scene(self, force_advance_scene: bool):
         if force_advance_scene:
             if self.scene_period != "manual":
-                LOGGER.warning(
+                get_logger().warning(
                     "When sampling scene, have `force_advance_scene == True`"
                     "but `self.scene_period` is not equal to 'manual',"
                     "this may cause unexpected behavior."
@@ -433,7 +442,7 @@ class PointNavTaskSampler(TaskSampler):
         # task_info['actions'] = []
 
         locs = self.env.known_good_locations_list()
-        # LOGGER.debug("locs[0] {} locs[-1] {}".format(locs[0], locs[-1]))
+        # get_logger().debug("locs[0] {} locs[-1] {}".format(locs[0], locs[-1]))
 
         ys = [loc["y"] for loc in locs]
         miny = min(ys)
@@ -460,9 +469,9 @@ class PointNavTaskSampler(TaskSampler):
         task_info["actions"] = []
 
         if cond:
-            LOGGER.warning("No path for sampled episode {}".format(task_info))
+            get_logger().warning("No path for sampled episode {}".format(task_info))
         # else:
-        #     LOGGER.debug("Path found for sampled episode {}".format(task_info))
+        #     get_logger().debug("Path found for sampled episode {}".format(task_info))
 
         # pose = {**task_info['initial_position'], 'rotation': {'x': 0.0, 'y': task_info['initial_orientation'], 'z': 0.0}, 'horizon': 0.0}
         # self.env.step({"action": "TeleportFull", **pose})

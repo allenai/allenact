@@ -1,14 +1,14 @@
 """Defining the PPO loss for actor critic type models."""
 
+import typing
 from typing import Dict, Union
+from typing import Optional, Callable
 
 import torch
-import typing
 
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
-from typing import Optional, Callable
 
 
 class PPO(AbstractActorCriticLoss):
@@ -43,17 +43,16 @@ class PPO(AbstractActorCriticLoss):
         self.use_clipped_value_loss = use_clipped_value_loss
         self.clip_decay = clip_decay if clip_decay is not None else (lambda x: 1.0)
 
-    def loss(  # type: ignore
+    def loss_per_step(
         self,
         step_count: int,
         batch: Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]],
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
-        *args,
-        **kwargs
-    ):
+    ) -> Dict[str, typing.Tuple[torch.Tensor, Optional[float]]]:
+
         actions = typing.cast(torch.LongTensor, batch["actions"])
         values = actor_critic_output.values
-        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy().mean()
+        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy()
         action_log_probs = actor_critic_output.distributions.log_probs(actions)
 
         clip_param = self.clip_param * self.clip_decay(step_count)
@@ -64,7 +63,7 @@ class PPO(AbstractActorCriticLoss):
             torch.clamp(ratio, 1.0 - clip_param, 1.0 + clip_param)
             * batch["norm_adv_targ"]
         )
-        action_loss = -torch.min(surr1, surr2).mean()
+        action_loss = -torch.min(surr1, surr2)
 
         if self.use_clipped_value_loss:
             value_pred_clipped = batch["values"] + (values - batch["values"]).clamp(
@@ -72,28 +71,45 @@ class PPO(AbstractActorCriticLoss):
             )
             value_losses = (values - batch["returns"]).pow(2)
             value_losses_clipped = (value_pred_clipped - batch["returns"]).pow(2)
-            value_loss = 0.5 * torch.max(value_losses, value_losses_clipped).mean()
+            value_loss = 0.5 * torch.max(value_losses, value_losses_clipped)
         else:
-            value_loss = (
-                0.5
-                * (typing.cast(torch.FloatTensor, batch["returns"]) - values)
-                .pow(2)
-                .mean()
-            )
+            value_loss = 0.5 * (
+                typing.cast(torch.FloatTensor, batch["returns"]) - values
+            ).pow(2)
 
-        total_loss = (
-            value_loss * self.value_loss_coef
-            + action_loss
-            - dist_entropy * self.entropy_coef
+        # noinspection PyUnresolvedReferences
+        return {
+            "value": (value_loss, self.value_loss_coef),
+            "action": (action_loss, None),
+            "entropy": (dist_entropy.mul_(-1.0), self.entropy_coef),  # type: ignore
+        }
+
+    def loss(  # type: ignore
+        self,
+        step_count: int,
+        batch: Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]],
+        actor_critic_output: ActorCriticOutput[CategoricalDistr],
+        *args,
+        **kwargs
+    ):
+        losses_per_step = self.loss_per_step(
+            step_count=step_count, batch=batch, actor_critic_output=actor_critic_output,
+        )
+        losses = {
+            key: (loss.mean(), weight)
+            for (key, (loss, weight)) in losses_per_step.items()
+        }
+
+        total_loss = sum(
+            loss * weight if weight is not None else loss
+            for loss, weight in losses.values()
         )
 
         return (
             total_loss,
             {
-                "ppo_total": total_loss.item(),
-                "value": value_loss.item(),
-                "action": action_loss.item(),
-                "entropy": -dist_entropy.item(),
+                "ppo_total": typing.cast(torch.Tensor, total_loss).item(),
+                **{key: loss.item() for key, (loss, _) in losses.items()},
             },
         )
 

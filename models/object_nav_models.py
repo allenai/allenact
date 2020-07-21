@@ -5,14 +5,18 @@ Facebook's Habitat.
 """
 from typing import cast, Tuple, Dict
 
+import gym
 import torch
 import torch.nn as nn
-import gym
 from gym.spaces.dict import Dict as SpaceDict
 
 from models.basic_models import SimpleCNN, RNNStateEncoder
-from onpolicy_sync.policy import ActorCriticModel, LinearActorCriticHead
-
+from onpolicy_sync.policy import (
+    ActorCriticModel,
+    LinearActorCriticHead,
+    LinearActorHead,
+    LinearCriticHead,
+)
 from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
 
@@ -299,7 +303,7 @@ class ObjectNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
         object_type_embedding_dim=8,
         trainable_masked_hidden_state: bool = False,
         num_rnn_layers=1,
-        rnn_type='GRU'
+        rnn_type="GRU",
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
@@ -323,7 +327,7 @@ class ObjectNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
             nn.ReLU(),
             # nn.AdaptiveAvgPool2d((1,1)),
             nn.Flatten(),
-            nn.Linear(2048, 512)
+            nn.Linear(2048, 512),
         )
 
         self.state_encoder = RNNStateEncoder(
@@ -332,15 +336,11 @@ class ObjectNavActorCriticTrainResNet50GRU(ActorCriticModel[CategoricalDistr]):
             self.recurrent_hidden_state_size,
             trainable_masked_hidden_state=trainable_masked_hidden_state,
             num_layers=num_rnn_layers,
-            rnn_type=rnn_type
+            rnn_type=rnn_type,
         )
 
-        self.actor = LinearActorHead(
-            self.recurrent_hidden_state_size, action_space.n
-        )
-        self.critic = LinearCriticHead(
-            self.recurrent_hidden_state_size
-        )
+        self.actor = LinearActorHead(self.recurrent_hidden_state_size, action_space.n)
+        self.critic = LinearCriticHead(self.recurrent_hidden_state_size)
 
         self.object_type_embedding = nn.Embedding(
             num_embeddings=self._n_object_types,

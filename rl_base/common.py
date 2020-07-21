@@ -1,10 +1,8 @@
 import abc
 import typing
-from typing import Dict, Any, TypeVar, Sequence, Tuple, NamedTuple, Optional
+from typing import Dict, Any, TypeVar, Sequence, NamedTuple, Optional
 
 import torch
-
-from utils.system import LOGGER
 
 EnvType = TypeVar("EnvType")
 DistributionType = TypeVar("DistributionType")

@@ -2,15 +2,14 @@ import typing
 from typing import Tuple, Dict
 
 import gym
-from gym.spaces import Dict as SpaceDict
 import torch
 import torch.nn as nn
+from gym.spaces import Dict as SpaceDict
 
 from models.basic_models import RNNStateEncoder
 from onpolicy_sync.policy import ActorCriticModel, LinearActorHead, LinearCriticHead
-from rl_base.common import ActorCriticOutput, Memory
+from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
-from utils.system import LOGGER
 
 
 class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
@@ -182,10 +181,11 @@ class ResnetTensorObjectNavActorCriticMemory(ResnetTensorObjectNavActorCritic):
     def recurrent_hidden_state_size(
         self,
     ) -> Dict[str, Tuple[Tuple[int, ...], int, torch.dtype]]:
-        """The memory spec of the model: A dictionary with string keys and tuple values, each with the dimensions of the
-        memory, e.g. (2, 32) for two layers of 32-dimensional recurrent hidden states; an integer indicating the index
-        of the sampler in a batch, e.g. 1 for RNNs; the data type, e.g. torch.float32.
-        """
+        """The memory spec of the model: A dictionary with string keys and
+        tuple values, each with the dimensions of the memory, e.g. (2, 32) for
+        two layers of 32-dimensional recurrent hidden states; an integer
+        indicating the index of the sampler in a batch, e.g. 1 for RNNs; the
+        data type, e.g. torch.float32."""
         return {
             "rnn_hidden": (
                 (self.state_encoder.num_recurrent_layers, self.hidden_size),
@@ -196,7 +196,8 @@ class ResnetTensorObjectNavActorCriticMemory(ResnetTensorObjectNavActorCritic):
 
     @property
     def num_recurrent_layers(self) -> int:
-        """Returns -1, indicating we are using a memory specification in recurrent_hidden_state_size."""
+        """Returns -1, indicating we are using a memory specification in
+        recurrent_hidden_state_size."""
         return -1
 
     def get_object_type_encoding(

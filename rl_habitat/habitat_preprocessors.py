@@ -1,13 +1,13 @@
 from typing import Dict, Any, Callable, Optional, List, Union
 
+import gym
+import numpy as np
 import torch
 import torch.nn as nn
 from torchvision import models
-import numpy as np
-import gym
 
 from rl_base.preprocessor import Preprocessor
-from utils.system import LOGGER
+from utils.system import get_logger
 
 
 class ResNetEmbedder(nn.Module):
@@ -84,7 +84,7 @@ class ResnetPreProcessorHabitat(Preprocessor):
             assert (
                 torch.cuda.is_available()
             ), "attempt to parallelize resnet without cuda"
-            LOGGER.info("Distributing resnet")
+            get_logger().info("Distributing resnet")
             self.resnet = self.resnet.to(torch.device("cuda"))
 
             # store = torch.distributed.TCPStore("localhost", 4712, 1, True)
@@ -94,7 +94,7 @@ class ResnetPreProcessorHabitat(Preprocessor):
             self.resnet = torch.nn.DataParallel(
                 self.resnet, device_ids=self.device_ids
             )  # , output_device=torch.cuda.device_count() - 1)
-            LOGGER.info("Detected {} devices".format(torch.cuda.device_count()))
+            get_logger().info("Detected {} devices".format(torch.cuda.device_count()))
 
         low = -np.inf
         high = np.inf

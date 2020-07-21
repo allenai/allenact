@@ -1,16 +1,16 @@
+import typing
 from typing import Any, Dict, Optional
 
 import gym
 import numpy as np
-from pyquaternion import Quaternion
-import typing
 import torch
 import torch.nn as nn
 import torchvision.models as models
+from pyquaternion import Quaternion
 from torchvision import transforms
 
-from rl_habitat.habitat_environment import HabitatEnvironment
 from rl_base.sensor import Sensor
+from rl_habitat.habitat_environment import HabitatEnvironment
 from rl_habitat.habitat_tasks import PointNavTask, HabitatTask  # type: ignore
 from utils.tensor_utils import ScaleBothSides
 
@@ -39,11 +39,15 @@ class RGBSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         if not self.should_normalize:
             low = 0.0
             high = 1.0
-            self.observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
+            self.observation_space = gym.spaces.Box(
+                low=np.float32(low), high=np.float32(high), shape=shape
+            )
         else:
             low = np.tile(-self.norm_means / self.norm_sds, shape[:-1] + (1,))
             high = np.tile((1 - self.norm_means) / self.norm_sds, shape[:-1] + (1,))
-            self.observation_space = gym.spaces.Box(low=low, high=high)
+            self.observation_space = gym.spaces.Box(
+                low=np.float32(low), high=np.float32(high)
+            )
 
         self.scaler = (
             None
@@ -108,11 +112,15 @@ class RGBResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         if not self.should_normalize:
             low = 0.0
             high = 1.0
-            self.observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
+            self.observation_space = gym.spaces.Box(
+                low=np.float32(low), high=np.float32(high), shape=shape
+            )
         else:
             low = np.tile(-self.norm_means / self.norm_sds, shape[:-1] + (1,))
             high = np.tile((1 - self.norm_means) / self.norm_sds, shape[:-1] + (1,))
-            self.observation_space = gym.spaces.Box(low=low, high=high)
+            self.observation_space = gym.spaces.Box(
+                low=np.float32(low), high=np.float32(high)
+            )
 
         self.scaler = (
             None
@@ -189,11 +197,15 @@ class DepthSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         if not self.should_normalize:
             low = 0.0
             high = 1.0
-            self.observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
+            self.observation_space = gym.spaces.Box(
+                low=np.float32(low), high=np.float32(high), shape=shape
+            )
         else:
             low = np.tile(-self.norm_means / self.norm_sds, shape[:-1] + (1,))
             high = np.tile((1 - self.norm_means) / self.norm_sds, shape[:-1] + (1,))
-            self.observation_space = gym.spaces.Box(low=low, high=high)
+            self.observation_space = gym.spaces.Box(
+                low=np.float32(low), high=np.float32(high)
+            )
 
         self.scaler = (
             None
@@ -260,11 +272,15 @@ class DepthResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         if not self.should_normalize:
             low = 0.0
             high = 1.0
-            self.observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
+            self.observation_space = gym.spaces.Box(
+                low=np.float32(low), high=np.float32(high), shape=shape
+            )
         else:
             low = np.tile(-self.norm_means / self.norm_sds, shape[:-1] + (1,))
             high = np.tile((1 - self.norm_means) / self.norm_sds, shape[:-1] + (1,))
-            self.observation_space = gym.spaces.Box(low=low, high=high)
+            self.observation_space = gym.spaces.Box(
+                low=np.float32(low), high=np.float32(high)
+            )
 
         self.scaler = (
             None
@@ -326,7 +342,7 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
 
         # Distance is a non-negative real and angle is normalized to the range (-Pi, Pi] or [-Pi, Pi)
         self.observation_space = gym.spaces.Box(
-            -3.15, 1000, shape=(config["coordinate_dims"],)
+            np.float32(-3.15), np.float32(1000), shape=(config["coordinate_dims"],)
         )
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -375,7 +391,9 @@ class AgentCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
 
-        self.observation_space = gym.spaces.Box(-1000, 1000, shape=(4,))
+        self.observation_space = gym.spaces.Box(
+            np.float32(-1000), np.float32(1000), shape=(4,)
+        )
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "agent_position_and_rotation"

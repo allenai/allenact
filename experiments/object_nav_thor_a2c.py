@@ -131,8 +131,8 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             object_type_embedding_dim=8,
         )
 
-    @staticmethod
-    def make_sampler_fn(**kwargs) -> TaskSampler:
+    @classmethod
+    def make_sampler_fn(cls, **kwargs) -> TaskSampler:
         return ObjectNavTaskSampler(**kwargs)
 
     @staticmethod

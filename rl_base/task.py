@@ -8,7 +8,7 @@ environment."""
 
 import abc
 from abc import abstractmethod
-from typing import Dict, Any, Tuple, Generic, Union, List, Optional, TypeVar
+from typing import Dict, Any, Tuple, Generic, Union, Optional, TypeVar, Sequence
 
 import gym
 import numpy as np
@@ -16,7 +16,6 @@ from gym.spaces.dict import Dict as SpaceDict
 
 from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor, SensorSuite
-from utils.system import LOGGER
 
 EnvType = TypeVar("EnvType")
 
@@ -49,23 +48,23 @@ class Task(Generic[EnvType]):
     def __init__(
         self,
         env: EnvType,
-        sensors: List[Sensor],
+        sensors: Union[SensorSuite, Sequence[Sensor]],
         task_info: Dict[str, Any],
         max_steps: int,
         **kwargs
     ) -> None:
         self.env = env
-        self.sensor_suite = SensorSuite(sensors)
+        self.sensor_suite = (
+            SensorSuite(sensors) if not isinstance(sensors, SensorSuite) else sensors
+        )
         self.task_info = task_info
         self.max_steps = max_steps
-        self.observation_space = SpaceDict(
-            {**self.sensor_suite.observation_spaces.spaces,}
-        )
+        self.observation_space = self.sensor_suite.observation_spaces
         self._num_steps_taken = 0
         self._total_reward = 0.0
 
-    def get_observations(self) -> Any:
-        return self.sensor_suite.get_observations(env=self.env, task=self)
+    def get_observations(self, **kwargs) -> Any:
+        return self.sensor_suite.get_observations(env=self.env, task=self, **kwargs)
 
     @property
     @abstractmethod
@@ -123,17 +122,13 @@ class Task(Generic[EnvType]):
         (possibly) additional information.
         """
         assert not self.is_done()
-        # TODO: Here we increment step counter before step...
-        self._increment_num_steps_taken()  # to ensure subsequent calls to is_done() are valid in _step implementation
         sr = self._step(action=action)
         self._total_reward += float(sr.reward)
-        # self._increment_num_steps_taken()
-        # TODO: Rather than cloning should be increment the step
-        #   count before running `self._step(...)`? Alternatively
-        #   we can make RLStepResult mutable.
-        return sr.clone(
-            {"done": sr.done or self.is_done()}
-        )  # TODO Unnecessary if we're happy with pre-incrementing step counter
+        self._increment_num_steps_taken()
+        # TODO: We need a better solution to the below. It's not a good idea
+        #   to pre-increment the step counter as this might play poorly with `_step`
+        #   if it relies on some aspect of the current number of steps taken.
+        return sr.clone({"done": sr.done or self.is_done()})
 
     @abstractmethod
     def _step(self, action: int) -> RLStepResult:
@@ -247,7 +242,17 @@ class Task(Generic[EnvType]):
             possible values (e.g. if x is the expert policy then x should be the correct length, \
             sum to 1, and have non-negative entries).
         """
-        raise NotImplementedError()
+        raise NotImplementedError
+
+    @property
+    def cumulative_reward(self) -> float:
+        """Total cumulative in the task so far.
+
+        # Returns
+
+        Cumulative reward as a float.
+        """
+        return self._total_reward
 
 
 SubTaskType = TypeVar("SubTaskType", bound=Task)
@@ -258,7 +263,7 @@ class TaskSampler(abc.ABC):
 
     @property
     @abstractmethod
-    def __len__(self) -> Union[int, float]:
+    def length(self) -> Union[int, float]:
         """Length.
 
         # Returns

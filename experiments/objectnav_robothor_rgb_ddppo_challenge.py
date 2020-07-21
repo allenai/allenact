@@ -1,38 +1,29 @@
-from typing import Dict, Any, List, Optional
-import json
 from math import ceil
+from typing import Dict, Any, List, Optional
 
 import gym
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
-import numpy as np
 
-from onpolicy_sync.losses.ppo import PPOConfig
 from models.resnet_tensor_object_nav_models import ResnetTensorObjectNavActorCritic
 from onpolicy_sync.losses import PPO
-from rl_base.experiment_config import ExperimentConfig
-from rl_base.task import TaskSampler
-from rl_base.preprocessor import ObservationSet
-from rl_robothor.robothor_tasks import ObjectNavTask
-from rl_robothor.robothor_task_samplers import ObjectNavTaskSampler
+from onpolicy_sync.losses.ppo import PPOConfig
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
+from rl_base.experiment_config import ExperimentConfig
+from rl_base.preprocessor import ObservationSet
+from rl_base.task import TaskSampler
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
+from rl_robothor.robothor_task_samplers import ObjectNavTaskSampler
+from rl_robothor.robothor_tasks import ObjectNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
-from utils.viz_utils import (
-    SimpleViz,
-    TrajectoryViz,
-    ActorViz,
-    AgentViewViz,
-    TensorViz1D,
-    TensorViz2D,
-)
 
 
 class ObjectNav_RoboThor_RGB_DDPPO_Challenge_ExperimentConfig(ExperimentConfig):
-    """An Object Navigation experiment configuration in RoboThor"""
+    """An Object Navigation experiment configuration in RoboThor."""
 
     TRAIN_SCENES = [
         "FloorPlan_Train%d_%d" % (wall + 1, furniture + 1)

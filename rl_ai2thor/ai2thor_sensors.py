@@ -1,8 +1,8 @@
+import typing
 from typing import Any, Dict, Optional, List
 
 import gym
 import numpy as np
-import typing
 from torchvision import transforms
 
 from rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
@@ -53,11 +53,15 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment, Task[AI2ThorEnvironment]]):
         if not self._should_normalize:
             low = 0.0
             high = 1.0
-            self.observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
+            self.observation_space = gym.spaces.Box(
+                low=np.float32(low), high=np.float32(high), shape=shape
+            )
         else:
             low = np.tile(-self._norm_means / self._norm_sds, shape[:-1] + (1,))
             high = np.tile((1 - self._norm_means) / self._norm_sds, shape[:-1] + (1,))
-            self.observation_space = gym.spaces.Box(low=low, high=high)
+            self.observation_space = gym.spaces.Box(
+                low=np.float32(low), high=np.float32(high)
+            )
 
         self._scaler = (
             None

@@ -2,13 +2,13 @@ import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from .object_nav_thor_ppo import ObjectNavThorPPOExperimentConfig
 from onpolicy_sync.losses import PPO
 from onpolicy_sync.losses.imitation import Imitation
 from onpolicy_sync.losses.ppo import PPOConfig
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from rl_base.sensor import ExpertActionSensor
 from utils.experiment_utils import LinearDecay, Builder, PipelineStage, TrainingPipeline
+from .object_nav_thor_ppo import ObjectNavThorPPOExperimentConfig
 
 
 class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):

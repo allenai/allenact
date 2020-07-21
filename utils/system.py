@@ -1,18 +1,21 @@
 import logging
 import socket
-from contextlib import closing
 import sys
+from contextlib import closing
 
-LOGGER = logging.getLogger("embodiedrl")
+_LOGGER = logging.getLogger("embodiedrl")
 
 
 def excepthook(*args):
-    LOGGER.error("Uncaught exception:", exc_info=args)
+    get_logger().error("Uncaught exception:", exc_info=args)
 
 
-def init_logging(log_format="default", log_level="debug"):
-    if len(LOGGER.handlers) > 0:
-        return
+def get_logger() -> logging.Logger:
+    log_format = "default"
+    log_level = "debug"
+
+    if len(_LOGGER.handlers) > 0:
+        return _LOGGER
 
     if log_level == "debug":
         log_level = logging.DEBUG
@@ -45,10 +48,12 @@ def init_logging(log_format="default", log_level="debug"):
         formatter = logging.Formatter(fmt=log_format, datefmt="%m/%d %H:%M:%S")
     ch.setFormatter(formatter)
 
-    LOGGER.setLevel(log_level)
-    LOGGER.addHandler(ch)
+    _LOGGER.setLevel(log_level)
+    _LOGGER.addHandler(ch)
 
     sys.excepthook = excepthook
+
+    return _LOGGER
 
 
 def find_free_port(address="localhost"):

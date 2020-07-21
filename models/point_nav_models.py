@@ -1,17 +1,15 @@
 # TODO: @klemenkotar please fix the type errors
 
 import gym
+import torch
+import torch.nn as nn
+from gym.spaces.dict import Dict as SpaceDict
+from habitat_baselines.rl.ddppo.policy.resnet_policy import PointNavResNetPolicy
 
 from models.basic_models import SimpleCNN, RNNStateEncoder
 from onpolicy_sync.policy import ActorCriticModel, LinearCriticHead, LinearActorHead
-import torch.nn as nn
-import torch
-
 from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
-from gym.spaces.dict import Dict as SpaceDict
-
-from habitat_baselines.rl.ddppo.policy.resnet_policy import PointNavResNetPolicy
 
 
 class PointNavActorCriticSimpleConvLSTM(ActorCriticModel[CategoricalDistr]):

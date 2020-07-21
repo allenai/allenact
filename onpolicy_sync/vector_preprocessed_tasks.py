@@ -5,28 +5,23 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import time
+import typing
 from multiprocessing.connection import Connection
 from multiprocessing.context import BaseContext
-from queue import Queue
 from threading import Thread
 from typing import Any, Callable, List, Optional, Sequence, Set, Tuple, Union, Dict
-from setproctitle import setproctitle as ptitle
 
 import numpy as np
-import typing
-from gym.spaces.dict import Dict as SpaceDict
 import torch.multiprocessing as mp
+from gym.spaces.dict import Dict as SpaceDict
+from setproctitle import setproctitle as ptitle
 
+from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
 from rl_base.common import RLStepResult
-from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
-from onpolicy_sync.vector_sampled_tasks import (
-    VectorSampledTasks,
-    ThreadedVectorSampledTasks,
-)
+from rl_base.task import TaskSampler
+from utils.system import get_logger
 from utils.tensor_utils import tile_images, batch_observations
-from utils.system import init_logging, LOGGER
-
 
 STEP_COMMAND = "step"
 NEXT_TASK_COMMAND = "next_task"
@@ -49,10 +44,11 @@ CALL_AT_COMMAND = "call_at"
 
 
 class VectorPreprocessedTasks(object):
-    """Vectorized collection of preprocessed tasks. Creates multiple processes where each
-    process creates its owe own preprocessor and and VectorSampledTasks. This class allows
-    for interacting with all preprocessed tasks in a vectorized manner, identically to the
-    functionality offered by VectorSampledTasks.
+    """Vectorized collection of preprocessed tasks. Creates multiple processes
+    where each process creates its owe own preprocessor and and
+    VectorSampledTasks. This class allows for interacting with all preprocessed
+    tasks in a vectorized manner, identically to the functionality offered by
+    VectorSampledTasks.
 
     # Attributes
 
@@ -213,8 +209,6 @@ class VectorPreprocessedTasks(object):
         Tasks/TaskSampler."""
         ptitle("VectorPreprocessedTasks: {}".format(worker_id))
 
-        init_logging()
-
         observation_set = make_preprocessors_fn(worker_id)
         vector_task_sampler = vectorized_class(
             make_sampler_fn=make_sampler_fn,
@@ -311,7 +305,7 @@ class VectorPreprocessedTasks(object):
                                     **data
                                 )  # data is a kwargs shared by all subworkers
                             else:
-                                LOGGER.error(
+                                get_logger().error(
                                     "passing arguments to directed next_task (worker {}, args {})".format(
                                         data[0], data[1]
                                     )
@@ -468,7 +462,7 @@ class VectorPreprocessedTasks(object):
             )
         ):
             worker_conn, parent_conn, cur_make_preprocessors_fn, cur_task_sampler_ids = stuff  # type: ignore
-            LOGGER.info("Starting {}-th preprocessor manager".format(id))
+            get_logger().info("Starting {}-th preprocessor manager".format(id))
             ps = self._mp_ctx.Process(  # type: ignore
                 target=self._task_sampling_loop_worker,
                 args=(
@@ -890,58 +884,3 @@ class VectorPreprocessedTasks(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
-
-
-class ThreadedVectorPreprocessedTasks(VectorPreprocessedTasks):
-    """Provides same functionality as ``VectorSampledTasks``, the only
-    difference is it runs in a multi-thread setup inside a single process.
-
-    ``VectorSampledTasks`` runs in a multi-proc setup. This makes it
-    much easier to debug when using ``VectorSampledTasks`` because you
-    can actually put break points in the Task methods. It should not be
-    used for best performance.
-    """
-
-    def _spawn_workers(
-        self,
-        make_preprocessors_fn: Sequence[Callable[..., ObservationSet]],
-        task_sampler_ids: Sequence[Sequence[int]],
-        make_sampler_fn: Callable[..., TaskSampler],
-        sampler_fn_args: Sequence[Dict[str, Any]],
-    ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
-        parent_read_queues, parent_write_queues = zip(
-            *[(Queue(), Queue()) for _ in range(self._num_processes)]
-        )
-        self._workers = []
-        for id, stuff in enumerate(
-            zip(
-                parent_read_queues,
-                parent_write_queues,
-                make_preprocessors_fn,
-                task_sampler_ids,
-            )
-        ):
-            parent_read_queue, parent_write_queue, cur_make_preprocessors_fn, cur_task_sampler_ids = stuff  # type: ignore
-            LOGGER.info("Starting {}-th preprocessor manager".format(id))
-            thread = Thread(
-                target=self._task_sampling_loop_worker,
-                args=(
-                    id,
-                    parent_write_queue.get,
-                    parent_read_queue.put,
-                    cur_make_preprocessors_fn,
-                    cur_task_sampler_ids,
-                    make_sampler_fn,
-                    sampler_fn_args,
-                    self._auto_resample_when_done,
-                    self.metrics_out_queue,
-                ),
-                kwargs=dict(vectorized_class=ThreadedVectorSampledTasks),
-            )
-            self._workers.append(thread)
-            thread.daemon = False
-            thread.start()
-        return (
-            [q.get for q in parent_read_queues],
-            [q.put for q in parent_write_queues],
-        )

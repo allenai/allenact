@@ -1,24 +1,127 @@
 """Functions used to manipulate pytorch tensors and numpy arrays."""
 
 import numbers
-from collections import defaultdict
-import typing
-from typing import List, Dict, Optional, DefaultDict, Union, Any
 import os
 import tempfile
+import typing
+from collections import defaultdict
+from typing import List, Dict, Optional, DefaultDict, Union, Any
 
+import PIL
 import numpy as np
 import torch
-from tensorboardX import SummaryWriter as TBXSummaryWriter, summary as tbxsummary
-from tensorboardX.x2num import make_np as tbxmake_np
-from tensorboardX.utils import _prepare_video as tbx_prepare_video
-from tensorboardX.proto.summary_pb2 import Summary as TBXSummary
+from PIL import Image
 from moviepy import editor as mpy
 from moviepy.editor import concatenate_videoclips
-import PIL
-from PIL import Image
+from tensorboardX import SummaryWriter as TBXSummaryWriter, summary as tbxsummary
+from tensorboardX.proto.summary_pb2 import Summary as TBXSummary
+from tensorboardX.utils import _prepare_video as tbx_prepare_video
+from tensorboardX.x2num import make_np as tbxmake_np
 
-from utils.system import LOGGER
+from utils.system import get_logger
+
+
+def to_device_recursively(input: Any, device: str, inplace: bool = True):
+    """Recursively places tensors on the appropriate device."""
+    if input is None:
+        return input
+    elif isinstance(input, torch.Tensor):
+        return input.to(device)
+    elif isinstance(input, tuple):
+        return tuple(
+            to_device_recursively(input=subinput, device=device, inplace=inplace)
+            for subinput in input
+        )
+    elif isinstance(input, list):
+        if inplace:
+            for i in range(len(input)):
+                input[i] = to_device_recursively(
+                    input=input[i], device=device, inplace=inplace
+                )
+            return input
+        else:
+            return [
+                to_device_recursively(input=subpart, device=device, inplace=inplace)
+                for subpart in input
+            ]
+    elif isinstance(input, dict):
+        if inplace:
+            for key in input:
+                input[key] = to_device_recursively(
+                    input=input[key], device=device, inplace=inplace
+                )
+            return input
+        else:
+            return {
+                k: to_device_recursively(input=input[k], device=device, inplace=inplace)
+                for k in input
+            }
+    elif isinstance(input, set):
+        if inplace:
+            for element in list(input):
+                input.remove(element)
+                input.add(
+                    to_device_recursively(element, device=device, inplace=inplace)
+                )
+        else:
+            return set(
+                to_device_recursively(k, device=device, inplace=inplace) for k in input
+            )
+    elif isinstance(input, np.ndarray) or np.isscalar(input) or isinstance(input, str):
+        return input
+    elif hasattr(input, "to"):
+        # noinspection PyCallingNonCallable
+        return input.to(device=device, inplace=inplace)
+    else:
+        raise NotImplementedError(
+            "Sorry, value of type {} is not supported.".format(type(input))
+        )
+
+
+def detach_recursively(input: Any, inplace=True):
+    """Recursively detaches tensors in some data structure from their
+    computation graph."""
+    if input is None:
+        return input
+    elif isinstance(input, torch.Tensor):
+        return input.detach()
+    elif isinstance(input, tuple):
+        return tuple(
+            detach_recursively(input=subinput, inplace=inplace) for subinput in input
+        )
+    elif isinstance(input, list):
+        if inplace:
+            for i in range(len(input)):
+                input[i] = detach_recursively(input[i], inplace=inplace)
+            return input
+        else:
+            return [
+                detach_recursively(input=subinput, inplace=inplace)
+                for subinput in input
+            ]
+    elif isinstance(input, dict):
+        if inplace:
+            for key in input:
+                input[key] = detach_recursively(input[key], inplace=inplace)
+            return input
+        else:
+            return {k: detach_recursively(input[k], inplace=inplace) for k in input}
+    elif isinstance(input, set):
+        if inplace:
+            for element in list(input):
+                input.remove(element)
+                input.add(detach_recursively(element, inplace=inplace))
+        else:
+            return set(detach_recursively(k, inplace=inplace) for k in input)
+    elif isinstance(input, np.ndarray) or np.isscalar(input) or isinstance(input, str):
+        return input
+    elif hasattr(input, "detach_recursively"):
+        # noinspection PyCallingNonCallable
+        return input.detach_recursively(inplace=inplace)
+    else:
+        raise NotImplementedError(
+            "Sorry, hidden state of type {} is not supported.".format(type(input))
+        )
 
 
 def batch_observations(
@@ -161,10 +264,11 @@ class SummaryWriter(TBXSummaryWriter):
 
 
 def image(tag, tensor, rescale=1, dataformats="CHW"):
-    """Outputs a `Summary` protocol buffer with images.
-    The summary has up to `max_images` summary values containing images. The
-    images are built from `tensor` which must be 3-D with shape `[height, width,
-    channels]` and where `channels` can be:
+    """Outputs a `Summary` protocol buffer with images. The summary has up to
+    `max_images` summary values containing images. The images are built from
+    `tensor` which must be 3-D with shape `[height, width, channels]` and where
+    `channels` can be:
+
     *  1: `tensor` is interpreted as Grayscale.
     *  3: `tensor` is interpreted as RGB.
     *  4: `tensor` is interpreted as RGBA.
@@ -287,7 +391,9 @@ def clips_to_video(clips, h, w, c):
     try:
         clip.write_gif(filename, verbose=False, logger=None)
     except TypeError:
-        LOGGER.warning("Upgrade to moviepy >= 1.0.0 to suppress the progress bar.")
+        get_logger().warning(
+            "Upgrade to moviepy >= 1.0.0 to suppress the progress bar."
+        )
         clip.write_gif(filename, verbose=False)
 
     with open(filename, "rb") as f:
@@ -296,7 +402,7 @@ def clips_to_video(clips, h, w, c):
     try:
         os.remove(filename)
     except OSError:
-        LOGGER.warning("The temporary file used by moviepy cannot be deleted.")
+        get_logger().warning("The temporary file used by moviepy cannot be deleted.")
 
     return TBXSummary.Image(
         height=h, width=w, colorspace=c, encoded_image_string=tensor_string
@@ -308,7 +414,7 @@ def process_video(render, max_clip_len=500, max_video_len=-1):
     hwc = None
     if len(render) > 0:
         if len(render) > max_video_len > 0:
-            LOGGER.warning(
+            get_logger().warning(
                 "Clipping video to first {} frames out of {} original frames".format(
                     max_video_len, len(render)
                 )
@@ -333,14 +439,14 @@ def process_video(render, max_clip_len=500, max_video_len=-1):
 
                 output.append(current)
             except MemoryError:
-                LOGGER.error(
+                get_logger().error(
                     "Skipping video due to memory error with clip of length {}".format(
                         len(clip)
                     )
                 )
                 return None
     else:
-        LOGGER.warning("Calling process_video with 0 frames")
+        get_logger().warning("Calling process_video with 0 frames")
         return None
 
     assert len(output) > 0, "No clips to concatenate"
@@ -349,7 +455,7 @@ def process_video(render, max_clip_len=500, max_video_len=-1):
     try:
         result = clips_to_video(output, *hwc)
     except MemoryError:
-        LOGGER.error("Skipping video due to memory error calling clips_to_video")
+        get_logger().error("Skipping video due to memory error calling clips_to_video")
         result = None
 
     return result

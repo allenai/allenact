@@ -2,16 +2,16 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import random
-from collections import defaultdict
 import typing
-from typing import Union, List, Dict, Tuple, Optional, DefaultDict, Sequence
+from collections import defaultdict
+from typing import Union, List, Dict, Tuple, DefaultDict, Sequence
 
-import torch
 import numpy as np
+import torch
 
-from utils.system import LOGGER
-from rl_base.common import Memory
 from onpolicy_sync.policy import ActorCriticModel
+from rl_base.common import Memory
+from utils.system import get_logger
 
 
 class RolloutStorage:
@@ -52,7 +52,7 @@ class RolloutStorage:
             if "num_recurrent_layers" in dir(actor_critic)
             else 0
         )  # actually a memory spec if num_rnn_layers is < 0
-        self.memory: Dict[str, Tuple[torch.Tensor, int]] = self.create_memory(
+        self.memory: Memory = self.create_memory(
             num_recurrent_layers, spec, num_processes
         )
 
@@ -149,30 +149,6 @@ class RolloutStorage:
                 )
             ]
         )
-
-    # TODO unused?!
-    @staticmethod
-    def to_flattened(
-        unflattened: Dict[str, Union[torch.Tensor, Dict]]
-    ) -> Dict[str, torch.Tensor]:
-        def recursive_flatten(
-            unflat: Dict[str, Union[torch.Tensor, Dict]],
-            res: Dict[str, torch.Tensor],
-            prefix: str = "",
-            flatten_sep=RolloutStorage.FLATTEN_SEPARATOR,
-        ) -> None:
-            for name in unflat:
-                if not torch.is_tensor(unflat[name]):
-                    recursive_flatten(
-                        unflat[name], res, prefix=prefix + name + flatten_sep
-                    )
-                else:
-                    flatten_name = prefix + name
-                    res[flatten_name] = unflat[name]
-
-        flattened = {}
-        recursive_flatten(unflattened, flattened)
-        return flattened
 
     def insert_observations(
         self, observations: Dict[str, Union[torch.Tensor, Dict]], time_step: int
@@ -308,7 +284,7 @@ class RolloutStorage:
         memory_index = torch.as_tensor(
             keep_list, dtype=torch.int64, device=self.masks.device
         )
-        # LOGGER.debug("keep_list {} memory_index {}".format(keep_list, memory_index))
+        # get_logger().debug("keep_list {} memory_index {}".format(keep_list, memory_index))
         for name in self.memory:
             self.memory[name] = (
                 self.memory[name][0].index_select(
@@ -328,7 +304,7 @@ class RolloutStorage:
         assert len(self.unnarrow_data) == 0, "attempting to narrow narrowed rollouts"
 
         if self.step == 0:  # we're actually done
-            LOGGER.warning("Called narrow with self.step == 0")
+            get_logger().warning("Called narrow with self.step == 0")
             return
 
         for sensor in self.observations:

@@ -4,6 +4,9 @@ import gym
 import numpy as np
 from ai2thor.util.metrics import compute_single_spl
 
+from rl_base.common import RLStepResult
+from rl_base.sensor import Sensor
+from rl_base.task import Task
 from rl_robothor.robothor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
@@ -13,10 +16,8 @@ from rl_robothor.robothor_constants import (
     LOOK_DOWN,
 )
 from rl_robothor.robothor_environment import RoboThorEnvironment
-from rl_base.common import RLStepResult
-from rl_base.sensor import Sensor
-from rl_base.task import Task
-from utils.system import LOGGER
+from utils.system import get_logger
+
 
 # class RoboThorTask(Task[RoboThorEnvironment]):
 #     def __init__(
@@ -95,7 +96,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         dist = self.env.path_corners_to_dist(self.episode_optimal_corners)
         if dist == float("inf"):
             dist = -1.0  # -1.0 for unreachable
-            LOGGER.warning(
+            get_logger().warning(
                 "No path for {} from {} to {}".format(
                     self.env.scene_name, self.env.agent_state(), task_info["target"]
                 )
@@ -166,7 +167,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         elif dist > 0.2:
             return False
         else:
-            LOGGER.warning(
+            get_logger().warning(
                 "No path for {} from {} to {}".format(
                     self.env.scene_name, self.env.agent_state(), tget
                 )
@@ -219,7 +220,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         return rew * self.reward_configs["shaping_weight"]
 
     def judge(self) -> float:
-        """ Judge the last event. """
+        """Judge the last event."""
         reward = self.reward_configs["step_penalty"]
 
         reward += self.shaping()
@@ -442,7 +443,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         return rew * self.reward_configs["shaping_weight"]
 
     def judge(self) -> float:
-        """ Judge the last event. """
+        """Judge the last event."""
         reward = self.reward_configs["step_penalty"]
 
         reward += self.shaping()
@@ -494,6 +495,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 "spl": self.spl() if len(self.episode_optimal_corners) > 1 else 0.0,
                 "task_info": self.task_info,
             }
-            # LOGGER.debug("{} Metrics {}".format(self.task_info["id"], {k: v for k, v in metrics.items() if k != "task_info"}))
+            # get_logger().debug("{} Metrics {}".format(self.task_info["id"], {k: v for k, v in metrics.items() if k != "task_info"}))
             self._rewards = []
             return metrics

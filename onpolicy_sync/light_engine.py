@@ -1,33 +1,24 @@
 """Defines the reinforcement learning `OnPolicyRLEngine`."""
 import os
-import queue
 import random
 import time
 import traceback
 import typing
 from multiprocessing.context import BaseContext
 from typing import Optional, Any, Dict, Union, List, Tuple, Sequence
-from collections import OrderedDict, namedtuple
 
 import torch
 import torch.distributions
 import torch.multiprocessing as mp
-from torch import nn
 import torch.optim
+from torch import nn
 from torch import optim
-from torch.optim.lr_scheduler import _LRScheduler
 from torch.nn.parallel import DistributedDataParallel
+from torch.optim.lr_scheduler import _LRScheduler
 
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from onpolicy_sync.storage import RolloutStorage
-from onpolicy_sync.vector_sampled_tasks import (
-    VectorSampledTasks,
-    ThreadedVectorSampledTasks,
-)
-from onpolicy_sync.vector_preprocessed_tasks import (
-    VectorPreprocessedTasks,
-    ThreadedVectorPreprocessedTasks,
-)
+from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
 from rl_base.experiment_config import ExperimentConfig
 from utils.experiment_utils import (
     ScalarMeanTracker,
@@ -38,18 +29,18 @@ from utils.experiment_utils import (
     TrainingPipeline,
     PipelineStage,
 )
+from utils.system import get_logger
 from utils.tensor_utils import batch_observations
-from utils.system import LOGGER
 
 
 class OnPolicyRLEngine(object):
     """The reinforcement learning primary controller.
 
-    This `OnPolicyRLEngine` class handles all training, validation, and testing as
-    well as logging and checkpointing. You are not expected to
-    instantiate this class yourself, instead you should define an
-    experiment which will then be used to instantiate an `OnPolicyRLEngine` and
-    perform any desired tasks.
+    This `OnPolicyRLEngine` class handles all training, validation, and
+    testing as well as logging and checkpointing. You are not expected
+    to instantiate this class yourself, instead you should define an
+    experiment which will then be used to instantiate an
+    `OnPolicyRLEngine` and perform any desired tasks.
     """
 
     def __init__(
@@ -182,7 +173,6 @@ class OnPolicyRLEngine(object):
                     output_device=self.device,
                 )
             self.is_distributed = True  # for testing, this only means we need to synchronize after each checkpoint
-
         self.deterministic_agent = False
 
         self.step_count: int = 0
@@ -222,52 +212,16 @@ class OnPolicyRLEngine(object):
                 total_processes,
                 initial_seed=self.seed,  # do not update the RNG state (creation might happen after seed resetting)
             )
-            if (
-                "make_preprocessors_fns" in self.machine_params
-                and self.machine_params["make_preprocessors_fns"] is not None
-                and len(self.machine_params["make_preprocessors_fns"]) > 0
-            ):
-                # Observation set will be distributed
-                assert (
-                    "task_sampler_ids" in self.machine_params
-                ), "Missing task_sampler_ids for machine_params with make_preprocessors_fns"
-                vector_class = (
-                    VectorPreprocessedTasks
-                    if not debug
-                    else ThreadedVectorPreprocessedTasks
-                )
-                self._vector_tasks = vector_class(
-                    make_preprocessors_fn=self.machine_params["make_preprocessors_fns"],
-                    task_sampler_ids=self.machine_params["task_sampler_ids"],
-                    make_sampler_fn=self.config.make_sampler_fn,
-                    sampler_fn_args=self.get_sampler_fn_args(seeds),
-                    multiprocessing_start_method="forkserver"
-                    if self.mp_ctx is None
-                    else None,
-                    mp_ctx=self.mp_ctx,
-                )
-            else:
-                if (
-                    "make_preprocessors_fns" in self.machine_params
-                    and self.machine_params["make_preprocessors_fns"] is not None
-                    and len(self.machine_params["make_preprocessors_fns"]) == 0
-                ):
-                    LOGGER.warning(
-                        "{} worker {} Found empty make_preprocessors_fns list in machine_params".format(
-                            self.mode, self.worker_id
-                        )
-                    )
-                vector_class = (
-                    VectorSampledTasks if not debug else ThreadedVectorSampledTasks
-                )
-                self._vector_tasks = vector_class(
-                    make_sampler_fn=self.config.make_sampler_fn,
-                    sampler_fn_args=self.get_sampler_fn_args(seeds),
-                    multiprocessing_start_method="forkserver"
-                    if self.mp_ctx is None
-                    else None,
-                    mp_ctx=self.mp_ctx,
-                )
+
+            vector_class = VectorSampledTasks
+            self._vector_tasks = vector_class(
+                make_sampler_fn=self.config.make_sampler_fn,
+                sampler_fn_args=self.get_sampler_fn_args(seeds),
+                multiprocessing_start_method="forkserver"
+                if self.mp_ctx is None
+                else None,
+                mp_ctx=self.mp_ctx,
+            )
         return self._vector_tasks
 
     @staticmethod
@@ -323,7 +277,7 @@ class OnPolicyRLEngine(object):
         self, ckpt: Union[str, Dict[str, Any]]
     ) -> Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, typing.List]]:
         if isinstance(ckpt, str):
-            LOGGER.info(
+            get_logger().info(
                 "{} worker {} loading checkpoint from {}".format(
                     self.mode, self.worker_id, ckpt
                 )
@@ -390,7 +344,7 @@ class OnPolicyRLEngine(object):
             nsamples += 1
 
         if nsamples < len(task_outputs):
-            LOGGER.warning(
+            get_logger().warning(
                 "Discarded {} empty task metrics".format(len(task_outputs) - nsamples)
             )
 
@@ -514,9 +468,9 @@ class OnPolicyRLEngine(object):
         def logif(s: Union[str, Exception]):
             if verbose:
                 if isinstance(s, str):
-                    LOGGER.info(s)
+                    get_logger().info(s)
                 elif isinstance(s, Exception):
-                    LOGGER.exception(traceback.format_exc())
+                    get_logger().exception(traceback.format_exc())
                 else:
                     raise NotImplementedError()
 
@@ -602,7 +556,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.former_steps = former_steps
 
             if self.steps_in_rollout > 0:
-                LOGGER.info("tstate {}".format(self.__dict__))
+                get_logger().info("tstate {}".format(self.__dict__))
 
     def __init__(
         self,
@@ -925,7 +879,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     self.optimizer.step()  # type: ignore
                     self.tstate.backprop_count += 1
                 else:
-                    LOGGER.warning(
+                    get_logger().warning(
                         "{} worker {}"
                         "Total loss ({}) is not a FloatTensor, it is a {}. This can happen when using teacher"
                         "enforcing alone if the expert does not know the optimal action".format(
@@ -956,7 +910,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         # target = self.actor_critic.module if self.is_distributed else self.actor_critic
         # state_dict = target.state_dict()
         # keys = sorted(list(state_dict.keys()))
-        # LOGGER.debug("worker {} param 0 {} param -1 {}".format(
+        # get_logger().debug("worker {} param 0 {} param -1 {}".format(
         #     self.worker_id,
         #     state_dict[keys[0]].flatten()[0],
         #     state_dict[keys[-1]].flatten()[-1],
@@ -1022,7 +976,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         <= step
                         < 0.95 * (self.tstate.steps_in_rollout - 1)
                     ):
-                        LOGGER.debug(
+                        get_logger().debug(
                             "{} worker {} narrowed rollouts at step {} ({}) with {} done".format(
                                 self.mode, self.worker_id, rollouts.step, step, num_done
                             )
@@ -1105,7 +1059,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.tstate.rollout_count % self.tstate.advance_scene_rollout_period
                 == 0
             ):
-                LOGGER.info(
+                get_logger().info(
                     "{} worker {} Force advance tasks with {} rollouts".format(
                         self.mode, self.worker_id, self.tstate.rollout_count
                     )
@@ -1185,23 +1139,25 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.step_count = 0
             finalized = True
         except KeyboardInterrupt:
-            LOGGER.info(
+            get_logger().info(
                 "KeyboardInterrupt. Terminating {} worker {}".format(
                     self.mode, self.worker_id
                 )
             )
         except Exception:
-            LOGGER.error(
+            get_logger().error(
                 "Encountered Exception. Terminating {} worker {}".format(
                     self.mode, self.worker_id
                 )
             )
-            LOGGER.exception(traceback.format_exc())
+            get_logger().exception(traceback.format_exc())
         finally:
             if finalized:
                 if self.worker_id == 0:
                     self.results_queue.put(("train_stopped", 0))
-                LOGGER.info("{} worker {} COMPLETE".format(self.mode, self.worker_id))
+                get_logger().info(
+                    "{} worker {} COMPLETE".format(self.mode, self.worker_id)
+                )
             else:
                 self.results_queue.put(("train_stopped", 1 + self.worker_id))
             self.close()
@@ -1244,7 +1200,7 @@ class OnPolicyInference(OnPolicyRLEngine):
         if self.actor_critic is not None:
             self.actor_critic.eval()
 
-        # LOGGER.debug("{} worker {} using device {}".format(self.mode, self.worker_id, self.device))
+        # get_logger().debug("{} worker {} using device {}".format(self.mode, self.worker_id, self.device))
 
         self.deterministic_agent = deterministic_agent
 
@@ -1333,7 +1289,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                     command,
                     data,
                 ) = self.checkpoints_queue.get()  # block until first command arrives
-                # LOGGER.debug("{} {} command {} data {}".format(self.mode, self.worker_id, command, data))
+                # get_logger().debug("{} {} command {} data {}".format(self.mode, self.worker_id, command, data))
 
                 if command == "eval":
                     if self.num_samplers > 0:
@@ -1368,23 +1324,25 @@ class OnPolicyInference(OnPolicyRLEngine):
                 else:
                     raise NotImplementedError()
         except KeyboardInterrupt:
-            LOGGER.info(
+            get_logger().info(
                 "KeyboardInterrupt. Terminating {} worker {}".format(
                     self.mode, self.worker_id
                 )
             )
         except Exception:
-            LOGGER.error(
+            get_logger().error(
                 "Encountered Exception. Terminating {} worker {}".format(
                     self.mode, self.worker_id
                 )
             )
-            LOGGER.exception(traceback.format_exc())
+            get_logger().exception(traceback.format_exc())
         finally:
             if finalized:
                 if self.mode == "test":
                     self.results_queue.put(("test_stopped", 0))
-                LOGGER.info("{} worker {} complete".format(self.mode, self.worker_id))
+                get_logger().info(
+                    "{} worker {} complete".format(self.mode, self.worker_id)
+                )
             else:
                 if self.mode == "test":
                     self.results_queue.put(("test_stopped", self.worker_id + 1))

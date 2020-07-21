@@ -1,11 +1,11 @@
-from typing import Dict, Any, List, Union
-from collections import OrderedDict
 import abc
+from collections import OrderedDict
+from typing import Dict, Any, List, Union
 
-import torch
 import gym
-from gym.spaces import Dict as SpaceDict
 import networkx as nx
+import torch
+from gym.spaces import Dict as SpaceDict
 
 from rl_base.sensor import Sensor, SensorSuite
 from utils.experiment_utils import Builder

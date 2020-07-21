@@ -1,112 +1,33 @@
-import typing
-from typing import Dict, Any, Optional, List, Union
 from collections import OrderedDict
+from typing import Dict, Any, Optional, List, Union
 
 import gym
-from gym.spaces.dict import Dict as SpaceDict
 import numpy as np
 import torch
-from torch.nn.parallel import DistributedDataParallel
+from gym.spaces.dict import Dict as SpaceDict
 
-from utils.cacheless_frcnn import fasterrcnn_resnet50_fpn
 from rl_base.preprocessor import Preprocessor
-from utils.system import LOGGER
+from utils.cacheless_frcnn import fasterrcnn_resnet50_fpn
+from utils.system import get_logger
 
 
 class BatchedFasterRCNN(torch.nn.Module):
+    # fmt: off
     COCO_INSTANCE_CATEGORY_NAMES = [
-        "__background__",
-        "person",
-        "bicycle",
-        "car",
-        "motorcycle",
-        "airplane",
-        "bus",
-        "train",
-        "truck",
-        "boat",
-        "traffic light",
-        "fire hydrant",
-        "N/A",
-        "stop sign",
-        "parking meter",
-        "bench",
-        "bird",
-        "cat",
-        "dog",
-        "horse",
-        "sheep",
-        "cow",
-        "elephant",
-        "bear",
-        "zebra",
-        "giraffe",
-        "N/A",
-        "backpack",
-        "umbrella",
-        "N/A",
-        "N/A",
-        "handbag",
-        "tie",
-        "suitcase",
-        "frisbee",
-        "skis",
-        "snowboard",
-        "sports ball",
-        "kite",
-        "baseball bat",
-        "baseball glove",
-        "skateboard",
-        "surfboard",
-        "tennis racket",
-        "bottle",
-        "N/A",
-        "wine glass",
-        "cup",
-        "fork",
-        "knife",
-        "spoon",
-        "bowl",
-        "banana",
-        "apple",
-        "sandwich",
-        "orange",
-        "broccoli",
-        "carrot",
-        "hot dog",
-        "pizza",
-        "donut",
-        "cake",
-        "chair",
-        "couch",
-        "potted plant",
-        "bed",
-        "N/A",
-        "dining table",
-        "N/A",
-        "N/A",
-        "toilet",
-        "N/A",
-        "tv",
-        "laptop",
-        "mouse",
-        "remote",
-        "keyboard",
-        "cell phone",
-        "microwave",
-        "oven",
-        "toaster",
-        "sink",
-        "refrigerator",
-        "N/A",
-        "book",
-        "clock",
-        "vase",
-        "scissors",
-        "teddy bear",
-        "hair drier",
-        "toothbrush",
+        '__background__', 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
+        'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'N/A', 'stop sign',
+        'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
+        'elephant', 'bear', 'zebra', 'giraffe', 'N/A', 'backpack', 'umbrella', 'N/A', 'N/A',
+        'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball',
+        'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
+        'bottle', 'N/A', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
+        'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza',
+        'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed', 'N/A', 'dining table',
+        'N/A', 'N/A', 'toilet', 'N/A', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone',
+        'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'N/A', 'book',
+        'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
     ]
+    # fmt: on
 
     def __init__(self, thres=0.12, maxdets=3, res=7):
         super().__init__()
@@ -271,7 +192,7 @@ class FasterRCNNPreProcessorRoboThor(Preprocessor):
             assert (
                 torch.cuda.is_available()
             ), "attempt to parallelize detector without cuda"
-            LOGGER.info("Distributing detector")
+            get_logger().info("Distributing detector")
             self.frcnn = self.frcnn.to(torch.device("cuda"))
 
             # store = torch.distributed.TCPStore("localhost", 4712, 1, True)
@@ -281,11 +202,11 @@ class FasterRCNNPreProcessorRoboThor(Preprocessor):
             self.frcnn = torch.nn.DataParallel(
                 self.frcnn, device_ids=self.device_ids
             )  # , output_device=torch.cuda.device_count() - 1)
-            LOGGER.info("Detected {} devices".format(torch.cuda.device_count()))
+            get_logger().info("Detected {} devices".format(torch.cuda.device_count()))
             # images = torch.cat([(1. / (1. + it)) * torch.ones(1, 3, 300, 400) for it in range(24)], dim=0)
             # self.frcnn(images[:timages, ...])
 
-            # LOGGER.info("Detector distributed")
+            # get_logger().info("Detector distributed")
 
         spaces: OrderedDict[str, gym.Space] = OrderedDict()
         shape = (self.max_dets, self.detector_spatial_res, self.detector_spatial_res)

@@ -4,6 +4,8 @@ import collections.abc
 import copy
 import random
 import typing
+from collections import OrderedDict
+from typing import Callable
 from typing import NamedTuple, Dict, Any, Union, Iterator, Optional, List, Tuple
 
 import numpy as np
@@ -11,7 +13,6 @@ import torch
 from torch import optim
 
 from rl_base.common import Loss
-from typing import Callable
 
 
 def recursive_update(
@@ -118,10 +119,10 @@ class ScalarMeanTracker(object):
     """Track a collection `scalar key -> mean` pairs."""
 
     def __init__(self) -> None:
-        self._sums: Dict[str, float] = {}
-        self._counts: Dict[str, int] = {}
+        self._sums: Dict[str, float] = OrderedDict()
+        self._counts: Dict[str, int] = OrderedDict()
 
-    def add_scalars(self, scalars: Dict[str, Union[float, int]]) -> None:
+    def add_scalars(self, scalars: Dict[str, Union[float, int]], n: int = 1) -> None:
         """Add additional scalars to track.
 
         # Parameters
@@ -130,11 +131,11 @@ class ScalarMeanTracker(object):
         """
         for k in scalars:
             if k not in self._sums:
-                self._sums[k] = scalars[k]
-                self._counts[k] = 1
+                self._sums[k] = n * scalars[k]
+                self._counts[k] = n
             else:
-                self._sums[k] += scalars[k]
-                self._counts[k] += 1
+                self._sums[k] += n * scalars[k]
+                self._counts[k] += n
 
     def pop_and_reset(self) -> Dict[str, float]:
         """Return tracked means and reset.
@@ -146,13 +147,15 @@ class ScalarMeanTracker(object):
         A dictionary of `scalar key -> current mean` pairs corresponding to those
         values added with `add_scalars`.
         """
-        means = {k: float(self._sums[k] / self._counts[k]) for k in self._sums}
+        means = OrderedDict(
+            [(k, float(self._sums[k] / self._counts[k])) for k in self._sums]
+        )
         self.reset()
         return means
 
     def reset(self):
-        self._sums = {}
-        self._counts = {}
+        self._sums = OrderedDict()
+        self._counts = OrderedDict()
 
     def sums(self):
         return copy.copy(self._sums)
@@ -161,7 +164,9 @@ class ScalarMeanTracker(object):
         return copy.copy(self._counts)
 
     def means(self):
-        return {k: float(self._sums[k] / self._counts[k]) for k in self._sums}
+        return OrderedDict(
+            [(k, float(self._sums[k] / self._counts[k])) for k in self._sums]
+        )
 
     @property
     def empty(self):
@@ -282,6 +287,13 @@ class NeverEarlyStoppingCriterion(EarlyStoppingCriterion):
         return False
 
 
+class OffPolicyPipelineComponent(NamedTuple):
+    data_iterator_builder: Callable[[], Iterator]
+    loss_names: typing.List[str]
+    updates: int
+    loss_weights: Optional[typing.Sequence[float]] = None
+
+
 class PipelineStage(NamedTuple):
     """A single stage in a training pipeline.
 
@@ -309,6 +321,7 @@ class PipelineStage(NamedTuple):
     early_stopping_criterion: Optional[EarlyStoppingCriterion] = None
     loss_weights: Optional[typing.Sequence[float]] = None
     teacher_forcing: Optional[LinearDecay] = None
+    offpolicy_component: Optional[OffPolicyPipelineComponent] = None
 
 
 class TrainingPipeline(typing.Iterable):

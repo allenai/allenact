@@ -1,17 +1,16 @@
 import gym
+import habitat
 import torch.nn as nn
 
-import habitat
-
+from experiments.pointnav_habitat_base import PointNavHabitatBaseExperimentConfig
 from models.point_nav_models import PointNavActorCriticSimpleConvLSTM
 from rl_base.sensor import SensorSuite
-from rl_habitat.habitat_tasks import PointNavTask
 from rl_habitat.habitat_sensors import (
     DepthSensorHabitat,
     TargetCoordinatesSensorHabitat,
 )
+from rl_habitat.habitat_tasks import PointNavTask
 from rl_habitat.habitat_utils import construct_env_configs
-from experiments.pointnav_habitat_base import PointNavHabitatBaseExperimentConfig
 
 
 class PointNavHabitatDeptheterministicSimpleConvGRUPPOExperimentConfig(

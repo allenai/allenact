@@ -1,30 +1,29 @@
-from typing import Dict, Any, List, Optional
-import json
 from math import ceil
+from typing import Dict, Any, List, Optional
 
 import gym
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from models.tensor_object_nav_models import ResnetTensorObjectNavActorCritic
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
-import numpy as np
 
-from onpolicy_sync.losses.ppo import PPOConfig
-from models.tensor_object_nav_models import ResnetTensorObjectNavActorCritic
 from onpolicy_sync.losses import PPO
-from rl_base.experiment_config import ExperimentConfig
-from rl_base.task import TaskSampler
-from rl_base.preprocessor import ObservationSet
-from rl_robothor.robothor_tasks import ObjectNavTask
-from rl_robothor.robothor_task_samplers import ObjectNavTaskSampler
+from onpolicy_sync.losses.ppo import PPOConfig
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
+from rl_base.experiment_config import ExperimentConfig
+from rl_base.preprocessor import ObservationSet
+from rl_base.task import TaskSampler
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
+from rl_robothor.robothor_task_samplers import ObjectNavTaskSampler
+from rl_robothor.robothor_tasks import ObjectNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
 class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
-    """An Object Navigation experiment configuration in RoboThor"""
+    """An Object Navigation experiment configuration in RoboThor."""
 
     # TRAIN_SCENES = [
     #     "FloorPlan_Train%d_%d" % (wall + 1, furniture + 1)
@@ -194,6 +193,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
             workers_per_device = 1
+            # fmt: off
             # gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7] * workers_per_device  # TODO vs4 only has 7 gpus
             gpu_ids = (
                 [] if not torch.cuda.is_available() else [0, 1] * workers_per_device
@@ -206,12 +206,6 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             sampler_devices = [
                 0,
                 1,
-                2,
-                3,
-                4,
-                5,
-                6,
-                7,
             ]  # TODO vs4 only has 7 gpus (ignored with > 1 gpu_ids)
             render_video = False
         elif mode == "valid":

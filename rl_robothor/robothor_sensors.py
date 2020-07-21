@@ -1,15 +1,15 @@
+import typing
 from typing import Any, Dict, Optional
 
 import gym
 import numpy as np
 import quaternion  # noqa # pylint: disable=unused-import
-import typing
 from torchvision import transforms
 
+from rl_ai2thor.ai2thor_sensors import ScaleBothSides
+from rl_base.sensor import Sensor
 from rl_robothor.robothor_environment import RoboThorEnvironment
 from rl_robothor.robothor_tasks import PointNavTask
-from rl_base.sensor import Sensor
-from rl_ai2thor.ai2thor_sensors import ScaleBothSides
 
 
 class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):

@@ -1,12 +1,14 @@
-"""Defines the reinforcement learning `OnPolicyRLEngine`."""
+"""Defines the reinforcement learning `UndistributedOnPolicyRLEngine`."""
+import copy
 import glob
 import itertools
 import json
-import logging
 import os
+import pathlib
 import queue
 import random
 import shutil
+import subprocess
 import sys
 import time
 import traceback
@@ -14,7 +16,7 @@ import typing
 import warnings
 from collections import OrderedDict
 from multiprocessing.context import BaseContext
-from typing import Optional, Any, Dict, Union, List, Tuple
+from typing import Optional, Any, Dict, Union, List, Tuple, Iterator
 
 import numpy as np
 import torch
@@ -22,24 +24,23 @@ import torch.distributions
 import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.optim
+from filelock import FileLock, Timeout
 from setproctitle import setproctitle as ptitle
 from torch import optim
 from torch.distributions import Categorical
 from torch.optim.lr_scheduler import _LRScheduler
 
+from offpolicy_sync.losses.abstract_offpolicy_loss import AbstractOffPolicyLoss
+from onpolicy_sync.light_engine import OnPolicyRLEngine
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from onpolicy_sync.policy import ActorCriticModel
 from onpolicy_sync.storage import RolloutStorage
-from onpolicy_sync.vector_preprocessed_tasks import (
-    VectorPreprocessedTasks,
-    ThreadedVectorPreprocessedTasks,
-)
 from onpolicy_sync.vector_sampled_tasks import (
     VectorSampledTasks,
     DEFAULT_MP_CONTEXT_TYPE,
     SingleProcessVectorSampledTasks,
-    ThreadedVectorSampledTasks,
 )
+from rl_base.common import Loss
 from rl_base.experiment_config import ExperimentConfig
 from utils.experiment_utils import (
     ScalarMeanTracker,
@@ -51,9 +52,16 @@ from utils.experiment_utils import (
     PipelineStage,
     EarlyStoppingCriterion,
     NeverEarlyStoppingCriterion,
+    OffPolicyPipelineComponent,
 )
-from utils.tensor_utils import batch_observations, SummaryWriter, tensor_to_video
-from utils.system import init_logging, LOGGER
+from utils.system import get_logger
+from utils.tensor_utils import (
+    batch_observations,
+    SummaryWriter,
+    tensor_to_video,
+    to_device_recursively,
+    detach_recursively,
+)
 
 
 def validate(
@@ -65,9 +73,8 @@ def validate(
     deterministic_cudnn: bool = False,
     mp_ctx: Optional[BaseContext] = None,
 ):
-    init_logging()
     ptitle("Validation")
-    evaluator = OnPolicyValidator(
+    evaluator = UndistributedOnPolicyValidator(
         config=config,
         output_dir=output_dir,
         seed=seed,
@@ -77,14 +84,14 @@ def validate(
     evaluator.process_checkpoints(read_from_parent, write_to_parent)
 
 
-class OnPolicyRLEngine(object):
+class UndistributedOnPolicyRLEngine(object):
     """The reinforcement learning primary controller.
 
-    This `OnPolicyRLEngine` class handles all training, validation, and
-    testing as well as logging and checkpointing. You are not expected
-    to instantiate this class yourself, instead you should define an
-    experiment which will then be used to instantiate an
-    `OnPolicyRLEngine` and perform any desired tasks.
+    This `UndistributedOnPolicyRLEngine` class handles all training,
+    validation, and testing as well as logging and checkpointing. You
+    are not expected to instantiate this class yourself, instead you
+    should define an experiment which will then be used to instantiate
+    an `UndistributedOnPolicyRLEngine` and perform any desired tasks.
     """
 
     def __init__(
@@ -98,6 +105,7 @@ class OnPolicyRLEngine(object):
         mp_ctx: Optional[BaseContext] = None,
         extra_tag: str = "",
         single_process_training: bool = False,
+        max_training_processes: Optional[int] = None,
     ):
         """Initializer.
 
@@ -133,17 +141,22 @@ class OnPolicyRLEngine(object):
         )
         self.num_processes = self.machine_params["nprocesses"]
 
+        assert (
+            max_training_processes is None or max_training_processes >= 1
+        ), "`max_training_processes` must be either `None` or a positive integer."
+        self.max_training_processes = max_training_processes
+
         self.device = "cpu"
         if len(self.machine_params["gpu_ids"]) > 0:
             if not torch.cuda.is_available():
-                LOGGER.warning(
+                get_logger().warning(
                     "Warning: no CUDA devices available for gpu ids {}".format(
                         self.machine_params["gpu_ids"]
                     )
                 )
             else:
                 self.device = "cuda:%d" % self.machine_params["gpu_ids"][0]
-                # torch.cuda.set_device(self.device)  # type: ignore
+                torch.cuda.set_device(self.device)  # type: ignore
 
         if self.deterministic_cudnn:
             set_deterministic_cudnn()
@@ -151,13 +164,41 @@ class OnPolicyRLEngine(object):
         if self.seed is not None:
             set_seed(self.seed)
 
-        self._vector_tasks: Optional[VectorSampledTasks] = None
+        self.observation_set = None
+        self.actor_critic: ActorCriticModel
+
+        if "observation_set" in self.machine_params:
+            self.observation_set = self.machine_params["observation_set"].to(
+                self.device
+            )
+            self.actor_critic = typing.cast(
+                ActorCriticModel,
+                config.create_model(observation_set=self.observation_set).to(
+                    self.device
+                ),
+            )
+        else:
+            self.actor_critic = typing.cast(
+                ActorCriticModel, config.create_model().to(self.device)
+            )
+
+        self.optimizer: Optional[optim.Optimizer] = None  # type: ignore
+        self.lr_scheduler: Optional[optim.lr_scheduler._LRScheduler] = None
+        if mode == "train":
+            self.optimizer = self.training_pipeline.optimizer_builder(
+                params=[p for p in self.actor_critic.parameters() if p.requires_grad]
+            )
+
+            if self.training_pipeline.lr_scheduler_builder is not None:
+                self.lr_scheduler = self.training_pipeline.lr_scheduler_builder(
+                    optimizer=self.optimizer
+                )
+
+        self._vector_tasks: Optional[
+            Union[VectorSampledTasks, SingleProcessVectorSampledTasks]
+        ] = None
 
         self.output_dir = output_dir
-        self.models_folder: Optional[str] = None
-
-        self.configs_folder = os.path.join(output_dir, "used_configs")
-        os.makedirs(self.configs_folder, exist_ok=True)
 
         self.loaded_config_src_files = loaded_config_src_files
 
@@ -170,6 +211,8 @@ class OnPolicyRLEngine(object):
         self.rollout_count = 0
         self.backprop_count = 0
         self.step_count = 0
+        self.episode_count = 0
+        self.off_policy_epochs = None
         self.total_steps = 0
         self.last_metrics_accumulate_steps: Optional[
             int
@@ -196,6 +239,12 @@ class OnPolicyRLEngine(object):
         self.teacher_forcing: Optional[LinearDecay] = None
         self.local_start_time_str: Optional[str] = None
         self.deterministic_agent: Optional[bool] = None
+
+        self.offpolicy_component: Optional[OffPolicyPipelineComponent] = None
+        self.offpolicy_losses: Optional[Tuple[AbstractOffPolicyLoss, ...]] = None
+        self.offpolicy_loss_weights: Optional[Tuple[float, ...]] = None
+        self._offpolicy_memory: Dict[str, torch.Tensor] = {}
+
         self.eval_process: Optional[mp.Process] = None
 
         self.experiment_name = config.tag()
@@ -212,9 +261,10 @@ class OnPolicyRLEngine(object):
                 self.mp_ctx = mp.get_context(DEFAULT_MP_CONTEXT_TYPE)
 
             if self.config.machine_params("valid")["nprocesses"] <= 0:
-                print(
-                    "No processes allocated to validation, no validation will be run."
-                )
+                if self.is_logging:
+                    get_logger().info(
+                        "No processes allocated to validation, no validation will be run."
+                    )
             else:
                 if self.single_process_training:
                     raise NotImplementedError(
@@ -236,65 +286,11 @@ class OnPolicyRLEngine(object):
                 )
                 self.eval_process.start()
 
-        self.observation_set = None
-        self.actor_critic: ActorCriticModel
-        if (
-            "make_preprocessors_fns" in self.machine_params
-            and self.machine_params["make_preprocessors_fns"] is not None
-            and len(self.machine_params["make_preprocessors_fns"]) > 0
-        ):
-            self.actor_critic = typing.cast(
-                ActorCriticModel,
-                config.create_model(
-                    observation_set=self.machine_params["make_preprocessors_fns"][0]()
-                ).to(self.device),
-            )
-        elif (
-            "observation_set" in self.machine_params
-            and self.machine_params["observation_set"] is not None
-        ):
-            self.observation_set = self.machine_params["observation_set"].to(
-                self.device
-            )
-            self.actor_critic = typing.cast(
-                ActorCriticModel,
-                config.create_model(observation_set=self.observation_set).to(
-                    self.device
-                ),
-            )
-        else:
-            self.actor_critic = typing.cast(
-                ActorCriticModel, config.create_model().to(self.device)
-            )
-
-        if (
-            "make_preprocessors_fns" in self.machine_params
-            and self.machine_params["make_preprocessors_fns"] is not None
-            and len(self.machine_params["make_preprocessors_fns"]) == 0
-        ):
-            LOGGER.warning("Found empty make_preprocessors_fns list in machine_params")
-
-        # if self.mode == "train" and len(self.machine_params["gpu_ids"]) > 0:
-        #     LOGGER.info("Using data parallelism to actor critic")
-        #     self.actor_critic = torch.nn.DataParallel(self.actor_critic).to("cuda")
-        #     self.is_data_parallel = True
-        # else:
-        #     self.is_data_parallel = False
-        self.is_data_parallel = False
-
-        self.optimizer: Optional[optim.Optimizer] = None  # type: ignore
-        self.lr_scheduler: Optional[optim.lr_scheduler._LRScheduler] = None
-        if mode == "train":
-            self.optimizer = self.training_pipeline.optimizer_builder(
-                params=[p for p in self.actor_critic.parameters() if p.requires_grad]
-            )
-
-            if self.training_pipeline.lr_scheduler_builder is not None:
-                self.lr_scheduler = self.training_pipeline.lr_scheduler_builder(
-                    optimizer=self.optimizer
-                )
-
         self._is_closed: bool = False
+
+    @property
+    def configs_folder(self):
+        return os.path.join(self.output_dir, "used_configs")
 
     @property
     def vector_tasks(
@@ -304,53 +300,23 @@ class OnPolicyRLEngine(object):
             seeds = self.worker_seeds(
                 self.machine_params["nprocesses"], initial_seed=self.seed
             )
-
             if self.single_process_training:
                 self._vector_tasks = SingleProcessVectorSampledTasks(
                     make_sampler_fn=self.config.make_sampler_fn,
-                    sampler_fn_args=self.get_sampler_fn_args(self.config, seeds),
+                    sampler_fn_args_list=self.get_sampler_fn_args(self.config, seeds),
+                    should_log=self.is_logging,
                 )
             else:
-                if (
-                    "make_preprocessors_fns" in self.machine_params
-                    and self.machine_params["make_preprocessors_fns"] is not None
-                    and len(self.machine_params["make_preprocessors_fns"]) > 0
-                ):
-                    assert (
-                        "task_sampler_ids" in self.machine_params
-                    ), "Missing task_sampler_ids for machine_params with make_preprocessors_fns"
-                    # self._vector_tasks = ThreadedVectorPreprocessedTasks(  # TODO Debugging
-                    self._vector_tasks = VectorPreprocessedTasks(
-                        make_preprocessors_fn=self.machine_params[
-                            "make_preprocessors_fns"
-                        ],
-                        task_sampler_ids=self.machine_params["task_sampler_ids"],
-                        make_sampler_fn=self.config.make_sampler_fn,
-                        sampler_fn_args=self.get_sampler_fn_args(self.config, seeds),
-                        multiprocessing_start_method=DEFAULT_MP_CONTEXT_TYPE
-                        if self.mp_ctx is None
-                        else None,
-                        mp_ctx=self.mp_ctx,
-                    )
-                else:
-                    if (
-                        "make_preprocessors_fns" in self.machine_params
-                        and self.machine_params["make_preprocessors_fns"] is not None
-                        and len(self.machine_params["make_preprocessors_fns"]) == 0
-                    ):
-                        LOGGER.warning(
-                            "Found empty make_preprocessors_fns list in machine_params"
-                        )
-
-                    # self._vector_tasks = ThreadedVectorSampledTasks(  # TODO Debugging
-                    self._vector_tasks = VectorSampledTasks(
-                        make_sampler_fn=self.config.make_sampler_fn,
-                        sampler_fn_args=self.get_sampler_fn_args(self.config, seeds),
-                        multiprocessing_start_method=DEFAULT_MP_CONTEXT_TYPE
-                        if self.mp_ctx is None
-                        else None,
-                        mp_ctx=self.mp_ctx,
-                    )
+                self._vector_tasks = VectorSampledTasks(
+                    make_sampler_fn=self.config.make_sampler_fn,
+                    sampler_fn_args=self.get_sampler_fn_args(self.config, seeds),
+                    multiprocessing_start_method=DEFAULT_MP_CONTEXT_TYPE
+                    if self.mp_ctx is None
+                    else None,
+                    mp_ctx=self.mp_ctx,
+                    should_log=self.is_logging,
+                    max_processes=self.max_training_processes,
+                )
         return self._vector_tasks
 
     @staticmethod
@@ -395,10 +361,16 @@ class OnPolicyRLEngine(object):
             for it in range(self.machine_params["nprocesses"])
         ]
 
-    def checkpoint_save(self) -> str:
-        self.models_folder = os.path.join(
-            self.output_dir, "checkpoints", self.local_start_time_str
+    @property
+    def models_folder(self):
+        return os.path.join(
+            self.output_dir,
+            "checkpoints",
+            self.experiment_name,
+            self.local_start_time_str,
         )
+
+    def checkpoint_save(self) -> str:
         os.makedirs(self.models_folder, exist_ok=True)
 
         if self.seed is not None and not self.vector_tasks.is_closed:
@@ -428,11 +400,11 @@ class OnPolicyRLEngine(object):
             "rollout_count": self.rollout_count,
             "backprop_count": self.backprop_count,
             "step_count": self.step_count,
+            "episode_count": self.episode_count,
+            "off_policy_epochs": self.off_policy_epochs,
             "local_start_time_str": self.local_start_time_str,
             "optimizer_state_dict": self.optimizer.state_dict(),  # type: ignore
-            "model_state_dict": self.actor_critic.state_dict()
-            if not self.is_data_parallel
-            else self.actor_critic.module,
+            "model_state_dict": self.actor_critic.state_dict(),
             "trainer_seed": self.seed,
             "extra_tag": self.extra_tag,
         }
@@ -459,12 +431,13 @@ class OnPolicyRLEngine(object):
             ckpt,
         )
 
-        if not self.is_data_parallel:
-            self.actor_critic.load_state_dict(ckpt["model_state_dict"])
-        else:
-            self.actor_critic.module.load_state_dict(ckpt["model_state_dict"])
+        self.actor_critic.load_state_dict(
+            typing.cast(Dict[str, torch.Tensor], ckpt["model_state_dict"])
+        )
         self.step_count = ckpt["step_count"]  # type: ignore
         self.total_steps = ckpt["total_steps"]  # type: ignore
+        self.episode_count = ckpt.get("episode_count", 0)  # type: ignore
+        self.off_policy_epochs = ckpt.get("off_policy_epochs", 0)  # type: ignore
 
         if self.mode == "train":
             self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])  # type: ignore
@@ -495,12 +468,12 @@ class OnPolicyRLEngine(object):
     def process_eval_metrics(self, count=-1):
         unused = []
         used = []
-        while (count < 0 and not self.vector_tasks.metrics_out_queue.empty()) or (
-            count > 0
-        ):
+        while True:
             try:
                 if count < 0:
-                    metric = self.vector_tasks.metrics_out_queue.get_nowait()
+                    metric = self.vector_tasks.metrics_out_queue.get(timeout=0.1)
+                elif count == 0:
+                    break
                 else:
                     metric = self.vector_tasks.metrics_out_queue.get(timeout=1)
                 if (
@@ -512,10 +485,10 @@ class OnPolicyRLEngine(object):
                         {k: v for k, v in metric.items() if k != "task_info"}
                     )
                     used.append(metric)
-                    if count > 0:
-                        count -= 1
+                    count -= 1
             except queue.Empty:
-                pass
+                if count <= 0:
+                    break
 
         for item in unused:
             self.vector_tasks.metrics_out_queue.put(item)
@@ -528,6 +501,7 @@ class OnPolicyRLEngine(object):
         str,
         Union[
             ScalarMeanTracker,
+            List[Dict[str, float]],
             List[Tuple[str, int, Union[float, np.ndarray]]],
             str,
             List[str],
@@ -538,13 +512,16 @@ class OnPolicyRLEngine(object):
         teachers = []
         valid_test_metrics = []
         valid_test_messages = []
-        while (not self.vector_tasks.metrics_out_queue.empty()) or (count > 0):
+        while True:
             try:
                 if count < 0:
-                    metric = self.vector_tasks.metrics_out_queue.get_nowait()
+                    metric = self.vector_tasks.metrics_out_queue.get(timeout=0.1)
+                elif count == 0:
+                    break
                 else:
                     metric = self.vector_tasks.metrics_out_queue.get(timeout=1)
                     count -= 1
+
                 if isinstance(metric, tuple):
                     pkg_type, info = metric
 
@@ -584,29 +561,32 @@ class OnPolicyRLEngine(object):
                             )
                     else:
                         if pkg_type == "update_package":
+                            is_offpolicy = info.get("offpolicy", False)
+                            prefix = "offpolicy/" if is_offpolicy else ""
                             cscalars = {
-                                "total_loss": info["total_loss"],
+                                prefix + "total_loss": info["total_loss"],
                             }
                             if "lr" in info:
-                                cscalars["lr"] = info["lr"]
+                                cscalars[prefix + "lr"] = info["lr"]
                             for loss in info["losses"]:
                                 lossname = loss[:-5] if loss.endswith("_loss") else loss
                                 for scalar in info["losses"][loss]:
-                                    cscalars["/".join([lossname, scalar])] = info[
-                                        "losses"
-                                    ][loss][scalar]
+                                    cscalars[
+                                        prefix + "/".join([lossname, scalar])
+                                    ] = info["losses"][loss][scalar]
                             losses.append(cscalars)
                         elif pkg_type == "teacher_package":
                             cscalars = {k: v for k, v in info.items()}
                             teachers.append(cscalars)
                         else:
-                            LOGGER.warning("Unknown info package {}".format(info))
+                            get_logger().warning("Unknown info package {}".format(info))
                 else:
                     train_metrics.append(metric)
             except queue.Empty:
-                pass
+                if count <= 0:
+                    break
 
-        train_scalars = []
+        train_scalars: List[Dict[str, float]] = []
         for to_record in itertools.chain(train_metrics, losses, teachers):
             train_scalars.append(
                 OrderedDict(
@@ -645,16 +625,26 @@ class OnPolicyRLEngine(object):
                     tag=key, vid=metric, global_step=metric_steps,
                 )
         for message in valid_test_messages:
-            LOGGER.info(message)
+            get_logger().info(message)
 
         if train_scalar_tracker is not None:
             tracked_means = train_scalar_tracker.means()
             train_message_list = [
-                "train {} steps:".format(self.total_steps + self.step_count)
+                "train {} steps: episodes {}".format(
+                    self.total_steps + self.step_count, self.episode_count
+                ),
             ]
+            tracked_means["episode_count"] = self.episode_count
+            if self.off_policy_epochs is not None:
+                tracked_means["offpolicy/epochs"] = self.off_policy_epochs
             for k in tracked_means:
+                k_for_log_writer = (
+                    "{}/" if k.startswith("offpolicy/") else "train/{}"
+                ).format(k)
                 self.log_writer.add_scalar(
-                    "train/" + k, tracked_means[k], self.total_steps + self.step_count,
+                    k_for_log_writer,
+                    tracked_means[k],
+                    self.total_steps + self.step_count,
                 )
                 train_message_list += [
                     k
@@ -667,7 +657,7 @@ class OnPolicyRLEngine(object):
 
             train_message = " ".join(train_message_list)
 
-            LOGGER.info(train_message)
+            get_logger().info(train_message)
 
     def update(self, rollouts: RolloutStorage) -> None:
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
@@ -678,9 +668,9 @@ class OnPolicyRLEngine(object):
             )
 
             for bit, batch in enumerate(data_generator):
-                actor_critic_output, hidden_states = self.actor_critic(
+                actor_critic_output, _ = self.actor_critic(
                     batch["observations"],
-                    batch["recurrent_hidden_states"],
+                    batch["memory"],
                     batch["prev_actions"],
                     batch["masks"],
                 )
@@ -694,8 +684,7 @@ class OnPolicyRLEngine(object):
                     losses={},
                 )
 
-                if self.lr_scheduler is not None:
-                    info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
+                info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
 
                 total_loss: Optional[torch.Tensor] = None
                 for loss_name in self.losses:
@@ -734,6 +723,86 @@ class OnPolicyRLEngine(object):
                             total_loss, type(total_loss)
                         )
                     )
+
+    def offpolicy_update(
+        self,
+        updates: int,
+        data_iterator: Optional[Iterator],
+        data_iterator_builder: typing.Callable[[], Iterator],
+    ) -> Iterator:
+        for e in range(updates):
+            if data_iterator is None:
+                data_iterator = data_iterator_builder()
+                self._offpolicy_memory.clear()
+                if self.off_policy_epochs is None:
+                    self.off_policy_epochs = 0
+                else:
+                    self.off_policy_epochs += 1
+
+            try:
+                batch = next(data_iterator)
+            except StopIteration:
+                data_iterator = data_iterator_builder()
+                self._offpolicy_memory.clear()
+                self.off_policy_epochs += 1
+                batch = next(data_iterator)
+
+            batch = to_device_recursively(batch, device=self.device, inplace=True)
+
+            info: Dict[str, Any] = dict(
+                total_updates=self.total_updates,
+                backprop_count=self.backprop_count,
+                rollout_count=self.rollout_count,
+                epoch=e,
+                losses={},
+            )
+
+            info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
+
+            total_loss: Optional[torch.Tensor] = None
+            for loss_name in self.offpolicy_losses:
+                loss, loss_weight = (
+                    self.offpolicy_losses[loss_name],
+                    self.offpolicy_loss_weights[loss_name],
+                )
+
+                current_loss, current_info, self._offpolicy_memory = loss.loss(
+                    model=self.actor_critic,
+                    batch=batch,
+                    step_count=self.step_count,
+                    memory=self._offpolicy_memory,
+                )
+                if total_loss is None:
+                    total_loss = loss_weight * current_loss
+                else:
+                    total_loss = total_loss + loss_weight * current_loss
+
+                info["losses"][loss_name] = current_info
+            assert total_loss is not None, "No losses specified?"
+
+            if isinstance(total_loss, torch.Tensor):
+                info["offpolicy"] = True
+                info["total_loss"] = total_loss.item()
+                self.vector_tasks.metrics_out_queue.put(("update_package", info))
+
+                self.optimizer.zero_grad()  # type: ignore
+                total_loss.backward()
+                nn.utils.clip_grad_norm_(
+                    self.actor_critic.parameters(), self.max_grad_norm,  # type: ignore
+                )
+                self.optimizer.step()  # type: ignore
+                self.backprop_count += 1
+            else:
+                warnings.warn(
+                    "Total loss ({}) was not a FloatTensor, it is a {}.".format(
+                        total_loss, type(total_loss)
+                    )
+                )
+
+            self._offpolicy_memory = detach_recursively(
+                input=self._offpolicy_memory, inplace=True
+            )
+        return data_iterator
 
     def _preprocess_observations(self, batched_observations):
         if self.observation_set is None:
@@ -777,13 +846,20 @@ class OnPolicyRLEngine(object):
             {"teacher_forcing_mask": teacher_forcing_mask},
         )
 
-    def collect_rollout_step(self, rollouts: RolloutStorage, render=None):
+    def collect_rollout_step(
+        self, rollouts: RolloutStorage, render=None, return_ac_out: bool = False
+    ):
+        if self.actor_critic.training:
+            # Place model into eval while collecting the rollouts
+            self.actor_critic.eval()
+
         # sample actions
         with torch.no_grad():
             step_observation = rollouts.pick_observation_step(rollouts.step)
-            actor_critic_output, recurrent_hidden_states = self.actor_critic(
+
+            actor_critic_output, memory = self.actor_critic(
                 step_observation,
-                rollouts.recurrent_hidden_states[rollouts.step],
+                rollouts.pick_memory_step(rollouts.step),
                 rollouts.prev_actions[rollouts.step],
                 rollouts.masks[rollouts.step],
             )
@@ -827,6 +903,7 @@ class OnPolicyRLEngine(object):
             dtype=torch.float32,
             device=self.device,
         )
+        self.episode_count += sum(dones)
 
         npaused, keep, batch = self.remove_paused_and_batch(observations)
 
@@ -848,17 +925,18 @@ class OnPolicyRLEngine(object):
             observations=self._preprocess_observations(batch)
             if len(keep) > 0
             else batch,
-            recurrent_hidden_states=index_kept(recurrent_hidden_states, True),
-            actions=index_kept(actions, False),
-            action_log_probs=index_kept(
-                actor_critic_output.distributions.log_probs(actions), False
-            ),
-            value_preds=index_kept(actor_critic_output.values, False),
-            rewards=index_kept(rewards, False),
-            masks=index_kept(masks, False),
+            memory=OnPolicyRLEngine._active_memory(memory, keep),
+            actions=actions[keep],
+            action_log_probs=actor_critic_output.distributions.log_probs(actions)[keep],
+            value_preds=actor_critic_output.values[keep],
+            rewards=rewards[keep],
+            masks=masks[keep],
         )
 
-        return npaused
+        if return_ac_out:
+            return npaused, actor_critic_output
+        else:
+            return npaused
 
     def remove_paused_and_batch(self, observations):
         paused, keep, running = [], [], []
@@ -893,17 +971,23 @@ class OnPolicyRLEngine(object):
 
         last_metrics_accumulate_time = time.time()
 
+        offpolicy_data_iterator: Optional[Iterator] = None
+
         early_stopping_criterion_met = False
+
         while self.rollout_count < self.num_rollouts and (
             self.early_stopping_criterion is None or not early_stopping_criterion_met
         ):
+
             for step in range(self.steps_in_rollout):
                 self.collect_rollout_step(rollouts)
 
             with torch.no_grad():
+                step_observation = {k: v[-1] for k, v in rollouts.observations.items()}
+
                 actor_critic_output, _ = self.actor_critic(
                     rollouts.pick_observation_step(-1),
-                    rollouts.recurrent_hidden_states[-1],
+                    rollouts.pick_memory_step(-1),
                     rollouts.prev_actions[-1],
                     rollouts.masks[-1],
                 )
@@ -915,9 +999,17 @@ class OnPolicyRLEngine(object):
                 self.gae_lambda,
             )
 
+            self.actor_critic.train()  # Place model into train mode before running updates
             self.update(rollouts)
             rollouts.after_update()
             self.rollout_count += 1
+
+            if self.offpolicy_component is not None:
+                offpolicy_data_iterator = self.offpolicy_update(
+                    updates=self.offpolicy_component.updates,
+                    data_iterator=offpolicy_data_iterator,
+                    data_iterator_builder=self.offpolicy_component.data_iterator_builder,
+                )
 
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step(epoch=self.step_count + self.total_steps)
@@ -955,13 +1047,9 @@ class OnPolicyRLEngine(object):
                 last_metrics_accumulate_time = time.time()
 
             # save for every interval-th episode or for the last epoch
-            if (
-                self.save_interval is not None
-                and self.models_folder != ""
-                and (
-                    self.rollout_count == self.num_rollouts
-                    or 0 < self.save_interval <= self.step_count - self.last_save
-                )
+            if self.save_interval is not None and (
+                self.rollout_count == self.num_rollouts
+                or 0 < self.save_interval <= self.step_count - self.last_save
             ):
                 model_path = self.checkpoint_save()
                 if self.write_to_eval is not None:
@@ -971,9 +1059,6 @@ class OnPolicyRLEngine(object):
             if (self.advance_scene_rollout_period is not None) and (
                 self.rollout_count % self.advance_scene_rollout_period == 0
             ):
-                LOGGER.info(
-                    "Force advance tasks with {} rollouts".format(self.rollout_count)
-                )
                 self.vector_tasks.next_task(force_advance_scene=True)
                 self.initialize_rollouts(rollouts)
 
@@ -993,6 +1078,7 @@ class OnPolicyRLEngine(object):
         advance_scene_rollout_period: Optional[int] = None,
         teacher_forcing: Optional[LinearDecay] = None,
         deterministic_agent: bool = False,
+        offpolicy_component: Optional[OffPolicyPipelineComponent] = None,
     ):
         self.losses = losses
         self.loss_weights = loss_weights
@@ -1011,8 +1097,8 @@ class OnPolicyRLEngine(object):
             "Using %d rollouts, %d steps (possibly truncated from requested %d steps)"
             % (self.num_rollouts, self.max_stage_steps, max_stage_steps,)
         )
-
-        LOGGER.info(message)
+        if self.is_logging:
+            get_logger().info(message)
 
         self.early_stopping_criterion = (
             early_stopping_criterion
@@ -1032,22 +1118,29 @@ class OnPolicyRLEngine(object):
 
         self.deterministic_agent = deterministic_agent
 
-    def _get_loss(self, loss_name) -> AbstractActorCriticLoss:
+        self.offpolicy_component = offpolicy_component
+        if self.offpolicy_component is not None:
+            self.offpolicy_losses, self.offpolicy_loss_weights = typing.cast(
+                Tuple[AbstractOffPolicyLoss, Tuple[float, ...]],
+                self._load_losses(self.offpolicy_component),
+            )
+        self._offpolicy_memory.clear()
+
+    def _get_loss(self, loss_name) -> Loss:
         assert (
             loss_name in self.training_pipeline.named_losses
-        ), "undefined referenced loss"
+        ), "{} undefined referenced loss. Known losses {}".format(
+            loss_name, list(self.training_pipeline.named_losses.keys())
+        )
         if isinstance(self.training_pipeline.named_losses[loss_name], Builder):
             return typing.cast(
-                Builder[AbstractActorCriticLoss],
-                self.training_pipeline.named_losses[loss_name],
+                Builder[Loss], self.training_pipeline.named_losses[loss_name],
             )()
         else:
-            return typing.cast(
-                AbstractActorCriticLoss, self.training_pipeline.named_losses[loss_name]
-            )
+            return typing.cast(Loss, self.training_pipeline.named_losses[loss_name])
 
-    def _load_losses(self, stage: PipelineStage):
-        stage_losses: Dict[str, AbstractActorCriticLoss] = {}
+    def _load_losses(self, stage: Union[PipelineStage, OffPolicyPipelineComponent]):
+        stage_losses: Dict[str, Loss] = {}
         for loss_name in stage.loss_names:
             stage_losses[loss_name] = self._get_loss(loss_name)
 
@@ -1133,13 +1226,14 @@ class OnPolicyRLEngine(object):
                 return ckpts[0]
 
     def save_config_files(self):
+        os.makedirs(self.configs_folder, exist_ok=True)
         for file in self.loaded_config_src_files:
             base, module = self.loaded_config_src_files[file]
             parts = module.split(".")
 
             src_file = os.path.sep.join([base] + parts) + ".py"
             if not os.path.isfile(src_file):
-                LOGGER.error("Config file {} not found".format(src_file))
+                get_logger().error("Config file {} not found".format(src_file))
 
             dst_file = (
                 os.path.join(
@@ -1153,26 +1247,111 @@ class OnPolicyRLEngine(object):
 
             shutil.copy(src_file, dst_file)
 
-    def run_pipeline(self, checkpoint_file_name: Optional[str] = None):
+        try:
+            short_sha = (
+                subprocess.check_output(["git", "describe", "--always"])
+                .decode("utf-8")
+                .strip()
+            )
+            diff_path = os.path.join(
+                self.configs_folder, self.local_start_time_str, "git-diff.patch",
+            )
+            sha_path = os.path.join(
+                self.configs_folder, self.local_start_time_str, "sha.txt",
+            )
+            os.makedirs(os.path.dirname(sha_path), exist_ok=True)
+
+            if os.path.exists(diff_path):
+                raise RuntimeError(
+                    "Git diff has already been saved, this should not occur."
+                )
+
+            with open(diff_path, "w") as f:
+                f.write(
+                    subprocess.check_output(["git", "diff", short_sha]).decode("utf-8")
+                )
+
+            with open(sha_path, "w") as f:
+                f.write(short_sha)
+        except subprocess.CalledProcessError as _:
+            get_logger().warning(
+                "Could not save git diff of current project. Continuing..."
+            )
+
+    def _acquire_unique_local_start_time_string(self) -> str:
+        """Creates a (unique) local start time string for this experiment.
+
+        Ensures through file locks that the local start time string
+        produced is unique. This implies that, if one has many
+        experiments starting in in parallel, at most one will be started
+        every second (as the local start time string only records the
+        time up to the current second).
+        """
+        os.makedirs(self.output_dir, exist_ok=True)
+        start_time_string_lock_path = os.path.join(
+            self.output_dir, ".start_time_string.lock"
+        )
+        try:
+            with FileLock(start_time_string_lock_path, timeout=60):
+                last_start_time_string_path = os.path.join(
+                    self.output_dir, ".last_start_time_string"
+                )
+                pathlib.Path(last_start_time_string_path).touch()
+
+                with open(last_start_time_string_path, "r") as f:
+                    last_start_time_string_list = f.readlines()
+
+                while True:
+                    candidate_str = time.strftime(
+                        "%Y-%m-%d_%H-%M-%S", time.localtime(time.time())
+                    )
+                    if (
+                        len(last_start_time_string_list) == 0
+                        or last_start_time_string_list[0].strip() != candidate_str
+                    ):
+                        self.local_start_time_str = candidate_str
+                        break
+
+                with open(
+                    os.path.join(self.output_dir, ".last_start_time_string"), "w"
+                ) as f:
+                    f.write(candidate_str)
+        except Timeout as e:
+            get_logger().exception(
+                "Could not acquire the lock for {} for 60 seconds,"
+                " this suggests an unexpected deadlock. Please close all embodied-rl training processes,"
+                " delete this lockfile, and try again.".format(
+                    start_time_string_lock_path
+                )
+            )
+            raise e
+
+        assert candidate_str is not None
+        return candidate_str
+
+    def run_pipeline(
+        self, checkpoint_file_name: Optional[str] = None, disable_logging: bool = False
+    ):
         encountered_exception = False
         try:
-            start_time = time.time()
-
             if checkpoint_file_name is not None:
                 self.checkpoint_load(
                     self.get_checkpoint_path(checkpoint_file_name), verbose=True
                 )
 
-            self.local_start_time_str = time.strftime(
-                "%Y-%m-%d_%H-%M-%S", time.localtime(start_time)
+            self.is_logging = self.training_pipeline.should_log and (
+                not disable_logging
             )
+
+            self.local_start_time_str = self._acquire_unique_local_start_time_string()
 
             if self.loaded_config_src_files is not None:
                 self.save_config_files()
 
-            self.is_logging = self.training_pipeline.should_log
-            if self.is_logging is not None:
+            if self.is_logging:
                 self.log_writer = SummaryWriter(log_dir=self.log_writer_path)
+
+            self.actor_critic.train()
 
             for stage_num, stage in self.training_pipeline.iterator_starting_at(
                 self.pipeline_stage
@@ -1180,13 +1359,14 @@ class OnPolicyRLEngine(object):
                 assert stage_num == self.pipeline_stage
 
                 self.last_metrics_accumulate_steps = (
-                    None
-                    if self.metric_accumulate_interval is None
-                    else self.step_count - self.metric_accumulate_interval
+                    None if self.metric_accumulate_interval is None else 0
                 )
                 self.last_save = self.step_count
 
-                stage_losses, stage_weights = self._load_losses(stage)
+                stage_losses, stage_weights = typing.cast(
+                    Tuple[AbstractActorCriticLoss, Tuple[float, ...]],
+                    self._load_losses(stage),
+                )
 
                 self.setup_stage(
                     losses=stage_losses,
@@ -1206,15 +1386,16 @@ class OnPolicyRLEngine(object):
                         stage, "advance_scene_rollout_period", allow_none=True
                     ),
                     teacher_forcing=stage.teacher_forcing,
+                    offpolicy_component=self._stage_value(
+                        stage, "offpolicy_component", allow_none=True
+                    ),
                 )
 
                 self.train(
                     RolloutStorage(
-                        self.steps_in_rollout,
-                        self.num_processes,
-                        self.actor_critic
-                        if not self.is_data_parallel
-                        else self.actor_critic.module,
+                        num_steps=self.steps_in_rollout,
+                        num_processes=self.num_processes,
+                        actor_critic=self.actor_critic,
                     )
                 )
 
@@ -1230,17 +1411,18 @@ class OnPolicyRLEngine(object):
             raise e
         finally:
             if not encountered_exception:
-                LOGGER.info("\n\nTRAINING COMPLETE.\n\n")
+                if self.is_logging:
+                    get_logger().info("\n\nTRAINING COMPLETE.\n\n")
             else:
-                LOGGER.info("\n\nENCOUNTERED EXCEPTION DURING TRAINING!\n\n")
-                LOGGER.exception(traceback.format_exc())
-            self.close()
+                get_logger().info("\n\nENCOUNTERED EXCEPTION DURING TRAINING!\n\n")
+                get_logger().exception(traceback.format_exc())
+            self.close(verbose=self.is_logging)
 
     def process_checkpoints(
         self,
         read_from_parent: mp.Queue,
         write_to_parent: mp.Queue,
-        deterministic_agent: bool = True,
+        deterministic_agent: bool = False,
     ):
         assert (
             self.mode != "train"
@@ -1287,7 +1469,7 @@ class OnPolicyRLEngine(object):
         if len(render) > 0:
             nt = len(render)
             if nt > max_clip_len:
-                LOGGER.info(
+                get_logger().info(
                     "Cutting video with length {} to {}".format(nt, max_clip_len)
                 )
                 render = render[:max_clip_len]
@@ -1297,7 +1479,7 @@ class OnPolicyRLEngine(object):
                 render = np.expand_dims(render, axis=0)  # 1, T, C, H, W
                 render = tensor_to_video(render, fps=4)
             except MemoryError:
-                LOGGER.warning(
+                get_logger().warning(
                     "Skipped video with length {} (cut to {})".format(nt, max_clip_len)
                 )
                 render = None
@@ -1311,23 +1493,49 @@ class OnPolicyRLEngine(object):
         rollout_steps=1,
         max_clip_len=2000,
         render_video=False,
+        str_to_extra_metrics_func: Optional[Dict[str, typing.Callable]] = None,
     ):
         self.checkpoint_load(checkpoint_file_name, verbose=False)
 
         rollouts = RolloutStorage(
             rollout_steps,
             self.num_processes,
-            self.actor_critic
-            if not self.is_data_parallel
-            else self.actor_critic.module,
+            self.actor_critic.action_space,
+            self.actor_critic.recurrent_hidden_state_size,
+            num_recurrent_layers=self.actor_critic.num_recurrent_layers
+            if "num_recurrent_layers" in dir(self.actor_critic)
+            else 0,
         )
 
         render: Union[None, np.ndarray, List[np.ndarray]] = [] if render_video else None
         num_paused = self.initialize_rollouts(rollouts, render=render)
         steps = 0
+
+        extra_metrics_tracker = ScalarMeanTracker()
+        self.actor_critic.eval()
         while num_paused < self.num_processes:
-            num_paused += self.collect_rollout_step(rollouts, render=render)
-            steps += 1
+            if str_to_extra_metrics_func is not None:
+                observation_tensors = {
+                    key: copy.deepcopy(val[0])
+                    for key, val in rollouts.observations.items()
+                }
+                processes_on_step = self.num_processes
+
+            newly_paused, actor_critic_output = self.collect_rollout_step(
+                rollouts, render=render, return_ac_out=True
+            )
+            num_paused += newly_paused
+
+            if str_to_extra_metrics_func is not None:
+                extra_metrics_tracker.add_scalars(
+                    {
+                        key: func(actor_critic_output, observation_tensors)
+                        for key, func in str_to_extra_metrics_func.items()
+                    },
+                    n=processes_on_step,
+                )
+
+            steps += self.num_processes - num_paused
             if steps % rollout_steps == 0:
                 rollouts.after_update()
 
@@ -1342,7 +1550,12 @@ class OnPolicyRLEngine(object):
             render = None
 
         return (
-            {k: (v, self.total_steps + self.step_count) for k, v in metrics.items()},
+            {
+                k: (v, self.total_steps + self.step_count)
+                for k, v in itertools.chain(
+                    metrics.items(), extra_metrics_tracker.means().items()
+                )
+            },
             render,
             samples,
         )
@@ -1383,7 +1596,8 @@ class OnPolicyRLEngine(object):
         checkpoint_file_name: Optional[str] = None,
         skip_checkpoints=0,
         rollout_steps=1,
-        deterministic_agent=True,
+        deterministic_agent=False,
+        str_to_extra_metrics_func: Optional[Dict[str, typing.Callable]] = None,
     ) -> List[Dict[str, Any]]:
         assert (
             self.mode != "train"
@@ -1407,7 +1621,7 @@ class OnPolicyRLEngine(object):
 
         def info_log(message):
             if self.is_logging:
-                LOGGER.info(message)
+                get_logger().info(message)
 
         if self.is_logging:
             self.log_writer = SummaryWriter(
@@ -1425,7 +1639,9 @@ class OnPolicyRLEngine(object):
             info_log("{}/{} {} steps".format(it + 1, len(checkpoints), step,))
 
             scalars, render, samples = self.run_eval(
-                checkpoint_file_name, rollout_steps
+                checkpoint_file_name,
+                rollout_steps,
+                str_to_extra_metrics_func=str_to_extra_metrics_func,
             )
 
             results = {scalar: scalars[scalar][0] for scalar in scalars}
@@ -1456,24 +1672,26 @@ class OnPolicyRLEngine(object):
         def logif(s: Union[str, Exception]):
             if verbose:
                 if isinstance(s, str):
-                    LOGGER.info(s)
+                    get_logger().info(s)
                 elif isinstance(s, Exception):
-                    LOGGER.exception(traceback.format_exc())
+                    get_logger().exception(traceback.format_exc())
                 else:
                     raise NotImplementedError()
 
         try:
-            logif("Closing OnPolicyRLEngine.vector_tasks.")
+            logif("Closing UndistributedOnPolicyRLEngine.vector_tasks.")
             self.vector_tasks.close()
             logif("Closed.")
         except Exception as e:
-            logif("Exception raised when closing OnPolicyRLEngine.vector_tasks:")
+            logif(
+                "Exception raised when closing UndistributedOnPolicyRLEngine.vector_tasks:"
+            )
             logif(e)
             pass
 
         logif("\n\n")
         try:
-            logif("Closing OnPolicyRLEngine.eval_process")
+            logif("Closing UndistributedOnPolicyRLEngine.eval_process")
             eval: mp.Process = getattr(self, "eval_process", None)
             if eval is not None:
                 self.write_to_eval.put(("exit", None))
@@ -1481,20 +1699,24 @@ class OnPolicyRLEngine(object):
                 self.eval_process = None
             logif("Closed.")
         except Exception as e:
-            logif("Exception raised when closing OnPolicyRLEngine.vector_tasks:")
+            logif(
+                "Exception raised when closing UndistributedOnPolicyRLEngine.vector_tasks:"
+            )
             logif(e)
             pass
 
         logif("\n\n")
         try:
-            logif("Closing OnPolicyRLEngine.log_writer")
+            logif("Closing UndistributedOnPolicyRLEngine.log_writer")
             log_writer = getattr(self, "log_writer", None)
             if log_writer is not None:
                 log_writer.close()
                 self.log_writer = None
             logif("Closed.")
         except Exception as e:
-            logif("Exception raised when closing OnPolicyRLEngine.log_writer:")
+            logif(
+                "Exception raised when closing UndistributedOnPolicyRLEngine.log_writer:"
+            )
             logif(e)
             pass
 
@@ -1510,7 +1732,7 @@ class OnPolicyRLEngine(object):
         self.close(verbose=False)
 
 
-class OnPolicyTrainer(OnPolicyRLEngine):
+class UndistributedOnPolicyTrainer(UndistributedOnPolicyRLEngine):
     def __init__(
         self,
         config: ExperimentConfig,
@@ -1518,6 +1740,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         loaded_config_src_files: Optional[Dict[str, Tuple[str, str]]],
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
+        max_training_processes: Optional[int] = None,
         **kwargs,
     ):
         super().__init__(
@@ -1527,11 +1750,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             seed=seed,
             mode="train",
             deterministic_cudnn=deterministic_cudnn,
+            max_training_processes=max_training_processes,
             **kwargs,
         )
 
 
-class OnPolicyValidator(OnPolicyRLEngine):
+class UndistributedOnPolicyValidator(UndistributedOnPolicyRLEngine):
     def __init__(
         self,
         config: ExperimentConfig,
@@ -1556,7 +1780,7 @@ class OnPolicyValidator(OnPolicyRLEngine):
         self.is_logging = should_log
 
 
-class OnPolicyTester(OnPolicyRLEngine):
+class UndistributedOnPolicyTester(UndistributedOnPolicyRLEngine):
     def __init__(
         self,
         config: ExperimentConfig,
