@@ -478,7 +478,8 @@ class OnPolicyRunner(object):
             mpkg, touts, rndr, cpfname = payload
             metrics_pkg.append(mpkg)
             task_outputs.extend(touts)
-            render.update(rndr)
+            if rndr is not None:
+                render.update(rndr)
             checkpoint_file_name.append(cpfname)
 
         mode = pkg_types[0].split("_")[0]

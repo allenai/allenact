@@ -1224,11 +1224,29 @@ class OnPolicyInference(OnPolicyRLEngine):
 
         num_paused = self.initialize_rollouts(rollouts, visualizer=visualizer)
         steps = 0
+        if self.mode == "test":
+            lengths = self.vector_tasks.command(
+                "sampler_attr", ["length"] * (self.num_samplers - num_paused)
+            )
+            get_logger().info(
+                "worker {}: {} tasks pending ({})".format(
+                    self.worker_id, sum(lengths), lengths
+                )
+            )
         while num_paused < self.num_samplers:
             num_paused += self.collect_rollout_step(rollouts, visualizer=visualizer)
             steps += 1
             if steps % rollout_steps == 0:
                 rollouts.after_update()
+            if self.mode == "test" and steps % 500 == 0:
+                lengths = self.vector_tasks.command(
+                    "sampler_attr", ["length"] * (self.num_samplers - num_paused)
+                )
+                get_logger().info(
+                    "worker {}: {} tasks pending ({})".format(
+                        self.worker_id, sum(lengths), lengths
+                    )
+                )
 
         self.vector_tasks.resume_all()
         self.vector_tasks.set_seeds(self.worker_seeds(self.num_samplers, self.seed))
