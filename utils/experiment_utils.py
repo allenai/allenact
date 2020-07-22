@@ -12,6 +12,7 @@ import numpy as np
 import torch
 from torch import optim
 
+from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from rl_base.common import Loss
 
 
@@ -215,15 +216,14 @@ class LinearDecay(object):
         return self.startp + (self.endp - self.startp) * (epoch / float(self.steps))
 
 
+# noinspection PyTypeHints,PyUnresolvedReferences
 def set_deterministic_cudnn() -> None:
     """Makes cudnn deterministic.
 
     This may slow down computations.
     """
     if torch.cuda.is_available():
-        # noinspection PyUnresolvedReferences
         torch.backends.cudnn.deterministic = True  # type: ignore
-        # noinspection PyUnresolvedReferences
         torch.backends.cudnn.benchmark = False  # type: ignore
 
 
@@ -289,12 +289,12 @@ class NeverEarlyStoppingCriterion(EarlyStoppingCriterion):
 
 class OffPolicyPipelineComponent(NamedTuple):
     data_iterator_builder: Callable[[], Iterator]
-    loss_names: typing.List[str]
+    loss_names: List[str]
     updates: int
     loss_weights: Optional[typing.Sequence[float]] = None
 
 
-class PipelineStage(NamedTuple):
+class PipelineStage(object):
     """A single stage in a training pipeline.
 
     # Attributes
@@ -313,18 +313,54 @@ class PipelineStage(NamedTuple):
         applied to the losses referenced by `loss_name`. Should be the same length
         as `loss_name`. If this is `None`, all weights will be assumed to be one.
     teacher_forcing : If applicable, defines the probability an agent will take the
-        expert action (as opposed to its own sampeld action) at a given time point.
+        expert action (as opposed to its own sampled action) at a given time point.
     """
 
-    loss_names: typing.List[str]
-    max_stage_steps: Union[int, Callable]
-    early_stopping_criterion: Optional[EarlyStoppingCriterion] = None
-    loss_weights: Optional[typing.Sequence[float]] = None
-    teacher_forcing: Optional[LinearDecay] = None
-    offpolicy_component: Optional[OffPolicyPipelineComponent] = None
+    def __init__(
+        self,
+        loss_names: List[str],
+        max_stage_steps: Union[int, Callable],
+        early_stopping_criterion: Optional[EarlyStoppingCriterion] = None,
+        loss_weights: Optional[typing.Sequence[float]] = None,
+        teacher_forcing: Optional[LinearDecay] = None,
+        offpolicy_component: Optional[OffPolicyPipelineComponent] = None,
+    ):
+        self.loss_names = loss_names
+        self.max_stage_steps = max_stage_steps
+        self.early_stopping_criterion = early_stopping_criterion
+        self.loss_weights = loss_weights
+        self.teacher_forcing = teacher_forcing
+        self.offpolicy_component = offpolicy_component
+
+        self.steps_taken_in_stage: int = 0
+        self.rollout_count = 0
+        self.early_stopping_criterion_met = False
+
+        self.named_losses: Optional[Dict[str, AbstractActorCriticLoss]] = None
+        self._named_loss_weights: Optional[Dict[str, float]] = None
+
+    @property
+    def is_complete(self):
+        return (
+            self.early_stopping_criterion_met
+            or self.steps_taken_in_stage >= self.max_stage_steps
+        )
+
+    @property
+    def named_loss_weights(self):
+        if self._named_loss_weights is None:
+            loss_weights = (
+                self.loss_weights
+                if self.loss_weights is not None
+                else [1.0] * len(self.loss_names)
+            )
+            self._named_loss_weights = {
+                name: weight for name, weight in zip(self.loss_names, loss_weights)
+            }
+        return self._named_loss_weights
 
 
-class TrainingPipeline(typing.Iterable):
+class TrainingPipeline(object):
     """Class defining the stages (and global parameters) in a training
     pipeline.
 
@@ -355,8 +391,6 @@ class TrainingPipeline(typing.Iterable):
         and used by the stage's early stopping criterion (if any).
     should_log: `True` if metrics accumulated during training should be logged to the console as well
         as to a tensorboard file.
-    current_pipeline_stage : Integer tracking the current stage of the pipeline. If -1 then the pipeline
-        is at it's start and `__next__` will need to be called to get the first pipeline stage.
     lr_scheduler_builder : Optional builder object to instantiate the learning rate scheduler used
         through the pipeline.
     """
@@ -403,16 +437,107 @@ class TrainingPipeline(typing.Iterable):
 
         self.pipeline_stages = pipeline_stages
 
-    def __iter__(self) -> Iterator[typing.Tuple[int, PipelineStage]]:
-        """Create iterator which moves through the pipeline stages."""
-        return enumerate(self.pipeline_stages)
+        self._current_stage: Optional[PipelineStage] = None
 
-    def iterator_starting_at(
-        self, start_stage_num: int
-    ) -> Iterator[typing.Tuple[int, PipelineStage]]:
-        """Create iterator which moves through the pipeline stages starting at
-        stage `start_stage_num`."""
-        return zip(
-            range(start_stage_num, len(self.pipeline_stages)),
-            self.pipeline_stages[start_stage_num:],
+        self.backprop_count = 0
+        self.rollout_count = 0
+        self.off_policy_epochs = None
+
+    @property
+    def total_steps(self) -> int:
+        return sum(ps.steps_taken_in_stage for ps in self.pipeline_stages)
+
+    def _refresh_current_stage(self) -> Optional[PipelineStage]:
+        if self._current_stage is None or self._current_stage.is_complete:
+            if self._current_stage is None:
+                start_index = 0
+            else:
+                start_index = self.pipeline_stages.index(self._current_stage) + 1
+
+            self._current_stage = None
+            for ps in self.pipeline_stages[start_index:]:
+                if not ps.is_complete:
+                    self._current_stage = ps
+                    break
+        return self._current_stage
+
+    @property
+    def current_stage(self) -> Optional[PipelineStage]:
+        return self._current_stage
+
+    @property
+    def current_stage_index(self) -> Optional[int]:
+        if self.current_stage is None:
+            return None
+        return self.pipeline_stages.index(self.current_stage)
+
+    def before_rollout(self, train_valid_metrics: Optional[Dict] = None):
+        if train_valid_metrics is not None:
+            self.current_stage.early_stopping_criterion_met = self.current_stage.early_stopping_criterion(
+                stage_steps=self.current_stage.steps_taken_in_stage,
+                total_steps=self.total_steps,
+                training_metrics=train_valid_metrics["train"],
+                test_valid_metrics=train_valid_metrics["valid"],
+            )
+        self._refresh_current_stage()
+
+    def restart_pipeline(self):
+        for ps in self.pipeline_stages:
+            ps.steps_taken_in_stage = 0
+            ps.early_stopping_criterion_met = False
+        self._current_stage = None
+        self._refresh_current_stage()
+
+    def state_dict(self):
+        return dict(
+            stage_info_list=[
+                {
+                    "early_stopping_criterion_met": ps.early_stopping_criterion_met,
+                    "steps_taken_in_stage": ps.steps_taken_in_stage,
+                }
+                for ps in self.pipeline_stages
+            ],
+            rollout_count=self.rollout_count,
+            backprop_count=self.backprop_count,
+            off_policy_epochs=self.off_policy_epochs,
         )
+
+    def load_state_dict(self, state_dict: Dict[str, Any]):
+        for ps, stage_info in zip(self.pipeline_stages, state_dict["stage_info_list"]):
+            ps.early_stopping_criterion_met = stage_info["early_stopping_criterion_met"]
+            ps.steps_taken_in_stage = stage_info["steps_taken_in_stage"]
+
+        self.rollout_count = state_dict["rollout_count"]
+        self.backprop_count = state_dict["backprop_count"]
+        self.off_policy_epochs = state_dict["off_policy_epochs"]
+
+        self._refresh_current_stage()
+
+    @property
+    def current_stage_losses(self) -> Dict[str, AbstractActorCriticLoss]:
+        if self.current_stage.named_losses is None:
+            for loss_name in self.current_stage.loss_names:
+                if isinstance(self.named_losses[loss_name], Builder):
+                    self.named_losses[loss_name] = typing.cast(
+                        Builder["AbstractActorCriticLoss"],
+                        self.named_losses[loss_name],
+                    )()
+
+            self.current_stage.named_losses = {
+                loss_name: self.named_losses[loss_name]
+                for loss_name in self.current_stage.loss_names
+            }
+            loss_weights = (
+                self.current_stage.loss_weights
+                if self.current_stage.loss_weights is not None
+                else [1.0] * len(self.current_stage.loss_names)
+            )
+            self.current_stage.named_loss_weights = {
+                name: weight
+                for name, weight in zip(self.current_stage.loss_names, loss_weights)
+            }
+        return self.current_stage.named_losses
+
+    @property
+    def current_stage_loss_weights(self) -> Dict[str, float]:
+        return self.current_stage.named_loss_weights

@@ -67,7 +67,7 @@ class OnPolicyRunner(object):
             "checkpoints": self.mp_ctx.Queue(),
         }
 
-        self.processes: Dict[str, list[mp.Process]] = defaultdict(list)
+        self.processes: Dict[str, List[mp.Process]] = defaultdict(list)
 
         self.current_checkpoint = None
 
@@ -153,7 +153,7 @@ class OnPolicyRunner(object):
     def train_loop(
         id: int = 0,
         checkpoint: Optional[str] = None,
-        restart: bool = False,
+        restart_pipeline: bool = False,
         *engine_args,
         **engine_kwargs
     ):
@@ -162,11 +162,13 @@ class OnPolicyRunner(object):
         engine_kwargs["worker_id"] = id
         get_logger().info("train {} args {}".format(id, engine_kwargs))
 
-        trainer = OnPolicyRunner.init_worker(
-            OnPolicyTrainer, engine_args, engine_kwargs
+        trainer: OnPolicyTrainer = OnPolicyRunner.init_worker(
+            engine_class=OnPolicyTrainer, args=engine_args, kwargs=engine_kwargs
         )
         if trainer is not None:
-            trainer.run_pipeline(checkpoint, restart)
+            trainer.run_pipeline(
+                checkpoint_file_name=checkpoint, restart_pipeline=restart_pipeline
+            )
 
     @staticmethod
     def valid_loop(id: int = 0, *engine_args, **engine_kwargs):
@@ -176,7 +178,7 @@ class OnPolicyRunner(object):
         get_logger().info("valid {} args {}".format(id, engine_kwargs))
 
         valid = OnPolicyRunner.init_worker(
-            OnPolicyInference, engine_args, engine_kwargs
+            engine_class=OnPolicyInference, args=engine_args, kwargs=engine_kwargs
         )
         if valid is not None:
             valid.process_checkpoints()  # gets checkpoints via queue
@@ -192,7 +194,9 @@ class OnPolicyRunner(object):
         if test is not None:
             test.process_checkpoints()  # gets checkpoints via queue
 
-    def start_train(self, checkpoint: Optional[str] = None, restart: bool = False):
+    def start_train(
+        self, checkpoint: Optional[str] = None, restart_pipeline: bool = False
+    ):
         self.save_config_files()
 
         devices = self.worker_devices("train")
@@ -211,8 +215,10 @@ class OnPolicyRunner(object):
         for trainer_it in range(num_trainers):
             train: mp.process.BaseProcess = self.mp_ctx.Process(
                 target=self.train_loop,
-                args=(trainer_it, checkpoint, restart),
                 kwargs=dict(
+                    id=trainer_it,
+                    checkpoint=checkpoint,
+                    restart_pipeline=restart_pipeline,
                     experiment_name=self.experiment_name,
                     config=self.config,
                     results_queue=self.queues["results"],

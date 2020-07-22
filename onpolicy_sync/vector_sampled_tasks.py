@@ -407,7 +407,7 @@ class VectorSampledTasks(object):
             subprocess_ind,
         ) = self.sampler_index_to_process_ind_and_subprocess_ind[sampler_index]
         self._connection_write_fns[process_ind]((subprocess_ind, command, data))
-        result = self._connection_read_fns[sampler_index]()
+        result = self._connection_read_fns[process_ind]()
         self._is_waiting = False
         return result
 
@@ -562,9 +562,9 @@ class VectorSampledTasks(object):
         for i in range(
             sampler_index + 1, len(self.sampler_index_to_process_ind_and_subprocess_ind)
         ):
-            other_process_and_sub_process_inds = (
-                self.sampler_index_to_process_ind_and_subprocess_ind
-            )
+            other_process_and_sub_process_inds = self.sampler_index_to_process_ind_and_subprocess_ind[
+                i
+            ]
             if other_process_and_sub_process_inds[0] == process_ind:
                 other_process_and_sub_process_inds[1] -= 1
             else:

@@ -425,10 +425,7 @@ class UndistributedOnPolicyRLEngine(object):
             ckpt = torch.load(ckpt, map_location="cpu")
 
         ckpt = typing.cast(
-            Dict[
-                str, Union[Dict[str, Any], torch.Tensor, float, int, str, typing.List]
-            ],
-            ckpt,
+            Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]], ckpt,
         )
 
         self.actor_critic.load_state_dict(

@@ -4,6 +4,7 @@ import random
 import time
 import traceback
 import typing
+from collections import defaultdict
 from multiprocessing.context import BaseContext
 from typing import Optional, Any, Dict, Union, List, Tuple, Sequence
 
@@ -17,13 +18,13 @@ from torch.nn.parallel import DistributedDataParallel
 from torch.optim.lr_scheduler import _LRScheduler
 
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
+from onpolicy_sync.policy import ActorCriticModel
 from onpolicy_sync.storage import RolloutStorage
 from onpolicy_sync.vector_preprocessed_tasks import VectorPreprocessedTasks
 from onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
 from rl_base.experiment_config import ExperimentConfig
 from utils.experiment_utils import (
     ScalarMeanTracker,
-    LinearDecay,
     set_deterministic_cudnn,
     set_seed,
     Builder,
@@ -105,8 +106,8 @@ class OnPolicyRLEngine(object):
 
         self.machine_params = config.machine_params(self.mode)
         if self.num_workers > 1:
-            self.all_samplers = self.machine_params["nprocesses"]
-            self.num_samplers = self.all_samplers[self.worker_id]
+            self.num_samplers_per_worker = self.machine_params["nprocesses"]
+            self.num_samplers = self.num_samplers_per_worker[self.worker_id]
         else:
             if isinstance(self.machine_params["nprocesses"], Sequence):
                 self.num_samplers = self.machine_params["nprocesses"][self.worker_id]
@@ -117,7 +118,9 @@ class OnPolicyRLEngine(object):
         self._vector_tasks: Optional[VectorSampledTasks] = None
 
         self.observation_set = None
-        self.actor_critic = None
+        self.actor_critic: Optional[
+            Union[DistributedDataParallel, ActorCriticModel]
+        ] = None
         if self.num_samplers > 0:
             if (
                 "make_preprocessors_fns" in self.machine_params
@@ -142,14 +145,14 @@ class OnPolicyRLEngine(object):
                 )
                 set_seed(self.seed)
                 self.actor_critic = typing.cast(
-                    torch.nn.Module,
+                    ActorCriticModel,
                     self.config.create_model(observation_set=self.observation_set),
                 ).to(self.device)
             else:
                 # no observation set
                 set_seed(self.seed)
                 self.actor_critic = typing.cast(
-                    torch.nn.Module, self.config.create_model()
+                    ActorCriticModel, self.config.create_model()
                 ).to(self.device)
 
         self.is_distributed = False
@@ -175,35 +178,18 @@ class OnPolicyRLEngine(object):
 
         self.deterministic_agent = False
 
-        self.step_count: int = 0
-        self.total_steps: int = 0
-
         self.scalars = ScalarMeanTracker()
-
-        set_seed(self.advance_seed(self.seed))
 
         self._is_closed: bool = False
 
-    def advance_seed(self, seed: Optional[int]) -> Optional[int]:
-        if seed is None:
-            return seed
-        seed = (seed ^ (self.total_steps + self.step_count + 1)) % (
-            2 ** 31 - 1
-        )  # same seed for all workers
-        # TODO: fix for distributed test
-        if self.mode == "train":
-            return self.worker_seeds(self.num_workers, seed)[
-                self.worker_id
-            ]  # doesn't modify the current rng state
-        else:
-            return self.worker_seeds(1, seed)[0]  # doesn't modify the current rng state
+        self.training_pipeline: Optional[TrainingPipeline] = None
 
     @property
     def vector_tasks(self, debug=False):  # TODO debug
         if self._vector_tasks is None and self.num_samplers > 0:
             if self.is_distributed:
                 total_processes = sum(
-                    self.all_samplers
+                    self.num_samplers_per_worker
                 )  # TODO this will break the fixed seed for multi-device test
             else:
                 total_processes = self.num_samplers
@@ -257,10 +243,11 @@ class OnPolicyRLEngine(object):
     @staticmethod
     def worker_seeds(nprocesses: int, initial_seed: Optional[int]) -> List[int]:
         """Create a collection of seeds for workers."""
+        rstate: Optional = None
         if initial_seed is not None:
             rstate = random.getstate()
             random.seed(initial_seed)
-        seeds = [random.randint(0, 2 ** (31) - 1) for _ in range(nprocesses)]
+        seeds = [random.randint(0, (2 ** 31) - 1) for _ in range(nprocesses)]
         if initial_seed is not None:
             random.setstate(rstate)
         return seeds
@@ -284,8 +271,8 @@ class OnPolicyRLEngine(object):
             )
 
         if self.is_distributed:
-            total_processes = sum(self.all_samplers)
-            process_offset = sum(self.all_samplers[: self.worker_id])
+            total_processes = sum(self.num_samplers_per_worker)
+            process_offset = sum(self.num_samplers_per_worker[: self.worker_id])
         else:
             total_processes = self.num_samplers
             process_offset = 0
@@ -305,7 +292,7 @@ class OnPolicyRLEngine(object):
 
     def checkpoint_load(
         self, ckpt: Union[str, Dict[str, Any]]
-    ) -> Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, typing.List]]:
+    ) -> Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]]:
         if isinstance(ckpt, str):
             get_logger().info(
                 "{} worker {} loading checkpoint from {}".format(
@@ -316,19 +303,13 @@ class OnPolicyRLEngine(object):
             ckpt = torch.load(ckpt, map_location="cpu")
 
         ckpt = typing.cast(
-            Dict[
-                str, Union[Dict[str, Any], torch.Tensor, float, int, str, typing.List]
-            ],
-            ckpt,
+            Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]], ckpt,
         )
 
         target = (
             self.actor_critic if not self.is_distributed else self.actor_critic.module
         )
         target.load_state_dict(ckpt["model_state_dict"])
-
-        self.step_count = ckpt["step_count"]  # type: ignore
-        self.total_steps = ckpt["total_steps"]  # type: ignore
 
         return ckpt
 
@@ -337,7 +318,7 @@ class OnPolicyRLEngine(object):
         self,
     ) -> Tuple[Tuple[str, Dict[str, float], int], List[Dict[str, Any]]]:
         assert self.scalars.empty, "found non-empty scalars {}".format(
-            self.scalars._counts
+            self.scalars.counts()
         )
 
         sentinel = ("aggregate.AUTO.sentinel", time.time())
@@ -443,7 +424,7 @@ class OnPolicyRLEngine(object):
         return memory.index_select(keep)  # arbitrary memory
 
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None):
-        actions, actor_critic_output, memory, _ = self.act(rollouts)
+        actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
 
         outputs = self.vector_tasks.step([a[0].item() for a in actions])
 
@@ -535,59 +516,6 @@ class OnPolicyRLEngine(object):
 
 
 class OnPolicyTrainer(OnPolicyRLEngine):
-    class TrainState:
-        def __init__(
-            self,
-            losses: Optional[Dict[str, AbstractActorCriticLoss]] = None,
-            loss_weights: Optional[Dict[str, float]] = None,
-            steps_in_rollout: int = -1,
-            stage_task_steps: int = -1,
-            update_epochs: int = -1,
-            update_mini_batches: int = -1,
-            gamma: float = 0.99,
-            use_gae: bool = True,
-            gae_lambda: float = 0.95,
-            max_grad_norm: float = 0.5,
-            pipeline_stage: int = 0,
-            advance_scene_rollout_period: Optional[int] = None,
-            teacher_forcing: Optional[LinearDecay] = None,
-            total_updates: int = 0,
-            rollout_count: int = 0,
-            backprop_count: int = 0,
-            log_interval: int = 0,
-            save_interval: int = 0,
-            last_log: int = 0,
-            last_save: int = 0,
-            tracking_types: Tuple[str, ...] = ("update", "teacher",),
-            former_steps: int = 0,
-        ):
-            self.losses = losses
-            self.loss_weights = loss_weights
-            self.stage_task_steps = stage_task_steps
-            self.steps_in_rollout = steps_in_rollout
-            self.update_epochs = update_epochs
-            self.update_mini_batches = update_mini_batches
-            self.gamma = gamma
-            self.use_gae = use_gae
-            self.gae_lambda = gae_lambda
-            self.max_grad_norm = max_grad_norm
-            self.pipeline_stage = pipeline_stage
-            self.advance_scene_rollout_period = advance_scene_rollout_period
-            self.teacher_forcing = teacher_forcing
-            self.total_updates = total_updates
-            self.rollout_count = rollout_count
-            self.backprop_count = backprop_count
-            self.log_interval = log_interval
-            self.save_interval = save_interval
-            self.last_log = last_log
-            self.last_save = last_save
-            self.tracking_types = tracking_types
-            self.tracking_info = {type: [] for type in self.tracking_types}
-            self.former_steps = former_steps
-
-            if self.steps_in_rollout > 0:
-                get_logger().info("tstate {}".format(self.__dict__))
-
     def __init__(
         self,
         experiment_name: str,
@@ -639,11 +567,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 optimizer=self.optimizer
             )
 
-        self.tstate: OnPolicyTrainer.TrainState = OnPolicyTrainer.TrainState(
-            save_interval=self.training_pipeline.save_interval,
-            log_interval=self.training_pipeline.metric_accumulate_interval,
-        )
-
         self.distributed_barrier = distributed_barrier
         if self.is_distributed:
             # Tracks how many workers have finished their rollout
@@ -660,6 +583,27 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.num_workers_steps = None
             self.distributed_preemption_threshold = 1.0
 
+        # Keeping track of training state
+        self.tracking_info: Dict[str, List] = defaultdict(lambda: [])
+        self.former_steps: Optional[int] = None
+        self.last_log: Optional[int] = None
+        self.save_interval: Optional[int] = None
+        self.last_save: Optional[int] = None
+
+    def advance_seed(self, seed: Optional[int]) -> Optional[int]:
+        if seed is None:
+            return seed
+        seed = (seed ^ (self.training_pipeline.total_steps + 1)) % (
+            2 ** 31 - 1
+        )  # same seed for all workers
+        # TODO: fix for distributed test
+        if self.mode == "train":
+            return self.worker_seeds(self.num_workers, seed)[
+                self.worker_id
+            ]  # doesn't modify the current rng state
+        else:
+            return self.worker_seeds(1, seed)[0]  # doesn't modify the current rng state
+
     def deterministic_seeds(self) -> None:
         if self.seed is not None:
             set_seed(self.advance_seed(self.seed))  # known state for all workers
@@ -675,8 +619,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.checkpoints_dir,
             "exp_{}__stage_{:02d}__steps_{:012d}.pt".format(
                 self.experiment_name,
-                self.tstate.pipeline_stage,
-                self.total_steps + self.step_count,
+                self.training_pipeline.current_stage_index,
+                self.training_pipeline.total_steps,
             ),
         )
 
@@ -686,13 +630,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         save_dict = {
             "model_state_dict": target.state_dict(),
-            "total_steps": self.total_steps,  # before current stage
-            "step_count": self.step_count,  # current stage
+            "total_steps": self.training_pipeline.total_steps,  # Total steps including current stage
             "optimizer_state_dict": self.optimizer.state_dict(),  # type: ignore
-            "total_updates": self.tstate.total_updates,  # whole training
-            "pipeline_stage": self.tstate.pipeline_stage,
-            "rollout_count": self.tstate.rollout_count,  # current stage
-            "backprop_count": self.tstate.backprop_count,  # whole training
+            "training_pipeline_state_dict": self.training_pipeline.state_dict(),
             "trainer_seed": self.seed,
         }
 
@@ -705,24 +645,18 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         return model_path
 
     def checkpoint_load(
-        self, ckpt: Union[str, Dict[str, Any]], restart: bool = False
-    ) -> Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, typing.List]]:
-        if restart:
-            step_count, total_steps = self.step_count, self.total_steps
+        self, ckpt: Union[str, Dict[str, Any]], restart_pipeline: bool = False
+    ) -> Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]]:
+        ckpt = super().checkpoint_load(ckpt)
 
-        ckpt = super().checkpoint_load(ckpt)  # loads model, total_steps, step_count
-
-        if not restart:
-            self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])  # type: ignore
-            self.tstate.total_updates = ckpt["total_updates"]  # type: ignore
-            self.tstate.pipeline_stage = ckpt["pipeline_stage"]  # type: ignore
-            self.tstate.rollout_count = ckpt["rollout_count"]  # type: ignore
-            self.tstate.backprop_count = ckpt["backprop_count"]  # type: ignore
+        self.training_pipeline.load_state_dict(ckpt["training_pipeline_state_dict"])
+        if restart_pipeline:
+            self.training_pipeline.restart_pipeline()
+        else:
             self.seed = typing.cast(int, ckpt["trainer_seed"])
+            self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])  # type: ignore
             if self.lr_scheduler is not None:
                 self.lr_scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
-        else:
-            self.step_count, self.total_steps = step_count, total_steps
 
         self.deterministic_seeds()
 
@@ -776,19 +710,33 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         else:
             raise RuntimeError("missing value for {}".format(field))
 
+    @property
+    def step_count(self):
+        return self.training_pipeline.current_stage.steps_taken_in_stage
+
+    @step_count.setter
+    def step_count(self, val: int):
+        self.training_pipeline.current_stage.steps_taken_in_stage = val
+
+    @property
+    def log_interval(self):
+        return self.log_interval
+
     def act(self, rollouts: RolloutStorage):
-        actions, actor_critic_output, memory, step_observation = super().act(rollouts)
+        actions, actor_critic_output, memory, step_observation = super().act(
+            rollouts=rollouts
+        )
 
         if self.is_distributed:
             # TODO this is inaccurate/hacky, but gets synchronized after each rollout
             approx_steps = (
-                self.step_count - self.tstate.former_steps
-            ) * self.num_workers + self.tstate.former_steps
+                self.step_count - self.former_steps
+            ) * self.num_workers + self.former_steps
         else:
             approx_steps = self.step_count  # this is actually accurate
 
-        if self.tstate.teacher_forcing is not None:
-            if self.tstate.teacher_forcing(approx_steps) > 0:
+        if self.training_pipeline.current_stage.teacher_forcing is not None:
+            if self.training_pipeline.current_stage.teacher_forcing(approx_steps) > 0:
                 actions, enforce_info = self.apply_teacher_forcing(
                     actions, step_observation, approx_steps
                 )
@@ -801,9 +749,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
             teacher_force_info = {
                 "teacher_ratio/sampled": num_enforced,
-                "teacher_ratio/enforced": self.tstate.teacher_forcing(approx_steps),
+                "teacher_ratio/enforced": self.training_pipeline.current_stage.teacher_forcing(
+                    approx_steps
+                ),
             }
-            self.tstate.tracking_info["teacher"].append(
+            self.tracking_info["teacher"].append(
                 ("teacher_package", teacher_force_info, actions.nelement())
             )
 
@@ -811,19 +761,18 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         return actions, actor_critic_output, memory, step_observation
 
-    # aggregates info of specific type from TrainState list
-    def aggregate_info(self, type: str = "update") -> Tuple[str, Dict[str, float], int]:
-        assert (
-            type in self.tstate.tracking_types
-        ), "Only {} types are accepted for aggregation".format(
-            self.tstate.tracking_types
-        )
+    # aggregates info of specific type from PipelineProgressState list
+    def aggregate_info(
+        self,
+        scalars: ScalarMeanTracker,
+        tracking_info: Dict[str, List],
+        type_str: str = "update",
+    ) -> Tuple[str, Dict[str, float], int]:
+        assert scalars.empty, "Found non-empty scalars {}".format(scalars.counts)
 
-        assert self.scalars.empty, "Found non-empty scalars {}".format(
-            self.scalars._counts
-        )
+        infos = tracking_info[type_str]
+        tracking_info[type_str] = []  # reset tracking info for current type
 
-        infos = self.tstate.tracking_info[type]
         nsamples = sum(info[2] for info in infos)
         valid_infos = sum(
             info[2] > 0 for info in infos
@@ -831,25 +780,33 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         # assert nsamples != 0, "Attempting to aggregate type {} with 0 samples".format(type)
 
+        last_name: Optional[str] = None
         for name, payload, nsamps in infos:
+            if last_name is not None:
+                assert (
+                    last_name == name
+                ), "All names in infos must be the same {} != {}".format(
+                    last_name, name
+                )
+            last_name = name
+
             if nsamps > 0:
-                self.scalars.add_scalars(
+                scalars.add_scalars(
                     {k: valid_infos * payload[k] * nsamps / nsamples for k in payload}
                 )
 
-        pkg_type = name
-        payload = self.scalars.pop_and_reset() if nsamples > 0 else None
-
-        self.tstate.tracking_info[type] = []  # reset tracking info for current type
+        assert last_name is not None, "infos was empty."
+        pkg_type = last_name
+        payload = scalars.pop_and_reset() if nsamples > 0 else None
 
         return pkg_type, payload, nsamples
 
     def update(self, rollouts: RolloutStorage):
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
 
-        for e in range(self.tstate.update_epochs):
+        for e in range(self.training_pipeline.update_repeats):
             data_generator = rollouts.recurrent_generator(
-                advantages, self.tstate.update_mini_batches
+                advantages, self.training_pipeline.num_mini_batch
             )
 
             for bit, batch in enumerate(data_generator):
@@ -874,10 +831,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
 
                 total_loss: Optional[torch.Tensor] = None
-                for loss_name in self.tstate.losses:
+                for loss_name in self.training_pipeline.current_stage_losses:
                     loss, loss_weight = (
-                        self.tstate.losses[loss_name],
-                        self.tstate.loss_weights[loss_name],
+                        self.training_pipeline.current_stage_losses[loss_name],
+                        self.training_pipeline.current_stage_loss_weights[loss_name],
                     )
 
                     current_loss, current_info = loss.loss(
@@ -896,18 +853,16 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 assert total_loss is not None, "No losses specified?"
 
                 info["total_loss"] = total_loss.item()
-                self.tstate.tracking_info["update"].append(
-                    ("update_package", info, bsize)
-                )
+                self.tracking_info["update"].append(("update_package", info, bsize))
 
                 if isinstance(total_loss, torch.Tensor):
                     self.optimizer.zero_grad()  # type: ignore
                     total_loss.backward()  # synchronize
                     nn.utils.clip_grad_norm_(
-                        self.actor_critic.parameters(), self.tstate.max_grad_norm,  # type: ignore
+                        self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
                     )
                     self.optimizer.step()  # type: ignore
-                    self.tstate.backprop_count += 1
+                    self.training_pipeline.backprop_count += 1
                 else:
                     get_logger().warning(
                         "{} worker {}"
@@ -931,10 +886,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         self.optimizer.zero_grad()  # type: ignore
                         zero_loss.backward()  # synchronize
                         nn.utils.clip_grad_norm_(
-                            self.actor_critic.parameters(), self.tstate.max_grad_norm,  # type: ignore
+                            self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
                         )
                         self.optimizer.step()  # type: ignore
-                        self.tstate.backprop_count += 1
+                        self.training_pipeline.backprop_count += 1
 
         # # TODO Useful for ensuring correctness of distributed infrastructure
         # target = self.actor_critic.module if self.is_distributed else self.actor_critic
@@ -946,14 +901,21 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         #     state_dict[keys[-1]].flatten()[-1],
         # ))
 
-    def apply_teacher_forcing(self, actions, step_observation, step_count):
+    def apply_teacher_forcing(
+        self,
+        actions: torch.tensor,
+        step_observation: Dict[str, torch.Tensor],
+        step_count: int,
+    ):
         tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
         expert_actions = step_observation["expert_action"][..., 0:1]
         expert_action_exists_mask = step_observation["expert_action"][..., 1:2]
 
         teacher_forcing_mask = (
             torch.distributions.bernoulli.Bernoulli(
-                torch.tensor(self.tstate.teacher_forcing(step_count))
+                torch.tensor(
+                    self.training_pipeline.current_stage.teacher_forcing(step_count)
+                )
             )
             .sample(tf_mask_shape)
             .long()
@@ -967,23 +929,31 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             {"teacher_forcing_mask": teacher_forcing_mask},
         )
 
-    def send_package(self):
+    def send_package(self, tracking_info: Dict[str, List]):
         package_type = "train_package"
 
         task_pkg, task_outputs = self.aggregate_task_metrics()
 
         payload = (task_pkg,) + tuple(
-            self.aggregate_info(type) for type in self.tstate.tracking_types
+            self.aggregate_info(
+                scalars=self.scalars, tracking_info=tracking_info, type_str=type_str
+            )
+            for type_str in self.tracking_info
         )
 
-        nsteps = self.total_steps + self.step_count
+        nsteps = self.training_pipeline.total_steps
 
         self.results_queue.put((package_type, payload, nsteps))
 
     def train(self, rollouts: RolloutStorage):
         self.initialize_rollouts(rollouts)
+        self.tracking_info.clear()
 
-        while self.step_count < self.tstate.stage_task_steps:
+        while True:
+            self.training_pipeline.before_rollout()
+            if self.training_pipeline.current_stage is None:
+                break
+
             if self.is_distributed:
                 self.num_workers_done.set("done", str(0))
                 self.num_workers_steps.set("steps", str(0))
@@ -993,18 +963,19 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 if idx == 0:
                     self.distributed_barrier.reset()
 
-            self.tstate.former_steps = self.step_count
-            for step in range(self.tstate.steps_in_rollout):
-                self.collect_rollout_step(rollouts)
+            self.former_steps = self.step_count
+            for step in range(self.training_pipeline.num_steps):
+                self.collect_rollout_step(rollouts=rollouts)
                 if self.is_distributed:
                     # Preempt stragglers
+                    # TODO: Add a bit more description of his behavior.
                     num_done = int(self.num_workers_done.get("done"))
                     if (
                         num_done
                         > self.distributed_preemption_threshold * self.num_workers
-                        and self.tstate.steps_in_rollout / 4
+                        and self.training_pipeline.num_steps / 4
                         <= step
-                        < 0.95 * (self.tstate.steps_in_rollout - 1)
+                        < 0.95 * (self.training_pipeline.num_steps - 1)
                     ):
                         get_logger().debug(
                             "{} worker {} narrowed rollouts at step {} ({}) with {} done".format(
@@ -1025,9 +996,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             if self.is_distributed:
                 # Mark that a worker is done collecting experience
                 self.num_workers_done.add("done", 1)
-                self.num_workers_steps.add(
-                    "steps", self.step_count - self.tstate.former_steps
-                )
+                self.num_workers_steps.add("steps", self.step_count - self.former_steps)
 
                 # Ensure all workers are done before updating step counter
                 idx = self.distributed_barrier.wait()  # here we synchronize
@@ -1040,65 +1009,63 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 ), "# workers done {} <> # workers {}".format(ndone, self.num_workers)
 
                 # get the actual step_count
-                new_worker_steps = self.step_count - self.tstate.former_steps
-                all_new_steps = int(self.num_workers_steps.get("steps"))
-                self.step_count += all_new_steps - new_worker_steps
-                assert (
-                    self.step_count == self.tstate.former_steps + all_new_steps
-                ), "num steps {} doesn't match {}".format(
-                    self.step_count, self.tstate.former_steps + all_new_steps
+                self.step_count = (
+                    int(self.num_workers_steps.get("steps")) + self.former_steps
                 )
 
             rollouts.compute_returns(
-                actor_critic_output.values.detach(),
-                self.tstate.use_gae,
-                self.tstate.gamma,
-                self.tstate.gae_lambda,
+                next_value=actor_critic_output.values.detach(),
+                use_gae=self.training_pipeline.use_gae,
+                gamma=self.training_pipeline.gamma,
+                tau=self.training_pipeline.gae_lambda,
             )
 
-            self.update(rollouts)  # here we synchronize
+            self.update(rollouts=rollouts)  # here we synchronize
+            self.training_pipeline.rollout_count += 1
 
             rollouts.after_update()
-            self.tstate.rollout_count += 1
 
             if self.lr_scheduler is not None:
-                self.lr_scheduler.step(epoch=self.step_count + self.total_steps)
+                self.lr_scheduler.step(epoch=self.training_pipeline.total_steps)
 
             if (
-                self.step_count - self.tstate.last_log >= self.tstate.log_interval
-                or self.step_count >= self.tstate.stage_task_steps
+                self.step_count - self.last_log >= self.log_interval
+                or self.training_pipeline.current_stage.is_complete
             ):
-                self.send_package()
-                self.tstate.last_log = self.step_count
+                self.send_package(tracking_info=self.tracking_info)
+                self.tracking_info.clear()
+                self.last_log = self.step_count
 
             # save for every interval-th episode or for the last epoch
             if (
                 (
-                    self.step_count - self.tstate.last_save >= self.tstate.save_interval
-                    or self.step_count >= self.tstate.stage_task_steps
+                    self.step_count - self.last_save
+                    >= self.training_pipeline.save_interval
+                    or self.training_pipeline.current_stage.is_complete
                 )
                 and self.checkpoints_dir != ""
-                and self.tstate.save_interval > 0
+                and self.training_pipeline.save_interval > 0
             ):
                 if self.worker_id == 0:
                     model_path = self.checkpoint_save()
                     self.checkpoints_queue.put(("eval", model_path))
-                self.tstate.last_save = self.step_count
+                self.last_save = self.step_count
 
-            if (self.tstate.advance_scene_rollout_period is not None) and (
-                self.tstate.rollout_count % self.tstate.advance_scene_rollout_period
+            if (self.training_pipeline.advance_scene_rollout_period is not None) and (
+                self.training_pipeline.rollout_count
+                % self.training_pipeline.advance_scene_rollout_period
                 == 0
             ):
                 get_logger().info(
                     "{} worker {} Force advance tasks with {} rollouts".format(
-                        self.mode, self.worker_id, self.tstate.rollout_count
+                        self.mode, self.worker_id, self.training_pipeline.rollout_count
                     )
                 )
                 self.vector_tasks.next_task(force_advance_scene=True)
                 self.initialize_rollouts(rollouts)
 
     def run_pipeline(
-        self, checkpoint_file_name: Optional[str] = None, restart: bool = False
+        self, checkpoint_file_name: Optional[str] = None, restart_pipeline: bool = False
     ):
         assert (
             self.mode == "train"
@@ -1107,66 +1074,25 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         finalized = False
         try:
             if checkpoint_file_name is not None:
-                self.checkpoint_load(checkpoint_file_name, restart)
+                self.checkpoint_load(checkpoint_file_name, restart_pipeline)
 
-            for stage_num, stage in self.training_pipeline.iterator_starting_at(
-                self.tstate.pipeline_stage
-            ):
-                assert (
-                    stage_num == self.tstate.pipeline_stage
-                ), "stage_num {} differs from pipeline_stage {}".format(
-                    stage_num, self.tstate.pipeline_stage
+            self.save_interval = self.training_pipeline.save_interval
+            self.last_log = self.step_count - self.log_interval
+            self.last_save = self.step_count - (
+                self.log_interval
+                if self.training_pipeline.current_stage_index == 0
+                else 0
+            )
+            self.train(
+                RolloutStorage(
+                    num_steps=self.training_pipeline.num_steps,
+                    num_processes=self.num_samplers,
+                    actor_critic=self.actor_critic
+                    if isinstance(self.actor_critic, ActorCriticModel)
+                    else typing.cast(ActorCriticModel, self.actor_critic.module),
                 )
+            )
 
-                stage_losses, stage_weights = self._load_losses(stage)
-
-                self.tstate = OnPolicyTrainer.TrainState(
-                    losses=stage_losses,
-                    loss_weights=stage_weights,
-                    steps_in_rollout=self._stage_value(stage, "num_steps"),
-                    stage_task_steps=self._stage_value(stage, "max_stage_steps"),
-                    update_epochs=self._stage_value(stage, "update_repeats"),
-                    update_mini_batches=self._stage_value(stage, "num_mini_batch"),
-                    gamma=self._stage_value(stage, "gamma"),
-                    use_gae=self._stage_value(stage, "use_gae"),
-                    gae_lambda=self._stage_value(stage, "gae_lambda"),
-                    max_grad_norm=self._stage_value(stage, "max_grad_norm"),
-                    pipeline_stage=stage_num,
-                    advance_scene_rollout_period=self._stage_value(
-                        stage, "advance_scene_rollout_period", allow_none=True
-                    ),
-                    teacher_forcing=stage.teacher_forcing,
-                    total_updates=self.tstate.total_updates,
-                    rollout_count=0,
-                    backprop_count=self.tstate.backprop_count,
-                    log_interval=self.tstate.log_interval,
-                    save_interval=self.tstate.save_interval,
-                    last_log=self.step_count - self.tstate.log_interval,
-                    last_save=self.step_count
-                    - (
-                        self.tstate.log_interval if stage_num == 0 else 0
-                    ),  # enforce early val
-                    tracking_types=("update",)
-                    if stage.teacher_forcing is None
-                    else ("update", "teacher"),
-                    former_steps=self.step_count,
-                )
-
-                self.train(
-                    RolloutStorage(
-                        self.tstate.steps_in_rollout,
-                        self.num_samplers,
-                        self.actor_critic
-                        if not self.is_distributed
-                        else self.actor_critic.module,
-                    )
-                )
-
-                self.tstate.total_updates += self.tstate.rollout_count
-                self.tstate.pipeline_stage += 1
-
-                self.total_steps += self.step_count
-                self.step_count = 0
             finalized = True
         except KeyboardInterrupt:
             get_logger().info(
@@ -1234,12 +1160,15 @@ class OnPolicyInference(OnPolicyRLEngine):
     def run_eval(self, checkpoint_file_name: str, rollout_steps=1, visualizer=None):
         assert self.actor_critic is not None, "called run_eval with no actor_critic"
 
-        self.checkpoint_load(checkpoint_file_name)
+        ckpt = self.checkpoint_load(checkpoint_file_name)
+        total_steps = ckpt["total_steps"]
 
         rollouts = RolloutStorage(
             rollout_steps,
             self.num_samplers,
-            self.actor_critic if not self.is_distributed else self.actor_critic.module,
+            self.actor_critic
+            if isinstance(self.actor_critic, ActorCriticModel)
+            else typing.cast(ActorCriticModel, self.actor_critic.module),
         )
 
         if visualizer is not None:
@@ -1247,6 +1176,8 @@ class OnPolicyInference(OnPolicyRLEngine):
 
         num_paused = self.initialize_rollouts(rollouts, visualizer=visualizer)
         steps = 0
+
+        self.actor_critic.eval()
         while num_paused < self.num_samplers:
             num_paused += self.collect_rollout_step(rollouts, visualizer=visualizer)
             steps += 1
@@ -1262,9 +1193,8 @@ class OnPolicyInference(OnPolicyRLEngine):
         pkg_type = "{}_package".format(self.mode)
         viz_package = visualizer.read_and_reset() if visualizer is not None else None
         payload = (metrics_pkg, task_outputs, viz_package, checkpoint_file_name)
-        nsteps = self.total_steps + self.step_count
 
-        return pkg_type, payload, nsteps
+        return pkg_type, payload, total_steps
 
     def skip_to_latest(self, command, data):
         sentinel = ("skip.AUTO.sentinel", time.time())
@@ -1273,8 +1203,8 @@ class OnPolicyInference(OnPolicyRLEngine):
         )  # valid since a single valid process is the only consumer
         forwarded = False
         while not forwarded:
-            new_command: Optional[str] = None
-            new_data: Any = None
+            new_command: Optional[str]
+            new_data: Any
             (
                 new_command,
                 new_data,
@@ -1302,8 +1232,8 @@ class OnPolicyInference(OnPolicyRLEngine):
         finalized = False
         try:
             while True:
-                command: Optional[str] = None
-                data: Any = None
+                command: Optional[str]
+                data: Any
                 (
                     command,
                     data,
