@@ -40,7 +40,7 @@ def get_distance(cache: Dict[str, Any], pos: Dict[str, float], target: Dict[str,
         }
         sp = _get_shortest_path_distance_from_cache(cache, pos, target)
     if sp == -1.0:
-        pos = find_nearest_point_in_cache(pos)
+        pos = find_nearest_point_in_cache(cache, pos)
         sp = _get_shortest_path_distance_from_cache(cache, pos, target)
     if sp == -1.0:
         print("Your cache is incomplete!")
