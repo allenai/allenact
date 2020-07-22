@@ -4,6 +4,7 @@ import random
 import copy
 from collections import OrderedDict
 import math
+import pickle
 
 import ai2thor
 from ai2thor.controller import Controller
@@ -11,6 +12,7 @@ from ai2thor.util import metrics
 import numpy as np
 
 from utils.experiment_utils import recursive_update
+from utils.cache_utils import _str_to_pos, _pos_to_str
 from utils.system import LOGGER
 
 
@@ -464,3 +466,152 @@ class RoboThorEnvironment:
 #                 target_position
 #             )
 #         )
+
+class RoboThorCachedEnvironment:
+    """Wrapper for the robo2thor controller providing additional functionality
+    and bookkeeping.
+
+    See [here](https://ai2thor.allenai.org/robothor/documentation) for comprehensive
+     documentation on RoboTHOR.
+
+    # Attributes
+
+    controller : The AI2THOR controller.
+    config : The AI2THOR controller configuration
+    """
+
+    def __init__(self, **kwargs):
+        self.env_root_dir = kwargs["env_root_dir"]
+        with open(self.env_root_dir + '/FloorPlan_Train10_1.pkl', 'rb') as handle:
+            self.view_cache = pickle.load(handle)
+        self.agent_position = list(self.view_cache.keys())[0]
+        self.agent_rotation = list(self.view_cache[self.agent_position].keys())[0]
+        self.known_good_locations: Dict[str, Any] = {self.scene_name: copy.deepcopy(self.currently_reachable_points)}
+        self._last_action = "None"
+        assert len(self.known_good_locations[self.scene_name]) > 100
+
+    def agent_state(self) -> Dict[str, Union[Dict[str, float], float]]:
+        """Return agent position, rotation and horizon."""
+        agent_meta = self.view_cache[self.agent_position][self.agent_rotation].metadata
+        return {
+            **_str_to_pos(self.agent_position),
+            "rotation": self.agent_rotation,
+            "horizon": 1.0,
+        }
+
+    def teleport(self, pose: Dict[str,float], rotation: Dict[str,float], horizon: float=0.0):
+        self.agent_position = _pos_to_str(pose)
+        self.agent_rotation = math.floor(rotation / 90.0) * 90 # round to nearest 90 degree angle
+        return True
+
+    def reset(self, scene_name: str = None) -> None:
+        """Resets scene to a known initial state."""
+        try:
+            with open(self.env_root_dir + "/" + scene_name + ".pkl", 'rb') as handle:
+                self.view_cache = pickle.load(handle)
+            self.agent_position = list(self.view_cache.keys())[0]
+            self.agent_rotation = list(self.view_cache[self.agent_position].keys())[0]
+            self.known_good_locations: Dict[str, Any] = {
+                self.scene_name: copy.deepcopy(self.currently_reachable_points)
+            }
+            self._last_action = "None"
+            assert len(self.known_good_locations[self.scene_name]) > 100
+        except:
+            print("Could not load scene:", scene_name)
+
+    def known_good_locations_list(self):
+        return self.known_good_locations[self.scene_name]
+
+    @property
+    def currently_reachable_points(self) -> List[Dict[str, float]]:
+        """List of {"x": x, "y": y, "z": z} locations in the scene that are
+        currently reachable."""
+        return [_str_to_pos(pos) for pos in self.view_cache]
+
+    @property
+    def scene_name(self) -> str:
+        """Current ai2thor scene."""
+        return self.view_cache[self.agent_position][self.agent_rotation].metadata["sceneName"]
+
+    @property
+    def current_frame(self) -> np.ndarray:
+        """Returns rgb image corresponding to the agent's egocentric view."""
+        return self.view_cache[self.agent_position][self.agent_rotation].frame
+
+    @property
+    def current_depth(self) -> np.ndarray:
+        """Returns depth image corresponding to the agent's egocentric view."""
+        return self.view_cache[self.agent_position][self.agent_rotation].depth_frame
+
+    @property
+    def last_event(self) -> ai2thor.server.Event:
+        """Last event returned by the controller."""
+        return self.view_cache[self.agent_position][self.agent_rotation]
+
+    @property
+    def last_action(self) -> str:
+        """Last action, as a string, taken by the agent."""
+        return self._last_action
+
+    @property
+    def last_action_success(self) -> bool:
+        """In the cached environment, all actions succeed"""
+        return True
+
+    @property
+    def last_action_return(self) -> Any:
+        """Get the value returned by the last action (if applicable).
+
+        For an example of an action that returns a value, see
+        `"GetReachablePositions"`.
+        """
+        return self.view_cache[self.agent_position][self.agent_rotation].metadata["actionReturn"]
+
+    def step(
+        self, action_dict: Dict[str, Union[str, int, float]]
+    ) -> ai2thor.server.Event:
+        """Take a step in the ai2thor environment."""
+        self._last_action = action_dict['action']
+        if action_dict['action'] == 'RotateLeft':
+            self.agent_rotation = (self.agent_rotation - 90.0) % 360.0
+        elif action_dict['action'] == "RotateRight":
+            self.agent_rotation = (self.agent_rotation + 90.0) % 360.0
+        elif action_dict['action'] == "MoveForvard":
+            pos = _str_to_pos(self.agent_position)
+            if self.agent_rotation == 0.0:
+                pos["x"] += 0.25
+            elif self.agent_rotation == 90.0:
+                pos["z"] += 0.25
+            elif self.agent_rotation == 180.0:
+                pos["x"] -= 0.25
+            elif self.agent_rotation == 270.0:
+                pos["z"] -= 0.25
+            self.agent_position = _pos_to_str(pos)
+        return True
+
+    def stop(self):
+        """Stops the ai2thor controller."""
+        print("No need to stop cached environment")
+
+    def all_objects(self) -> List[Dict[str, Any]]:
+        """Return all object metadata."""
+        return self.view_cache[self.agent_position][self.agent_rotation].metadata["objects"]
+
+    def all_objects_with_properties(
+        self, properties: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Find all objects with the given properties."""
+        objects = []
+        for o in self.all_objects():
+            satisfies_all = True
+            for k, v in properties.items():
+                if o[k] != v:
+                    satisfies_all = False
+                    break
+            if satisfies_all:
+                objects.append(o)
+        return objects
+
+    def visible_objects(self) -> List[Dict[str, Any]]:
+        """Return all visible objects."""
+        return self.all_objects_with_properties({"visible": True})

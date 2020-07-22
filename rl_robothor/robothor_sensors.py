@@ -6,8 +6,9 @@ import quaternion  # noqa # pylint: disable=unused-import
 import typing
 from torchvision import transforms
 
-from rl_robothor.robothor_environment import RoboThorEnvironment
+from rl_robothor.robothor_environment import RoboThorEnvironment, RoboThorCachedEnvironment
 from rl_robothor.robothor_tasks import PointNavTask
+from rl_base.task import Task
 from rl_base.sensor import Sensor
 from rl_ai2thor.ai2thor_sensors import ScaleBothSides
 
@@ -162,3 +163,36 @@ class DepthSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
         depth = np.expand_dims(depth, 2)
 
         return depth
+
+
+class ResNetRGBSensorHabitatCache(Sensor[RoboThorCachedEnvironment, Task[RoboThorEnvironment]]):
+    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
+        super().__init__(config, *args, **kwargs)
+
+        def f(x, k, default):
+            return x[k] if k in x else default
+
+        self.uuid = f(config, "uuid", None)
+        self.height: Optional[int] = f(config, "height", None)
+        self.width: Optional[int] = f(config, "width", None)
+        self.should_normalize = f(config, "use_resnet_normalization", False)
+
+        shape = (7, 7, 1024)
+        low = 0.0
+        high = 1.0
+        self.observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "rgb_resnet"
+
+    def _get_observation_space(self) -> gym.spaces.Box:
+        return typing.cast(gym.spaces.Box, self.observation_space)
+
+    def get_observation(
+            self,
+            env: RoboThorEnvironment,
+            task: Optional[PointNavTask]=None,
+            *args: Any,
+            **kwargs: Any
+    ) -> Any:
+        return env.current_frame

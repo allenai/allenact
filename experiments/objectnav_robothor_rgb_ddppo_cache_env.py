@@ -19,26 +19,20 @@ from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
 from rl_robothor.robothor_tasks import ObjectNavTask
 from rl_robothor.robothor_task_samplers import ObjectNavTaskSampler, ObjectNavDatasetTaskSampler
-from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
-from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
+from rl_robothor.robothor_environment import RoboThorCachedEnvironment
+from rl_robothor.robothor_sensors import ResNetRGBSensorHabitatCache
+from rl_ai2thor.ai2thor_sensors import GoalObjectTypeThorSensor
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
 class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     """An Object Navigation experiment configuration in RoboThor"""
 
-    CAMERA_WIDTH = 640  # 400
-    CAMERA_HEIGHT = 480  # 300
-
-    SCREEN_SIZE = 224
-
     MAX_STEPS = 500
 
-    # It also ignores the empirical success of all episodes with length > num_steps * ADVANCE_SCENE_ROLLOUT_PERIOD and
-    # some with shorter lengths
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000  # generally useful if more than 1 scene per worker
-
     VALIDATION_SAMPLES_PER_SCENE = 10
+
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
 
     NUM_PROCESSES = 60  # TODO 2 for debugging
 
@@ -60,12 +54,9 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     )
 
     SENSORS = [
-        RGBSensorThor(
+        ResNetRGBSensorHabitatCache(
             {
-                "height": SCREEN_SIZE,
-                "width": SCREEN_SIZE,
-                "use_resnet_normalization": True,
-                "uuid": "rgb_lowres",
+                "uuid": "rgb_resnet",
             }
         ),
         GoalObjectTypeThorSensor({
@@ -73,45 +64,16 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         }),
     ]
 
-    PREPROCESSORS = [
-        Builder(ResnetPreProcessorHabitat,
-                dict(config={
-                    "input_height": SCREEN_SIZE,
-                    "input_width": SCREEN_SIZE,
-                    "output_width": 7,
-                    "output_height": 7,
-                    "output_dims": 512,
-                    "pool": False,
-                    "torchvision_resnet_model": models.resnet18,
-                    "input_uuids": ["rgb_lowres"],
-                    "output_uuid": "rgb_resnet",
-                    "parallel": False,  # TODO False for debugging
-            })
-        ),
-    ]
+    PREPROCESSORS = []
 
     OBSERVATIONS = [
         "rgb_resnet",
         "goal_object_type_ind",
     ]
 
-    ENV_ARGS = dict(
-        width=CAMERA_WIDTH,
-        height=CAMERA_HEIGHT,
-        continuousMode=True,
-        applyActionNoise=True,
-        agentType="stochastic",
-        rotateStepDegrees=30.0,
-        visibilityDistance=1.0,
-        gridSize=0.25,
-        snapToGrid=False,
-        agentMode="bot",
-        include_private_scenes=False,
-    )
-
     @classmethod
     def tag(cls):
-        return "ObjectNavRobothorRGBPPO"
+        return "ObjectNavRobothorRGBPPOCachedEnvironment"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
@@ -251,6 +213,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 "failed_stop_reward": 0.0,
                 "shaping_weight": 1.0,  # applied to the decrease in distance to target
             },
+            "env_class": RoboThorCachedEnvironment
         }
 
     def train_task_sampler_args(
@@ -271,10 +234,10 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         res["scene_directory"] = "dataset/robothor/objectnav/train"
         res["loop_dataset"] = True
         res["env_args"] = {}
-        res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
             ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
         )
+        res["env_args"]["env_root_dir"] = "dataset/robothor/objectnav/train/view_caches"
         res["allow_flipping"] = True
         return res
 
@@ -296,7 +259,6 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         res["scene_directory"] = "dataset/robothor/objectnav/val"
         res["loop_dataset"] = False
         res["env_args"] = {}
-        res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
             ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
         )
@@ -320,7 +282,6 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         res["scene_directory"] = "dataset/robothor/objectnav/val"
         res["loop_dataset"] = False
         res["env_args"] = {}
-        res["env_args"].update(self.ENV_ARGS)
         # res["env_args"]["x_display"] = (
         #     ("0.%d" % devices[process_ind % len(devices)])
         #     if devices is not None and len(devices) > 0

@@ -18,6 +18,7 @@ from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor
 from rl_base.task import Task
 from utils.system import LOGGER
+from utils.cache_utils import get_distance
 
 # class RoboThorTask(Task[RoboThorEnvironment]):
 #     def __init__(
@@ -292,27 +293,6 @@ class PointNavTask(Task[RoboThorEnvironment]):
                 "task_info": self.task_info,
             }
 
-    def _get_distance_to_target(self):
-        if self.path_cache:
-            curr_pose = self.env.agent_state()
-            curr_pose = {
-                "x": 0.25*math.ceil(curr_pose["x"]/0.25),
-                "y": curr_pose["y"],
-                "z": 0.25*math.ceil(curr_pose["z"]/0.25)
-            }
-            return self._get_shortest_path_distance_from_cache(curr_pose, self.task_info['target'])
-        return self.env.dist_to_point(self.task_info['target'])
-
-    def _get_shortest_path_distance_from_cache(self, position: Dict[str, float], target: Dict[str, float]) -> float:
-        try:
-            return self.path_cache[self._pos_to_str(position)][self._pos_to_str(target)]["distance"]
-        except:
-            return -1.0
-
-    @staticmethod
-    def _pos_to_str(pos: Dict[str, float]) -> str:
-        return "_".join([str(pos["x"]), str(pos["y"]), str(pos["z"])])
-
 
 class ObjectNavTask(Task[RoboThorEnvironment]):
     _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT, END, LOOK_UP, LOOK_DOWN)
@@ -324,30 +304,28 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         task_info: Dict[str, Any],
         max_steps: int,
         reward_configs: Dict[str, Any],
+        distance_cache: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> None:
-        # print("task info in objectnavtask %s" % task_info)
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
         self.reward_configs = reward_configs
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
-        self._subsampled_locations_from_which_obj_visible = None
-        self.episode_optimal_corners = self.env.path_corners(task_info["object_type"])  # assume it's valid (sampler must take care)!
         self.mirror = task_info['mirrored']
-        dist = self.env.path_corners_to_dist(self.episode_optimal_corners)
-        if dist == float("inf"):
-            dist = -1.0  # -1.0 for unreachable
-        self.last_geodesic_distance = dist
+        self.last_geodesic_distance = task_info["distance_to_target"] if task_info["distance_to_target"] else None
+        self.distance_cache = distance_cache
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
-        # pose = self.env.agent_state()
-        # self.path = [{k: pose[k] for k in ['x', 'y', 'z']}]
         self.path = []  # the initial coordinate will be directly taken from the optimal path
         self.task_info["followed_path"] = [self.env.agent_state()]
         self.task_info["taken_actions"] = []
+
+        if not task_info["distance_to_target"]:
+            self.episode_optimal_corners = self.env.path_corners(task_info["target"])  # assume it's valid (sampler must take care)!
+
 
     @property
     def action_space(self):
@@ -441,7 +419,10 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         #         rew += self.reward_configs["delta_dist_reward_further"]
         # self.last_geodesic_distance = geodesic_distance
 
-        geodesic_distance = self.env.dist_to_object(self.task_info["object_type"])
+        if self.distance_cache:
+            geodesic_distance = get_distance(self.distance_cache, self.env.agent_state(), self.task_info['target'])
+        else:
+            geodesic_distance = self.env.dist_to_object(self.task_info["object_type"])
         if self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5:  # (robothor limits)
             rew += self.last_geodesic_distance - geodesic_distance
         self.last_geodesic_distance = geodesic_distance
@@ -478,9 +459,12 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         return float(reward)
 
     def spl(self):
-        pose = self.env.agent_state()
-        res = compute_single_spl(self.path, self.episode_optimal_corners, self._success)
-        # self.env.step({"action": "TeleportFull", **pose})
+        if not self.last_action_success:
+            return 0.0
+        if self.self.task_info["distance_to_target"]:
+            res = (len(self.path) * self.env.config['gridSize']) / self.task_info["distance_to_target"]
+        else:
+            res = compute_single_spl(self.path, self.episode_optimal_corners, self._success)
         return res
 
     def get_observations(self) -> Any:
@@ -505,7 +489,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
-                "spl": self.spl() if len(self.episode_optimal_corners) > 1 else 0.0,
+                "spl": self.spl(),
                 "task_info": self.task_info,
             }
             self._rewards = []

@@ -80,6 +80,32 @@ above.
 
 You are now ready to [run your first experiment](./overview/running-your-first-experiment.md).
 
+
+
+## Habitat Setup
+
+[AI Habitat](https://aihabitat.org/) is a simulation platform for research in embodied artificial intelligence, developed by Facebook. It consists of two packages, [habitat-sim](https://github.com/facebookresearch/habitat-sim) (the low leve, efficient game engine that runs the simulator), and [habitat-api](https://github.com/facebookresearch/habitat-api) (the high level library for interacting with the simulator in python).
+
+The Embodied-RL library comes with out-of-the-box support for the Habitat environment. There are two ways to set up the Embodied-RL library to work with Habitat:
+
+- [Use a Pre Built Docker Container](#Use a Pre Built Docker Container) (recommended)
+- Build Your Own Docker Container
+- Install Locally
+
+### Use a Pre Built Docker Container (recommended)
+
+We provide an image of a docker container that contains a working installation of the`embodied-rl` library (commit #), `habitat-api` (commit #) and `habitat-sim` (commit #) as well as the `gibson` and `mp3d` datasets. The container image is 41GB, but it contains everything you need to start training a baseline agent in habitat.
+
+### Build Your Own Docker Container
+
+To 
+
+### Install Locally
+
+To 
+
+
+
 ## Contributions
 
 We in the Perceptual Reasoning and Interaction Research (PRIOR) group at the
@@ -89,10 +115,10 @@ We in the Perceptual Reasoning and Interaction Research (PRIOR) group at the
  Doing so can ensure we can validate your suggestions before you spend a great deal of time
  upon them. Small (or validated) improvements and bug fixes should be made via a pull request
  from your fork of this repository.
- 
+
 All code in this repository is subject to formatting, documentation, and type-annotation
 guidelines. For more details, please see the our [contribution guidelines](./CONTRIBUTING.md).   
-  
+
 ## Citation
 
 If you use this work, please cite:

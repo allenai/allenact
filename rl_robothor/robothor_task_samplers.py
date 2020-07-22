@@ -12,6 +12,7 @@ from rl_robothor.robothor_environment import RoboThorEnvironment
 from rl_base.sensor import Sensor
 from utils.experiment_utils import set_seed, set_deterministic_cudnn
 from utils.system import LOGGER
+from utils.cache_utils import find_nearest_point_in_cache
 
 
 class ObjectNavTaskSampler(TaskSampler):
@@ -252,17 +253,21 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         deterministic_cudnn: bool = False,
         loop_dataset: bool = True,
         allow_flipping = False,
+        env_class = RoboThorEnvironment,
         *args,
         **kwargs
     ) -> None:
         self.rewards_config = rewards_config
         self.env_args = env_args
         self.scenes = scenes
-        self.episodes = {scene: self._load_dataset(scene, scene_directory) for scene in scenes}
+        self.episodes = {
+            scene: self._load_dataset(scene, scene_directory + "/episodes") for scene in scenes
+        }
+        self.distance_caches = {
+            scene: self._load_distance_cache(scene, scene_directory + "/distance_caches") for scene in scenes
+        }
+        self.env_class = env_class
         self.object_types = [ep["object_type"] for scene in self.episodes for ep in self.episodes[scene]]
-        # self.scene_to_episodes = scene_to_episodes
-        # self.scene_counters = {scene: -1 for scene in self.scene_to_episodes}
-        # self.scenes = list(self.scene_to_episodes.keys())
         self.env: Optional[RoboThorEnvironment] = None
         self.sensors = sensors
         self.max_steps = max_steps
@@ -291,7 +296,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         self.reset()
 
     def _create_environment(self) -> RoboThorEnvironment:
-        env = RoboThorEnvironment(**self.env_args)
+        env = self.env_class(**self.env_args)
         return env
 
     def _load_dataset(self, scene: str, base_directory: str) -> List[Dict]:
@@ -302,6 +307,15 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         json_str = json_bytes.decode('utf-8')
         data = json.loads(json_str)
         random.shuffle(data)
+        return data
+
+    def _load_distance_cache(self, scene: str, base_directory: str) -> List[Dict]:
+        filename = "/".join([base_directory, scene]) if base_directory[-1] != '/' else "".join([base_directory, scene])
+        filename += ".json.gz"
+        with gzip.GzipFile(filename, 'r') as fin:
+            json_bytes = fin.read()
+        json_str = json_bytes.decode('utf-8')
+        data = json.loads(json_str)
         return data
 
     @property
@@ -349,6 +363,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
 
         scene = self.scenes[self.scene_index]
         episode = self.episodes[scene][self.episode_index]
+        distance_cache = self.distance_caches[scene] if self.distance_caches else None
 
         if self.env is not None:
             if scene.replace("_physics", "") != self.env.scene_name.replace("_physics", ""):
@@ -370,6 +385,9 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
 
         task_info['initial_position'] = episode['initial_position']
         task_info['initial_orientation'] = episode['initial_orientation']
+        task_info['distance_to_target'] = episode['shortest_path_length']
+        task_info['path_to_target'] = episode['shortest_path']
+        task_info['target'] = find_nearest_point_in_cache(distance_cache, episode['target_position'])
 
         if self.allow_flipping and random.random() > 0.5:
             task_info["mirrored"] = True
@@ -392,7 +410,8 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             task_info=task_info,
             max_steps=self.max_steps,
             action_space=self._action_space,
-            reward_configs=self.rewards_config
+            reward_configs=self.rewards_config,
+            distance_cache=distance_cache,
         )
         return self._last_sampled_task
 
