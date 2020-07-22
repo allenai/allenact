@@ -492,7 +492,6 @@ class RoboThorCachedEnvironment:
 
     def agent_state(self) -> Dict[str, Union[Dict[str, float], float]]:
         """Return agent position, rotation and horizon."""
-        agent_meta = self.view_cache[self.agent_position][self.agent_rotation].metadata
         return {
             **_str_to_pos(self.agent_position),
             "rotation": self.agent_rotation,
