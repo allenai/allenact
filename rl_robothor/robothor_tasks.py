@@ -347,7 +347,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self.env.stop()
 
     def _step(self, action: int) -> RLStepResult:
-        get_logger().debug("New step")
         action_str = self.action_names()[action]
 
         if self.mirror:

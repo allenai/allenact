@@ -1222,28 +1222,17 @@ class OnPolicyInference(OnPolicyRLEngine):
         if visualizer is not None:
             assert visualizer.empty()
 
-        get_logger().debug("initialize rollouts worker {}".format(self.worker_id))
-
         num_paused = self.initialize_rollouts(rollouts, visualizer=visualizer)
         steps = 0
         while num_paused < self.num_samplers:
             num_paused += self.collect_rollout_step(rollouts, visualizer=visualizer)
             steps += 1
-            get_logger().info(
-                "eval worker {} steps {} paused {}".format(
-                    self.worker_id, steps, num_paused
-                )
-            )
             if steps % rollout_steps == 0:
                 rollouts.after_update()
-
-        get_logger().debug("completed tasks worker {}".format(self.worker_id))
 
         self.vector_tasks.resume_all()
         self.vector_tasks.set_seeds(self.worker_seeds(self.num_samplers, self.seed))
         self.vector_tasks.reset_all()
-
-        get_logger().debug("aggregate metrics worker {}".format(self.worker_id))
 
         metrics_pkg, task_outputs = self.aggregate_task_metrics()
 
@@ -1302,11 +1291,11 @@ class OnPolicyInference(OnPolicyRLEngine):
                     command,
                     data,
                 ) = self.checkpoints_queue.get()  # block until first command arrives
-                get_logger().debug(
-                    "{} {} command {} data {}".format(
-                        self.mode, self.worker_id, command, data
-                    )
-                )
+                # get_logger().debug(
+                #     "{} {} command {} data {}".format(
+                #         self.mode, self.worker_id, command, data
+                #     )
+                # )
 
                 if command == "eval":
                     if self.num_samplers > 0:
@@ -1329,11 +1318,11 @@ class OnPolicyInference(OnPolicyRLEngine):
                             checkpoint_file_name=data, visualizer=visualizer
                         )
 
-                        get_logger().debug(
-                            "queueing eval_package {} with {} tasks".format(
-                                self.worker_id, eval_package[1][0][2]
-                            )
-                        )
+                        # get_logger().debug(
+                        #     "queueing eval_package {} with {} tasks".format(
+                        #         self.worker_id, eval_package[1][0][2]
+                        #     )
+                        # )
 
                         self.results_queue.put(eval_package)
 
