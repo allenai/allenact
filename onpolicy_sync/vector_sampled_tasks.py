@@ -291,7 +291,7 @@ class VectorSampledTasks(object):
                         sp_vector_sampled_tasks.close()
                         break
                     elif commands == RESUME_COMMAND:
-                        sp_vector_sampled_tasks.reset_all()
+                        sp_vector_sampled_tasks.resume_all()
                         connection_write_fn("done")
                     else:
                         if isinstance(commands, str):
