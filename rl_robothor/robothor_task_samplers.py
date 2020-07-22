@@ -256,8 +256,8 @@ class ObjectNavTaskSampler(TaskSampler):
         else:
             task_info["mirrored"] = False
 
-        # if self.reset_tasks is not None:
-        #     get_logger().debug("valid task_info {}".format(task_info))
+        if self.reset_tasks is not None:
+            get_logger().debug("eval task_info {}".format(task_info))
 
         self._last_sampled_task = ObjectNavTask(
             env=self.env,

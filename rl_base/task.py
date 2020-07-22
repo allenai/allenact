@@ -122,9 +122,10 @@ class Task(Generic[EnvType]):
         (possibly) additional information.
         """
         assert not self.is_done()
+        self._increment_num_steps_taken()
         sr = self._step(action=action)
         self._total_reward += float(sr.reward)
-        self._increment_num_steps_taken()
+        # self._increment_num_steps_taken()
         # TODO: We need a better solution to the below. It's not a good idea
         #   to pre-increment the step counter as this might play poorly with `_step`
         #   if it relies on some aspect of the current number of steps taken.
