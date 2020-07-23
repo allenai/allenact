@@ -354,56 +354,45 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
     def next_task(self, force_advance_scene: bool = False) -> Optional[ObjectNavTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
-
-        if self.episode_index > len(self.episodes[self.scenes[self.scene_index]]):
+        if self.episode_index >= len(self.episodes[self.scenes[self.scene_index]]):
             self.scene_index = (self.scene_index + 1) % len(self.scenes)
             # shuffle the new list of episodes to train on
             random.shuffle(self.episodes[self.scenes[self.scene_index]])
             self.episode_index = 0
-
         scene = self.scenes[self.scene_index]
         episode = self.episodes[scene][self.episode_index]
         distance_cache = self.distance_caches[scene] if self.distance_caches else None
-
         if self.env is not None:
             if scene.replace("_physics", "") != self.env.scene_name.replace("_physics", ""):
                 self.env.reset(scene)
         else:
             self.env = self._create_environment()
             self.env.reset(scene_name=scene)
-
         task_info = {
             "scene": scene,
             "object_type": episode["object_type"]
         }
-
         if len(task_info) == 0:
             LOGGER.warning(
                 "Scene {} does not contain any"
                 " objects of any of the types {}.".format(scene, self.object_types)
             )
-
         task_info['initial_position'] = episode['initial_position']
         task_info['initial_orientation'] = episode['initial_orientation']
         task_info['distance_to_target'] = episode['shortest_path_length']
         task_info['path_to_target'] = episode['shortest_path']
         task_info['target'] = find_nearest_point_in_cache(distance_cache, episode['target_position'])
-
         if self.allow_flipping and random.random() > 0.5:
             task_info["mirrored"] = True
         else:
             task_info["mirrored"] = False
-
         if self.reset_tasks is not None:
             LOGGER.debug("valid task_info {}".format(task_info))
-
         self.episode_index += 1
         if self.max_tasks is not None:
             self.max_tasks -= 1
-
         if not self.env.teleport(episode['initial_position'], episode['initial_orientation']):
             return self.next_task()
-
         self._last_sampled_task = ObjectNavTask(
             env=self.env,
             sensors=self.sensors,

@@ -3,8 +3,7 @@ import math
 
 
 def _pos_to_str(pos: Dict[str, float]) -> str:
-    # return "_".join([str(pos["x"]), str(pos["y"]), str(pos["z"])])
-    return "_".join([str(pos["x"]), "0.9009997", str(pos["z"])])
+    return "_".join([str(pos["x"]), str(pos["y"]), str(pos["z"])])
 
 def _str_to_pos(s: str) -> Dict[str, float]:
     split = s.split("_")

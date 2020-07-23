@@ -5,6 +5,7 @@ import copy
 from collections import OrderedDict
 import math
 import pickle
+import glob
 
 import ai2thor
 from ai2thor.controller import Controller
@@ -482,7 +483,8 @@ class RoboThorCachedEnvironment:
 
     def __init__(self, **kwargs):
         self.env_root_dir = kwargs["env_root_dir"]
-        with open(self.env_root_dir + '/FloorPlan_Train10_1.pkl', 'rb') as handle:
+        random_scene = random.choice(list(glob.glob(self.env_root_dir + "/*.pkl")))
+        with open(random_scene, 'rb') as handle:
             self.view_cache = pickle.load(handle)
         self.agent_position = list(self.view_cache.keys())[0]
         self.agent_rotation = list(self.view_cache[self.agent_position].keys())[0]

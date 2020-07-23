@@ -262,6 +262,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         res["env_args"]["x_display"] = (
             ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
         )
+        res["env_args"]["env_root_dir"] = "dataset/robothor/objectnav/val/view_caches"
         return res
 
     def test_task_sampler_args(
@@ -288,4 +289,5 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         #     else None
         # )
         res["env_args"]["x_display"] = "10.0"
+        res["env_args"]["env_root_dir"] = "dataset/robothor/objectnav/val/view_caches"
         return res

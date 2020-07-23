@@ -461,7 +461,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
     def spl(self):
         if not self.last_action_success:
             return 0.0
-        if self.self.task_info["distance_to_target"]:
+        if self.task_info["distance_to_target"]:
             res = (len(self.path) * self.env.config['gridSize']) / self.task_info["distance_to_target"]
         else:
             res = compute_single_spl(self.path, self.episode_optimal_corners, self._success)
