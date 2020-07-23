@@ -291,7 +291,7 @@ class VectorSampledTasks(object):
                         sp_vector_sampled_tasks.close()
                         break
                     elif commands == RESUME_COMMAND:
-                        sp_vector_sampled_tasks.reset_all()
+                        sp_vector_sampled_tasks.resume_all()
                         connection_write_fn("done")
                     else:
                         if isinstance(commands, str):
@@ -407,7 +407,7 @@ class VectorSampledTasks(object):
             subprocess_ind,
         ) = self.sampler_index_to_process_ind_and_subprocess_ind[sampler_index]
         self._connection_write_fns[process_ind]((subprocess_ind, command, data))
-        result = self._connection_read_fns[sampler_index]()
+        result = self._connection_read_fns[process_ind]()
         self._is_waiting = False
         return result
 
@@ -527,13 +527,22 @@ class VectorSampledTasks(object):
 
         if self._is_waiting:
             for read_fn in self._connection_read_fns:
-                read_fn()
+                try:
+                    read_fn()
+                except:
+                    pass
 
         for write_fn in self._connection_write_fns:
-            write_fn((CLOSE_COMMAND, None))
+            try:
+                write_fn((CLOSE_COMMAND, None))
+            except:
+                pass
 
         for process in self._workers:
-            process.join()
+            try:
+                process.join()
+            except:
+                pass
 
         self._is_closed = True
 
@@ -562,9 +571,9 @@ class VectorSampledTasks(object):
         for i in range(
             sampler_index + 1, len(self.sampler_index_to_process_ind_and_subprocess_ind)
         ):
-            other_process_and_sub_process_inds = (
-                self.sampler_index_to_process_ind_and_subprocess_ind
-            )
+            other_process_and_sub_process_inds = self.sampler_index_to_process_ind_and_subprocess_ind[
+                i
+            ]
             if other_process_and_sub_process_inds[0] == process_ind:
                 other_process_and_sub_process_inds[1] -= 1
             else:
@@ -683,13 +692,18 @@ class VectorSampledTasks(object):
 
         return self.command(commands=ATTR_COMMAND, data_list=attr_names)
 
-    def render(self, mode: str = "human", *args, **kwargs) -> Union[np.ndarray, None]:
-        """Render observations from all Tasks in a tiled image."""
+    def render(
+        self, mode: str = "human", *args, **kwargs
+    ) -> Union[np.ndarray, None, List[np.ndarray]]:
+        """Render observations from all Tasks in a tiled image or list of images."""
 
         images = self.command(
             commands=RENDER_COMMAND,
             data_list=[(args, {"mode": "rgb", **kwargs})] * self.num_unpaused_tasks,
         )
+
+        if mode == "raw_rgb_list":
+            return images
 
         tile = tile_images(images)
         if mode == "human":
@@ -841,6 +855,7 @@ class SingleProcessVectorSampledTasks(object):
                     if current_task.is_done():
                         metrics = current_task.metrics()
                         if metrics is not None and len(metrics) != 0:
+                            # get_logger().debug("sampler putting metrics")
                             metrics_out_queue.put(metrics)
 
                         if auto_resample_when_done:
@@ -1204,13 +1219,18 @@ class SingleProcessVectorSampledTasks(object):
             for g, attr_name in zip(self._vector_task_generators, attr_names)
         ]
 
-    def render(self, mode: str = "human", *args, **kwargs) -> Union[np.ndarray, None]:
-        """Render observations from all Tasks in a tiled image."""
+    def render(
+        self, mode: str = "human", *args, **kwargs
+    ) -> Union[np.ndarray, None, List[np.ndarray]]:
+        """Render observations from all Tasks in a tiled image or a list of images."""
 
         images = [
             g.send((RENDER_COMMAND, (args, {"mode": "rgb", **kwargs})))
             for g in self._vector_task_generators
         ]
+
+        if mode == "raw_rgb_list":
+            return images
 
         for index, _ in reversed(self._paused):
             images.insert(index, np.zeros_like(images[0]))

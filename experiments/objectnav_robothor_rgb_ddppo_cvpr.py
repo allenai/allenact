@@ -26,6 +26,7 @@ from utils.viz_utils import (
     TrajectoryViz,
     ActorViz,
     AgentViewViz,
+    TensorViz1D,
     TensorViz2D,
 )
 

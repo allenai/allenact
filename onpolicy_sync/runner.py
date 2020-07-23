@@ -266,6 +266,10 @@ class OnPolicyRunner(object):
         self.get_visualizer("test")
         num_testers = len(devices)
 
+        distributed_barrier = None
+        if num_testers > 1:
+            distributed_barrier = self.mp_ctx.Barrier(num_testers)
+
         for tester_it in range(num_testers):
             test: mp.process.BaseProcess = self.mp_ctx.Process(
                 target=self.test_loop,
@@ -277,9 +281,12 @@ class OnPolicyRunner(object):
                     seed=12345,  # TODO allow same order for randomly sampled tasks? Is this any useful anyway?
                     deterministic_cudnn=self.deterministic_cudnn,
                     mp_ctx=self.mp_ctx,
+                    num_workers=num_testers,
                     device=devices[tester_it],
+                    distributed_barrier=distributed_barrier,
                 ),
             )
+
             test.start()
             self.processes["test"].append(test)
 
@@ -293,9 +300,10 @@ class OnPolicyRunner(object):
         get_logger().info("Running test on {} steps {}".format(len(steps), steps))
 
         for cp in checkpoints:
-            # TODO for tester_it in range(num_testers): # to move to distributed test
-            self.queues["checkpoints"].put(("eval", cp))
-        # Allow all testers to terminate cleanly
+            # Make all testers work on each checkpoint
+            for tester_it in range(num_testers):
+                self.queues["checkpoints"].put(("eval", cp))
+        # Signal all testers to terminate cleanly
         for _ in range(num_testers):
             self.queues["checkpoints"].put(("quit", None))
 
@@ -399,7 +407,7 @@ class OnPolicyRunner(object):
         if self.visualizer is not None:
             self.visualizer.log(log_writer, task_outputs, render, steps)
 
-    def aggregate_infos(self, log_writer, infos, steps):
+    def aggregate_infos(self, log_writer, infos, steps, return_metrics=False):
         nsamples = sum(info[2] for info in infos)
         valid_infos = sum(info[2] > 0 for info in infos)
 
@@ -412,10 +420,13 @@ class OnPolicyRunner(object):
             assert nsamps >= 0, "negative ({}) samples in info".format(nsamps)
             if nsamps > 0:
                 self.scalars.add_scalars(
-                    {k: valid_infos * payload[k] * nsamps / nsamples for k in payload}
+                    {
+                        k: valid_infos * payload[k] * nsamps / nsamples for k in payload
+                    }  # pop divides by valid_infos
                 )
 
         message = []
+        metrics = None
         if nsamples > 0:
             summary = self.scalars.pop_and_reset()
 
@@ -430,7 +441,10 @@ class OnPolicyRunner(object):
                 log_writer.add_scalar("{}/".format(self.mode) + k, metrics[k], steps)
                 message.append(k + " {}".format(metrics[k]))
 
-        return message
+        if not return_metrics:
+            return message
+        else:
+            return message, metrics
 
     def process_train_packages(self, log_writer, pkgs, last_steps=0, last_time=0.0):
         current_time = time.time()
@@ -454,6 +468,47 @@ class OnPolicyRunner(object):
 
         return steps, current_time
 
+    def process_test_packages(
+        self, log_writer, pkgs, all_results: Optional[List[Any]] = None
+    ):
+        pkg_types, payloads, all_steps = [vals for vals in zip(*pkgs)]
+        steps = all_steps[0]
+        metrics_pkg, task_outputs, render, checkpoint_file_name = [], [], {}, []
+        for payload in payloads:
+            mpkg, touts, rndr, cpfname = payload
+            metrics_pkg.append(mpkg)
+            task_outputs.extend(touts)
+            if rndr is not None:
+                render.update(rndr)
+            checkpoint_file_name.append(cpfname)
+
+        mode = pkg_types[0].split("_")[0]
+
+        message = ["{} {} steps:".format(mode, steps)]
+        # for k in metrics:
+        #     log_writer.add_scalar("{}/".format(mode) + k, metrics[k], steps)
+        #     message.append(k + " {}".format(metrics[k]))
+        msg, mets = self.aggregate_infos(
+            log_writer, metrics_pkg, steps, return_metrics=all_results is not None
+        )
+        message += msg
+        if all_results is not None:
+            results = copy.deepcopy(mets)
+            results.update({"training_steps": steps, "tasks": task_outputs})
+            all_results.append(results)
+
+        num_tasks = sum([mpkg[2] for mpkg in metrics_pkg])
+        message.append(
+            "tasks {} checkpoint {}".format(num_tasks, checkpoint_file_name[0])
+        )
+        get_logger().info(" ".join(message))
+
+        # if render is not None:
+        #     log_writer.add_vid("{}/agent_view".format(mode), render, steps)
+
+        if self.visualizer is not None:
+            self.visualizer.log(log_writer, task_outputs, render, steps)
+
     def log(
         self,
         start_time_str: str,
@@ -472,7 +527,7 @@ class OnPolicyRunner(object):
         collected = []
         last_train_steps = 0
         last_train_time = time.time()
-        test_steps = sorted(test_steps, reverse=True)
+        # test_steps = sorted(test_steps, reverse=True)
         test_results = []
 
         try:
@@ -512,43 +567,18 @@ class OnPolicyRunner(object):
                         finalized and self.queues["checkpoints"].empty()
                     ):  # assume queue is actually empty after trainer finished and no checkpoints in queue
                         break
-                elif (
-                    package[0] == "test_package"
-                ):  # multiple workers with varying average episode length (reorder)
-                    # TODO make test package processing similar to training to move to distributed test
-                    assert (
-                        package[2] in test_steps
-                    ), "unexpected test package for {} steps".format(package[2])
-                    if package[2] == test_steps[-1]:
-                        processed = []
-                        self.process_eval_package(log_writer, package, test_results)
-                        processed.append(test_steps.pop())
-                        if len(collected) > 0:
-                            collected = sorted(
-                                collected, key=lambda x: x[2], reverse=True
-                            )
-                            while collected[-1][2] == test_steps[-1]:
-                                self.process_eval_package(
-                                    log_writer, collected.pop(), test_results
-                                )
-                                processed.append(test_steps.pop())
-                                if len(collected) == 0:
-                                    break
-                            get_logger().debug(
-                                "Processed metrics for steps {}".format(processed)
-                            )
+                elif package[0] == "test_package":
+                    collected.append(package)
+                    if len(collected) == nworkers:
+                        self.process_test_packages(log_writer, collected, test_results)
+                        collected = []
                         with open(metrics_file, "w") as f:
                             json.dump(test_results, f, indent=4, sort_keys=True)
                             get_logger().debug(
-                                "Updated {} up to step {}".format(
-                                    metrics_file, processed[-1]
+                                "Updated {} up to checkpoint {}".format(
+                                    metrics_file, test_steps[len(test_results) - 1]
                                 )
                             )
-                    else:
-                        collected.append(package)
-                        get_logger().debug(
-                            "Collected metrics for step {}".format(package[2])
-                        )
                 elif package[0] == "train_stopped":
                     if package[1] == 0:
                         finalized = True
