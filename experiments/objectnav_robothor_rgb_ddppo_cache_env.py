@@ -34,7 +34,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
 
-    NUM_PROCESSES = 180  # TODO 2 for debugging
+    NUM_PROCESSES = 120  # TODO 2 for debugging
 
     TARGET_TYPES = sorted(
         [
@@ -121,7 +121,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             workers_per_device = 1
             # gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7] * workers_per_device  # TODO vs4 only has 7 gpus
             gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6] * workers_per_device  # TODO vs4 only has 7 gpus
-            nprocesses = 2 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
+            nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
             sampler_devices = [0, 1, 2, 3, 4, 5, 6]  # TODO vs4 only has 7 gpus (ignored with > 1 gpu_ids)
             render_video = False
         elif mode == "valid":
