@@ -453,8 +453,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 if self._success
                 else self.reward_configs["failed_stop_reward"]
             )
-            if self._success:
-                print("TOOK CORRECT END ACTION:", reward)
 
         self._rewards.append(float(reward))
         return float(reward)
