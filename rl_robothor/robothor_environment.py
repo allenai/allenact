@@ -482,6 +482,17 @@ class RoboThorCachedEnvironment:
     """
 
     def __init__(self, **kwargs):
+        self.config = dict(
+            rotateStepDegrees=30.0,
+            visibilityDistance=1.0,
+            gridSize=0.25,
+            # agentType="stochastic",
+            continuousMode=True,
+            snapToGrid=False,
+            agentMode="bot",
+            width=640,
+            height=480,
+        )
         self.env_root_dir = kwargs["env_root_dir"]
         random_scene = random.choice(list(glob.glob(self.env_root_dir + "/*.pkl")))
         with open(random_scene, 'rb') as handle:
