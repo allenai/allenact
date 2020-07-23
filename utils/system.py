@@ -6,6 +6,25 @@ from contextlib import closing
 _LOGGER = logging.getLogger("embodiedrl")
 
 
+class StreamToLogger:
+    def __init__(self):
+        self.linebuf = ""
+
+    def write(self, buf):
+        temp_linebuf = self.linebuf + buf
+        self.linebuf = ""
+        for line in temp_linebuf.splitlines(True):
+            if line[-1] == "\n":
+                _LOGGER.info(line.rstrip())
+            else:
+                self.linebuf += line
+
+    def flush(self):
+        if self.linebuf != "":
+            _LOGGER.info(self.linebuf.rstrip())
+        self.linebuf = ""
+
+
 def excepthook(*args):
     get_logger().error("Uncaught exception:", exc_info=args)
 
@@ -52,6 +71,7 @@ def get_logger() -> logging.Logger:
     _LOGGER.addHandler(ch)
 
     sys.excepthook = excepthook
+    sys.stdout = StreamToLogger()
 
     return _LOGGER
 
