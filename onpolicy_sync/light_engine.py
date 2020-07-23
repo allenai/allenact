@@ -1227,7 +1227,7 @@ class OnPolicyInference(OnPolicyRLEngine):
     def run_eval(
         self,
         checkpoint_file_name: str,
-        rollout_steps=500,
+        rollout_steps=100,
         visualizer=None,
         update_secs=20,
     ):
@@ -1298,29 +1298,35 @@ class OnPolicyInference(OnPolicyRLEngine):
         return pkg_type, payload, nsteps
 
     def skip_to_latest(self, command, data):
-        sentinel = ("skip.AUTO.sentinel", time.time())
-        self.checkpoints_queue.put(
-            sentinel
-        )  # valid since a single valid process is the only consumer
-        forwarded = False
-        while not forwarded:
-            new_command: Optional[str] = None
-            new_data: Any = None
-            (
-                new_command,
-                new_data,
-            ) = self.checkpoints_queue.get()  # block until next command arrives
-            if new_command == command:
-                data = new_data
-            elif new_command == sentinel[0]:
-                assert new_data == sentinel[1], "wrong sentinel found: {} vs {}".format(
-                    new_data, sentinel[1]
-                )
-                forwarded = True
-            else:
-                raise ValueError(
-                    "Unexpected command {} with data {}".format(new_command, new_data)
-                )
+        cond = True
+        while cond:
+            sentinel = ("skip.AUTO.sentinel", time.time())
+            self.checkpoints_queue.put(
+                sentinel
+            )  # valid since a single valid process is the only consumer
+            forwarded = False
+            while not forwarded:
+                new_command: Optional[str] = None
+                new_data: Any = None
+                (
+                    new_command,
+                    new_data,
+                ) = self.checkpoints_queue.get()  # block until next command arrives
+                if new_command == command:
+                    data = new_data
+                elif new_command == sentinel[0]:
+                    assert (
+                        new_data == sentinel[1]
+                    ), "wrong sentinel found: {} vs {}".format(new_data, sentinel[1])
+                    forwarded = True
+                else:
+                    raise ValueError(
+                        "Unexpected command {} with data {}".format(
+                            new_command, new_data
+                        )
+                    )
+            time.sleep(1)
+            cond = not self.checkpoints_queue.empty()
         return data
 
     def barrier(self):
