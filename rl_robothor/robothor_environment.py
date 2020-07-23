@@ -495,8 +495,9 @@ class RoboThorCachedEnvironment:
         )
         self.env_root_dir = kwargs["env_root_dir"]
         random_scene = random.choice(list(glob.glob(self.env_root_dir + "/*.pkl")))
-        with open(random_scene, 'rb') as handle:
-            self.view_cache = pickle.load(handle)
+        handle= open(random_scene, 'rb')
+        self.view_cache = pickle.load(handle)
+        handle.close()
         self.agent_position = list(self.view_cache.keys())[0]
         self.agent_rotation = list(self.view_cache[self.agent_position].keys())[0]
         self.known_good_locations: Dict[str, Any] = {self.scene_name: copy.deepcopy(self.currently_reachable_points)}
@@ -519,8 +520,9 @@ class RoboThorCachedEnvironment:
     def reset(self, scene_name: str = None) -> None:
         """Resets scene to a known initial state."""
         try:
-            with open(self.env_root_dir + "/" + scene_name + ".pkl", 'rb') as handle:
-                self.view_cache = pickle.load(handle)
+            handle = open(self.env_root_dir + "/" + scene_name + ".pkl", 'rb')
+            self.view_cache = pickle.load(handle)
+            handle.close()
             self.agent_position = list(self.view_cache.keys())[0]
             self.agent_rotation = list(self.view_cache[self.agent_position].keys())[0]
             self.known_good_locations: Dict[str, Any] = {

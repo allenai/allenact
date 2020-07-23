@@ -34,7 +34,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
 
-    NUM_PROCESSES = 60  # TODO 2 for debugging
+    NUM_PROCESSES = 180  # TODO 2 for debugging
 
     TARGET_TYPES = sorted(
         [

@@ -302,8 +302,9 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
     def _load_dataset(self, scene: str, base_directory: str) -> List[Dict]:
         filename = "/".join([base_directory, scene]) if base_directory[-1] != '/' else "".join([base_directory, scene])
         filename += ".json.gz"
-        with gzip.GzipFile(filename, 'r') as fin:
-            json_bytes = fin.read()
+        fin = gzip.GzipFile(filename, 'r')
+        json_bytes = fin.read()
+        fin.close()
         json_str = json_bytes.decode('utf-8')
         data = json.loads(json_str)
         random.shuffle(data)
@@ -312,8 +313,9 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
     def _load_distance_cache(self, scene: str, base_directory: str) -> List[Dict]:
         filename = "/".join([base_directory, scene]) if base_directory[-1] != '/' else "".join([base_directory, scene])
         filename += ".json.gz"
-        with gzip.GzipFile(filename, 'r') as fin:
-            json_bytes = fin.read()
+        fin = gzip.GzipFile(filename, 'r')
+        json_bytes = fin.read()
+        fin.close()
         json_str = json_bytes.decode('utf-8')
         data = json.loads(json_str)
         return data
@@ -697,8 +699,9 @@ class PointNavDatasetTaskSampler(TaskSampler):
     def _load_dataset(self, scene: str, base_directory: str) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         filename = "/".join([base_directory, scene]) if base_directory[-1] != '/' else "".join([base_directory, scene])
         filename += ".json.gz"
-        with gzip.GzipFile(filename, 'r') as fin:
-            json_bytes = fin.read()
+        fin = gzip.GzipFile(filename, 'r')
+        json_bytes = fin.read()
+        fin.close()
         json_str = json_bytes.decode('utf-8')
         data = json.loads(json_str)
         episodes = data["episodes"]
