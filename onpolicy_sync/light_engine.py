@@ -320,7 +320,7 @@ class OnPolicyRLEngine(object):
 
         task_outputs = []
 
-        done = num_tasks != 0
+        done = num_tasks == 0
         while not done:
             item = (
                 self.vector_tasks.metrics_out_queue.get()
@@ -1274,7 +1274,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                         "sampler_attr", ["length"] * (self.num_samplers - num_paused)
                     )
                     get_logger().info(
-                        "worker {}: {} fps, {} tasks pending (per sampler {})".format(
+                        "worker {}: {:.1f} fps, {} tasks pending ({})".format(
                             self.worker_id,
                             frames / (new_time - init_time),
                             sum(lengths),

@@ -134,8 +134,15 @@ class TrajectoryViz(AbstractViz):
         for page, current_ids in enumerate(self.episode_ids):
             figs = []
             for episode_id in current_ids:
-                assert episode_id in all_episodes
+                # assert episode_id in all_episodes
+                if episode_id not in all_episodes:
+                    get_logger().warning(
+                        "skipping viz for missing episode {}".format(episode_id)
+                    )
+                    continue
                 figs.append(self.make_fig(all_episodes[episode_id], episode_id))
+            if len(figs) == 0:
+                continue
             log_writer.add_figure(
                 "{}/{}_group{}".format(self.mode, self.label, page),
                 figs,
@@ -274,13 +281,20 @@ class AgentViewViz(AbstractViz):
         for page, current_ids in enumerate(self.episode_ids):
             images = []  # list of lists of rgb frames
             for episode_id in current_ids:
-                assert episode_id in render
+                # assert episode_id in render
+                if episode_id not in render:
+                    get_logger().warning(
+                        "skipping viz for missing episode {}".format(episode_id)
+                    )
+                    continue
                 # TODO overlay episode id?
                 images.append([step[datum_id] for step in render[episode_id]])
-            for saveit, image in enumerate(images[0]):
-                import cv2
-
-                cv2.imwrite("dump{}.png".format(saveit), image[:, :, ::-1])
+            if len(images) == 0:
+                continue
+            # for saveit, image in enumerate(images[0]):
+            #     import cv2
+            #
+            #     cv2.imwrite("dump{}.png".format(saveit), image[:, :, ::-1])
             vid = self.make_vid(images)
             if vid is not None:
                 log_writer.add_vid(
@@ -352,9 +366,16 @@ class AbstractTensorViz(AbstractViz):
         for page, current_ids in enumerate(self.episode_ids):
             figs = []
             for episode_id in current_ids:
-                assert (
-                    episode_id in render and len(render[episode_id]) > 0
-                ), "missing or empty episode {}".format(episode_id)
+                # assert (
+                #     episode_id in render and len(render[episode_id]) > 0
+                # ), "missing or empty episode {}".format(episode_id)
+                if episode_id not in render or len(render[episode_id]) == 0:
+                    get_logger().warning(
+                        "skipping viz for missing or 0-length episode {}".format(
+                            episode_id
+                        )
+                    )
+                    continue
                 episode_src = [
                     step[self.datum_id]
                     for step in render[episode_id]
@@ -369,6 +390,8 @@ class AbstractTensorViz(AbstractViz):
                 # TODO missing tensor for last step if this is last episode in sampler
                 # get_logger().debug("found {} for {} steps from total {} steps".format(self.datum_id, len(episode_src), len(render[episode_id])))
                 figs.append(self.make_fig(episode_src, episode_id))
+            if len(figs) == 0:
+                continue
             log_writer.add_figure(
                 "{}/{}_group{}".format(self.mode, self.label, page),
                 figs,
@@ -477,7 +500,12 @@ class ActorViz(AbstractViz):
         for page, current_ids in enumerate(self.episode_ids):
             figs = []
             for episode_id in current_ids:
-                assert episode_id in render
+                # assert episode_id in render
+                if episode_id not in render:
+                    get_logger().warning(
+                        "skipping viz for missing episode {}".format(episode_id)
+                    )
+                    continue
                 episode_src = [
                     step["actor_probs"]
                     for step in render[episode_id]
@@ -485,6 +513,8 @@ class ActorViz(AbstractViz):
                 ]
                 assert len(episode_src) == len(render[episode_id])
                 figs.append(self.make_fig(episode_src, episode_id))
+            if len(figs) == 0:
+                continue
             log_writer.add_figure(
                 "{}/{}_group{}".format(self.mode, self.label, page),
                 figs,
