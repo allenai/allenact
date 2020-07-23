@@ -590,7 +590,7 @@ class RoboThorCachedEnvironment:
             self.agent_rotation = (self.agent_rotation - 90.0) % 360.0
         elif action_dict['action'] == "RotateRight":
             self.agent_rotation = (self.agent_rotation + 90.0) % 360.0
-        elif action_dict['action'] == "MoveForward":
+        elif action_dict['action'] == "MoveAhead":
             pos = _str_to_pos(self.agent_position)
             if self.agent_rotation == 0.0:
                 pos["x"] += 0.25
