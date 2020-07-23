@@ -306,20 +306,21 @@ class OnPolicyRLEngine(object):
 
     # aggregates task metrics currently in queue
     def aggregate_task_metrics(
-        self,
+        self, num_tasks: int = -1
     ) -> Tuple[Tuple[str, Dict[str, float], int], List[Dict[str, Any]]]:
         assert self.scalars.empty, "found non-empty scalars {}".format(
             self.scalars._counts
         )
 
-        sentinel = ("aggregate.AUTO.sentinel", time.time())
-        self.vector_tasks.metrics_out_queue.put(
-            sentinel
-        )  # valid since a single training process is the only consumer
+        if num_tasks < 0:
+            sentinel = ("aggregate.AUTO.sentinel", time.time())
+            self.vector_tasks.metrics_out_queue.put(
+                sentinel
+            )  # valid since a single training/testing process is the only consumer
 
         task_outputs = []
 
-        done = False
+        done = num_tasks != 0
         while not done:
             item = (
                 self.vector_tasks.metrics_out_queue.get()
@@ -331,6 +332,21 @@ class OnPolicyRLEngine(object):
                 done = True
             else:
                 task_outputs.append(item)
+                if num_tasks > 0:
+                    num_tasks -= 1
+                done = num_tasks == 0
+
+        # get_logger().debug(
+        #     "worker {} got {} tasks".format(self.worker_id, len(task_outputs))
+        # )
+        #
+        # get_logger().debug("worker {} sleeping for 10 s".format(self.worker_id))
+        # time.sleep(10)
+        # get_logger().debug(
+        #     "worker {} empty {}".format(
+        #         self.worker_id, self.vector_tasks.metrics_out_queue.empty()
+        #     )
+        # )
 
         nsamples = 0
         for task_output in task_outputs:
@@ -1208,21 +1224,31 @@ class OnPolicyInference(OnPolicyRLEngine):
 
         self.distributed_barrier = distributed_barrier
 
-    def run_eval(self, checkpoint_file_name: str, rollout_steps=1, visualizer=None):
+    def run_eval(
+        self,
+        checkpoint_file_name: str,
+        rollout_steps=500,
+        visualizer=None,
+        update_secs=20,
+    ):
         assert self.actor_critic is not None, "called run_eval with no actor_critic"
 
         self.checkpoint_load(checkpoint_file_name)
 
-        rollouts = RolloutStorage(
-            rollout_steps,
-            self.num_samplers,
-            self.actor_critic,  # if not self.is_distributed else self.actor_critic.module,
-        )
+        rollouts = RolloutStorage(rollout_steps, self.num_samplers, self.actor_critic,)
 
         if visualizer is not None:
             assert visualizer.empty()
 
         num_paused = self.initialize_rollouts(rollouts, visualizer=visualizer)
+        num_tasks = sum(
+            self.vector_tasks.command(
+                "sampler_attr", ["total_unique"] * (self.num_samplers - num_paused)
+            )
+        )
+        # get_logger().debug(
+        #     "worker {} number of tasks {}".format(self.worker_id, num_tasks)
+        # )
         steps = 0
         if self.mode == "test":
             lengths = self.vector_tasks.command(
@@ -1233,26 +1259,36 @@ class OnPolicyInference(OnPolicyRLEngine):
                     self.worker_id, sum(lengths), lengths
                 )
             )
+            last_time = time.time()
+            init_time = last_time
+            frames = self.num_samplers - num_paused
         while num_paused < self.num_samplers:
             num_paused += self.collect_rollout_step(rollouts, visualizer=visualizer)
             steps += 1
             if steps % rollout_steps == 0:
                 rollouts.after_update()
-            if self.mode == "test" and steps % 500 == 0:
-                lengths = self.vector_tasks.command(
-                    "sampler_attr", ["length"] * (self.num_samplers - num_paused)
-                )
-                get_logger().info(
-                    "worker {}: {} tasks pending ({})".format(
-                        self.worker_id, sum(lengths), lengths
+            if self.mode == "test":
+                new_time = time.time()
+                if new_time - last_time >= update_secs:
+                    lengths = self.vector_tasks.command(
+                        "sampler_attr", ["length"] * (self.num_samplers - num_paused)
                     )
-                )
+                    get_logger().info(
+                        "worker {}: {} fps, {} tasks pending (per sampler {})".format(
+                            self.worker_id,
+                            frames / (new_time - init_time),
+                            sum(lengths),
+                            lengths,
+                        )
+                    )
+                    last_time = new_time
+                frames += self.num_samplers - num_paused
 
         self.vector_tasks.resume_all()
         self.vector_tasks.set_seeds(self.worker_seeds(self.num_samplers, self.seed))
         self.vector_tasks.reset_all()
 
-        metrics_pkg, task_outputs = self.aggregate_task_metrics()
+        metrics_pkg, task_outputs = self.aggregate_task_metrics(num_tasks)
 
         pkg_type = "{}_package".format(self.mode)
         viz_package = visualizer.read_and_reset() if visualizer is not None else None
@@ -1377,4 +1413,4 @@ class OnPolicyInference(OnPolicyRLEngine):
             else:
                 if self.mode == "test":
                     self.results_queue.put(("test_stopped", self.worker_id + 1))
-            self.close()
+            self.close(verbose=False)

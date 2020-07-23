@@ -527,13 +527,22 @@ class VectorSampledTasks(object):
 
         if self._is_waiting:
             for read_fn in self._connection_read_fns:
-                read_fn()
+                try:
+                    read_fn()
+                except:
+                    pass
 
         for write_fn in self._connection_write_fns:
-            write_fn((CLOSE_COMMAND, None))
+            try:
+                write_fn((CLOSE_COMMAND, None))
+            except:
+                pass
 
         for process in self._workers:
-            process.join()
+            try:
+                process.join()
+            except:
+                pass
 
         self._is_closed = True
 
@@ -846,6 +855,7 @@ class SingleProcessVectorSampledTasks(object):
                     if current_task.is_done():
                         metrics = current_task.metrics()
                         if metrics is not None and len(metrics) != 0:
+                            # get_logger().debug("sampler putting metrics")
                             metrics_out_queue.put(metrics)
 
                         if auto_resample_when_done:

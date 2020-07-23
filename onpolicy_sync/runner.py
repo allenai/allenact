@@ -567,41 +567,7 @@ class OnPolicyRunner(object):
                         finalized and self.queues["checkpoints"].empty()
                     ):  # assume queue is actually empty after trainer finished and no checkpoints in queue
                         break
-                elif (
-                    package[0] == "test_package"
-                ):  # multiple workers with varying average episode length (reorder)
-                    # assert (
-                    #     package[2] in test_steps
-                    # ), "unexpected test package for {} steps".format(package[2])
-                    # if package[2] == test_steps[-1]:
-                    #     processed = []
-                    #     self.process_eval_package(log_writer, package, test_results)
-                    #     processed.append(test_steps.pop())
-                    #     if len(collected) > 0:
-                    #         collected = sorted(
-                    #             collected, key=lambda x: x[2], reverse=True
-                    #         )
-                    #         while collected[-1][2] == test_steps[-1]:
-                    #             self.process_eval_package(
-                    #                 log_writer, collected.pop(), test_results
-                    #             )
-                    #             processed.append(test_steps.pop())
-                    #             if len(collected) == 0:
-                    #                 break
-                    #         get_logger().debug(
-                    #             "Processed metrics for steps {}".format(processed)
-                    #         )
-                    #     with open(metrics_file, "w") as f:
-                    #         json.dump(test_results, f, indent=4, sort_keys=True)
-                    #         get_logger().debug(
-                    #             "Updated {} up to step {}".format(
-                    #                 metrics_file, processed[-1]
-                    #             )
-                    #         )
-                    # else:
-                    #     collected.append(package)
-                    #     get_logger().debug("Collected metrics for step {}".format(package[2]))
-                    # # TODO make test package processing similar to training to move to distributed test
+                elif package[0] == "test_package":
                     collected.append(package)
                     if len(collected) == nworkers:
                         self.process_test_packages(log_writer, collected, test_results)
