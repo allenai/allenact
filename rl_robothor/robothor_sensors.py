@@ -43,14 +43,52 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
 
     def _compute_pointgoal(self, source_position, source_rotation, goal_position):
         direction_vector = goal_position - source_position
-        direction_vector_agent = quaternion_rotate_vector(
+        direction_vector_agent = self.quaternion_rotate_vector(
             source_rotation.inverse(), direction_vector
         )
 
-        rho, phi = cartesian_to_polar(
+        rho, phi = GPSCompassSensorRoboThor.cartesian_to_polar(
             direction_vector_agent[2], -direction_vector_agent[0]
         )
         return np.array([rho, phi], dtype=np.float32)
+
+    @staticmethod
+    def quaternion_from_y_angle(angle: float) -> np.quaternion:
+        r"""Creates a quaternion from rotation angle around y axis
+        """
+        return GPSCompassSensorRoboThor.quaternion_from_coeff(
+            np.array(
+                [0.0, np.sin(np.pi * angle / 360.0), 0.0, np.cos(np.pi * angle / 360.0)]
+            )
+        )
+
+    @staticmethod
+    def quaternion_from_coeff(coeffs: np.ndarray) -> np.quaternion:
+        r"""Creates a quaternions from coeffs in [x, y, z, w] format
+        """
+        quat = np.quaternion(0, 0, 0, 0)
+        quat.real = coeffs[3]
+        quat.imag = coeffs[0:3]
+        return quat
+
+    @staticmethod
+    def cartesian_to_polar(x, y):
+        rho = np.sqrt(x ** 2 + y ** 2)
+        phi = np.arctan2(y, x)
+        return rho, phi
+
+    @staticmethod
+    def quaternion_rotate_vector(quat: np.quaternion, v: np.array) -> np.array:
+        r"""Rotates a vector by a quaternion
+        Args:
+            quaternion: The quaternion to rotate by
+            v: The vector to rotate
+        Returns:
+            np.array: The rotated vector
+        """
+        vq = np.quaternion(0, 0, 0, 0)
+        vq.imag = v
+        return (quat * vq * quat.inverse()).imag
 
     def get_observation(
         self,
@@ -62,51 +100,15 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
 
         agent_state = env.agent_state()
         agent_position = np.array([agent_state[k] for k in ["x", "y", "z"]])
-        rotation_world_agent = quaternion_from_y_angle(agent_state["rotation"]["y"])
+        rotation_world_agent = self.quaternion_from_y_angle(
+            agent_state["rotation"]["y"]
+        )
 
         goal_position = np.array([task.task_info["target"][k] for k in ["x", "y", "z"]])
 
         return self._compute_pointgoal(
             agent_position, rotation_world_agent, goal_position
         )
-
-
-def quaternion_from_y_angle(angle: float) -> np.quaternion:
-    r"""Creates a quaternion from rotation angle around y axis
-    """
-    return quaternion_from_coeff(
-        np.array(
-            [0.0, np.sin(np.pi * angle / 360.0), 0.0, np.cos(np.pi * angle / 360.0)]
-        )
-    )
-
-
-def quaternion_from_coeff(coeffs: np.ndarray) -> np.quaternion:
-    r"""Creates a quaternions from coeffs in [x, y, z, w] format
-    """
-    quat = np.quaternion(0, 0, 0, 0)
-    quat.real = coeffs[3]
-    quat.imag = coeffs[0:3]
-    return quat
-
-
-def cartesian_to_polar(x, y):
-    rho = np.sqrt(x ** 2 + y ** 2)
-    phi = np.arctan2(y, x)
-    return rho, phi
-
-
-def quaternion_rotate_vector(quat: np.quaternion, v: np.array) -> np.array:
-    r"""Rotates a vector by a quaternion
-    Args:
-        quaternion: The quaternion to rotate by
-        v: The vector to rotate
-    Returns:
-        np.array: The rotated vector
-    """
-    vq = np.quaternion(0, 0, 0, 0)
-    vq.imag = v
-    return (quat * vq * quat.inverse()).imag
 
 
 class DepthSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
