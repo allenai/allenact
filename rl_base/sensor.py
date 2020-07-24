@@ -261,20 +261,24 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             "either both height/width must be None or neither."
         )
 
-        channels = f(config, "OUTPUT_CHANNELS", None)
-        shape = None if self._height is None else (self._height, self._width, channels)
+        shape = f(
+            config,
+            "OUTPUT_SHAPE",
+            None
+            if self._height is None
+            else (self._height, self._width, f(config, "OUTPUT_CHANNELS", None)),
+        )
         low = f(config, "INPUT_LOW", -np.inf)
         high = f(config, "INPUT_HIGH", np.inf)
 
-        if not self._should_normalize or shape is None:
+        if not self._should_normalize or shape is None or len(shape) == 1:
             self.observation_space = gym.spaces.Box(
                 low=np.float32(low), high=np.float32(high), shape=shape
             )
         else:
-            low = np.tile((low - self._norm_means) / self._norm_sds, shape[:-1] + (1,))
-            high = np.tile(
-                (high - self._norm_means) / self._norm_sds, shape[:-1] + (1,)
-            )
+            out_shape = shape[:-1] + (1,)
+            low = np.tile((low - self._norm_means) / self._norm_sds, out_shape)
+            high = np.tile((high - self._norm_means) / self._norm_sds, out_shape)
             self.observation_space = gym.spaces.Box(
                 low=np.float32(low), high=np.float32(high)
             )
@@ -387,6 +391,18 @@ class DepthSensor(VisionSensor[EnvType, SubTaskType]):
     def __init__(
         self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
     ):
+        """Initializer.
+
+        # Parameters
+
+        config : If `config["use_normalization"]` is `True` then the depth images will be normalized
+            with mean 0.5 and standard deviation 0.25. If both `config["height"]` and `config["width"]` are
+            non-negative integers then the depth image returned from the environment will be rescaled to have shape
+            (config["height"], config["width"]) using bilinear sampling.
+        args : Extra args. Currently unused.
+        kwargs : Extra kwargs. Currently unused.
+        """
+
         def f(x, k, default):
             return x[k] if k in x else default
 
@@ -417,10 +433,25 @@ class RGBResNetSensor(VisionSensor[EnvType, SubTaskType]):
     def __init__(
         self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
     ):
+        """Initializer.
+
+        # Parameters
+
+        config : If `config["use_resnet_normalization"]` is `True` then the RGB images will be normalized
+            with means `[0.485, 0.456, 0.406]` and standard deviations `[0.229, 0.224, 0.225]` (i.e. using the standard
+            resnet normalization). If both `config["height"]` and `config["width"]` are non-negative integers then
+            the RGB image returned from the environment will be rescaled to have shape
+            (config["height"], config["width"], 3) using bilinear sampling before being fed to a ResNet-50 and
+            extracting the flattened 2048-dimensional output embedding.
+        args : Extra args. Currently unused.
+        kwargs : Extra kwargs. Currently unused.
+        """
+
         def f(x, k, default):
             return x[k] if k in x else default
 
         config["uuid"] = f(config, "uuid", "rgbresnet")
+        config["OUTPUT_SHAPE"] = (2048,)
         if f(config, "use_resnet_normalization", True):
             config["NORM_mean"] = np.array([[[0.485, 0.456, 0.406]]], dtype=np.float32)
             config["NORM_stdev"] = np.array([[[0.229, 0.224, 0.225]]], dtype=np.float32)
@@ -448,6 +479,64 @@ class RGBResNetSensor(VisionSensor[EnvType, SubTaskType]):
         rgb = self.to_tensor(rgb).unsqueeze(0)
         if torch.cuda.is_available():
             rgb = rgb.to("cuda")
-        rgb = self.resnet(rgb).detach().cpu().numpy()
+        with torch.no_grad():
+            rgb = self.resnet(rgb).detach().cpu().numpy()
 
         return rgb
+
+
+class DepthResNetSensor(VisionSensor[EnvType, SubTaskType]):
+    def __init__(
+        self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
+    ):
+        """Initializer.
+
+        # Parameters
+
+        config : If `config["use_normalization"]` is `True` then the depth images will be normalized
+            with mean 0.5 and standard deviation 0.25. If both `config["height"]` and `config["width"]` are
+            non-negative integers then the depth image returned from the environment will be rescaled to have shape
+            (config["height"], config["width"], 1) using bilinear sampling before being replicated to fill in three
+            channels to feed a ResNet-50 and finally extract the flattened 2048-dimensional output embedding.
+        args : Extra args. Currently unused.
+        kwargs : Extra kwargs. Currently unused.
+        """
+
+        def f(x, k, default):
+            return x[k] if k in x else default
+
+        config["uuid"] = f(config, "uuid", "rgbdepth")
+        config["OUTPUT_SHAPE"] = (2048,)
+        if f(config, "use_normalization", False):
+            config["NORM_mean"] = np.array([[0.5]], dtype=np.float32)
+            config["NORM_stdev"] = np.array([[0.25]], dtype=np.float32)
+
+        super().__init__(config, scale_first, *args, **kwargs)
+
+        self.to_tensor = transforms.ToTensor()
+
+        self.resnet = nn.Sequential(
+            *list(models.resnet50(pretrained=True).children())[:-1] + [nn.Flatten()]
+        ).eval()
+
+        if torch.cuda.is_available():
+            self.resnet = self.resnet.to("cuda")
+
+    @abstractmethod
+    def frame_from_env(self, env: EnvType):
+        return NotImplementedError
+
+    def get_observation(  # type: ignore
+        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
+    ) -> Any:
+        depth = super().get_observation(env, task, *args, **kwargs)
+
+        depth = self.to_tensor(depth).squeeze()
+        depth = torch.stack([depth] * 3, dim=0).unsqueeze(0)
+
+        if torch.cuda.is_available():
+            depth = depth.to("cuda")
+        with torch.no_grad():
+            depth = self.resnet(depth).detach().cpu().numpy()
+
+        return depth
