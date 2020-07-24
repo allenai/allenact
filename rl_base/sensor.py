@@ -9,7 +9,9 @@ from abc import abstractmethod
 
 import gym
 from gym.spaces import Dict as SpaceDict
-from torchvision import transforms
+import torch
+from torchvision import transforms, models
+from torch import nn
 
 from rl_base.common import EnvType
 from utils.tensor_utils import ScaleBothSides
@@ -265,7 +267,7 @@ class RGBSensor(Sensor[EnvType, SubTaskType]):
             )
         else:
             low = np.tile(-self._norm_means / self._norm_sds, shape[:-1] + (1,))
-            high = np.tile((1 - self._norm_means) / self._norm_sds, shape[:-1] + (1,))
+            high = np.tile((1 + self._norm_means) / self._norm_sds, shape[:-1] + (1,))
             self.observation_space = gym.spaces.Box(
                 low=np.float32(low), high=np.float32(high)
             )
@@ -335,5 +337,41 @@ class RGBSensor(Sensor[EnvType, SubTaskType]):
         if not self._scale_first:
             if self.scaler is not None and rgb.shape[:2] != (self._height, self._width):
                 rgb = np.array(self.scaler(self.to_pil(rgb)), dtype=np.float32)  # hwc
+
+        return rgb
+
+
+class RGBResNetSensor(RGBSensor[EnvType, SubTaskType]):
+    def __init__(
+        self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
+    ):
+        config["use_resnet_normalization"] = True
+        super().__init__(config, scale_first, *args, **kwargs)
+
+        shape = None
+        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=shape)
+
+        self.to_tensor = transforms.ToTensor()
+
+        self.resnet = nn.Sequential(
+            *list(models.resnet50(pretrained=True).children())[:-1] + [nn.Flatten()]
+        ).eval()
+
+        if torch.cuda.is_available():
+            self.resnet = self.resnet.to("cuda")
+
+    @abstractmethod
+    def frame_from_env(self, env: EnvType):
+        return NotImplementedError
+
+    def get_observation(  # type: ignore
+        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
+    ) -> Any:
+        rgb = super().get_observation(env, task, *args, **kwargs)
+
+        rgb = self.to_tensor(rgb).unsqueeze(0)
+        if torch.cuda.is_available():
+            rgb = rgb.to("cuda")
+        rgb = self.resnet(rgb).detach().cpu().numpy()
 
         return rgb
