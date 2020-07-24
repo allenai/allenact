@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from models.tensor_object_nav_models import ResnetTensorObjectNavActorCritic
+from models.resnet_tensor_object_nav_models import ResnetTensorObjectNavActorCritic
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 
