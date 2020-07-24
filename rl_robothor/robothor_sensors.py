@@ -6,10 +6,22 @@ import numpy as np
 import quaternion  # noqa # pylint: disable=unused-import
 from torchvision import transforms
 
-from rl_ai2thor.ai2thor_sensors import ScaleBothSides
-from rl_base.sensor import Sensor
+from utils.tensor_utils import ScaleBothSides
+from rl_base.sensor import Sensor, RGBSensor
+from rl_base.task import Task
 from rl_robothor.robothor_environment import RoboThorEnvironment
 from rl_robothor.robothor_tasks import PointNavTask
+
+
+class RGBSensorRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnvironment]]):
+    """Sensor for RGB images in RoboTHOR.
+
+    Returns from a running RoboThorEnvironment instance, the current RGB
+    frame corresponding to the agent's egocentric view.
+    """
+
+    def frame_from_env(self, env: RoboThorEnvironment) -> np.ndarray:
+        return env.current_frame.copy()
 
 
 class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
