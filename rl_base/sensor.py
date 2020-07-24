@@ -324,8 +324,8 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         return cast(gym.spaces.Box, self.observation_space)
 
     @abstractmethod
-    def frame_from_env(self, env: EnvType):
-        return NotImplementedError
+    def frame_from_env(self, env: EnvType) -> np.ndarray:
+        raise NotImplementedError
 
     def get_observation(
         self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
@@ -383,8 +383,8 @@ class RGBSensor(VisionSensor[EnvType, SubTaskType]):
         super().__init__(config, scale_first, *args, **kwargs)
 
     @abstractmethod
-    def frame_from_env(self, env: EnvType):
-        return NotImplementedError
+    def frame_from_env(self, env: EnvType) -> np.ndarray:
+        raise NotImplementedError
 
 
 class DepthSensor(VisionSensor[EnvType, SubTaskType]):
@@ -417,8 +417,8 @@ class DepthSensor(VisionSensor[EnvType, SubTaskType]):
         super().__init__(config, scale_first, *args, **kwargs)
 
     @abstractmethod
-    def frame_from_env(self, env: EnvType):
-        return NotImplementedError
+    def frame_from_env(self, env: EnvType) -> np.ndarray:
+        raise NotImplementedError
 
     def get_observation(  # type: ignore
         self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
@@ -468,8 +468,8 @@ class RGBResNetSensor(VisionSensor[EnvType, SubTaskType]):
             self.resnet = self.resnet.to("cuda")
 
     @abstractmethod
-    def frame_from_env(self, env: EnvType):
-        return NotImplementedError
+    def frame_from_env(self, env: EnvType) -> np.ndarray:
+        raise NotImplementedError
 
     def get_observation(  # type: ignore
         self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
@@ -523,8 +523,8 @@ class DepthResNetSensor(VisionSensor[EnvType, SubTaskType]):
             self.resnet = self.resnet.to("cuda")
 
     @abstractmethod
-    def frame_from_env(self, env: EnvType):
-        return NotImplementedError
+    def frame_from_env(self, env: EnvType) -> np.ndarray:
+        raise NotImplementedError
 
     def get_observation(  # type: ignore
         self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
