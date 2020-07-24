@@ -131,6 +131,8 @@ class Memory(Dict):
 
     def index_select(self, keep: Sequence[int]):
         res = Memory()
+        if len(keep) == 0:
+            return res
         for name in self:
             sampler_dim = self.sampler_dim(name)
             tensor = self.tensor(name)
