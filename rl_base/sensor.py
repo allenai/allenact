@@ -394,8 +394,9 @@ class DepthSensor(VisionSensor[EnvType, SubTaskType]):
         config["OUTPUT_CHANNELS"] = 1
         config["INPUT_LOW"] = 0.0
         config["INPUT_HIGH"] = 5.0
-        config["NORM_mean"] = np.array([[0.5]], dtype=np.float32)
-        config["NORM_stdev"] = np.array([[0.25]], dtype=np.float32)
+        if f(config, "use_normalization", False):
+            config["NORM_mean"] = np.array([[0.5]], dtype=np.float32)
+            config["NORM_stdev"] = np.array([[0.25]], dtype=np.float32)
 
         super().__init__(config, scale_first, *args, **kwargs)
 

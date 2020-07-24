@@ -9,7 +9,7 @@ import torchvision.models as models
 from pyquaternion import Quaternion
 from torchvision import transforms
 
-from rl_base.sensor import Sensor, RGBSensor, RGBResNetSensor
+from rl_base.sensor import Sensor, RGBSensor, RGBResNetSensor, DepthSensor
 from rl_base.task import Task
 from rl_habitat.habitat_environment import HabitatEnvironment
 from rl_habitat.habitat_tasks import PointNavTask, HabitatTask  # type: ignore
@@ -32,84 +32,33 @@ class RGBResNetSensorHabitat(
     def __init__(
         self, config: Dict[str, Any], scale_first=False, *args: Any, **kwargs: Any
     ):
+        def f(x, k, default):
+            return x[k] if k in x else default
+
+        config["uuid"] = f(config, "uuid", "rgb")
+
         super().__init__(config, scale_first, *args, **kwargs)
 
     def frame_from_env(self, env: HabitatEnvironment) -> np.ndarray:
         return env.current_frame["rgb"].copy()
 
 
-class DepthSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
-    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
-        super().__init__(config, *args, **kwargs)
-
+class DepthSensorHabitat(DepthSensor[HabitatEnvironment, Task[HabitatEnvironment]]):
+    def __init__(
+        self, config: Dict[str, Any], scale_first=False, *args: Any, **kwargs: Any
+    ):
         def f(x, k, default):
             return x[k] if k in x else default
 
-        self.height: Optional[int] = f(config, "height", None)
-        self.width: Optional[int] = f(config, "width", None)
-        self.should_normalize = f(config, "use_resnet_normalization", False)
-
-        assert (self.width is None) == (self.height is None), (
-            "In RGBSensorThor's config, "
-            "either both height/width must be None or neither."
+        # Backwards compatibility
+        config["use_normalization"] = f(
+            config, "use_normalization", f(config, "use_resnet_normalization", False)
         )
 
-        self.norm_means = np.array([0.5], dtype=np.float32)
-        self.norm_sds = np.array([[0.25]], dtype=np.float32)
+        super().__init__(config, scale_first, *args, **kwargs)
 
-        shape = None if self.height is None else (self.height, self.width, 3)
-        if not self.should_normalize:
-            low = 0.0
-            high = 1.0
-            self.observation_space = gym.spaces.Box(
-                low=np.float32(low), high=np.float32(high), shape=shape
-            )
-        else:
-            low = np.tile(-self.norm_means / self.norm_sds, shape[:-1] + (1,))
-            high = np.tile((1 - self.norm_means) / self.norm_sds, shape[:-1] + (1,))
-            self.observation_space = gym.spaces.Box(
-                low=np.float32(low), high=np.float32(high)
-            )
-
-        self.scaler = (
-            None
-            if self.width is None
-            else ScaleBothSides(width=self.width, height=self.height)
-        )
-
-        self.to_pil = transforms.ToPILImage()
-
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "depth"
-
-    def _get_observation_space(self) -> gym.spaces.Box:
-        return self.observation_space
-
-    def get_observation(  # type: ignore
-        self,
-        env: HabitatEnvironment,
-        task: Optional[HabitatTask],
-        *args: Any,
-        **kwargs: Any
-    ) -> Any:
-        frame = env.current_frame
-        depth = frame["depth"].copy()
-
-        assert depth.dtype in [np.uint8, np.float32]
-
-        if depth.dtype == np.uint8:
-            depth = depth.astype(np.float32) / 255.0
-
-        if self.should_normalize:
-            depth -= self.norm_means
-            depth /= self.norm_sds
-
-        if self.scaler is not None and depth.shape[:2] != (self.height, self.width):
-            depth = np.array(self.scaler(self.to_pil(depth)), dtype=np.float32)
-
-        depth = np.expand_dims(depth, 2)
-
-        return depth
+    def frame_from_env(self, env: HabitatEnvironment) -> np.ndarray:
+        return env.current_frame["depth"].copy()
 
 
 class DepthResNetSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
