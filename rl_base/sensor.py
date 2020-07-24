@@ -224,7 +224,7 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
         )
 
 
-class RGBSensor(Sensor[EnvType, SubTaskType]):
+class VisionSensor(Sensor[EnvType, SubTaskType]):
     def __init__(
         self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
     ):
@@ -232,11 +232,11 @@ class RGBSensor(Sensor[EnvType, SubTaskType]):
 
         # Parameters
 
-        config : If `config["use_resnet_normalization"]` is `True` then the RGB images will be normalized
-            with means `[0.485, 0.456, 0.406]` and standard deviations `[0.229, 0.224, 0.225]` (i.e. using the standard
-            resnet normalization). If both `config["height"]` and `config["width"]` are non-negative integers then
-            the RGB image returned from the environment will be rescaled to have shape
-            (config["height"], config["width"], 3) using bilinear sampling.
+        config : The images will be normalized
+            with means `config["mean"]` and standard deviations `config["stdev"]`. If both `config["height"]` and
+            `config["width"]` are non-negative integers then
+            the image returned from the environment will be rescaled to have
+            `config["height"]` rows and `config["width"]` columns using bilinear sampling.
         args : Extra args. Currently unused.
         kwargs : Extra kwargs. Currently unused.
         """
@@ -244,43 +244,50 @@ class RGBSensor(Sensor[EnvType, SubTaskType]):
         def f(x, k, default):
             return x[k] if k in x else default
 
-        self._should_normalize = f(config, "use_resnet_normalization", False)
+        self._norm_means = f(config, "NORM_mean", None)
+        self._norm_sds = f(config, "NORM_stdev", None)
+        assert (self._norm_means is None) == (self._norm_sds is None), (
+            "In VisionSensor's config, "
+            "either both mean/stdev must be None or neither."
+        )
+        self._should_normalize = self._norm_means is not None
         self._height: Optional[int] = f(config, "height", None)
         self._width: Optional[int] = f(config, "width", None)
-        self._uuid: str = f(config, "uuid", "rgb")
+        self._uuid: str = f(config, "uuid", "vision")
         self._scale_first = scale_first
 
         assert (self._width is None) == (self._height is None), (
-            "In RGBSensor's config, "
+            "In VisionSensor's config, "
             "either both height/width must be None or neither."
         )
 
-        self._norm_means = np.array([[[0.485, 0.456, 0.406]]], dtype=np.float32)
-        self._norm_sds = np.array([[[0.229, 0.224, 0.225]]], dtype=np.float32)
+        channels = f(config, "OUTPUT_CHANNELS", None)
+        shape = None if self._height is None else (self._height, self._width, channels)
+        low = f(config, "INPUT_LOW", -np.inf)
+        high = f(config, "INPUT_HIGH", np.inf)
 
-        shape = None if self._height is None else (self._height, self._width, 3)
-        if not self._should_normalize:
-            low = 0.0
-            high = 1.0
+        if not self._should_normalize or shape is None:
             self.observation_space = gym.spaces.Box(
                 low=np.float32(low), high=np.float32(high), shape=shape
             )
         else:
-            low = np.tile(-self._norm_means / self._norm_sds, shape[:-1] + (1,))
-            high = np.tile((1 + self._norm_means) / self._norm_sds, shape[:-1] + (1,))
+            low = np.tile((low - self._norm_means) / self._norm_sds, shape[:-1] + (1,))
+            high = np.tile(
+                (high - self._norm_means) / self._norm_sds, shape[:-1] + (1,)
+            )
             self.observation_space = gym.spaces.Box(
                 low=np.float32(low), high=np.float32(high)
             )
 
         self.scaler = (
             None
-            if self.width is None
+            if self._width is None
             else ScaleBothSides(
                 width=cast(int, self._width), height=cast(int, self._height)
             )
         )
 
-        self.to_pil = transforms.ToPILImage(mode="RGB")
+        self.to_pil = transforms.ToPILImage()  # assumes mode="RGB" for 3 channels
 
         super().__init__(
             config, *args, **kwargs
@@ -288,7 +295,7 @@ class RGBSensor(Sensor[EnvType, SubTaskType]):
 
     @property
     def height(self) -> Optional[int]:
-        """Height that RGB image will be rescale to have.
+        """Height that input image will be rescale to have.
 
         # Returns
 
@@ -298,7 +305,7 @@ class RGBSensor(Sensor[EnvType, SubTaskType]):
 
     @property
     def width(self) -> Optional[int]:
-        """Width that RGB image will be rescale to have.
+        """Width that input image will be rescale to have.
 
         # Returns
 
@@ -319,37 +326,105 @@ class RGBSensor(Sensor[EnvType, SubTaskType]):
     def get_observation(
         self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
     ) -> Any:
-        rgb = self.frame_from_env(env)
+        im = self.frame_from_env(env)
 
         if self._scale_first:
-            if self.scaler is not None and rgb.shape[:2] != (self._height, self._width):
-                rgb = np.array(self.scaler(self.to_pil(rgb)), dtype=np.uint8)  # hwc
+            if self.scaler is not None and im.shape[:2] != (self._height, self._width):
+                im = np.array(self.scaler(self.to_pil(im)), dtype=np.uint8)  # hwc
 
-        assert rgb.dtype in [np.uint8, np.float32]
+        assert im.dtype in [np.uint8, np.float32]
 
-        if rgb.dtype == np.uint8:
-            rgb = rgb.astype(np.float32) / 255.0
+        if im.dtype == np.uint8:
+            im = im.astype(np.float32) / 255.0
 
         if self._should_normalize:
-            rgb -= self._norm_means
-            rgb /= self._norm_sds
+            im -= self._norm_means
+            im /= self._norm_sds
 
         if not self._scale_first:
-            if self.scaler is not None and rgb.shape[:2] != (self._height, self._width):
-                rgb = np.array(self.scaler(self.to_pil(rgb)), dtype=np.float32)  # hwc
+            if self.scaler is not None and im.shape[:2] != (self._height, self._width):
+                im = np.array(self.scaler(self.to_pil(im)), dtype=np.float32)  # hwc
 
-        return rgb
+        return im
 
 
-class RGBResNetSensor(RGBSensor[EnvType, SubTaskType]):
+class RGBSensor(VisionSensor[EnvType, SubTaskType]):
     def __init__(
         self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
     ):
-        config["use_resnet_normalization"] = True
+        """Initializer.
+
+        # Parameters
+
+        config : If `config["use_resnet_normalization"]` is `True` then the RGB images will be normalized
+            with means `[0.485, 0.456, 0.406]` and standard deviations `[0.229, 0.224, 0.225]` (i.e. using the standard
+            resnet normalization). If both `config["height"]` and `config["width"]` are non-negative integers then
+            the RGB image returned from the environment will be rescaled to have shape
+            (config["height"], config["width"], 3) using bilinear sampling.
+        args : Extra args. Currently unused.
+        kwargs : Extra kwargs. Currently unused.
+        """
+
+        def f(x, k, default):
+            return x[k] if k in x else default
+
+        config["uuid"] = f(config, "uuid", "rgb")
+        config["OUTPUT_CHANNELS"] = 3
+        config["INPUT_LOW"] = 0.0
+        config["INPUT_HIGH"] = 1.0
+        if f(config, "use_resnet_normalization", False):
+            config["NORM_mean"] = np.array([[[0.485, 0.456, 0.406]]], dtype=np.float32)
+            config["NORM_stdev"] = np.array([[[0.229, 0.224, 0.225]]], dtype=np.float32)
+
         super().__init__(config, scale_first, *args, **kwargs)
 
-        shape = None
-        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=shape)
+    @abstractmethod
+    def frame_from_env(self, env: EnvType):
+        return NotImplementedError
+
+
+class DepthSensor(VisionSensor[EnvType, SubTaskType]):
+    def __init__(
+        self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
+    ):
+        def f(x, k, default):
+            return x[k] if k in x else default
+
+        config["uuid"] = f(config, "uuid", "depth")
+        config["OUTPUT_CHANNELS"] = 1
+        config["INPUT_LOW"] = 0.0
+        config["INPUT_HIGH"] = 5.0
+        config["NORM_mean"] = np.array([[0.5]], dtype=np.float32)
+        config["NORM_stdev"] = np.array([[0.25]], dtype=np.float32)
+
+        super().__init__(config, scale_first, *args, **kwargs)
+
+    @abstractmethod
+    def frame_from_env(self, env: EnvType):
+        return NotImplementedError
+
+    def get_observation(  # type: ignore
+        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
+    ) -> Any:
+        depth = super().get_observation(env, task, *args, **kwargs)
+        depth = np.expand_dims(depth, 2)
+
+        return depth
+
+
+class RGBResNetSensor(VisionSensor[EnvType, SubTaskType]):
+    def __init__(
+        self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
+    ):
+        def f(x, k, default):
+            return x[k] if k in x else default
+
+        config["uuid"] = f(config, "uuid", "rgbresnet")
+        if f(config, "use_resnet_normalization", True):
+            config["NORM_mean"] = np.array([[[0.485, 0.456, 0.406]]], dtype=np.float32)
+            config["NORM_stdev"] = np.array([[[0.229, 0.224, 0.225]]], dtype=np.float32)
+
+        super().__init__(config, scale_first, *args, **kwargs)
 
         self.to_tensor = transforms.ToTensor()
 
