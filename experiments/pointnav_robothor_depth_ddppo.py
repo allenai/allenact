@@ -24,7 +24,7 @@ from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
+class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     """An Object Navigation experiment configuration in RoboThor"""
 
     CAMERA_WIDTH = 640  # 400
@@ -243,19 +243,20 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            "dataset/robothor/pointnav/train/content",
+            "dataset/robothor/pointnav/train/episodes",
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = "dataset/robothor/pointnav/train/content"
+        res["scene_directory"] = "dataset/robothor/pointnav/train"
         res["loop_dataset"] = True
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
             ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
         )
+        res["env_args"]["env_root_dir"] = "dataset/robothor/objectnav/train/view_caches"
         res["allow_flipping"] = True
         return res
 
@@ -268,19 +269,20 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            "dataset/robothor/pointnav/val/content",
+            "dataset/robothor/pointnav/val/episodes",
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = "dataset/robothor/pointnav/val/content"
+        res["scene_directory"] = "dataset/robothor/pointnav/val"
         res["loop_dataset"] = False
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
             ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
         )
+        res["env_args"]["env_root_dir"] = "dataset/robothor/objectnav/val/view_caches"
         return res
 
     def test_task_sampler_args(
@@ -292,13 +294,13 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            "dataset/robothor/pointnav/val/content",
+            "dataset/robothor/pointnav/val/episodes",
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = "dataset/robothor/pointnav/val/content"
+        res["scene_directory"] = "dataset/robothor/pointnav/val"
         res["loop_dataset"] = False
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
@@ -308,4 +310,5 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         #     else None
         # )
         res["env_args"]["x_display"] = "10.0"
+        res["env_args"]["env_root_dir"] = "dataset/robothor/objectnav/val/view_caches"
         return res

@@ -655,16 +655,13 @@ class PointNavDatasetTaskSampler(TaskSampler):
         self.rewards_config = rewards_config
         self.env_args = env_args
         self.scenes = scenes
-        self.episodes = {}
-        self.caches = {}
         self.shuffle_dataset: bool = shuffle_dataset
-        for scene in scenes:
-            episodes, cache = self._load_dataset(scene, scene_directory)
-            self.episodes[scene] = episodes
-            self.caches[scene] = cache
-        # self.scene_to_episodes = scene_to_episodes
-        # self.scene_counters = {scene: -1 for scene in self.scene_to_episodes}
-        # self.scenes = list(self.scene_to_episodes.keys())
+        self.episodes = {
+            scene: self._load_dataset(scene, scene_directory + "/episodes") for scene in scenes
+        }
+        self.distance_caches = {
+            scene: self._load_distance_cache(scene, scene_directory + "/distance_caches") for scene in scenes
+        }
         self.env: Optional[RoboThorEnvironment] = None
         self.sensors = sensors
         self.max_steps = max_steps
@@ -696,7 +693,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
         env = RoboThorEnvironment(**self.env_args)
         return env
 
-    def _load_dataset(self, scene: str, base_directory: str) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    def _load_dataset(self, scene: str, base_directory: str) -> List[Dict]:
         filename = "/".join([base_directory, scene]) if base_directory[-1] != '/' else "".join([base_directory, scene])
         filename += ".json.gz"
         fin = gzip.GzipFile(filename, 'r')
@@ -704,11 +701,18 @@ class PointNavDatasetTaskSampler(TaskSampler):
         fin.close()
         json_str = json_bytes.decode('utf-8')
         data = json.loads(json_str)
-        episodes = data["episodes"]
-        cache = data["cache"]
-        if self.shuffle_dataset:
-            random.shuffle(episodes)
-        return episodes, cache
+        random.shuffle(data)
+        return data
+
+    def _load_distance_cache(self, scene: str, base_directory: str) -> List[Dict]:
+        filename = "/".join([base_directory, scene]) if base_directory[-1] != '/' else "".join([base_directory, scene])
+        filename += ".json.gz"
+        fin = gzip.GzipFile(filename, 'r')
+        json_bytes = fin.read()
+        fin.close()
+        json_str = json_bytes.decode('utf-8')
+        data = json.loads(json_str)
+        return data
 
     @property
     def __len__(self) -> Union[int, float]:
@@ -755,15 +759,8 @@ class PointNavDatasetTaskSampler(TaskSampler):
             self.episode_index = 0
 
         scene = self.scenes[self.scene_index]
-        try:
-            episode = self.episodes[scene][self.episode_index]
-        except:
-            print("\\n\n\n\n\n AN ERROR HAS OCCURED!")
-            print("--------------------------")
-            print("Scene:", scene, "Scenes:", self.scenes, "Scene Index:", self.scene_index)
-            print("Episode Index:", self.episode_index, "Episodes Length:", len(self.episodes[scene]))
-            print("\n\n\n\n\n")
-
+        episode = self.episodes[scene][self.episode_index]
+        distance_cache = self.distance_caches[scene] if self.distance_caches else None
         if self.env is not None:
             if scene.replace("_physics", "") != self.env.scene_name.replace("_physics", ""):
                 self.env.reset(scene)
@@ -775,7 +772,9 @@ class PointNavDatasetTaskSampler(TaskSampler):
             "scene": scene,
             "initial_position": ['initial_position'],
             "initial_orientation": episode['initial_orientation'],
-            "target": episode['target_position']
+            "target": episode['target_position'],
+            "shortest_path": episode['shortest_path'],
+            "distance_to_target": episode['shortest_path_length']
         }
 
         if self.allow_flipping and random.random() > 0.5:
@@ -796,7 +795,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
             max_steps=self.max_steps,
             action_space=self._action_space,
             reward_configs=self.rewards_config,
-            path_cache=self.caches[self.scenes[self.scene_index]],
+            distance_cache=self.distance_caches[self.scenes[self.scene_index]],
             episode_info=self.episodes[self.scenes[self.scene_index]][self.episode_index]
         )
 

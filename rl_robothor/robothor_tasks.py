@@ -81,7 +81,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         task_info: Dict[str, Any],
         max_steps: int,
         reward_configs: Dict[str, Any],
-        path_cache: Optional[Dict[str, Any]] = None,
+        distance_cache: Optional[Dict[str, Any]] = None,
         episode_info: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> None:
@@ -92,7 +92,6 @@ class PointNavTask(Task[RoboThorEnvironment]):
         self.reward_configs = reward_configs
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
-        self._subsampled_locations_from_which_obj_visible = None
 
         if episode_info:
             self.episode_optimal_corners = episode_info['shortest_path']
@@ -109,7 +108,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
-        self.path_cache = path_cache
+        self.distance_cache = distance_cache
         self.path = []  # the initial coordinate will be directly taken from the optimal path
 
     @property
@@ -158,7 +157,12 @@ class PointNavTask(Task[RoboThorEnvironment]):
         tget = self.task_info["target"]
         # pose = self.env.agent_state()
         # dist = np.sqrt((pose['x'] - tget['x']) ** 2 + (pose['z'] - tget['z']) ** 2)
-        dist = self._get_distance_to_target()
+
+        # dist = self._get_distance_to_target()
+        if self.distance_cache:
+            dist = get_distance(self.distance_cache, self.env.agent_state(), self.task_info['target'])
+        else:
+            dist = self.dist_to_target()
 
         if -0.5 < dist <= 0.2:
             return True
@@ -193,7 +197,12 @@ class PointNavTask(Task[RoboThorEnvironment]):
         if self.reward_configs["shaping_weight"] == 0.0:
             return rew
 
-        geodesic_distance = self._get_distance_to_target()
+        # geodesic_distance = self._get_distance_to_target()
+        if self.distance_cache:
+            geodesic_distance = get_distance(self.distance_cache, self.env.agent_state(), self.task_info['target'])
+        else:
+            geodesic_distance = self.dist_to_target()
+
         if geodesic_distance == -1.0:
             geodesic_distance = self.last_geodesic_distance
         # rew += self.last_geodesic_distance - geodesic_distance
@@ -236,30 +245,15 @@ class PointNavTask(Task[RoboThorEnvironment]):
                 )
 
         self._rewards.append(float(reward))
-
         return float(reward)
 
     def spl(self):
-        if len(self.episode_optimal_corners) <= 1 or self._success is None:
-            return None
-
-        if not self._success:
+        if not self.last_action_success:
             return 0.0
-
-        # pose = self.env.agent_state()
-        if self.shortest_geodesic_distance:
-            res = (len(self.path) * self.env.config['gridSize']) / self.shortest_geodesic_distance
+        if self.task_info["distance_to_target"]:
+            res = self.task_info["distance_to_target"] / (len(self.path) * self.env.config['gridSize'])
         else:
-            res = compute_single_spl(self.path, self.episode_optimal_corners, self._success)  # no controller involved
-
-        # # self.env.step({"action": "TeleportFull", **pose})
-        # new_pose = self.env.agent_state()
-        # assert abs(new_pose['x'] - pose['x']) < 1e-5, "wrong x"
-        # assert abs(new_pose['y'] - pose['y']) < 1e-5, "wrong y"
-        # assert abs(new_pose['z'] - pose['z']) < 1e-5, "wrong z"
-        # assert abs(new_pose['rotation']['y'] - pose['rotation']['y']) < 1e-5, "wrong rotation y"
-        # assert abs(new_pose['horizon'] - pose['horizon']) < 1e-5, "wrong horizon"
-
+            res = compute_single_spl(self.path, self.episode_optimal_corners, self._success)
         return res
 
     def dist_to_target(self):
@@ -276,7 +270,10 @@ class PointNavTask(Task[RoboThorEnvironment]):
             if self._success is None:
                 return {}
 
-            dist2tget = self._get_distance_to_target()
+            if self.distance_cache:
+                dist2tget = get_distance(self.distance_cache, self.env.agent_state(), self.task_info['target'])
+            else:
+                dist2tget = self._get_distance_to_target()
             if dist2tget is None:
                 return {}
 
@@ -461,7 +458,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         if not self.last_action_success:
             return 0.0
         if self.task_info["distance_to_target"]:
-            res = (len(self.path) * self.env.config['gridSize']) / self.task_info["distance_to_target"]
+            res = self.task_info["distance_to_target"] / (len(self.path) * self.env.config['gridSize'])
         else:
             res = compute_single_spl(self.path, self.episode_optimal_corners, self._success)
         return res
