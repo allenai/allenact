@@ -58,7 +58,7 @@ def find_nearest_point_in_cache(cache: Dict[str, Any], point: Dict[str, float]) 
     best_delta = float('inf')
     for p in cache:
         p = _str_to_pos(p)
-        delta = (point["x"] - p["x"]) + (point["y"] - p["y"]) + (point["z"] - p["z"])
+        delta = abs(point["x"] - p["x"]) + abs(point["y"] - p["y"]) + abs(point["z"] - p["z"])
         if delta < best_delta:
             best_delta = delta
             closest_point = p
