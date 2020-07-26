@@ -251,7 +251,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         if not self.last_action_success:
             return 0.0
         if self.task_info["distance_to_target"]:
-            res = self.task_info["distance_to_target"] / (len(self.path) * self.env.config['gridSize'])
+            res = self.task_info["distance_to_target"] / (len(self.path) * self.env.config['gridSize'] + 1e-8)
         else:
             res = compute_single_spl(self.path, self.episode_optimal_corners, self._success)
         return res
@@ -458,7 +458,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         if not self.last_action_success:
             return 0.0
         if self.task_info["distance_to_target"]:
-            res = self.task_info["distance_to_target"] / (len(self.path) * self.env.config['gridSize'])
+            res = self.task_info["distance_to_target"] / (len(self.path) * self.env.config['gridSize'] + 1e-8)
         else:
             res = compute_single_spl(self.path, self.episode_optimal_corners, self._success)
         return res
