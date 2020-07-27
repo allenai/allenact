@@ -48,7 +48,7 @@ class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
         self.visual_encoder = SimpleCNN(observation_space, hidden_size)
 
         self.state_encoder = RNNStateEncoder(
-            (0 if self.is_blind else self.recurrent_hidden_state_size())
+            (0 if self.is_blind else self.recurrent_hidden_state_size)
             + self.coorinate_embedding_size,
             self._hidden_size,
             num_layers=num_rnn_layers,
@@ -87,6 +87,7 @@ class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
         else:
             return observations[self.goal_sensor_uuid].to(torch.float32)
 
+    @property
     def recurrent_hidden_state_size(self):
         return self._hidden_size
 
