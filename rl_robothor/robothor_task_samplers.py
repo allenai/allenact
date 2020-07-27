@@ -785,6 +785,10 @@ class PointNavDatasetTaskSampler(TaskSampler):
         if self.reset_tasks is not None:
             LOGGER.debug("valid task_info {}".format(task_info))
 
+        self.episode_index += 1
+        if self.max_tasks is not None:
+            self.max_tasks -= 1
+
         if not self.env.teleport(episode['initial_position'], episode['initial_orientation']):
             return self.next_task()
 
@@ -795,13 +799,9 @@ class PointNavDatasetTaskSampler(TaskSampler):
             max_steps=self.max_steps,
             action_space=self._action_space,
             reward_configs=self.rewards_config,
-            distance_cache=self.distance_caches[self.scenes[self.scene_index]],
-            episode_info=self.episodes[self.scenes[self.scene_index]][self.episode_index]
+            distance_cache=distance_cache,
+            episode_info=episode
         )
-
-        self.episode_index += 1
-        if self.max_tasks is not None:
-            self.max_tasks -= 1
 
         return self._last_sampled_task
 
