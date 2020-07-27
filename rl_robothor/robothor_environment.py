@@ -45,7 +45,7 @@ class RoboThorEnvironment:
         recursive_update(self.config, {**kwargs, "agentMode": "bot"})
         self.controller = Controller(**self.config)
         self.known_good_locations: Dict[str, Any] = {self.scene_name: copy.deepcopy(self.currently_reachable_points)}
-        assert len(self.known_good_locations[self.scene_name]) > 50
+        assert len(self.known_good_locations[self.scene_name]) > 10
 
         # onames = [o['objectId'] for o in self.last_event.metadata['objects']]
         # removed = []
@@ -279,7 +279,7 @@ class RoboThorEnvironment:
             assert self.last_action_success, "Could not reset to new scene"
             if scene_name not in self.known_good_locations:
                 self.known_good_locations[scene_name] = copy.deepcopy(self.currently_reachable_points)
-                assert len(self.known_good_locations[scene_name]) > 50
+                assert len(self.known_good_locations[scene_name]) > 10
 
             # onames = [o['objectId'] for o in self.last_event.metadata['objects']]
             # removed = []
@@ -342,7 +342,7 @@ class RoboThorEnvironment:
         if seed is not None:
             random.seed(seed)
         # xyz = random.choice(self.currently_reachable_points)
-        assert len(self.known_good_locations[self.scene_name]) > 100
+        assert len(self.known_good_locations[self.scene_name]) > 10
         xyz = copy.deepcopy(random.choice(self.known_good_locations[self.scene_name]))
         rotation = random.choice(
             np.arange(0.0, 360.0, self.config["rotateStepDegrees"])
@@ -502,7 +502,7 @@ class RoboThorCachedEnvironment:
         self.agent_rotation = list(self.view_cache[self.agent_position].keys())[0]
         self.known_good_locations: Dict[str, Any] = {self.scene_name: copy.deepcopy(self.currently_reachable_points)}
         self._last_action = "None"
-        assert len(self.known_good_locations[self.scene_name]) > 100
+        assert len(self.known_good_locations[self.scene_name]) > 10
 
     def agent_state(self) -> Dict[str, Union[Dict[str, float], float]]:
         """Return agent position, rotation and horizon."""
@@ -529,7 +529,7 @@ class RoboThorCachedEnvironment:
                 self.scene_name: copy.deepcopy(self.currently_reachable_points)
             }
             self._last_action = "None"
-            assert len(self.known_good_locations[self.scene_name]) > 100
+            assert len(self.known_good_locations[self.scene_name]) > 10
         except:
             print("Could not load scene:", scene_name)
 
