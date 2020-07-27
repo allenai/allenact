@@ -110,6 +110,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         self._metrics = None
         self.distance_cache = distance_cache
         self.path = []  # the initial coordinate will be directly taken from the optimal path
+        self.num_moves_made = 0
 
     @property
     def action_space(self):
@@ -137,7 +138,8 @@ class PointNavTask(Task[RoboThorEnvironment]):
             self.last_action_success = self.env.last_action_success
             pose = self.env.agent_state()
             self.path.append({k: pose[k] for k in ['x', 'y', 'z']})
-
+        if len(self.path) > 1 and self.path[-1] != self.path[-2]:
+            self.num_moves_made += 1
         step_result = RLStepResult(
             observation=self.get_observations(),
             reward=self.judge(),
@@ -250,8 +252,8 @@ class PointNavTask(Task[RoboThorEnvironment]):
     def spl(self):
         if not self.last_action_success:
             return 0.0
-        if self.task_info["distance_to_target"]:
-            res = self.task_info["distance_to_target"] / (len(self.path) * self.env.config['gridSize'] + 1e-8)
+        if self.distance_cache:
+            res = self.task_info["distance_to_target"] / (self.num_moves_made * self.env.config['gridSize'] + 1e-8)
         else:
             res = compute_single_spl(self.path, self.episode_optimal_corners, self._success)
         return res
@@ -322,7 +324,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
 
         if not task_info["distance_to_target"]:
             self.episode_optimal_corners = self.env.path_corners(task_info["target"])  # assume it's valid (sampler must take care)!
-
+        self.num_moves_made = 0
 
     @property
     def action_space(self):
@@ -359,7 +361,8 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             pose = self.env.agent_state()
             self.path.append({k: pose[k] for k in ['x', 'y', 'z']})
             self.task_info["followed_path"].append(pose)
-
+        if len(self.path) > 1 and self.path[-1] != self.path[-2]:
+            self.num_moves_made += 1
         step_result = RLStepResult(
             observation=self.get_observations(),
             reward=self.judge(),
@@ -457,8 +460,8 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
     def spl(self):
         if not self.last_action_success:
             return 0.0
-        if self.task_info["distance_to_target"]:
-            res = self.task_info["distance_to_target"] / (len(self.path) * self.env.config['gridSize'] + 1e-8)
+        if self.distance_cache:
+            res = self.task_info["distance_to_target"] / (self.num_moves_made * self.env.config['gridSize'] + 1e-8)
         else:
             res = compute_single_spl(self.path, self.episode_optimal_corners, self._success)
         return res
