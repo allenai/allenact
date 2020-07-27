@@ -22,6 +22,7 @@ from rl_robothor.robothor_task_samplers import PointNavDatasetTaskSampler
 from rl_robothor.robothor_sensors import DepthSensorRoboThor, GPSCompassSensorRoboThor
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
+from models.point_nav_models import PointNavActorCriticSimpleConvRNN
 
 
 class PointNaviThorRGBPPOExperimentConfig(ExperimentConfig):
@@ -48,31 +49,33 @@ class PointNaviThorRGBPPOExperimentConfig(ExperimentConfig):
                 "height": SCREEN_SIZE,
                 "width": SCREEN_SIZE,
                 "use_resnet_normalization": True,
-                "uuid": "depth_lowres",
+                "uuid": "depth",
             }
         ),
         GPSCompassSensorRoboThor({}),
     ]
 
-    PREPROCESSORS = [
-        Builder(ResnetPreProcessorHabitat,
-                dict(config={
-                    "input_height": SCREEN_SIZE,
-                    "input_width": SCREEN_SIZE,
-                    "output_width": 7,
-                    "output_height": 7,
-                    "output_dims": 512,
-                    "pool": False,
-                    "torchvision_resnet_model": models.resnet18,
-                    "input_uuids": ["depth_lowres"],
-                    "output_uuid": "depth_resnet",
-                    "parallel": False,  # TODO False for debugging
-                })
-        ),
-    ]
+    # PREPROCESSORS = [
+    #     Builder(ResnetPreProcessorHabitat,
+    #             dict(config={
+    #                 "input_height": SCREEN_SIZE,
+    #                 "input_width": SCREEN_SIZE,
+    #                 "output_width": 7,
+    #                 "output_height": 7,
+    #                 "output_dims": 512,
+    #                 "pool": False,
+    #                 "torchvision_resnet_model": models.resnet18,
+    #                 "input_uuids": ["depth_lowres"],
+    #                 "output_uuid": "depth_resnet",
+    #                 "parallel": False,  # TODO False for debugging
+    #             })
+    #     ),
+    # ]
+
+    PREPROCESSORS = []
 
     OBSERVATIONS = [
-        "depth_resnet",
+        "depth",
         "target_coordinates_ind",
     ]
 
@@ -174,14 +177,24 @@ class PointNaviThorRGBPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ResnetTensorPointNavActorCritic(
+        return PointNavActorCriticSimpleConvRNN(
             action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
-            depth_resnet_preprocessor_uuid="depth_resnet",
             hidden_size=512,
-            goal_dims=32,
+            embed_coordinates=False,
+            coordinate_dims=2,
+            num_rnn_layers=1,
+            rnn_type='GRU'
         )
+        # return ResnetTensorPointNavActorCritic(
+        #     action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
+        #     observation_space=kwargs["observation_set"].observation_spaces,
+        #     goal_sensor_uuid="target_coordinates_ind",
+        #     depth_resnet_preprocessor_uuid="depth_resnet",
+        #     hidden_size=512,
+        #     goal_dims=32,
+        # )
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
