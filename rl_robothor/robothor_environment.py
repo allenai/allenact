@@ -35,7 +35,7 @@ class RoboThorEnvironment:
             rotateStepDegrees=30.0,
             visibilityDistance=1.0,
             gridSize=0.25,
-            # agentType="stochastic",
+            agentType="stochastic",
             continuousMode=True,
             snapToGrid=False,
             agentMode="bot",
@@ -45,7 +45,7 @@ class RoboThorEnvironment:
         recursive_update(self.config, {**kwargs, "agentMode": "bot"})
         self.controller = Controller(**self.config)
         self.known_good_locations: Dict[str, Any] = {self.scene_name: copy.deepcopy(self.currently_reachable_points)}
-        assert len(self.known_good_locations[self.scene_name]) > 100
+        assert len(self.known_good_locations[self.scene_name]) > 50
 
         # onames = [o['objectId'] for o in self.last_event.metadata['objects']]
         # removed = []
@@ -279,7 +279,7 @@ class RoboThorEnvironment:
             assert self.last_action_success, "Could not reset to new scene"
             if scene_name not in self.known_good_locations:
                 self.known_good_locations[scene_name] = copy.deepcopy(self.currently_reachable_points)
-                assert len(self.known_good_locations[scene_name]) > 100
+                assert len(self.known_good_locations[scene_name]) > 50
 
             # onames = [o['objectId'] for o in self.last_event.metadata['objects']]
             # removed = []
@@ -367,7 +367,7 @@ class RoboThorEnvironment:
     @property
     def scene_name(self) -> str:
         """Current ai2thor scene."""
-        return self.controller.last_event.metadata["sceneName"]
+        return self.controller.last_event.metadata["sceneName"].replace("_physics", "")
 
     @property
     def current_frame(self) -> np.ndarray:

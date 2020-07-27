@@ -772,7 +772,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
             "scene": scene,
             "initial_position": ['initial_position'],
             "initial_orientation": episode['initial_orientation'],
-            "target": episode['target_position'],
+            "target": find_nearest_point_in_cache(distance_cache, episode['target_position']),
             "shortest_path": episode['shortest_path'],
             "distance_to_target": episode['shortest_path_length']
         }
