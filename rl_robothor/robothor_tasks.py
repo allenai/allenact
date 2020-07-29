@@ -315,8 +315,12 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self.mirror = task_info['mirrored']
-        self.last_geodesic_distance = task_info["distance_to_target"] if task_info["distance_to_target"] else None
+        # self.last_geodesic_distance = task_info["distance_to_target"] if task_info["distance_to_target"] else None
         self.distance_cache = distance_cache
+        if self.distance_cache:
+            self.last_geodesic_distance = get_distance(self.distance_cache, self.env.agent_state(), self.task_info['target'])
+        else:
+            self.last_geodesic_distance = self.env.dist_to_object(self.task_info["object_type"])
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
