@@ -4,12 +4,17 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import OrderedDict
-from typing import Generic, Dict, Any, Optional, TYPE_CHECKING, TypeVar, Sequence
+from typing import Generic, Dict, Any, Optional, TYPE_CHECKING, TypeVar, Sequence, cast
+from abc import abstractmethod
 
 import gym
 from gym.spaces import Dict as SpaceDict
+import torch
+from torchvision import transforms, models
+from torch import nn
 
 from rl_base.common import EnvType
+from utils.tensor_utils import ScaleBothSides
 
 if TYPE_CHECKING:
     from rl_base.task import SubTaskType
@@ -217,3 +222,321 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
         return np.array(
             np.concatenate((policy, [expert_was_successful]), axis=0), dtype=np.float32
         )
+
+
+class VisionSensor(Sensor[EnvType, SubTaskType]):
+    def __init__(
+        self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
+    ):
+        """Initializer.
+
+        # Parameters
+
+        config : The images will be normalized
+            with means `config["mean"]` and standard deviations `config["stdev"]`. If both `config["height"]` and
+            `config["width"]` are non-negative integers then
+            the image returned from the environment will be rescaled to have
+            `config["height"]` rows and `config["width"]` columns using bilinear sampling.
+        args : Extra args. Currently unused.
+        kwargs : Extra kwargs. Currently unused.
+        """
+
+        def f(x, k, default):
+            return x[k] if k in x else default
+
+        self._norm_means = f(config, "NORM_mean", None)
+        self._norm_sds = f(config, "NORM_stdev", None)
+        assert (self._norm_means is None) == (self._norm_sds is None), (
+            "In VisionSensor's config, "
+            "either both mean/stdev must be None or neither."
+        )
+        self._should_normalize = self._norm_means is not None
+        self._height: Optional[int] = f(config, "height", None)
+        self._width: Optional[int] = f(config, "width", None)
+        self._uuid: str = f(config, "uuid", "vision")
+        self._scale_first = scale_first
+
+        assert (self._width is None) == (self._height is None), (
+            "In VisionSensor's config, "
+            "either both height/width must be None or neither."
+        )
+
+        shape = f(
+            config,
+            "OUTPUT_SHAPE",
+            None
+            if self._height is None
+            else (self._height, self._width, f(config, "OUTPUT_CHANNELS", None)),
+        )
+        low = f(config, "INPUT_LOW", -np.inf)
+        high = f(config, "INPUT_HIGH", np.inf)
+
+        if not self._should_normalize or shape is None or len(shape) == 1:
+            self.observation_space = gym.spaces.Box(
+                low=np.float32(low), high=np.float32(high), shape=shape
+            )
+        else:
+            out_shape = shape[:-1] + (1,)
+            low = np.tile((low - self._norm_means) / self._norm_sds, out_shape)
+            high = np.tile((high - self._norm_means) / self._norm_sds, out_shape)
+            self.observation_space = gym.spaces.Box(
+                low=np.float32(low), high=np.float32(high)
+            )
+
+        self.scaler = (
+            None
+            if self._width is None
+            else ScaleBothSides(
+                width=cast(int, self._width), height=cast(int, self._height)
+            )
+        )
+
+        self.to_pil = transforms.ToPILImage()  # assumes mode="RGB" for 3 channels
+
+        super().__init__(
+            config, *args, **kwargs
+        )  # call it last so that user can assign a uuid
+
+    @property
+    def height(self) -> Optional[int]:
+        """Height that input image will be rescale to have.
+
+        # Returns
+
+        The height as a non-negative integer or `None` if no rescaling is done.
+        """
+        return self._height
+
+    @property
+    def width(self) -> Optional[int]:
+        """Width that input image will be rescale to have.
+
+        # Returns
+
+        The width as a non-negative integer or `None` if no rescaling is done.
+        """
+        return self._width
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self._uuid
+
+    def _get_observation_space(self) -> gym.spaces.Box:
+        return cast(gym.spaces.Box, self.observation_space)
+
+    @abstractmethod
+    def frame_from_env(self, env: EnvType) -> np.ndarray:
+        raise NotImplementedError
+
+    def get_observation(
+        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
+    ) -> Any:
+        im = self.frame_from_env(env)
+
+        if self._scale_first:
+            if self.scaler is not None and im.shape[:2] != (self._height, self._width):
+                im = np.array(self.scaler(self.to_pil(im)), dtype=np.uint8)  # hwc
+
+        assert im.dtype in [np.uint8, np.float32]
+
+        if im.dtype == np.uint8:
+            im = im.astype(np.float32) / 255.0
+
+        if self._should_normalize:
+            im -= self._norm_means
+            im /= self._norm_sds
+
+        if not self._scale_first:
+            if self.scaler is not None and im.shape[:2] != (self._height, self._width):
+                im = np.array(self.scaler(self.to_pil(im)), dtype=np.float32)  # hwc
+
+        return im
+
+
+class RGBSensor(VisionSensor[EnvType, SubTaskType]):
+    def __init__(
+        self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
+    ):
+        """Initializer.
+
+        # Parameters
+
+        config : If `config["use_resnet_normalization"]` is `True` then the RGB images will be normalized
+            with means `[0.485, 0.456, 0.406]` and standard deviations `[0.229, 0.224, 0.225]` (i.e. using the standard
+            resnet normalization). If both `config["height"]` and `config["width"]` are non-negative integers then
+            the RGB image returned from the environment will be rescaled to have shape
+            (config["height"], config["width"], 3) using bilinear sampling.
+        args : Extra args. Currently unused.
+        kwargs : Extra kwargs. Currently unused.
+        """
+
+        def f(x, k, default):
+            return x[k] if k in x else default
+
+        config["uuid"] = f(config, "uuid", "rgb")
+        config["OUTPUT_CHANNELS"] = 3
+        config["INPUT_LOW"] = 0.0
+        config["INPUT_HIGH"] = 1.0
+        if f(config, "use_resnet_normalization", False):
+            config["NORM_mean"] = np.array([[[0.485, 0.456, 0.406]]], dtype=np.float32)
+            config["NORM_stdev"] = np.array([[[0.229, 0.224, 0.225]]], dtype=np.float32)
+
+        super().__init__(config, scale_first, *args, **kwargs)
+
+    @abstractmethod
+    def frame_from_env(self, env: EnvType) -> np.ndarray:
+        raise NotImplementedError
+
+
+class DepthSensor(VisionSensor[EnvType, SubTaskType]):
+    def __init__(
+        self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
+    ):
+        """Initializer.
+
+        # Parameters
+
+        config : If `config["use_normalization"]` is `True` then the depth images will be normalized
+            with mean 0.5 and standard deviation 0.25. If both `config["height"]` and `config["width"]` are
+            non-negative integers then the depth image returned from the environment will be rescaled to have shape
+            (config["height"], config["width"]) using bilinear sampling.
+        args : Extra args. Currently unused.
+        kwargs : Extra kwargs. Currently unused.
+        """
+
+        def f(x, k, default):
+            return x[k] if k in x else default
+
+        config["uuid"] = f(config, "uuid", "depth")
+        config["OUTPUT_CHANNELS"] = 1
+        config["INPUT_LOW"] = 0.0
+        config["INPUT_HIGH"] = 5.0
+        if f(config, "use_normalization", False):
+            config["NORM_mean"] = np.array([[0.5]], dtype=np.float32)
+            config["NORM_stdev"] = np.array([[0.25]], dtype=np.float32)
+
+        super().__init__(config, scale_first, *args, **kwargs)
+
+    @abstractmethod
+    def frame_from_env(self, env: EnvType) -> np.ndarray:
+        raise NotImplementedError
+
+    def get_observation(  # type: ignore
+        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
+    ) -> Any:
+        depth = super().get_observation(env, task, *args, **kwargs)
+        depth = np.expand_dims(depth, 2)
+
+        return depth
+
+
+class RGBResNetSensor(VisionSensor[EnvType, SubTaskType]):
+    def __init__(
+        self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
+    ):
+        """Initializer.
+
+        # Parameters
+
+        config : If `config["use_resnet_normalization"]` is `True` then the RGB images will be normalized
+            with means `[0.485, 0.456, 0.406]` and standard deviations `[0.229, 0.224, 0.225]` (i.e. using the standard
+            resnet normalization). If both `config["height"]` and `config["width"]` are non-negative integers then
+            the RGB image returned from the environment will be rescaled to have shape
+            (config["height"], config["width"], 3) using bilinear sampling before being fed to a ResNet-50 and
+            extracting the flattened 2048-dimensional output embedding.
+        args : Extra args. Currently unused.
+        kwargs : Extra kwargs. Currently unused.
+        """
+
+        def f(x, k, default):
+            return x[k] if k in x else default
+
+        config["uuid"] = f(config, "uuid", "rgbresnet")
+        config["OUTPUT_SHAPE"] = (2048,)
+        if f(config, "use_resnet_normalization", True):
+            config["NORM_mean"] = np.array([[[0.485, 0.456, 0.406]]], dtype=np.float32)
+            config["NORM_stdev"] = np.array([[[0.229, 0.224, 0.225]]], dtype=np.float32)
+
+        super().__init__(config, scale_first, *args, **kwargs)
+
+        self.to_tensor = transforms.ToTensor()
+
+        self.resnet = nn.Sequential(
+            *list(models.resnet50(pretrained=True).children())[:-1] + [nn.Flatten()]
+        ).eval()
+
+        if torch.cuda.is_available():
+            self.resnet = self.resnet.to("cuda")
+
+    @abstractmethod
+    def frame_from_env(self, env: EnvType) -> np.ndarray:
+        raise NotImplementedError
+
+    def get_observation(  # type: ignore
+        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
+    ) -> Any:
+        rgb = super().get_observation(env, task, *args, **kwargs)
+
+        rgb = self.to_tensor(rgb).unsqueeze(0)
+        if torch.cuda.is_available():
+            rgb = rgb.to("cuda")
+        with torch.no_grad():
+            rgb = self.resnet(rgb).detach().cpu().numpy()
+
+        return rgb
+
+
+class DepthResNetSensor(VisionSensor[EnvType, SubTaskType]):
+    def __init__(
+        self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
+    ):
+        """Initializer.
+
+        # Parameters
+
+        config : If `config["use_normalization"]` is `True` then the depth images will be normalized
+            with mean 0.5 and standard deviation 0.25. If both `config["height"]` and `config["width"]` are
+            non-negative integers then the depth image returned from the environment will be rescaled to have shape
+            (config["height"], config["width"], 1) using bilinear sampling before being replicated to fill in three
+            channels to feed a ResNet-50 and finally extract the flattened 2048-dimensional output embedding.
+        args : Extra args. Currently unused.
+        kwargs : Extra kwargs. Currently unused.
+        """
+
+        def f(x, k, default):
+            return x[k] if k in x else default
+
+        config["uuid"] = f(config, "uuid", "rgbdepth")
+        config["OUTPUT_SHAPE"] = (2048,)
+        if f(config, "use_normalization", False):
+            config["NORM_mean"] = np.array([[0.5]], dtype=np.float32)
+            config["NORM_stdev"] = np.array([[0.25]], dtype=np.float32)
+
+        super().__init__(config, scale_first, *args, **kwargs)
+
+        self.to_tensor = transforms.ToTensor()
+
+        self.resnet = nn.Sequential(
+            *list(models.resnet50(pretrained=True).children())[:-1] + [nn.Flatten()]
+        ).eval()
+
+        if torch.cuda.is_available():
+            self.resnet = self.resnet.to("cuda")
+
+    @abstractmethod
+    def frame_from_env(self, env: EnvType) -> np.ndarray:
+        raise NotImplementedError
+
+    def get_observation(  # type: ignore
+        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
+    ) -> Any:
+        depth = super().get_observation(env, task, *args, **kwargs)
+
+        depth = self.to_tensor(depth).squeeze()
+        depth = torch.stack([depth] * 3, dim=0).unsqueeze(0)
+
+        if torch.cuda.is_available():
+            depth = depth.to("cuda")
+        with torch.no_grad():
+            depth = self.resnet(depth).detach().cpu().numpy()
+
+        return depth

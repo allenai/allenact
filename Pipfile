@@ -41,6 +41,7 @@ gym-minigrid = "*"
 gin-config = "*"
 babyai = {editable = true,git = "https://github.com/unnat/babyai.git",ref = "ff645fe00ea8412a29bd5e2d6f79ae1595d229a7"}
 localreg = "*"
+colour = "*"
 
 [requires]
 python_version = "3.6"
