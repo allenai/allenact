@@ -14,7 +14,7 @@ import torch.multiprocessing as mp
 import torch.optim
 from torch import nn
 from torch import optim
-from torch.nn.parallel import DistributedDataParallel
+from torch.nn.parallel import DistributedDataParallel, DistributedDataParallelCPU
 from torch.optim.lr_scheduler import _LRScheduler
 
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
@@ -165,15 +165,21 @@ class OnPolicyRLEngine(object):
                 self.num_workers,
                 self.worker_id == 0,
             )
+            cpu_device = torch.device(self.device) == torch.device("cpu")
             torch.distributed.init_process_group(
-                backend="nccl",
+                backend="gloo" if cpu_device else "nccl",
                 store=self.store,
                 rank=self.worker_id,
                 world_size=self.num_workers,
             )
-            self.actor_critic = DistributedDataParallel(
-                self.actor_critic, device_ids=[self.device], output_device=self.device
-            )
+            if cpu_device:
+                self.actor_critic = DistributedDataParallelCPU(self.actor_critic)
+            else:
+                self.actor_critic = DistributedDataParallel(
+                    self.actor_critic,
+                    device_ids=[self.device],
+                    output_device=self.device,
+                )
             self.is_distributed = True
 
         self.deterministic_agent = False
@@ -587,7 +593,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self.tracking_info: Dict[str, List] = defaultdict(lambda: [])
         self.former_steps: Optional[int] = None
         self.last_log: Optional[int] = None
-        self.save_interval: Optional[int] = None
         self.last_save: Optional[int] = None
 
     def advance_seed(self, seed: Optional[int]) -> Optional[int]:
@@ -720,7 +725,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
     @property
     def log_interval(self):
-        return self.log_interval
+        return self.training_pipeline.metric_accumulate_interval
 
     def act(self, rollouts: RolloutStorage):
         actions, actor_critic_output, memory, step_observation = super().act(
@@ -798,6 +803,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         assert last_name is not None, "infos was empty."
         pkg_type = last_name
         payload = scalars.pop_and_reset() if nsamples > 0 else None
+        payload["pipeline_stage"] = self.training_pipeline.current_stage_index
 
         return pkg_type, payload, nsamples
 
@@ -949,6 +955,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self.initialize_rollouts(rollouts)
         self.tracking_info.clear()
 
+        self.last_log = self.training_pipeline.total_steps - self.log_interval
+        self.last_save = self.training_pipeline.total_steps - (
+            self.log_interval if self.training_pipeline.current_stage_index == 0 else 0
+        )
+
         while True:
             self.training_pipeline.before_rollout()
             if self.training_pipeline.current_stage is None:
@@ -1029,27 +1040,27 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.lr_scheduler.step(epoch=self.training_pipeline.total_steps)
 
             if (
-                self.step_count - self.last_log >= self.log_interval
+                self.training_pipeline.total_steps - self.last_log >= self.log_interval
                 or self.training_pipeline.current_stage.is_complete
             ):
                 self.send_package(tracking_info=self.tracking_info)
                 self.tracking_info.clear()
-                self.last_log = self.step_count
+                self.last_log = self.training_pipeline.total_steps
 
             # save for every interval-th episode or for the last epoch
             if (
-                (
-                    self.step_count - self.last_save
+                self.checkpoints_dir != ""
+                and self.training_pipeline.save_interval > 0
+                and (
+                    self.training_pipeline.total_steps - self.last_save
                     >= self.training_pipeline.save_interval
                     or self.training_pipeline.current_stage.is_complete
                 )
-                and self.checkpoints_dir != ""
-                and self.training_pipeline.save_interval > 0
             ):
                 if self.worker_id == 0:
                     model_path = self.checkpoint_save()
                     self.checkpoints_queue.put(("eval", model_path))
-                self.last_save = self.step_count
+                self.last_save = self.training_pipeline.total_steps
 
             if (self.training_pipeline.advance_scene_rollout_period is not None) and (
                 self.training_pipeline.rollout_count
@@ -1071,18 +1082,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.mode == "train"
         ), "run_pipeline only to be called from a train instance"
 
-        finalized = False
+        training_completed_successfully = False
         try:
             if checkpoint_file_name is not None:
                 self.checkpoint_load(checkpoint_file_name, restart_pipeline)
 
-            self.save_interval = self.training_pipeline.save_interval
-            self.last_log = self.step_count - self.log_interval
-            self.last_save = self.step_count - (
-                self.log_interval
-                if self.training_pipeline.current_stage_index == 0
-                else 0
-            )
             self.train(
                 RolloutStorage(
                     num_steps=self.training_pipeline.num_steps,
@@ -1093,7 +1097,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 )
             )
 
-            finalized = True
+            training_completed_successfully = True
         except KeyboardInterrupt:
             get_logger().info(
                 "KeyboardInterrupt. Terminating {} worker {}".format(
@@ -1108,7 +1112,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             )
             get_logger().exception(traceback.format_exc())
         finally:
-            if finalized:
+            if training_completed_successfully:
                 if self.worker_id == 0:
                     self.results_queue.put(("train_stopped", 0))
                 get_logger().info(

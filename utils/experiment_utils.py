@@ -443,11 +443,18 @@ class TrainingPipeline(object):
         self.rollout_count = 0
         self.off_policy_epochs = None
 
+        self._refresh_current_stage(force_stage_search_from_start=True)
+
     @property
     def total_steps(self) -> int:
         return sum(ps.steps_taken_in_stage for ps in self.pipeline_stages)
 
-    def _refresh_current_stage(self) -> Optional[PipelineStage]:
+    def _refresh_current_stage(
+        self, force_stage_search_from_start: bool = False
+    ) -> Optional[PipelineStage]:
+        if force_stage_search_from_start:
+            self._current_stage = None
+
         if self._current_stage is None or self._current_stage.is_complete:
             if self._current_stage is None:
                 start_index = 0
@@ -479,14 +486,14 @@ class TrainingPipeline(object):
                 training_metrics=train_valid_metrics["train"],
                 test_valid_metrics=train_valid_metrics["valid"],
             )
-        self._refresh_current_stage()
+        self._refresh_current_stage(force_stage_search_from_start=False)
 
     def restart_pipeline(self):
         for ps in self.pipeline_stages:
             ps.steps_taken_in_stage = 0
             ps.early_stopping_criterion_met = False
         self._current_stage = None
-        self._refresh_current_stage()
+        self._refresh_current_stage(force_stage_search_from_start=True)
 
     def state_dict(self):
         return dict(
@@ -511,7 +518,7 @@ class TrainingPipeline(object):
         self.backprop_count = state_dict["backprop_count"]
         self.off_policy_epochs = state_dict["off_policy_epochs"]
 
-        self._refresh_current_stage()
+        self._refresh_current_stage(force_stage_search_from_start=True)
 
     @property
     def current_stage_losses(self) -> Dict[str, AbstractActorCriticLoss]:
@@ -526,15 +533,6 @@ class TrainingPipeline(object):
             self.current_stage.named_losses = {
                 loss_name: self.named_losses[loss_name]
                 for loss_name in self.current_stage.loss_names
-            }
-            loss_weights = (
-                self.current_stage.loss_weights
-                if self.current_stage.loss_weights is not None
-                else [1.0] * len(self.current_stage.loss_names)
-            )
-            self.current_stage.named_loss_weights = {
-                name: weight
-                for name, weight in zip(self.current_stage.loss_names, loss_weights)
             }
         return self.current_stage.named_losses
 
