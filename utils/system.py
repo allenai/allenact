@@ -76,7 +76,7 @@ def get_logger() -> logging.Logger:
     return _LOGGER
 
 
-def find_free_port(address="localhost"):
+def find_free_port(address="127.0.0.1"):
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
         s.bind((address, 0))
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

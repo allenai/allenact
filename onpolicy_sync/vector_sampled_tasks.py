@@ -695,7 +695,8 @@ class VectorSampledTasks(object):
     def render(
         self, mode: str = "human", *args, **kwargs
     ) -> Union[np.ndarray, None, List[np.ndarray]]:
-        """Render observations from all Tasks in a tiled image or list of images."""
+        """Render observations from all Tasks in a tiled image or list of
+        images."""
 
         images = self.command(
             commands=RENDER_COMMAND,
@@ -1222,7 +1223,8 @@ class SingleProcessVectorSampledTasks(object):
     def render(
         self, mode: str = "human", *args, **kwargs
     ) -> Union[np.ndarray, None, List[np.ndarray]]:
-        """Render observations from all Tasks in a tiled image or a list of images."""
+        """Render observations from all Tasks in a tiled image or a list of
+        images."""
 
         images = [
             g.send((RENDER_COMMAND, (args, {"mode": "rgb", **kwargs})))

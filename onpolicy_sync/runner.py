@@ -364,18 +364,35 @@ class OnPolicyRunner(object):
 
     @property
     def checkpoint_dir(self):
-        folder = os.path.join(self.output_dir, "checkpoints", self.local_start_time_str)
+        folder = os.path.join(
+            self.output_dir,
+            "checkpoints",
+            self.config.tag()
+            if self.extra_tag == ""
+            else os.path.join(self.config.tag(), self.extra_tag),
+            self.local_start_time_str,
+        )
         os.makedirs(folder, exist_ok=True)
         return folder
 
     def log_writer_path(self, start_time_str) -> str:
         return os.path.join(
-            self.output_dir, "tb", self.experiment_name, start_time_str,
+            self.output_dir,
+            "tb",
+            self.config.tag()
+            if self.extra_tag == ""
+            else os.path.join(self.config.tag(), self.extra_tag),
+            start_time_str,
         )
 
     def metric_path(self, start_time_str) -> str:
         return os.path.join(
-            self.output_dir, "metrics", self.experiment_name, start_time_str
+            self.output_dir,
+            "metrics",
+            self.config.tag()
+            if self.extra_tag == ""
+            else os.path.join(self.config.tag(), self.extra_tag),
+            start_time_str,
         )
 
     def save_config_files(self):
@@ -557,7 +574,7 @@ class OnPolicyRunner(object):
         try:
             while True:
                 try:
-                    package = self.queues["results"].get()
+                    package = self.queues["results"].get(timeout=1)
                     if package[0] == "train_package":
                         collected.append(package)
                         if len(collected) >= nworkers:
@@ -595,7 +612,9 @@ class OnPolicyRunner(object):
                     elif package[0] == "test_package":
                         collected.append(package)
                         if len(collected) == nworkers:
-                            self.process_test_packages(log_writer, collected, test_results)
+                            self.process_test_packages(
+                                log_writer, collected, test_results
+                            )
                             collected = []
                             with open(metrics_file, "w") as f:
                                 json.dump(test_results, f, indent=4, sort_keys=True)
@@ -615,7 +634,9 @@ class OnPolicyRunner(object):
                             )
                     elif package[0] == "valid_stopped":
                         raise Exception(
-                            "Valid worker {} abnormally terminated".format(package[1] - 1)
+                            "Valid worker {} abnormally terminated".format(
+                                package[1] - 1
+                            )
                         )
                     elif package[0] == "test_stopped":
                         if package[1] == 0:

@@ -15,12 +15,16 @@ import torch.optim
 from torch import nn
 from torch import optim
 from torch.nn.parallel import DistributedDataParallel
+
 try:
     from torch.nn.parallel import DistributedDataParallelCPU
 except ImportError as e:
+
     class DistributedDataParallelCPU(object):
         def __init__(self, *args, **kwargs):
             raise e
+
+
 from torch.optim.lr_scheduler import _LRScheduler
 
 from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
@@ -165,7 +169,7 @@ class OnPolicyRLEngine(object):
         if self.num_workers > 1:
             if self.mode == "train":
                 self.store = torch.distributed.TCPStore(
-                    "localhost",
+                    "127.0.0.1",
                     self.distributed_port,
                     self.num_workers,
                     self.worker_id == 0,
@@ -224,7 +228,8 @@ class OnPolicyRLEngine(object):
 
     @staticmethod
     def worker_seeds(nprocesses: int, initial_seed: Optional[int]) -> List[int]:
-        """Create a collection of seeds for workers without modifying the RNG state."""
+        """Create a collection of seeds for workers without modifying the RNG
+        state."""
         rstate: Optional = None
         if initial_seed is not None:
             rstate = random.getstate()
@@ -950,9 +955,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self.tracking_info.clear()
 
         self.last_log = self.training_pipeline.total_steps - self.log_interval
-        self.last_save = self.training_pipeline.total_steps - (
-            self.log_interval if self.training_pipeline.current_stage_index == 0 else 0
-        )
+        self.last_save = self.training_pipeline.total_steps
 
         while True:
             self.training_pipeline.before_rollout()
