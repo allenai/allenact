@@ -48,13 +48,14 @@ class Preprocessor(abc.ABC):
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
     def to(self, device: torch.device) -> "Preprocessor":
         raise NotImplementedError()
 
 
 class PreprocessorGraph:
     """Represents a graph of preprocessors, with each preprocessor being
-    identified through a unique id.
+    identified through a universally unique id.
 
     # Attributes
 

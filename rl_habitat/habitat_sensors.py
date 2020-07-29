@@ -23,6 +23,7 @@ from utils.tensor_utils import ScaleBothSides
 
 
 class RGBSensorHabitat(RGBSensor[HabitatEnvironment, Task[HabitatEnvironment]]):
+    # For backwards compatibility
     def __init__(
         self, config: Dict[str, Any], scale_first=False, *args: Any, **kwargs: Any
     ):
@@ -35,6 +36,7 @@ class RGBSensorHabitat(RGBSensor[HabitatEnvironment, Task[HabitatEnvironment]]):
 class RGBResNetSensorHabitat(
     RGBResNetSensor[HabitatEnvironment, Task[HabitatEnvironment]]
 ):
+    # For backwards compatibility
     def __init__(
         self, config: Dict[str, Any], scale_first=False, *args: Any, **kwargs: Any
     ):
@@ -50,13 +52,13 @@ class RGBResNetSensorHabitat(
 
 
 class DepthSensorHabitat(DepthSensor[HabitatEnvironment, Task[HabitatEnvironment]]):
+    # For backwards compatibility
     def __init__(
         self, config: Dict[str, Any], scale_first=False, *args: Any, **kwargs: Any
     ):
         def f(x, k, default):
             return x[k] if k in x else default
 
-        # Backwards compatibility
         config["use_normalization"] = f(
             config, "use_normalization", f(config, "use_resnet_normalization", False)
         )
@@ -70,6 +72,7 @@ class DepthSensorHabitat(DepthSensor[HabitatEnvironment, Task[HabitatEnvironment
 class DepthResNetSensorHabitat(
     DepthResNetSensor[HabitatEnvironment, Task[HabitatEnvironment]]
 ):
+    # For backwards compatibility
     def __init__(
         self, config: Dict[str, Any], scale_first=False, *args: Any, **kwargs: Any
     ):

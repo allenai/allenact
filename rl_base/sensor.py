@@ -12,16 +12,16 @@ from gym.spaces import Dict as SpaceDict
 import torch
 from torchvision import transforms, models
 from torch import nn
+import numpy as np
 
 from rl_base.common import EnvType
 from utils.tensor_utils import ScaleBothSides
+from utils.system import get_logger
 
 if TYPE_CHECKING:
     from rl_base.task import SubTaskType
 else:
     SubTaskType = TypeVar("SubTaskType", bound="Task")
-
-import numpy as np
 
 
 class Sensor(Generic[EnvType, SubTaskType]):
@@ -236,7 +236,8 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             with means `config["mean"]` and standard deviations `config["stdev"]`. If both `config["height"]` and
             `config["width"]` are non-negative integers then
             the image returned from the environment will be rescaled to have
-            `config["height"]` rows and `config["width"]` columns using bilinear sampling.
+            `config["height"]` rows and `config["width"]` columns using bilinear sampling. The universally unique
+            identifier will be set as `config["uuid"]`.
         args : Extra args. Currently unused.
         kwargs : Extra kwargs. Currently unused.
         """
@@ -244,32 +245,39 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         def f(x, k, default):
             return x[k] if k in x else default
 
-        self._norm_means = f(config, "NORM_mean", None)
-        self._norm_sds = f(config, "NORM_stdev", None)
+        self._norm_means = f(config, "mean", None)
+        self._norm_sds = f(config, "stdev", None)
         assert (self._norm_means is None) == (self._norm_sds is None), (
             "In VisionSensor's config, "
             "either both mean/stdev must be None or neither."
         )
         self._should_normalize = self._norm_means is not None
+
         self._height: Optional[int] = f(config, "height", None)
         self._width: Optional[int] = f(config, "width", None)
-        self._uuid: str = f(config, "uuid", "vision")
-        self._scale_first = scale_first
-
         assert (self._width is None) == (self._height is None), (
             "In VisionSensor's config, "
             "either both height/width must be None or neither."
         )
 
+        self._uuid: str = f(config, "uuid", "vision")
+        self._scale_first = scale_first
+
+        if "output_shape" in config and "output_channels" in config:
+            get_logger().warning(
+                "Ignoring output_channels ({}) given output_shape {}".format(
+                    config["output_channels"], config["output_shape"]
+                )
+            )
         shape = f(
             config,
-            "OUTPUT_SHAPE",
+            "output_shape",
             None
             if self._height is None
-            else (self._height, self._width, f(config, "OUTPUT_CHANNELS", None)),
+            else (self._height, self._width, f(config, "output_channels", None)),
         )
-        low = f(config, "INPUT_LOW", -np.inf)
-        high = f(config, "INPUT_HIGH", np.inf)
+        low = f(config, "input_infimum", -np.inf)
+        high = f(config, "input_supremum", np.inf)
 
         if not self._should_normalize or shape is None or len(shape) == 1:
             self.observation_space = gym.spaces.Box(
@@ -373,12 +381,16 @@ class RGBSensor(VisionSensor[EnvType, SubTaskType]):
             return x[k] if k in x else default
 
         config["uuid"] = f(config, "uuid", "rgb")
-        config["OUTPUT_CHANNELS"] = 3
-        config["INPUT_LOW"] = 0.0
-        config["INPUT_HIGH"] = 1.0
+        config["output_channels"] = f(config, "output_channels", 3)
+        config["input_infimum"] = f(config, "input_infimum", 0.0)
+        config["input_supremum"] = f(config, "input_supremum", 1.0)
         if f(config, "use_resnet_normalization", False):
-            config["NORM_mean"] = np.array([[[0.485, 0.456, 0.406]]], dtype=np.float32)
-            config["NORM_stdev"] = np.array([[[0.229, 0.224, 0.225]]], dtype=np.float32)
+            config["mean"] = f(
+                config, "mean", np.array([[[0.485, 0.456, 0.406]]], dtype=np.float32)
+            )
+            config["stdev"] = f(
+                config, "stdev", np.array([[[0.229, 0.224, 0.225]]], dtype=np.float32)
+            )
 
         super().__init__(config, scale_first, *args, **kwargs)
 
@@ -407,12 +419,12 @@ class DepthSensor(VisionSensor[EnvType, SubTaskType]):
             return x[k] if k in x else default
 
         config["uuid"] = f(config, "uuid", "depth")
-        config["OUTPUT_CHANNELS"] = 1
-        config["INPUT_LOW"] = 0.0
-        config["INPUT_HIGH"] = 5.0
+        config["output_channels"] = f(config, "output_channels", 1)
+        config["input_infimum"] = f(config, "input_infimum", 0.0)
+        config["input_supremum"] = f(config, "input_supremum", 5.0)
         if f(config, "use_normalization", False):
-            config["NORM_mean"] = np.array([[0.5]], dtype=np.float32)
-            config["NORM_stdev"] = np.array([[0.25]], dtype=np.float32)
+            config["mean"] = f(config, "mean", np.array([[0.5]], dtype=np.float32))
+            config["stdev"] = f(config, "stdev", np.array([[0.25]], dtype=np.float32))
 
         super().__init__(config, scale_first, *args, **kwargs)
 
@@ -429,7 +441,57 @@ class DepthSensor(VisionSensor[EnvType, SubTaskType]):
         return depth
 
 
-class RGBResNetSensor(VisionSensor[EnvType, SubTaskType]):
+class ResNetSensor(VisionSensor[EnvType, SubTaskType]):
+    def __init__(
+        self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
+    ):
+        def f(x, k, default):
+            return x[k] if k in x else default
+
+        config["uuid"] = f(config, "uuid", "resnet")
+
+        super().__init__(config, scale_first, *args, **kwargs)
+
+        self.to_tensor = transforms.ToTensor()
+
+        self.resnet = nn.Sequential(
+            *list(models.resnet50(pretrained=True).children())[:-1] + [nn.Flatten()]
+        ).eval()
+
+        self.device = "cpu"
+
+    @abstractmethod
+    def frame_from_env(self, env: EnvType) -> np.ndarray:
+        raise NotImplementedError
+
+    def to(self, device: torch.device):
+        """Moves sensor to specified device.
+
+        # Parameters
+
+        device : The device for the sensor.
+        """
+        self.device = device
+        self.resnet = self.resnet.to(device)
+
+    def observation_to_tensor(self, observation: Any) -> torch.Tensor:
+        return self.to_tensor(observation)
+
+    def get_observation(  # type: ignore
+        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
+    ) -> Any:
+        observation = super().get_observation(env, task, *args, **kwargs)
+
+        input_tensor = (
+            self.observation_to_tensor(observation).unsqueeze(0).to(self.device)
+        )
+        with torch.no_grad():
+            result = self.resnet(input_tensor).detach().cpu().numpy()
+
+        return result
+
+
+class RGBResNetSensor(ResNetSensor[EnvType, SubTaskType]):
     def __init__(
         self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
     ):
@@ -451,41 +513,23 @@ class RGBResNetSensor(VisionSensor[EnvType, SubTaskType]):
             return x[k] if k in x else default
 
         config["uuid"] = f(config, "uuid", "rgbresnet")
-        config["OUTPUT_SHAPE"] = (2048,)
+        config["output_shape"] = f(config, "output_shape", (2048,))
         if f(config, "use_resnet_normalization", True):
-            config["NORM_mean"] = np.array([[[0.485, 0.456, 0.406]]], dtype=np.float32)
-            config["NORM_stdev"] = np.array([[[0.229, 0.224, 0.225]]], dtype=np.float32)
+            config["mean"] = f(
+                config, "mean", np.array([[[0.485, 0.456, 0.406]]], dtype=np.float32)
+            )
+            config["stdev"] = f(
+                config, "stdev", np.array([[[0.229, 0.224, 0.225]]], dtype=np.float32)
+            )
 
         super().__init__(config, scale_first, *args, **kwargs)
-
-        self.to_tensor = transforms.ToTensor()
-
-        self.resnet = nn.Sequential(
-            *list(models.resnet50(pretrained=True).children())[:-1] + [nn.Flatten()]
-        ).eval()
-
-        if torch.cuda.is_available():
-            self.resnet = self.resnet.to("cuda")
 
     @abstractmethod
     def frame_from_env(self, env: EnvType) -> np.ndarray:
         raise NotImplementedError
 
-    def get_observation(  # type: ignore
-        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
-    ) -> Any:
-        rgb = super().get_observation(env, task, *args, **kwargs)
 
-        rgb = self.to_tensor(rgb).unsqueeze(0)
-        if torch.cuda.is_available():
-            rgb = rgb.to("cuda")
-        with torch.no_grad():
-            rgb = self.resnet(rgb).detach().cpu().numpy()
-
-        return rgb
-
-
-class DepthResNetSensor(VisionSensor[EnvType, SubTaskType]):
+class DepthResNetSensor(ResNetSensor[EnvType, SubTaskType]):
     def __init__(
         self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
     ):
@@ -505,38 +549,18 @@ class DepthResNetSensor(VisionSensor[EnvType, SubTaskType]):
         def f(x, k, default):
             return x[k] if k in x else default
 
-        config["uuid"] = f(config, "uuid", "rgbdepth")
-        config["OUTPUT_SHAPE"] = (2048,)
+        config["uuid"] = f(config, "uuid", "depthresnet")
+        config["output_shape"] = f(config, "output_shape", (2048,))
         if f(config, "use_normalization", False):
-            config["NORM_mean"] = np.array([[0.5]], dtype=np.float32)
-            config["NORM_stdev"] = np.array([[0.25]], dtype=np.float32)
+            config["mean"] = f(config, "mean", np.array([[0.5]], dtype=np.float32))
+            config["stdev"] = f(config, "stdev", np.array([[0.25]], dtype=np.float32))
 
         super().__init__(config, scale_first, *args, **kwargs)
-
-        self.to_tensor = transforms.ToTensor()
-
-        self.resnet = nn.Sequential(
-            *list(models.resnet50(pretrained=True).children())[:-1] + [nn.Flatten()]
-        ).eval()
-
-        if torch.cuda.is_available():
-            self.resnet = self.resnet.to("cuda")
 
     @abstractmethod
     def frame_from_env(self, env: EnvType) -> np.ndarray:
         raise NotImplementedError
 
-    def get_observation(  # type: ignore
-        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
-    ) -> Any:
-        depth = super().get_observation(env, task, *args, **kwargs)
-
-        depth = self.to_tensor(depth).squeeze()
-        depth = torch.stack([depth] * 3, dim=0).unsqueeze(0)
-
-        if torch.cuda.is_available():
-            depth = depth.to("cuda")
-        with torch.no_grad():
-            depth = self.resnet(depth).detach().cpu().numpy()
-
-        return depth
+    def observation_to_tensor(self, depth: Any) -> torch.Tensor:
+        depth = super().observation_to_tensor(depth).squeeze()
+        return torch.stack([depth] * 3, dim=0)

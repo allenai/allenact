@@ -112,13 +112,13 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
 
 
 class DepthSensorRoboThor(DepthSensor[RoboThorEnvironment, Task[RoboThorEnvironment]]):
+    # For backwards compatibility
     def __init__(
         self, config: Dict[str, Any], scale_first=False, *args: Any, **kwargs: Any
     ):
         def f(x, k, default):
             return x[k] if k in x else default
 
-        # Backwards compatibility
         config["use_normalization"] = f(
             config, "use_normalization", f(config, "use_resnet_normalization", False)
         )

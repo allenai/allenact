@@ -264,10 +264,9 @@ class OnPolicyRLEngine(object):
             fn(
                 process_ind=process_offset + it,
                 total_processes=total_processes,
-                # TODO: fix for distributed test
                 devices=[self.device]
                 if self.is_distributed or self.mode == "test"
-                else devices,
+                else devices,  # TODO is this ever used?!
                 seeds=seeds,
             )
             for it in range(self.num_samplers)
