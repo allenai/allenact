@@ -121,7 +121,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             workers_per_device = 1
             # gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7] * workers_per_device  # TODO vs4 only has 7 gpus
             gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6] * workers_per_device  # TODO vs4 only has 7 gpus
-            nprocesses = 8 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
+            nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
             sampler_devices = [0, 1, 2, 3, 4, 5, 6]  # TODO vs4 only has 7 gpus (ignored with > 1 gpu_ids)
             render_video = False
         elif mode == "valid":
@@ -210,7 +210,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             "rewards_config": {
                 "step_penalty": -0.01,
                 "goal_success_reward": 10.0,
-                "failed_stop_reward": 0.0,
+                "failed_stop_reward": -1.0,
                 "shaping_weight": 1.0,  # applied to the decrease in distance to target
             },
             "env_class": RoboThorCachedEnvironment
