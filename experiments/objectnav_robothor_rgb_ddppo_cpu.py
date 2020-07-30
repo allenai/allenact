@@ -6,10 +6,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from models.resnet_tensor_object_nav_models import ResnetTensorObjectNavActorCritic
+
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 
+from models.resnet_tensor_object_nav_models import ResnetTensorObjectNavActorCritic
 from onpolicy_sync.losses import PPO
 from onpolicy_sync.losses.ppo import PPOConfig
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
@@ -25,18 +26,6 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     """An Object Navigation experiment configuration in RoboThor."""
 
-    # TRAIN_SCENES = [
-    #     "FloorPlan_Train%d_%d" % (wall + 1, furniture + 1)
-    #     for wall in range(12)
-    #     for furniture in range(5)
-    # ]
-    #
-    # VALID_SCENES = [
-    #     "FloorPlan_Val%d_%d" % (wall + 1, furniture + 1)
-    #     for wall in range(3)
-    #     for furniture in range(5)
-    # ]
-
     TRAIN_SCENES = [
         "FloorPlan_Train%d_%d" % (wall + 1, furniture + 1)
         for wall in range(1)
@@ -44,12 +33,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     ]
 
     VALID_SCENES = TRAIN_SCENES
-
-    TEST_SCENES = [
-        "FloorPlan_test-dev%d_%d" % (wall + 1, furniture + 1)
-        for wall in range(2)
-        for furniture in range(2)
-    ]
+    TEST_SCENES = TRAIN_SCENES
 
     CAMERA_WIDTH = 400
     CAMERA_HEIGHT = 300
@@ -66,59 +50,56 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     VALIDATION_SAMPLES_PER_SCENE = 10
 
-    NUM_PROCESSES = 4  # TODO 2 for debugging
+    NUM_PROCESSES = 2
 
-    # TARGET_TYPES = sorted(
-    #     [
-    #         "AlarmClock",
-    #         "Apple",
-    #         "BaseballBat",
-    #         "BasketBall",
-    #         "Bowl",
-    #         "GarbageCan",
-    #         "HousePlant",
-    #         "Laptop",
-    #         "Mug",
-    #         "Remote",
-    #         "SprayBottle",
-    #         "Television",
-    #         "Vase",
-    #         # 'AlarmClock',
-    #         # 'Apple',
-    #         # 'BasketBall',
-    #         # 'Mug',
-    #         # 'Television',
-    #     ]
-    # )
-    TARGET_TYPES = sorted(["Television",])
+    TARGET_TYPES = sorted(
+        [
+            "AlarmClock",
+            "Apple",
+            "BaseballBat",
+            "BasketBall",
+            "Bowl",
+            "GarbageCan",
+            "HousePlant",
+            "Laptop",
+            "Mug",
+            "Remote",
+            "SprayBottle",
+            "Television",
+            "Vase",
+        ]
+    )
+    # TARGET_TYPES = sorted(["Television",])
 
     SENSORS = [
         RGBSensorThor(
-            **{
+            {
                 "height": SCREEN_SIZE,
                 "width": SCREEN_SIZE,
                 "use_resnet_normalization": True,
                 "uuid": "rgb_lowres",
             }
         ),
-        GoalObjectTypeThorSensor(**{"object_types": TARGET_TYPES,}),
+        GoalObjectTypeThorSensor({"object_types": TARGET_TYPES,}),
     ]
 
     PREPROCESSORS = [
         Builder(
             ResnetPreProcessorHabitat,
-            {
-                "input_height": SCREEN_SIZE,
-                "input_width": SCREEN_SIZE,
-                "output_width": 7,
-                "output_height": 7,
-                "output_dims": 512,
-                "pool": False,
-                "torchvision_resnet_model": models.resnet18,
-                "input_uuids": ["rgb_lowres"],
-                "output_uuid": "rgb_resnet",
-                "parallel": False,  # TODO False for debugging
-            }
+            dict(
+                config={
+                    "input_height": SCREEN_SIZE,
+                    "input_width": SCREEN_SIZE,
+                    "output_width": 7,
+                    "output_height": 7,
+                    "output_dims": 512,
+                    "pool": False,
+                    "torchvision_resnet_model": models.resnet18,
+                    "input_uuids": ["rgb_lowres"],
+                    "output_uuid": "rgb_resnet",
+                    "parallel": False,  # TODO False for debugging
+                }
+            ),
         ),
     ]
 
@@ -138,7 +119,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         gridSize=0.25,
         snapToGrid=False,
         agentMode="bot",
-        include_private_scenes=True,
+        include_private_scenes=False,
     )
 
     @classmethod
@@ -147,12 +128,12 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        ppo_steps = int(10000)
+        ppo_steps = int(100)
         lr = 3e-4
         num_mini_batch = 1
         update_repeats = 3
-        num_steps = 30
-        save_interval = cls.NUM_PROCESSES * num_steps * 10  # every >= 10 rollouts
+        num_steps = 10
+        save_interval = -1  # Never save
         log_interval = 1  # log every rollout
         gamma = 0.99
         use_gae = True
@@ -160,7 +141,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         max_grad_norm = 0.5
         return TrainingPipeline(
             save_interval=save_interval,
-            log_interval=log_interval,
+            metric_accumulate_interval=log_interval,
             optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
@@ -172,45 +153,26 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             gae_lambda=gae_lambda,
             advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
-                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps)
+                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps),
+                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps),
             ],
             lr_scheduler_builder=Builder(
-                LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
+                LambdaLR, {"lr_lambda": LinearDecay(steps=2 * ppo_steps)}
             ),
         )
 
-    def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(
-            self.NUM_PROCESSES, ndevices
-        )
-        res = [0] * ndevices
-        for it in range(self.NUM_PROCESSES):
-            res[it % ndevices] += 1
-        return res
-
     def machine_params(self, mode="train", **kwargs):
+        render_video = False
+
+        sampler_devices = []
         if mode == "train":
-            workers_per_device = 1
-            # gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7] * workers_per_device  # TODO vs4 only has 7 gpus
-            gpu_ids = (
-                [] if not torch.cuda.is_available() else [0, 1] * workers_per_device
-            )  # TODO vs4 only has 7 gpus
-            nprocesses = (
-                2
-                if not torch.cuda.is_available()
-                else self.split_num_processes(len(gpu_ids))
-            )
-            sampler_devices = [
-                0,
-                1,
-            ]  # TODO vs4 only has 7 gpus (ignored with > 1 gpu_ids)
-            render_video = False
+            nprocesses = [1] * self.NUM_PROCESSES
+            gpu_ids = ["cpu"] * len(nprocesses)
         elif mode == "valid":
-            nprocesses = 1  # TODO debugging (0)
-            gpu_ids = [] if not torch.cuda.is_available() else [0]
-            render_video = False
+            nprocesses = 0
+            gpu_ids = []
         elif mode == "test":
-            nprocesses = 1
+            nprocesses = 2
             gpu_ids = [] if not torch.cuda.is_available() else [0]
             render_video = True
         else:
@@ -219,7 +181,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         # Disable parallelization for validation process
         if mode == "valid":
             for prep in self.PREPROCESSORS:
-                prep.kwargs["parallel"] = False
+                prep.kwargs["config"]["parallel"] = False
 
         observation_set = (
             Builder(
@@ -325,11 +287,14 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         res["scene_period"] = "manual"  # uses ADVANCE_SCENE_ROLLOUT_PERIOD
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)])
-            if devices is not None and len(devices) > 0
-            else None
-        )
+        try:
+            res["env_args"]["x_display"] = (
+                ("0.%d" % devices[process_ind % len(devices)])
+                if devices is not None and len(devices) > 0
+                else None
+            )
+        except Exception as _:
+            pass
         res["allow_flipping"] = True
         return res
 
@@ -357,4 +322,33 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             if devices is not None and len(devices) > 0
             else None
         )
+        return res
+
+    def test_task_sampler_args(
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]] = None,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
+    ) -> Dict[str, Any]:
+        res = self._get_sampler_args_for_scene_split(
+            self.TEST_SCENES,
+            process_ind,
+            total_processes,
+            seeds=seeds,
+            deterministic_cudnn=deterministic_cudnn,
+        )
+        res["scene_period"] = self.VALIDATION_SAMPLES_PER_SCENE
+        res["max_tasks"] = self.VALIDATION_SAMPLES_PER_SCENE * len(res["scenes"])
+        res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
+        try:
+            res["env_args"]["x_display"] = (
+                ("0.%d" % devices[process_ind % len(devices)])
+                if devices is not None and len(devices) > 0
+                else None
+            )
+        except Exception as _:
+            pass
         return res

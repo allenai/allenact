@@ -1,8 +1,10 @@
 """Defines the reinforcement learning `OnPolicyRunner`."""
 import copy
 import glob
+import itertools
 import json
 import os
+import queue
 import shutil
 import signal
 import time
@@ -20,6 +22,7 @@ from setproctitle import setproctitle as ptitle
 from onpolicy_sync.light_engine import OnPolicyTrainer, OnPolicyInference
 from rl_base.experiment_config import ExperimentConfig
 from utils.experiment_utils import ScalarMeanTracker, set_deterministic_cudnn, set_seed
+from utils.misc_utils import all_equal
 from utils.system import get_logger, find_free_port
 from utils.tensor_utils import SummaryWriter
 
@@ -67,7 +70,7 @@ class OnPolicyRunner(object):
             "checkpoints": self.mp_ctx.Queue(),
         }
 
-        self.processes: Dict[str, list[mp.Process]] = defaultdict(list)
+        self.processes: Dict[str, List[mp.Process]] = defaultdict(list)
 
         self.current_checkpoint = None
 
@@ -78,6 +81,10 @@ class OnPolicyRunner(object):
         self.scalars = ScalarMeanTracker()
 
         self._is_closed: bool = False
+
+    @property
+    def running_validation(self):
+        return self.config.machine_params("valid")["nprocesses"] > 0
 
     @staticmethod
     def init_context(
@@ -104,12 +111,22 @@ class OnPolicyRunner(object):
         # Note: Avoid instantiating preprocessors in machine_params (use Builder if needed)
         devices = self.config.machine_params(mode)["gpu_ids"]
         if len(devices) > 0:
-            assert all([gpu_id >= 0 for gpu_id in devices]), "all gpu_ids must be >= 0"
-            assert torch.cuda.device_count() > max(
-                set(devices)
-            ), "{} CUDA devices available for requested {} gpu ids {}".format(
-                torch.cuda.device_count(), mode, devices
-            )
+            if torch.device(devices[0]) == torch.device("cpu"):
+                assert all_equal(
+                    devices
+                ), "Specified devices {} must be all non-negative integers or all equal to 'cpu'".format(
+                    devices
+                )
+                devices = [torch.device(d) for d in devices]
+            else:
+                assert all(
+                    [gpu_id >= 0 for gpu_id in devices]
+                ), "all gpu_ids must be >= 0"
+                assert torch.cuda.device_count() > max(
+                    set(devices)
+                ), "{} CUDA devices available for requested {} gpu ids {}".format(
+                    torch.cuda.device_count(), mode, devices
+                )
         else:
             devices = [torch.device("cpu")]
         get_logger().info(
@@ -153,7 +170,7 @@ class OnPolicyRunner(object):
     def train_loop(
         id: int = 0,
         checkpoint: Optional[str] = None,
-        restart: bool = False,
+        restart_pipeline: bool = False,
         *engine_args,
         **engine_kwargs
     ):
@@ -162,11 +179,13 @@ class OnPolicyRunner(object):
         engine_kwargs["worker_id"] = id
         get_logger().info("train {} args {}".format(id, engine_kwargs))
 
-        trainer = OnPolicyRunner.init_worker(
-            OnPolicyTrainer, engine_args, engine_kwargs
+        trainer: OnPolicyTrainer = OnPolicyRunner.init_worker(
+            engine_class=OnPolicyTrainer, args=engine_args, kwargs=engine_kwargs
         )
         if trainer is not None:
-            trainer.run_pipeline(checkpoint, restart)
+            trainer.train(
+                checkpoint_file_name=checkpoint, restart_pipeline=restart_pipeline
+            )
 
     @staticmethod
     def valid_loop(id: int = 0, *engine_args, **engine_kwargs):
@@ -176,7 +195,7 @@ class OnPolicyRunner(object):
         get_logger().info("valid {} args {}".format(id, engine_kwargs))
 
         valid = OnPolicyRunner.init_worker(
-            OnPolicyInference, engine_args, engine_kwargs
+            engine_class=OnPolicyInference, args=engine_args, kwargs=engine_kwargs
         )
         if valid is not None:
             valid.process_checkpoints()  # gets checkpoints via queue
@@ -192,7 +211,9 @@ class OnPolicyRunner(object):
         if test is not None:
             test.process_checkpoints()  # gets checkpoints via queue
 
-    def start_train(self, checkpoint: Optional[str] = None, restart: bool = False):
+    def start_train(
+        self, checkpoint: Optional[str] = None, restart_pipeline: bool = False
+    ):
         self.save_config_files()
 
         devices = self.worker_devices("train")
@@ -211,12 +232,16 @@ class OnPolicyRunner(object):
         for trainer_it in range(num_trainers):
             train: mp.process.BaseProcess = self.mp_ctx.Process(
                 target=self.train_loop,
-                args=(trainer_it, checkpoint, restart),
                 kwargs=dict(
+                    id=trainer_it,
+                    checkpoint=checkpoint,
+                    restart_pipeline=restart_pipeline,
                     experiment_name=self.experiment_name,
                     config=self.config,
                     results_queue=self.queues["results"],
-                    checkpoints_queue=self.queues["checkpoints"],
+                    checkpoints_queue=self.queues["checkpoints"]
+                    if self.running_validation
+                    else None,
                     checkpoints_dir=self.checkpoint_dir,
                     seed=seed,
                     deterministic_cudnn=self.deterministic_cudnn,
@@ -235,27 +260,32 @@ class OnPolicyRunner(object):
         )
 
         # Validation
-        device = self.worker_devices("valid")[0]
-        self.get_visualizer("valid")
-        valid: mp.process.BaseProcess = self.mp_ctx.Process(
-            target=self.valid_loop,
-            args=(0,),
-            kwargs=dict(
-                config=self.config,
-                results_queue=self.queues["results"],
-                checkpoints_queue=self.queues["checkpoints"],
-                seed=12345,  # TODO allow same order for randomly sampled tasks? Is this any useful anyway?
-                deterministic_cudnn=self.deterministic_cudnn,
-                mp_ctx=self.mp_ctx,
-                device=device,
-            ),
-        )
-        valid.start()
-        self.processes["valid"].append(valid)
+        if self.running_validation:
+            device = self.worker_devices("valid")[0]
+            self.get_visualizer("valid")
+            valid: mp.process.BaseProcess = self.mp_ctx.Process(
+                target=self.valid_loop,
+                args=(0,),
+                kwargs=dict(
+                    config=self.config,
+                    results_queue=self.queues["results"],
+                    checkpoints_queue=self.queues["checkpoints"],
+                    seed=12345,  # TODO allow same order for randomly sampled tasks? Is this any useful anyway?
+                    deterministic_cudnn=self.deterministic_cudnn,
+                    mp_ctx=self.mp_ctx,
+                    device=device,
+                ),
+            )
+            valid.start()
+            self.processes["valid"].append(valid)
 
-        get_logger().info(
-            "Started {} valid processes".format(len(self.processes["valid"]))
-        )
+            get_logger().info(
+                "Started {} valid processes".format(len(self.processes["valid"]))
+            )
+        else:
+            get_logger().info(
+                "No processes allocated to validation, no validation will be run."
+            )
 
         self.log(self.local_start_time_str, num_trainers)
 
@@ -340,18 +370,35 @@ class OnPolicyRunner(object):
 
     @property
     def checkpoint_dir(self):
-        folder = os.path.join(self.output_dir, "checkpoints", self.local_start_time_str)
+        folder = os.path.join(
+            self.output_dir,
+            "checkpoints",
+            self.config.tag()
+            if self.extra_tag == ""
+            else os.path.join(self.config.tag(), self.extra_tag),
+            self.local_start_time_str,
+        )
         os.makedirs(folder, exist_ok=True)
         return folder
 
     def log_writer_path(self, start_time_str) -> str:
         return os.path.join(
-            self.output_dir, "tb", self.experiment_name, start_time_str,
+            self.output_dir,
+            "tb",
+            self.config.tag()
+            if self.extra_tag == ""
+            else os.path.join(self.config.tag(), self.extra_tag),
+            start_time_str,
         )
 
     def metric_path(self, start_time_str) -> str:
         return os.path.join(
-            self.output_dir, "metrics", self.experiment_name, start_time_str
+            self.output_dir,
+            "metrics",
+            self.config.tag()
+            if self.extra_tag == ""
+            else os.path.join(self.config.tag(), self.extra_tag),
+            start_time_str,
         )
 
     def save_config_files(self):
@@ -439,7 +486,7 @@ class OnPolicyRunner(object):
 
             for k in metrics:
                 log_writer.add_scalar("{}/".format(self.mode) + k, metrics[k], steps)
-                message.append(k + " {}".format(metrics[k]))
+                message.append(k + " {:.3g}".format(metrics[k]))
 
         if not return_metrics:
             return message
@@ -458,11 +505,11 @@ class OnPolicyRunner(object):
         message = ["train {} steps:".format(steps)]
         for info_type in all_info_types:
             message += self.aggregate_infos(log_writer, info_type, steps)
-        message += ["elapsed_time {}s".format(current_time - last_time)]
+        message += ["elapsed_time {:.3g}s".format(current_time - last_time)]
 
         if last_steps > 0:
             fps = (steps - last_steps) / (current_time - last_time)
-            message += ["approx_fps {}".format(fps)]
+            message += ["approx_fps {:.3g}".format(fps)]
             log_writer.add_scalar("train/approx_fps", fps, steps)
         get_logger().info(" ".join(message))
 
@@ -532,83 +579,94 @@ class OnPolicyRunner(object):
 
         try:
             while True:
-                package = self.queues["results"].get()
-                if package[0] == "train_package":
-                    collected.append(package)
-                    if len(collected) >= nworkers:
-                        collected = sorted(
-                            collected, key=lambda x: x[2]
-                        )  # sort by num_steps
+                try:
+                    package = self.queues["results"].get(timeout=1)
+                    if package[0] == "train_package":
+                        collected.append(package)
+                        if len(collected) >= nworkers:
+                            collected = sorted(
+                                collected, key=lambda x: x[2]
+                            )  # sort by num_steps
+                            if (
+                                collected[nworkers - 1][2] == collected[0][2]
+                            ):  # ensure nworkers have provided the same num_steps
+                                (
+                                    last_train_steps,
+                                    last_train_time,
+                                ) = self.process_train_packages(
+                                    log_writer,
+                                    collected[:nworkers],
+                                    last_steps=last_train_steps,
+                                    last_time=last_train_time,
+                                )
+                                collected = collected[nworkers:]
+                            elif len(collected) > 2 * nworkers:
+                                raise Exception(
+                                    "Unable to aggregate train packages from {} workers".format(
+                                        nworkers
+                                    )
+                                )
+                    elif (
+                        package[0] == "valid_package"
+                    ):  # they all come from a single worker
+                        if package[1] is not None:  # no validation samplers
+                            self.process_eval_package(log_writer, package)
                         if (
-                            collected[nworkers - 1][2] == collected[0][2]
-                        ):  # ensure nworkers have provided the same num_steps
-                            (
-                                last_train_steps,
-                                last_train_time,
-                            ) = self.process_train_packages(
-                                log_writer,
-                                collected[:nworkers],
-                                last_steps=last_train_steps,
-                                last_time=last_train_time,
-                            )
-                            collected = collected[nworkers:]
-                        elif len(collected) > 2 * nworkers:
-                            raise Exception(
-                                "Unable to aggregate train packages from {} workers".format(
-                                    nworkers
-                                )
-                            )
-                elif (
-                    package[0] == "valid_package"
-                ):  # they all come from a single worker
-                    if package[1] is not None:  # no validation samplers
-                        self.process_eval_package(log_writer, package)
-                    if (
-                        finalized and self.queues["checkpoints"].empty()
-                    ):  # assume queue is actually empty after trainer finished and no checkpoints in queue
-                        break
-                elif package[0] == "test_package":
-                    collected.append(package)
-                    if len(collected) == nworkers:
-                        self.process_test_packages(log_writer, collected, test_results)
-                        collected = []
-                        with open(metrics_file, "w") as f:
-                            json.dump(test_results, f, indent=4, sort_keys=True)
-                            get_logger().debug(
-                                "Updated {} up to checkpoint {}".format(
-                                    metrics_file, test_steps[len(test_results) - 1]
-                                )
-                            )
-                elif package[0] == "train_stopped":
-                    if package[1] == 0:
-                        finalized = True
-                    else:
-                        raise Exception(
-                            "Train worker {} abnormally terminated".format(
-                                package[1] - 1
-                            )
-                        )
-                elif package[0] == "valid_stopped":
-                    raise Exception(
-                        "Valid worker {} abnormally terminated".format(package[1] - 1)
-                    )
-                elif package[0] == "test_stopped":
-                    if package[1] == 0:
-                        nworkers -= 1
-                        if nworkers == 0:
-                            get_logger().info("Last tester finished. Terminating")
-                            finalized = True
+                            finalized and self.queues["checkpoints"].empty()
+                        ):  # assume queue is actually empty after trainer finished and no checkpoints in queue
                             break
-                    else:
+                    elif package[0] == "test_package":
+                        collected.append(package)
+                        if len(collected) == nworkers:
+                            self.process_test_packages(
+                                log_writer, collected, test_results
+                            )
+                            collected = []
+                            with open(metrics_file, "w") as f:
+                                json.dump(test_results, f, indent=4, sort_keys=True)
+                                get_logger().debug(
+                                    "Updated {} up to checkpoint {}".format(
+                                        metrics_file, test_steps[len(test_results) - 1]
+                                    )
+                                )
+                    elif package[0] == "train_stopped":
+                        if package[1] == 0:
+                            finalized = True
+                        else:
+                            raise Exception(
+                                "Train worker {} abnormally terminated".format(
+                                    package[1] - 1
+                                )
+                            )
+                    elif package[0] == "valid_stopped":
                         raise Exception(
-                            "Test worker {} abnormally terminated".format(
+                            "Valid worker {} abnormally terminated".format(
                                 package[1] - 1
                             )
                         )
-                else:
-                    get_logger().error(
-                        "Runner received unknown package type {}".format(package[0])
-                    )
+                    elif package[0] == "test_stopped":
+                        if package[1] == 0:
+                            nworkers -= 1
+                            if nworkers == 0:
+                                get_logger().info("Last tester finished. Terminating")
+                                finalized = True
+                                break
+                        else:
+                            raise Exception(
+                                "Test worker {} abnormally terminated".format(
+                                    package[1] - 1
+                                )
+                            )
+                    else:
+                        get_logger().error(
+                            "Runner received unknown package type {}".format(package[0])
+                        )
+                except queue.Empty as _:
+                    if all(
+                        p.exitcode is not None
+                        for p in itertools.chain(*self.processes.values())
+                    ):
+                        break
         except KeyboardInterrupt:
             get_logger().info("KeyboardInterrupt. Terminating runner")
         except Exception:

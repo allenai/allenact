@@ -84,9 +84,9 @@ class ExperimentConfig(abc.ABC):
         self,
         process_ind: int,
         total_processes: int,
-        devices: Optional[List[int]],
-        seeds: Optional[List[int]],
-        deterministic_cudnn: bool,
+        devices: Optional[List[int]] = None,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         """Specifies the training parameters for the `process_ind`th training
         process.
@@ -112,9 +112,9 @@ class ExperimentConfig(abc.ABC):
         self,
         process_ind: int,
         total_processes: int,
-        devices: Optional[List[int]],
-        seeds: Optional[List[int]],
-        deterministic_cudnn: bool,
+        devices: Optional[List[int]] = None,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         """Specifies the validation parameters for the `process_ind`th
         validation process.
@@ -128,9 +128,9 @@ class ExperimentConfig(abc.ABC):
         self,
         process_ind: int,
         total_processes: int,
-        devices: Optional[List[int]],
-        seeds: Optional[List[int]],
-        deterministic_cudnn: bool,
+        devices: Optional[List[int]] = None,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         """Specifies the test parameters for the `process_ind`th test process.
 

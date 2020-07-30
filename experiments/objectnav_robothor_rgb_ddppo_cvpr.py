@@ -327,7 +327,7 @@ class ObjectNavRoboThorRGBDDPPOCVPRExperimentConfig(ExperimentConfig):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return ResnetTensorObjectNavActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            action_space=gym.spaces.Discrete(len(ObjectNavTask.class_action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="goal_object_type_ind",
             resnet_preprocessor_uuid="rgb_resnet",
@@ -374,7 +374,9 @@ class ObjectNavRoboThorRGBDDPPOCVPRExperimentConfig(ExperimentConfig):
             "object_types": self.TARGET_TYPES,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(
+                len(ObjectNavTask.class_action_names())
+            ),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": {
@@ -451,7 +453,7 @@ class ObjectNavRoboThorRGBDDPPOCVPRExperimentConfig(ExperimentConfig):
             object_types=self.TARGET_TYPES,
             max_steps=100,  # TODO self.MAX_STEPS,
             sensors=self.SENSORS,
-            action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            action_space=gym.spaces.Discrete(len(ObjectNavTask.class_action_names())),
             seed=seeds[process_ind] if seeds is not None else None,
             deterministic_cudnn=deterministic_cudnn,
             dataset_first=inds[process_ind]
