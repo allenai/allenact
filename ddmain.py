@@ -66,14 +66,15 @@ def _get_args():
     )
     parser.add_argument(
         "-r",
-        "--restart",
-        dest="restart",
+        "--restart_pipeline",
+        dest="restart_pipeline",
         action="store_true",
         required=False,
-        help="for training, if checkpoint is specified, use it as model initialization and "
-        "restart training with current config",
+        help="for training, if checkpoint is specified, DO NOT continue the training pipeline from where"
+        "training had previously ended. Instead restart the training pipeline from scratch but"
+        "with the model weights from the checkpoint.",
     )
-    parser.set_defaults(restart=False)
+    parser.set_defaults(restart_pipeline=False)
 
     parser.add_argument(
         "-d",
@@ -170,7 +171,7 @@ def main():
             mode="train",
             deterministic_cudnn=args.deterministic_cudnn,
             extra_tag=args.extra_tag,
-        ).start_train(args.checkpoint, args.restart)
+        ).start_train(args.checkpoint, args.restart_pipeline)
     else:
         OnPolicyRunner(
             config=cfg,
