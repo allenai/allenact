@@ -331,6 +331,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         if not task_info["distance_to_target"]:
             self.episode_optimal_corners = self.env.path_corners(task_info["target"])  # assume it's valid (sampler must take care)!
         self.num_moves_made = 0
+        self.optimal_distance = self.last_geodesic_distance
 
     @property
     def action_space(self):
@@ -467,7 +468,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         if not self.last_action_success:
             return 0.0
         if self.distance_cache:
-            li = self.task_info["distance_to_target"]
+            li = self.optimal_distance
             pi = self.num_moves_made * self.env.config['gridSize']
             res = li / (max(pi, li))
         else:
