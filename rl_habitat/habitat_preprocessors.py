@@ -46,7 +46,22 @@ class ResNetEmbedder(nn.Module):
 class ResnetPreProcessorHabitat(Preprocessor):
     """Preprocess RGB or depth image using a ResNet model."""
 
-    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
+    def __init__(
+        self,
+        input_uuids: List[str],
+        output_uuid: str,
+        input_height: int,
+        input_width: int,
+        output_height: int,
+        output_width: int,
+        output_dims: int,
+        pool: bool,
+        torchvision_resnet_model: Callable[..., models.ResNet] = models.resnet18,
+        parallel: bool = True,
+        device: Optional[torch.device] = None,
+        device_ids: Optional[List[torch.device]] = None,
+        **kwargs: Any
+    ):
         def f(x, k):
             assert k in x, "{} must be set in ResnetPreProcessorHabitat".format(k)
             return x[k]
@@ -54,27 +69,20 @@ class ResnetPreProcessorHabitat(Preprocessor):
         def optf(x, k, default):
             return x[k] if k in x else default
 
-        self.input_height: int = f(config, "input_height")
-        self.input_width: int = f(config, "input_width")
-        self.output_height: int = f(config, "output_height")
-        self.output_width: int = f(config, "output_width")
-        self.output_dims: int = f(config, "output_dims")
-        self.pool: bool = f(config, "pool")
-        self.make_model: Callable[..., models.ResNet] = optf(
-            config, "torchvision_resnet_model", models.resnet18
+        self.input_height = input_height
+        self.input_width = input_width
+        self.output_height = output_height
+        self.output_width = output_width
+        self.output_dims = output_dims
+        self.pool = pool
+        self.make_model = torchvision_resnet_model
+        self.parallel = parallel
+        self.device = (
+            device
+            if device is not None
+            else ("cuda" if self.parallel and torch.cuda.is_available() else "cpu")
         )
-        # self.device: torch.device = optf(config, "device", "cpu")
-        self.parallel: bool = optf(config, "parallel", True)
-        self.device: torch.device = torch.device(
-            optf(
-                config,
-                "device",
-                "cuda" if self.parallel and torch.cuda.is_available() else "cpu",
-            )
-        )
-        self.device_ids: Optional[List[Union[torch.device, int]]] = optf(
-            config, "device_ids", list(range(torch.cuda.device_count()))
-        )
+        self.device_ids = device_ids or list(range(torch.cuda.device_count()))
 
         self.resnet = ResNetEmbedder(
             self.make_model(pretrained=True).to(self.device), pool=self.pool
@@ -99,15 +107,14 @@ class ResnetPreProcessorHabitat(Preprocessor):
         low = -np.inf
         high = np.inf
         shape = (self.output_dims, self.output_height, self.output_width)
-        self.observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
 
         assert (
-            len(config["input_uuids"]) == 1
+            len(input_uuids) == 1
         ), "resnet preprocessor can only consume one observation type"
 
-        f(config, "output_uuid")
+        observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
 
-        super().__init__(config, *args, **kwargs)
+        super().__init__(**self.prepare_locals_for_super(locals()))
 
     def to(self, device: torch.device) -> "ResnetPreProcessorHabitat":
         if not self.parallel:

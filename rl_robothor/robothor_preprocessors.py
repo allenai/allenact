@@ -157,30 +157,32 @@ class FasterRCNNPreProcessorRoboThor(Preprocessor):
 
     COCO_INSTANCE_CATEGORY_NAMES = BatchedFasterRCNN.COCO_INSTANCE_CATEGORY_NAMES
 
-    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
-        def f(x, k):
-            assert k in x, "{} must be set in ResnetPreProcessorThor".format(k)
-            return x[k]
-
-        def optf(x, k, default):
-            return x[k] if k in x else default
-
-        self.input_height: int = f(config, "input_height")
-        self.input_width: int = f(config, "input_width")
-        self.max_dets: int = f(config, "max_dets")
-        self.detector_spatial_res: int = f(config, "detector_spatial_res")
-        self.detector_thres: float = f(config, "detector_thres")
-        self.parallel: bool = optf(config, "parallel", True)
-        self.device: torch.device = torch.device(
-            optf(
-                config,
-                "device",
-                "cuda" if self.parallel and torch.cuda.is_available() else "cpu",
-            )
+    def __init__(
+        self,
+        input_uuids: List[str],
+        output_uuid: str,
+        input_height: int,
+        input_width: int,
+        max_dets: int,
+        detector_spatial_res: int,
+        detector_thres: float,
+        parallel: bool = False,
+        device: Optional[torch.device] = None,
+        device_ids: Optional[List[torch.device]] = None,
+        **kwargs: Any,
+    ):
+        self.input_height = input_height
+        self.input_width = input_width
+        self.max_dets = max_dets
+        self.detector_spatial_res = detector_spatial_res
+        self.detector_thres = detector_thres
+        self.parallel = parallel
+        self.device = (
+            device
+            if device is not None
+            else ("cuda" if self.parallel and torch.cuda.is_available() else "cpu")
         )
-        self.device_ids: Optional[List[Union[torch.device, int]]] = optf(
-            config, "device_ids", list(range(torch.cuda.device_count()))
-        )
+        self.device_ids = device_ids or list(range(torch.cuda.device_count()))
 
         self.frcnn = BatchedFasterRCNN(
             thres=self.detector_thres,
@@ -195,18 +197,8 @@ class FasterRCNNPreProcessorRoboThor(Preprocessor):
             get_logger().info("Distributing detector")
             self.frcnn = self.frcnn.to(torch.device("cuda"))
 
-            # store = torch.distributed.TCPStore("localhost", 4712, 1, True)
-            # torch.distributed.init_process_group(backend="nccl", store=store, rank=0, world_size=1)
-            # self.model = DistributedDataParallel(self.frcnn, device_ids=self.device_ids)
-
-            self.frcnn = torch.nn.DataParallel(
-                self.frcnn, device_ids=self.device_ids
-            )  # , output_device=torch.cuda.device_count() - 1)
+            self.frcnn = torch.nn.DataParallel(self.frcnn, device_ids=self.device_ids)
             get_logger().info("Detected {} devices".format(torch.cuda.device_count()))
-            # images = torch.cat([(1. / (1. + it)) * torch.ones(1, 3, 300, 400) for it in range(24)], dim=0)
-            # self.frcnn(images[:timages, ...])
-
-            # get_logger().info("Detector distributed")
 
         spaces: OrderedDict[str, gym.Space] = OrderedDict()
         shape = (self.max_dets, self.detector_spatial_res, self.detector_spatial_res)
@@ -222,15 +214,14 @@ class FasterRCNNPreProcessorRoboThor(Preprocessor):
             self.detector_spatial_res,
         )
         spaces["frcnn_boxes"] = gym.spaces.Box(low=-np.inf, high=np.inf, shape=shape)
-        self.observation_space = SpaceDict(spaces=spaces)
 
         assert (
-            len(config["input_uuids"]) == 1
+            len(input_uuids) == 1
         ), "fasterrcnn preprocessor can only consume one observation type"
 
-        f(config, "output_uuid")  # check before calling superclass
+        observation_space = SpaceDict(spaces=spaces)
 
-        super().__init__(config, *args, **kwargs)
+        super().__init__(**self.prepare_locals_for_super(locals()))
 
     def to(self, device: torch.device) -> "FasterRCNNPreProcessorRoboThor":
         if not self.parallel:

@@ -4,8 +4,18 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import OrderedDict
-from typing import Generic, Dict, Any, Optional, TYPE_CHECKING, TypeVar, Sequence, cast
-from abc import abstractmethod
+from typing import (
+    Generic,
+    Dict,
+    Any,
+    Optional,
+    TYPE_CHECKING,
+    TypeVar,
+    Sequence,
+    cast,
+    Tuple,
+)
+from abc import abstractmethod, ABC
 
 import gym
 from gym.spaces import Dict as SpaceDict
@@ -31,33 +41,32 @@ class Sensor(Generic[EnvType, SubTaskType]):
 
     # Attributes
 
-    config : configuration information for the sensor.
     uuid : universally unique id.
     observation_space : ``gym.Space`` object corresponding to observation of
         sensor.
     """
 
-    config: Dict[str, Any]
     uuid: str
     observation_space: gym.Space
 
-    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
-        self.config = config
-        self.uuid = self._get_uuid()
+    def __init__(self, uuid: str, observation_space: gym.Space, **kwargs: Any) -> None:
+        self.uuid = uuid
+        self.observation_space = observation_space
 
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        """The unique ID of the sensor.
-
-        # Parameters
-
-        args : extra args.
-        kwargs : extra kwargs.
-        """
-        raise NotImplementedError()
-
-    def _get_observation_space(self) -> gym.Space:
-        """The observation space of the sensor."""
-        raise NotImplementedError()
+    @staticmethod
+    def prepare_locals_for_super(local_vars):
+        assert (
+            "args" not in local_vars
+        ), "`prepare_locals_for_super` does not support `args`."
+        new_locals = {
+            k: v for k, v in local_vars.items() if k != "self" and "__" not in k
+        }
+        if "kwargs" in new_locals:
+            kwargs = new_locals["kwargs"]
+            del new_locals["kwargs"]
+            kwargs.update(new_locals)
+            new_locals = kwargs
+        return new_locals
 
     def get_observation(
         self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
@@ -140,15 +149,19 @@ class SensorSuite(Generic[EnvType]):
 
 
 class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
-    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
-        super().__init__(config, *args, **kwargs)
-        self.config = config
-        self.uuid = self._get_uuid()
-        self.observation_space = self._get_observation_space()
-        self.expert_args: Dict[str, Any] = config.get("expert_args", {})
+    def __init__(
+        self,
+        nactions: int,
+        uuid: str = "expert_action",
+        expert_args: Optional[Dict[str, Any]] = None,
+        **kwargs: Any
+    ) -> None:
+        self.nactions = nactions
+        self.expert_args: Dict[str, Any] = expert_args or {}
 
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "expert_action"
+        observation_space = self._get_observation_space()
+
+        super().__init__(**self.prepare_locals_for_super(locals()))
 
     def _get_observation_space(self) -> gym.spaces.Tuple:
         """The observation space of the expert action sensor.
@@ -160,7 +173,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         value `num actions in task` should be in `config["nactions"]`
         """
         return gym.spaces.Tuple(
-            (gym.spaces.Discrete(self.config["nactions"]), gym.spaces.Discrete(2))
+            (gym.spaces.Discrete(self.nactions), gym.spaces.Discrete(2))
         )
 
     def get_observation(
@@ -179,15 +192,19 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
 
 
 class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
-    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
-        super().__init__(config, *args, **kwargs)
-        self.config = config
-        self.uuid = self._get_uuid()
-        self.observation_space = self._get_observation_space()
-        self.expert_args: Dict[str, Any] = config.get("expert_args", {})
+    def __init__(
+        self,
+        nactions: int,
+        uuid: str = "expert_policy",
+        expert_args: Optional[Dict[str, Any]] = None,
+        **kwargs: Any
+    ) -> None:
+        self.nactions = nactions
+        self.expert_args: Dict[str, Any] = expert_args or {}
 
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "expert_policy"
+        observation_space = self._get_observation_space()
+
+        super().__init__(**self.prepare_locals_for_super(locals()))
 
     def _get_observation_space(self) -> gym.spaces.Tuple:
         """The observation space of the expert action sensor.
@@ -201,9 +218,7 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
         return gym.spaces.Tuple(
             (
                 gym.spaces.Box(
-                    low=np.float32(0.0),
-                    high=np.float32(1.0),
-                    shape=(self.config["nactions"],),
+                    low=np.float32(0.0), high=np.float32(1.0), shape=(self.nactions,),
                 ),
                 gym.spaces.Discrete(2),
             )
@@ -213,11 +228,9 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
         self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
     ) -> Any:
         policy, expert_was_successful = task.query_expert(**self.expert_args)
-        assert isinstance(policy, np.ndarray) and policy.shape == (
-            self.config["nactions"],
-        ), (
+        assert isinstance(policy, np.ndarray) and policy.shape == (self.nactions,), (
             "In expert action sensor, `task.query_expert()` "
-            "did not return an numpy array."
+            "did not return a valid numpy array."
         )
         return np.array(
             np.concatenate((policy, [expert_was_successful]), axis=0), dtype=np.float32
@@ -226,7 +239,18 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
 
 class VisionSensor(Sensor[EnvType, SubTaskType]):
     def __init__(
-        self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
+        self,
+        mean: Optional[np.ndarray] = None,
+        stdev: Optional[np.ndarray] = None,
+        height: Optional[int] = None,
+        width: Optional[int] = None,
+        uuid: str = "vision",
+        output_shape: Optional[Tuple[int, ...]] = None,
+        output_channels: Optional[int] = None,
+        input_infimum: float = -np.inf,
+        input_supremum: float = np.inf,
+        scale_first: bool = True,
+        **kwargs: Any
     ):
         """Initializer.
 
@@ -242,68 +266,81 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         kwargs : Extra kwargs. Currently unused.
         """
 
-        def f(x, k, default):
-            return x[k] if k in x else default
-
-        self._norm_means = f(config, "mean", None)
-        self._norm_sds = f(config, "stdev", None)
+        self._norm_means = mean
+        self._norm_sds = stdev
         assert (self._norm_means is None) == (self._norm_sds is None), (
             "In VisionSensor's config, "
             "either both mean/stdev must be None or neither."
         )
         self._should_normalize = self._norm_means is not None
 
-        self._height: Optional[int] = f(config, "height", None)
-        self._width: Optional[int] = f(config, "width", None)
+        self._height = height
+        self._width = width
         assert (self._width is None) == (self._height is None), (
             "In VisionSensor's config, "
             "either both height/width must be None or neither."
         )
 
-        self._uuid: str = f(config, "uuid", "vision")
         self._scale_first = scale_first
 
-        if "output_shape" in config and "output_channels" in config:
-            get_logger().warning(
-                "Ignoring output_channels ({}) given output_shape {}".format(
-                    config["output_channels"], config["output_shape"]
-                )
-            )
-        shape = f(
-            config,
-            "output_shape",
-            None
-            if self._height is None
-            else (self._height, self._width, f(config, "output_channels", None)),
-        )
-        low = f(config, "input_infimum", -np.inf)
-        high = f(config, "input_supremum", np.inf)
-
-        if not self._should_normalize or shape is None or len(shape) == 1:
-            self.observation_space = gym.spaces.Box(
-                low=np.float32(low), high=np.float32(high), shape=shape
-            )
-        else:
-            out_shape = shape[:-1] + (1,)
-            low = np.tile((low - self._norm_means) / self._norm_sds, out_shape)
-            high = np.tile((high - self._norm_means) / self._norm_sds, out_shape)
-            self.observation_space = gym.spaces.Box(
-                low=np.float32(low), high=np.float32(high)
-            )
-
-        self.scaler = (
-            None
-            if self._width is None
-            else ScaleBothSides(
+        self.scaler: Optional[ScaleBothSides] = None
+        if self._width is not None:
+            self.scaler = ScaleBothSides(
                 width=cast(int, self._width), height=cast(int, self._height)
             )
-        )
 
         self.to_pil = transforms.ToPILImage()  # assumes mode="RGB" for 3 channels
 
-        super().__init__(
-            config, *args, **kwargs
-        )  # call it last so that user can assign a uuid
+        observation_space = self._get_observation_space(
+            output_shape=output_shape,
+            output_channels=output_channels,
+            input_infimum=input_infimum,
+            input_supremum=input_supremum,
+        )
+
+        super().__init__(**self.prepare_locals_for_super(locals()))
+
+    def _get_observation_space(
+        self,
+        output_shape: Optional[Tuple[int, ...]],
+        output_channels: Optional[int],
+        input_infimum: float,
+        input_supremum: float,
+    ) -> gym.spaces.Box:
+        assert output_shape is None or output_channels is None, (
+            "In VisionSensor's config, "
+            "only one of output_shape and output_channels can be not None."
+        )
+
+        shape: Optional[Tuple[int, ...]] = None
+        if output_shape is not None:
+            shape = output_shape
+        elif self._height is not None and output_channels is not None:
+            shape = (
+                cast(int, self._height),
+                cast(int, self._width),
+                cast(int, output_channels),
+            )
+
+        if not self._should_normalize or shape is None or len(shape) == 1:
+            return gym.spaces.Box(
+                low=np.float32(input_infimum),
+                high=np.float32(input_supremum),
+                shape=shape,
+            )
+        else:
+            out_shape = shape[:-1] + (1,)
+            low = np.tile(
+                (input_infimum - cast(np.ndarray, self._norm_means))
+                / cast(np.ndarray, self._norm_sds),
+                out_shape,
+            )
+            high = np.tile(
+                (input_supremum - cast(np.ndarray, self._norm_means))
+                / cast(np.ndarray, self._norm_sds),
+                out_shape,
+            )
+            return gym.spaces.Box(low=np.float32(low), high=np.float32(high))
 
     @property
     def height(self) -> Optional[int]:
@@ -324,12 +361,6 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         The width as a non-negative integer or `None` if no rescaling is done.
         """
         return self._width
-
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return self._uuid
-
-    def _get_observation_space(self) -> gym.spaces.Box:
-        return cast(gym.spaces.Box, self.observation_space)
 
     @abstractmethod
     def frame_from_env(self, env: EnvType) -> np.ndarray:
@@ -360,9 +391,25 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         return im
 
 
-class RGBSensor(VisionSensor[EnvType, SubTaskType]):
+class RGBSensor(VisionSensor[EnvType, SubTaskType], ABC):
     def __init__(
-        self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
+        self,
+        use_resnet_normalization: bool = False,
+        mean: Optional[np.ndarray] = np.array(
+            [[[0.485, 0.456, 0.406]]], dtype=np.float32
+        ),
+        stdev: Optional[np.ndarray] = np.array(
+            [[[0.229, 0.224, 0.225]]], dtype=np.float32
+        ),
+        height: Optional[int] = None,
+        width: Optional[int] = None,
+        uuid: str = "rgb",
+        output_shape: Optional[Tuple[int, ...]] = None,
+        output_channels: int = 3,
+        input_infimum: float = 0.0,
+        input_supremum: float = 1.0,
+        scale_first: bool = True,
+        **kwargs: Any
     ):
         """Initializer.
 
@@ -377,31 +424,27 @@ class RGBSensor(VisionSensor[EnvType, SubTaskType]):
         kwargs : Extra kwargs. Currently unused.
         """
 
-        def f(x, k, default):
-            return x[k] if k in x else default
+        if not use_resnet_normalization:
+            mean, stdev = None, None
 
-        config["uuid"] = f(config, "uuid", "rgb")
-        config["output_channels"] = f(config, "output_channels", 3)
-        config["input_infimum"] = f(config, "input_infimum", 0.0)
-        config["input_supremum"] = f(config, "input_supremum", 1.0)
-        if f(config, "use_resnet_normalization", False):
-            config["mean"] = f(
-                config, "mean", np.array([[[0.485, 0.456, 0.406]]], dtype=np.float32)
-            )
-            config["stdev"] = f(
-                config, "stdev", np.array([[[0.229, 0.224, 0.225]]], dtype=np.float32)
-            )
-
-        super().__init__(config, scale_first, *args, **kwargs)
-
-    @abstractmethod
-    def frame_from_env(self, env: EnvType) -> np.ndarray:
-        raise NotImplementedError
+        super().__init__(**self.prepare_locals_for_super(locals()))
 
 
-class DepthSensor(VisionSensor[EnvType, SubTaskType]):
+class DepthSensor(VisionSensor[EnvType, SubTaskType], ABC):
     def __init__(
-        self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
+        self,
+        use_normalization: bool = False,
+        mean: Optional[np.ndarray] = np.array([[0.5]], dtype=np.float32),
+        stdev: Optional[np.ndarray] = np.array([[0.25]], dtype=np.float32),
+        height: Optional[int] = None,
+        width: Optional[int] = None,
+        uuid: str = "depth",
+        output_shape: Optional[Tuple[int, ...]] = None,
+        output_channels: int = 1,
+        input_infimum: float = 0.0,
+        input_supremum: float = 5.0,
+        scale_first: bool = True,
+        **kwargs: Any
     ):
         """Initializer.
 
@@ -415,22 +458,10 @@ class DepthSensor(VisionSensor[EnvType, SubTaskType]):
         kwargs : Extra kwargs. Currently unused.
         """
 
-        def f(x, k, default):
-            return x[k] if k in x else default
+        if not use_normalization:
+            mean, stdev = None, None
 
-        config["uuid"] = f(config, "uuid", "depth")
-        config["output_channels"] = f(config, "output_channels", 1)
-        config["input_infimum"] = f(config, "input_infimum", 0.0)
-        config["input_supremum"] = f(config, "input_supremum", 5.0)
-        if f(config, "use_normalization", False):
-            config["mean"] = f(config, "mean", np.array([[0.5]], dtype=np.float32))
-            config["stdev"] = f(config, "stdev", np.array([[0.25]], dtype=np.float32))
-
-        super().__init__(config, scale_first, *args, **kwargs)
-
-    @abstractmethod
-    def frame_from_env(self, env: EnvType) -> np.ndarray:
-        raise NotImplementedError
+        super().__init__(**self.prepare_locals_for_super(locals()))
 
     def get_observation(  # type: ignore
         self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
@@ -441,17 +472,21 @@ class DepthSensor(VisionSensor[EnvType, SubTaskType]):
         return depth
 
 
-class ResNetSensor(VisionSensor[EnvType, SubTaskType]):
+class ResNetSensor(VisionSensor[EnvType, SubTaskType], ABC):
     def __init__(
-        self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
+        self,
+        mean: Optional[np.ndarray] = None,
+        stdev: Optional[np.ndarray] = None,
+        height: Optional[int] = None,
+        width: Optional[int] = None,
+        uuid: str = "resnet",
+        output_shape: Optional[Tuple[int, ...]] = None,
+        output_channels: Optional[int] = None,
+        input_infimum: float = -np.inf,
+        input_supremum: float = np.inf,
+        scale_first: bool = True,
+        **kwargs: Any
     ):
-        def f(x, k, default):
-            return x[k] if k in x else default
-
-        config["uuid"] = f(config, "uuid", "resnet")
-
-        super().__init__(config, scale_first, *args, **kwargs)
-
         self.to_tensor = transforms.ToTensor()
 
         self.resnet = nn.Sequential(
@@ -460,11 +495,9 @@ class ResNetSensor(VisionSensor[EnvType, SubTaskType]):
 
         self.device = "cpu"
 
-    @abstractmethod
-    def frame_from_env(self, env: EnvType) -> np.ndarray:
-        raise NotImplementedError
+        super().__init__(**self.prepare_locals_for_super(locals()))
 
-    def to(self, device: torch.device):
+    def to(self, device: torch.device) -> "ResNetSensor":
         """Moves sensor to specified device.
 
         # Parameters
@@ -473,6 +506,7 @@ class ResNetSensor(VisionSensor[EnvType, SubTaskType]):
         """
         self.device = device
         self.resnet = self.resnet.to(device)
+        return self
 
     def observation_to_tensor(self, observation: Any) -> torch.Tensor:
         return self.to_tensor(observation)
@@ -491,9 +525,25 @@ class ResNetSensor(VisionSensor[EnvType, SubTaskType]):
         return result
 
 
-class RGBResNetSensor(ResNetSensor[EnvType, SubTaskType]):
+class RGBResNetSensor(ResNetSensor[EnvType, SubTaskType], ABC):
     def __init__(
-        self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
+        self,
+        use_resnet_normalization: bool = True,
+        mean: Optional[np.ndarray] = np.array(
+            [[[0.485, 0.456, 0.406]]], dtype=np.float32
+        ),
+        stdev: Optional[np.ndarray] = np.array(
+            [[[0.229, 0.224, 0.225]]], dtype=np.float32
+        ),
+        height: Optional[int] = None,
+        width: Optional[int] = None,
+        uuid: str = "rgbresnet",
+        output_shape: Optional[Tuple[int, ...]] = (2048,),
+        output_channels: Optional[int] = None,
+        input_infimum: float = -np.inf,
+        input_supremum: float = np.inf,
+        scale_first: bool = True,
+        **kwargs: Any
     ):
         """Initializer.
 
@@ -508,30 +558,27 @@ class RGBResNetSensor(ResNetSensor[EnvType, SubTaskType]):
         args : Extra args. Currently unused.
         kwargs : Extra kwargs. Currently unused.
         """
+        if not use_resnet_normalization:
+            mean, stdev = None, None
 
-        def f(x, k, default):
-            return x[k] if k in x else default
-
-        config["uuid"] = f(config, "uuid", "rgbresnet")
-        config["output_shape"] = f(config, "output_shape", (2048,))
-        if f(config, "use_resnet_normalization", True):
-            config["mean"] = f(
-                config, "mean", np.array([[[0.485, 0.456, 0.406]]], dtype=np.float32)
-            )
-            config["stdev"] = f(
-                config, "stdev", np.array([[[0.229, 0.224, 0.225]]], dtype=np.float32)
-            )
-
-        super().__init__(config, scale_first, *args, **kwargs)
-
-    @abstractmethod
-    def frame_from_env(self, env: EnvType) -> np.ndarray:
-        raise NotImplementedError
+        super().__init__(**self.prepare_locals_for_super(locals()))
 
 
-class DepthResNetSensor(ResNetSensor[EnvType, SubTaskType]):
+class DepthResNetSensor(ResNetSensor[EnvType, SubTaskType], ABC):
     def __init__(
-        self, config: Dict[str, Any], scale_first=True, *args: Any, **kwargs: Any
+        self,
+        use_normalization: bool = False,
+        mean: Optional[np.ndarray] = np.array([[0.5]], dtype=np.float32),
+        stdev: Optional[np.ndarray] = np.array([[0.25]], dtype=np.float32),
+        height: Optional[int] = None,
+        width: Optional[int] = None,
+        uuid: str = "depthresnet",
+        output_shape: Optional[Tuple[int, ...]] = (2048,),
+        output_channels: Optional[int] = None,
+        input_infimum: float = -np.inf,
+        input_supremum: float = np.inf,
+        scale_first: bool = True,
+        **kwargs: Any
     ):
         """Initializer.
 
@@ -546,20 +593,10 @@ class DepthResNetSensor(ResNetSensor[EnvType, SubTaskType]):
         kwargs : Extra kwargs. Currently unused.
         """
 
-        def f(x, k, default):
-            return x[k] if k in x else default
+        if not use_normalization:
+            mean, stdev = None, None
 
-        config["uuid"] = f(config, "uuid", "depthresnet")
-        config["output_shape"] = f(config, "output_shape", (2048,))
-        if f(config, "use_normalization", False):
-            config["mean"] = f(config, "mean", np.array([[0.5]], dtype=np.float32))
-            config["stdev"] = f(config, "stdev", np.array([[0.25]], dtype=np.float32))
-
-        super().__init__(config, scale_first, *args, **kwargs)
-
-    @abstractmethod
-    def frame_from_env(self, env: EnvType) -> np.ndarray:
-        raise NotImplementedError
+        super().__init__(**self.prepare_locals_for_super(locals()))
 
     def observation_to_tensor(self, depth: Any) -> torch.Tensor:
         depth = super().observation_to_tensor(depth).squeeze()

@@ -18,21 +18,40 @@ class Preprocessor(abc.ABC):
     required to set the below attributes:
 
     # Attributes:
-        config : Configuration information for the preprocessor.
         input_uuids : List of input universally unique ids.
         uuid : Universally unique id.
         observation_space : ``gym.Space`` object corresponding to processed observation spaces.
     """
 
-    config: Dict[str, Any]
     input_uuids: List[str]
     uuid: str
     observation_space: gym.Space
 
-    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
-        self.config = config
-        self.uuid = self.config["output_uuid"]
-        self.input_uuids = self.config["input_uuids"]
+    def __init__(
+        self,
+        input_uuids: List[str],
+        output_uuid: str,
+        observation_space: gym.Space,
+        **kwargs: Any
+    ) -> None:
+        self.uuid = output_uuid
+        self.input_uuids = input_uuids
+        self.observation_space = observation_space
+
+    @staticmethod
+    def prepare_locals_for_super(local_vars):
+        assert (
+            "args" not in local_vars
+        ), "`prepare_locals_for_super` does not support `args`."
+        new_locals = {
+            k: v for k, v in local_vars.items() if k != "self" and "__" not in k
+        }
+        if "kwargs" in new_locals:
+            kwargs = new_locals["kwargs"]
+            del new_locals["kwargs"]
+            kwargs.update(new_locals)
+            new_locals = kwargs
+        return new_locals
 
     @abc.abstractmethod
     def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:
