@@ -223,15 +223,6 @@ class PointNavTask(Task[RoboThorEnvironment]):
             #     rew += self.reward_configs["delta_dist_reward_further"]
         self.last_geodesic_distance = geodesic_distance
 
-        # # ...and also exploring! We won't be able to hit the optimal path in test
-        # old_visited = len(self.visited)
-        # self.visited.add(
-        #     self.env.agent_to_grid(xz_subsampling=4, rot_subsampling=3)
-        # )  # squares of 1 m2, sectors of 90 deg
-        # rew += self.reward_configs["exploration_shaping_weight"] * (
-        #     len(self.visited) - old_visited
-        # )
-
         return rew * self.reward_configs["shaping_weight"]
 
     def judge(self) -> float:
@@ -255,7 +246,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         return float(reward)
 
     def spl(self):
-        if not self.last_action_success:
+        if not self._success:
             return 0.0
         if self.distance_cache:
             li = self.optimal_distance
@@ -470,7 +461,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         return float(reward)
 
     def spl(self):
-        if not self.last_action_success:
+        if not self._success:
             return 0.0
         if self.distance_cache:
             li = self.optimal_distance

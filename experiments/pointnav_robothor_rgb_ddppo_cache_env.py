@@ -200,7 +200,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             "rewards_config": {
                 "step_penalty": -0.01,
                 "goal_success_reward": 10.0,
-                "failed_stop_reward": -0.5,
+                "failed_stop_reward": 0.0,
                 "shaping_weight": 1.0,  # applied to the decrease in distance to target
             },
             "env_class": RoboThorCachedEnvironment
