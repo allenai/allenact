@@ -94,33 +94,31 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     SENSORS = [
         RGBSensorThor(
-            {
+            **{
                 "height": SCREEN_SIZE,
                 "width": SCREEN_SIZE,
                 "use_resnet_normalization": True,
                 "uuid": "rgb_lowres",
             }
         ),
-        GoalObjectTypeThorSensor({"object_types": TARGET_TYPES,}),
+        GoalObjectTypeThorSensor(**{"object_types": TARGET_TYPES,}),
     ]
 
     PREPROCESSORS = [
         Builder(
             ResnetPreProcessorHabitat,
-            dict(
-                config={
-                    "input_height": SCREEN_SIZE,
-                    "input_width": SCREEN_SIZE,
-                    "output_width": 7,
-                    "output_height": 7,
-                    "output_dims": 512,
-                    "pool": False,
-                    "torchvision_resnet_model": models.resnet18,
-                    "input_uuids": ["rgb_lowres"],
-                    "output_uuid": "rgb_resnet",
-                    "parallel": False,  # TODO False for debugging
-                }
-            ),
+            {
+                "input_height": SCREEN_SIZE,
+                "input_width": SCREEN_SIZE,
+                "output_width": 7,
+                "output_height": 7,
+                "output_dims": 512,
+                "pool": False,
+                "torchvision_resnet_model": models.resnet18,
+                "input_uuids": ["rgb_lowres"],
+                "output_uuid": "rgb_resnet",
+                "parallel": False,  # TODO False for debugging
+            }
         ),
     ]
 
@@ -222,7 +220,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         # Disable parallelization for validation process
         if mode == "valid":
             for prep in self.PREPROCESSORS:
-                prep.kwargs["config"]["parallel"] = False
+                prep.kwargs["parallel"] = False
 
         observation_set = (
             Builder(

@@ -19,18 +19,18 @@ class PointNavHabitatRGBDeterministicResNet50PPOExperimentConfig(
 
     SENSORS = [
         RGBSensorHabitat(
-            {
+            **{
                 "height": PointNavHabitatBaseExperimentConfig.SCREEN_SIZE,
                 "width": PointNavHabitatBaseExperimentConfig.SCREEN_SIZE,
                 "use_resnet_normalization": True,
             }
         ),
-        TargetCoordinatesSensorHabitat({"coordinate_dims": 2}),
+        TargetCoordinatesSensorHabitat(**{"coordinate_dims": 2}),
     ]
 
     PREPROCESSORS = [
         ResnetPreProcessorHabitat(
-            config={
+            **{
                 "input_height": PointNavHabitatBaseExperimentConfig.SCREEN_SIZE,
                 "input_width": PointNavHabitatBaseExperimentConfig.SCREEN_SIZE,
                 "output_width": 1,
