@@ -59,7 +59,9 @@ class OnPolicyRLEngine(object):
         experiment_name: str,
         config: ExperimentConfig,
         results_queue: mp.Queue,  # to output aggregated results
-        checkpoints_queue: mp.Queue,  # to write/read (trainer/evaluator) ready checkpoints
+        checkpoints_queue: Optional[
+            mp.Queue
+        ],  # to write/read (trainer/evaluator) ready checkpoints
         checkpoints_dir: str,
         mode: str = "train",
         seed: Optional[int] = None,
@@ -526,7 +528,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         experiment_name: str,
         config: ExperimentConfig,
         results_queue: mp.Queue,
-        checkpoints_queue: mp.Queue,
+        checkpoints_queue: Optional[mp.Queue],
         checkpoints_dir: str = "",
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
@@ -950,7 +952,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         self.results_queue.put((package_type, payload, nsteps))
 
-    def train(self, rollouts: RolloutStorage):
+    def run_pipeline(self, rollouts: RolloutStorage):
         self.initialize_rollouts(rollouts)
         self.tracking_info.clear()
 
@@ -1056,7 +1058,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             ):
                 if self.worker_id == 0:
                     model_path = self.checkpoint_save()
-                    self.checkpoints_queue.put(("eval", model_path))
+                    if self.checkpoints_queue is not None:
+                        self.checkpoints_queue.put(("eval", model_path))
                 self.last_save = self.training_pipeline.total_steps
 
             if (self.training_pipeline.advance_scene_rollout_period is not None) and (
@@ -1072,19 +1075,17 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.vector_tasks.next_task(force_advance_scene=True)
                 self.initialize_rollouts(rollouts)
 
-    def run_pipeline(
+    def train(
         self, checkpoint_file_name: Optional[str] = None, restart_pipeline: bool = False
     ):
-        assert (
-            self.mode == "train"
-        ), "run_pipeline only to be called from a train instance"
+        assert self.mode == "train", "train only to be called from a train instance"
 
         training_completed_successfully = False
         try:
             if checkpoint_file_name is not None:
                 self.checkpoint_load(checkpoint_file_name, restart_pipeline)
 
-            self.train(
+            self.run_pipeline(
                 RolloutStorage(
                     num_steps=self.training_pipeline.num_steps,
                     num_processes=self.num_samplers,
@@ -1154,8 +1155,6 @@ class OnPolicyInference(OnPolicyRLEngine):
             num_workers=num_workers,
             **kwargs,
         )
-        if self.actor_critic is not None:
-            self.actor_critic.eval()
 
         # get_logger().debug("{} worker {} using device {}".format(self.mode, self.worker_id, self.device))
 
@@ -1240,21 +1239,25 @@ class OnPolicyInference(OnPolicyRLEngine):
 
         return pkg_type, payload, total_steps
 
-    def skip_to_latest(self, command, data):
+    @staticmethod
+    def skip_to_latest(checkpoints_queue: mp.Queue, command: Optional[str], data):
+        assert (
+            checkpoints_queue is not None
+        ), "Attempting to process checkpoints queue but this queue is `None`."
         cond = True
         while cond:
             sentinel = ("skip.AUTO.sentinel", time.time())
-            self.checkpoints_queue.put(
+            checkpoints_queue.put(
                 sentinel
             )  # valid since a single valid process is the only consumer
             forwarded = False
             while not forwarded:
-                new_command: Optional[str] = None
-                new_data: Any = None
+                new_command: Optional[str]
+                new_data: Any
                 (
                     new_command,
                     new_data,
-                ) = self.checkpoints_queue.get()  # block until next command arrives
+                ) = checkpoints_queue.get()  # block until next command arrives
                 if new_command == command:
                     data = new_data
                 elif new_command == sentinel[0]:
@@ -1269,7 +1272,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                         )
                     )
             time.sleep(1)
-            cond = not self.checkpoints_queue.empty()
+            cond = not checkpoints_queue.empty()
         return data
 
     def barrier(self):
@@ -1282,6 +1285,10 @@ class OnPolicyInference(OnPolicyRLEngine):
         assert (
             self.mode != "train"
         ), "process_checkpoints only to be called from a valid or test instance"
+
+        assert (
+            self.checkpoints_queue is not None
+        ), "Attempting to process checkpoints queue but this queue is `None`."
 
         visualizer = None
 
@@ -1306,7 +1313,11 @@ class OnPolicyInference(OnPolicyRLEngine):
                             # skip to latest using
                             # 1. there's only consumer in valid
                             # 2. there's no quit/exit/close message issued by runner nor trainer
-                            data = self.skip_to_latest(command, data)
+                            data = self.skip_to_latest(
+                                checkpoints_queue=self.checkpoints_queue,
+                                command=command,
+                                data=data,
+                            )
 
                         if (
                             visualizer is None

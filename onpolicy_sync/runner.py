@@ -82,6 +82,10 @@ class OnPolicyRunner(object):
 
         self._is_closed: bool = False
 
+    @property
+    def running_validation(self):
+        return self.config.machine_params("valid")["nprocesses"] > 0
+
     @staticmethod
     def init_context(
         mp_ctx: Optional[BaseContext] = None,
@@ -179,7 +183,7 @@ class OnPolicyRunner(object):
             engine_class=OnPolicyTrainer, args=engine_args, kwargs=engine_kwargs
         )
         if trainer is not None:
-            trainer.run_pipeline(
+            trainer.train(
                 checkpoint_file_name=checkpoint, restart_pipeline=restart_pipeline
             )
 
@@ -235,7 +239,9 @@ class OnPolicyRunner(object):
                     experiment_name=self.experiment_name,
                     config=self.config,
                     results_queue=self.queues["results"],
-                    checkpoints_queue=self.queues["checkpoints"],
+                    checkpoints_queue=self.queues["checkpoints"]
+                    if self.running_validation
+                    else None,
                     checkpoints_dir=self.checkpoint_dir,
                     seed=seed,
                     deterministic_cudnn=self.deterministic_cudnn,
@@ -254,11 +260,7 @@ class OnPolicyRunner(object):
         )
 
         # Validation
-        if self.config.machine_params("valid")["nprocesses"] <= 0:
-            get_logger().info(
-                "No processes allocated to validation, no validation will be run."
-            )
-        else:
+        if self.running_validation:
             device = self.worker_devices("valid")[0]
             self.get_visualizer("valid")
             valid: mp.process.BaseProcess = self.mp_ctx.Process(
@@ -279,6 +281,10 @@ class OnPolicyRunner(object):
 
             get_logger().info(
                 "Started {} valid processes".format(len(self.processes["valid"]))
+            )
+        else:
+            get_logger().info(
+                "No processes allocated to validation, no validation will be run."
             )
 
         self.log(self.local_start_time_str, num_trainers)
