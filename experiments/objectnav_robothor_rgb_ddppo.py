@@ -118,7 +118,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 "input_uuids": ["rgb_lowres"],
                 "output_uuid": "rgb_resnet",
                 "parallel": False,  # TODO False for debugging
-            }
+            },
         ),
     ]
 
