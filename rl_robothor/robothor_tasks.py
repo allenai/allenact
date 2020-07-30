@@ -92,6 +92,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         self.reward_configs = reward_configs
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
+        self.distance_cache = distance_cache
 
         if episode_info:
             self.episode_optimal_corners = episode_info['shortest_path']
@@ -99,16 +100,20 @@ class PointNavTask(Task[RoboThorEnvironment]):
         else:
             self.episode_optimal_corners = self.env.path_corners(task_info["target"])  # assume it's valid (sampler must take care)!
             dist = self.env.path_corners_to_dist(self.episode_optimal_corners)
-
         if dist == float("inf"):
             dist = -1.0  # -1.0 for unreachable
             LOGGER.warning("No path for {} from {} to {}".format(self.env.scene_name, self.env.agent_state(), task_info["target"]))
-        self.last_geodesic_distance = dist
-        self.shortest_geodesic_distance = dist
+
+        if self.distance_cache:
+            self.last_geodesic_distance = get_distance(self.distance_cache, self.env.agent_state(), self.task_info['target'])
+        else:
+            self.last_geodesic_distance = self.env.dist_to_object(self.task_info["object_type"])
+
+        # self.last_geodesic_distance = dist
+        self.optimal_distance = self.last_geodesic_distance
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
-        self.distance_cache = distance_cache
         self.path = []  # the initial coordinate will be directly taken from the optimal path
         self.num_moves_made = 0
 
@@ -253,7 +258,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         if not self.last_action_success:
             return 0.0
         if self.distance_cache:
-            li = self.task_info["distance_to_target"]
+            li = self.optimal_distance
             pi = self.num_moves_made * self.env.config['gridSize']
             res = li / (max(pi, li))
         else:

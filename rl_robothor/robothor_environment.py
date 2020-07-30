@@ -508,7 +508,7 @@ class RoboThorCachedEnvironment:
         """Return agent position, rotation and horizon."""
         return {
             **_str_to_pos(self.agent_position),
-            "rotation": self.agent_rotation,
+            "rotation": {"x": 0.0, "y": self.agent_rotation, "z": 0.0},
             "horizon": 1.0,
         }
 

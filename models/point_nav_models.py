@@ -265,6 +265,7 @@ class PointNavActorCriticResNet50RNN(ActorCriticModel[CategoricalDistr]):
         else:
             return observations[self.goal_sensor_uuid].to(torch.float32)
 
+    @property
     def recurrent_hidden_state_size(self):
         return self._hidden_size
 
@@ -274,9 +275,9 @@ class PointNavActorCriticResNet50RNN(ActorCriticModel[CategoricalDistr]):
 
         embs = []
         if "rgb_resnet" in observations:
-            embs.append(observations["rgb_resnet"].view(-1, observations["rgb_resnet"].shape[-1]))
+            embs.append(observations["rgb_resnet"].view(observations["rgb_resnet"].shape[0], -1))
         if "depth_resnet" in observations:
-            embs.append(observations["depth_resnet"].view(-1, observations["depth_resnet"].shape[-1]))
+            embs.append(observations["depth_resnet"].view(observations["depth_resnet"].shape[0], -1))
         emb = torch.cat(embs, dim=1)
 
         x = [self.visual_encoder(emb)] + x

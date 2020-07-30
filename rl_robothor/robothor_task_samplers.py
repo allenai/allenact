@@ -649,6 +649,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
         loop_dataset: bool = True,
         shuffle_dataset: bool = True,
         allow_flipping = False,
+        env_class = RoboThorEnvironment,
         *args,
         **kwargs
     ) -> None:
@@ -662,6 +663,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
         self.distance_caches = {
             scene: self._load_distance_cache(scene, scene_directory + "/distance_caches") for scene in scenes
         }
+        self.env_class = env_class
         self.env: Optional[RoboThorEnvironment] = None
         self.sensors = sensors
         self.max_steps = max_steps
@@ -690,7 +692,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
         self.reset()
 
     def _create_environment(self) -> RoboThorEnvironment:
-        env = RoboThorEnvironment(**self.env_args)
+        env = self.env_class(**self.env_args)
         return env
 
     def _load_dataset(self, scene: str, base_directory: str) -> List[Dict]:

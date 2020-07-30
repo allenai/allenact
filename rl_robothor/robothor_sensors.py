@@ -177,7 +177,7 @@ class ResNetRGBSensorHabitatCache(Sensor[RoboThorCachedEnvironment, Task[RoboTho
         self.width: Optional[int] = f(config, "width", None)
         self.should_normalize = f(config, "use_resnet_normalization", False)
 
-        shape = (7, 7, 1024)
+        shape = (512, 7, 7)
         low = 0.0
         high = 1.0
         self.observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
