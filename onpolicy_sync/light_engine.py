@@ -6,7 +6,7 @@ import traceback
 import typing
 from collections import defaultdict
 from multiprocessing.context import BaseContext
-from typing import Optional, Any, Dict, Union, List, Tuple, Sequence
+from typing import Optional, Any, Dict, Union, List, Tuple, Sequence, cast
 
 import torch
 import torch.distributions
@@ -1173,7 +1173,9 @@ class OnPolicyInference(OnPolicyRLEngine):
         ckpt = self.checkpoint_load(checkpoint_file_name)
         total_steps = ckpt["total_steps"]
 
-        rollouts = RolloutStorage(rollout_steps, self.num_samplers, self.actor_critic,)
+        rollouts = RolloutStorage(
+            rollout_steps, self.num_samplers, cast(ActorCriticModel, self.actor_critic),
+        )
 
         if visualizer is not None:
             assert visualizer.empty()
@@ -1191,6 +1193,9 @@ class OnPolicyInference(OnPolicyRLEngine):
 
         self.actor_critic.eval()
 
+        last_time: float = 0.0
+        init_time: float = 0.0
+        frames: int = 0
         if self.mode == "test":
             lengths = self.vector_tasks.command(
                 "sampler_attr", ["length"] * (self.num_samplers - num_paused)
