@@ -1,6 +1,6 @@
-# EmbodiedRL
+# Embodied-AI
 
-EmbodiedRL is a library designed for research in embodied reinforcement learning with
+`embodied-ai` is a library designed for research in embodied reinforcement learning with
 a focus on modularity, flexibility, and low cognitive overhead. This work builds upon
 the [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail) 
 library of Ilya Kostrikov and uses some data structures from FAIR's 
@@ -8,12 +8,12 @@ library of Ilya Kostrikov and uses some data structures from FAIR's
 
 ## Table of contents
 
-1. [Why embodied-rl?](#why)
+1. [Why embodied-ai?](#why)
 1. [Installation](#installation)
 1. [Contributions](#contributions)
 1. [Citiation](#citation)
 
-## Why `embodied-rl`?
+## Why `embodied-ai`?
 
 There are an increasingly 
 [large collection](https://winderresearch.com/a-comparison-of-reinforcement-learning-frameworks-dopamine-rllib-keras-rl-coach-trfl-tensorforce-coach-and-more/) 
@@ -30,11 +30,11 @@ could not find a package delivering all of the following features, each of which
     * [multi-agent furniture lifting](https://prior.allenai.org/projects/two-body-problem), and
     * [adversarial hide-and-seek](https://arxiv.org/abs/1912.08195).
    
-    We have designed `embodied-rl` to easily support a wide variety of tasks designed for individual environments.
+    We have designed `embodied-ai` to easily support a wide variety of tasks designed for individual environments.
 
 1. *First-class pytorch support*: While many well-developed libraries exist for reinforcement learning in 
    tensorflow, we are one of a few to target pytorch.
-1. *Configuration as code*: In `embodied-rl` experiments are 
+1. *Configuration as code*: In `embodied-ai` experiments are 
    defined using python classes, so knowing how to extend an abstract python class we can define an
    experiment.
 1. *Type checking and documentation*: We have put significant effort into providing extensive documentation and type
@@ -98,7 +98,7 @@ guidelines. For more details, please see the our [contribution guidelines](./CON
 If you use this work, please cite:
 
 ```text
-@misc{embodied-rl,
+@misc{embodied-ai,
   author = {Luca Weihs and Jordi Salvador},
   title = {A Python Package for Embodied Reinforcement Learning},
   year = {2020},

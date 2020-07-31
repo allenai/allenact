@@ -191,13 +191,14 @@ if __name__ == "__main__":
     yaml = YAML()
     mkdocs_yaml = yaml.load(yaml_path)
     site_nav = mkdocs_yaml["nav"]
-    projects_key = "Publications using embodied-rl"
-    nav_obj = None
-    for obj in site_nav:
-        if projects_key in obj:
-            nav_obj = obj
-            break
-    nav_obj[projects_key] = project_readme_paths_to_nav_structure(project_readmes)
+    # TODO Find a way to do the following in a way that results in nice titles.
+    # projects_key = "Projects using embodied-ai"
+    # nav_obj = None
+    # for obj in site_nav:
+    #     if projects_key in obj:
+    #         nav_obj = obj
+    #         break
+    # nav_obj[projects_key] = project_readme_paths_to_nav_structure(project_readmes)
 
     with open(yaml_path, "w") as f:
         yaml.dump(mkdocs_yaml, f)
