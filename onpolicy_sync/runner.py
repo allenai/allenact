@@ -22,7 +22,7 @@ from setproctitle import setproctitle as ptitle
 from onpolicy_sync.light_engine import OnPolicyTrainer, OnPolicyInference
 from rl_base.experiment_config import ExperimentConfig
 from utils.experiment_utils import ScalarMeanTracker, set_deterministic_cudnn, set_seed
-from utils.misc_utils import all_equal
+from utils.misc_utils import all_equal, get_git_diff_of_project
 from utils.system import get_logger, find_free_port
 from utils.tensor_utils import SummaryWriter
 
@@ -214,7 +214,7 @@ class OnPolicyRunner(object):
     def start_train(
         self, checkpoint: Optional[str] = None, restart_pipeline: bool = False
     ):
-        self.save_config_files()
+        self.save_project_state()
 
         devices = self.worker_devices("train")
         num_trainers = len(devices)
@@ -401,11 +401,25 @@ class OnPolicyRunner(object):
             start_time_str,
         )
 
-    def save_config_files(self):
-        basefolder = os.path.join(
-            self.output_dir, "used_configs", self.local_start_time_str
+    def save_project_state(self):
+        base_dir = os.path.join(
+            self.output_dir,
+            "used_configs",
+            self.config.tag()
+            if self.extra_tag == ""
+            else os.path.join(self.config.tag(), self.extra_tag),
+            self.local_start_time_str,
         )
+        os.makedirs(base_dir, exist_ok=True)
 
+        # Saving current git diff
+        sha, diff_str = get_git_diff_of_project()
+        with open(os.path.join(base_dir, "{}.patch".format(sha)), "w") as f:
+            f.write(diff_str)
+
+        get_logger().info("Git diff saved to {}".format(base_dir))
+
+        # Recursively saving configs
         for file in self.loaded_config_src_files:
             base, module = self.loaded_config_src_files[file]
             parts = module.split(".")
@@ -413,11 +427,11 @@ class OnPolicyRunner(object):
             src_file = os.path.sep.join([base] + parts) + ".py"
             assert os.path.isfile(src_file), "Config file {} not found".format(src_file)
 
-            dst_file = os.path.join(basefolder, os.path.join(*parts[1:]),) + ".py"
+            dst_file = os.path.join(base_dir, os.path.join(*parts[1:]),) + ".py"
             os.makedirs(os.path.dirname(dst_file), exist_ok=True)
             shutil.copy(src_file, dst_file)
 
-        get_logger().info("Config files saved to {}".format(basefolder))
+        get_logger().info("Config files saved to {}".format(base_dir))
 
     def process_eval_package(
         self, log_writer, pkg, all_results: Optional[List[Any]] = None
