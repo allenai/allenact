@@ -128,10 +128,10 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-#pycharm
+# pycharm
 .idea/
 
-#pytorch
+# pytorch
 *.pt
 
 # Default output dir
@@ -148,3 +148,9 @@ events.out.tfevents.*
 
 # tmp directory
 tmp/
+
+# Pickle files
+*.pkl
+
+# Zip files
+*.zip
