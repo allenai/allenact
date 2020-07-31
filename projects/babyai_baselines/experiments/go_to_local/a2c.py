@@ -1,6 +1,8 @@
 import torch
 
-from projects.babyai_baselines.experiments.go_to_local.base import BaseBabyAIGoToLocalExperimentConfig
+from projects.babyai_baselines.experiments.go_to_local.base import (
+    BaseBabyAIGoToLocalExperimentConfig,
+)
 from utils.experiment_utils import PipelineStage
 
 
@@ -22,7 +24,9 @@ class A2CBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentConfig):
         return cls._training_pipeline(
             named_losses={"a2c_loss": a2c_info["loss"],},
             pipeline_stages=[
-                PipelineStage(loss_names=["a2c_loss"], max_stage_steps=total_training_steps,),
+                PipelineStage(
+                    loss_names=["a2c_loss"], max_stage_steps=total_training_steps,
+                ),
             ],
             num_mini_batch=a2c_info["num_mini_batch"],
             update_repeats=a2c_info["update_repeats"],

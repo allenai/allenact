@@ -2,7 +2,6 @@ from typing import Dict, List, Optional, Union
 
 import gin
 import gym
-import torch
 import torch.nn as nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR

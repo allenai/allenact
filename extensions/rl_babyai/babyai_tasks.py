@@ -122,15 +122,15 @@ class BabyAITask(Task[MiniGridEnv]):
 
 class BabyAITaskSampler(TaskSampler):
     def __init__(
-            self,
-            env_builder: Union[str, Callable[..., MiniGridEnv]],
-            sensors: Union[SensorSuite, List[Sensor]],
-            max_tasks: Optional[int] = None,
-            num_unique_seeds: Optional[int] = None,
-            task_seeds_list: Optional[List[int]] = None,
-            deterministic_sampling: bool = False,
-            extra_task_kwargs: Optional[Dict] = None,
-            **kwargs,
+        self,
+        env_builder: Union[str, Callable[..., MiniGridEnv]],
+        sensors: Union[SensorSuite, List[Sensor]],
+        max_tasks: Optional[int] = None,
+        num_unique_seeds: Optional[int] = None,
+        task_seeds_list: Optional[List[int]] = None,
+        deterministic_sampling: bool = False,
+        extra_task_kwargs: Optional[Dict] = None,
+        **kwargs,
     ):
         super(TaskSampler, self).__init__()
         self.sensors = (
@@ -147,7 +147,7 @@ class BabyAITaskSampler(TaskSampler):
         self._last_task = None
 
         assert (self.num_unique_seeds is None) or (
-                0 < self.num_unique_seeds
+            0 < self.num_unique_seeds
         ), "`num_unique_seeds` must be a positive integer."
 
         self.num_unique_seeds = num_unique_seeds
@@ -199,7 +199,7 @@ class BabyAITaskSampler(TaskSampler):
             if self.deterministic_sampling:
                 self._last_env_seed = self.task_seeds_list[
                     self.num_tasks_generated % len(self.task_seeds_list)
-                    ]
+                ]
             else:
                 self._last_env_seed = self.np_seeded_random_gen.choice(
                     self.task_seeds_list
