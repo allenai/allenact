@@ -233,8 +233,8 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         uuid: str = "vision",
         output_shape: Optional[Tuple[int, ...]] = None,
         output_channels: Optional[int] = None,
-        input_infimum: float = -np.inf,
-        input_supremum: float = np.inf,
+        unnormalized_infimum: float = -np.inf,
+        unnormalized_supremum: float = np.inf,
         scale_first: bool = True,
         **kwargs: Any
     ):
@@ -280,8 +280,8 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         observation_space = self._get_observation_space(
             output_shape=output_shape,
             output_channels=output_channels,
-            input_infimum=input_infimum,
-            input_supremum=input_supremum,
+            unnormalized_infimum=unnormalized_infimum,
+            unnormalized_supremum=unnormalized_supremum,
         )
 
         super().__init__(**prepare_locals_for_super(locals()))
@@ -290,8 +290,8 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         self,
         output_shape: Optional[Tuple[int, ...]],
         output_channels: Optional[int],
-        input_infimum: float,
-        input_supremum: float,
+        unnormalized_infimum: float,
+        unnormalized_supremum: float,
     ) -> gym.spaces.Box:
         assert output_shape is None or output_channels is None, (
             "In VisionSensor's config, "
@@ -310,19 +310,19 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
 
         if not self._should_normalize or shape is None or len(shape) == 1:
             return gym.spaces.Box(
-                low=np.float32(input_infimum),
-                high=np.float32(input_supremum),
+                low=np.float32(unnormalized_infimum),
+                high=np.float32(unnormalized_supremum),
                 shape=shape,
             )
         else:
             out_shape = shape[:-1] + (1,)
             low = np.tile(
-                (input_infimum - cast(np.ndarray, self._norm_means))
+                (unnormalized_infimum - cast(np.ndarray, self._norm_means))
                 / cast(np.ndarray, self._norm_sds),
                 out_shape,
             )
             high = np.tile(
-                (input_supremum - cast(np.ndarray, self._norm_means))
+                (unnormalized_supremum - cast(np.ndarray, self._norm_means))
                 / cast(np.ndarray, self._norm_sds),
                 out_shape,
             )
@@ -392,8 +392,8 @@ class RGBSensor(VisionSensor[EnvType, SubTaskType], ABC):
         uuid: str = "rgb",
         output_shape: Optional[Tuple[int, ...]] = None,
         output_channels: int = 3,
-        input_infimum: float = 0.0,
-        input_supremum: float = 1.0,
+        unnormalized_infimum: float = 0.0,
+        unnormalized_supremum: float = 1.0,
         scale_first: bool = True,
         **kwargs: Any
     ):
@@ -427,8 +427,8 @@ class DepthSensor(VisionSensor[EnvType, SubTaskType], ABC):
         uuid: str = "depth",
         output_shape: Optional[Tuple[int, ...]] = None,
         output_channels: int = 1,
-        input_infimum: float = 0.0,
-        input_supremum: float = 5.0,
+        unnormalized_infimum: float = 0.0,
+        unnormalized_supremum: float = 5.0,
         scale_first: bool = True,
         **kwargs: Any
     ):
@@ -468,8 +468,8 @@ class ResNetSensor(VisionSensor[EnvType, SubTaskType], ABC):
         uuid: str = "resnet",
         output_shape: Optional[Tuple[int, ...]] = None,
         output_channels: Optional[int] = None,
-        input_infimum: float = -np.inf,
-        input_supremum: float = np.inf,
+        unnormalized_infimum: float = -np.inf,
+        unnormalized_supremum: float = np.inf,
         scale_first: bool = True,
         **kwargs: Any
     ):
@@ -526,8 +526,8 @@ class RGBResNetSensor(ResNetSensor[EnvType, SubTaskType], ABC):
         uuid: str = "rgbresnet",
         output_shape: Optional[Tuple[int, ...]] = (2048,),
         output_channels: Optional[int] = None,
-        input_infimum: float = -np.inf,
-        input_supremum: float = np.inf,
+        unnormalized_infimum: float = -np.inf,
+        unnormalized_supremum: float = np.inf,
         scale_first: bool = True,
         **kwargs: Any
     ):
@@ -561,8 +561,8 @@ class DepthResNetSensor(ResNetSensor[EnvType, SubTaskType], ABC):
         uuid: str = "depthresnet",
         output_shape: Optional[Tuple[int, ...]] = (2048,),
         output_channels: Optional[int] = None,
-        input_infimum: float = -np.inf,
-        input_supremum: float = np.inf,
+        unnormalized_infimum: float = -np.inf,
+        unnormalized_supremum: float = np.inf,
         scale_first: bool = True,
         **kwargs: Any
     ):

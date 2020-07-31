@@ -115,8 +115,8 @@ class DepthSensorRoboThor(DepthSensor[RoboThorEnvironment, Task[RoboThorEnvironm
         uuid: str = "depth",
         output_shape: Optional[Tuple[int, ...]] = None,
         output_channels: int = 1,
-        input_infimum: float = 0.0,
-        input_supremum: float = 5.0,
+        unnormalized_infimum: float = 0.0,
+        unnormalized_supremum: float = 5.0,
         scale_first: bool = False,
         **kwargs: Any
     ):

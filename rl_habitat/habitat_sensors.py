@@ -33,8 +33,8 @@ class RGBSensorHabitat(RGBSensor[HabitatEnvironment, Task[HabitatEnvironment]]):
         uuid: str = "rgb",
         output_shape: Optional[Tuple[int, ...]] = None,
         output_channels: int = 3,
-        input_infimum: float = 0.0,
-        input_supremum: float = 1.0,
+        unnormalized_infimum: float = 0.0,
+        unnormalized_supremum: float = 1.0,
         scale_first: bool = False,
         **kwargs: Any
     ):
@@ -62,8 +62,8 @@ class RGBResNetSensorHabitat(
         uuid: str = "rgb",
         output_shape: Optional[Tuple[int, ...]] = (2048,),
         output_channels: Optional[int] = None,
-        input_infimum: float = -np.inf,
-        input_supremum: float = np.inf,
+        unnormalized_infimum: float = -np.inf,
+        unnormalized_supremum: float = np.inf,
         scale_first: bool = False,
         **kwargs: Any
     ):
@@ -86,8 +86,8 @@ class DepthSensorHabitat(DepthSensor[HabitatEnvironment, Task[HabitatEnvironment
         uuid: str = "depth",
         output_shape: Optional[Tuple[int, ...]] = None,
         output_channels: int = 1,
-        input_infimum: float = 0.0,
-        input_supremum: float = 5.0,
+        unnormalized_infimum: float = 0.0,
+        unnormalized_supremum: float = 5.0,
         scale_first: bool = False,
         **kwargs: Any
     ):
@@ -118,8 +118,8 @@ class DepthResNetSensorHabitat(
         uuid: str = "depth",
         output_shape: Optional[Tuple[int, ...]] = (2048,),
         output_channels: Optional[int] = None,
-        input_infimum: float = -np.inf,
-        input_supremum: float = np.inf,
+        unnormalized_infimum: float = -np.inf,
+        unnormalized_supremum: float = np.inf,
         scale_first: bool = False,
         **kwargs: Any
     ):
