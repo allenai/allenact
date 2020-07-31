@@ -8,7 +8,7 @@ import pandas as pd
 import patsy
 
 from extensions.rl_lighthouse.lighthouse_environment import LightHouseEnvironment
-from rl_base.sensor import Sensor
+from rl_base.sensor import Sensor, prepare_locals_for_super
 from rl_base.task import Task
 
 
@@ -70,25 +70,25 @@ def get_corner_observation(
 
 
 class CornerSensor(Sensor[LightHouseEnvironment, Any]):
-    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
-        super().__init__(config, *args, **kwargs)
-
-        self.view_radius = config["view_radius"]
-        self.world_dim = config["world_dim"]
+    def __init__(
+        self,
+        view_radius: int,
+        world_dim: int,
+        uuid: str = "corner_fixed_radius",
+        **kwargs: Any
+    ):
+        self.view_radius = view_radius
+        self.world_dim = world_dim
         self.view_corner_offsets: Optional[np.ndarray] = None
 
-        self.observation_space = gym.spaces.Box(
+        observation_space = gym.spaces.Box(
             low=min(LightHouseEnvironment.SPACE_LEVELS),
             high=max(LightHouseEnvironment.SPACE_LEVELS),
-            shape=(2 ** config["world_dim"],),
+            shape=(2 ** world_dim,),
             dtype=int,
         )
 
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "corner_fixed_radius"
-
-    def _get_observation_space(self) -> gym.spaces.Box:
-        return typing.cast(gym.spaces.Box, self.observation_space)
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
         self,
@@ -110,12 +110,17 @@ class CornerSensor(Sensor[LightHouseEnvironment, Any]):
 
 
 class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
-    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
-        super().__init__(config, *args, **kwargs)
-
-        self.view_radius = config["view_radius"]
-        self.world_dim = config["world_dim"]
-        self.degree = config["degree"]
+    def __init__(
+        self,
+        view_radius: int,
+        world_dim: int,
+        degree: int,
+        uuid: str = "corner_fixed_radius_categorical",
+        **kwargs: Any
+    ):
+        self.view_radius = view_radius
+        self.world_dim = world_dim
+        self.degree = degree
 
         if self.world_dim > 2:
             raise NotImplementedError(
@@ -129,7 +134,7 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
         self.view_corner_offsets: Optional[np.ndarray] = None
         # self.world_corners_offset: Optional[List[typing.Tuple[int, ...]]] = None
 
-        self.corner_sensor = CornerSensor(config=config)
+        self.corner_sensor = CornerSensor(self.view_radius, self.world_dim)
 
         self.variables_and_levels = self._get_variables_and_levels(
             world_dim=self.world_dim
@@ -156,7 +161,7 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
         self.design_matrix = np.array(design_matrix, dtype=bool)
         self.tuple_to_ind = tuple_to_ind
 
-        self.observation_space = gym.spaces.Box(
+        observation_space = gym.spaces.Box(
             low=min(LightHouseEnvironment.SPACE_LEVELS),
             high=max(LightHouseEnvironment.SPACE_LEVELS),
             # shape=(self.output_dim(world_dim=self.world_dim),),
@@ -169,6 +174,8 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
             ),
             dtype=int,
         )
+
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def view_tuple_to_design_array(self, view_tuple: typing.Tuple):
         return np.array(
@@ -240,12 +247,6 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
                 ),
                 degree,
             )
-
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "corner_fixed_radius_categorical"
-
-    def _get_observation_space(self) -> gym.spaces.Box:
-        return typing.cast(gym.spaces.Box, self.observation_space)
 
     def get_observation(
         self,

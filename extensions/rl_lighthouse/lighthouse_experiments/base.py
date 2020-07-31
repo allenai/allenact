@@ -33,7 +33,7 @@ class BaseLightHouseExperimentConfig(ExperimentConfig):
         if key not in cls._SENSOR_CACHE:
             sensors = [
                 FactorialDesignCornerSensor(
-                    {
+                    **{
                         "view_radius": cls.VIEW_RADIUS,
                         "world_dim": cls.WORLD_DIM,
                         "degree": cls.DEGREE,
@@ -43,7 +43,7 @@ class BaseLightHouseExperimentConfig(ExperimentConfig):
             if cls.EXPERT_VIEW_RADIUS:
                 sensors.append(
                     ExpertPolicySensor(
-                        {
+                        **{
                             "expert_args": {
                                 "expert_view_radius": cls.EXPERT_VIEW_RADIUS
                             },
@@ -57,7 +57,7 @@ class BaseLightHouseExperimentConfig(ExperimentConfig):
 
     @classmethod
     def optimal_ave_ep_length(cls):
-        return LightHouseEnvironment.optimal_ave_ep_length(
+        return LightHouseEnvironment.optimal_ave_ep_length(  # TODO: is this broken?!
             world_dim=cls.WORLD_DIM,
             world_radius=cls.WORLD_RADIUS,
             view_radius=cls.VIEW_RADIUS,
@@ -122,7 +122,7 @@ class BaseLightHouseExperimentConfig(ExperimentConfig):
         self,
         process_ind: int,
         total_processes: int,
-        devices: Optional[List[int]],
+        devices: Optional[List[int]] = None,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
@@ -132,7 +132,7 @@ class BaseLightHouseExperimentConfig(ExperimentConfig):
         self,
         process_ind: int,
         total_processes: int,
-        devices: Optional[List[int]],
+        devices: Optional[List[int]] = None,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
