@@ -30,12 +30,12 @@ class BaseBabyAIExperimentConfig(ExperimentConfig):
     LEVEL: Optional[str] = None
     TOTAL_RL_TRAIN_STEPS = None
     AGENT_VIEW_SIZE: int = 7
-    ROLLOUT_STEPS: int = 100
-    NUM_TRAIN_SAMPLERS: int = 10 if torch.cuda.is_available() else 2
-    NUM_TEST_TASKS: int = 1000
-    INSTR_LEN: int = 30
+    ROLLOUT_STEPS: Optional[int] = None
+    NUM_TRAIN_SAMPLERS: Optional[int] = None
+    NUM_TEST_TASKS: Optional[int] = None
+    INSTR_LEN: Optional[int] = None
     USE_INSTR: Optional[bool] = None
-    GPU_ID: Optional[int] = 1 if torch.cuda.is_available() else None
+    GPU_ID: Optional[int] = None
     USE_EXPERT = False
     SHOULD_LOG = True
     PPO_NUM_MINI_BATCH = 2
@@ -57,18 +57,18 @@ class BaseBabyAIExperimentConfig(ExperimentConfig):
         return (
             [
                 EgocentricMiniGridSensor(
-                    config={"agent_view_size": cls.AGENT_VIEW_SIZE, "view_channels": 3}
+                    agent_view_size=cls.AGENT_VIEW_SIZE, view_channels=3
                 ),
             ]
             + (
-                [MiniGridMissionSensor(config={"instr_len": cls.INSTR_LEN})]
+                [MiniGridMissionSensor(instr_len=cls.INSTR_LEN)]
                 if cls.USE_INSTR
                 else []
             )
             + (
                 [
                     ExpertActionSensor(  # type: ignore
-                        {"nactions": len(BabyAITask.class_action_names())}
+                        nactions=len(BabyAITask.class_action_names())
                     )
                 ]
                 if cls.USE_EXPERT

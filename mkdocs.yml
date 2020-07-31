@@ -1,5 +1,5 @@
-site_name: EmbodiedRL
-site_description: EmbodiedRL is a ..
+site_name: embodied-ai
+site_description: embodied-ai, a framework for Embodied-AI research
 site_url: https://github.com/allenai/embodied-rl
 
 theme:
@@ -21,21 +21,47 @@ repo_url: https://github.com/allenai/embodied-rl
 edit_uri: edit/master/docs/
 
 nav:
-- EmbodiedRL: README.md
-- Running your first experiment: overview/running-your-first-experiment.md
-- Primary abstractions: overview/abstractions.md
-- Defining a new experiment: overview/experiment.md
-- Changing rewards and losses: overview/changing-rewards-and-losses.md
-- Defining a new model: overview/defining-a-new-model.md
-- Defining a new task: overview/defining-a-new-task.md
-#- FAQ: overview/FAQ.md
+- Overview: README.md
+- Getting started:
+  - Run your first experiment: overview/running-your-first-experiment.md
+  - Primary abstractions: overview/abstractions.md
+- Tutorials:
+  - Basics:
+    - Defining a new experiment: overview/experiment.md
+    - Changing rewards and losses: overview/changing-rewards-and-losses.md
+    - Defining a new model: overview/defining-a-new-model.md
+    - Defining a new Task: overview/defining-a-new-task.md
+    - Defining a new TaskSampler: overview/defining-a-new-task.md
+- Projects using embodied-ai:
+  - BabyAI Baselines: projects/babyai_baselines/README.md
 - Roadmap: ROADMAP.md
 - Contributing: CONTRIBUTING.md
 - Licence: LICENSE.md
+- FAQ: overview/FAQ.md
 - API:
+  - ddmain: api/ddmain.md
+  - extensions:
+    - rl_babyai:
+      - babyai_scripts:
+        - truncate_expert_demos: api/extensions/rl_babyai/babyai_scripts/truncate_expert_demos.md
+        - get_instr_length_percentiles: api/extensions/rl_babyai/babyai_scripts/get_instr_length_percentiles.md
+        - download_babyai_expert_demos: api/extensions/rl_babyai/babyai_scripts/download_babyai_expert_demos.md
+      - babyai_constants: api/extensions/rl_babyai/babyai_constants.md
+      - babyai_models: api/extensions/rl_babyai/babyai_models.md
+      - babyai_tasks: api/extensions/rl_babyai/babyai_tasks.md
+    - rl_lighthouse:
+      - lighthouse_models: api/extensions/rl_lighthouse/lighthouse_models.md
+      - lighthouse_environment: api/extensions/rl_lighthouse/lighthouse_environment.md
+      - lighthouse_tasks: api/extensions/rl_lighthouse/lighthouse_tasks.md
+      - lighthouse_sensors: api/extensions/rl_lighthouse/lighthouse_sensors.md
+      - lighthouse_util: api/extensions/rl_lighthouse/lighthouse_util.md
   - models:
+    - point_nav_models: api/models/point_nav_models.md
+    - gru_map: api/models/gru_map.md
     - object_nav_models: api/models/object_nav_models.md
     - basic_models: api/models/basic_models.md
+    - frcnn_tensor_object_nav_models: api/models/frcnn_tensor_object_nav_models.md
+    - resnet_tensor_object_nav_models: api/models/resnet_tensor_object_nav_models.md
   - onpolicy_sync:
     - losses:
       - imitation: api/onpolicy_sync/losses/imitation.md
@@ -43,13 +69,26 @@ nav:
       - ppo: api/onpolicy_sync/losses/ppo.md
       - kfac: api/onpolicy_sync/losses/kfac.md
       - a2cacktr: api/onpolicy_sync/losses/a2cacktr.md
+    - runner: api/onpolicy_sync/runner.md
+    - light_engine: api/onpolicy_sync/light_engine.md
     - policy: api/onpolicy_sync/policy.md
     - engine: api/onpolicy_sync/engine.md
     - vector_sampled_tasks: api/onpolicy_sync/vector_sampled_tasks.md
     - storage: api/onpolicy_sync/storage.md
+  - projects:
+    - babyai_baselines:
+      - experiments:
+        - go_to_local:
+          - bc: api/projects/babyai_baselines/experiments/go_to_local/bc.md
+          - pure_offpolicy: api/projects/babyai_baselines/experiments/go_to_local/pure_offpolicy.md
+          - dagger: api/projects/babyai_baselines/experiments/go_to_local/dagger.md
+          - bc_teacher_forcing: api/projects/babyai_baselines/experiments/go_to_local/bc_teacher_forcing.md
+          - ppo: api/projects/babyai_baselines/experiments/go_to_local/ppo.md
+          - a2c: api/projects/babyai_baselines/experiments/go_to_local/a2c.md
+          - base: api/projects/babyai_baselines/experiments/go_to_local/base.md
+        - base: api/projects/babyai_baselines/experiments/base.md
   - rl_ai2thor:
     - ai2thor_environment: api/rl_ai2thor/ai2thor_environment.md
-    - ai2thor_tasks: api/rl_ai2thor/ai2thor_tasks.md
     - ithor_constants: api/rl_ai2thor/ithor_constants.md
     - object_nav:
       - tasks: api/rl_ai2thor/object_nav/tasks.md
@@ -63,9 +102,32 @@ nav:
     - preprocessor: api/rl_base/preprocessor.md
     - distributions: api/rl_base/distributions.md
     - common: api/rl_base/common.md
+  - rl_habitat:
+    - habitat_constants: api/rl_habitat/habitat_constants.md
+    - habitat_tasks: api/rl_habitat/habitat_tasks.md
+    - habitat_sensors: api/rl_habitat/habitat_sensors.md
+    - habitat_environment: api/rl_habitat/habitat_environment.md
+    - habitat_preprocessors: api/rl_habitat/habitat_preprocessors.md
+    - habitat_task_samplers: api/rl_habitat/habitat_task_samplers.md
+    - scripts:
+      - agent_demo: api/rl_habitat/scripts/agent_demo.md
+      - make_map: api/rl_habitat/scripts/make_map.md
+    - habitat_utils: api/rl_habitat/habitat_utils.md
+  - rl_robothor:
+    - robothor_preprocessors: api/rl_robothor/robothor_preprocessors.md
+    - robothor_task_samplers: api/rl_robothor/robothor_task_samplers.md
+    - robothor_environment: api/rl_robothor/robothor_environment.md
+    - robothor_constants: api/rl_robothor/robothor_constants.md
+    - robothor_tasks: api/rl_robothor/robothor_tasks.md
+    - robothor_sensors: api/rl_robothor/robothor_sensors.md
+    - robothor_viz: api/rl_robothor/robothor_viz.md
   - utils:
     - model_utils: api/utils/model_utils.md
     - experiment_utils: api/utils/experiment_utils.md
+    - system: api/utils/system.md
+    - cacheless_frcnn: api/utils/cacheless_frcnn.md
+    - misc_utils: api/utils/misc_utils.md
+    - viz_utils: api/utils/viz_utils.md
     - tensor_utils: api/utils/tensor_utils.md
 markdown_extensions:
 - toc:

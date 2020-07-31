@@ -1316,7 +1316,7 @@ class UndistributedOnPolicyRLEngine(object):
         except Timeout as e:
             get_logger().exception(
                 "Could not acquire the lock for {} for 60 seconds,"
-                " this suggests an unexpected deadlock. Please close all embodied-rl training processes,"
+                " this suggests an unexpected deadlock. Please close all embodied-ai training processes,"
                 " delete this lockfile, and try again.".format(
                     start_time_string_lock_path
                 )

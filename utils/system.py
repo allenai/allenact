@@ -3,7 +3,7 @@ import socket
 import sys
 from contextlib import closing
 
-_LOGGER = logging.getLogger("embodiedrl")
+_LOGGER = logging.getLogger("embodiedai")
 
 
 class StreamToLogger:

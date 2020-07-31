@@ -5,7 +5,7 @@ if __name__ == "__main__":
         dependency_links=[
             "git+https://github.com/unnat/babyai.git@ff645fe00ea8412a29bd5e2d6f79ae1595d229a7#egg=babyai"
         ],
-        name="embodied-rl",
+        name="embodied-ai",
         packages=find_packages(),
         version="0.0.1",
         install_requires=[

@@ -8,6 +8,7 @@ import os
 import sys
 from typing import Dict, Tuple
 
+import gin
 from setproctitle import setproctitle as ptitle
 
 from onpolicy_sync.runner import OnPolicyRunner
@@ -19,7 +20,8 @@ def _get_args():
     """Creates the argument parser and parses any input arguments."""
 
     parser = argparse.ArgumentParser(
-        description="EmbodiedRL", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        description="embodied-ai",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     parser.add_argument(
@@ -32,8 +34,8 @@ def _get_args():
         default="",
         required=False,
         help="Add an extra tag to the experiment when trying out new ideas (will be used"
-        "as a suffix of the experiment name). It also has to be provided when testing on"
-        "the trained model.",
+        "as a subdirectory of the tensorboard path so you will be able to"
+        "search tensorboard logs using this extra tag).",
     )
 
     parser.add_argument(
@@ -106,6 +108,9 @@ def _get_args():
         help="optional number of skipped checkpoints between runs in test if no checkpoint specified",
     )
 
+    parser.add_argument(
+        "--gp", default=None, action="append", help="values to be used by gin-config.",
+    )
     return parser.parse_args()
 
 
@@ -142,11 +147,13 @@ def _load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
     experiments = [
         m[1]
         for m in inspect.getmembers(module, inspect.isclass)
-        if m[1].__module__ == module.__name__
+        if m[1].__module__ == module.__name__ and issubclass(m[1], ExperimentConfig)
     ]
     assert (
         len(experiments) == 1
     ), "Too many or two few experiments defined in {}".format(module_path)
+
+    gin.parse_config_files_and_bindings(None, args.gp)
 
     config = experiments[0]()
     sources = _config_source(args)
