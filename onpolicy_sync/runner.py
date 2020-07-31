@@ -212,7 +212,10 @@ class OnPolicyRunner(object):
             test.process_checkpoints()  # gets checkpoints via queue
 
     def start_train(
-        self, checkpoint: Optional[str] = None, restart_pipeline: bool = False
+        self,
+        checkpoint: Optional[str] = None,
+        restart_pipeline: bool = False,
+        max_processes_per_trainer: Optional[int] = None,
     ):
         self.save_config_files()
 
@@ -250,6 +253,7 @@ class OnPolicyRunner(object):
                     device=devices[trainer_it],
                     distributed_port=distributed_port,
                     distributed_barrier=distributed_barrier,
+                    max_processes_per_trainer=max_processes_per_trainer,
                 ),
             )
             train.start()

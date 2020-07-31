@@ -109,6 +109,14 @@ def _get_args():
     )
 
     parser.add_argument(
+        "--max_processes_per_trainer",
+        required=False,
+        default=None,
+        type=int,
+        help="maximal number of processes to spawn for each trainer",
+    )
+
+    parser.add_argument(
         "--gp", default=None, action="append", help="values to be used by gin-config.",
     )
     return parser.parse_args()
@@ -178,7 +186,9 @@ def main():
             mode="train",
             deterministic_cudnn=args.deterministic_cudnn,
             extra_tag=args.extra_tag,
-        ).start_train(args.checkpoint, args.restart_pipeline)
+        ).start_train(
+            args.checkpoint, args.restart_pipeline, args.max_processes_per_trainer
+        )
     else:
         OnPolicyRunner(
             config=cfg,
