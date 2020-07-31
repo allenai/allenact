@@ -20,13 +20,13 @@ class PointNavHabitatDeptheterministicSimpleConvGRUPPOExperimentConfig(
 
     SENSORS = [
         DepthSensorHabitat(
-            {
+            **{
                 "height": PointNavHabitatBaseExperimentConfig.SCREEN_SIZE,
                 "width": PointNavHabitatBaseExperimentConfig.SCREEN_SIZE,
                 "use_resnet_normalization": True,
             }
         ),
-        TargetCoordinatesSensorHabitat({"coordinate_dims": 2}),
+        TargetCoordinatesSensorHabitat(**{"coordinate_dims": 2}),
     ]
 
     PREPROCESSORS = []

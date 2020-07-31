@@ -576,6 +576,7 @@ class OnPolicyRunner(object):
         last_train_time = time.time()
         # test_steps = sorted(test_steps, reverse=True)
         test_results = []
+        unfinished_workers = nworkers
 
         try:
             while True:
@@ -601,9 +602,10 @@ class OnPolicyRunner(object):
                                 )
                                 collected = collected[nworkers:]
                             elif len(collected) > 2 * nworkers:
-                                raise Exception(
-                                    "Unable to aggregate train packages from {} workers".format(
-                                        nworkers
+                                get_logger().warning(
+                                    "Unable to aggregate train packages from all {} workers"
+                                    "after {} packages collected".format(
+                                        nworkers, len(collected)
                                     )
                                 )
                     elif (
@@ -617,18 +619,25 @@ class OnPolicyRunner(object):
                             break
                     elif package[0] == "test_package":
                         collected.append(package)
-                        if len(collected) == nworkers:
-                            self.process_test_packages(
-                                log_writer, collected, test_results
-                            )
-                            collected = []
-                            with open(metrics_file, "w") as f:
-                                json.dump(test_results, f, indent=4, sort_keys=True)
-                                get_logger().debug(
-                                    "Updated {} up to checkpoint {}".format(
-                                        metrics_file, test_steps[len(test_results) - 1]
-                                    )
+                        if len(collected) >= nworkers:
+                            collected = sorted(
+                                collected, key=lambda x: x[2]
+                            )  # sort by num_steps
+                            if (
+                                collected[nworkers - 1][2] == collected[0][2]
+                            ):  # ensure nworkers have provided the same num_steps
+                                self.process_test_packages(
+                                    log_writer, collected[:nworkers], test_results
                                 )
+                                collected = collected[nworkers:]
+                                with open(metrics_file, "w") as f:
+                                    json.dump(test_results, f, indent=4, sort_keys=True)
+                                    get_logger().debug(
+                                        "Updated {} up to checkpoint {}".format(
+                                            metrics_file,
+                                            test_steps[len(test_results) - 1],
+                                        )
+                                    )
                     elif package[0] == "train_stopped":
                         if package[1] == 0:
                             finalized = True
@@ -646,8 +655,8 @@ class OnPolicyRunner(object):
                         )
                     elif package[0] == "test_stopped":
                         if package[1] == 0:
-                            nworkers -= 1
-                            if nworkers == 0:
+                            unfinished_workers -= 1
+                            if unfinished_workers == 0:
                                 get_logger().info("Last tester finished. Terminating")
                                 finalized = True
                                 break

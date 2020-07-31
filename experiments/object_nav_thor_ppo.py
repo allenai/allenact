@@ -44,13 +44,13 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
     SENSORS = [
         RGBSensorThor(
-            {
+            **{
                 "height": SCREEN_SIZE,
                 "width": SCREEN_SIZE,
                 "use_resnet_normalization": True,
             }
         ),
-        GoalObjectTypeThorSensor({"object_types": OBJECT_TYPES}),
+        GoalObjectTypeThorSensor(**{"object_types": OBJECT_TYPES}),
     ]
 
     ENV_ARGS = {

@@ -9,6 +9,7 @@ from gym.spaces import Dict as SpaceDict
 
 from rl_base.sensor import Sensor, SensorSuite
 from utils.experiment_utils import Builder
+from utils.misc_utils import prepare_locals_for_super
 
 
 class Preprocessor(abc.ABC):
@@ -18,21 +19,25 @@ class Preprocessor(abc.ABC):
     required to set the below attributes:
 
     # Attributes:
-        config : Configuration information for the preprocessor.
         input_uuids : List of input universally unique ids.
         uuid : Universally unique id.
         observation_space : ``gym.Space`` object corresponding to processed observation spaces.
     """
 
-    config: Dict[str, Any]
     input_uuids: List[str]
     uuid: str
     observation_space: gym.Space
 
-    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
-        self.config = config
-        self.uuid = self.config["output_uuid"]
-        self.input_uuids = self.config["input_uuids"]
+    def __init__(
+        self,
+        input_uuids: List[str],
+        output_uuid: str,
+        observation_space: gym.Space,
+        **kwargs: Any
+    ) -> None:
+        self.uuid = output_uuid
+        self.input_uuids = input_uuids
+        self.observation_space = observation_space
 
     @abc.abstractmethod
     def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:
@@ -48,13 +53,14 @@ class Preprocessor(abc.ABC):
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
     def to(self, device: torch.device) -> "Preprocessor":
         raise NotImplementedError()
 
 
 class PreprocessorGraph:
     """Represents a graph of preprocessors, with each preprocessor being
-    identified through a unique id.
+    identified through a universally unique id.
 
     # Attributes
 
