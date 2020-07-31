@@ -8,7 +8,7 @@ import torch
 from babyai.utils.format import InstructionsPreprocessor
 from gym_minigrid.minigrid import MiniGridEnv
 
-from rl_base.sensor import Sensor
+from rl_base.sensor import Sensor, prepare_locals_for_super
 from rl_base.task import Task, SubTaskType
 
 # fmt: off
@@ -23,10 +23,15 @@ ALL_VOCAB_TOKENS = [
 
 
 class EgocentricMiniGridSensor(Sensor[MiniGridEnv, Task[MiniGridEnv]]):
-    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
-        super().__init__(config, *args, **kwargs)
-        self.agent_view_size = config["agent_view_size"]
-        self.view_channels = config.get("view_channels", 1)
+    def __init__(
+        self,
+        agent_view_size: int,
+        view_channels: int = 1,
+        uuid: str = "minigrid_ego_image",
+        **kwargs: Any
+    ):
+        self.agent_view_size = agent_view_size
+        self.view_channels = view_channels
         self.num_objects = (
             typing.cast(
                 int, max(map(abs, gym_minigrid.minigrid.OBJECT_TO_IDX.values()))
@@ -41,10 +46,10 @@ class EgocentricMiniGridSensor(Sensor[MiniGridEnv, Task[MiniGridEnv]]):
             typing.cast(int, max(map(abs, gym_minigrid.minigrid.STATE_TO_IDX.values())))
             + 1
         )
-        self.observation_space = self._get_observation_space()
 
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "minigrid_ego_image"
+        observation_space = self._get_observation_space()
+
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def _get_observation_space(self) -> gym.Space:
         return gym.spaces.Box(
@@ -76,8 +81,7 @@ class EgocentricMiniGridSensor(Sensor[MiniGridEnv, Task[MiniGridEnv]]):
 
 
 class MiniGridMissionSensor(Sensor[MiniGridEnv, Task[MiniGridEnv]]):
-    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
-        super().__init__(config, *args, **kwargs)
+    def __init__(self, instr_len: int, uuid: str = "minigrid_mission", **kwargs: Any):
 
         self.instr_preprocessor = InstructionsPreprocessor(
             model_name="TMP_SENSOR", load_vocab_from=None
@@ -88,14 +92,14 @@ class MiniGridMissionSensor(Sensor[MiniGridEnv, Task[MiniGridEnv]]):
         # guarantees that sensors on all processes will produce the same
         # values.
         for token in ALL_VOCAB_TOKENS:
-            self.instr_preprocessor.vocab[token]
+            _ = self.instr_preprocessor.vocab[token]
         self.instr_preprocessor.vocab.max_size = len(ALL_VOCAB_TOKENS)
 
-        self.instr_len: int = self.config["instr_len"]
-        self.observation_space = self._get_observation_space()
+        self.instr_len = instr_len
 
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "minigrid_mission"
+        observation_space = self._get_observation_space()
+
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def _get_observation_space(self) -> gym.Space:
         return gym.spaces.Box(
