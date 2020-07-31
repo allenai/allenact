@@ -8,7 +8,7 @@ from utils.experiment_utils import EarlyStoppingCriterion, ScalarMeanTracker
 class StopIfNearOptimal(EarlyStoppingCriterion):
     def __init__(self, optimal: float, deviation: float, min_memory_size: int = 100):
         self.optimal = optimal
-        self.deviaion = deviation
+        self.deviation = deviation
 
         self.current_pos = 0
         self.has_filled = False
@@ -32,8 +32,12 @@ class StopIfNearOptimal(EarlyStoppingCriterion):
             n = self.memory.shape[0]
             if count >= n:
                 if count > n:
+                    # Increase memory size to fit all of the new values
                     self.memory = np.full(count, fill_value=ep_length_ave)
                 else:
+                    # We have exactly as many values as the memory size,
+                    # simply set the whole memory to be equal to the new
+                    # average ep length.
                     self.memory[:] = ep_length_ave
                 self.current_pos = 0
                 self.has_filled = True
@@ -49,4 +53,5 @@ class StopIfNearOptimal(EarlyStoppingCriterion):
 
         if not self.has_filled:
             return False
-        return self.memory.mean() < self.optimal + self.deviaion
+
+        return self.memory.mean() < self.optimal + self.deviation

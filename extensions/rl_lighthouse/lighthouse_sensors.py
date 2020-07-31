@@ -1,6 +1,5 @@
 import itertools
-import typing
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, Tuple, Sequence
 
 import gym
 import numpy as np
@@ -84,7 +83,7 @@ class CornerSensor(Sensor[LightHouseEnvironment, Any]):
         observation_space = gym.spaces.Box(
             low=min(LightHouseEnvironment.SPACE_LEVELS),
             high=max(LightHouseEnvironment.SPACE_LEVELS),
-            shape=(2 ** world_dim,),
+            shape=(2 ** config["world_dim"] + 2,),
             dtype=int,
         )
 
@@ -110,6 +109,8 @@ class CornerSensor(Sensor[LightHouseEnvironment, Any]):
 
 
 class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
+    _DESIGN_MAT_CACHE: Dict[Tuple, Any] = {}
+
     def __init__(
         self,
         view_radius: int,
@@ -149,22 +150,21 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
             data=[[0] * len(self.variables_and_levels)],
             columns=[x[0] for x in self.variables_and_levels],
         )
-        self._view_tuple_to_design_array: Dict[typing.Tuple[int, ...], np.ndarray] = {}
+        self._view_tuple_to_design_array: Dict[Tuple[int, ...], np.ndarray] = {}
 
         (
             design_matrix,
             tuple_to_ind,
         ) = self._create_full_design_matrix_and_tuple_to_ind_dict(
-            variables_and_levels=self.variables_and_levels, degree=self.degree
+            variables_and_levels=tuple(self.variables_and_levels), degree=self.degree
         )
 
-        self.design_matrix = np.array(design_matrix, dtype=bool)
+        self.design_matrix = design_matrix
         self.tuple_to_ind = tuple_to_ind
 
         observation_space = gym.spaces.Box(
             low=min(LightHouseEnvironment.SPACE_LEVELS),
             high=max(LightHouseEnvironment.SPACE_LEVELS),
-            # shape=(self.output_dim(world_dim=self.world_dim),),
             shape=(
                 len(
                     self.view_tuple_to_design_array(
@@ -177,7 +177,7 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
 
         super().__init__(**prepare_locals_for_super(locals()))
 
-    def view_tuple_to_design_array(self, view_tuple: typing.Tuple):
+    def view_tuple_to_design_array(self, view_tuple: Tuple):
         return np.array(
             self.design_matrix[self.tuple_to_ind[view_tuple], :], dtype=np.float32
         )
@@ -190,31 +190,41 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
 
     @classmethod
     def _create_full_design_matrix_and_tuple_to_ind_dict(
-        cls, variables_and_levels: List[typing.Tuple[str, List[int]]], degree: int
+        cls, variables_and_levels: Sequence[Tuple[str, Sequence[int]]], degree: int
     ):
-        all_tuples = [
-            tuple(x)
-            for x in itertools.product(*[levels for _, levels in variables_and_levels])
-        ]
+        variables_and_levels = tuple((x, tuple(y)) for x, y in variables_and_levels)
+        key = (variables_and_levels, degree)
+        if key not in cls._DESIGN_MAT_CACHE:
+            all_tuples = [
+                tuple(x)
+                for x in itertools.product(
+                    *[levels for _, levels in variables_and_levels]
+                )
+            ]
 
-        tuple_to_ind = {}
-        for i, t in enumerate(all_tuples):
-            tuple_to_ind[t] = i
+            tuple_to_ind = {}
+            for i, t in enumerate(all_tuples):
+                tuple_to_ind[t] = i
 
-        df = pd.DataFrame(
-            data=all_tuples, columns=[var_name for var_name, _ in variables_and_levels]
-        )
+            df = pd.DataFrame(
+                data=all_tuples,
+                columns=[var_name for var_name, _ in variables_and_levels],
+            )
 
-        return (
-            1.0
-            * patsy.dmatrix(
-                cls._create_formula(
-                    variables_and_levels=variables_and_levels, degree=degree
+            cls._DESIGN_MAT_CACHE[key] = (
+                np.array(
+                    1.0
+                    * patsy.dmatrix(
+                        cls._create_formula(
+                            variables_and_levels=variables_and_levels, degree=degree
+                        ),
+                        data=df,
+                    ),
+                    dtype=bool,
                 ),
-                data=df,
-            ),
-            tuple_to_ind,
-        )
+                tuple_to_ind,
+            )
+        return cls._DESIGN_MAT_CACHE[key]
 
     @classmethod
     def _get_variables_and_levels(self, world_dim: int):
@@ -229,7 +239,7 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
 
     @classmethod
     def _create_formula(
-        cls, variables_and_levels: List[typing.Tuple[str, List[int]]], degree: int
+        cls, variables_and_levels: Sequence[Tuple[str, Sequence[int]]], degree: int
     ):
         def make_categorial(var_name, levels):
             return "C({}, levels={})".format(var_name, levels)
@@ -258,7 +268,3 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
         kwargs["as_tuple"] = True
         view_array = self.corner_sensor.get_observation(env, task, *args, **kwargs)
         return self.view_tuple_to_design_array(tuple(view_array))
-
-        # design_mat_ind = self.tuple_to_ind[tuple(view_array)]
-
-        # return 1.0 * self.design_mat[design_mat_ind, :]

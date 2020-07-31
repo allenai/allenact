@@ -1,5 +1,5 @@
-import signal
 import random
+import signal
 from typing import Tuple, Any, List, Dict, Optional, Union, Callable
 
 import babyai
@@ -9,10 +9,10 @@ import numpy as np
 from gym.utils import seeding
 from gym_minigrid.minigrid import MiniGridEnv
 
-from onpolicy_sync.engine import LOGGER
 from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor, SensorSuite
 from rl_base.task import Task, TaskSampler
+from utils.system import get_logger
 
 
 class BabyAITask(Task[MiniGridEnv]):
@@ -162,7 +162,7 @@ class BabyAITaskSampler(TaskSampler):
             self.task_seeds_list = list(range(self.num_unique_seeds))
 
         if (not deterministic_sampling) and self.max_tasks:
-            LOGGER.warning(
+            get_logger().warning(
                 "`deterministic_sampling` is `False` but you have specified `max_tasks < inf`,"
                 " this might be a mistake when running testing."
             )
