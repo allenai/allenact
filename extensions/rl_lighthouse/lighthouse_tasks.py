@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional, Tuple, Union
 
 import gym
 import numpy as np
+from gym.utils import seeding
 
 from extensions.rl_lighthouse.lighthouse_environment import LightHouseEnvironment
 from extensions.rl_lighthouse.lighthouse_sensors import get_corner_observation
@@ -13,9 +14,10 @@ from projects.advisor.lighthouse_constants import (
     FOUND_TARGET_REWARD,
 )
 from rl_base.common import RLStepResult
-from rl_base.sensor import Sensor
+from rl_base.sensor import Sensor, SensorSuite
 from rl_base.task import Task, TaskSampler
 from utils.experiment_utils import set_seed
+from utils.system import get_logger
 
 
 class LightHouseTask(Task[LightHouseEnvironment], abc.ABC):
@@ -33,7 +35,7 @@ class LightHouseTask(Task[LightHouseEnvironment], abc.ABC):
     def __init__(
         self,
         env: LightHouseEnvironment,
-        sensors: List[Sensor],
+        sensors: Union[SensorSuite, List[Sensor]],
         task_info: Dict[str, Any],
         max_steps: int,
         **kwargs
@@ -91,7 +93,7 @@ class FindGoalLightHouseTask(LightHouseTask):
     def __init__(
         self,
         env: LightHouseEnvironment,
-        sensors: List[Sensor],
+        sensors: Union[SensorSuite, List[Sensor]],
         task_info: Dict[str, Any],
         max_steps: int,
         **kwargs
@@ -106,13 +108,13 @@ class FindGoalLightHouseTask(LightHouseTask):
 
     def _step(self, action: int) -> RLStepResult:
         success = self.env.step(action)
-        reward = -0.01  # Step penalty
+        reward = STEP_PENALTY
 
         if np.all(self.env.current_position == self.env.goal_position):
             self._found_target = True
-            reward += 1  # Found target reward
+            reward += FOUND_TARGET_REWARD
         elif self.num_steps_taken() == self.max_steps - 1:
-            reward = -0.01 / (1 - 0.99)  # TODO: Assumes discounting factor = 0.99
+            reward = STEP_PENALTY / (1 - DISCOUNT_FACTOR)
 
         return RLStepResult(
             observation=self.get_observations(),
@@ -287,23 +289,58 @@ class FindGoalLightHouseTaskSampler(TaskSampler):
         self,
         world_dim: int,
         world_radius: int,
-        sensors: List[Sensor],
+        sensors: Union[SensorSuite, List[Sensor]],
         max_steps: int,
         max_tasks: Optional[int] = None,
+        num_unique_seeds: Optional[int] = None,
+        task_seeds_list: Optional[List[int]] = None,
+        deterministic_sampling: bool = False,
         seed: Optional[int] = None,
         **kwargs
     ):
         self.env = LightHouseEnvironment(world_dim=world_dim, world_radius=world_radius)
 
         self._last_sampled_task: Optional[FindGoalLightHouseTask] = None
-        self.sensors = sensors
+        self.sensors = (
+            SensorSuite(sensors) if not isinstance(sensors, SensorSuite) else sensors
+        )
         self.max_steps = max_steps
         self.max_tasks = max_tasks
-        self.total_sampled = 0
+        self.num_tasks_generated = 0
+        self.deterministic_sampling = deterministic_sampling
 
-        self.seed: Optional[int] = None
-        if seed is not None:
-            self.set_seed(seed)
+        self.num_unique_seeds = num_unique_seeds
+        self.task_seeds_list = task_seeds_list
+        assert (self.num_unique_seeds is None) or (
+            0 < self.num_unique_seeds
+        ), "`num_unique_seeds` must be a positive integer."
+
+        self.num_unique_seeds = num_unique_seeds
+        self.task_seeds_list = task_seeds_list
+        if self.task_seeds_list is not None:
+            if self.num_unique_seeds is not None:
+                assert self.num_unique_seeds == len(
+                    self.task_seeds_list
+                ), "`num_unique_seeds` must equal the length of `task_seeds_list` if both specified."
+            self.num_unique_seeds = len(self.task_seeds_list)
+        elif self.num_unique_seeds is not None:
+            self.task_seeds_list = list(range(self.num_unique_seeds))
+
+        assert (not deterministic_sampling) or (
+            self.num_unique_seeds is not None
+        ), "Cannot use deterministic sampling when `num_unique_seeds` is `None`."
+
+        if (not deterministic_sampling) and self.max_tasks:
+            get_logger().warning(
+                "`deterministic_sampling` is `False` but you have specified `max_tasks < inf`,"
+                " this might be a mistake when running testing."
+            )
+
+        self.seed: int = int(
+            seed if seed is not None else np.random.randint(0, 2 ** 31 - 1)
+        )
+        self.np_seeded_random_gen: Optional[np.random.RandomState] = None
+        self.set_seed(self.seed)
 
     @property
     def world_dim(self):
@@ -314,22 +351,39 @@ class FindGoalLightHouseTaskSampler(TaskSampler):
         return self.env.world_radius
 
     @property
-    def __len__(self) -> Union[int, float]:
-        return float("inf") if self.max_tasks is None else self.max_tasks
+    def length(self) -> Union[int, float]:
+        return (
+            float("inf")
+            if self.max_tasks is None
+            else self.max_tasks - self.num_tasks_generated
+        )
 
     @property
     def total_unique(self) -> Optional[Union[int, float]]:
-        return self.max_tasks
+        n = 2 ** self.world_dim
+        return n if self.num_unique_seeds is None else min(n, self.num_unique_seeds)
 
     @property
     def last_sampled_task(self) -> Optional[Task]:
         return self._last_sampled_task
 
     def next_task(self, force_advance_scene: bool = False) -> Optional[Task]:
-        if self.max_tasks is not None and self.total_sampled >= self.max_tasks:
+        if self.length <= 0:
             return None
 
-        self.total_sampled += 1
+        if self.num_unique_seeds is not None:
+            if self.deterministic_sampling:
+                seed = self.task_seeds_list[
+                    self.num_tasks_generated % len(self.task_seeds_list)
+                ]
+            else:
+                seed = self.np_seeded_random_gen.choice(self.task_seeds_list)
+        else:
+            seed = self.np_seeded_random_gen.randint(0, 2 ** 31 - 1)
+
+        self.num_tasks_generated += 1
+
+        self.env.set_seed(seed)
         self.env.random_reset()
         return FindGoalLightHouseTask(
             env=self.env, sensors=self.sensors, task_info={}, max_steps=self.max_steps
@@ -343,8 +397,10 @@ class FindGoalLightHouseTaskSampler(TaskSampler):
         return True
 
     def reset(self) -> None:
-        self.total_sampled = 0
+        self.num_tasks_generated = 0
+        self.set_seed(seed=self.seed)
 
     def set_seed(self, seed: int) -> None:
         set_seed(seed)
+        self.np_seeded_random_gen, _ = seeding.np_random(seed)
         self.seed = seed
