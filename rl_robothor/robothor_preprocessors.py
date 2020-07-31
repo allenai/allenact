@@ -9,6 +9,7 @@ from gym.spaces.dict import Dict as SpaceDict
 from rl_base.preprocessor import Preprocessor
 from utils.cacheless_frcnn import fasterrcnn_resnet50_fpn
 from utils.system import get_logger
+from utils.misc_utils import prepare_locals_for_super
 
 
 class BatchedFasterRCNN(torch.nn.Module):
@@ -221,7 +222,7 @@ class FasterRCNNPreProcessorRoboThor(Preprocessor):
 
         observation_space = SpaceDict(spaces=spaces)
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def to(self, device: torch.device) -> "FasterRCNNPreProcessorRoboThor":
         if not self.parallel:

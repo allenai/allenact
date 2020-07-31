@@ -27,6 +27,7 @@ import numpy as np
 from rl_base.common import EnvType
 from utils.tensor_utils import ScaleBothSides
 from utils.system import get_logger
+from utils.misc_utils import prepare_locals_for_super
 
 if TYPE_CHECKING:
     from rl_base.task import SubTaskType
@@ -52,21 +53,6 @@ class Sensor(Generic[EnvType, SubTaskType]):
     def __init__(self, uuid: str, observation_space: gym.Space, **kwargs: Any) -> None:
         self.uuid = uuid
         self.observation_space = observation_space
-
-    @staticmethod
-    def prepare_locals_for_super(local_vars):
-        assert (
-            "args" not in local_vars
-        ), "`prepare_locals_for_super` does not support `args`."
-        new_locals = {
-            k: v for k, v in local_vars.items() if k != "self" and "__" not in k
-        }
-        if "kwargs" in new_locals:
-            kwargs = new_locals["kwargs"]
-            del new_locals["kwargs"]
-            kwargs.update(new_locals)
-            new_locals = kwargs
-        return new_locals
 
     def get_observation(
         self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
@@ -161,7 +147,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
 
         observation_space = self._get_observation_space()
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def _get_observation_space(self) -> gym.spaces.Tuple:
         """The observation space of the expert action sensor.
@@ -204,7 +190,7 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
 
         observation_space = self._get_observation_space()
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def _get_observation_space(self) -> gym.spaces.Tuple:
         """The observation space of the expert action sensor.
@@ -298,7 +284,7 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             input_supremum=input_supremum,
         )
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def _get_observation_space(
         self,
@@ -427,7 +413,7 @@ class RGBSensor(VisionSensor[EnvType, SubTaskType], ABC):
         if not use_resnet_normalization:
             mean, stdev = None, None
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
 
 class DepthSensor(VisionSensor[EnvType, SubTaskType], ABC):
@@ -461,7 +447,7 @@ class DepthSensor(VisionSensor[EnvType, SubTaskType], ABC):
         if not use_normalization:
             mean, stdev = None, None
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(  # type: ignore
         self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
@@ -495,7 +481,7 @@ class ResNetSensor(VisionSensor[EnvType, SubTaskType], ABC):
 
         self.device = "cpu"
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def to(self, device: torch.device) -> "ResNetSensor":
         """Moves sensor to specified device.
@@ -561,7 +547,7 @@ class RGBResNetSensor(ResNetSensor[EnvType, SubTaskType], ABC):
         if not use_resnet_normalization:
             mean, stdev = None, None
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
 
 class DepthResNetSensor(ResNetSensor[EnvType, SubTaskType], ABC):
@@ -596,7 +582,7 @@ class DepthResNetSensor(ResNetSensor[EnvType, SubTaskType], ABC):
         if not use_normalization:
             mean, stdev = None, None
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def observation_to_tensor(self, depth: Any) -> torch.Tensor:
         depth = super().observation_to_tensor(depth).squeeze()

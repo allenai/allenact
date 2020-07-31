@@ -8,6 +8,7 @@ from rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
 from rl_ai2thor.object_nav.tasks import ObjectNavTask
 from rl_base.sensor import Sensor, RGBSensor
 from rl_base.task import Task
+from utils.misc_utils import prepare_locals_for_super
 
 
 class RGBSensorThor(RGBSensor[AI2ThorEnvironment, Task[AI2ThorEnvironment]]):
@@ -56,7 +57,7 @@ class GoalObjectTypeThorSensor(Sensor):
 
             observation_space = gym.spaces.Discrete(len(self.detector_types))
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
         self,

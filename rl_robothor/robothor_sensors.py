@@ -8,6 +8,7 @@ from rl_base.sensor import Sensor, RGBSensor, DepthSensor
 from rl_base.task import Task
 from rl_robothor.robothor_environment import RoboThorEnvironment
 from rl_robothor.robothor_tasks import PointNavTask
+from utils.misc_utils import prepare_locals_for_super
 
 
 class RGBSensorRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnvironment]]):
@@ -29,7 +30,7 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
             shape=(2,),
             dtype=np.float32,
         )
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def _compute_pointgoal(self, source_position, source_rotation, goal_position):
         direction_vector = goal_position - source_position
@@ -125,7 +126,7 @@ class DepthSensorRoboThor(DepthSensor[RoboThorEnvironment, Task[RoboThorEnvironm
         elif use_normalization is None:
             use_normalization = False
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def frame_from_env(self, env: RoboThorEnvironment) -> np.ndarray:
         return env.current_depth.copy()

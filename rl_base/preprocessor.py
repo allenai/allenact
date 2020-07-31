@@ -9,6 +9,7 @@ from gym.spaces import Dict as SpaceDict
 
 from rl_base.sensor import Sensor, SensorSuite
 from utils.experiment_utils import Builder
+from utils.misc_utils import prepare_locals_for_super
 
 
 class Preprocessor(abc.ABC):
@@ -37,21 +38,6 @@ class Preprocessor(abc.ABC):
         self.uuid = output_uuid
         self.input_uuids = input_uuids
         self.observation_space = observation_space
-
-    @staticmethod
-    def prepare_locals_for_super(local_vars):
-        assert (
-            "args" not in local_vars
-        ), "`prepare_locals_for_super` does not support `args`."
-        new_locals = {
-            k: v for k, v in local_vars.items() if k != "self" and "__" not in k
-        }
-        if "kwargs" in new_locals:
-            kwargs = new_locals["kwargs"]
-            del new_locals["kwargs"]
-            kwargs.update(new_locals)
-            new_locals = kwargs
-        return new_locals
 
     @abc.abstractmethod
     def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:

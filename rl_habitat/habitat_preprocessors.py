@@ -8,6 +8,7 @@ from torchvision import models
 
 from rl_base.preprocessor import Preprocessor
 from utils.system import get_logger
+from utils.misc_utils import prepare_locals_for_super
 
 
 class ResNetEmbedder(nn.Module):
@@ -114,7 +115,7 @@ class ResnetPreProcessorHabitat(Preprocessor):
 
         observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def to(self, device: torch.device) -> "ResnetPreProcessorHabitat":
         if not self.parallel:

@@ -14,6 +14,7 @@ from rl_base.sensor import (
 from rl_base.task import Task
 from rl_habitat.habitat_environment import HabitatEnvironment
 from rl_habitat.habitat_tasks import PointNavTask  # type: ignore
+from utils.misc_utils import prepare_locals_for_super
 
 
 class RGBSensorHabitat(RGBSensor[HabitatEnvironment, Task[HabitatEnvironment]]):
@@ -37,7 +38,7 @@ class RGBSensorHabitat(RGBSensor[HabitatEnvironment, Task[HabitatEnvironment]]):
         scale_first: bool = False,
         **kwargs: Any
     ):
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def frame_from_env(self, env: HabitatEnvironment) -> np.ndarray:
         return env.current_frame["rgb"].copy()
@@ -66,7 +67,7 @@ class RGBResNetSensorHabitat(
         scale_first: bool = False,
         **kwargs: Any
     ):
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def frame_from_env(self, env: HabitatEnvironment) -> np.ndarray:
         return env.current_frame["rgb"].copy()
@@ -96,7 +97,7 @@ class DepthSensorHabitat(DepthSensor[HabitatEnvironment, Task[HabitatEnvironment
         elif use_normalization is None:
             use_normalization = False
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def frame_from_env(self, env: HabitatEnvironment) -> np.ndarray:
         return env.current_frame["depth"].copy()
@@ -128,7 +129,7 @@ class DepthResNetSensorHabitat(
         elif use_normalization is None:
             use_normalization = False
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def frame_from_env(self, env: HabitatEnvironment) -> np.ndarray:
         return env.current_frame["depth"].copy()
@@ -143,7 +144,7 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
             np.float32(-3.15), np.float32(1000), shape=(coordinate_dims,)
         )
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
         self,
@@ -161,7 +162,7 @@ class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def __init__(self, uuid: str = "target_object_id", **kwargs: Any):
         observation_space = gym.spaces.Discrete(38)
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
         self,
@@ -181,7 +182,7 @@ class AgentCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
             np.float32(-1000), np.float32(1000), shape=(4,)
         )
 
-        super().__init__(**self.prepare_locals_for_super(locals()))
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
         self,
