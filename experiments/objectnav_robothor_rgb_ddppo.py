@@ -94,33 +94,31 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     SENSORS = [
         RGBSensorThor(
-            {
+            **{
                 "height": SCREEN_SIZE,
                 "width": SCREEN_SIZE,
                 "use_resnet_normalization": True,
                 "uuid": "rgb_lowres",
             }
         ),
-        GoalObjectTypeThorSensor({"object_types": TARGET_TYPES,}),
+        GoalObjectTypeThorSensor(**{"object_types": TARGET_TYPES,}),
     ]
 
     PREPROCESSORS = [
         Builder(
             ResnetPreProcessorHabitat,
-            dict(
-                config={
-                    "input_height": SCREEN_SIZE,
-                    "input_width": SCREEN_SIZE,
-                    "output_width": 7,
-                    "output_height": 7,
-                    "output_dims": 512,
-                    "pool": False,
-                    "torchvision_resnet_model": models.resnet18,
-                    "input_uuids": ["rgb_lowres"],
-                    "output_uuid": "rgb_resnet",
-                    "parallel": False,  # TODO False for debugging
-                }
-            ),
+            {
+                "input_height": SCREEN_SIZE,
+                "input_width": SCREEN_SIZE,
+                "output_width": 7,
+                "output_height": 7,
+                "output_dims": 512,
+                "pool": False,
+                "torchvision_resnet_model": models.resnet18,
+                "input_uuids": ["rgb_lowres"],
+                "output_uuid": "rgb_resnet",
+                "parallel": False,  # TODO False for debugging
+            },
         ),
     ]
 
@@ -162,7 +160,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         max_grad_norm = 0.5
         return TrainingPipeline(
             save_interval=save_interval,
-            log_interval=log_interval,
+            metric_accumulate_interval=log_interval,
             optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
@@ -174,7 +172,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             gae_lambda=gae_lambda,
             advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
-                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps)
+                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps)
             ],
             lr_scheduler_builder=Builder(
                 LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
@@ -221,7 +219,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         # Disable parallelization for validation process
         if mode == "valid":
             for prep in self.PREPROCESSORS:
-                prep.kwargs["config"]["parallel"] = False
+                prep.kwargs["parallel"] = False
 
         observation_set = (
             Builder(

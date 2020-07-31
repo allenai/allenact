@@ -149,3 +149,16 @@ def all_equal(s: typing.Sequence):
     if len(s) <= 1:
         return True
     return all(s[0] == ss for ss in s[1:])
+
+
+def prepare_locals_for_super(local_vars, args_name="args", kwargs_name="kwargs"):
+    assert (
+        args_name not in local_vars
+    ), "`prepare_locals_for_super` does not support {}.".format(args_name)
+    new_locals = {k: v for k, v in local_vars.items() if k != "self" and "__" not in k}
+    if kwargs_name in new_locals:
+        kwargs = new_locals[kwargs_name]
+        del new_locals[kwargs_name]
+        kwargs.update(new_locals)
+        new_locals = kwargs
+    return new_locals

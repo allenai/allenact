@@ -19,18 +19,18 @@ class ObjectNavHabitatDepthDeterministicResNet50GRUPPOExperimentConfig(
 
     SENSORS = [
         DepthSensorHabitat(
-            {
+            **{
                 "height": ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE,
                 "width": ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE,
                 "use_resnet_normalization": True,
             }
         ),
-        TargetObjectSensorHabitat({}),
+        TargetObjectSensorHabitat(),
     ]
 
     PREPROCESSORS = [
         ResnetPreProcessorHabitat(
-            config={
+            **{
                 "input_height": ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE,
                 "input_width": ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE,
                 "output_width": 1,

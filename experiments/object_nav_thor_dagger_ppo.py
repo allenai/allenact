@@ -36,14 +36,14 @@ class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
 
     SENSORS = [
         RGBSensorThor(
-            {
+            **{
                 "height": SCREEN_SIZE,
                 "width": SCREEN_SIZE,
                 "use_resnet_normalization": True,
             }
         ),
-        GoalObjectTypeThorSensor({"object_types": OBJECT_TYPES}),
-        ExpertActionSensor({"nactions": 6}),
+        GoalObjectTypeThorSensor(**{"object_types": OBJECT_TYPES}),
+        ExpertActionSensor(**{"nactions": 6}),
     ]
 
     @classmethod

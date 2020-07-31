@@ -1,16 +1,14 @@
-import typing
-from typing import Any, Dict, Optional
+from typing import Any, Tuple, Optional
 
 import gym
 import numpy as np
 import quaternion  # noqa # pylint: disable=unused-import
-from torchvision import transforms
 
-from utils.tensor_utils import ScaleBothSides
 from rl_base.sensor import Sensor, RGBSensor, DepthSensor
 from rl_base.task import Task
 from rl_robothor.robothor_environment import RoboThorEnvironment
 from rl_robothor.robothor_tasks import PointNavTask
+from utils.misc_utils import prepare_locals_for_super
 
 
 class RGBSensorRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnvironment]]):
@@ -25,21 +23,14 @@ class RGBSensorRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnvironment]
 
 
 class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
-    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
-        super().__init__(config, *args, **kwargs)
-
-        self.observation_space = gym.spaces.Box(
+    def __init__(self, uuid: str = "target_coordinates_ind", **kwargs: Any):
+        observation_space = gym.spaces.Box(
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             shape=(2,),
             dtype=np.float32,
         )
-
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "target_coordinates_ind"
-
-    def _get_observation_space(self) -> gym.spaces.Box:
-        return typing.cast(gym.spaces.Box, self.observation_space)
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def _compute_pointgoal(self, source_position, source_rotation, goal_position):
         direction_vector = goal_position - source_position
@@ -112,18 +103,30 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
 
 
 class DepthSensorRoboThor(DepthSensor[RoboThorEnvironment, Task[RoboThorEnvironment]]):
+    # For backwards compatibility
     def __init__(
-        self, config: Dict[str, Any], scale_first=False, *args: Any, **kwargs: Any
+        self,
+        use_resnet_normalization: Optional[bool] = None,
+        use_normalization: Optional[bool] = None,
+        mean: Optional[np.ndarray] = np.array([[0.5]], dtype=np.float32),
+        stdev: Optional[np.ndarray] = np.array([[0.25]], dtype=np.float32),
+        height: Optional[int] = None,
+        width: Optional[int] = None,
+        uuid: str = "depth",
+        output_shape: Optional[Tuple[int, ...]] = None,
+        output_channels: int = 1,
+        unnormalized_infimum: float = 0.0,
+        unnormalized_supremum: float = 5.0,
+        scale_first: bool = False,
+        **kwargs: Any
     ):
-        def f(x, k, default):
-            return x[k] if k in x else default
+        # Give priority to use_normalization, but use_resnet_normalization for backward compat. if not set
+        if use_resnet_normalization is not None and use_normalization is None:
+            use_normalization = use_resnet_normalization
+        elif use_normalization is None:
+            use_normalization = False
 
-        # Backwards compatibility
-        config["use_normalization"] = f(
-            config, "use_normalization", f(config, "use_resnet_normalization", False)
-        )
-
-        super().__init__(config, scale_first, *args, **kwargs)
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def frame_from_env(self, env: RoboThorEnvironment) -> np.ndarray:
         return env.current_depth.copy()

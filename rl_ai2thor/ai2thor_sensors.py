@@ -8,6 +8,7 @@ from rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
 from rl_ai2thor.object_nav.tasks import ObjectNavTask
 from rl_base.sensor import Sensor, RGBSensor
 from rl_base.task import Task
+from utils.misc_utils import prepare_locals_for_super
 
 
 class RGBSensorThor(RGBSensor[AI2ThorEnvironment, Task[AI2ThorEnvironment]]):
@@ -22,28 +23,31 @@ class RGBSensorThor(RGBSensor[AI2ThorEnvironment, Task[AI2ThorEnvironment]]):
 
 
 class GoalObjectTypeThorSensor(Sensor):
-    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
-        super().__init__(config, *args, **kwargs)
+    def __init__(
+        self,
+        object_types: List[str],
+        target_to_detector_map: Optional[Dict[str, int]] = None,
+        detector_types: Optional[List[str]] = None,
+        uuid: str = "goal_object_type_ind",
+        **kwargs: Any
+    ):
+        self.ordered_object_types = list(object_types)
+        assert self.ordered_object_types == sorted(
+            self.ordered_object_types
+        ), "object types input to goal object type sensor must be ordered"
 
-        self.ordered_object_types: List[str] = list(self.config["object_types"])
-        assert self.ordered_object_types == list(sorted(self.ordered_object_types)), (
-            "object types" "input to goal object type " "sensor must be ordered"
-        )
-
-        if "target_to_detector_map" not in self.config:
+        if target_to_detector_map is None:
             self.object_type_to_ind = {
                 ot: i for i, ot in enumerate(self.ordered_object_types)
             }
 
-            self.observation_space = gym.spaces.Discrete(len(self.ordered_object_types))
+            observation_space = gym.spaces.Discrete(len(self.ordered_object_types))
         else:
             assert (
-                "detector_types" in self.config
-            ), "Missing detector_types for map {}".format(
-                self.config["target_to_detector_map"]
-            )
-            self.target_to_detector = self.config["target_to_detector_map"]
-            self.detector_types = self.config["detector_types"]
+                detector_types is not None
+            ), "Missing detector_types for map {}".format(target_to_detector_map)
+            self.target_to_detector = target_to_detector_map
+            self.detector_types = detector_types
 
             detector_index = {ot: i for i, ot in enumerate(self.detector_types)}
             self.object_type_to_ind = {
@@ -51,13 +55,9 @@ class GoalObjectTypeThorSensor(Sensor):
                 for ot in self.ordered_object_types
             }
 
-            self.observation_space = gym.spaces.Discrete(len(self.detector_types))
+            observation_space = gym.spaces.Discrete(len(self.detector_types))
 
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "goal_object_type_ind"
-
-    def _get_observation_space(self) -> gym.spaces.Discrete:
-        return typing.cast(gym.spaces.Discrete, self.observation_space)
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
         self,
@@ -66,9 +66,4 @@ class GoalObjectTypeThorSensor(Sensor):
         *args: Any,
         **kwargs: Any
     ) -> Any:
-
-        # # Debug
-        # print(task.task_info["object_type"], '->',
-        #       self.detector_types[self.object_type_to_ind[task.task_info["object_type"]]])
-
         return self.object_type_to_ind[task.task_info["object_type"]]

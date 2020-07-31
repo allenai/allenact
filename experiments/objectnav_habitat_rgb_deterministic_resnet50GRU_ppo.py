@@ -19,13 +19,13 @@ class ObjectNavHabitatRGBDeterministicResNet50GRUPPOExperimentConfig(
 
     SENSORS = [
         RGBSensorHabitat(
-            {
+            **{
                 "height": ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE,
                 "width": ObjectNavHabitatBaseExperimentConfig.SCREEN_SIZE,
                 "use_resnet_normalization": True,
             }
         ),
-        TargetObjectSensorHabitat({}),
+        TargetObjectSensorHabitat(),
     ]
 
     PREPROCESSORS = [
