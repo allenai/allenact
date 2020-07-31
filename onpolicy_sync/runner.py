@@ -576,6 +576,7 @@ class OnPolicyRunner(object):
         last_train_time = time.time()
         # test_steps = sorted(test_steps, reverse=True)
         test_results = []
+        unfinished_workers = nworkers
 
         try:
             while True:
@@ -646,8 +647,8 @@ class OnPolicyRunner(object):
                         )
                     elif package[0] == "test_stopped":
                         if package[1] == 0:
-                            nworkers -= 1
-                            if nworkers == 0:
+                            unfinished_workers -= 1
+                            if unfinished_workers == 0:
                                 get_logger().info("Last tester finished. Terminating")
                                 finalized = True
                                 break
