@@ -1,3 +1,4 @@
+import glob
 import os
 import shutil
 from pathlib import Path
@@ -37,18 +38,22 @@ def render_file(
     else:
         namespace = f"{relative_src_namespace}.{src_base}{modifier}"
 
-    args = ["pydocmd", "simple", namespace]
-    call_result = check_output(args, env=os.environ).decode("utf-8")
-    # noinspection PyShadowingNames
-    with open(to_file, "w") as f:
-        doc_split = call_result.split("\n")
-        github_path = "https://github.com/allenai/embodied-rl/tree/master/"
-        path = github_path + doc_split[0].replace("# ", "").replace(".", "/") + ".py"
-        mdlink = "[[source]]({})".format(path)
-        call_result = "\n".join([doc_split[0] + " " + mdlink] + doc_split[1:])
-        f.write(call_result)
-
-    print(f"Built docs for {src_file}: {to_file}")
+    args = ["mathy_pydoc", namespace]
+    try:
+        call_result = check_output(args, env=os.environ).decode("utf-8")
+        # noinspection PyShadowingNames
+        with open(to_file, "w") as f:
+            doc_split = call_result.split("\n")
+            github_path = "https://github.com/allenai/embodied-rl/tree/master/"
+            path = (
+                github_path + doc_split[0].replace("# ", "").replace(".", "/") + ".py"
+            )
+            mdlink = "[[source]]({})".format(path)
+            call_result = "\n".join([doc_split[0] + " " + mdlink] + doc_split[1:])
+            f.write(call_result)
+        print(f"Built docs for {src_file}: {to_file}")
+    except Exception as _:
+        print(f"Building docs for {src_file}: {to_file} failed.")
 
 
 # noinspection PyShadowingNames
@@ -117,9 +122,50 @@ def build_docs(
     return nav_root
 
 
+def project_readme_paths_to_nav_structure(project_readmes):
+    nested_dict = {}
+    for fp in project_readmes:
+        has_seen_project_dir = False
+        sub_nested_dict = nested_dict
+
+        split_fp = os.path.dirname(fp).split("/")
+        for i, yar in enumerate(split_fp):
+            has_seen_project_dir = has_seen_project_dir or yar == "projects"
+            if not has_seen_project_dir or yar == "projects":
+                continue
+
+            if yar not in sub_nested_dict:
+                if i == len(split_fp) - 1:
+                    sub_nested_dict[yar] = fp.replace("docs/", "")
+                    break
+                else:
+                    sub_nested_dict[yar] = {}
+
+            sub_nested_dict = sub_nested_dict[yar]
+
+    def recursively_create_nav_structure(nested_dict):
+        if isinstance(nested_dict, str):
+            return nested_dict
+
+        to_return = []
+        for key in nested_dict:
+            to_return.append({key: recursively_create_nav_structure(nested_dict[key])})
+        return to_return
+
+    return recursively_create_nav_structure(nested_dict)
+
+
 if __name__ == "__main__":
-    print("Copying README.md file to docs.")
+    print("Copying all README.md files to docs.")
     shutil.copy("README.md", "docs/README.md")
+
+    project_readmes = []
+    for readme_file_path in glob.glob("projects/**/README.md", recursive=True):
+        if "docs/" not in readme_file_path:
+            new_path = os.path.join("docs", readme_file_path)
+            os.makedirs(os.path.dirname(new_path), exist_ok=True)
+            shutil.copy(readme_file_path, new_path)
+            project_readmes.append(new_path)
 
     print("Copying LICENSE file to docs.")
     shutil.copy("LICENSE", "docs/LICENSE.md")
@@ -137,11 +183,24 @@ if __name__ == "__main__":
     parent_folder_path = Path(__file__).parent.parent
     yaml_path = parent_folder_path / "mkdocs.yml"
     source_path = parent_folder_path
-    # source_path = parent_folder_path / "embodied_rl"
     docs_dir = str(parent_folder_path / "docs" / "api")
     if not os.path.exists(docs_dir):
         os.mkdir(docs_dir)
+
+    # Adding project readmes to the yaml
     yaml = YAML()
+    mkdocs_yaml = yaml.load(yaml_path)
+    site_nav = mkdocs_yaml["nav"]
+    projects_key = "Publications using embodied-rl"
+    nav_obj = None
+    for obj in site_nav:
+        if projects_key in obj:
+            nav_obj = obj
+            break
+    nav_obj[projects_key] = project_readme_paths_to_nav_structure(project_readmes)
+
+    with open(yaml_path, "w") as f:
+        yaml.dump(mkdocs_yaml, f)
 
     # Get directories to ignore
     git_dirs = set(
@@ -161,9 +220,7 @@ if __name__ == "__main__":
     )
     nav_entries.sort(key=lambda x: list(x)[0], reverse=False)
 
-    mkdocs_yaml = yaml.load(yaml_path)
     docs_key = "API"
-    site_nav = mkdocs_yaml["nav"]
 
     # Find the yaml corresponding to the API
     nav_obj = None
