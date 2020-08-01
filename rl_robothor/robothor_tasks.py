@@ -488,8 +488,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
     def metrics(self) -> Dict[str, Any]:
         if not self.is_done():
             return {}
-        if self._success:
-            print("\n\n\n\n\n----------------\n", self._rewards, "\n----------------\n")
         else:
             metrics = {
                 "success": self._success,
