@@ -40,7 +40,7 @@ class ObjectNaviThorRGBPPOExperimentConfig(ExperimentConfig):
 
     VALIDATION_SAMPLES_PER_SCENE = 10
 
-    NUM_PROCESSES = 180  # TODO 2 for debugging
+    NUM_PROCESSES = 80  # TODO 2 for debugging
 
     TARGET_TYPES = sorted(
         [
