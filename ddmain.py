@@ -16,7 +16,7 @@ from rl_base.experiment_config import ExperimentConfig
 from utils.system import get_logger
 
 
-def _get_args():
+def get_args():
     """Creates the argument parser and parses any input arguments."""
 
     parser = argparse.ArgumentParser(
@@ -109,11 +109,11 @@ def _get_args():
     )
 
     parser.add_argument(
-        "--max_processes_per_trainer",
+        "--max_sampler_processes_per_worker",
         required=False,
         default=None,
         type=int,
-        help="maximal number of processes to spawn for each trainer",
+        help="maximal number of sampler processes to spawn for each trainer",
     )
 
     parser.add_argument(
@@ -143,7 +143,7 @@ def _config_source(args) -> Dict[str, Tuple[str, str]]:
     return res
 
 
-def _load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
+def load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
     path = os.path.abspath(os.path.normpath(args.experiment_base))
     sys.path.insert(0, os.path.dirname(path))
     importlib.invalidate_caches()
@@ -169,13 +169,13 @@ def _load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
 
 
 def main():
-    args = _get_args()
+    args = get_args()
 
     get_logger().info("Running with args {}".format(args))
 
     ptitle("Master: {}".format("Training" if args.test_date is None else "Testing"))
 
-    cfg, srcs = _load_config(args)
+    cfg, srcs = load_config(args)
 
     if args.test_date is None:
         OnPolicyRunner(
@@ -187,7 +187,9 @@ def main():
             deterministic_cudnn=args.deterministic_cudnn,
             extra_tag=args.extra_tag,
         ).start_train(
-            args.checkpoint, args.restart_pipeline, args.max_processes_per_trainer
+            args.checkpoint,
+            args.restart_pipeline,
+            args.max_sampler_processes_per_worker,
         )
     else:
         OnPolicyRunner(
@@ -198,7 +200,12 @@ def main():
             mode="test",
             deterministic_cudnn=args.deterministic_cudnn,
             extra_tag=args.extra_tag,
-        ).start_test(args.test_date, args.checkpoint, args.skip_checkpoints)
+        ).start_test(
+            args.test_date,
+            args.checkpoint,
+            args.skip_checkpoints,
+            max_sampler_processes_per_worker=args.max_sampler_processes_per_worker,
+        )
 
 
 if __name__ == "__main__":

@@ -136,7 +136,7 @@ def _get_args():
     )
 
     parser.add_argument(
-        "--max_training_processes",
+        "--max_sampler_processes_per_worker",
         required=False,
         default=None,
         type=int,
@@ -242,7 +242,7 @@ def main():
             deterministic_cudnn=args.deterministic_cudnn,
             extra_tag=args.extra_tag,
             single_process_training=args.single_process_training,
-            max_training_processes=args.max_training_processes,
+            max_sampler_processes_per_worker=args.max_sampler_processes_per_worker,
         )
 
         trainer.run_pipeline(

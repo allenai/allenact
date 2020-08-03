@@ -157,7 +157,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig):
         elif mode == "valid":
             nprocesses = 0
         elif mode == "test":
-            nprocesses = 100 if torch.cuda.is_available() else 1
+            nprocesses = 100 if torch.cuda.is_available() else 8
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 

@@ -19,6 +19,7 @@ gitpython = "*"
 ipython = "*"
 mathy-pydoc = "*"
 numba = "*"
+pytest = "*"
 
 [packages]
 gym = "*"

@@ -105,7 +105,7 @@ class UndistributedOnPolicyRLEngine(object):
         mp_ctx: Optional[BaseContext] = None,
         extra_tag: str = "",
         single_process_training: bool = False,
-        max_training_processes: Optional[int] = None,
+        max_sampler_processes_per_worker: Optional[int] = None,
     ):
         """Initializer.
 
@@ -142,9 +142,10 @@ class UndistributedOnPolicyRLEngine(object):
         self.num_processes = self.machine_params["nprocesses"]
 
         assert (
-            max_training_processes is None or max_training_processes >= 1
-        ), "`max_training_processes` must be either `None` or a positive integer."
-        self.max_training_processes = max_training_processes
+            max_sampler_processes_per_worker is None
+            or max_sampler_processes_per_worker >= 1
+        ), "`max_sampler_processes_per_worker` must be either `None` or a positive integer."
+        self.max_sampler_processes_per_worker = max_sampler_processes_per_worker
 
         self.device = "cpu"
         if len(self.machine_params["gpu_ids"]) > 0:
@@ -315,7 +316,7 @@ class UndistributedOnPolicyRLEngine(object):
                     else None,
                     mp_ctx=self.mp_ctx,
                     should_log=self.is_logging,
-                    max_processes=self.max_training_processes,
+                    max_processes=self.max_sampler_processes_per_worker,
                 )
         return self._vector_tasks
 
@@ -1737,7 +1738,7 @@ class UndistributedOnPolicyTrainer(UndistributedOnPolicyRLEngine):
         loaded_config_src_files: Optional[Dict[str, Tuple[str, str]]],
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
-        max_training_processes: Optional[int] = None,
+        max_sampler_processes_per_worker: Optional[int] = None,
         **kwargs,
     ):
         super().__init__(
@@ -1747,7 +1748,7 @@ class UndistributedOnPolicyTrainer(UndistributedOnPolicyRLEngine):
             seed=seed,
             mode="train",
             deterministic_cudnn=deterministic_cudnn,
-            max_training_processes=max_training_processes,
+            max_sampler_processes_per_worker=max_sampler_processes_per_worker,
             **kwargs,
         )
 

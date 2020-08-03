@@ -1,8 +1,7 @@
+import types
 from typing import Dict, List, Optional, Union
 
-import gin
 import gym
-import torch
 import torch.nn as nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
@@ -15,31 +14,30 @@ from rl_base.sensor import SensorSuite
 from utils.experiment_utils import Builder, LinearDecay, PipelineStage, TrainingPipeline
 
 
-class BaseBabyAIGoToLocalExperimentConfig(BaseBabyAIExperimentConfig):
+class BaseBabyAIGoToObjExperimentConfig(BaseBabyAIExperimentConfig):
     """Base experimental config."""
 
-    LEVEL: Optional[str] = "BabyAI-GoToLocal-v0"
-    TOTAL_RL_TRAIN_STEPS = int(15e6)
-    TOTAL_IL_TRAIN_STEPS = int(7.5e6)
-    ROLLOUT_STEPS: int = 128
-    NUM_TRAIN_SAMPLERS: int = 128 if torch.cuda.is_available() else 4
-    PPO_NUM_MINI_BATCH = 4
-    NUM_CKPTS_TO_SAVE = 20
-    NUM_TEST_TASKS: int = 1000
-    USE_LR_DECAY: bool = True
+    LEVEL: Optional[str] = "BabyAI-GoToObj-v0"
+    TOTAL_RL_TRAIN_STEPS = int(5e4)
+    TOTAL_IL_TRAIN_STEPS = int(2e4)
+    ROLLOUT_STEPS: int = 32
+    NUM_TRAIN_SAMPLERS: int = 16
+    PPO_NUM_MINI_BATCH = 2
+    NUM_TEST_TASKS: int = 50
+    USE_LR_DECAY: bool = False
 
-    # ARCH = "cnn1"
+    DEFAULT_LR = 1e-3
+
+    ARCH = "cnn1"
     # ARCH = "cnn2"
-    ARCH = "expert_filmcnn"
+    # ARCH = "expert_filmcnn"
 
-    USE_INSTR = True
-    INSTR_LEN: int = 5
-
-    INCLUDE_AUXILIARY_HEAD = False
+    USE_INSTR = False
+    INSTR_LEN: int = -1
 
     @classmethod
     def METRIC_ACCUMULATE_INTERVAL(cls):
-        return cls.NUM_TRAIN_SAMPLERS * 64
+        return cls.NUM_TRAIN_SAMPLERS * 128
 
     @classmethod
     def _training_pipeline(
@@ -57,7 +55,7 @@ class BaseBabyAIGoToLocalExperimentConfig(BaseBabyAIExperimentConfig):
         metric_accumulate_interval = (
             cls.METRIC_ACCUMULATE_INTERVAL()
         )  # Log every 10 max length tasks
-        save_interval = int(total_train_steps / cls.NUM_CKPTS_TO_SAVE)
+        save_interval = 2 ** 31
         gamma = 0.99
 
         use_gae = "reinforce_loss" not in named_losses
@@ -95,8 +93,7 @@ class BaseBabyAIGoToLocalExperimentConfig(BaseBabyAIExperimentConfig):
             use_instr=cls.USE_INSTR,
             use_memory=True,
             arch=cls.ARCH,
-            instr_dim=256,
-            lang_model="attgru",
-            memory_dim=2048,
-            include_auxiliary_head=cls.INCLUDE_AUXILIARY_HEAD,
+            instr_dim=8,
+            lang_model="gru",
+            memory_dim=128,
         )

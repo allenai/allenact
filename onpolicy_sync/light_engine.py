@@ -71,7 +71,7 @@ class OnPolicyRLEngine(object):
         num_workers: int = 1,
         device: Union[str, torch.device, int] = "cpu",
         distributed_port: int = 0,
-        max_processes_per_trainer: Optional[int] = None,
+        max_sampler_processes_per_worker: Optional[int] = None,
         **kwargs,
     ):
         """Initializer.
@@ -117,9 +117,10 @@ class OnPolicyRLEngine(object):
         self.experiment_name = experiment_name
 
         assert (
-            max_processes_per_trainer is None or max_processes_per_trainer >= 1
-        ), "`max_training_processes` must be either `None` or a positive integer."
-        self.max_processes_per_trainer = max_processes_per_trainer
+            max_sampler_processes_per_worker is None
+            or max_sampler_processes_per_worker >= 1
+        ), "`max_sampler_processes_per_worker` must be either `None` or a positive integer."
+        self.max_sampler_processes_per_worker = max_sampler_processes_per_worker
 
         self.machine_params = config.machine_params(self.mode)
         if self.num_workers > 1:
@@ -231,7 +232,7 @@ class OnPolicyRLEngine(object):
                 if self.mp_ctx is None
                 else None,
                 mp_ctx=self.mp_ctx,
-                max_processes=self.max_processes_per_trainer,
+                max_processes=self.max_sampler_processes_per_worker,
             )
         return self._vector_tasks
 
@@ -546,7 +547,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         deterministic_agent: bool = False,
         distributed_preemption_threshold: float = 0.7,
         distributed_barrier: Optional[mp.Barrier] = None,
-        max_processes_per_trainer: Optional[int] = None,
+        max_sampler_processes_per_worker: Optional[int] = None,
         **kwargs,
     ):
         kwargs["mode"] = "train"
@@ -564,7 +565,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             device=device,
             distributed_port=distributed_port,
             deterministic_agent=deterministic_agent,
-            max_processes_per_trainer=max_processes_per_trainer,
+            max_sampler_processes_per_worker=max_sampler_processes_per_worker,
             **kwargs,
         )
 
@@ -964,7 +965,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self.initialize_rollouts(rollouts)
         self.tracking_info.clear()
 
-        self.last_log = self.training_pipeline.total_steps - self.log_interval
+        self.last_log = self.training_pipeline.total_steps
         self.last_save = self.training_pipeline.total_steps
 
         while True:
