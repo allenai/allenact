@@ -18,7 +18,7 @@ from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor
 from rl_base.task import Task
 from utils.system import LOGGER
-from utils.cache_utils import get_distance
+from utils.cache_utils import get_distance, get_distance_to_object
 
 # class RoboThorTask(Task[RoboThorEnvironment]):
 #     def __init__(
@@ -314,7 +314,9 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         # self.last_geodesic_distance = task_info["distance_to_target"] if task_info["distance_to_target"] else None
         self.distance_cache = distance_cache
         if self.distance_cache:
-            self.last_geodesic_distance = get_distance(self.distance_cache, self.env.agent_state(), self.task_info['target'])
+            self.last_geodesic_distance = get_distance_to_object(
+                self.distance_cache, self.env.agent_state(), self.task_info['object_type']
+            )
         else:
             self.last_geodesic_distance = self.env.dist_to_object(self.task_info["object_type"])
         self._rewards = []
@@ -423,7 +425,9 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         # self.last_geodesic_distance = geodesic_distance
 
         if self.distance_cache:
-            geodesic_distance = get_distance(self.distance_cache, self.env.agent_state(), self.task_info['target'])
+            geodesic_distance = get_distance_to_object(
+                self.distance_cache, self.env.agent_state(), self.task_info['object_type']
+            )
         else:
             geodesic_distance = self.env.dist_to_object(self.task_info["object_type"])
         if self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5:  # (robothor limits)
@@ -486,6 +490,12 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         return obs
 
     def metrics(self) -> Dict[str, Any]:
+        if self.distance_cache:
+            dist2tget = get_distance_to_object(
+                self.distance_cache, self.env.agent_state(), self.task_info['object_type']
+            )
+        else:
+            dist2tget = self._get_distance_to_target()
         if not self.is_done():
             return {}
         else:
@@ -493,6 +503,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
+                "dist_to_target": dist2tget,
                 "spl": self.spl(),
                 "task_info": self.task_info,
             }

@@ -383,7 +383,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         task_info['initial_orientation'] = episode['initial_orientation']
         task_info['distance_to_target'] = episode['shortest_path_length']
         task_info['path_to_target'] = episode['shortest_path']
-        task_info['target'] = find_nearest_point_in_cache(distance_cache, episode['target_position'])
+        task_info['object_type'] = episode['object_type']
         if self.allow_flipping and random.random() > 0.5:
             task_info["mirrored"] = True
         else:
