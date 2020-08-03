@@ -128,11 +128,29 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-#pycharm
+# pycharm
 .idea/
 
-#pytorch
+# pytorch
 *.pt
 
 # Default output dir
 experiment_output
+
+# PDFs
+*.pdf
+
+# Tensorboard logs
+events.out.tfevents.*
+
+# TSV files
+*.tsv
+
+# tmp directory
+tmp/
+
+# Pickle files
+*.pkl
+
+# Zip files
+*.zip

@@ -2,13 +2,13 @@ import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from .object_nav_thor_ppo import ObjectNavThorPPOExperimentConfig
 from onpolicy_sync.losses import PPO
 from onpolicy_sync.losses.imitation import Imitation
 from onpolicy_sync.losses.ppo import PPOConfig
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from rl_base.sensor import ExpertActionSensor
 from utils.experiment_utils import LinearDecay, Builder, PipelineStage, TrainingPipeline
+from .object_nav_thor_ppo import ObjectNavThorPPOExperimentConfig
 
 
 class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
@@ -36,14 +36,14 @@ class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
 
     SENSORS = [
         RGBSensorThor(
-            {
+            **{
                 "height": SCREEN_SIZE,
                 "width": SCREEN_SIZE,
                 "use_resnet_normalization": True,
             }
         ),
-        GoalObjectTypeThorSensor({"object_types": OBJECT_TYPES}),
-        ExpertActionSensor({"nactions": 6}),
+        GoalObjectTypeThorSensor(**{"object_types": OBJECT_TYPES}),
+        ExpertActionSensor(**{"nactions": 6}),
     ]
 
     @classmethod
@@ -58,7 +58,7 @@ class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
         num_mini_batch = 1 if not torch.cuda.is_available() else 6
         update_repeats = 4
         num_steps = 128
-        log_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
+        metric_accumulate_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
         save_interval = 10000 if cls.EASY else 500000
         gamma = 0.99
         use_gae = True
@@ -66,7 +66,7 @@ class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
         max_grad_norm = 0.5
         return TrainingPipeline(
             save_interval=save_interval,
-            log_interval=log_interval,
+            metric_accumulate_interval=metric_accumulate_interval,
             optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
@@ -86,10 +86,10 @@ class ObjectNavThorDAggerPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
                     teacher_forcing=LinearDecay(
                         startp=1.0, endp=0.0, steps=dagger_steps,
                     ),
-                    end_criterion=dagger_steps,
+                    max_stage_steps=dagger_steps,
                 ),
                 PipelineStage(
-                    loss_names=["ppo_loss", "imitation_loss"], end_criterion=ppo_steps
+                    loss_names=["ppo_loss", "imitation_loss"], max_stage_steps=ppo_steps
                 ),
             ],
             lr_scheduler_builder=Builder(

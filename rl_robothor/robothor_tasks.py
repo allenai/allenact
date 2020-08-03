@@ -5,6 +5,9 @@ import numpy as np
 import math
 from ai2thor.util.metrics import compute_single_spl
 
+from rl_base.common import RLStepResult
+from rl_base.sensor import Sensor
+from rl_base.task import Task
 from rl_robothor.robothor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
@@ -17,8 +20,9 @@ from rl_robothor.robothor_environment import RoboThorEnvironment
 from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor
 from rl_base.task import Task
-from utils.system import LOGGER
 from utils.cache_utils import get_distance, get_distance_to_object
+from utils.system import get_logger
+LOGGER = get_logger()
 
 # class RoboThorTask(Task[RoboThorEnvironment]):
 #     def __init__(
@@ -124,8 +128,11 @@ class PointNavTask(Task[RoboThorEnvironment]):
     def reached_terminal_state(self) -> bool:
         return self._took_end_action
 
+    # @classmethod
+    # def action_names(cls) -> Tuple[str, ...]:
+    #     return cls._actions
     @classmethod
-    def action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
         return cls._actions
 
     def close(self) -> None:
@@ -176,11 +183,11 @@ class PointNavTask(Task[RoboThorEnvironment]):
         elif dist > 0.2:
             return False
         else:
-            LOGGER.warning("No path for {} from {} to {}".format(
-                self.env.scene_name,
-                self.env.agent_state(),
-                tget
-            ))
+            get_logger().warning(
+                "No path for {} from {} to {}".format(
+                    self.env.scene_name, self.env.agent_state(), tget
+                )
+            )
             return None
 
     # def judge(self) -> float:
@@ -226,7 +233,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         return rew * self.reward_configs["shaping_weight"]
 
     def judge(self) -> float:
-        """ Judge the last event. """
+        """Judge the last event."""
         reward = self.reward_configs["step_penalty"]
 
         reward += self.shaping()
@@ -257,7 +264,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         return res
 
     def dist_to_target(self):
-        res = self.env.dist_to_point(self.task_info['target'])
+        res = self.env.dist_to_point(self.task_info["target"])
         return res if res > -0.5 else None
 
     def metrics(self) -> Dict[str, Any]:
@@ -325,6 +332,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self.path = []  # the initial coordinate will be directly taken from the optimal path
         self.task_info["followed_path"] = [self.env.agent_state()]
         self.task_info["taken_actions"] = []
+        self.task_info["action_names"] = self.action_names()
 
         if not task_info["distance_to_target"]:
             self.episode_optimal_corners = self.env.path_corners(task_info["target"])  # assume it's valid (sampler must take care)!
@@ -339,7 +347,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         return self._took_end_action
 
     @classmethod
-    def action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
         return cls._actions
 
     def close(self) -> None:
@@ -364,7 +372,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
             pose = self.env.agent_state()
-            self.path.append({k: pose[k] for k in ['x', 'y', 'z']})
+            self.path.append({k: pose[k] for k in ["x", "y", "z"]})
             self.task_info["followed_path"].append(pose)
         if len(self.path) > 1 and self.path[-1] != self.path[-2]:
             self.num_moves_made += 1
@@ -446,7 +454,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         return rew * self.reward_configs["shaping_weight"]
 
     def judge(self) -> float:
-        """ Judge the last event. """
+        """Judge the last event."""
         reward = self.reward_configs["step_penalty"]
 
         reward += self.shaping()
@@ -480,8 +488,10 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         if self.mirror:
             # flipped = []
             for o in obs:
-                if ('rgb' in o or 'depth' in o) and isinstance(obs[o], np.ndarray):
-                    if len(obs[o].shape) == 3:  # heuristic to determine this is a visual sensor
+                if ("rgb" in o or "depth" in o) and isinstance(obs[o], np.ndarray):
+                    if (
+                        len(obs[o].shape) == 3
+                    ):  # heuristic to determine this is a visual sensor
                         obs[o] = obs[o][:, ::-1, :].copy()  # horizontal flip
                     elif len(obs[o].shape) == 2:  # perhaps only two axes for depth?
                         obs[o] = obs[o][:, ::-1].copy()  # horizontal flip
@@ -507,5 +517,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 "spl": self.spl(),
                 "task_info": self.task_info,
             }
+            # get_logger().debug("{} Metrics {}".format(self.task_info["id"], {k: v for k, v in metrics.items() if k != "task_info"}))
             self._rewards = []
             return metrics

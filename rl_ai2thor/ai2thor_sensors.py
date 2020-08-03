@@ -8,14 +8,13 @@ from PIL import Image
 from torchvision import transforms
 
 from rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
-from rl_ai2thor.ai2thor_tasks import AI2ThorTask
 from rl_ai2thor.object_nav.tasks import ObjectNavTask
 from rl_base.sensor import Sensor
+from rl_base.task import Task
 
 
 class ScaleBothSides(object):
     """Rescales the input PIL.Image to the given 'width' and `height`.
-
     Attributes
         width: new width
         height: new height
@@ -31,18 +30,15 @@ class ScaleBothSides(object):
         return img.resize((self.width, self.height), self.interpolation)
 
 
-class RGBSensorThor(Sensor[AI2ThorEnvironment, AI2ThorTask]):
+class RGBSensorThor(Sensor[AI2ThorEnvironment, Task[AI2ThorEnvironment]]):
     """Sensor for RGB images in AI2-THOR.
-
     Returns from a running AI2ThorEnvironment instance, the current RGB
     frame corresponding to the agent's egocentric view.
     """
 
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         """Initializer.
-
         # Parameters
-
         config : If `config["use_resnet_normalization"]` is `True` then the RGB images from THOR will be normalized
             with means `[0.485, 0.456, 0.406]` and standard deviations `[0.229, 0.224, 0.225]` (i.e. using the standard
             resnet normalization). If both `config["height"]` and `config["width"]` are non-negative integers then
@@ -93,9 +89,7 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment, AI2ThorTask]):
     @property
     def height(self) -> Optional[int]:
         """Height that RGB image will be rescale to have.
-
         # Returns
-
         The height as a non-negative integer or `None` if no rescaling is done.
         """
         return self._height
@@ -103,9 +97,7 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment, AI2ThorTask]):
     @property
     def width(self) -> Optional[int]:
         """Width that RGB image will be rescale to have.
-
         # Returns
-
         The width as a non-negative integer or `None` if no rescaling is done.
         """
         return self._width

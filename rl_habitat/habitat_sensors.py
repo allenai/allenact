@@ -1,19 +1,20 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional, Tuple
 
-import PIL
 import gym
 import numpy as np
 from pyquaternion import Quaternion
-import typing
-from PIL import Image
-import torch
-import torch.nn as nn
-import torchvision.models as models
-from torchvision import transforms
 
+from rl_base.sensor import (
+    Sensor,
+    RGBSensor,
+    RGBResNetSensor,
+    DepthSensor,
+    DepthResNetSensor,
+)
+from rl_base.task import Task
 from rl_habitat.habitat_environment import HabitatEnvironment
-from rl_habitat.habitat_tasks import HabitatTask, PointNavTask
-from rl_base.sensor import Sensor
+from rl_habitat.habitat_tasks import PointNavTask  # type: ignore
+from utils.misc_utils import prepare_locals_for_super
 
 
 class ScaleBothSides(object):
@@ -294,49 +295,99 @@ class DepthResNetSensorHabitat(Sensor[HabitatEnvironment, HabitatTask]):
         self.to_pil = transforms.ToPILImage()
         self.to_tensor = transforms.ToTensor()
 
-        self.resnet = nn.Sequential(
-            *list(models.resnet50(pretrained=True).children())[:-1] + [nn.Flatten()]
-        ).eval()
+    def frame_from_env(self, env: HabitatEnvironment) -> np.ndarray:
+        return env.current_frame["rgb"].copy()
 
-        if torch.cuda.is_available():
-            self.resnet = self.resnet.to("cuda:0")
 
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "depth"
+class RGBResNetSensorHabitat(
+    RGBResNetSensor[HabitatEnvironment, Task[HabitatEnvironment]]
+):
+    # For backwards compatibility
+    def __init__(
+        self,
+        use_resnet_normalization: bool = True,
+        mean: Optional[np.ndarray] = np.array(
+            [[[0.485, 0.456, 0.406]]], dtype=np.float32
+        ),
+        stdev: Optional[np.ndarray] = np.array(
+            [[[0.229, 0.224, 0.225]]], dtype=np.float32
+        ),
+        height: Optional[int] = None,
+        width: Optional[int] = None,
+        uuid: str = "rgb",
+        output_shape: Optional[Tuple[int, ...]] = (2048,),
+        output_channels: Optional[int] = None,
+        unnormalized_infimum: float = -np.inf,
+        unnormalized_supremum: float = np.inf,
+        scale_first: bool = False,
+        **kwargs: Any
+    ):
+        super().__init__(**prepare_locals_for_super(locals()))
 
-    def _get_observation_space(self) -> gym.spaces.Box:
-        return self.observation_space
+    def frame_from_env(self, env: HabitatEnvironment) -> np.ndarray:
+        return env.current_frame["rgb"].copy()
 
-    def get_observation(
-            self,
-            env: HabitatEnvironment,
-            task: Optional[HabitatTask],
-            *args: Any,
-            **kwargs: Any
-    ) -> Any:
-        frame = env.current_frame
-        depth = frame["depth"].copy()
 
-        assert depth.dtype in [np.uint8, np.float32]
+class DepthSensorHabitat(DepthSensor[HabitatEnvironment, Task[HabitatEnvironment]]):
+    # For backwards compatibility
+    def __init__(
+        self,
+        use_resnet_normalization: Optional[bool] = None,
+        use_normalization: Optional[bool] = None,
+        mean: Optional[np.ndarray] = np.array([[0.5]], dtype=np.float32),
+        stdev: Optional[np.ndarray] = np.array([[0.25]], dtype=np.float32),
+        height: Optional[int] = None,
+        width: Optional[int] = None,
+        uuid: str = "depth",
+        output_shape: Optional[Tuple[int, ...]] = None,
+        output_channels: int = 1,
+        unnormalized_infimum: float = 0.0,
+        unnormalized_supremum: float = 5.0,
+        scale_first: bool = False,
+        **kwargs: Any
+    ):
+        # Give priority to use_normalization, but use_resnet_normalization for backward compat. if not set
+        if use_resnet_normalization is not None and use_normalization is None:
+            use_normalization = use_resnet_normalization
+        elif use_normalization is None:
+            use_normalization = False
 
-        if depth.dtype == np.uint8:
-            rgb = depth.astype(np.float32) / 255.0
+        super().__init__(**prepare_locals_for_super(locals()))
 
-        if self.should_normalize:
-            depth -= self.norm_means
-            depth /= self.norm_sds
+    def frame_from_env(self, env: HabitatEnvironment) -> np.ndarray:
+        return env.current_frame["depth"].copy()
 
-        if self.scaler is not None and depth.shape[:2] != (self.height, self.width):
-            depth = np.array(self.scaler(self.to_pil(depth)), dtype=np.float32)
 
-        depth = self.to_tensor(depth).squeeze()
-        depth = torch.stack([depth] * 3, dim=0).unsqueeze(0)
+class DepthResNetSensorHabitat(
+    DepthResNetSensor[HabitatEnvironment, Task[HabitatEnvironment]]
+):
+    # For backwards compatibility
+    def __init__(
+        self,
+        use_resnet_normalization: Optional[bool] = None,
+        use_normalization: Optional[bool] = None,
+        mean: Optional[np.ndarray] = np.array([[0.5]], dtype=np.float32),
+        stdev: Optional[np.ndarray] = np.array([[0.25]], dtype=np.float32),
+        height: Optional[int] = None,
+        width: Optional[int] = None,
+        uuid: str = "depth",
+        output_shape: Optional[Tuple[int, ...]] = (2048,),
+        output_channels: Optional[int] = None,
+        unnormalized_infimum: float = -np.inf,
+        unnormalized_supremum: float = np.inf,
+        scale_first: bool = False,
+        **kwargs: Any
+    ):
+        # Give priority to use_normalization, but use_resnet_normalization for backward compat. if not set
+        if use_resnet_normalization is not None and use_normalization is None:
+            use_normalization = use_resnet_normalization
+        elif use_normalization is None:
+            use_normalization = False
 
-        if torch.cuda.is_available():
-            depth = depth.to("cuda:0")
-        depth = self.resnet(depth).detach().cpu().numpy()
+        super().__init__(**prepare_locals_for_super(locals()))
 
-        return depth
+    def frame_from_env(self, env: HabitatEnvironment) -> np.ndarray:
+        return env.current_frame["depth"].copy()
 
 
 class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, HabitatTask]):
@@ -348,8 +399,7 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, HabitatTask]):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "target_coordinates_ind"
 
-    def _get_observation_space(self) -> gym.spaces.Discrete:
-        return typing.cast(gym.spaces.Discrete, self.observation_space)
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
         self,
@@ -362,7 +412,6 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, HabitatTask]):
         goal = frame["pointgoal_with_gps_compass"]
         return goal
 
-
 class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, HabitatTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
@@ -372,8 +421,7 @@ class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, HabitatTask]):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "target_object_id"
 
-    def _get_observation_space(self) -> gym.spaces.Discrete:
-        return typing.cast(gym.spaces.Discrete, self.observation_space)
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
         self,
@@ -386,7 +434,6 @@ class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, HabitatTask]):
         goal = frame["objectgoal"][0]
         return goal
 
-
 class AgentCoordinatesSensorHabitat(Sensor[HabitatEnvironment, HabitatTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(config, *args, **kwargs)
@@ -396,8 +443,8 @@ class AgentCoordinatesSensorHabitat(Sensor[HabitatEnvironment, HabitatTask]):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "agent_position_and_rotation"
 
-    def _get_observation_space(self) -> gym.spaces.Discrete:
-        return typing.cast(gym.spaces.Discrete, self.observation_space)
+
+        super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
         self,

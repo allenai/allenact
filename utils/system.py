@@ -1,18 +1,40 @@
 import logging
 import socket
-from contextlib import closing
 import sys
+from contextlib import closing
 
-LOGGER = logging.getLogger("embodiedrl")
+_LOGGER = logging.getLogger("embodiedai")
+
+
+class StreamToLogger:
+    def __init__(self):
+        self.linebuf = ""
+
+    def write(self, buf):
+        temp_linebuf = self.linebuf + buf
+        self.linebuf = ""
+        for line in temp_linebuf.splitlines(True):
+            if line[-1] == "\n":
+                _LOGGER.info(line.rstrip())
+            else:
+                self.linebuf += line
+
+    def flush(self):
+        if self.linebuf != "":
+            _LOGGER.info(self.linebuf.rstrip())
+        self.linebuf = ""
 
 
 def excepthook(*args):
-    LOGGER.error("Uncaught exception:", exc_info=args)
+    get_logger().error("Uncaught exception:", exc_info=args)
 
 
-def init_logging(log_format="default", log_level="debug"):
-    if len(LOGGER.handlers) > 0:
-        return
+def get_logger() -> logging.Logger:
+    log_format = "default"
+    log_level = "debug"
+
+    if len(_LOGGER.handlers) > 0:
+        return _LOGGER
 
     if log_level == "debug":
         log_level = logging.DEBUG
@@ -22,8 +44,12 @@ def init_logging(log_format="default", log_level="debug"):
         log_level = logging.WARNING
     elif log_level == "error":
         log_level = logging.ERROR
-    assert log_level in [logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR], \
-        "unknown log_level {}".format(log_level)
+    assert log_level in [
+        logging.DEBUG,
+        logging.INFO,
+        logging.WARNING,
+        logging.ERROR,
+    ], "unknown log_level {}".format(log_level)
 
     ch = logging.StreamHandler()
     ch.setLevel(log_level)
@@ -41,13 +67,16 @@ def init_logging(log_format="default", log_level="debug"):
         formatter = logging.Formatter(fmt=log_format, datefmt="%m/%d %H:%M:%S")
     ch.setFormatter(formatter)
 
-    LOGGER.setLevel(log_level)
-    LOGGER.addHandler(ch)
+    _LOGGER.setLevel(log_level)
+    _LOGGER.addHandler(ch)
 
     sys.excepthook = excepthook
+    sys.stdout = StreamToLogger()
+
+    return _LOGGER
 
 
-def find_free_port(address='localhost'):
+def find_free_port(address="127.0.0.1"):
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
         s.bind((address, 0))
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

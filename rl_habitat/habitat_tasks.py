@@ -1,8 +1,13 @@
+# TODO: @klemenkotar please fix all type errors
+
 from typing import Tuple, List, Dict, Any, Optional
 
 import gym
 import numpy as np
 
+from rl_base.common import RLStepResult
+from rl_base.sensor import Sensor
+from rl_base.task import Task
 from rl_habitat.habitat_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
@@ -59,15 +64,6 @@ class HabitatTask(Task[HabitatEnvironment]):
     def last_action_success(self, value: Optional[bool]):
         self._last_action_success = value
 
-    def _step(self, action: int) -> RLStepResult:
-        self._last_action_ind = action
-        self.last_action = self.action_names()[action]
-        self.last_action_success = None
-        step_result = super(HabitatTask, self).step(action=action)
-        step_result.info["action"] = self._last_action_ind
-        step_result.info["action_success"] = self.last_action_success
-        return step_result
-
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         if mode == "rgb":
             return self.env.current_frame["rgb"]
@@ -119,14 +115,14 @@ class PointNavTask(Task[HabitatEnvironment]):
         return self.env.env.episode_over
 
     @classmethod
-    def action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls) -> Tuple[str, ...]:
         return cls._actions
 
     def close(self) -> None:
         self.env.stop()
 
     def _step(self, action: int) -> RLStepResult:
-        action_str = self.action_names()[action]
+        action_str = self.class_action_names()[action]
 
         self.env.step({"action": action_str})
 
@@ -147,11 +143,11 @@ class PointNavTask(Task[HabitatEnvironment]):
 
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         assert mode in ["rgb", "depth"], "only rgb and depth rendering is implemented"
-        return self.env.current_frame['rgb']
+        return self.env.current_frame["rgb"]
 
     def _is_goal_in_range(self) -> bool:
         # The habitat simulator will return an SPL value of 0.0 whenever the goal is not in range
-        return bool(self.env.env.get_metrics()['spl'])
+        return bool(self.env.env.get_metrics()["spl"])
 
     def judge(self) -> float:
         reward = -0.01
@@ -181,14 +177,14 @@ class PointNavTask(Task[HabitatEnvironment]):
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
-                "spl": _metrics['spl'] if _metrics['spl'] is not None else 0.0
+                "spl": _metrics["spl"] if _metrics["spl"] is not None else 0.0,
             }
             self._rewards = []
             return metrics
 
-    def query_expert(self) -> Tuple[int, bool]:
+    def query_expert(self, **kwargs) -> Tuple[int, bool]:
         if self._is_goal_in_range():
-            return self.action_names().index(END), True
+            return self.class_action_names().index(END), True
 
         target = self.task_info["target"]
         action = self._shortest_path_follower.get_next_action(target)
@@ -245,7 +241,7 @@ class ObjectNavTask(HabitatTask):
         return self.env.env.episode_over
 
     @classmethod
-    def action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls) -> Tuple[str, ...]:
         return cls._actions
 
     def close(self) -> None:
@@ -293,11 +289,11 @@ class ObjectNavTask(HabitatTask):
 
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         assert mode in ["rgb", "depth"], "only rgb and depth rendering is implemented"
-        return self.env.current_frame['rgb']
+        return self.env.current_frame["rgb"]
 
     def _is_goal_in_range(self) -> bool:
         # The habitat simulator will return an SPL value of 0.0 whenever the goal is not in range
-        return bool(self.env.env.get_metrics()['spl'])
+        return bool(self.env.env.get_metrics()["spl"])
 
     def judge(self) -> float:
         # Set default reward
@@ -353,9 +349,9 @@ class ObjectNavTask(HabitatTask):
             self._rewards = []
             return metrics
 
-    def query_expert(self) -> Tuple[int, bool]:
+    def query_expert(self, **kwargs) -> Tuple[int, bool]:
         if self._is_goal_in_range():
-            return self.action_names().index(END), True
+            return self.class_action_names().index(END), True
 
         target = self.task_info["target"]
         action = self._shortest_path_follower.get_next_action(target)

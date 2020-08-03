@@ -1,49 +1,104 @@
+<<<<<<< HEAD:projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_ddppo.py
 from typing import Dict, Any, List, Optional
+=======
+>>>>>>> de752be39b1a7d9a4e4dc432293e3a12387385d2:experiments/objectnav_robothor_rgb_ddppo.py
 from math import ceil
+from typing import Dict, Any, List, Optional
 
 import gym
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from models.resnet_tensor_object_nav_models import ResnetTensorObjectNavActorCritic
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
+<<<<<<< HEAD:projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_ddppo.py
 import numpy as np
 import glob
 
 from onpolicy_sync.losses.ppo import PPOConfig
 from projects.pointnav_baselines.models.point_nav_models import ResnetTensorPointNavActorCritic
+=======
+
+>>>>>>> de752be39b1a7d9a4e4dc432293e3a12387385d2:experiments/objectnav_robothor_rgb_ddppo.py
 from onpolicy_sync.losses import PPO
+from onpolicy_sync.losses.ppo import PPOConfig
+from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from rl_base.experiment_config import ExperimentConfig
-from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
+<<<<<<< HEAD:projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_ddppo.py
 from rl_robothor.robothor_tasks import PointNavTask
 from rl_robothor.robothor_task_samplers import PointNavDatasetTaskSampler
 from rl_robothor.robothor_sensors import GPSCompassSensorRoboThor
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor
+=======
+from rl_base.task import TaskSampler
+>>>>>>> de752be39b1a7d9a4e4dc432293e3a12387385d2:experiments/objectnav_robothor_rgb_ddppo.py
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
+from rl_robothor.robothor_task_samplers import ObjectNavTaskSampler
+from rl_robothor.robothor_tasks import ObjectNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
 class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
-    """An Object Navigation experiment configuration in RoboThor"""
+    """An Object Navigation experiment configuration in RoboThor."""
 
     CAMERA_WIDTH = 640
     CAMERA_HEIGHT = 480
     SCREEN_SIZE = 224
     
     MAX_STEPS = 500
+<<<<<<< HEAD:projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_ddppo.py
     ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000  # generally useful if more than 1 scene per worker
     NUM_PROCESSES = 60
+=======
+
+    # It also ignores the empirical success of all episodes with length > num_steps * ADVANCE_SCENE_ROLLOUT_PERIOD and
+    # some with shorter lengths
+    ADVANCE_SCENE_ROLLOUT_PERIOD = (
+        10000000000000  # generally useful if more than 1 scene per worker
+    )
+
+    VALIDATION_SAMPLES_PER_SCENE = 10
+
+    NUM_PROCESSES = 4  # TODO 2 for debugging
+
+    # TARGET_TYPES = sorted(
+    #     [
+    #         "AlarmClock",
+    #         "Apple",
+    #         "BaseballBat",
+    #         "BasketBall",
+    #         "Bowl",
+    #         "GarbageCan",
+    #         "HousePlant",
+    #         "Laptop",
+    #         "Mug",
+    #         "Remote",
+    #         "SprayBottle",
+    #         "Television",
+    #         "Vase",
+    #         # 'AlarmClock',
+    #         # 'Apple',
+    #         # 'BasketBall',
+    #         # 'Mug',
+    #         # 'Television',
+    #     ]
+    # )
+    TARGET_TYPES = sorted(["Television",])
+>>>>>>> de752be39b1a7d9a4e4dc432293e3a12387385d2:experiments/objectnav_robothor_rgb_ddppo.py
 
     SENSORS = [
         RGBSensorThor(
-            {
+            **{
                 "height": SCREEN_SIZE,
                 "width": SCREEN_SIZE,
                 "use_resnet_normalization": True,
                 "uuid": "rgb_lowres",
             }
         ),
+<<<<<<< HEAD:projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_ddppo.py
         GPSCompassSensorRoboThor({}),
     ]
 
@@ -61,6 +116,26 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                     "output_uuid": "rgb_resnet",
                     "parallel": False,  # TODO False for debugging
                 })
+=======
+        GoalObjectTypeThorSensor(**{"object_types": TARGET_TYPES,}),
+    ]
+
+    PREPROCESSORS = [
+        Builder(
+            ResnetPreProcessorHabitat,
+            {
+                "input_height": SCREEN_SIZE,
+                "input_width": SCREEN_SIZE,
+                "output_width": 7,
+                "output_height": 7,
+                "output_dims": 512,
+                "pool": False,
+                "torchvision_resnet_model": models.resnet18,
+                "input_uuids": ["rgb_lowres"],
+                "output_uuid": "rgb_resnet",
+                "parallel": False,  # TODO False for debugging
+            },
+>>>>>>> de752be39b1a7d9a4e4dc432293e3a12387385d2:experiments/objectnav_robothor_rgb_ddppo.py
         ),
     ]
 
@@ -103,7 +178,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         max_grad_norm = 0.5
         return TrainingPipeline(
             save_interval=save_interval,
-            log_interval=log_interval,
+            metric_accumulate_interval=log_interval,
             optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
@@ -115,7 +190,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             gae_lambda=gae_lambda,
             advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
-                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps)
+                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps)
             ],
             lr_scheduler_builder=Builder(
                 LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
@@ -123,7 +198,9 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         )
 
     def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(self.NUM_PROCESSES, ndevices)
+        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(
+            self.NUM_PROCESSES, ndevices
+        )
         res = [0] * ndevices
         for it in range(self.NUM_PROCESSES):
             res[it % ndevices] += 1
@@ -133,9 +210,24 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         if mode == "train":
             workers_per_device = 1
             # gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7] * workers_per_device  # TODO vs4 only has 7 gpus
+<<<<<<< HEAD:projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_ddppo.py
             gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6] * workers_per_device  # TODO vs4 only has 7 gpus
             nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
             sampler_devices = [0, 1, 2, 3, 4, 5, 6]  # TODO vs4 only has 7 gpus (ignored with > 1 gpu_ids)
+=======
+            gpu_ids = (
+                [] if not torch.cuda.is_available() else [0, 1] * workers_per_device
+            )  # TODO vs4 only has 7 gpus
+            nprocesses = (
+                2
+                if not torch.cuda.is_available()
+                else self.split_num_processes(len(gpu_ids))
+            )
+            sampler_devices = [
+                0,
+                1,
+            ]  # TODO vs4 only has 7 gpus (ignored with > 1 gpu_ids)
+>>>>>>> de752be39b1a7d9a4e4dc432293e3a12387385d2:experiments/objectnav_robothor_rgb_ddppo.py
             render_video = False
         elif mode == "valid":
             nprocesses = 1  # TODO debugging (0)
@@ -151,24 +243,40 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         # Disable parallelization for validation process
         if mode == "valid":
             for prep in self.PREPROCESSORS:
-                prep.kwargs["config"]["parallel"] = False
+                prep.kwargs["parallel"] = False
 
-        observation_set = Builder(ObservationSet, kwargs=dict(
-            source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
-        )) if mode == 'train' or nprocesses > 0 else None
+        observation_set = (
+            Builder(
+                ObservationSet,
+                kwargs=dict(
+                    source_ids=self.OBSERVATIONS,
+                    all_preprocessors=self.PREPROCESSORS,
+                    all_sensors=self.SENSORS,
+                ),
+            )
+            if mode == "train" or nprocesses > 0
+            else None
+        )
 
         return {
             "nprocesses": nprocesses,
             "gpu_ids": gpu_ids,
-            "sampler_devices": sampler_devices if mode == "train" else gpu_ids,  # ignored with > 1 gpu_ids
+            "sampler_devices": sampler_devices
+            if mode == "train"
+            else gpu_ids,  # ignored with > 1 gpu_ids
             "observation_set": observation_set,
             "render_video": render_video,
         }
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
+<<<<<<< HEAD:projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_ddppo.py
         return ResnetTensorPointNavActorCritic(
             action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
+=======
+        return ResnetTensorObjectNavActorCritic(
+            action_space=gym.spaces.Discrete(len(ObjectNavTask.class_action_names())),
+>>>>>>> de752be39b1a7d9a4e4dc432293e3a12387385d2:experiments/objectnav_robothor_rgb_ddppo.py
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             rgb_resnet_preprocessor_uuid="rgb_resnet",
@@ -213,10 +321,20 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         inds = self._partition_inds(len(scenes), total_processes)
 
         return {
+<<<<<<< HEAD:projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_ddppo.py
             "scenes": scenes[inds[process_ind]:inds[process_ind + 1]],
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+=======
+            "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
+            "object_types": self.TARGET_TYPES,
+            "max_steps": self.MAX_STEPS,
+            "sensors": self.SENSORS,
+            "action_space": gym.spaces.Discrete(
+                len(ObjectNavTask.class_action_names())
+            ),
+>>>>>>> de752be39b1a7d9a4e4dc432293e3a12387385d2:experiments/objectnav_robothor_rgb_ddppo.py
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": {
@@ -247,7 +365,9 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
         )
         res["allow_flipping"] = True
         return res
@@ -272,7 +392,9 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
         )
         return res
 

@@ -9,7 +9,7 @@ To generate html documentation under the `site` directory run
 ```bash
 bash scripts/build_docs.sh
 ```
-from within the `embodied-rl` root directory run.
+from within the `embodied-ai` root directory run.
 
 To serve the documentation on your local machine (with live 
 reloading of modified documentation) run

@@ -4,20 +4,20 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
-import typing
+from typing import TypeVar, Generic, Tuple, Optional, Union, Dict, Sequence
 
 import gym
 import torch
+from gym.spaces.dict import Dict as SpaceDict
 from torch import nn as nn
 
-from rl_base.common import ActorCriticOutput
+from rl_base.common import ActorCriticOutput, Memory
 from rl_base.distributions import CategoricalDistr
-from gym.spaces.dict import Dict as SpaceDict
 
-DistributionType = typing.TypeVar("DistributionType")
+DistributionType = TypeVar("DistributionType")
 
 
-class ActorCriticModel(typing.Generic[DistributionType], nn.Module):
+class ActorCriticModel(Generic[DistributionType], nn.Module):
     """Abstract class defining a deep (recurrent) actor critic agent.
 
     When defining a new agent, you should over subclass this class and implement the abstract methods.
@@ -44,20 +44,26 @@ class ActorCriticModel(typing.Generic[DistributionType], nn.Module):
 
     @property
     @abc.abstractmethod
-    def recurrent_hidden_state_size(self) -> int:
+    def recurrent_hidden_state_size(
+        self,
+    ) -> Union[int, Dict[str, Tuple[Sequence[int], int, torch.dtype]]]:
         """Non-negative integer corresponding to the dimension of the hidden
-        state used by the agent.
+        state used by the agent or mapping from string memory names to Tuples
+        of (0) sequences of axes dimensions excluding sampler axis; (1)
+        position for sampler axis; and (2) data types.
 
         # Returns
 
-        The hidden state dimension (non-negative integer).
+        The hidden state dimension (non-negative integer) or dict with memory specification.
         """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def forward(
         self, *args, **kwargs
-    ) -> typing.Tuple[ActorCriticOutput[DistributionType], typing.Any]:
+    ) -> Tuple[
+        ActorCriticOutput[DistributionType], Optional[Union[torch.Tensor, Memory]]
+    ]:
         """Transforms input observations (& previous hidden state) into action
         probabilities and the state value.
 
@@ -113,7 +119,7 @@ class LinearActorHead(nn.Module):
         nn.init.orthogonal_(self.linear.weight, gain=0.01)
         nn.init.constant_(self.linear.bias, 0)
 
-    def forward(self, x: torch.FloatTensor):
+    def forward(self, x: torch.FloatTensor):  # type: ignore
         x = self.linear(x)
         # noinspection PyArgumentList
         return CategoricalDistr(logits=x)

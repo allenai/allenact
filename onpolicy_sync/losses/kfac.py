@@ -1,6 +1,6 @@
 """Implementation of the KFAC optimizer.
 
-TODO: this code is not currently supported as it only is designed for non-recurrent models.
+TODO: this code is not supported as it currently lacks an implementation for recurrent models.
 """
 import math
 
@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from models.basic_models import AddBias
+from rl_base.distributions import AddBias
 
 
 # TODO: In order to make this code faster:

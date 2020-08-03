@@ -1,13 +1,13 @@
 from typing import List, Optional, Union
 
-from rl_habitat.habitat_environment import HabitatEnvironment
 import gym
 import habitat
 from habitat.config import Config
 
 from rl_base.sensor import Sensor
 from rl_base.task import TaskSampler
-from rl_habitat.habitat_tasks import PointNavTask, ObjectNavTask
+from rl_habitat.habitat_environment import HabitatEnvironment
+from rl_habitat.habitat_tasks import PointNavTask, ObjectNavTask  # type: ignore
 
 
 class PointNavTaskSampler(TaskSampler):
@@ -46,7 +46,7 @@ class PointNavTaskSampler(TaskSampler):
         return env
 
     @property
-    def __len__(self) -> Union[int, float]:
+    def length(self) -> Union[int, float]:
         """
         @return: Number of total tasks remaining that can be sampled. Can be float('inf').
         """
@@ -147,7 +147,7 @@ class ObjectNavTaskSampler(TaskSampler):
         return env
 
     @property
-    def __len__(self) -> Union[int, float]:
+    def length(self) -> Union[int, float]:
         """
         @return: Number of total tasks remaining that can be sampled. Can be float('inf').
         """

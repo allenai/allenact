@@ -8,7 +8,7 @@ environment."""
 
 import abc
 from abc import abstractmethod
-from typing import Dict, Any, Tuple, Generic, Union, List, Optional, TypeVar
+from typing import Dict, Any, Tuple, Generic, Union, Optional, TypeVar, Sequence
 
 import gym
 import numpy as np
@@ -48,23 +48,23 @@ class Task(Generic[EnvType]):
     def __init__(
         self,
         env: EnvType,
-        sensors: List[Sensor],
+        sensors: Union[SensorSuite, Sequence[Sensor]],
         task_info: Dict[str, Any],
         max_steps: int,
         **kwargs
     ) -> None:
         self.env = env
-        self.sensor_suite = SensorSuite(sensors)
+        self.sensor_suite = (
+            SensorSuite(sensors) if not isinstance(sensors, SensorSuite) else sensors
+        )
         self.task_info = task_info
         self.max_steps = max_steps
-        self.observation_space = SpaceDict(
-            {**self.sensor_suite.observation_spaces.spaces,}
-        )
+        self.observation_space = self.sensor_suite.observation_spaces
         self._num_steps_taken = 0
         self._total_reward = 0.0
 
-    def get_observations(self) -> Any:
-        return self.sensor_suite.get_observations(env=self.env, task=self)
+    def get_observations(self, **kwargs) -> Any:
+        return self.sensor_suite.get_observations(env=self.env, task=self, **kwargs)
 
     @property
     @abstractmethod
@@ -106,7 +106,7 @@ class Task(Generic[EnvType]):
         """Take an action in the environment.
 
         Takes the action in the environment corresponding to
-        `self.action_names()[action]` and returns
+        `self.class_action_names()[action]` and returns
         observations (& rewards and any additional information)
         corresponding to the agent's new state. Note that this function
         should not be overwritten without care (instead
@@ -125,9 +125,9 @@ class Task(Generic[EnvType]):
         sr = self._step(action=action)
         self._total_reward += float(sr.reward)
         self._increment_num_steps_taken()
-        # TODO: Rather than cloning should be increment the step
-        #   count before running `self._step(...)`? Alternatively
-        #   we can make RLStepResult mutable.
+        # TODO: We need a better solution to the below. It's not a good idea
+        #   to pre-increment the step counter as this might play poorly with `_step`
+        #   if it relies on some aspect of the current number of steps taken.
         return sr.clone({"done": sr.done or self.is_done()})
 
     @abstractmethod
@@ -135,7 +135,7 @@ class Task(Generic[EnvType]):
         """Helper function called by `step` to take a step in the environment.
 
         Takes the action in the environment corresponding to
-        `self.action_names()[action]` and returns
+        `self.class_action_names()[action]` and returns
         observations (& rewards and any additional information)
         corresponding to the agent's new state. This function is called
         by the (public) `step` function and is what should be implemented
@@ -176,25 +176,37 @@ class Task(Generic[EnvType]):
 
     @classmethod
     @abstractmethod
-    def action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
         """A tuple of action names.
+
+        # Parameters
+
+        kwargs : Keyword arguments.
 
         # Returns
 
         Tuple of (ordered) action names so that taking action
-            running `task.step(i)` corresponds to taking action task.action_names()[i].
+            running `task.step(i)` corresponds to taking action task.class_action_names()[i].
         """
         raise NotImplementedError()
+
+    def action_names(self) -> Tuple[str, ...]:
+        """Action names of the Task instance.
+
+        This method should be overwritten if `class_action_names`
+        requires key word arguments to determine the number of actions.
+        """
+        return self.class_action_names()
 
     @property
     def total_actions(self) -> int:
         """Total number of actions available to an agent in this Task."""
-        return len(self.action_names())
+        return len(self.class_action_names())
 
     def index_to_action(self, index: int) -> str:
         """Returns the action name correspond to `index`."""
         assert 0 <= index < self.total_actions
-        return self.action_names()[index]
+        return self.class_action_names()[index]
 
     @abstractmethod
     def close(self) -> None:
@@ -219,7 +231,7 @@ class Task(Generic[EnvType]):
             "task_info": self.task_info,
         }
 
-    def query_expert(self) -> Tuple[Any, bool]:
+    def query_expert(self, **kwargs) -> Tuple[Any, bool]:
         """Query the expert policy for this task.
 
         # Returns
@@ -230,7 +242,17 @@ class Task(Generic[EnvType]):
             possible values (e.g. if x is the expert policy then x should be the correct length, \
             sum to 1, and have non-negative entries).
         """
-        raise NotImplementedError()
+        raise NotImplementedError
+
+    @property
+    def cumulative_reward(self) -> float:
+        """Total cumulative in the task so far.
+
+        # Returns
+
+        Cumulative reward as a float.
+        """
+        return self._total_reward
 
 
 SubTaskType = TypeVar("SubTaskType", bound=Task)
@@ -241,7 +263,7 @@ class TaskSampler(abc.ABC):
 
     @property
     @abstractmethod
-    def __len__(self) -> Union[int, float]:
+    def length(self) -> Union[int, float]:
         """Length.
 
         # Returns
@@ -314,8 +336,7 @@ class TaskSampler(abc.ABC):
 
     @abstractmethod
     def reset(self) -> None:
-        """Resets task sampler to its original state (except for any seed).
-        """
+        """Resets task sampler to its original state (except for any seed)."""
         raise NotImplementedError()
 
     @abstractmethod
