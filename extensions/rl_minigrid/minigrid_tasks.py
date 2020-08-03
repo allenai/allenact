@@ -397,7 +397,7 @@ class AskForHelpSimpleCrossingTask(MiniGridTask):
 class MiniGridTaskSampler(TaskSampler):
     def __init__(
         self,
-        env_class: Callable[..., Union[CrossingEnv]],
+        env_class: Callable[..., Union[MiniGridEnv]],
         sensors: Union[SensorSuite, List[Sensor]],
         env_info: Optional[Dict[str, Any]] = None,
         max_tasks: Optional[int] = None,

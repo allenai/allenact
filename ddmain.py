@@ -109,6 +109,7 @@ def _get_args():
     )
 
     parser.add_argument(
+        "-m",
         "--max_processes_per_trainer",
         required=False,
         default=None,
