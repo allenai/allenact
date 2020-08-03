@@ -27,13 +27,26 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     """An Object Navigation experiment configuration in RoboThor"""
 
+    # Task Parameters
+    MAX_STEPS = 500
+    REWARD_CONFIG = {
+        "step_penalty": -0.01,
+        "goal_success_reward": 10.0,
+        "failed_stop_reward": 0.0,
+        "shaping_weight": 1.0,
+    }
+
+    # Simulator Parameters
     CAMERA_WIDTH = 640
     CAMERA_HEIGHT = 480
     SCREEN_SIZE = 224
-    
-    MAX_STEPS = 500
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000  # generally useful if more than 1 scene per worker
+
+    # Training Engine Parameters
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
     NUM_PROCESSES = 60
+    TRAINING_GPUS = [0, 1, 2, 3, 4, 5, 6]
+    VALIDATION_GPUS = [7]
+    TESTING_GPUS = [7]
 
     SENSORS = [
         RGBSensorThor(
@@ -72,16 +85,14 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     ENV_ARGS = dict(
         width=CAMERA_WIDTH,
         height=CAMERA_HEIGHT,
-        continuousMode=True,
-        applyActionNoise=True,
-        agentType="stochastic",
         rotateStepDegrees=30.0,
         visibilityDistance=1.0,
         gridSize=0.25,
+        continuousMode=True,
+        applyActionNoise=True,
+        agentType="stochastic",
         snapToGrid=False,
-        agentMode="bot",
-        include_private_scenes=False,
-        renderDepthImage=False
+        agentMode="bot"
     )
 
     @classmethod
@@ -132,13 +143,12 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
             workers_per_device = 1
-            # gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6, 7] * workers_per_device  # TODO vs4 only has 7 gpus
-            gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6] * workers_per_device  # TODO vs4 only has 7 gpus
+            gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6] * workers_per_device
             nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
-            sampler_devices = [0, 1, 2, 3, 4, 5, 6]  # TODO vs4 only has 7 gpus (ignored with > 1 gpu_ids)
+            sampler_devices = [0, 1, 2, 3, 4, 5, 6]
             render_video = False
         elif mode == "valid":
-            nprocesses = 1  # TODO debugging (0)
+            nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else [7]
             render_video = False
         elif mode == "test":
@@ -160,11 +170,12 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         return {
             "nprocesses": nprocesses,
             "gpu_ids": gpu_ids,
-            "sampler_devices": sampler_devices if mode == "train" else gpu_ids,  # ignored with > 1 gpu_ids
+            "sampler_devices": sampler_devices if mode == "train" else gpu_ids,
             "observation_set": observation_set,
             "render_video": render_video,
         }
 
+    # Define Model
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return ResnetTensorPointNavActorCritic(
@@ -176,10 +187,12 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             goal_dims=32,
         )
 
+    # Define Task Sampler
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
         return PointNavDatasetTaskSampler(**kwargs)
 
+    # Utility Functions for distributing scenes between GPUs
     @staticmethod
     def _partition_inds(n: int, num_parts: int):
         return np.round(np.linspace(0, n, num_parts + 1, endpoint=True)).astype(
@@ -219,12 +232,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
-            "rewards_config": {
-                "step_penalty": -0.01,
-                "goal_success_reward": 10.0,
-                "failed_stop_reward": 0.0,
-                "shaping_weight": 1.0,  # applied to the decrease in distance to target
-            },
+            "rewards_config": self.REWARD_CONFIG
         }
 
     def train_task_sampler_args(
@@ -295,10 +303,5 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         res["loop_dataset"] = False
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
-        # res["env_args"]["x_display"] = (
-        #     ("0.%d" % devices[process_ind % len(devices)])
-        #     if devices is not None and len(devices) > 0
-        #     else None
-        # )
         res["env_args"]["x_display"] = "10.0"
         return res
