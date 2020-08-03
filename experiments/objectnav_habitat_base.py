@@ -8,7 +8,7 @@ from torch.optim.lr_scheduler import LambdaLR
 
 import habitat
 from onpolicy_sync.losses.ppo import PPOConfig
-from models.point_nav_models import PointNavActorCriticResNet50GRU
+from projects.pointnav_baselines.models.point_nav_models import PointNavActorCriticResNet50GRU
 from onpolicy_sync.losses import PPO
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.sensor import SensorSuite

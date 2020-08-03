@@ -2,7 +2,7 @@ import gym
 import torch.nn as nn
 from torchvision import models
 
-from models.object_nav_models import ObjectNavResNetActorCritic
+from projects.objectnav_baselines.models.object_nav_models import ObjectNavResNetActorCritic
 from rl_base.sensor import SensorSuite
 from rl_habitat.habitat_tasks import ObjectNavTask
 from rl_habitat.habitat_sensors import DepthSensorHabitat, TargetObjectSensorHabitat

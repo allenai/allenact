@@ -6,76 +6,91 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
+from torchvision import models
 import numpy as np
 import glob
 
 from onpolicy_sync.losses.ppo import PPOConfig
-from projects.objectnav_baselines.models.object_nav_models import ResnetTensorObjectNavActorCritic
+from projects.pointnav_baselines.models.point_nav_models import ResnetTensorPointNavActorCritic
 from onpolicy_sync.losses import PPO
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
-from rl_robothor.robothor_tasks import ObjectNavTask
-from rl_robothor.robothor_task_samplers import ObjectNavDatasetTaskSampler
-from rl_robothor.robothor_environment import RoboThorCachedEnvironment
-from rl_robothor.robothor_sensors import ResNetRGBSensorHabitatCache
-from rl_ai2thor.ai2thor_sensors import GoalObjectTypeThorSensor
+from rl_robothor.robothor_tasks import PointNavTask
+from rl_robothor.robothor_task_samplers import PointNavDatasetTaskSampler
+from rl_robothor.robothor_sensors import GPSCompassSensorRoboThor
+from rl_ai2thor.ai2thor_sensors import RGBSensorThor
+from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
 class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     """An Object Navigation experiment configuration in RoboThor"""
 
+    CAMERA_WIDTH = 640
+    CAMERA_HEIGHT = 480
+    SCREEN_SIZE = 224
+    
     MAX_STEPS = 500
-
-    VALIDATION_SAMPLES_PER_SCENE = 10
-
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
-
-    NUM_PROCESSES = 60  # TODO 2 for debugging
-
-    TARGET_TYPES = sorted(
-        [
-            'AlarmClock',
-            'Apple',
-            'BaseballBat',
-            'BasketBall',
-            'Bowl',
-            'GarbageCan',
-            'HousePlant',
-            'Laptop',
-            'Mug',
-            'SprayBottle',
-            'Television',
-            'Vase'
-        ]
-    )
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000  # generally useful if more than 1 scene per worker
+    NUM_PROCESSES = 60
 
     SENSORS = [
-        ResNetRGBSensorHabitatCache(
+        RGBSensorThor(
             {
-                "uuid": "rgb_resnet",
+                "height": SCREEN_SIZE,
+                "width": SCREEN_SIZE,
+                "use_resnet_normalization": True,
+                "uuid": "rgb_lowres",
             }
         ),
-        GoalObjectTypeThorSensor({
-            "object_types": TARGET_TYPES,
-        }),
+        GPSCompassSensorRoboThor({}),
     ]
 
-    PREPROCESSORS = []
+    PREPROCESSORS = [
+        Builder(ResnetPreProcessorHabitat,
+                dict(config={
+                    "input_height": SCREEN_SIZE,
+                    "input_width": SCREEN_SIZE,
+                    "output_width": 7,
+                    "output_height": 7,
+                    "output_dims": 512,
+                    "pool": False,
+                    "torchvision_resnet_model": models.resnet18,
+                    "input_uuids": ["rgb_lowres"],
+                    "output_uuid": "rgb_resnet",
+                    "parallel": False,  # TODO False for debugging
+                })
+        ),
+    ]
 
     OBSERVATIONS = [
         "rgb_resnet",
-        "goal_object_type_ind",
+        "target_coordinates_ind",
     ]
+
+    ENV_ARGS = dict(
+        width=CAMERA_WIDTH,
+        height=CAMERA_HEIGHT,
+        continuousMode=True,
+        applyActionNoise=True,
+        agentType="stochastic",
+        rotateStepDegrees=30.0,
+        visibilityDistance=1.0,
+        gridSize=0.25,
+        snapToGrid=False,
+        agentMode="bot",
+        include_private_scenes=False,
+        renderDepthImage=False
+    )
 
     @classmethod
     def tag(cls):
-        return "ObjectNavRobothorRGBPPOCachedEnvironment"
+        return "PointNavRobothorRGBPPO"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        ppo_steps = int(300000000)
+        ppo_steps = int(250000000)
         lr = 3e-4
         num_mini_batch = 1
         update_repeats = 3
@@ -123,7 +138,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             sampler_devices = [0, 1, 2, 3, 4, 5, 6]  # TODO vs4 only has 7 gpus (ignored with > 1 gpu_ids)
             render_video = False
         elif mode == "valid":
-            nprocesses = 15  # TODO debugging (0)
+            nprocesses = 1  # TODO debugging (0)
             gpu_ids = [] if not torch.cuda.is_available() else [7]
             render_video = False
         elif mode == "test":
@@ -152,10 +167,10 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ResnetTensorObjectNavActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+        return ResnetTensorPointNavActorCritic(
+            action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
-            goal_sensor_uuid="goal_object_type_ind",
+            goal_sensor_uuid="target_coordinates_ind",
             rgb_resnet_preprocessor_uuid="rgb_resnet",
             hidden_size=512,
             goal_dims=32,
@@ -163,7 +178,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return ObjectNavDatasetTaskSampler(**kwargs)
+        return PointNavDatasetTaskSampler(**kwargs)
 
     @staticmethod
     def _partition_inds(n: int, num_parts: int):
@@ -199,19 +214,17 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
         return {
             "scenes": scenes[inds[process_ind]:inds[process_ind + 1]],
-            "object_types": self.TARGET_TYPES,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": {
                 "step_penalty": -0.01,
                 "goal_success_reward": 10.0,
-                "failed_stop_reward": -0.5,
+                "failed_stop_reward": 0.0,
                 "shaping_weight": 1.0,  # applied to the decrease in distance to target
             },
-            "env_class": RoboThorCachedEnvironment
         }
 
     def train_task_sampler_args(
@@ -223,19 +236,19 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            "dataset/robothor/objectnav/train/episodes",
+            "dataset/robothor/pointnav/train/content",
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = "dataset/robothor/objectnav/train"
+        res["scene_directory"] = "dataset/robothor/pointnav/train/content"
         res["loop_dataset"] = True
         res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
             ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
         )
-        res["env_args"]["env_root_dir"] = "dataset/robothor/objectnav/train/view_caches"
         res["allow_flipping"] = True
         return res
 
@@ -248,19 +261,19 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            "dataset/robothor/objectnav/val/episodes",
+            "dataset/robothor/pointnav/val/content",
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = "dataset/robothor/objectnav/val"
+        res["scene_directory"] = "dataset/robothor/pointnav/val/content"
         res["loop_dataset"] = False
         res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
             ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
         )
-        res["env_args"]["env_root_dir"] = "dataset/robothor/objectnav/val/view_caches"
         return res
 
     def test_task_sampler_args(
@@ -272,20 +285,20 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            "dataset/robothor/objectnav/val/episodes",
+            "dataset/robothor/pointnav/val/content",
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = "dataset/robothor/objectnav/val"
+        res["scene_directory"] = "dataset/robothor/pointnav/val/content"
         res["loop_dataset"] = False
         res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
         # res["env_args"]["x_display"] = (
         #     ("0.%d" % devices[process_ind % len(devices)])
         #     if devices is not None and len(devices) > 0
         #     else None
         # )
         res["env_args"]["x_display"] = "10.0"
-        res["env_args"]["env_root_dir"] = "dataset/robothor/objectnav/val/view_caches"
         return res

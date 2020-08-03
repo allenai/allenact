@@ -2,13 +2,11 @@ import gym
 import torch.nn as nn
 from torchvision import models
 
-from models.object_nav_models import ObjectNavActorCriticTrainResNet50GRU
-from rl_base.sensor import SensorSuite
+from projects.objectnav_baselines.models.object_nav_models import ObjectNavActorCriticTrainResNet50GRU
 from rl_habitat.habitat_tasks import ObjectNavTask
 from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetObjectSensorHabitat
 from rl_habitat.habitat_utils import construct_env_configs
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
-from rl_base.preprocessor import ObservationSet
 from experiments.objectnav_habitat_base_ddppo import ObjectNavHabitatDDPPOBaseExperimentConfig
 
 
