@@ -109,6 +109,7 @@ def get_args():
     )
 
     parser.add_argument(
+        "-m",
         "--max_sampler_processes_per_worker",
         required=False,
         default=None,

@@ -245,7 +245,7 @@ class OnPolicyRunner(object):
                     checkpoints_queue=self.queues["checkpoints"]
                     if self.running_validation
                     else None,
-                    checkpoints_dir=self.checkpoint_dir,
+                    checkpoints_dir=self.checkpoint_dir(),
                     seed=seed,
                     deterministic_cudnn=self.deterministic_cudnn,
                     mp_ctx=self.mp_ctx,
@@ -379,15 +379,14 @@ class OnPolicyRunner(object):
             return "{}_{}".format(self.config.tag(), self.extra_tag)
         return self.config.tag()
 
-    @property
-    def checkpoint_dir(self):
+    def checkpoint_dir(self, start_time_str=None):
         folder = os.path.join(
             self.output_dir,
             "checkpoints",
             self.config.tag()
             if self.extra_tag == ""
             else os.path.join(self.config.tag(), self.extra_tag),
-            self.local_start_time_str,
+            start_time_str or self.local_start_time_str,
         )
         os.makedirs(folder, exist_ok=True)
         return folder
@@ -726,10 +725,7 @@ class OnPolicyRunner(object):
         if checkpoint_file_name is not None:
             return [checkpoint_file_name]
         files = glob.glob(
-            os.path.join(
-                self.output_dir, "checkpoints", "**", experiment_date, "exp_*.pt"
-            ),
-            recursive=True,
+            os.path.join(self.checkpoint_dir(experiment_date), "exp_*.pt")
         )
         files = sorted(files)
         return (

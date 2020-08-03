@@ -433,9 +433,11 @@ class OnPolicyRLEngine(object):
 
     @staticmethod
     def _active_memory(memory, keep):
-        if isinstance(memory, torch.Tensor):  # rnn hidden state
+        if isinstance(memory, torch.Tensor):  # rnn hidden state or no memory
             return memory[:, keep] if memory.shape[1] > len(keep) else memory
-        return memory.index_select(keep)  # arbitrary memory
+        return (
+            memory.index_select(keep) if memory is not None else memory
+        )  # arbitrary memory or no memory
 
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None):
         actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
@@ -781,7 +783,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self,
         scalars: ScalarMeanTracker,
         tracking_info: Dict[str, List],
-        type_str: str = "update",
+        type_str: str = "update_package",
     ) -> Tuple[str, Dict[str, float], int]:
         assert scalars.empty, "Found non-empty scalars {}".format(scalars.counts)
 
@@ -794,6 +796,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         )  # used to cancel the averaging in self.scalars
 
         # assert nsamples != 0, "Attempting to aggregate type {} with 0 samples".format(type)
+
+        # get_logger().debug(infos)
 
         last_name: Optional[str] = None
         for name, payload, nsamps in infos:
@@ -813,7 +817,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         assert last_name is not None, "infos was empty."
         pkg_type = last_name
         payload = scalars.pop_and_reset() if nsamples > 0 else None
-        payload["pipeline_stage"] = self.training_pipeline.current_stage_index
+        if payload is not None:
+            payload["pipeline_stage"] = self.training_pipeline.current_stage_index
 
         return pkg_type, payload, nsamples
 
@@ -831,7 +836,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 for key in batch:
                     if isinstance(batch[key], torch.Tensor):
                         bsize = batch[key].shape[0]
-                        break
+                        if bsize > 0:
+                            break
                 assert bsize is not None, "TODO check recursively for batch size"
 
                 actor_critic_output, memory = self.actor_critic(
@@ -954,8 +960,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.aggregate_info(
                 scalars=self.scalars, tracking_info=tracking_info, type_str=type_str
             )
-            for type_str in self.tracking_info
+            for type_str in tracking_info
         )
+
+        # get_logger().debug("{}".format(payload))
 
         nsteps = self.training_pipeline.total_steps
 
