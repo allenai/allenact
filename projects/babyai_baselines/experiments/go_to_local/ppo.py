@@ -9,7 +9,7 @@ from utils.experiment_utils import PipelineStage
 class PPOBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentConfig):
     """PPO only."""
 
-    NUM_TRAIN_SAMPLERS: int = 128 * 12 if torch.cuda.is_available() else 4
+    NUM_TRAIN_SAMPLERS: int = 128 * 12 if torch.cuda.is_available() else BaseBabyAIGoToLocalExperimentConfig.NUM_TRAIN_SAMPLERS
     ROLLOUT_STEPS: int = 32
 
     @classmethod

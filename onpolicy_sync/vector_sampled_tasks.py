@@ -327,14 +327,17 @@ class VectorSampledTasks(object):
         for id, stuff in enumerate(
             zip(worker_connections, parent_connections, sampler_fn_args_list)
         ):
-            if len(sampler_fn_args_list) != 1:
-                id = "{}({}-{})".format(id, k, k + len(sampler_fn_args_list) - 1)
-                k += len(sampler_fn_args_list)
-
             worker_conn, parent_conn, current_sampler_fn_args_list = stuff  # type: ignore
+
+            if len(current_sampler_fn_args_list) != 1:
+                id = "{}({}-{})".format(
+                    id, k, k + len(current_sampler_fn_args_list) - 1
+                )
+                k += len(current_sampler_fn_args_list)
+
             if self.should_log:
                 get_logger().info(
-                    "Starting {}-th worker with args {}".format(
+                    "Starting {}-th VectorSampledTask worker with args {}".format(
                         id, current_sampler_fn_args_list
                     )
                 )
@@ -954,7 +957,7 @@ class SingleProcessVectorSampledTasks(object):
         for id, current_sampler_fn_args in enumerate(sampler_fn_args):
             if self.should_log:
                 get_logger().info(
-                    "Starting {}-th worker with args {}".format(
+                    "Starting {}-th SingleProcessVectorSampledTasks generator with args {}".format(
                         id, current_sampler_fn_args
                     )
                 )

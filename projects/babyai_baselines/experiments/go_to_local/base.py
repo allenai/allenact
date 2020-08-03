@@ -22,7 +22,7 @@ class BaseBabyAIGoToLocalExperimentConfig(BaseBabyAIExperimentConfig):
     TOTAL_RL_TRAIN_STEPS = int(15e6)
     TOTAL_IL_TRAIN_STEPS = int(7.5e6)
     ROLLOUT_STEPS: int = 128
-    NUM_TRAIN_SAMPLERS: int = 128 if torch.cuda.is_available() else 2
+    NUM_TRAIN_SAMPLERS: int = 128 if torch.cuda.is_available() else 4
     PPO_NUM_MINI_BATCH = 4
     NUM_CKPTS_TO_SAVE = 20
     NUM_TEST_TASKS: int = 1000
