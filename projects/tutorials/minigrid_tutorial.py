@@ -109,12 +109,6 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        """Specifies the validation parameters for the `process_ind`th
-        validation process.
-
-        See `ExperimentConfig.train_task_sampler_args` for parameter
-        definitions.
-        """
         return self._get_sampler_args(process_ind=process_ind, mode="valid")
 
     def test_task_sampler_args(
@@ -125,9 +119,4 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        """Specifies the test parameters for the `process_ind`th test process.
-
-        See `ExperimentConfig.train_task_sampler_args` for parameter
-        definitions.
-        """
         return self._get_sampler_args(process_ind=process_ind, mode="test")
