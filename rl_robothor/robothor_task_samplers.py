@@ -404,6 +404,16 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         """
         return True
 
+    @property
+    def length(self) -> Union[int, float]:
+        """Length.
+
+        # Returns
+
+        Number of total tasks remaining that can be sampled. Can be float('inf').
+        """
+        return float("inf") if self.max_tasks is None else self.max_tasks
+
     def next_task(self, force_advance_scene: bool = False) -> Optional[ObjectNavTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
@@ -872,3 +882,14 @@ class PointNavDatasetTaskSampler(TaskSampler):
         self.seed = seed
         if seed is not None:
             set_seed(seed)
+
+    @property
+    def length(self) -> Union[int, float]:
+        """Length.
+
+        # Returns
+
+        Number of total tasks remaining that can be sampled.
+        Can be float('inf').
+        """
+        return float("inf") if self.max_tasks is None else self.max_tasks

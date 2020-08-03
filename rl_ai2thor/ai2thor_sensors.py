@@ -53,7 +53,7 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment, Task[AI2ThorEnvironment]]):
         self._should_normalize = f(config, "use_resnet_normalization", False)
         self._height: Optional[int] = f(config, "height", None)
         self._width: Optional[int] = f(config, "width", None)
-        self._uuid: str = f(config, "uuid", "rgb")
+        self.uuid: str = f(config, "uuid", "rgb")
 
         assert (self._width is None) == (self._height is None), (
             "In RGBSensorThor's config, "
@@ -84,8 +84,6 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment, Task[AI2ThorEnvironment]]):
 
         self._to_pil = transforms.ToPILImage()
 
-        super().__init__(config, *args, **kwargs)  # call it last so that user can assign a uuid
-
     @property
     def height(self) -> Optional[int]:
         """Height that RGB image will be rescale to have.
@@ -103,7 +101,7 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment, Task[AI2ThorEnvironment]]):
         return self._width
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return self._uuid
+        return self.uuid
 
     def _get_observation_space(self) -> gym.spaces.Box:
         return typing.cast(gym.spaces.Box, self.observation_space)
@@ -111,7 +109,7 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment, Task[AI2ThorEnvironment]]):
     def get_observation(
         self,
         env: AI2ThorEnvironment,
-        task: Optional[AI2ThorTask],
+        task: Optional[Task[AI2ThorEnvironment]],
         *args: Any,
         **kwargs: Any
     ) -> Any:
@@ -134,8 +132,7 @@ class RGBSensorThor(Sensor[AI2ThorEnvironment, Task[AI2ThorEnvironment]]):
 
 class GoalObjectTypeThorSensor(Sensor):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
-        super().__init__(config, *args, **kwargs)
-
+        self.config = config
         self.ordered_object_types: List[str] = list(self.config["object_types"])
         assert self.ordered_object_types == list(sorted(self.ordered_object_types)), (
             "object types" "input to goal object type " "sensor must be ordered"
@@ -160,9 +157,11 @@ class GoalObjectTypeThorSensor(Sensor):
             }
 
             self.observation_space = gym.spaces.Discrete(len(self.detector_types))
+        super().__init__(config, self.observation_space, *args, **kwargs)
+        self.uuid = "goal_object_type_ind"
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "goal_object_type_ind"
+        return self.uuid
 
     def _get_observation_space(self) -> gym.spaces.Discrete:
         return typing.cast(gym.spaces.Discrete, self.observation_space)

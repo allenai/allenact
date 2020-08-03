@@ -35,18 +35,18 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
 
         self.PREPROCESSORS = [
             Builder(ResnetPreProcessorHabitat,
-                    dict(config={
-                        "input_height": self.SCREEN_SIZE,
-                        "input_width": self.SCREEN_SIZE,
-                        "output_width": 7,
-                        "output_height": 7,
-                        "output_dims": 512,
-                        "pool": False,
-                        "torchvision_resnet_model": models.resnet18,
-                        "input_uuids": ["rgb_lowres"],
-                        "output_uuid": "rgb_resnet",
-                        "parallel": False,  # TODO False for debugging
-                })
+                {
+                    "input_height": self.SCREEN_SIZE,
+                    "input_width": self.SCREEN_SIZE,
+                    "output_width": 7,
+                    "output_height": 7,
+                    "output_dims": 512,
+                    "pool": False,
+                    "torchvision_resnet_model": models.resnet18,
+                    "input_uuids": ["rgb_lowres"],
+                    "output_uuid": "rgb_resnet",
+                    "parallel": False,
+                }
             ),
         ]
 
@@ -73,7 +73,7 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
         max_grad_norm = 0.5
         return TrainingPipeline(
             save_interval=save_interval,
-            log_interval=log_interval,
+            metric_accumulate_interval=log_interval,
             optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
@@ -85,7 +85,7 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
             gae_lambda=gae_lambda,
             advance_scene_rollout_period=self.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
-                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps)
+                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps)
             ],
             lr_scheduler_builder=Builder(
                 LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
@@ -95,7 +95,7 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return ResnetTensorObjectNavActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            action_space=gym.spaces.Discrete(len(ObjectNavTask._actions)),
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="goal_object_type_ind",
             rgb_resnet_preprocessor_uuid="rgb_resnet",
