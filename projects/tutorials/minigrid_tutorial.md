@@ -161,7 +161,7 @@ where, for convenience, we have defined a `_get_sampler_args` method:
             # no predefined random seeds for training,
             # else one seed for each task to sample:
             # - ensures different seeds for each sampler
-            # - ensures a fixed seed for each task in each sampler
+            # - ensures a deterministic set of sampled tasks
             task_seeds_list=None
             if mode == "train"
             else list(
