@@ -1,20 +1,21 @@
-# MiniGrid tutorial
+# Third-party environments: MiniGrid
  
-This tutorial assumes the [installation instructions](/README.md#installation) have already been followed and, to some
-extent, the `embodied-ai` framework's [abstractions](/overview/abstractions.md) are known.
+This tutorial assumes the [installation instructions](/#installation) have already been followed and, to some
+extent, the `embodied-ai` framework's [abstractions](/overview/abstractions) are known.
 
 We will use a trivial task type to show how to:
-- Write an experiment configuration file with a simple training pipeline from scratch.
-- Use one of the supported third-party environments with minimal user effort. 
-- Train, validate and test your experiment from the command line.
+
+* Write an experiment configuration file with a simple training pipeline from scratch.
+* Use one of the supported third-party environments with minimal user effort. 
+* Train, validate and test your experiment from the command line.
 
 ## The task
-A MiniGrid-Empty-Random-5x5 task consists of a grid of dimensions 5x5 where an agent spawned at a random
+A `MiniGrid-Empty-Random-5x5-v0` task consists of a grid of dimensions 5x5 where an agent spawned at a random
 location and orientation has to navigate to the visitable bottom right corner cell of the grid by sequences of three
 possible actions (rotate left/right and move forward). A visualization of the environment with expert steps in a random
-MiniGrid-Empty-Random-5x5 task looks like
+`MiniGrid-Empty-Random-5x5-v0` task looks like
 
-![MiniGridEmptyRandom5x5 task example](./minigrid_environment.png)
+![MiniGridEmptyRandom5x5 task example](../img/minigrid_environment.png)
 
 The observation for the agent is a subset of the entire grid, simulating a simplified limited field of view, as
 depicted by the highlighted rectangle (observed subset of the grid) around the agent (red arrow). Gray cells correspond
@@ -23,26 +24,28 @@ to walls.
 ## Experiment configuration file
 
 Our complete experiment consists of:
-- Training a basic actor-critic agent with memory to solve randomly sampled navigation tasks.
-- Validation on a fixed set of tasks (running in parallel with training).
-- A second stage where we test saved checkpoints with a larger fixed set of tasks.
+
+* Training a basic actor-critic agent with memory to solve randomly sampled navigation tasks.
+* Validation on a fixed set of tasks (running in parallel with training).
+* A second stage where we test saved checkpoints with a larger fixed set of tasks.
 
 The entire configuration for the experiment, including training, validation, and testing, is encapsulated in a single 
 class implementing the `ExperimentConfig` abstraction. For this tutorial, we will follow the config under
-[projects/tutorials/minigrid_tutorial.py](./minigrid_tutorial.py). 
+[projects/tutorials/minigrid_tutorial.py](/api/projects/tutorials/minigrid_tutorial). 
 
 The `ExperimentConfig` abstraction is used by the
-[OnPolicyTrainer](/onpolicy_sync/light_engine/#onpolicytrainer) class (for training) and the
-[OnPolicyInference](/onpolicy_sync/light_engine/#onpolicyinference) class (for validation and testing)
-invoked through the entry script [ddmain.py](../../ddmain.py) that calls an orchestrating
-[OnPolicyRunner](/onpolicy_sync/runner/#onpolicyrunner) class. It includes:
-- A `tag` method to identify the experiment.
-- A `create_model` method to instantiate actor-critic models.
-- A `make_sampler_fn` method to instantiate task samplers.
-- Three `{train,valid,test}_task_sampler_args` methods describing initialization parameters for task samplers used in
+[OnPolicyTrainer](/api/onpolicy_sync/light_engine/#onpolicytrainer) class (for training) and the
+[OnPolicyInference](/api/onpolicy_sync/light_engine/#onpolicyinference) class (for validation and testing)
+invoked through the entry script `ddmain.py` that calls an orchestrating
+[OnPolicyRunner](/api/onpolicy_sync/runner/#onpolicyrunner) class. It includes:
+
+* A `tag` method to identify the experiment.
+* A `create_model` method to instantiate actor-critic models.
+* A `make_sampler_fn` method to instantiate task samplers.
+* Three `{train,valid,test}_task_sampler_args` methods describing initialization parameters for task samplers used in
 training, validation, and testing; including assignment of workers to devices for simulation.
-- A `machine_params` method with configuration parameters that will be used for training, validation, and testing.
-- A `training_pipeline` method describing a possibly multi-staged training pipeline with different types of losses,
+* A `machine_params` method with configuration parameters that will be used for training, validation, and testing.
+* A `training_pipeline` method describing a possibly multi-staged training pipeline with different types of losses,
 an optimizer, and other parameters like learning rates, batch sizes, etc.
 
 ### Preliminaries
@@ -178,7 +181,7 @@ where, for convenience, we have defined a `_get_sampler_args` method:
 ```
 
 Note that the `env_class` argument to the Task Sampler is the one determining which task type we are going to train the
-model for (in this case, `MiniGrid-Empty-Random-5x5-v0` from https://github.com/maximecb/gym-minigrid#empty-environment)
+model for (in this case, `MiniGrid-Empty-Random-5x5-v0` from [gym-minigrid](https://github.com/maximecb/gym-minigrid#empty-environment))
 . The sparse reward is
 [given by the environment](https://github.com/maximecb/gym-minigrid/blob/6e22a44dc67414b647063692258a4f95ce789161/gym_minigrid/minigrid.py#L819)
 , and the maximum task length is 100. For training, we opt for a default random sampling, whereas for validation and
@@ -240,7 +243,7 @@ for which the model weights need to be known.
 ## Training and validation
 
 We have a complete implementation of this experiment's configuration class in
-[projects/tutorials/minigrid_tutorial.py](./minigrid_tutorial.py).
+[projects/tutorials/minigrid_tutorial.py](/api/projects/tutorials/minigrid_tutorial).
 To start training from scratch, we just need to invoke
 
 ```bash
@@ -248,28 +251,29 @@ python ddmain.py minigrid_tutorial -b projects/tutorials -m 8 -o /PATH/TO/minigr
 ```
 
 from the project root folder.
-- With `-b projects/tutorials` we set the base folder to search for the `minigrid_tutorial` experiment configuration.
-- With `-m 8` we limit the number of subprocesses to 8 (each subprocess will run 16 of the 128 training task samplers).
-- With `-o /PATH/TO/minigrid_output` we set the output folder.
-- With `-s 12345` we set the random seed.
+
+* With `-b projects/tutorials` we set the base folder to search for the `minigrid_tutorial` experiment configuration.
+* With `-m 8` we limit the number of subprocesses to 8 (each subprocess will run 16 of the 128 training task samplers).
+* With `-o /PATH/TO/minigrid_output` we set the output folder.
+* With `-s 12345` we set the random seed.
 
 If we have Tensorboard installed, we can track progress with
 ```bash
 tensorboard --logdir /PATH/TO/minigrid_output
 ```
-which will default to the URL http://localhost:6006/.
+which will default to the URL [http://localhost:6006/](http://localhost:6006/).
 
 After 150,000 steps, the script will terminate and several checkpoints will be saved in the output folder.
 The training curves should look similar to:
 
-![training curves](./minigrid_train.png)
+![training curves](../img/minigrid_train.png)
 
 If everything went well, the `valid` success rate should converge to 1 and the mean episode length to a value below 4.
 (For perfectly uniform sampling and complete observation, the expectation for the optimal policy is 3.75 steps.) In the
 not-so-unlikely event of the run failing to converge to a near-optimal policy, we can just try to re-run (for example
 with a different random seed). The validation curves should look similar to:
 
-![validation curves](./minigrid_valid.png)
+![validation curves](../img/minigrid_valid.png)
 
 ## Testing
 
@@ -286,4 +290,4 @@ Again, if everything went well, the `test` success rate should converge to 1 and
 below 4. Detailed results are saved under a `metrics` subfolder in the output folder.
 The test curves should look similar to:
 
-![test curves](./minigrid_test.png)
+![test curves](../img/minigrid_test.png)

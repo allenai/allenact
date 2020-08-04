@@ -1,3 +1,5 @@
+"""Experiment Config for MiniGrid tutorial."""
+
 from typing import Dict, Optional, List, Any
 
 import gym
