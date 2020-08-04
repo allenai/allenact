@@ -8,9 +8,10 @@ MiniGrid-Empty-Random-5x5 task looks like
 
 ![MiniGridEmptyRandom5x5 task example](./minigrid_environment.png)
 
-The observation for the agent is a subset of the entire grid simulating a simplified limited field of view. For example,
-if the agent is placed in the first row while looking up, only cells in the first row will be observable, as shown by
-the highlighted rectangle (observed subset of the grid) around the agent (red arrow). Gray cells correspond to walls.
+The observation for the agent is a subset of the entire grid simulating a simplified limited field of view.
+For example, if the agent is placed in the first row belowe the upper wall while looking up (towards the wall), only
+cells in the first row under the wall, out of the 9 that can be visited, will be observable, as depicted by the
+highlighted rectangle (observed subset of the grid) around the agent (red arrow). Gray cells correspond to walls.
 
 # Experiment configuration file
 
@@ -20,7 +21,7 @@ Our complete experiment consists of:
 - A second stage where we test saved checkpoints with a larger set of tasks.
 
 The entire configuration for the experiment, including training, validation and testing, is encapsulated in a single 
-class implementing an `ExperimentConfig` abstraction. For this tutorial, we will follow the config under
+class implementing the `ExperimentConfig` abstraction. For this tutorial, we will follow the config under
 [projects/tutorials/minigrid_tutorial.py](./minigrid_tutorial.py). 
 
 The `ExperimentConfig` abstraction is used by the
@@ -233,9 +234,9 @@ The training curves should look similar to
 ![training curves](./minigrid_train.png)
 
 If everything went well, the `valid` success rate should converge to 1 and the mean episode length to a value below 4.
-(For perfectly uniform sampling, the expectation for the optimal policy is 3.75 steps.) Since this is RL, if the run
-failed to converge to the optimal policy, we can just try to re-run, for example with a different seed. The validation
-curves should looks similar to
+(For perfectly uniform sampling, the expectation for the optimal policy is 3.75 steps.) In the not-so-unlikely event of
+the run failing to converge to the optimal policy, we can just try to re-run (for example with a different random seed).
+The validation curves should look similar to
 ![validation curves](./minigrid_valid.png)
 
 # Testing
