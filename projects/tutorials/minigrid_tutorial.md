@@ -1,15 +1,18 @@
 # MiniGrid tutorial
  
+This tutorial assumes the [installation instructions](/README.md#installation) have already been followed and, to some
+extent, our framework's [abstractions](/overview/abstractions.md) are known.
+ 
 # The task
 A MiniGrid-Empty-Random-5x5 task consists of a grid of dimensions 5x5 where an agent spawned at a random
-location and orientation has to navigate to the cell in the bottom right corner of the grid by sequences of three
+location and orientation has to navigate to the visitable bottom right corner cell of the grid by sequences of three
 possible actions (rotate left/right and move forward). A visualization of the environment for a random
 MiniGrid-Empty-Random-5x5 task looks like
 
 ![MiniGridEmptyRandom5x5 task example](./minigrid_environment.png)
 
 The observation for the agent is a subset of the entire grid simulating a simplified limited field of view.
-For example, if the agent is placed in the first row belowe the upper wall while looking up (towards the wall), only
+For example, if the agent is placed in the first row below the upper wall while looking up (towards the wall), only
 cells in the first row under the wall, out of the 9 that can be visited, will be observable, as depicted by the
 highlighted rectangle (observed subset of the grid) around the agent (red arrow). Gray cells correspond to walls.
 
@@ -59,10 +62,10 @@ allows us to extract observations for our agent in a format consumable by an `Ac
         EgocentricMiniGridSensor(agent_view_size=10, view_channels=3),
     ]
 ```
-The three `view_channels` include objects, colors and states corresponding to a partially observable image tensor
-equivalent to that in `ImgObsWrapper` in https://github.com/maximecb/gym-minigrid#wrappers. The relatively large
-`agent_view_size` means the view will only be clipped by the environment walls in the forward and lateral directions
-with respect to the agent's orientation.
+The three `view_channels` include objects, colors and states corresponding to a partial observation of the environment
+as an image tensor equivalent to that in `ImgObsWrapper` in https://github.com/maximecb/gym-minigrid#wrappers. The
+relatively large `agent_view_size` means the view will only be clipped by the environment walls in the forward and
+lateral directions with respect to the agent's orientation.
 
 We define our Actor-Critic model using an implementation with recurrent memory for MiniGrid
 environments, [MiniGridSimpleConvRNN](/api/extensions/rl_minigrid/minigrid_models/#minigridsimpleconvrnn):
