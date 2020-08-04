@@ -15,7 +15,7 @@ location and orientation has to navigate to the visitable bottom right corner ce
 possible actions (rotate left/right and move forward). A visualization of the environment with expert steps in a random
 `MiniGrid-Empty-Random-5x5-v0` task looks like
 
-![MiniGridEmptyRandom5x5 task example](/img/minigrid_environment.png)
+![MiniGridEmptyRandom5x5 task example](../img/minigrid_environment.png)
 
 The observation for the agent is a subset of the entire grid, simulating a simplified limited field of view, as
 depicted by the highlighted rectangle (observed subset of the grid) around the agent (red arrow). Gray cells correspond
@@ -266,14 +266,14 @@ which will default to the URL [http://localhost:6006/](http://localhost:6006/).
 After 150,000 steps, the script will terminate and several checkpoints will be saved in the output folder.
 The training curves should look similar to:
 
-![training curves](/img/minigrid_train.png)
+![training curves](../img/minigrid_train.png)
 
 If everything went well, the `valid` success rate should converge to 1 and the mean episode length to a value below 4.
 (For perfectly uniform sampling and complete observation, the expectation for the optimal policy is 3.75 steps.) In the
 not-so-unlikely event of the run failing to converge to a near-optimal policy, we can just try to re-run (for example
 with a different random seed). The validation curves should look similar to:
 
-![validation curves](/img/minigrid_valid.png)
+![validation curves](../img/minigrid_valid.png)
 
 ## Testing
 
@@ -290,4 +290,4 @@ Again, if everything went well, the `test` success rate should converge to 1 and
 below 4. Detailed results are saved under a `metrics` subfolder in the output folder.
 The test curves should look similar to:
 
-![test curves](/img/minigrid_test.png)
+![test curves](../img/minigrid_test.png)
