@@ -14,6 +14,9 @@ class HabitatEnvironment(object):
         # print("rl_habitat env constructor")
         self.x_display = x_display
         self.env = habitat.Env(config=config, dataset=dataset)
+        # Set the target to a random goal from the provided list for this episode
+        self.goal_index = 0
+        self.last_geodesic_distance = None
 
     @property
     def scene_name(self) -> str:
@@ -28,11 +31,6 @@ class HabitatEnvironment(object):
         self._current_frame = obs
         return obs
 
-    def get_geodesic_distance(self) -> float:
-        curr = self.get_location()
-        goal = self.get_current_episode().goals[0].position
-        return self.env.sim.geodesic_distance(curr, goal)
-
     def get_distance_to_target(self) -> float:
         curr = self.get_location()
         goal = self.get_current_episode().goals[0].view_points[0].agent_state.position
@@ -40,6 +38,9 @@ class HabitatEnvironment(object):
 
     def get_location(self) -> AgentState:
         return self.env.sim.get_agent_state().position
+
+    def get_rotation(self) -> AgentState:
+        return self.env.sim.get_agent_state().rotation
 
     def get_shortest_path(
         self, source_state: AgentState, target_state: AgentState,
@@ -60,7 +61,7 @@ class HabitatEnvironment(object):
 
     @property
     def last_action_success(self) -> bool:
-        # We can not pick things up so we really can't fail in our actions
+        # For now we can not have failure of actions
         return True
 
     @property

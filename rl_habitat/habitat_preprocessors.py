@@ -20,11 +20,6 @@ class ResNetEmbedder(nn.Module):
 
     def forward(self, x):
         with torch.no_grad():
-            # # TODO Debug
-            # import cv2
-            # for it in range(x.shape[0]):
-            #     cvim = 255.0 * (0.5 + 0.22 * x[it].to('cpu').permute(1, 2, 0).numpy()[:, :, ::-1])
-            #     cv2.imwrite('test_lores{}.png'.format(it), cvim)
 
             x = self.model.conv1(x)
             x = self.model.bn1(x)
@@ -85,7 +80,9 @@ class ResnetPreProcessorHabitat(Preprocessor):
         )
         self.device_ids = device_ids or list(range(torch.cuda.device_count()))
 
-        self.resnet = ResNetEmbedder(
+        self.resnet: Union[
+            ResNetEmbedder, torch.nn.DataParallel[ResNetEmbedder]
+        ] = ResNetEmbedder(
             self.make_model(pretrained=True).to(self.device), pool=self.pool
         )
 
