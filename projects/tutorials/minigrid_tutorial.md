@@ -15,7 +15,7 @@ the highlighted rectangle (observed subset of the grid) around the agent (red ar
 # Experiment configuration file
 
 Our complete experiment consists of:
-- Training a basic model with memory.
+- Training a basic model with memory to solve the navigation task.
 - Validation on a small set of tasks (running in parallel with training).
 - A second step where we test saved checkpoints with a larger set of tasks.
 The entire configuration for the experiment, including training, validation and testing, is encapsulated in a single 
@@ -57,8 +57,10 @@ allows us to extract observations for our agent in a format consumable by an `Ac
         EgocentricMiniGridSensor(agent_view_size=10, view_channels=3),
     ]
 ```
+The three `view_channels` include objects, colors and states corresponding to a partially observable image tensor
+equivalent to that in `ImgObsWrapper` in https://github.com/maximecb/gym-minigrid#wrappers.
 
-We define our Actor-Critic model using an existing implementation with recurrent memory for MiniGrid
+We define our Actor-Critic model using an implementation with recurrent memory for MiniGrid
 environments, [MiniGridSimpleConvRNN](/api/extensions/rl_minigrid/minigrid_models/#minigridsimpleconvrnn):
 
 ```python
@@ -249,4 +251,3 @@ Again, if everything went well, the `test` success rate should converge to 1 and
 below 4. Detailed results are saved under a `metrics` subfolder in the output folder.
 The test curves should look similar to
 ![test curves](./minigrid_test.png)
-
