@@ -1,4 +1,5 @@
 from typing import Callable, Dict, Optional
+import abc
 
 import gym
 import numpy as np
@@ -11,7 +12,107 @@ from onpolicy_sync.policy import ActorCriticModel
 from rl_base.distributions import CategoricalDistr
 
 
-class MiniGridSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
+class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
+    actor_critic: ActorCriticModel
+
+    def __init__(
+        self,
+        action_space: gym.spaces.Discrete,
+        observation_space: SpaceDict,
+        num_objects: int,
+        num_colors: int,
+        num_states: int,
+        object_embedding_dim: int = 8,
+    ):
+        super().__init__(action_space=action_space, observation_space=observation_space)
+
+        self.num_objects = num_objects
+        self.object_embedding_dim = object_embedding_dim
+
+        vis_input_shape = observation_space["minigrid_ego_image"].shape
+        agent_view_x, agent_view_y, view_channels = vis_input_shape
+        assert agent_view_x == agent_view_y
+        self.agent_view = agent_view_x
+        self.view_channels = view_channels
+
+        assert (np.array(vis_input_shape[:2]) >= 3).all(), (
+            "MiniGridSimpleConvRNN requires" "that the input size be at least 3x3."
+        )
+
+        self.num_channels = 0
+
+        if self.num_objects > 0:
+            # Object embedding
+            self.object_embedding = nn.Embedding(
+                num_embeddings=num_objects, embedding_dim=self.object_embedding_dim
+            )
+            self.object_channel = self.num_channels
+            self.num_channels += 1
+
+        self.num_colors = num_colors
+        if self.num_colors > 0:
+            # Same dimensionality used for colors and states
+            self.color_embedding = nn.Embedding(
+                num_embeddings=num_colors, embedding_dim=self.object_embedding_dim
+            )
+            self.color_channel = self.num_channels
+            self.num_channels += 1
+
+        self.num_states = num_states
+        if self.num_states > 0:
+            self.state_embedding = nn.Embedding(
+                num_embeddings=num_states, embedding_dim=self.object_embedding_dim
+            )
+            self.state_channel = self.num_channels
+            self.num_channels += 1
+
+        assert self.num_channels == self.view_channels > 0
+
+        self.ac_key = "enc"
+        self.observations_for_ac: Dict[str, Optional[torch.Tensor]] = {
+            self.ac_key: None
+        }
+
+    def forward(self, observations, recurrent_hidden_states, prev_actions, masks):
+        minigrid_ego_image = observations["minigrid_ego_image"]
+        nbatch, nrow, ncol, nchannels = minigrid_ego_image.shape
+        assert nrow == ncol == self.agent_view
+        # assert nchannels == self.view_channels == 3
+        assert nchannels == self.view_channels == self.num_channels
+        embed_list = []
+        if self.num_objects > 0:
+            ego_object_embeds = self.object_embedding(
+                minigrid_ego_image[:, :, :, self.object_channel].long()
+            )
+            embed_list.append(ego_object_embeds)
+        if self.num_colors > 0:
+            ego_color_embeds = self.color_embedding(
+                minigrid_ego_image[:, :, :, self.color_channel].long()
+            )
+            embed_list.append(ego_color_embeds)
+        if self.num_states > 0:
+            ego_state_embeds = self.state_embedding(
+                minigrid_ego_image[:, :, :, self.state_channel].long()
+            )
+            embed_list.append(ego_state_embeds)
+        ego_embeds = torch.cat(embed_list, dim=-1)
+
+        self.observations_for_ac[self.ac_key] = ego_embeds.view(nbatch, -1)
+
+        # noinspection PyCallingNonCallable
+        out, rnn_hidden_states = self.actor_critic(
+            observations=self.observations_for_ac,
+            recurrent_hidden_states=recurrent_hidden_states,
+            prev_actions=prev_actions,
+            masks=masks,
+        )
+
+        self.observations_for_ac[self.ac_key] = None
+
+        return (out, rnn_hidden_states)
+
+
+class MiniGridSimpleConvRNN(MiniGridSimpleConvBase):
     def __init__(
         self,
         action_space: gym.spaces.Discrete,
@@ -27,40 +128,20 @@ class MiniGridSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
             ..., ActorCriticModel[CategoricalDistr]
         ] = LinearActorCritic,
     ):
-        super().__init__(action_space=action_space, observation_space=observation_space)
+        super().__init__(
+            action_space=action_space,
+            observation_space=observation_space,
+            num_objects=num_objects,
+            num_colors=num_colors,
+            num_states=num_states,
+            object_embedding_dim=object_embedding_dim,
+        )
 
         self._hidden_size = hidden_size
-        self.num_objects = num_objects
-        self.object_embedding_dim = object_embedding_dim
-
-        vis_input_shape = observation_space["minigrid_ego_image"].shape
-        agent_view_x, agent_view_y, view_channels = vis_input_shape
-        assert agent_view_x == agent_view_y
-        self.agent_view = agent_view_x
-        self.view_channels = view_channels
-
-        assert (np.array(vis_input_shape[:2]) >= 7).all(), (
-            "MiniGridSimpleConvRNN requires" "that the input size be at least 7x7."
-        )
-
-        # Object embedding
-        self.object_embedding = nn.Embedding(
-            num_embeddings=num_objects, embedding_dim=self.object_embedding_dim
-        )
-
-        # Same dimensionality used for colors and states
-        self.color_embedding = nn.Embedding(
-            num_embeddings=num_colors, embedding_dim=self.object_embedding_dim
-        )
-        self.state_embedding = nn.Embedding(
-            num_embeddings=num_states, embedding_dim=self.object_embedding_dim
-        )
-
-        self.ac_key = "enc"
-        self.observations_for_ac: Dict[str, Optional[torch.Tensor]] = {
-            self.ac_key: None
-        }
-        self.rnn_actor_critic = RNNActorCritic(
+        agent_view_x, agent_view_y, view_channels = observation_space[
+            "minigrid_ego_image"
+        ].shape
+        self.actor_critic = RNNActorCritic(
             input_key=self.ac_key,
             action_space=action_space,
             observation_space=SpaceDict(
@@ -87,34 +168,60 @@ class MiniGridSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
 
     @property
     def num_recurrent_layers(self):
-        return self.rnn_actor_critic.num_recurrent_layers
+        return self.actor_critic.num_recurrent_layers
 
     @property
     def recurrent_hidden_state_size(self):
         return self._hidden_size
 
-    def forward(self, observations, recurrent_hidden_states, prev_actions, masks):
-        minigrid_ego_image = observations["minigrid_ego_image"]
-        nbatch, nrow, ncol, nchannels = minigrid_ego_image.shape
-        assert nrow == ncol == self.agent_view
-        assert nchannels == self.view_channels == 3
-        ego_object_embeds = self.object_embedding(minigrid_ego_image[:, :, :, 0].long())
-        ego_color_embeds = self.color_embedding(minigrid_ego_image[:, :, :, 1].long())
-        ego_state_embeds = self.state_embedding(minigrid_ego_image[:, :, :, 2].long())
-        ego_embeds = torch.cat(
-            (ego_object_embeds, ego_color_embeds, ego_state_embeds), dim=-1
+
+class MiniGridSimpleConv(MiniGridSimpleConvBase):
+    def __init__(
+        self,
+        action_space: gym.spaces.Discrete,
+        observation_space: SpaceDict,
+        num_objects: int,
+        num_colors: int,
+        num_states: int,
+        object_embedding_dim: int = 8,
+    ):
+        super().__init__(
+            action_space=action_space,
+            observation_space=observation_space,
+            num_objects=num_objects,
+            num_colors=num_colors,
+            num_states=num_states,
+            object_embedding_dim=object_embedding_dim,
         )
 
-        self.observations_for_ac[self.ac_key] = ego_embeds.view(nbatch, -1)
-
-        # noinspection PyCallingNonCallable
-        out, rnn_hidden_states = self.rnn_actor_critic(
-            observations=self.observations_for_ac,
-            recurrent_hidden_states=recurrent_hidden_states,
-            prev_actions=prev_actions,
-            masks=masks,
+        agent_view_x, agent_view_y, view_channels = observation_space[
+            "minigrid_ego_image"
+        ].shape
+        self.actor_critic = LinearActorCritic(
+            self.ac_key,
+            action_space=action_space,
+            observation_space=SpaceDict(
+                {
+                    self.ac_key: gym.spaces.Box(
+                        low=np.float32(-1.0),
+                        high=np.float32(1.0),
+                        shape=(
+                            self.object_embedding_dim
+                            * agent_view_x
+                            * agent_view_y
+                            * view_channels,
+                        ),
+                    )
+                }
+            ),
         )
 
-        self.observations_for_ac[self.ac_key] = None
+        self.train()
 
-        return (out, rnn_hidden_states)
+    @property
+    def num_recurrent_layers(self):
+        return 0
+
+    @property
+    def recurrent_hidden_state_size(self):
+        return 0

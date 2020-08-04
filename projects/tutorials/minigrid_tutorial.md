@@ -2,7 +2,12 @@
  
 This tutorial assumes the [installation instructions](/README.md#installation) have already been followed and, to some
 extent, the `embodied-ai` framework's [abstractions](/overview/abstractions.md) are known.
- 
+
+We will use a trivial task type to show how to:
+- Write an experiment configuration file with a simple training pipeline from scratch.
+- Use one of the supported third-party environments with minimal user effort. 
+- Train, validate and test your experiment from the command line.
+
 ## The task
 A MiniGrid-Empty-Random-5x5 task consists of a grid of dimensions 5x5 where an agent spawned at a random
 location and orientation has to navigate to the visitable bottom right corner cell of the grid by sequences of three
@@ -59,7 +64,7 @@ allows us to extract observations in a format consumable by an `ActorCriticModel
 
 ```python
     SENSORS = [
-        EgocentricMiniGridSensor(agent_view_size=10, view_channels=3),
+        EgocentricMiniGridSensor(agent_view_size=5, view_channels=3),
     ]
 ```
 
@@ -85,8 +90,8 @@ environments, [MiniGridSimpleConvRNN](/api/extensions/rl_minigrid/minigrid_model
 
 ### Task samplers
 
-We use an available TaskSampler class for MiniGrid environments that allows to sample both random and deterministic
-`MiniGridTasks`, [MiniGridTaskSampler](/api/extensions/rl_minigrid/minigrid_tasks/#minigridtasksampler):
+We use an available TaskSampler implementation for MiniGrid environments that allows to sample both random and
+deterministic `MiniGridTasks`, [MiniGridTaskSampler](/api/extensions/rl_minigrid/minigrid_tasks/#minigridtasksampler):
 
 ```python
     @classmethod
@@ -94,7 +99,12 @@ We use an available TaskSampler class for MiniGrid environments that allows to s
         return MiniGridTaskSampler(**kwargs)
 ```
 
-In order to define the task samplers' arguments for `train`, `valid` and `test`:
+This task sampler will during training (or validation/testing), randomly initialize new tasks for the agent to complete.
+While it is not quite as important for this task type (as we test our agent in the same setting it is trained on) there
+are a lot of good reasons we would like to sample tasks differently during training than during validation or testing.
+One good reason, that is applicable in this tutorial, is that, during training, we would like to be able to sample tasks
+forever while, during testing, we would like to sample a fixed number of tasks (as otherwise we would never finish
+testing!). In `embodied-ai` this is made possible by defining different arguments for the task sampler:
 
 ```python
     def train_task_sampler_args(
@@ -132,13 +142,26 @@ where, for convenience, we have defined a `_get_sampler_args` method:
 
 ```python
     def _get_sampler_args(self, process_ind: int, mode: str) -> Dict[str, Any]:
-        num_eval_tasks_per_sampler = 5 if mode == "valid" else 10
+        """
+        Generate initialization arguments for train, valid and test TaskSamplers.
+        By default, tasks sampled will have a maximum length of 10 steps and  
+        # Parameters
+        process_ind: index of the current task sampler
+        mode: one of `train`, `valid` or `test`
+        """
+        # Fixed number of tasks per sampler only used if mode != `train`:
+        num_eval_tasks_per_sampler = 20 if mode == "valid" else 40 
         return dict(
-            env_class=self.make_env,
+            env_class=self.make_env,  # builder for third-party environment (defined below)
             sensors=self.SENSORS,
-            env_info=dict(),
-            max_tasks=None if mode == "train" else num_eval_tasks_per_sampler,
-            deterministic_sampling=False if mode == "train" else True,
+            env_info=dict(),  # parameters for environment builder
+            max_tasks=None if mode == "train" else num_eval_tasks_per_sampler,  # infinite training tasks
+            deterministic_sampling=False if mode == "train" else True,  # randomly sample in training
+
+            # no predefined random seeds for training,
+            # else one seed for each task to sample:
+            # - ensures different seeds for each sampler
+            # - ensures a fixed seed for each task in each sampler
             task_seeds_list=None
             if mode == "train"
             else list(
@@ -159,8 +182,8 @@ model for (in this case, `MiniGrid-Empty-Random-5x5-v0` from https://github.com/
 . For training, we opt for a default random sampling, whereas for validation and test we define fixed sets of randomly
 sampled tasks without needing to explicitly define a dataset.
 
-In this toy example, the maximum number of different tasks is 32. For validation we sample 80 tasks, and 160 for
-testing, so we can be fairly sure that all possible tasks are visited at least once during evaluation.
+In this toy example, the maximum number of different tasks is 32. For validation we sample 320 tasks using 16 samplers,
+or 640 for testing, so we can be fairly sure that all possible tasks are visited at least once during evaluation.
 
 ### Machine parameters
 
@@ -219,10 +242,7 @@ We have a complete implementation of this experiment's configuration class in
 To start training from scratch, we just need to invoke
 
 ```bash
-python ddmain.py minigrid_tutorial -b projects/tutorials -m 1 -o /PATH/TO/minigrid_output -s 12345 \
-&> /PATH/TO/log_minigrid_experiment &
-
-tail -f /PATH/TO/log_minigrid_experiment
+python ddmain.py minigrid_tutorial -b projects/tutorials -m 1 -o /PATH/TO/minigrid_output -s 12345
 ```
 
 from the project root folder.
@@ -257,10 +277,7 @@ In order to test for a specific experiment, we need to pass its training start d
 `-t EXPERIMENT_DATE`:
 
 ```bash
-python ddmain.py minigrid_tutorial -b projects/tutorials -m 1 -o /PATH/TO/minigrid_output -s 12345 \
--t EXPERIMENT_DATE &> /PATH/TO/log_minigrid_test &
-
-tail -f /PATH/TO/log_minigrid_test
+python ddmain.py minigrid_tutorial -b projects/tutorials -m 1 -o /PATH/TO/minigrid_output -s 12345 -t EXPERIMENT_DATE
 ```
 
 Again, if everything went well, the `test` success rate should converge to 1 and the mean episode length to a value

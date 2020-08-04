@@ -21,7 +21,7 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
         return "MiniGridTutorial"
 
     SENSORS = [
-        EgocentricMiniGridSensor(agent_view_size=10, view_channels=3),
+        EgocentricMiniGridSensor(agent_view_size=5, view_channels=3),
     ]
 
     @classmethod
@@ -70,7 +70,7 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
         return EmptyRandomEnv5x5()
 
     def _get_sampler_args(self, process_ind: int, mode: str) -> Dict[str, Any]:
-        num_eval_tasks_per_sampler = 5 if mode == "valid" else 10
+        num_eval_tasks_per_sampler = 20 if mode == "valid" else 40
         return dict(
             env_class=self.make_env,
             sensors=self.SENSORS,
