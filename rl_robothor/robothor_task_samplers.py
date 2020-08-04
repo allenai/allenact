@@ -1,8 +1,3 @@
-
-from typing import List, Optional, Union, Dict, Any, Tuple
-import random
-import copy
-import json
 import gzip
 import copy
 import json
@@ -18,7 +13,7 @@ from rl_robothor.robothor_tasks import ObjectNavTask, PointNavTask
 from utils.experiment_utils import set_seed, set_deterministic_cudnn
 from utils.cache_utils import find_nearest_point_in_cache
 from utils.system import get_logger
-LOGGER = get_logger()
+
 
 class ObjectNavTaskSampler(TaskSampler):
     def __init__(
@@ -436,7 +431,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             "object_type": episode["object_type"]
         }
         if len(task_info) == 0:
-            LOGGER.warning(
+            get_logger().warning(
                 "Scene {} does not contain any"
                 " objects of any of the types {}.".format(scene, self.object_types)
             )
@@ -450,7 +445,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         else:
             task_info["mirrored"] = False
         if self.reset_tasks is not None:
-            LOGGER.debug("valid task_info {}".format(task_info))
+            get_logger().debug("valid task_info {}".format(task_info))
         self.episode_index += 1
         if self.max_tasks is not None:
             self.max_tasks -= 1
@@ -851,7 +846,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
             task_info["mirrored"] = False
 
         if self.reset_tasks is not None:
-            LOGGER.debug("valid task_info {}".format(task_info))
+            get_logger().debug("valid task_info {}".format(task_info))
 
         self.episode_index += 1
         if self.max_tasks is not None:

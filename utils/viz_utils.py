@@ -9,11 +9,8 @@ from matplotlib.figure import Figure
 
 from onpolicy_sync.storage import RolloutStorage
 from utils.experiment_utils import Builder
-from rl_base.common import ActorCriticOutput
-import math
 from utils.system import get_logger
 from utils.tensor_utils import SummaryWriter, tile_images, process_video
-LOGGER = get_logger()
 
 
 class AbstractViz:
@@ -294,10 +291,6 @@ class AgentViewViz(AbstractViz):
                 images.append([step[datum_id] for step in render[episode_id]])
             if len(images) == 0:
                 continue
-            # for saveit, image in enumerate(images[0]):
-            #     import cv2
-            #
-            #     cv2.imwrite("dump{}.png".format(saveit), image[:, :, ::-1])
             vid = self.make_vid(images)
             if vid is not None:
                 log_writer.add_vid(
@@ -369,9 +362,6 @@ class AbstractTensorViz(AbstractViz):
         for page, current_ids in enumerate(self.episode_ids):
             figs = []
             for episode_id in current_ids:
-                # assert (
-                #     episode_id in render and len(render[episode_id]) > 0
-                # ), "missing or empty episode {}".format(episode_id)
                 if episode_id not in render or len(render[episode_id]) == 0:
                     get_logger().warning(
                         "skipping viz for missing or 0-length episode {}".format(
@@ -385,13 +375,6 @@ class AbstractTensorViz(AbstractViz):
                     if self.datum_id in step
                 ]
 
-                # query = self._source_to_str(self.rnn_hidden_memory, is_vector_task=False)
-                # assert query == self.datum_id
-                # for debug_it in range(min(10, len(episode_src))):
-                #     get_logger().debug("basic to_render {} {} {} {}".format(self.datum_id, episode_id, debug_it, episode_src[debug_it][..., 0]))
-
-                # TODO missing tensor for last step if this is last episode in sampler
-                # get_logger().debug("found {} for {} steps from total {} steps".format(self.datum_id, len(episode_src), len(render[episode_id])))
                 figs.append(self.make_fig(episode_src, episode_id))
             if len(figs) == 0:
                 continue
@@ -624,10 +607,6 @@ class SimpleViz(AbstractViz):
             self.episode_ids.append(new_episodes)
             self.all_episode_ids = self._episodes_set()
 
-        # get_logger().debug("rollout sources {}".format(rollout_sources))
-        # get_logger().debug("vector task sources {}".format(vector_task_sources))
-        # get_logger().debug("actor-critic source {}".format(actor_critic_source))
-
         rol_flat = {json.dumps(src, sort_keys=True): src for src in rollout_sources}
         vt_flat = {json.dumps(src, sort_keys=True): src for src in vector_task_sources}
 
@@ -653,19 +632,13 @@ class SimpleViz(AbstractViz):
     def _update(self, collected_data):
         for epid in collected_data:
             assert epid in self.data
-            # get_logger().debug("Updating {} to {} ({} steps)".format(list(collected_data[epid].keys()), epid, len(self.data[epid])))
             self.data[epid][-1].update(collected_data[epid])
-            # query = self._source_to_str(self.rnn_hidden_memory, is_vector_task=False)
-            # if query in collected_data[epid]:
-            #     get_logger().debug("basic collected {} {}".format(epid, self.data[epid][-1][query][..., 0]))
 
     def _append(self, vector_task_data):
         for epid in vector_task_data:
             if epid in self.data:
-                # get_logger().debug("Appending {} to {} ({} steps)".format(list(vector_task_data[epid].keys()), epid, len(self.data[epid])))
                 self.data[epid].append(vector_task_data[epid])
             else:
-                # get_logger().debug("Append {} to new episode {}".format(list(vector_task_data[epid].keys()), epid))
                 self.data[epid] = [vector_task_data[epid]]
 
     def _collect_actor_critic(self, actor_critic):
@@ -704,7 +677,6 @@ class SimpleViz(AbstractViz):
         alive_it2epid = [
             epid for it, epid in enumerate(self.last_it2epid) if it in alive_set
         ]
-        # assert len(alive_it2epid) == len(it2epid) or len(self.last_it2epid) == 0
         rollout_data = {
             epid: dict() for epid in alive_it2epid if epid in self.all_episode_ids
         }
@@ -722,14 +694,11 @@ class SimpleViz(AbstractViz):
 
                 # Access sub-storage if path not empty
                 if len(path) > 0:
-                    # get_logger().debug("storage {} keys {} key {}".format(storage, rollout.reverse_flattened_spaces[storage], tuple(path)))
                     for path_step in rollout.reverse_flattened_spaces[storage][
                         tuple(path)
                     ]:
                         res = res[path_step]
                     res, episode_dim = res
-
-                # get_logger().debug("basic res shape")
 
                 # Select latest step
                 res = res.narrow(
@@ -789,10 +758,6 @@ class SimpleViz(AbstractViz):
 
     # to be called by engine
     def collect(self, vector_task=None, alive=None, rollout=None, actor_critic=None):
-        # # TODO assume we never revisit same episode? we have one entry per episode id in data
-        # get_logger().debug("Data entries: {}".format(list(self.data.keys())))
-        # for entry in self.data:
-        #     get_logger().debug("{}: {} steps, last {}".format(entry, len(self.data[entry]), list(self.data[entry][-1].keys())))
 
         if actor_critic is not None:
             # in phase with last_it2epid
@@ -807,13 +772,7 @@ class SimpleViz(AbstractViz):
             # in phase with identifiers of current episodes from vector_task
             self.last_it2epid = self._collect_vector_task(vector_task)
 
-        # # TODO Post checks for debugging
-        # if alive is not None:
-        #     assert len(alive) <= len(self.last_it2epid) or len(self.last_it2epid) == 0
-        #     if vector_task is not None:
-        #         assert len(alive) == len(self.last_it2epid)
 
-    # to be called by engine
     def read_and_reset(self):
         res, self.data = self.data, {}
         # get_logger().debug("Returning episodes {}".format(list(res.keys())))

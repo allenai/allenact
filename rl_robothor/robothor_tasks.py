@@ -2,12 +2,7 @@ from typing import Tuple, List, Dict, Any, Optional
 
 import gym
 import numpy as np
-import math
 from ai2thor.util.metrics import compute_single_spl
-
-from rl_base.common import RLStepResult
-from rl_base.sensor import Sensor
-from rl_base.task import Task
 from rl_robothor.robothor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
@@ -22,57 +17,6 @@ from rl_base.sensor import Sensor
 from rl_base.task import Task
 from utils.cache_utils import get_distance, get_distance_to_object
 from utils.system import get_logger
-LOGGER = get_logger()
-
-# class RoboThorTask(Task[RoboThorEnvironment]):
-#     def __init__(
-#         self,
-#         env: RoboThorEnvironment,
-#         sensors: List[Sensor],
-#         task_info: Dict[str, Any],
-#         max_steps: int,
-#         **kwargs
-#     ) -> None:
-#         super().__init__(
-#             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
-#         )
-#
-#         self._last_action: Optional[str] = None
-#         self._last_action_ind: Optional[int] = None
-#         self._last_action_success: Optional[bool] = None
-#
-#     @property
-#     def last_action(self):
-#         return self._last_action
-#
-#     @last_action.setter
-#     def last_action(self, value: str):
-#         self._last_action = value
-#
-#     @property
-#     def last_action_success(self):
-#         return self._last_action_success
-#
-#     @last_action_success.setter
-#     def last_action_success(self, value: Optional[bool]):
-#         self._last_action_success = value
-#
-#     # def _step(self, action: int) -> RLStepResult:
-#     #     self._last_action_ind = action
-#     #     self.last_action = self.action_names()[action]
-#     #     self.last_action_success = None
-#     #     step_result = super().step(action=action)
-#     #     step_result.info["action"] = self._last_action_ind
-#     #     step_result.info["action_success"] = self.last_action_success
-#     #     return step_result
-#
-#     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
-#         if mode == "rgb":
-#             return self.env.current_frame["rgb"]
-#         elif mode == "depth":
-#             return self.env.current_frame["depth"]
-#         else:
-#             raise NotImplementedError()
 
 
 class PointNavTask(Task[RoboThorEnvironment]):
@@ -89,7 +33,6 @@ class PointNavTask(Task[RoboThorEnvironment]):
         episode_info: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> None:
-        # print("task info in objectnavtask %s" % task_info)
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
@@ -106,14 +49,13 @@ class PointNavTask(Task[RoboThorEnvironment]):
             dist = self.env.path_corners_to_dist(self.episode_optimal_corners)
         if dist == float("inf"):
             dist = -1.0  # -1.0 for unreachable
-            LOGGER.warning("No path for {} from {} to {}".format(self.env.scene_name, self.env.agent_state(), task_info["target"]))
+            get_logger().warning("No path for {} from {} to {}".format(self.env.scene_name, self.env.agent_state(), task_info["target"]))
 
         if self.distance_cache:
             self.last_geodesic_distance = get_distance(self.distance_cache, self.env.agent_state(), self.task_info['target'])
         else:
             self.last_geodesic_distance = self.env.dist_to_object(self.task_info["object_type"])
 
-        # self.last_geodesic_distance = dist
         self.optimal_distance = self.last_geodesic_distance
         self._rewards = []
         self._distance_to_goal = []
@@ -128,9 +70,6 @@ class PointNavTask(Task[RoboThorEnvironment]):
     def reached_terminal_state(self) -> bool:
         return self._took_end_action
 
-    # @classmethod
-    # def action_names(cls) -> Tuple[str, ...]:
-    #     return cls._actions
     @classmethod
     def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
         return cls._actions
@@ -169,10 +108,6 @@ class PointNavTask(Task[RoboThorEnvironment]):
 
     def _is_goal_in_range(self) -> Optional[bool]:
         tget = self.task_info["target"]
-        # pose = self.env.agent_state()
-        # dist = np.sqrt((pose['x'] - tget['x']) ** 2 + (pose['z'] - tget['z']) ** 2)
-
-        # dist = self._get_distance_to_target()
         if self.distance_cache:
             dist = get_distance(self.distance_cache, self.env.agent_state(), self.task_info['target'])
         else:
@@ -190,28 +125,12 @@ class PointNavTask(Task[RoboThorEnvironment]):
             )
             return None
 
-    # def judge(self) -> float:
-    #     reward = -0.01
-    #
-    #     geodesic_distance = self.env.dist_to_point(self.task_info['target'])
-    #     if self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5:  # (robothor limits)
-    #         reward += self.last_geodesic_distance - geodesic_distance
-    #     self.last_geodesic_distance = geodesic_distance
-    #
-    #     if self._took_end_action:
-    #         reward += 10.0 if self._success else 0.0
-    #
-    #     self._rewards.append(float(reward))
-    #
-    #     return float(reward)
-
     def shaping(self) -> float:
         rew = 0.0
 
         if self.reward_configs["shaping_weight"] == 0.0:
             return rew
 
-        # geodesic_distance = self._get_distance_to_target()
         if self.distance_cache:
             geodesic_distance = get_distance(self.distance_cache, self.env.agent_state(), self.task_info['target'])
         else:
@@ -219,15 +138,8 @@ class PointNavTask(Task[RoboThorEnvironment]):
 
         if geodesic_distance == -1.0:
             geodesic_distance = self.last_geodesic_distance
-        # rew += self.last_geodesic_distance - geodesic_distance
         if self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5:  # (robothor limits)
             rew += self.last_geodesic_distance - geodesic_distance
-            # if self.last_geodesic_distance > geodesic_distance:
-            #     rew += self.reward_configs["delta_dist_reward_closer"]
-            # elif self.last_geodesic_distance == geodesic_distance:
-            #     rew += self.reward_configs["delta_dist_reward_same"]
-            # else:
-            #     rew += self.reward_configs["delta_dist_reward_further"]
         self.last_geodesic_distance = geodesic_distance
 
         return rew * self.reward_configs["shaping_weight"]
@@ -237,9 +149,6 @@ class PointNavTask(Task[RoboThorEnvironment]):
         reward = self.reward_configs["step_penalty"]
 
         reward += self.shaping()
-
-        # if not self.last_action_success:
-        #     reward += self.reward_configs["unsuccessful_action_penalty"]
 
         if self._took_end_action:
             if self._success is not None:
@@ -401,36 +310,11 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             for o in self.env.visible_objects()
         )
 
-    # def judge(self) -> float:
-    #     reward = -0.01
-    #
-    #     geodesic_distance = self.env.dist_to_object(self.task_info["object_type"])
-    #     if self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5:  # (robothor limits)
-    #         reward += self.last_geodesic_distance - geodesic_distance
-    #     self.last_geodesic_distance = geodesic_distance
-    #
-    #     if self._took_end_action:
-    #         reward += 10.0 if self._success else 0.0
-    #
-    #     self._rewards.append(float(reward))
-    #
-    #     return float(reward)
-
     def shaping(self) -> float:
         rew = 0.0
 
         if self.reward_configs["shaping_weight"] == 0.0:
             return rew
-
-        # geodesic_distance = self.env.dist_to_object(self.task_info["object_type"])
-        # if self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5:  # (robothor limits)
-        #     if self.last_geodesic_distance > geodesic_distance:
-        #         rew += self.reward_configs["delta_dist_reward_closer"]
-        #     elif self.last_geodesic_distance == geodesic_distance:
-        #         rew += self.reward_configs["delta_dist_reward_same"]
-        #     else:
-        #         rew += self.reward_configs["delta_dist_reward_further"]
-        # self.last_geodesic_distance = geodesic_distance
 
         if self.distance_cache:
             geodesic_distance = get_distance_to_object(
@@ -442,15 +326,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             rew += self.last_geodesic_distance - geodesic_distance
         self.last_geodesic_distance = geodesic_distance
 
-        # # ...and also exploring! We won't be able to hit the optimal path in test
-        # old_visited = len(self.visited)
-        # self.visited.add(
-        #     self.env.agent_to_grid(xz_subsampling=4, rot_subsampling=3)
-        # )  # squares of 1 m2, sectors of 90 deg
-        # rew += self.reward_configs["exploration_shaping_weight"] * (
-        #     len(self.visited) - old_visited
-        # )
-
         return rew * self.reward_configs["shaping_weight"]
 
     def judge(self) -> float:
@@ -458,9 +333,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         reward = self.reward_configs["step_penalty"]
 
         reward += self.shaping()
-
-        # if not self.last_action_success:
-        #     reward += self.reward_configs["unsuccessful_action_penalty"]
 
         if self._took_end_action:
             reward += (
@@ -486,7 +358,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
     def get_observations(self) -> Any:
         obs = self.sensor_suite.get_observations(env=self.env, task=self)
         if self.mirror:
-            # flipped = []
             for o in obs:
                 if ("rgb" in o or "depth" in o) and isinstance(obs[o], np.ndarray):
                     if (
@@ -495,8 +366,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                         obs[o] = obs[o][:, ::-1, :].copy()  # horizontal flip
                     elif len(obs[o].shape) == 2:  # perhaps only two axes for depth?
                         obs[o] = obs[o][:, ::-1].copy()  # horizontal flip
-                    # flipped.append(o)
-            # print('flipped {}'.format(flipped))
         return obs
 
     def metrics(self) -> Dict[str, Any]:
@@ -517,6 +386,5 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 "spl": self.spl(),
                 "task_info": self.task_info,
             }
-            # get_logger().debug("{} Metrics {}".format(self.task_info["id"], {k: v for k, v in metrics.items() if k != "task_info"}))
             self._rewards = []
             return metrics
