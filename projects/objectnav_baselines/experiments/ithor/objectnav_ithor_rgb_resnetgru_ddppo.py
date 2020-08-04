@@ -93,7 +93,7 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return ResnetTensorObjectNavActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask._actions)),
+            action_space=gym.spaces.Discrete(len(ObjectNavTask.class_action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="goal_object_type_ind",
             rgb_resnet_preprocessor_uuid="rgb_resnet",

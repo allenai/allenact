@@ -55,14 +55,12 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     SENSORS = [
         RGBSensorThor(
-            {
-                "height": SCREEN_SIZE,
-                "width": SCREEN_SIZE,
-                "use_resnet_normalization": True,
-                "uuid": "rgb_lowres",
-            }
+            height=SCREEN_SIZE,
+            width=SCREEN_SIZE,
+            use_resnet_normalization=True,
+            uuid="rgb_lowres",
         ),
-        GPSCompassSensorRoboThor({}),
+        GPSCompassSensorRoboThor(),
     ]
 
     PREPROCESSORS = [
@@ -179,7 +177,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return ResnetTensorPointNavActorCritic(
-            action_space=gym.spaces.Discrete(len(PointNavTask._actions)),
+            action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             rgb_resnet_preprocessor_uuid="rgb_resnet",

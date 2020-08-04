@@ -90,7 +90,7 @@ class PointNaviThorRGBPPOExperimentConfig(PointNaviThorBaseConfig):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return PointNavActorCriticSimpleConvRNN(
-            action_space=gym.spaces.Discrete(len(PointNavTask._actions)),
+            action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
