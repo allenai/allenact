@@ -10,6 +10,7 @@ from torch import nn
 from models.basic_models import LinearActorCritic, RNNActorCritic
 from onpolicy_sync.policy import ActorCriticModel
 from rl_base.distributions import CategoricalDistr
+from utils.misc_utils import prepare_locals_for_super
 
 
 class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
@@ -23,6 +24,7 @@ class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
         num_colors: int,
         num_states: int,
         object_embedding_dim: int = 8,
+        **kwargs,
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
@@ -127,15 +129,9 @@ class MiniGridSimpleConvRNN(MiniGridSimpleConvBase):
         head_type: Callable[
             ..., ActorCriticModel[CategoricalDistr]
         ] = LinearActorCritic,
+        **kwargs,
     ):
-        super().__init__(
-            action_space=action_space,
-            observation_space=observation_space,
-            num_objects=num_objects,
-            num_colors=num_colors,
-            num_states=num_states,
-            object_embedding_dim=object_embedding_dim,
-        )
+        super().__init__(**prepare_locals_for_super(locals()))
 
         self._hidden_size = hidden_size
         agent_view_x, agent_view_y, view_channels = observation_space[
@@ -184,15 +180,9 @@ class MiniGridSimpleConv(MiniGridSimpleConvBase):
         num_colors: int,
         num_states: int,
         object_embedding_dim: int = 8,
+        **kwargs,
     ):
-        super().__init__(
-            action_space=action_space,
-            observation_space=observation_space,
-            num_objects=num_objects,
-            num_colors=num_colors,
-            num_states=num_states,
-            object_embedding_dim=object_embedding_dim,
-        )
+        super().__init__(**prepare_locals_for_super(locals()))
 
         agent_view_x, agent_view_y, view_channels = observation_space[
             "minigrid_ego_image"
