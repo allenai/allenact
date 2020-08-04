@@ -6,7 +6,7 @@ extent, the `embodied-ai` framework's [abstractions](/overview/abstractions.md) 
 # The task
 A MiniGrid-Empty-Random-5x5 task consists of a grid of dimensions 5x5 where an agent spawned at a random
 location and orientation has to navigate to the visitable bottom right corner cell of the grid by sequences of three
-possible actions (rotate left/right and move forward). A visualization of the environment for expert steps in a random
+possible actions (rotate left/right and move forward). A visualization of the environment with expert steps in a random
 MiniGrid-Empty-Random-5x5 task looks like
 
 ![MiniGridEmptyRandom5x5 task example](./minigrid_environment.png)
