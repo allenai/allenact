@@ -252,7 +252,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask._actions)),
+            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG,
