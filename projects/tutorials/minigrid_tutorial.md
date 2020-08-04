@@ -11,10 +11,12 @@ the agent (red arrow).
 
 # Experiment configuration file
 
-Our experiment consists of training a basic model with memory to complete each task, running in parallel with
-validation on a small set of tasks, and a second step where we test all saved checkpoints with a larger set of tasks.
+Our experiment consists of:
+- Training a basic model with memory to complete each task
+- Validation on a small set of tasks running in parallel with training
+- A second step where we test saved checkpoints with a larger set of tasks.
 The entire configuration for the experiment, including training, validation and testing, is encapsulated in a single 
-class implementing an `ExperimentConfig`. For this tutorial, we will follow the config under
+class implementing an `ExperimentConfig` abstraction. For this tutorial, we will follow the config under
 [projects/tutorials/minigrid_tutorial.py](./minigrid_tutorial.py). 
 
 The `ExperimentConfig` abstraction, which is the one used by an
