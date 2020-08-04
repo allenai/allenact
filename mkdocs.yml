@@ -63,9 +63,6 @@ nav:
       - lighthouse_sensors: api/extensions/rl_lighthouse/lighthouse_sensors.md
       - lighthouse_util: api/extensions/rl_lighthouse/lighthouse_util.md
   - models:
-    - point_nav_models: api/models/point_nav_models.md
-    - gru_map: api/models/gru_map.md
-    - object_nav_models: api/models/object_nav_models.md
     - basic_models: api/models/basic_models.md
     - frcnn_tensor_object_nav_models: api/models/frcnn_tensor_object_nav_models.md
     - resnet_tensor_object_nav_models: api/models/resnet_tensor_object_nav_models.md
@@ -82,10 +79,24 @@ nav:
     - runner: api/onpolicy_sync/runner.md
     - light_engine: api/onpolicy_sync/light_engine.md
     - policy: api/onpolicy_sync/policy.md
-    - engine: api/onpolicy_sync/engine.md
     - vector_sampled_tasks: api/onpolicy_sync/vector_sampled_tasks.md
     - storage: api/onpolicy_sync/storage.md
   - projects:
+    - objectnav_baselines:
+      - experiments:
+        - robothor:
+          - objectnav_robothor_base: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_base.md
+          - objectnav_robothor_rgb_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_ddppo.md
+          - objectnav_robothor_rgbd_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgbd_resnetgru_ddppo.md
+          - objectnav_robothor_depth_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_depth_resnetgru_ddppo.md
+        - ithor:
+          - objectnav_ithor_rgbd_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_rgbd_resnetgru_ddppo.md
+          - objectnav_ithor_depth_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_depth_resnetgru_ddppo.md
+          - objectnav_ithor_rgb_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_rgb_resnetgru_ddppo.md
+          - objectnav_ithor_base: api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_base.md
+        - objectnav_base: api/projects/objectnav_baselines/experiments/objectnav_base.md
+      - models:
+        - object_nav_models: api/projects/objectnav_baselines/models/object_nav_models.md
     - babyai_baselines:
       - experiments:
         - go_to_local:
@@ -103,8 +114,31 @@ nav:
           - a2c: api/projects/babyai_baselines/experiments/go_to_obj/a2c.md
           - base: api/projects/babyai_baselines/experiments/go_to_obj/base.md
         - base: api/projects/babyai_baselines/experiments/base.md
+    - pointnav_baselines:
+      - experiments:
+        - robothor:
+          - pointnav_robothor_rgbd_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgbd_simpleconvgru_ddppo.md
+          - pointnav_robothor_depth_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_depth_simpleconvgru_ddppo.md
+          - pointnav_robothor_rgb_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_simpleconvgru_ddppo.md
+          - pointnav_robothor_base: api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_base.md
+        - habitat:
+          - pointnav_habitat_rgb_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgb_simpleconvgru_ddppo.md
+          - pointnav_habitat_rgbd_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgbd_simpleconvgru_ddppo.md
+          - pointnav_habitat_base: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_base.md
+          - pointnav_habitat_depth_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo.md
+        - pointnav_base: api/projects/pointnav_baselines/experiments/pointnav_base.md
+        - ithor:
+          - pointnav_ithor_rgbd_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_rgbd_simpleconvgru_ddppo.md
+          - pointnav_ithor_rgb_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_rgb_simpleconvgru_ddppo.md
+          - pointnav_ithor_base: api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_base.md
+          - pointnav_ithor_depth_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_depth_simpleconvgru_ddppo.md
+      - models:
+        - point_nav_models: api/projects/pointnav_baselines/models/point_nav_models.md
     - tutorials:
       - minigrid_tutorial: api/projects/tutorials/minigrid_tutorial.md
+    - robothor_pointnav_tutorial:
+      - experiments:
+        - pointnav_robothor_rgb_ddppo: api/projects/robothor_pointnav_tutorial/experiments/pointnav_robothor_rgb_ddppo.md
   - rl_ai2thor:
     - ai2thor_environment: api/rl_ai2thor/ai2thor_environment.md
     - ithor_constants: api/rl_ai2thor/ithor_constants.md
@@ -150,6 +184,7 @@ nav:
     - misc_utils: api/utils/misc_utils.md
     - viz_utils: api/utils/viz_utils.md
     - tensor_utils: api/utils/tensor_utils.md
+    - cache_utils: api/utils/cache_utils.md
 markdown_extensions:
 - toc:
     permalink: '#'
