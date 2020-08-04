@@ -30,7 +30,7 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
 
 ## Sensors
 
-An existing Sensor type for MiniGrid allows us to extract observations for our agent in the correct format:
+An existing Sensor type for MiniGrid, [EgocentricMiniGridSensor](/api/extenstions/rl_minigrid/minigrid_sensors/#egocentricminigridsensor), allows us to extract observations for our agent in the correct format:
 
 ```python
     SENSORS = [
@@ -41,7 +41,7 @@ An existing Sensor type for MiniGrid allows us to extract observations for our a
 ## Model
 
 We define our model using the existing implementation for Actor-Critic models with recurrent memory for MiniGrid
-environments:
+environments, [MiniGridSimpleConvRNN](/api/extenstions/rl_minigrid/minigrid_models/#minigridsimpleconvrnn):
 
 ```python
     @classmethod
@@ -57,7 +57,7 @@ environments:
 
 ## Task sampler
 
-We use the available TaskSampler for MiniGrid environments:
+We use the available TaskSampler for MiniGrid environments, [MiniGridTaskSampler](/api/extenstions/rl_minigrid/minigrid_tasks/#minigridtasksampler):
 
 ```python
     @classmethod
@@ -126,8 +126,9 @@ For convenience, we have implemented a `_get_sampler_args` method:
 ```
 
 Note that the `env_class` argument to the Task Sampler is the one determining which task type we are going to train the
-model for. For training, we opt for a default random sampling, whereas for validation and test we define fixed sets of
-tasks without needing to explicitly define a dataset.
+model for (in this case, `MiniGrid-Empty-Random-5x5-v0` from https://github.com/maximecb/gym-minigrid#empty-environment)
+. For training, we opt for a default random sampling, whereas for validation and test we define fixed sets of tasks
+without needing to explicitly define a dataset.
 
 ## Machine parameters
 
