@@ -18,9 +18,9 @@ to walls.
 # Experiment configuration file
 
 Our complete experiment consists of:
-- Training a basic actor-critic agent with memory to solve the navigation task.
-- Validation on a small set of tasks (running in parallel with training).
-- A second stage where we test saved checkpoints with a larger set of tasks.
+- Training a basic actor-critic agent with memory to solve randomly sampled navigation tasks.
+- Validation on a fixed set of tasks (running in parallel with training).
+- A second stage where we test saved checkpoints with a larger fixed set of tasks.
 
 The entire configuration for the experiment, including training, validation, and testing, is encapsulated in a single 
 class implementing the `ExperimentConfig` abstraction. For this tutorial, we will follow the config under
@@ -158,8 +158,8 @@ model for (in this case, `MiniGrid-Empty-Random-5x5-v0` from https://github.com/
 . For training, we opt for a default random sampling, whereas for validation and test we define fixed sets of randomly
 sampled tasks without needing to explicitly define a dataset.
 
-In this toy example, the maximum number of different episodes is 32. For validation we sample 80 episodes, and 160 for
-testing, so we can be fairly sure that all possible episodes are visited at least once during evaluation.
+In this toy example, the maximum number of different tasks is 32. For validation we sample 80 tasks, and 160 for
+testing, so we can be fairly sure that all possible tasks are visited at least once during evaluation.
 
 ## Machine parameters
 
