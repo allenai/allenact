@@ -3,7 +3,7 @@
 This tutorial assumes the [installation instructions](/README.md#installation) have already been followed and, to some
 extent, the `embodied-ai` framework's [abstractions](/overview/abstractions.md) are known.
  
-# The task
+## The task
 A MiniGrid-Empty-Random-5x5 task consists of a grid of dimensions 5x5 where an agent spawned at a random
 location and orientation has to navigate to the visitable bottom right corner cell of the grid by sequences of three
 possible actions (rotate left/right and move forward). A visualization of the environment with expert steps in a random
@@ -15,7 +15,7 @@ The observation for the agent is a subset of the entire grid, simulating a simpl
 depicted by the highlighted rectangle (observed subset of the grid) around the agent (red arrow). Gray cells correspond
 to walls.
 
-# Experiment configuration file
+## Experiment configuration file
 
 Our complete experiment consists of:
 - Training a basic actor-critic agent with memory to solve randomly sampled navigation tasks.
@@ -39,7 +39,7 @@ training, validation, and testing; including assignment of workers to devices fo
 - A `training_pipeline` method describing a possibly multi-staged training pipeline with different types of losses,
 an optimizer, and other parameters like learning rates, batch sizes, etc.
 
-## Preliminaries
+### Preliminaries
 
 We first identify the experiment through a `tag`.  
 
@@ -50,7 +50,7 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
         return "MiniGridTutorial"
 ```
 
-## Sensors and Model
+### Sensors and Model
 
 A readily available Sensor type for MiniGrid,
 [EgocentricMiniGridSensor](/api/extensions/rl_minigrid/minigrid_sensors/#egocentricminigridsensor),
@@ -82,7 +82,7 @@ environments, [MiniGridSimpleConvRNN](/api/extensions/rl_minigrid/minigrid_model
         )
 ```
 
-## Task samplers
+### Task samplers
 
 We use an available TaskSampler class for MiniGrid environments that allows to sample both random and deterministic
 `MiniGridTasks`, [MiniGridTaskSampler](/api/extensions/rl_minigrid/minigrid_tasks/#minigridtasksampler):
@@ -161,7 +161,7 @@ sampled tasks without needing to explicitly define a dataset.
 In this toy example, the maximum number of different tasks is 32. For validation we sample 80 tasks, and 160 for
 testing, so we can be fairly sure that all possible tasks are visited at least once during evaluation.
 
-## Machine parameters
+### Machine parameters
 
 Given the simplicity of the task and model, we can quickly train the model on the CPU:
 
@@ -177,7 +177,7 @@ Given the simplicity of the task and model, we can quickly train the model on th
 We allocate a larger number of samplers for training (128) than for validation or testing (16), and we default to CPU
 usage by returning an empty list of `gpu_ids`.
 
-## Training pipeline
+### Training pipeline
 
 The last definition required before starting to train is a training pipeline. In this case, we just use a single PPO
 stage with linearly decaying learning rate:
@@ -211,7 +211,7 @@ stage with linearly decaying learning rate:
 You can see that we use a `Builder` class to postpone the construction of some of the elements, like the optimizer,
 for which the model weights need to be known.
 
-# Training
+## Training
 
 We have a complete implementation of this experiment's configuration class in
 [projects/tutorials/minigrid_tutorial.py](./minigrid_tutorial.py).
@@ -248,7 +248,7 @@ with a different random seed). The validation curves should look similar to:
 
 ![validation curves](./minigrid_valid.png)
 
-# Testing
+## Testing
 
 The training start date for the experiment, in `YYYY-MM-DD_HH-MM-SS` format, is used as the name of one of the
 subfolders in the path to the checkpoints, saved under the output folder.
