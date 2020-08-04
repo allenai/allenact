@@ -14,7 +14,10 @@ the agent (red arrow).
 # Experiment configuration file
 
 Our experiment consists of training a basic model with memory to complete the task running in parallel with validation
-on a small set of tasks and a second step where we test all saved checkpoints with a larger test set. 
+on a small set of tasks and a second step where we test all saved checkpoints with a larger test set. The entire
+configuration for the experiment, including training, validation and testing, is encapsulated in a single
+`ExperimentConfig` class. For this tutorial, we will follow the config under
+[projects/tutorials/minigrid_tutorial.py](projects/tutorials/minigrid_tutorial.py). 
 
 ## Preliminaries
 
@@ -192,7 +195,7 @@ tail -f /PATH/TO/log_minigrid_experiment
 
 from the project root folder.
 - With `-b projects/tutorials` we set the base folder to search for the `minigrid_tutorial` experiment configuration.
-- With `-m 1` we constrain the number of subprocesses to 1 (i.e. all task samplers will run
+- With `-m 1` we constrain the number of subprocesses to 1 (i.e. all task samplers will run on a single process).
 - With `-o /PATH/TO/minigrid_output` we set the output folder.
 - With `-s 12345` we set the random seed.
 in the same process).
