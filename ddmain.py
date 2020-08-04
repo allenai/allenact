@@ -114,7 +114,7 @@ def get_args():
         required=False,
         default=None,
         type=int,
-        help="maximal number of sampler processes to spawn for each trainer",
+        help="maximal number of sampler processes to spawn for each worker",
     )
 
     parser.add_argument(

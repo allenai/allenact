@@ -278,6 +278,7 @@ class OnPolicyRunner(object):
                     deterministic_cudnn=self.deterministic_cudnn,
                     mp_ctx=self.mp_ctx,
                     device=device,
+                    max_sampler_processes_per_worker=max_sampler_processes_per_worker,
                 ),
             )
             valid.start()
