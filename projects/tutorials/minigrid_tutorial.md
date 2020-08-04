@@ -176,8 +176,8 @@ usage by returning an empty list of `gpu_ids`.
 
 ## Training pipeline
 
-The last definition required before training is a training pipeline. In this case, we just use a single stage with PPO
-with linearly decaying learning rate:
+The last definition required before starting to train is a training pipeline. In this case, we just use a single PPO
+stage with linearly decaying learning rate:
 
 ```python
     @classmethod
