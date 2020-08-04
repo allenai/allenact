@@ -38,7 +38,9 @@ class PointNavTaskSampler(TaskSampler):
             self.env_config.DATASET.TYPE, config=self.env_config.DATASET
         )
         env = HabitatEnvironment(config=self.env_config, dataset=dataset)
-        self.max_tasks = env.num_episodes
+        self.max_tasks = (
+            None if self.env_config.MODE == "train" else env.num_episodes
+        )  # env.num_episodes
         self.reset_tasks = self.max_tasks
         return env
 
@@ -51,7 +53,7 @@ class PointNavTaskSampler(TaskSampler):
 
     @property
     def total_unique(self) -> Union[int, float, None]:
-        return None
+        return self.env.num_episodes
 
     @property
     def last_sampled_task(self) -> Optional[PointNavTask]:
@@ -104,6 +106,8 @@ class PointNavTaskSampler(TaskSampler):
 
     def set_seed(self, seed: int):
         self.seed = seed
+        if seed is not None:
+            self.env.env.seed(seed)
 
 
 class ObjectNavTaskSampler(TaskSampler):
@@ -134,7 +138,9 @@ class ObjectNavTaskSampler(TaskSampler):
             self.env_config.DATASET.TYPE, config=self.env_config.DATASET
         )
         env = HabitatEnvironment(config=self.env_config, dataset=dataset)
-        self.max_tasks = env.num_episodes
+        self.max_tasks = (
+            None if self.env_config.MODE == "train" else env.num_episodes
+        )  # mp3d objectnav val -> 2184
         self.reset_tasks = self.max_tasks
         return env
 
@@ -147,7 +153,7 @@ class ObjectNavTaskSampler(TaskSampler):
 
     @property
     def total_unique(self) -> Union[int, float, None]:
-        return None
+        return self.env.num_episodes
 
     @property
     def last_sampled_task(self) -> Optional[ObjectNavTask]:
@@ -200,5 +206,5 @@ class ObjectNavTaskSampler(TaskSampler):
 
     def set_seed(self, seed: int):
         self.seed = seed
-        # if seed is not None:
-        #     set_seed(seed)
+        if seed is not None:
+            self.env.env.seed(seed)

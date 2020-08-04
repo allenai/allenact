@@ -326,7 +326,6 @@ class OnPolicyRLEngine(object):
             )  # valid since a single training/testing process is the only consumer
 
         task_outputs = []
-
         done = num_tasks == 0
         while not done:
             item = (
@@ -984,7 +983,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             if self.is_distributed:
                 self.num_workers_done.set("done", str(0))
                 self.num_workers_steps.set("steps", str(0))
-
                 # Ensure all workers are done before incrementing num_workers_{steps, done}
                 idx = self.distributed_barrier.wait()  # here we synchronize
                 if idx == 0:

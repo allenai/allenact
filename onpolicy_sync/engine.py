@@ -473,7 +473,7 @@ class UndistributedOnPolicyRLEngine(object):
                 elif count == 0:
                     break
                 else:
-                    metric = self.vector_tasks.metrics_out_queue.get(timeout=1)
+                    metric = self.vector_tasks.metrics_out_queue.get(timeout=10)
                 if (
                     isinstance(metric, tuple) and metric[0] == "test_metrics"
                 ):  # queue reused for test
@@ -487,10 +487,8 @@ class UndistributedOnPolicyRLEngine(object):
             except queue.Empty:
                 if count <= 0:
                     break
-
         for item in unused:
             self.vector_tasks.metrics_out_queue.put(item)
-
         return self.scalars.pop_and_reset(), used
 
     def accumulate_data_from_metrics_out_queue(
@@ -1540,7 +1538,10 @@ class UndistributedOnPolicyRLEngine(object):
         self.vector_tasks.resume_all()
         self.vector_tasks.reset_all()
 
-        metrics, samples = self.process_eval_metrics(count=self.num_processes)
+        num_tasks = self.vector_tasks.call("total_unique")
+        total_tasks = sum(num_tasks)
+
+        metrics, samples = self.process_eval_metrics(count=total_tasks)
 
         if render_video:
             render = self.process_video(render, max_clip_len)
@@ -1641,7 +1642,6 @@ class UndistributedOnPolicyRLEngine(object):
                 rollout_steps,
                 str_to_extra_metrics_func=str_to_extra_metrics_func,
             )
-
             results = {scalar: scalars[scalar][0] for scalar in scalars}
             results.update({"training_steps": step, "tasks": samples})
             all_results.append(results)
@@ -1792,7 +1792,7 @@ class UndistributedOnPolicyTester(UndistributedOnPolicyRLEngine):
             del kwargs["loaded_config_src_files"]
         super().__init__(
             config=config,
-            loaded_config_src_files=None,
+            # loaded_config_src_files=None,
             output_dir=output_dir,
             seed=seed,
             mode="test",
