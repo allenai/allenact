@@ -1,18 +1,18 @@
 from typing import Dict, Optional, List, Any
 
 import gym
+from gym_minigrid.envs import EmptyRandomEnv5x5
 from torch import nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from rl_base.experiment_config import ExperimentConfig, TaskSampler
-from utils.experiment_utils import TrainingPipeline, Builder, PipelineStage, LinearDecay
-from extensions.rl_minigrid.minigrid_tasks import MiniGridTaskSampler, MiniGridTask
-from extensions.rl_minigrid.minigrid_sensors import EgocentricMiniGridSensor
-from gym_minigrid.envs import EmptyRandomEnv5x5
 from extensions.rl_minigrid.minigrid_models import MiniGridSimpleConvRNN
-from rl_base.sensor import SensorSuite
+from extensions.rl_minigrid.minigrid_sensors import EgocentricMiniGridSensor
+from extensions.rl_minigrid.minigrid_tasks import MiniGridTaskSampler, MiniGridTask
 from onpolicy_sync.losses.ppo import PPO, PPOConfig
+from rl_base.experiment_config import ExperimentConfig, TaskSampler
+from rl_base.sensor import SensorSuite
+from utils.experiment_utils import TrainingPipeline, Builder, PipelineStage, LinearDecay
 
 
 class MiniGridTutorialExperimentConfig(ExperimentConfig):

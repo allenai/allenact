@@ -1,5 +1,3 @@
-import torch
-
 from projects.babyai_baselines.experiments.go_to_obj.base import (
     BaseBabyAIGoToObjExperimentConfig,
 )

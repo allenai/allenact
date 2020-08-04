@@ -1,6 +1,5 @@
 # TODO: @klemenkotar please fix all type errors
 
-import random
 from typing import List
 
 import habitat

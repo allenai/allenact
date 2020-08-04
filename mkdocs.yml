@@ -1,5 +1,5 @@
 site_name: embodied-ai
-site_description: embodied-ai, a framework for Embodied-AI research
+site_description: a framework for embodied-ai research
 site_url: https://github.com/allenai/embodied-rl
 
 theme:
@@ -25,13 +25,13 @@ nav:
 - Getting started:
   - Run your first experiment: overview/running-your-first-experiment.md
   - Primary abstractions: overview/abstractions.md
+  - Defining an experiment: overview/defining-an-experiment.md
 - Tutorials:
   - Basics:
-    - Defining a new experiment: overview/experiment.md
-    - Changing rewards and losses: overview/changing-rewards-and-losses.md
-    - Defining a new model: overview/defining-a-new-model.md
-    - Defining a new Task: overview/defining-a-new-task.md
-    - Defining a new TaskSampler: overview/defining-a-new-task.md
+    - Changing rewards and losses: tutorials/changing-rewards-and-losses.md
+    - Defining a new model: tutorials/defining-a-new-model.md
+    - Defining a new Task: tutorials/defining-a-new-task.md
+  #   - Defining a new TaskSampler: tutorials/defining-a-new-task.md # TODO
 - Projects using embodied-ai:
   - BabyAI Baselines: projects/babyai_baselines/README.md
 - Roadmap: ROADMAP.md
@@ -39,7 +39,7 @@ nav:
 - Licence: LICENSE.md
 - FAQ: overview/FAQ.md
 - API:
-  - ddmain: api/ddmain.md
+  - constants: api/constants.md
   - extensions:
     - rl_babyai:
       - babyai_scripts:
@@ -49,6 +49,13 @@ nav:
       - babyai_constants: api/extensions/rl_babyai/babyai_constants.md
       - babyai_models: api/extensions/rl_babyai/babyai_models.md
       - babyai_tasks: api/extensions/rl_babyai/babyai_tasks.md
+    - rl_minigrid:
+      - minigrid_tasks: api/extensions/rl_minigrid/minigrid_tasks.md
+      - minigrid_environments: api/extensions/rl_minigrid/minigrid_environments.md
+      - minigrid_offpolicy: api/extensions/rl_minigrid/minigrid_offpolicy.md
+      - minigrid_sensors: api/extensions/rl_minigrid/minigrid_sensors.md
+      - minigrid_models: api/extensions/rl_minigrid/minigrid_models.md
+      - manual_control: api/extensions/rl_minigrid/manual_control.md
     - rl_lighthouse:
       - lighthouse_models: api/extensions/rl_lighthouse/lighthouse_models.md
       - lighthouse_environment: api/extensions/rl_lighthouse/lighthouse_environment.md
@@ -62,6 +69,9 @@ nav:
     - basic_models: api/models/basic_models.md
     - frcnn_tensor_object_nav_models: api/models/frcnn_tensor_object_nav_models.md
     - resnet_tensor_object_nav_models: api/models/resnet_tensor_object_nav_models.md
+  - offpolicy_sync:
+    - losses:
+      - abstract_offpolicy_loss: api/offpolicy_sync/losses/abstract_offpolicy_loss.md
   - onpolicy_sync:
     - losses:
       - imitation: api/onpolicy_sync/losses/imitation.md
@@ -80,13 +90,21 @@ nav:
       - experiments:
         - go_to_local:
           - bc: api/projects/babyai_baselines/experiments/go_to_local/bc.md
-          - pure_offpolicy: api/projects/babyai_baselines/experiments/go_to_local/pure_offpolicy.md
           - dagger: api/projects/babyai_baselines/experiments/go_to_local/dagger.md
           - bc_teacher_forcing: api/projects/babyai_baselines/experiments/go_to_local/bc_teacher_forcing.md
           - ppo: api/projects/babyai_baselines/experiments/go_to_local/ppo.md
           - a2c: api/projects/babyai_baselines/experiments/go_to_local/a2c.md
           - base: api/projects/babyai_baselines/experiments/go_to_local/base.md
+        - go_to_obj:
+          - bc: api/projects/babyai_baselines/experiments/go_to_obj/bc.md
+          - dagger: api/projects/babyai_baselines/experiments/go_to_obj/dagger.md
+          - bc_teacher_forcing: api/projects/babyai_baselines/experiments/go_to_obj/bc_teacher_forcing.md
+          - ppo: api/projects/babyai_baselines/experiments/go_to_obj/ppo.md
+          - a2c: api/projects/babyai_baselines/experiments/go_to_obj/a2c.md
+          - base: api/projects/babyai_baselines/experiments/go_to_obj/base.md
         - base: api/projects/babyai_baselines/experiments/base.md
+    - tutorials:
+      - minigrid_tutorial: api/projects/tutorials/minigrid_tutorial.md
   - rl_ai2thor:
     - ai2thor_environment: api/rl_ai2thor/ai2thor_environment.md
     - ithor_constants: api/rl_ai2thor/ithor_constants.md
@@ -121,6 +139,9 @@ nav:
     - robothor_tasks: api/rl_robothor/robothor_tasks.md
     - robothor_sensors: api/rl_robothor/robothor_sensors.md
     - robothor_viz: api/rl_robothor/robothor_viz.md
+  - tests:
+    - sync_algs_cpu:
+      - test_to_to_obj_trains: api/tests/sync_algs_cpu/test_to_to_obj_trains.md
   - utils:
     - model_utils: api/utils/model_utils.md
     - experiment_utils: api/utils/experiment_utils.md
@@ -137,3 +158,8 @@ markdown_extensions:
 - admonition
 - codehilite
 - extra
+#extra_javascript:
+#  - javascripts/extra.js
+#plugins:
+#  - search
+#  - mkpdfs

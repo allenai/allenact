@@ -1,5 +1,5 @@
-from typing import Callable, Dict, Optional
 import abc
+from typing import Callable, Dict, Optional
 
 import gym
 import numpy as np

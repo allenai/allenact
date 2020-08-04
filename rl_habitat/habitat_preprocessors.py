@@ -7,8 +7,8 @@ import torch.nn as nn
 from torchvision import models
 
 from rl_base.preprocessor import Preprocessor
-from utils.system import get_logger
 from utils.misc_utils import prepare_locals_for_super
+from utils.system import get_logger
 
 
 class ResNetEmbedder(nn.Module):

@@ -17,7 +17,10 @@ flake8 = "*"
 pre-commit = "*"
 gitpython = "*"
 ipython = "*"
+mkdocs = "*"
 mathy-pydoc = "*"
+#mkdocs = {editable = true, git="https://github.com/zhaoterryy/mkdocs-pdf-export-plugin.git", ref="master"}
+# pip install -e git://github.com/jwaschkau/mkpdfs-mkdocs-plugin.git@260643aa3297d5fb1f41f27ffd16bb0a4f5ce74c#egg=mkpdfs-mkdocs
 numba = "*"
 pytest = "*"
 coverage = "*"

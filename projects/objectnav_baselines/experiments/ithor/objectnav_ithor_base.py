@@ -1,16 +1,16 @@
-from typing import Dict, Any, List, Optional
+import glob
 from math import ceil
+from typing import Dict, Any, List, Optional
 
 import gym
-import torch
 import numpy as np
-import glob
+import torch
 
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
-from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
-from rl_robothor.robothor_tasks import ObjectNavTask
+from rl_base.task import TaskSampler
 from rl_robothor.robothor_task_samplers import ObjectNavDatasetTaskSampler
+from rl_robothor.robothor_tasks import ObjectNavTask
 from utils.experiment_utils import Builder
 
 
@@ -53,7 +53,7 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         self.TRAIN_GPU_IDS = [0, 1, 2, 3, 4, 5, 6]
         self.VALID_GPU_IDS = [7]
         self.TEST_GPU_IDS = [7]
-        self.ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
+        self.ADVANCE_SCENE_ROLLOUT_PERIOD = 10 ** 13
 
         self.TRAIN_DATASET_DIR = "dataset/ithor/objectnav/train"
         self.VAL_DATASET_DIR = "dataset/ithor/objectnav/val"
@@ -166,7 +166,9 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
             "object_types": self.TARGET_TYPES,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(ObjectNavTask._actions)),
+            "action_space": gym.spaces.Discrete(
+                len(ObjectNavTask.class_action_names())
+            ),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG,

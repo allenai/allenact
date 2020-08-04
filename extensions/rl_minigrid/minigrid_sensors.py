@@ -1,5 +1,5 @@
 import typing
-from typing import Optional, Any, Dict
+from typing import Optional, Any
 
 import gym
 import gym_minigrid.minigrid

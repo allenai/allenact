@@ -1,18 +1,18 @@
 import copy
-import math
-from typing import Tuple, Sequence, Union, Dict, Optional, Any
-import os
 import json
+import math
+import os
+from typing import Tuple, Sequence, Union, Dict, Optional, Any
 
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
-from matplotlib.figure import Figure
 from PIL import Image, ImageDraw
 from ai2thor.controller import Controller
+from matplotlib import pyplot as plt
+from matplotlib.figure import Figure
 
-from utils.viz_utils import TrajectoryViz
 from utils.system import get_logger
+from utils.viz_utils import TrajectoryViz
 
 
 class ThorPositionTo2DFrameTranslator(object):

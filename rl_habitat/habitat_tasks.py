@@ -4,6 +4,7 @@ from typing import Tuple, List, Dict, Any, Optional
 
 import gym
 import numpy as np
+from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 
 from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor
@@ -17,10 +18,6 @@ from rl_habitat.habitat_constants import (
     LOOK_DOWN,
 )
 from rl_habitat.habitat_environment import HabitatEnvironment
-from rl_base.common import RLStepResult
-from rl_base.sensor import Sensor
-from rl_base.task import Task
-from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 
 
 class HabitatTask(Task[HabitatEnvironment]):
