@@ -19,20 +19,16 @@ class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(PointNa
         super().__init__()
         self.SENSORS = [
             RGBSensorHabitat(
-                {
-                    "height": self.SCREEN_SIZE,
-                    "width": self.SCREEN_SIZE,
-                    "use_resnet_normalization": True,
-                }
+                height=self.SCREEN_SIZE,
+                width=self.SCREEN_SIZE,
+                use_resnet_normalization=True,
             ),
             DepthSensorHabitat(
-                {
-                    "height": self.SCREEN_SIZE,
-                    "width": self.SCREEN_SIZE,
-                    "use_resnet_normalization": True,
-                }
+                height=self.SCREEN_SIZE,
+                width=self.SCREEN_SIZE,
+                use_resnet_normalization=True,
             ),
-            TargetCoordinatesSensorHabitat({"coordinate_dims": 2}),
+            TargetCoordinatesSensorHabitat(coordinate_dims=2),
         ]
 
         self.PREPROCESSORS = []

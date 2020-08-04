@@ -24,16 +24,14 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig):
         self.ENV_ARGS["renderDepthImage"] = True
 
         DepthSensorRoboThor(
-            {
-                "height": self.SCREEN_SIZE,
-                "width": self.SCREEN_SIZE,
-                "use_resnet_normalization": True,
-                "uuid": "depth_lowres",
-            }
+            height=self.SCREEN_SIZE,
+            width=self.SCREEN_SIZE,
+            use_resnet_normalization=True,
+            uuid="depth_lowres",
         ),
-        GoalObjectTypeThorSensor({
-            "object_types": self.TARGET_TYPES,
-        }),
+        GoalObjectTypeThorSensor(
+            object_types=self.TARGET_TYPES,
+        ),
 
         self.PREPROCESSORS = [
             Builder(ResnetPreProcessorHabitat,

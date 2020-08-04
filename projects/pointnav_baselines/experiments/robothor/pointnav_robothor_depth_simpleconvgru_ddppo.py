@@ -19,14 +19,12 @@ class PointNavRoboThorRGBPPOExperimentConfig(PointNavRoboThorBaseConfig):
         super().__init__()
         self.SENSORS = [
             DepthSensorRoboThor(
-                {
-                    "height": self.SCREEN_SIZE,
-                    "width": self.SCREEN_SIZE,
-                    "use_resnet_normalization": True,
-                    "uuid": "depth",
-                }
+                height=self.SCREEN_SIZE,
+                width=self.SCREEN_SIZE,
+                use_resnet_normalization=True,
+                uuid="depth_lowres",
             ),
-            GPSCompassSensorRoboThor({}),
+            GPSCompassSensorRoboThor(),
         ]
 
         self.PREPROCESSORS = []

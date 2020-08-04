@@ -25,24 +25,20 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig):
 
         self.SENSORS = [
             RGBSensorThor(
-                {
-                    "height": self.SCREEN_SIZE,
-                    "width": self.SCREEN_SIZE,
-                    "use_resnet_normalization": True,
-                    "uuid": "rgb_lowres",
-                }
+                height=self.SCREEN_SIZE,
+                width=self.SCREEN_SIZE,
+                use_resnet_normalization=True,
+                uuid="rgb_lowres",
             ),
             DepthSensorRoboThor(
-                {
-                    "height": self.SCREEN_SIZE,
-                    "width": self.SCREEN_SIZE,
-                    "use_resnet_normalization": True,
-                    "uuid": "depth_lowres",
-                }
+                height=self.SCREEN_SIZE,
+                width=self.SCREEN_SIZE,
+                use_resnet_normalization=True,
+                uuid="depth_lowres",
             ),
-            GoalObjectTypeThorSensor({
-                "object_types": self.TARGET_TYPES,
-            }),
+            GoalObjectTypeThorSensor(
+                object_types=self.TARGET_TYPES,
+            ),
         ]
 
         self.PREPROCESSORS = [
