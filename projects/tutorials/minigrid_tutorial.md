@@ -1,19 +1,22 @@
 # MiniGrid tutorial
  
-# MiniGrid Empty Random 5x5
-A MiniGrid Empty Random 5x5 task consists of a grid of dimensions 5x5 where an agent spawned at a random
-location and orientation has to navigate to the cell in the bottom right corner of the grid. A visualization of the
-environment for a random such task looks like
+# The task
+A MiniGrid-Empty-Random-5x5 task consists of a grid of dimensions 5x5 where an agent spawned at a random
+location and orientation has to navigate to the cell in the bottom right corner of the grid by sequences of three
+possible actions (rotate left/right and move forward). A visualization of the environment for a random
+MiniGrid-Empty-Random-5x5 task looks like
+
 ![MiniGridEmptyRandom5x5 task example](./minigrid_environment.png)
+
 The observations for the agent are an egocentric subset of the entire grid. For example, if the agent is placed in the
 first row while looking up, only cells in the first row will be observable, as shown by the highlighted rectangle around
-the agent (red arrow). 
+the agent (red arrow). Gray cells correspond to walls.
 
 # Experiment configuration file
 
-Our experiment consists of:
-- Training a basic model with memory to complete each task
-- Validation on a small set of tasks running in parallel with training
+Our complete experiment consists of:
+- Training a basic model with memory.
+- Validation on a small set of tasks running in parallel with training.
 - A second step where we test saved checkpoints with a larger set of tasks.
 The entire configuration for the experiment, including training, validation and testing, is encapsulated in a single 
 class implementing an `ExperimentConfig` abstraction. For this tutorial, we will follow the config under
@@ -23,14 +26,14 @@ The `ExperimentConfig` abstraction, which is the one used by an
 [OnPolicyTrainer](/onpolicy_sync/light_engine/#onpolicytrainer) class (for training) and two flavors of an
 [OnPolicyInference](/onpolicy_sync/light_engine/#onpolicyinference) class (for validation and testing)
 that are invoked through the entry script `ddmain.py`, includes:
-- A tag to identify the experiment (`tag` method).
-- A method to instantiate actor-critic models (`create_model`).
-- A method to instantiate task samplers (`make_sampler_fn`).
-- Methods describing initialization parameters for task samplers used in training, validation, and testing;
-including the assignment of workers to devices for running environments (`{train,valid,test}_task_sampler_args`).
-- Machine configuration parameters that will be used e.g. for training or validation (`machine_params` method).
-- A possibly multi-staged training pipeline with different types of losses, an optimizer, and other parameters like
-learning rates, batch sizes, etc. (`training_pipeline` method).
+- A `tag` method to identify the experiment.
+- A `create_model` method to instantiate actor-critic models.
+- A `make_sampler_fn` method to instantiate task samplers.
+- Three `{train,valid,test}_task_sampler_args` methods describing initialization parameters for task samplers used in
+training, validation, and testing; including assignment of workers to devices for simulation.
+- A `machine_params` method with configuration parameters that will be used for training, validation or testing.
+- A `training_pipeline` method describing a possibly multi-staged training pipeline with different types of losses,
+an optimizer, and other parameters like learning rates, batch sizes, etc.
 
 ## Preliminaries
 
@@ -223,7 +226,7 @@ tensorboard --logdir /PATH/TO/minigrid_output
 
 which will default to the URL http://localhost:6006/.
 
-After approximately 150000 steps, the script will terminate and several checkpoints will be saved in the output folder.
+After 150,000 steps, the script will terminate and several checkpoints will be saved in the output folder.
 The training curves should look similar to
 
 ![training curves](./minigrid_train.png)
