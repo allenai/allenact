@@ -1,6 +1,5 @@
 from typing import Dict, List, Optional, Union
 
-import gin
 import gym
 import torch
 import torch.nn as nn

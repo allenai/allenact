@@ -83,7 +83,7 @@ class CornerSensor(Sensor[LightHouseEnvironment, Any]):
         observation_space = gym.spaces.Box(
             low=min(LightHouseEnvironment.SPACE_LEVELS),
             high=max(LightHouseEnvironment.SPACE_LEVELS),
-            shape=(2 ** config["world_dim"] + 2,),
+            shape=(2 ** world_dim + 2,),
             dtype=int,
         )
 

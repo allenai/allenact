@@ -97,6 +97,7 @@ class AI2ThorEnvironment(object):
         self.simplify_physics = simplify_physics
 
         self.start(None)
+        # noinspection PyTypeHints
         self.controller.docker_enabled = docker_enabled  # type: ignore
 
     @property

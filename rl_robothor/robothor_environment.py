@@ -1,18 +1,17 @@
 import copy
+import glob
 import math
 import pickle
-import glob
 import random
-from typing import Any, Optional, Dict, List, Union, Tuple, Collection
+from typing import Any, Optional, Dict, List, Union, Tuple, Collection, Sequence
 
-import ai2thor
+import ai2thor.server
 import numpy as np
 from ai2thor.controller import Controller
 from ai2thor.util import metrics
 
-from utils.experiment_utils import recursive_update
-
 from utils.cache_utils import _str_to_pos, _pos_to_str
+from utils.experiment_utils import recursive_update
 from utils.system import get_logger
 
 
@@ -228,7 +227,7 @@ class RoboThorEnvironment:
         #     # get_logger().debug("initial pos in path corners {} current pos {} path {}".format(pose, self.agent_state(), path))
         return path
 
-    def path_corners_to_dist(self, corners: Collection[Dict[str, float]]) -> float:
+    def path_corners_to_dist(self, corners: Sequence[Dict[str, float]]) -> float:
         """Computes the distance covered by the given path described by its
         corners."""
 

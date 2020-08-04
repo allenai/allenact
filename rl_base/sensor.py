@@ -3,6 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from abc import abstractmethod, ABC
 from collections import OrderedDict
 from typing import (
     Generic,
@@ -15,19 +16,17 @@ from typing import (
     cast,
     Tuple,
 )
-from abc import abstractmethod, ABC
 
 import gym
-from gym.spaces import Dict as SpaceDict
-import torch
-from torchvision import transforms, models
-from torch import nn
 import numpy as np
+import torch
+from gym.spaces import Dict as SpaceDict
+from torch import nn
+from torchvision import transforms, models
 
 from rl_base.common import EnvType
-from utils.tensor_utils import ScaleBothSides
-from utils.system import get_logger
 from utils.misc_utils import prepare_locals_for_super
+from utils.tensor_utils import ScaleBothSides
 
 if TYPE_CHECKING:
     from rl_base.task import SubTaskType

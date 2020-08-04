@@ -37,7 +37,7 @@ class AbstractViz:
 
         self.mode: Optional[str] = None
         self.path_to_id: Optional[Sequence[str]] = None
-        self.episode_ids: Optional[Sequence[Sequence[str]]] = None
+        self.episode_ids: Optional[List[Sequence[str]]] = None
 
     @staticmethod
     def _source_to_str(source, is_vector_task):

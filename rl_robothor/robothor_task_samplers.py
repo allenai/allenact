@@ -1,5 +1,5 @@
-import gzip
 import copy
+import gzip
 import json
 import random
 from typing import List, Optional, Union, Dict, Any
@@ -10,8 +10,8 @@ from rl_base.sensor import Sensor
 from rl_base.task import TaskSampler
 from rl_robothor.robothor_environment import RoboThorEnvironment
 from rl_robothor.robothor_tasks import ObjectNavTask, PointNavTask
-from utils.experiment_utils import set_seed, set_deterministic_cudnn
 from utils.cache_utils import find_nearest_point_in_cache
+from utils.experiment_utils import set_seed, set_deterministic_cudnn
 from utils.system import get_logger
 
 
@@ -668,12 +668,13 @@ class PointNavTaskSampler(TaskSampler):
 
         pose = self.env.agent_state()
 
-        task_info = {}
-        task_info["scene"] = scene
-        task_info["initial_position"] = {k: pose[k] for k in ["x", "y", "z"]}
-        task_info["initial_orientation"] = pose["rotation"]["y"]
-        task_info["target"] = target
-        task_info["actions"] = []
+        task_info = {
+            "scene": scene,
+            "initial_position": {k: pose[k] for k in ["x", "y", "z"]},
+            "initial_orientation": pose["rotation"]["y"],
+            "target": target,
+            "actions": [],
+        }
 
         if cond:
             get_logger().warning("No path for sampled episode {}".format(task_info))

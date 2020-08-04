@@ -1,13 +1,14 @@
 from typing import Dict, Any, List, Optional
+
 import gym
-import torch
 import habitat
+import torch
 
 from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
-from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
-from rl_habitat.habitat_tasks import PointNavTask
+from rl_base.task import TaskSampler
 from rl_habitat.habitat_task_samplers import PointNavTaskSampler
+from rl_habitat.habitat_tasks import PointNavTask
 from utils.experiment_utils import Builder
 
 
@@ -60,17 +61,6 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig):
     @classmethod
     def tag(cls):
         return "PointNav"
-
-    @classmethod
-    def evaluation_params(cls, **kwargs):
-        nprocesses = 1
-        gpu_ids = [] if not torch.cuda.is_available() else [1]
-        res = cls.training_pipeline()
-        del res["pipeline"]
-        del res["optimizer"]
-        res["nprocesses"] = nprocesses
-        res["gpu_ids"] = gpu_ids
-        return res
 
     def split_num_processes(self, ndevices):
         assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(

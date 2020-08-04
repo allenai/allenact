@@ -1,5 +1,5 @@
-from typing import Dict, Any
 import math
+from typing import Dict, Any
 
 
 def _pos_to_str(pos: Dict[str, float]) -> str:

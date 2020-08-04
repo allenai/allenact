@@ -242,6 +242,7 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
             torch.stack([r["memory"] for r in results], dim=0),
         )
 
+    # noinspection PyMethodOverriding
     def forward(
         self,
         observations: Dict[str, torch.Tensor],

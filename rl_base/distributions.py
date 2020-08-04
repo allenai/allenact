@@ -1,7 +1,7 @@
 import abc
 
 import torch
-from torch import nn as nn
+from torch import nn
 from torch.distributions.utils import lazy_property
 
 from utils.model_utils import init_linear_layer

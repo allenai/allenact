@@ -3,6 +3,10 @@ from typing import Tuple, List, Dict, Any, Optional
 import gym
 import numpy as np
 from ai2thor.util.metrics import compute_single_spl
+
+from rl_base.common import RLStepResult
+from rl_base.sensor import Sensor
+from rl_base.task import Task
 from rl_robothor.robothor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
@@ -12,9 +16,6 @@ from rl_robothor.robothor_constants import (
     LOOK_DOWN,
 )
 from rl_robothor.robothor_environment import RoboThorEnvironment
-from rl_base.common import RLStepResult
-from rl_base.sensor import Sensor
-from rl_base.task import Task
 from utils.cache_utils import get_distance, get_distance_to_object
 from utils.system import get_logger
 
@@ -213,7 +214,9 @@ class PointNavTask(Task[RoboThorEnvironment]):
                     self.task_info["target"],
                 )
             else:
-                dist2tget = self._get_distance_to_target()
+                # TODO
+                raise NotImplementedError
+                # dist2tget = self._get_distance_to_target()
             if dist2tget is None:
                 return {}
 
@@ -414,7 +417,9 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 self.task_info["object_type"],
             )
         else:
-            dist2tget = self._get_distance_to_target()
+            # TODO
+            raise NotImplementedError
+            # dist2tget = self._get_distance_to_target()
         if not self.is_done():
             return {}
         else:

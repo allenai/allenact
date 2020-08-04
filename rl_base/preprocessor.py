@@ -9,7 +9,6 @@ from gym.spaces import Dict as SpaceDict
 
 from rl_base.sensor import Sensor, SensorSuite
 from utils.experiment_utils import Builder
-from utils.misc_utils import prepare_locals_for_super
 
 
 class Preprocessor(abc.ABC):
