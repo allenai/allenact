@@ -1,6 +1,5 @@
 from typing import Dict, List, Optional, Union
 
-import gin
 import gym
 import torch
 import torch.nn as nn
@@ -22,7 +21,7 @@ class BaseBabyAIGoToLocalExperimentConfig(BaseBabyAIExperimentConfig):
     TOTAL_RL_TRAIN_STEPS = int(15e6)
     TOTAL_IL_TRAIN_STEPS = int(7.5e6)
     ROLLOUT_STEPS: int = 128
-    NUM_TRAIN_SAMPLERS: int = 128 if torch.cuda.is_available() else 2
+    NUM_TRAIN_SAMPLERS: int = 128 if torch.cuda.is_available() else 4
     PPO_NUM_MINI_BATCH = 4
     NUM_CKPTS_TO_SAVE = 20
     NUM_TEST_TASKS: int = 1000
@@ -38,22 +37,6 @@ class BaseBabyAIGoToLocalExperimentConfig(BaseBabyAIExperimentConfig):
     INCLUDE_AUXILIARY_HEAD = False
 
     @classmethod
-    @gin.configurable
-    def hyperparams(
-        cls,
-        lr: Optional[float] = None,
-        arch: Optional[str] = None,
-        use_lr_decay: Optional[bool] = None,
-    ):
-        return {
-            "lr": lr if lr is not None else cls.DEFAULT_LR,
-            "arch": arch if arch is not None else cls.ARCH,
-            "use_lr_decay": use_lr_decay
-            if use_lr_decay is not None
-            else cls.USE_LR_DECAY,
-        }
-
-    @classmethod
     def METRIC_ACCUMULATE_INTERVAL(cls):
         return cls.NUM_TRAIN_SAMPLERS * 64
 
@@ -67,7 +50,7 @@ class BaseBabyAIGoToLocalExperimentConfig(BaseBabyAIExperimentConfig):
         total_train_steps: int,
         lr: Optional[float] = None,
     ):
-        lr = cls.hyperparams()["lr"]
+        lr = cls.DEFAULT_LR
 
         num_steps = cls.ROLLOUT_STEPS
         metric_accumulate_interval = (
@@ -98,7 +81,7 @@ class BaseBabyAIGoToLocalExperimentConfig(BaseBabyAIExperimentConfig):
             lr_scheduler_builder=Builder(
                 LambdaLR, {"lr_lambda": LinearDecay(steps=total_train_steps)}  # type: ignore
             )
-            if cls.hyperparams()["use_lr_decay"]
+            if cls.USE_LR_DECAY
             else None,
         )
 
@@ -110,7 +93,7 @@ class BaseBabyAIGoToLocalExperimentConfig(BaseBabyAIExperimentConfig):
             observation_space=SensorSuite(sensors).observation_spaces,
             use_instr=cls.USE_INSTR,
             use_memory=True,
-            arch=cls.hyperparams()["arch"],
+            arch=cls.ARCH,
             instr_dim=256,
             lang_model="attgru",
             memory_dim=2048,

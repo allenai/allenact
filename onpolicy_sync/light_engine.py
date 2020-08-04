@@ -71,7 +71,7 @@ class OnPolicyRLEngine(object):
         num_workers: int = 1,
         device: Union[str, torch.device, int] = "cpu",
         distributed_port: int = 0,
-        max_processes_per_trainer: Optional[int] = None,
+        max_sampler_processes_per_worker: Optional[int] = None,
         **kwargs,
     ):
         """Initializer.
@@ -117,9 +117,10 @@ class OnPolicyRLEngine(object):
         self.experiment_name = experiment_name
 
         assert (
-            max_processes_per_trainer is None or max_processes_per_trainer >= 1
-        ), "`max_training_processes` must be either `None` or a positive integer."
-        self.max_processes_per_trainer = max_processes_per_trainer
+            max_sampler_processes_per_worker is None
+            or max_sampler_processes_per_worker >= 1
+        ), "`max_sampler_processes_per_worker` must be either `None` or a positive integer."
+        self.max_sampler_processes_per_worker = max_sampler_processes_per_worker
 
         self.machine_params = config.machine_params(self.mode)
         if self.num_workers > 1:
@@ -231,7 +232,7 @@ class OnPolicyRLEngine(object):
                 if self.mp_ctx is None
                 else None,
                 mp_ctx=self.mp_ctx,
-                max_processes=self.max_processes_per_trainer,
+                max_processes=self.max_sampler_processes_per_worker,
             )
         return self._vector_tasks
 
@@ -431,9 +432,11 @@ class OnPolicyRLEngine(object):
 
     @staticmethod
     def _active_memory(memory, keep):
-        if isinstance(memory, torch.Tensor):  # rnn hidden state
+        if isinstance(memory, torch.Tensor):  # rnn hidden state or no memory
             return memory[:, keep] if memory.shape[1] > len(keep) else memory
-        return memory.index_select(keep)  # arbitrary memory
+        return (
+            memory.index_select(keep) if memory is not None else memory
+        )  # arbitrary memory or no memory
 
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None):
         actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
@@ -545,7 +548,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         deterministic_agent: bool = False,
         distributed_preemption_threshold: float = 0.7,
         distributed_barrier: Optional[mp.Barrier] = None,
-        max_processes_per_trainer: Optional[int] = None,
+        max_sampler_processes_per_worker: Optional[int] = None,
         **kwargs,
     ):
         kwargs["mode"] = "train"
@@ -563,7 +566,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             device=device,
             distributed_port=distributed_port,
             deterministic_agent=deterministic_agent,
-            max_processes_per_trainer=max_processes_per_trainer,
+            max_sampler_processes_per_worker=max_sampler_processes_per_worker,
             **kwargs,
         )
 
@@ -779,7 +782,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self,
         scalars: ScalarMeanTracker,
         tracking_info: Dict[str, List],
-        type_str: str = "update",
+        type_str: str = "update_package",
     ) -> Tuple[str, Dict[str, float], int]:
         assert scalars.empty, "Found non-empty scalars {}".format(scalars.counts)
 
@@ -792,6 +795,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         )  # used to cancel the averaging in self.scalars
 
         # assert nsamples != 0, "Attempting to aggregate type {} with 0 samples".format(type)
+
+        # get_logger().debug(infos)
 
         last_name: Optional[str] = None
         for name, payload, nsamps in infos:
@@ -811,7 +816,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         assert last_name is not None, "infos was empty."
         pkg_type = last_name
         payload = scalars.pop_and_reset() if nsamples > 0 else None
-        payload["pipeline_stage"] = self.training_pipeline.current_stage_index
+        if payload is not None:
+            payload["pipeline_stage"] = self.training_pipeline.current_stage_index
 
         return pkg_type, payload, nsamples
 
@@ -829,7 +835,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 for key in batch:
                     if isinstance(batch[key], torch.Tensor):
                         bsize = batch[key].shape[0]
-                        break
+                        if bsize > 0:
+                            break
                 assert bsize is not None, "TODO check recursively for batch size"
 
                 actor_critic_output, memory = self.actor_critic(
@@ -952,8 +959,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.aggregate_info(
                 scalars=self.scalars, tracking_info=tracking_info, type_str=type_str
             )
-            for type_str in self.tracking_info
+            for type_str in tracking_info
         )
+
+        # get_logger().debug("{}".format(payload))
 
         nsteps = self.training_pipeline.total_steps
 
@@ -963,7 +972,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self.initialize_rollouts(rollouts)
         self.tracking_info.clear()
 
-        self.last_log = self.training_pipeline.total_steps - self.log_interval
+        self.last_log = self.training_pipeline.total_steps
         self.last_save = self.training_pipeline.total_steps
 
         while True:

@@ -1,28 +1,28 @@
-from typing import Dict, Any, List, Optional
+import glob
 from math import ceil
+from typing import Dict, Any, List, Optional
 
 import gym
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
-import numpy as np
-import glob
 
+from onpolicy_sync.losses import PPO
 from onpolicy_sync.losses.ppo import PPOConfig
 from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )
-from onpolicy_sync.losses import PPO
-from rl_base.experiment_config import ExperimentConfig
-from rl_base.task import TaskSampler
-from rl_base.preprocessor import ObservationSet
-from rl_robothor.robothor_tasks import PointNavTask
-from rl_robothor.robothor_task_samplers import PointNavDatasetTaskSampler
-from rl_robothor.robothor_sensors import GPSCompassSensorRoboThor
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor
+from rl_base.experiment_config import ExperimentConfig
+from rl_base.preprocessor import ObservationSet
+from rl_base.task import TaskSampler
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
+from rl_robothor.robothor_sensors import GPSCompassSensorRoboThor
+from rl_robothor.robothor_task_samplers import PointNavDatasetTaskSampler
+from rl_robothor.robothor_tasks import PointNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -252,7 +252,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask._actions)),
+            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG,

@@ -397,7 +397,7 @@ class AskForHelpSimpleCrossingTask(MiniGridTask):
 class MiniGridTaskSampler(TaskSampler):
     def __init__(
         self,
-        env_class: Callable[..., Union[CrossingEnv]],
+        env_class: Callable[..., Union[MiniGridEnv]],
         sensors: Union[SensorSuite, List[Sensor]],
         env_info: Optional[Dict[str, Any]] = None,
         max_tasks: Optional[int] = None,
@@ -529,6 +529,7 @@ class MiniGridTaskSampler(TaskSampler):
             task_cache_uid = str(self._last_env_seed)
 
         if repeating and task_has_same_seed_reset:
+            # noinspection PyUnresolvedReferences
             self.env.same_seed_reset()
         else:
             self.env.seed(self._last_env_seed)

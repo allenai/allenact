@@ -3,7 +3,7 @@ from collections import Callable
 from typing import Sequence, Tuple, Union
 
 import torch
-from torch import nn as nn
+from torch import nn
 
 
 def init_linear_layer(

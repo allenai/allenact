@@ -256,12 +256,7 @@ class RolloutStorage:
 
             self.insert_memory(memory, time_step=self.step + 1)
         else:
-            assert (
-                self.memory[self.DEFAULT_RNN_MEMORY_NAME].shape[
-                    self.DEFAULT_RNN_MEMORY_SAMPLER_AXIS
-                ]
-                == 0
-            )
+            assert self.memory[self.DEFAULT_RNN_MEMORY_NAME][0].shape[-1] == 0
 
         self.actions[self.step].copy_(actions)
         self.prev_actions[self.step + 1].copy_(actions)

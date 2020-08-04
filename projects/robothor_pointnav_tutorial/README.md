@@ -318,7 +318,7 @@ distance to the target) with `goal_dims`.
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return ResnetTensorPointNavActorCritic(
-            action_space=gym.spaces.Discrete(len(PointNavTask._actions)),
+            action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             rgb_resnet_preprocessor_uuid="rgb_resnet",
@@ -379,7 +379,7 @@ each process should work with. If we have several GPUS and many scenes this proc
             "scenes": scenes[inds[process_ind]:inds[process_ind + 1]],
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask._actions)),
+            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG

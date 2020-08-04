@@ -1,4 +1,4 @@
-# Experiment specification
+# Defining an  experiment
 
 Let's look at an example experiment configuration for an object navigation example with an actor-critic agent observing
 RGB images from the environment and target object classes from the task.
