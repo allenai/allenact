@@ -16,7 +16,6 @@ from utils.cache_utils import _str_to_pos, _pos_to_str
 from utils.system import get_logger
 
 
-
 class RoboThorEnvironment:
     """Wrapper for the robo2thor controller providing additional functionality
     and bookkeeping.
@@ -44,7 +43,9 @@ class RoboThorEnvironment:
         )
         recursive_update(self.config, {**kwargs, "agentMode": "bot"})
         self.controller = Controller(**self.config)
-        self.known_good_locations: Dict[str, Any] = {self.scene_name: copy.deepcopy(self.currently_reachable_points)}
+        self.known_good_locations: Dict[str, Any] = {
+            self.scene_name: copy.deepcopy(self.currently_reachable_points)
+        }
         assert len(self.known_good_locations[self.scene_name]) > 10
 
         # onames = [o['objectId'] for o in self.last_event.metadata['objects']]
@@ -228,7 +229,8 @@ class RoboThorEnvironment:
         return path
 
     def path_corners_to_dist(self, corners: Collection[Dict[str, float]]) -> float:
-        """Computes the distance covered by the given path described by its corners."""
+        """Computes the distance covered by the given path described by its
+        corners."""
 
         if len(corners) == 0:
             return float("inf")
@@ -291,13 +293,17 @@ class RoboThorEnvironment:
             "horizon": round(float(agent_meta["cameraHorizon"]), 1),
         }
 
-    def teleport(self, pose: Dict[str,float], rotation: Dict[str,float], horizon: float=0.0):
-        e = self.controller.step("TeleportFull",
-                                 x=pose["x"],
-                                 y=pose["y"],
-                                 z=pose["z"],
-                                 rotation=rotation,
-                                 horizon=horizon)
+    def teleport(
+        self, pose: Dict[str, float], rotation: Dict[str, float], horizon: float = 0.0
+    ):
+        e = self.controller.step(
+            "TeleportFull",
+            x=pose["x"],
+            y=pose["y"],
+            z=pose["z"],
+            rotation=rotation,
+            horizon=horizon,
+        )
         return e.metadata["lastActionSuccess"]
 
     def reset(self, scene_name: str = None) -> None:
@@ -306,7 +312,9 @@ class RoboThorEnvironment:
             self.controller.reset(scene_name)
             assert self.last_action_success, "Could not reset to new scene"
             if scene_name not in self.known_good_locations:
-                self.known_good_locations[scene_name] = copy.deepcopy(self.currently_reachable_points)
+                self.known_good_locations[scene_name] = copy.deepcopy(
+                    self.currently_reachable_points
+                )
                 assert len(self.known_good_locations[scene_name]) > 10
 
             # onames = [o['objectId'] for o in self.last_event.metadata['objects']]
@@ -496,6 +504,7 @@ class RoboThorEnvironment:
 #             )
 #         )
 
+
 class RoboThorCachedEnvironment:
     """Wrapper for the robo2thor controller providing additional functionality
     and bookkeeping.
@@ -523,12 +532,14 @@ class RoboThorCachedEnvironment:
         )
         self.env_root_dir = kwargs["env_root_dir"]
         random_scene = random.choice(list(glob.glob(self.env_root_dir + "/*.pkl")))
-        handle= open(random_scene, 'rb')
+        handle = open(random_scene, "rb")
         self.view_cache = pickle.load(handle)
         handle.close()
         self.agent_position = list(self.view_cache.keys())[0]
         self.agent_rotation = list(self.view_cache[self.agent_position].keys())[0]
-        self.known_good_locations: Dict[str, Any] = {self.scene_name: copy.deepcopy(self.currently_reachable_points)}
+        self.known_good_locations: Dict[str, Any] = {
+            self.scene_name: copy.deepcopy(self.currently_reachable_points)
+        }
         self._last_action = "None"
         assert len(self.known_good_locations[self.scene_name]) > 10
 
@@ -540,15 +551,19 @@ class RoboThorCachedEnvironment:
             "horizon": 1.0,
         }
 
-    def teleport(self, pose: Dict[str,float], rotation: Dict[str,float], horizon: float=0.0):
+    def teleport(
+        self, pose: Dict[str, float], rotation: Dict[str, float], horizon: float = 0.0
+    ):
         self.agent_position = _pos_to_str(pose)
-        self.agent_rotation = math.floor(rotation / 90.0) * 90 # round to nearest 90 degree angle
+        self.agent_rotation = (
+            math.floor(rotation / 90.0) * 90
+        )  # round to nearest 90 degree angle
         return True
 
     def reset(self, scene_name: str = None) -> None:
         """Resets scene to a known initial state."""
         try:
-            handle = open(self.env_root_dir + "/" + scene_name + ".pkl", 'rb')
+            handle = open(self.env_root_dir + "/" + scene_name + ".pkl", "rb")
             self.view_cache = pickle.load(handle)
             handle.close()
             self.agent_position = list(self.view_cache.keys())[0]
@@ -573,7 +588,9 @@ class RoboThorCachedEnvironment:
     @property
     def scene_name(self) -> str:
         """Current ai2thor scene."""
-        return self.view_cache[self.agent_position][self.agent_rotation].metadata["sceneName"]
+        return self.view_cache[self.agent_position][self.agent_rotation].metadata[
+            "sceneName"
+        ]
 
     @property
     def current_frame(self) -> np.ndarray:
@@ -597,7 +614,7 @@ class RoboThorCachedEnvironment:
 
     @property
     def last_action_success(self) -> bool:
-        """In the cached environment, all actions succeed"""
+        """In the cached environment, all actions succeed."""
         return True
 
     @property
@@ -607,18 +624,20 @@ class RoboThorCachedEnvironment:
         For an example of an action that returns a value, see
         `"GetReachablePositions"`.
         """
-        return self.view_cache[self.agent_position][self.agent_rotation].metadata["actionReturn"]
+        return self.view_cache[self.agent_position][self.agent_rotation].metadata[
+            "actionReturn"
+        ]
 
     def step(
         self, action_dict: Dict[str, Union[str, int, float]]
     ) -> ai2thor.server.Event:
         """Take a step in the ai2thor environment."""
-        self._last_action = action_dict['action']
-        if action_dict['action'] == 'RotateLeft':
+        self._last_action = action_dict["action"]
+        if action_dict["action"] == "RotateLeft":
             self.agent_rotation = (self.agent_rotation - 90.0) % 360.0
-        elif action_dict['action'] == "RotateRight":
+        elif action_dict["action"] == "RotateRight":
             self.agent_rotation = (self.agent_rotation + 90.0) % 360.0
-        elif action_dict['action'] == "MoveAhead":
+        elif action_dict["action"] == "MoveAhead":
             pos = _str_to_pos(self.agent_position)
             if self.agent_rotation == 0.0:
                 pos["x"] += 0.25
@@ -639,7 +658,9 @@ class RoboThorCachedEnvironment:
 
     def all_objects(self) -> List[Dict[str, Any]]:
         """Return all object metadata."""
-        return self.view_cache[self.agent_position][self.agent_rotation].metadata["objects"]
+        return self.view_cache[self.agent_position][self.agent_rotation].metadata[
+            "objects"
+        ]
 
     def all_objects_with_properties(
         self, properties: Dict[str, Any]

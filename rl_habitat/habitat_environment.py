@@ -13,14 +13,10 @@ class HabitatEnvironment(object):
     def __init__(self, config: Config, dataset: Dataset, x_display: str = None) -> None:
         # print("rl_habitat env constructor")
         self.x_display = x_display
-        self.env = habitat.Env(
-            config=config,
-            dataset=dataset
-        )
+        self.env = habitat.Env(config=config, dataset=dataset)
         # Set the target to a random goal from the provided list for this episode
         self.goal_index = 0
         self.last_geodesic_distance = None
-
 
     @property
     def scene_name(self) -> str:

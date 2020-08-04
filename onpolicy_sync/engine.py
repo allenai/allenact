@@ -474,7 +474,7 @@ class UndistributedOnPolicyRLEngine(object):
                 else:
                     metric = self.vector_tasks.metrics_out_queue.get(timeout=10)
                 if (
-                        isinstance(metric, tuple) and metric[0] == "test_metrics"
+                    isinstance(metric, tuple) and metric[0] == "test_metrics"
                 ):  # queue reused for test
                     unused.append(metric)
                 else:

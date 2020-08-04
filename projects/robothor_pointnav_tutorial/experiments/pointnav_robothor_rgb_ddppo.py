@@ -11,7 +11,9 @@ import numpy as np
 import glob
 
 from onpolicy_sync.losses.ppo import PPOConfig
-from projects.pointnav_baselines.models.point_nav_models import ResnetTensorPointNavActorCritic
+from projects.pointnav_baselines.models.point_nav_models import (
+    ResnetTensorPointNavActorCritic,
+)
 from onpolicy_sync.losses import PPO
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.task import TaskSampler
@@ -25,7 +27,7 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 
 
 class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
-    """A Point Navigation experiment configuration in RoboThor"""
+    """A Point Navigation experiment configuration in RoboThor."""
 
     # Task Parameters
     MAX_STEPS = 500
@@ -52,7 +54,6 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     TRAIN_DATASET_DIR = "dataset/robothor/objectnav/train"
     VAL_DATASET_DIR = "dataset/robothor/objectnav/val"
 
-
     SENSORS = [
         RGBSensorThor(
             height=SCREEN_SIZE,
@@ -64,7 +65,8 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     ]
 
     PREPROCESSORS = [
-        Builder(ResnetPreProcessorHabitat,
+        Builder(
+            ResnetPreProcessorHabitat,
             {
                 "input_height": SCREEN_SIZE,
                 "input_width": SCREEN_SIZE,
@@ -76,7 +78,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 "input_uuids": ["rgb_lowres"],
                 "output_uuid": "rgb_resnet",
                 "parallel": False,  # TODO False for debugging
-            }
+            },
         ),
     ]
 
@@ -118,7 +120,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig, )},
+            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
@@ -132,7 +134,9 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         )
 
     def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(self.NUM_PROCESSES, ndevices)
+        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(
+            self.NUM_PROCESSES, ndevices
+        )
         res = [0] * ndevices
         for it in range(self.NUM_PROCESSES):
             res[it % ndevices] += 1
@@ -141,8 +145,16 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
             workers_per_device = 1
-            gpu_ids = [] if not torch.cuda.is_available() else self.TRAINING_GPUS * workers_per_device
-            nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
+            gpu_ids = (
+                []
+                if not torch.cuda.is_available()
+                else self.TRAINING_GPUS * workers_per_device
+            )
+            nprocesses = (
+                1
+                if not torch.cuda.is_available()
+                else self.split_num_processes(len(gpu_ids))
+            )
             sampler_devices = self.TRAINING_GPUS
             render_video = False
         elif mode == "valid":
@@ -161,9 +173,18 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             for prep in self.PREPROCESSORS:
                 prep.kwargs["parallel"] = False
 
-        observation_set = Builder(ObservationSet, kwargs=dict(
-            source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
-        )) if mode == 'train' or nprocesses > 0 else None
+        observation_set = (
+            Builder(
+                ObservationSet,
+                kwargs=dict(
+                    source_ids=self.OBSERVATIONS,
+                    all_preprocessors=self.PREPROCESSORS,
+                    all_sensors=self.SENSORS,
+                ),
+            )
+            if mode == "train" or nprocesses > 0
+            else None
+        )
 
         return {
             "nprocesses": nprocesses,
@@ -205,7 +226,11 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        path = scenes_dir + "*.json.gz" if scenes_dir[-1] == "/" else scenes_dir + "/*.json.gz"
+        path = (
+            scenes_dir + "*.json.gz"
+            if scenes_dir[-1] == "/"
+            else scenes_dir + "/*.json.gz"
+        )
         scenes = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(path)]
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
@@ -224,13 +249,13 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         inds = self._partition_inds(len(scenes), total_processes)
 
         return {
-            "scenes": scenes[inds[process_ind]:inds[process_ind + 1]],
+            "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(PointNavTask._actions)),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
-            "rewards_config": self.REWARD_CONFIG
+            "rewards_config": self.REWARD_CONFIG,
         }
 
     def train_task_sampler_args(
@@ -242,7 +267,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.TRAIN_DATASET_DIR + '/episodes/',
+            self.TRAIN_DATASET_DIR + "/episodes/",
             process_ind,
             total_processes,
             seeds=seeds,
@@ -253,7 +278,9 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
         )
         res["allow_flipping"] = True
         return res
@@ -267,7 +294,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.VAL_DATASET_DIR + '/episodes/',
+            self.VAL_DATASET_DIR + "/episodes/",
             process_ind,
             total_processes,
             seeds=seeds,
@@ -278,20 +305,22 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
         )
         return res
 
     def test_task_sampler_args(
-            self,
-            process_ind: int,
-            total_processes: int,
-            devices: Optional[List[int]] = None,
-            seeds: Optional[List[int]] = None,
-            deterministic_cudnn: bool = False,
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]] = None,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.VAL_DATASET_DIR + '/episodes/',
+            self.VAL_DATASET_DIR + "/episodes/",
             process_ind,
             total_processes,
             seeds=seeds,

@@ -298,8 +298,8 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
         loop_dataset: bool = True,
-        allow_flipping = False,
-        env_class = RoboThorEnvironment,
+        allow_flipping=False,
+        env_class=RoboThorEnvironment,
         *args,
         **kwargs
     ) -> None:
@@ -307,13 +307,19 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         self.env_args = env_args
         self.scenes = scenes
         self.episodes = {
-            scene: self._load_dataset(scene, scene_directory + "/episodes") for scene in scenes
+            scene: self._load_dataset(scene, scene_directory + "/episodes")
+            for scene in scenes
         }
         self.distance_caches = {
-            scene: self._load_distance_cache(scene, scene_directory + "/distance_caches") for scene in scenes
+            scene: self._load_distance_cache(
+                scene, scene_directory + "/distance_caches"
+            )
+            for scene in scenes
         }
         self.env_class = env_class
-        self.object_types = [ep["object_type"] for scene in self.episodes for ep in self.episodes[scene]]
+        self.object_types = [
+            ep["object_type"] for scene in self.episodes for ep in self.episodes[scene]
+        ]
         self.env: Optional[RoboThorEnvironment] = None
         self.sensors = sensors
         self.max_steps = max_steps
@@ -326,7 +332,9 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         if loop_dataset:
             self.max_tasks = None
         else:
-            self.max_tasks = sum(len(scene_episodes) for scene_episodes in self.episodes)
+            self.max_tasks = sum(
+                len(scene_episodes) for scene_episodes in self.episodes
+            )
         self.reset_tasks = self.max_tasks
         self.scene_index = 0
         self.episode_index = 0
@@ -346,23 +354,31 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         return env
 
     def _load_dataset(self, scene: str, base_directory: str) -> List[Dict]:
-        filename = "/".join([base_directory, scene]) if base_directory[-1] != '/' else "".join([base_directory, scene])
+        filename = (
+            "/".join([base_directory, scene])
+            if base_directory[-1] != "/"
+            else "".join([base_directory, scene])
+        )
         filename += ".json.gz"
-        fin = gzip.GzipFile(filename, 'r')
+        fin = gzip.GzipFile(filename, "r")
         json_bytes = fin.read()
         fin.close()
-        json_str = json_bytes.decode('utf-8')
+        json_str = json_bytes.decode("utf-8")
         data = json.loads(json_str)
         random.shuffle(data)
         return data
 
     def _load_distance_cache(self, scene: str, base_directory: str) -> List[Dict]:
-        filename = "/".join([base_directory, scene]) if base_directory[-1] != '/' else "".join([base_directory, scene])
+        filename = (
+            "/".join([base_directory, scene])
+            if base_directory[-1] != "/"
+            else "".join([base_directory, scene])
+        )
         filename += ".json.gz"
-        fin = gzip.GzipFile(filename, 'r')
+        fin = gzip.GzipFile(filename, "r")
         json_bytes = fin.read()
         fin.close()
-        json_str = json_bytes.decode('utf-8')
+        json_str = json_bytes.decode("utf-8")
         data = json.loads(json_str)
         return data
 
@@ -421,25 +437,24 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         episode = self.episodes[scene][self.episode_index]
         distance_cache = self.distance_caches[scene] if self.distance_caches else None
         if self.env is not None:
-            if scene.replace("_physics", "") != self.env.scene_name.replace("_physics", ""):
+            if scene.replace("_physics", "") != self.env.scene_name.replace(
+                "_physics", ""
+            ):
                 self.env.reset(scene)
         else:
             self.env = self._create_environment()
             self.env.reset(scene_name=scene)
-        task_info = {
-            "scene": scene,
-            "object_type": episode["object_type"]
-        }
+        task_info = {"scene": scene, "object_type": episode["object_type"]}
         if len(task_info) == 0:
             get_logger().warning(
                 "Scene {} does not contain any"
                 " objects of any of the types {}.".format(scene, self.object_types)
             )
-        task_info['initial_position'] = episode['initial_position']
-        task_info['initial_orientation'] = episode['initial_orientation']
-        task_info['distance_to_target'] = episode['shortest_path_length']
-        task_info['path_to_target'] = episode['shortest_path']
-        task_info['object_type'] = episode['object_type']
+        task_info["initial_position"] = episode["initial_position"]
+        task_info["initial_orientation"] = episode["initial_orientation"]
+        task_info["distance_to_target"] = episode["shortest_path_length"]
+        task_info["path_to_target"] = episode["shortest_path"]
+        task_info["object_type"] = episode["object_type"]
         if self.allow_flipping and random.random() > 0.5:
             task_info["mirrored"] = True
         else:
@@ -449,7 +464,9 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         self.episode_index += 1
         if self.max_tasks is not None:
             self.max_tasks -= 1
-        if not self.env.teleport(episode['initial_position'], episode['initial_orientation']):
+        if not self.env.teleport(
+            episode["initial_position"], episode["initial_orientation"]
+        ):
             return self.next_task()
         self._last_sampled_task = ObjectNavTask(
             env=self.env,
@@ -709,8 +726,8 @@ class PointNavDatasetTaskSampler(TaskSampler):
         deterministic_cudnn: bool = False,
         loop_dataset: bool = True,
         shuffle_dataset: bool = True,
-        allow_flipping = False,
-        env_class = RoboThorEnvironment,
+        allow_flipping=False,
+        env_class=RoboThorEnvironment,
         *args,
         **kwargs
     ) -> None:
@@ -719,10 +736,14 @@ class PointNavDatasetTaskSampler(TaskSampler):
         self.scenes = scenes
         self.shuffle_dataset: bool = shuffle_dataset
         self.episodes = {
-            scene: self._load_dataset(scene, scene_directory + "/episodes") for scene in scenes
+            scene: self._load_dataset(scene, scene_directory + "/episodes")
+            for scene in scenes
         }
         self.distance_caches = {
-            scene: self._load_distance_cache(scene, scene_directory + "/distance_caches") for scene in scenes
+            scene: self._load_distance_cache(
+                scene, scene_directory + "/distance_caches"
+            )
+            for scene in scenes
         }
         self.env_class = env_class
         self.env: Optional[RoboThorEnvironment] = None
@@ -737,7 +758,9 @@ class PointNavDatasetTaskSampler(TaskSampler):
         if loop_dataset:
             self.max_tasks = None
         else:
-            self.max_tasks = sum(len(scene_episodes) for scene_episodes in self.episodes)
+            self.max_tasks = sum(
+                len(scene_episodes) for scene_episodes in self.episodes
+            )
         self.reset_tasks = self.max_tasks
         self.scene_index = 0
         self.episode_index = 0
@@ -757,23 +780,31 @@ class PointNavDatasetTaskSampler(TaskSampler):
         return env
 
     def _load_dataset(self, scene: str, base_directory: str) -> List[Dict]:
-        filename = "/".join([base_directory, scene]) if base_directory[-1] != '/' else "".join([base_directory, scene])
+        filename = (
+            "/".join([base_directory, scene])
+            if base_directory[-1] != "/"
+            else "".join([base_directory, scene])
+        )
         filename += ".json.gz"
-        fin = gzip.GzipFile(filename, 'r')
+        fin = gzip.GzipFile(filename, "r")
         json_bytes = fin.read()
         fin.close()
-        json_str = json_bytes.decode('utf-8')
+        json_str = json_bytes.decode("utf-8")
         data = json.loads(json_str)
         random.shuffle(data)
         return data
 
     def _load_distance_cache(self, scene: str, base_directory: str) -> List[Dict]:
-        filename = "/".join([base_directory, scene]) if base_directory[-1] != '/' else "".join([base_directory, scene])
+        filename = (
+            "/".join([base_directory, scene])
+            if base_directory[-1] != "/"
+            else "".join([base_directory, scene])
+        )
         filename += ".json.gz"
-        fin = gzip.GzipFile(filename, 'r')
+        fin = gzip.GzipFile(filename, "r")
         json_bytes = fin.read()
         fin.close()
-        json_str = json_bytes.decode('utf-8')
+        json_str = json_bytes.decode("utf-8")
         data = json.loads(json_str)
         return data
 
@@ -825,7 +856,9 @@ class PointNavDatasetTaskSampler(TaskSampler):
         episode = self.episodes[scene][self.episode_index]
         distance_cache = self.distance_caches[scene] if self.distance_caches else None
         if self.env is not None:
-            if scene.replace("_physics", "") != self.env.scene_name.replace("_physics", ""):
+            if scene.replace("_physics", "") != self.env.scene_name.replace(
+                "_physics", ""
+            ):
                 self.env.reset(scene)
         else:
             self.env = self._create_environment()
@@ -833,11 +866,13 @@ class PointNavDatasetTaskSampler(TaskSampler):
 
         task_info = {
             "scene": scene,
-            "initial_position": ['initial_position'],
-            "initial_orientation": episode['initial_orientation'],
-            "target": find_nearest_point_in_cache(distance_cache, episode['target_position']),
-            "shortest_path": episode['shortest_path'],
-            "distance_to_target": episode['shortest_path_length']
+            "initial_position": ["initial_position"],
+            "initial_orientation": episode["initial_orientation"],
+            "target": find_nearest_point_in_cache(
+                distance_cache, episode["target_position"]
+            ),
+            "shortest_path": episode["shortest_path"],
+            "distance_to_target": episode["shortest_path_length"],
         }
 
         if self.allow_flipping and random.random() > 0.5:
@@ -852,7 +887,9 @@ class PointNavDatasetTaskSampler(TaskSampler):
         if self.max_tasks is not None:
             self.max_tasks -= 1
 
-        if not self.env.teleport(episode['initial_position'], episode['initial_orientation']):
+        if not self.env.teleport(
+            episode["initial_position"], episode["initial_orientation"]
+        ):
             return self.next_task()
 
         self._last_sampled_task = PointNavTask(
@@ -863,7 +900,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
             action_space=self._action_space,
             reward_configs=self.rewards_config,
             distance_cache=distance_cache,
-            episode_info=episode
+            episode_info=episode,
         )
 
         return self._last_sampled_task

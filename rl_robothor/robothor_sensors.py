@@ -13,6 +13,7 @@ from utils.misc_utils import prepare_locals_for_super
 
 class RGBSensorRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnvironment]]):
     """Sensor for RGB images in RoboTHOR.
+
     Returns from a running RoboThorEnvironment instance, the current RGB
     frame corresponding to the agent's egocentric view.
     """

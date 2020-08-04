@@ -8,12 +8,17 @@ from onpolicy_sync.losses import PPO
 from rl_robothor.robothor_tasks import PointNavTask
 from rl_robothor.robothor_sensors import DepthSensorRoboThor, GPSCompassSensorRoboThor
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
-from projects.pointnav_baselines.models.point_nav_models import PointNavActorCriticSimpleConvRNN
-from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base import PointNavRoboThorBaseConfig
+from projects.pointnav_baselines.models.point_nav_models import (
+    PointNavActorCriticSimpleConvRNN,
+)
+from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base import (
+    PointNavRoboThorBaseConfig,
+)
 
 
 class PointNavRoboThorRGBPPOExperimentConfig(PointNavRoboThorBaseConfig):
-    """An Point Navigation experiment configuration in RoboTHOR with Depth input"""
+    """An Point Navigation experiment configuration in RoboTHOR with Depth
+    input."""
 
     def __init__(self):
         super().__init__()
@@ -33,7 +38,6 @@ class PointNavRoboThorRGBPPOExperimentConfig(PointNavRoboThorBaseConfig):
             "depth_lowres",
             "target_coordinates_ind",
         ]
-
 
     @classmethod
     def tag(cls):
@@ -60,7 +64,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(PointNavRoboThorBaseConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig, )},
+            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
@@ -83,5 +87,5 @@ class PointNavRoboThorRGBPPOExperimentConfig(PointNavRoboThorBaseConfig):
             embed_coordinates=False,
             coordinate_dims=2,
             num_rnn_layers=1,
-            rnn_type='GRU'
+            rnn_type="GRU",
         )

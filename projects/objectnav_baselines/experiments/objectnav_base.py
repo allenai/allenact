@@ -2,7 +2,7 @@ from rl_base.experiment_config import ExperimentConfig
 
 
 class ObjectNavBaseConfig(ExperimentConfig):
-    """The base object navigation configuration file"""
+    """The base object navigation configuration file."""
 
     def __init__(self):
         self.CAMERA_WIDTH = 640

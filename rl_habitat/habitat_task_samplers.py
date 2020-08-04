@@ -37,11 +37,10 @@ class PointNavTaskSampler(TaskSampler):
         dataset = habitat.make_dataset(
             self.env_config.DATASET.TYPE, config=self.env_config.DATASET
         )
-        env = HabitatEnvironment(
-            config=self.env_config,
-            dataset=dataset
-        )
-        self.max_tasks =  None if self.env_config.MODE == 'train' else env.num_episodes  # env.num_episodes
+        env = HabitatEnvironment(config=self.env_config, dataset=dataset)
+        self.max_tasks = (
+            None if self.env_config.MODE == "train" else env.num_episodes
+        )  # env.num_episodes
         self.reset_tasks = self.max_tasks
         return env
 
@@ -138,11 +137,10 @@ class ObjectNavTaskSampler(TaskSampler):
         dataset = habitat.make_dataset(
             self.env_config.DATASET.TYPE, config=self.env_config.DATASET
         )
-        env = HabitatEnvironment(
-            config=self.env_config,
-            dataset=dataset
-        )
-        self.max_tasks = None if self.env_config.MODE == 'train' else env.num_episodes  # mp3d objectnav val -> 2184
+        env = HabitatEnvironment(config=self.env_config, dataset=dataset)
+        self.max_tasks = (
+            None if self.env_config.MODE == "train" else env.num_episodes
+        )  # mp3d objectnav val -> 2184
         self.reset_tasks = self.max_tasks
         return env
 

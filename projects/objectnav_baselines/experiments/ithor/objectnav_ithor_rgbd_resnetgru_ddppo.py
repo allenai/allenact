@@ -5,9 +5,13 @@ from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 
 from onpolicy_sync.losses.ppo import PPOConfig
-from projects.objectnav_baselines.models.object_nav_models import ResnetTensorObjectNavActorCritic
+from projects.objectnav_baselines.models.object_nav_models import (
+    ResnetTensorObjectNavActorCritic,
+)
 from onpolicy_sync.losses import PPO
-from projects.objectnav_baselines.experiments.ithor.objectnav_ithor_base import ObjectNaviThorBaseConfig
+from projects.objectnav_baselines.experiments.ithor.objectnav_ithor_base import (
+    ObjectNaviThorBaseConfig,
+)
 from rl_robothor.robothor_tasks import ObjectNavTask
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from rl_robothor.robothor_sensors import DepthSensorRoboThor
@@ -16,7 +20,8 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 
 
 class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
-    """An Object Navigation experiment configuration in iThor with RGBD input"""
+    """An Object Navigation experiment configuration in iThor with RGBD
+    input."""
 
     def __init__(self):
         super().__init__()
@@ -36,13 +41,12 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
                 use_resnet_normalization=True,
                 uuid="depth_lowres",
             ),
-            GoalObjectTypeThorSensor(
-                object_types=self.TARGET_TYPES,
-            ),
+            GoalObjectTypeThorSensor(object_types=self.TARGET_TYPES,),
         ]
 
         self.PREPROCESSORS = [
-            Builder(ResnetPreProcessorHabitat,
+            Builder(
+                ResnetPreProcessorHabitat,
                 {
                     "input_height": self.SCREEN_SIZE,
                     "input_width": self.SCREEN_SIZE,
@@ -54,9 +58,10 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
                     "input_uuids": ["rgb_lowres"],
                     "output_uuid": "rgb_resnet",
                     "parallel": False,
-                }
+                },
             ),
-            Builder(ResnetPreProcessorHabitat,
+            Builder(
+                ResnetPreProcessorHabitat,
                 {
                     "input_height": self.SCREEN_SIZE,
                     "input_width": self.SCREEN_SIZE,
@@ -68,7 +73,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
                     "input_uuids": ["depth_lowres"],
                     "output_uuid": "depth_resnet",
                     "parallel": False,
-                }
+                },
             ),
         ]
 
@@ -102,7 +107,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig, )},
+            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,

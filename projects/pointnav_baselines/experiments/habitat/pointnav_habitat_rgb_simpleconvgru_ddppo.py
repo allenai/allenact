@@ -3,8 +3,12 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from projects.pointnav_baselines.experiments.habitat.pointnav_habitat_base import PointNavHabitatBaseConfig
-from projects.pointnav_baselines.models.point_nav_models import PointNavActorCriticSimpleConvRNN
+from projects.pointnav_baselines.experiments.habitat.pointnav_habitat_base import (
+    PointNavHabitatBaseConfig,
+)
+from projects.pointnav_baselines.models.point_nav_models import (
+    PointNavActorCriticSimpleConvRNN,
+)
 from rl_habitat.habitat_tasks import PointNavTask
 from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetCoordinatesSensorHabitat
 from rl_habitat.habitat_utils import construct_env_configs
@@ -12,8 +16,12 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 from onpolicy_sync.losses.ppo import PPOConfig
 from onpolicy_sync.losses import PPO
 
-class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(PointNavHabitatBaseConfig):
-    """An Point Navigation experiment configuration in Habitat with Depth input"""
+
+class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(
+    PointNavHabitatBaseConfig
+):
+    """An Point Navigation experiment configuration in Habitat with Depth
+    input."""
 
     def __init__(self):
         super().__init__()
@@ -63,7 +71,7 @@ class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(PointNa
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig, )},
+            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
@@ -86,5 +94,5 @@ class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(PointNa
             embed_coordinates=False,
             coordinate_dims=2,
             num_rnn_layers=1,
-            rnn_type='GRU'
+            rnn_type="GRU",
         )

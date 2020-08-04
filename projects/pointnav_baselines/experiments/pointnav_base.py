@@ -2,7 +2,7 @@ from rl_base.experiment_config import ExperimentConfig
 
 
 class PointNavBaseConfig(ExperimentConfig):
-    """An Object Navigation experiment configuration in iThor"""
+    """An Object Navigation experiment configuration in iThor."""
 
     def __init__(self):
         self.CAMERA_WIDTH = 640

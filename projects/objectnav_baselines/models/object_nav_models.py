@@ -1,4 +1,5 @@
 """Baseline models for use in the object navigation task.
+
 Object navigation is currently available as a Task in AI2-THOR and
 Facebook's Habitat.
 """
@@ -15,7 +16,7 @@ from onpolicy_sync.policy import (
     ActorCriticModel,
     LinearActorCriticHead,
     LinearCriticHead,
-    LinearActorHead
+    LinearActorHead,
 )
 
 from rl_base.common import ActorCriticOutput
@@ -24,6 +25,7 @@ from rl_base.distributions import CategoricalDistr
 
 class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
     """Baseline recurrent actor critic model for object-navigation.
+
     # Attributes
     action_space : The space of actions available to the agent. Currently only discrete
         actions are allowed (so this space will always be of type `gym.spaces.Discrete`).
@@ -46,9 +48,10 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         object_type_embedding_dim=8,
         trainable_masked_hidden_state: bool = False,
         num_rnn_layers=1,
-        rnn_type='GRU',
+        rnn_type="GRU",
     ):
         """Initializer.
+
         See class documentation for parameter definitions.
         """
         super().__init__(action_space=action_space, observation_space=observation_space)
@@ -61,20 +64,15 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         self.visual_encoder = SimpleCNN(self.observation_space, self._hidden_size)
 
         self.state_encoder = RNNStateEncoder(
-            (0 if self.is_blind else self._hidden_size)
-            + object_type_embedding_dim,
+            (0 if self.is_blind else self._hidden_size) + object_type_embedding_dim,
             self._hidden_size,
             trainable_masked_hidden_state=trainable_masked_hidden_state,
             num_layers=num_rnn_layers,
-            rnn_type=rnn_type
+            rnn_type=rnn_type,
         )
 
-        self.actor = LinearActorHead(
-            self._hidden_size, action_space.n
-        )
-        self.critic = LinearCriticHead(
-            self._hidden_size
-        )
+        self.actor = LinearActorHead(self._hidden_size, action_space.n)
+        self.critic = LinearCriticHead(self._hidden_size)
 
         self.object_type_embedding = nn.Embedding(
             num_embeddings=self._n_object_types,
@@ -115,11 +113,12 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         masks: torch.FloatTensor,
     ) -> Tuple[ActorCriticOutput, torch.FloatTensor]:
         """Processes input batched observations to produce new actor and critic
-        values.
-        Processes input batched observations (along with prior hidden states, previous actions,
-        and masks denoting which recurrent hidden states should be masked) and returns
-        an `ActorCriticOutput` object containing the model's policy (distribution over actions)
-        and evaluation of the current state (value).
+        values. Processes input batched observations (along with prior hidden
+        states, previous actions, and masks denoting which recurrent hidden
+        states should be masked) and returns an `ActorCriticOutput` object
+        containing the model's policy (distribution over actions) and
+        evaluation of the current state (value).
+
         # Parameters
         observations : Batched input observations.
         rnn_hidden_states : Hidden states from initial timepoints.
@@ -140,13 +139,16 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
 
         # distributions, values = self.actor_and_critic(x_out)
         return (
-            ActorCriticOutput(distributions=self.actor(x_out), values=self.critic(x_out), extras={}),
+            ActorCriticOutput(
+                distributions=self.actor(x_out), values=self.critic(x_out), extras={}
+            ),
             rnn_hidden_states,
         )
 
 
 class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
     """Baseline recurrent actor critic model for object-navigation.
+
     # Attributes
     action_space : The space of actions available to the agent. Currently only discrete
         actions are allowed (so this space will always be of type `gym.spaces.Discrete`).
@@ -169,9 +171,10 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
         object_type_embedding_dim=8,
         trainable_masked_hidden_state: bool = False,
         num_rnn_layers=1,
-        rnn_type='GRU',
+        rnn_type="GRU",
     ):
         """Initializer.
+
         See class documentation for parameter definitions.
         """
         super().__init__(action_space=action_space, observation_space=observation_space)
@@ -181,18 +184,20 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
         self._hidden_size = hidden_size
         self.object_type_embedding_size = object_type_embedding_dim
 
-        if 'rgb_resnet' in observation_space.spaces and 'depth_resnet' in observation_space.spaces:
+        if (
+            "rgb_resnet" in observation_space.spaces
+            and "depth_resnet" in observation_space.spaces
+        ):
             self.visual_encoder = nn.Linear(4096, hidden_size)
         else:
             self.visual_encoder = nn.Linear(2048, hidden_size)
 
         self.state_encoder = RNNStateEncoder(
-            (0 if self.is_blind else self._hidden_size)
-            + object_type_embedding_dim,
+            (0 if self.is_blind else self._hidden_size) + object_type_embedding_dim,
             self._hidden_size,
             trainable_masked_hidden_state=trainable_masked_hidden_state,
             num_layers=num_rnn_layers,
-            rnn_type=rnn_type
+            rnn_type=rnn_type,
         )
 
         self.actor_and_critic = LinearActorCriticHead(
@@ -238,11 +243,12 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
         masks: torch.FloatTensor,
     ) -> Tuple[ActorCriticOutput, torch.FloatTensor]:
         """Processes input batched observations to produce new actor and critic
-        values.
-        Processes input batched observations (along with prior hidden states, previous actions,
-        and masks denoting which recurrent hidden states should be masked) and returns
-        an `ActorCriticOutput` object containing the model's policy (distribution over actions)
-        and evaluation of the current state (value).
+        values. Processes input batched observations (along with prior hidden
+        states, previous actions, and masks denoting which recurrent hidden
+        states should be masked) and returns an `ActorCriticOutput` object
+        containing the model's policy (distribution over actions) and
+        evaluation of the current state (value).
+
         # Parameters
         observations : Batched input observations.
         rnn_hidden_states : Hidden states from initial timepoints.
@@ -256,9 +262,17 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
 
         embs = []
         if "rgb_resnet" in observations:
-            embs.append(observations["rgb_resnet"].view(-1, observations["rgb_resnet"].shape[-1]))
+            embs.append(
+                observations["rgb_resnet"].view(
+                    -1, observations["rgb_resnet"].shape[-1]
+                )
+            )
         if "depth_resnet" in observations:
-            embs.append(observations["depth_resnet"].view(-1, observations["depth_resnet"].shape[-1]))
+            embs.append(
+                observations["depth_resnet"].view(
+                    -1, observations["depth_resnet"].shape[-1]
+                )
+            )
         perception_emb = torch.cat(embs, dim=1)
         x = [self.visual_encoder(perception_emb)] + x
 
@@ -282,7 +296,7 @@ class ObjectNavActorCriticTrainResNet50RNN(ActorCriticModel[CategoricalDistr]):
         object_type_embedding_dim=8,
         trainable_masked_hidden_state: bool = False,
         num_rnn_layers=1,
-        rnn_type='GRU'
+        rnn_type="GRU",
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
@@ -306,24 +320,19 @@ class ObjectNavActorCriticTrainResNet50RNN(ActorCriticModel[CategoricalDistr]):
             nn.ReLU(),
             # nn.AdaptiveAvgPool2d((1,1)),
             nn.Flatten(),
-            nn.Linear(2048, 512)
+            nn.Linear(2048, 512),
         )
 
         self.state_encoder = RNNStateEncoder(
-            (0 if self.is_blind else self._hidden_size)
-            + object_type_embedding_dim,
+            (0 if self.is_blind else self._hidden_size) + object_type_embedding_dim,
             self._hidden_size,
             trainable_masked_hidden_state=trainable_masked_hidden_state,
             num_layers=num_rnn_layers,
-            rnn_type=rnn_type
+            rnn_type=rnn_type,
         )
 
-        self.actor = LinearActorHead(
-            self._hidden_size, action_space.n
-        )
-        self.critic = LinearCriticHead(
-            self._hidden_size
-        )
+        self.actor = LinearActorHead(self._hidden_size, action_space.n)
+        self.critic = LinearCriticHead(self._hidden_size)
 
         self.object_type_embedding = nn.Embedding(
             num_embeddings=self._n_object_types,
@@ -380,16 +389,16 @@ class ObjectNavActorCriticTrainResNet50RNN(ActorCriticModel[CategoricalDistr]):
 
 class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
     def __init__(
-            self,
-            action_space: gym.spaces.Discrete,
-            observation_space: SpaceDict,
-            goal_sensor_uuid: str,
-            rgb_resnet_preprocessor_uuid: Optional[str],
-            depth_resnet_preprocessor_uuid: Optional[str] = None,
-            hidden_size: int = 512,
-            goal_dims: int = 32,
-            resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
-            combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
+        self,
+        action_space: gym.spaces.Discrete,
+        observation_space: SpaceDict,
+        goal_sensor_uuid: str,
+        rgb_resnet_preprocessor_uuid: Optional[str],
+        depth_resnet_preprocessor_uuid: Optional[str] = None,
+        hidden_size: int = 512,
+        goal_dims: int = 32,
+        resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
+        combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
     ):
 
         super().__init__(
@@ -397,9 +406,15 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         )
 
         self._hidden_size = hidden_size
-        if rgb_resnet_preprocessor_uuid is None or depth_resnet_preprocessor_uuid is None:
-            resnet_preprocessor_uuid = rgb_resnet_preprocessor_uuid if rgb_resnet_preprocessor_uuid is None else \
-                depth_resnet_preprocessor_uuid
+        if (
+            rgb_resnet_preprocessor_uuid is None
+            or depth_resnet_preprocessor_uuid is None
+        ):
+            resnet_preprocessor_uuid = (
+                rgb_resnet_preprocessor_uuid
+                if rgb_resnet_preprocessor_uuid is None
+                else depth_resnet_preprocessor_uuid
+            )
             self.goal_visual_encoder = ResnetTensorGoalEncoder(
                 self.observation_space,
                 goal_sensor_uuid,
@@ -442,7 +457,7 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         return self.state_encoder.num_recurrent_layers
 
     def get_object_type_encoding(
-            self, observations: Dict[str, torch.FloatTensor]
+        self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
         return self.goal_visual_encoder.get_object_type_encoding(observations)
@@ -460,15 +475,15 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
 
 class ResNextTrainObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
     def __init__(
-            self,
-            action_space: gym.spaces.Discrete,
-            observation_space: SpaceDict,
-            goal_sensor_uuid: str,
-            resnet_preprocessor_uuid: str,
-            hidden_size: int = 512,
-            goal_dims: int = 32,
-            resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
-            combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
+        self,
+        action_space: gym.spaces.Discrete,
+        observation_space: SpaceDict,
+        goal_sensor_uuid: str,
+        resnet_preprocessor_uuid: str,
+        hidden_size: int = 512,
+        goal_dims: int = 32,
+        resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
+        combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
     ):
 
         super().__init__(
@@ -480,11 +495,13 @@ class ResNextTrainObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
             observation_space=observation_space,
             action_space=action_space,
             goal_sensor_uuid=goal_sensor_uuid,
-            backbone=visual_encoder_weights['model_args'].backbone,
-            hidden_size=visual_encoder_weights['model_args'].hidden_size,
-            num_recurrent_layers=visual_encoder_weights['model_args'].num_recurrent_layers,
-            resnet_baseplanes=visual_encoder_weights['model_args'].resnet_baseplanes,
-            rnn_type=visual_encoder_weights['model_args'].rnn_type
+            backbone=visual_encoder_weights["model_args"].backbone,
+            hidden_size=visual_encoder_weights["model_args"].hidden_size,
+            num_recurrent_layers=visual_encoder_weights[
+                "model_args"
+            ].num_recurrent_layers,
+            resnet_baseplanes=visual_encoder_weights["model_args"].resnet_baseplanes,
+            rnn_type=visual_encoder_weights["model_args"].rnn_type,
         )
 
         self.state_encoder = RNNStateEncoder(
@@ -511,7 +528,7 @@ class ResNextTrainObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         return self.state_encoder.num_recurrent_layers
 
     def get_object_type_encoding(
-            self, observations: Dict[str, torch.FloatTensor]
+        self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
         return self.goal_visual_encoder.get_object_type_encoding(observations)
@@ -529,13 +546,13 @@ class ResNextTrainObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
 
 class ResnetTensorGoalEncoder(nn.Module):
     def __init__(
-            self,
-            observation_spaces: SpaceDict,
-            goal_sensor_uuid: str,
-            resnet_preprocessor_uuid: str,
-            class_dims: int = 32,
-            resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
-            combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
+        self,
+        observation_spaces: SpaceDict,
+        goal_sensor_uuid: str,
+        resnet_preprocessor_uuid: str,
+        class_dims: int = 32,
+        resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
+        combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
     ) -> None:
         super().__init__()
         self.goal_uuid = goal_sensor_uuid
@@ -576,13 +593,13 @@ class ResnetTensorGoalEncoder(nn.Module):
             return self.class_dims
         else:
             return (
-                    self.combine_hid_out_dims[-1]
-                    * self.resnet_tensor_shape[1]
-                    * self.resnet_tensor_shape[2]
+                self.combine_hid_out_dims[-1]
+                * self.resnet_tensor_shape[1]
+                * self.resnet_tensor_shape[2]
             )
 
     def get_object_type_encoding(
-            self, observations: Dict[str, torch.FloatTensor]
+        self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
         return typing.cast(
@@ -595,8 +612,9 @@ class ResnetTensorGoalEncoder(nn.Module):
 
     def distribute_target(self, observations):
         target_emb = self.embed_class(observations[self.goal_uuid])
-        return target_emb.view(-1, self.class_dims, 1, 1).expand(-1, -1, self.resnet_tensor_shape[-2],
-                                                                 self.resnet_tensor_shape[-1])
+        return target_emb.view(-1, self.class_dims, 1, 1).expand(
+            -1, -1, self.resnet_tensor_shape[-2], self.resnet_tensor_shape[-1]
+        )
 
     def forward(self, observations):
         if self.blind:
@@ -605,20 +623,20 @@ class ResnetTensorGoalEncoder(nn.Module):
             self.compress_resnet(observations),
             self.distribute_target(observations),
         ]
-        x = self.target_obs_combiner(torch.cat(embs, dim=1, ))
+        x = self.target_obs_combiner(torch.cat(embs, dim=1,))
         return x.view(x.size(0), -1)  # flatten
 
 
 class ResnetDualTensorGoalEncoder(nn.Module):
     def __init__(
-            self,
-            observation_spaces: SpaceDict,
-            goal_sensor_uuid: str,
-            rgb_resnet_preprocessor_uuid: str,
-            depth_resnet_preprocessor_uuid: str,
-            class_dims: int = 32,
-            resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
-            combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
+        self,
+        observation_spaces: SpaceDict,
+        goal_sensor_uuid: str,
+        rgb_resnet_preprocessor_uuid: str,
+        depth_resnet_preprocessor_uuid: str,
+        class_dims: int = 32,
+        resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
+        combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
     ) -> None:
         super().__init__()
         self.goal_uuid = goal_sensor_uuid
@@ -631,10 +649,14 @@ class ResnetDualTensorGoalEncoder(nn.Module):
             num_embeddings=observation_spaces.spaces[self.goal_uuid].n,
             embedding_dim=self.class_dims,
         )
-        self.blind = self.rgb_resnet_uuid not in observation_spaces.spaces or \
-                     self.depth_resnet_uuid not in observation_spaces.spaces
+        self.blind = (
+            self.rgb_resnet_uuid not in observation_spaces.spaces
+            or self.depth_resnet_uuid not in observation_spaces.spaces
+        )
         if not self.blind:
-            self.resnet_tensor_shape = observation_spaces.spaces[self.rgb_resnet_uuid].shape
+            self.resnet_tensor_shape = observation_spaces.spaces[
+                self.rgb_resnet_uuid
+            ].shape
             self.rgb_resnet_compressor = nn.Sequential(
                 nn.Conv2d(self.resnet_tensor_shape[0], self.resnet_hid_out_dims[0], 1),
                 nn.ReLU(),
@@ -666,7 +688,6 @@ class ResnetDualTensorGoalEncoder(nn.Module):
                 nn.Conv2d(*self.combine_hid_out_dims[0:2], 1),
             )
 
-
     @property
     def is_blind(self):
         return self.blind
@@ -677,14 +698,14 @@ class ResnetDualTensorGoalEncoder(nn.Module):
             return self.class_dims
         else:
             return (
-                    2
-                    * self.combine_hid_out_dims[-1]
-                    * self.resnet_tensor_shape[1]
-                    * self.resnet_tensor_shape[2]
+                2
+                * self.combine_hid_out_dims[-1]
+                * self.resnet_tensor_shape[1]
+                * self.resnet_tensor_shape[2]
             )
 
     def get_object_type_encoding(
-            self, observations: Dict[str, torch.FloatTensor]
+        self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
         return typing.cast(
@@ -700,8 +721,9 @@ class ResnetDualTensorGoalEncoder(nn.Module):
 
     def distribute_target(self, observations):
         target_emb = self.embed_class(observations[self.goal_uuid])
-        return target_emb.view(-1, self.class_dims, 1, 1).expand(-1, -1, self.resnet_tensor_shape[-2],
-                                                                 self.resnet_tensor_shape[-1])
+        return target_emb.view(-1, self.class_dims, 1, 1).expand(
+            -1, -1, self.resnet_tensor_shape[-2], self.resnet_tensor_shape[-1]
+        )
 
     def forward(self, observations):
         if self.blind:
@@ -710,11 +732,11 @@ class ResnetDualTensorGoalEncoder(nn.Module):
             self.compress_rgb_resnet(observations),
             self.distribute_target(observations),
         ]
-        rgb_x = self.rgb_target_obs_combiner(torch.cat(rgb_embs, dim=1, ))
+        rgb_x = self.rgb_target_obs_combiner(torch.cat(rgb_embs, dim=1,))
         depth_embs = [
             self.compress_depth_resnet(observations),
             self.distribute_target(observations),
         ]
-        depth_x = self.depth_target_obs_combiner(torch.cat(depth_embs, dim=1, ))
+        depth_x = self.depth_target_obs_combiner(torch.cat(depth_embs, dim=1,))
         x = torch.cat([rgb_x, depth_x], dim=1)
         return x.view(x.size(0), -1)  # flatten

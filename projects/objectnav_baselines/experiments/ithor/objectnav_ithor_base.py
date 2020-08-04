@@ -15,24 +15,24 @@ from utils.experiment_utils import Builder
 
 
 class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
-    """The base config for all iTHOR ObjectNav experiments"""
+    """The base config for all iTHOR ObjectNav experiments."""
 
     def __init__(self):
         super().__init__()
         self.TARGET_TYPES = sorted(
             [
-                'AlarmClock',
-                'Apple',
-                'Book',
-                'Bowl',
-                'Box',
-                'Candle',
-                'GarbageCan',
-                'HousePlant',
-                'Laptop',
-                'SoapBottle',
-                'Television',
-                'Toaster'
+                "AlarmClock",
+                "Apple",
+                "Book",
+                "Bowl",
+                "Box",
+                "Candle",
+                "GarbageCan",
+                "HousePlant",
+                "Laptop",
+                "SoapBottle",
+                "Television",
+                "Toaster",
             ]
         )
         self.ENV_ARGS = dict(
@@ -58,9 +58,10 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         self.TRAIN_DATASET_DIR = "dataset/ithor/objectnav/train"
         self.VAL_DATASET_DIR = "dataset/ithor/objectnav/val"
 
-
     def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(self.NUM_PROCESSES, ndevices)
+        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(
+            self.NUM_PROCESSES, ndevices
+        )
         res = [0] * ndevices
         for it in range(self.NUM_PROCESSES):
             res[it % ndevices] += 1
@@ -69,8 +70,16 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
             workers_per_device = 1
-            gpu_ids = [] if not torch.cuda.is_available() else self.TRAIN_GPU_IDS * workers_per_device
-            nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
+            gpu_ids = (
+                []
+                if not torch.cuda.is_available()
+                else self.TRAIN_GPU_IDS * workers_per_device
+            )
+            nprocesses = (
+                1
+                if not torch.cuda.is_available()
+                else self.split_num_processes(len(gpu_ids))
+            )
             sampler_devices = self.TRAIN_GPU_IDS
             render_video = False
         elif mode == "valid":
@@ -89,14 +98,25 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
             for prep in self.PREPROCESSORS:
                 prep.kwargs["parallel"] = False
 
-        observation_set = Builder(ObservationSet, kwargs=dict(
-            source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
-        )) if mode == 'train' or nprocesses > 0 else None
+        observation_set = (
+            Builder(
+                ObservationSet,
+                kwargs=dict(
+                    source_ids=self.OBSERVATIONS,
+                    all_preprocessors=self.PREPROCESSORS,
+                    all_sensors=self.SENSORS,
+                ),
+            )
+            if mode == "train" or nprocesses > 0
+            else None
+        )
 
         return {
             "nprocesses": nprocesses,
             "gpu_ids": gpu_ids,
-            "sampler_devices": sampler_devices if mode == "train" else gpu_ids,  # ignored with > 1 gpu_ids
+            "sampler_devices": sampler_devices
+            if mode == "train"
+            else gpu_ids,  # ignored with > 1 gpu_ids
             "observation_set": observation_set,
             "render_video": render_video,
         }
@@ -119,7 +139,11 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        path = scenes_dir + "*.json.gz" if scenes_dir[-1] == "/" else scenes_dir + "/*.json.gz"
+        path = (
+            scenes_dir + "*.json.gz"
+            if scenes_dir[-1] == "/"
+            else scenes_dir + "/*.json.gz"
+        )
         scenes = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(path)]
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
@@ -138,14 +162,14 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         inds = self._partition_inds(len(scenes), total_processes)
 
         return {
-            "scenes": scenes[inds[process_ind]:inds[process_ind + 1]],
+            "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
             "object_types": self.TARGET_TYPES,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(ObjectNavTask._actions)),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
-            "rewards_config": self.REWARD_CONFIG
+            "rewards_config": self.REWARD_CONFIG,
         }
 
     def train_task_sampler_args(
@@ -157,7 +181,7 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.TRAIN_DATASET_DIR + '/episodes/',
+            self.TRAIN_DATASET_DIR + "/episodes/",
             process_ind,
             total_processes,
             seeds=seeds,
@@ -168,7 +192,9 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
         )
         res["allow_flipping"] = True
         return res
@@ -182,7 +208,7 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.VAL_DATASET_DIR + '/episodes/',
+            self.VAL_DATASET_DIR + "/episodes/",
             process_ind,
             total_processes,
             seeds=seeds,
@@ -193,20 +219,22 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
         )
         return res
 
     def test_task_sampler_args(
-            self,
-            process_ind: int,
-            total_processes: int,
-            devices: Optional[List[int]] = None,
-            seeds: Optional[List[int]] = None,
-            deterministic_cudnn: bool = False,
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]] = None,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.VAL_DATASET_DIR + '/episodes/',
+            self.VAL_DATASET_DIR + "/episodes/",
             process_ind,
             total_processes,
             seeds=seeds,

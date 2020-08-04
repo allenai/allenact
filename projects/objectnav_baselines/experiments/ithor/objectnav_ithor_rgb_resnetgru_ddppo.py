@@ -5,9 +5,13 @@ from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 
 from onpolicy_sync.losses.ppo import PPOConfig
-from projects.objectnav_baselines.models.object_nav_models import ResnetTensorObjectNavActorCritic
+from projects.objectnav_baselines.models.object_nav_models import (
+    ResnetTensorObjectNavActorCritic,
+)
 from onpolicy_sync.losses import PPO
-from projects.objectnav_baselines.experiments.ithor.objectnav_ithor_base import ObjectNaviThorBaseConfig
+from projects.objectnav_baselines.experiments.ithor.objectnav_ithor_base import (
+    ObjectNaviThorBaseConfig,
+)
 from rl_robothor.robothor_tasks import ObjectNavTask
 from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
@@ -15,7 +19,8 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 
 
 class ObjectNaviThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
-    """An Object Navigation experiment configuration in iThor with RGB input"""
+    """An Object Navigation experiment configuration in iThor with RGB
+    input."""
 
     def __init__(self):
         super().__init__()
@@ -26,13 +31,12 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
                 use_resnet_normalization=True,
                 uuid="rgb_lowres",
             ),
-            GoalObjectTypeThorSensor(
-                object_types=self.TARGET_TYPES,
-            ),
+            GoalObjectTypeThorSensor(object_types=self.TARGET_TYPES,),
         ]
 
         self.PREPROCESSORS = [
-            Builder(ResnetPreProcessorHabitat,
+            Builder(
+                ResnetPreProcessorHabitat,
                 {
                     "input_height": self.SCREEN_SIZE,
                     "input_width": self.SCREEN_SIZE,
@@ -44,7 +48,7 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
                     "input_uuids": ["rgb_lowres"],
                     "output_uuid": "rgb_resnet",
                     "parallel": False,
-                }
+                },
             ),
         ]
 

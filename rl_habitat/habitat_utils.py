@@ -28,12 +28,32 @@ def construct_env_configs(config: Config) -> List[Config]:
     dataset = habitat.make_dataset(config.DATASET.TYPE)
     scenes = dataset.get_scenes_to_load(config.DATASET)
 
-    scenes = ['sT4fr6TAbpF', 'HxpKQynjfin', '8WUmhLawc2A', 'r47D5H71a5s',
-              'Pm6F8kyY3z2', '17DRP5sb8fy', 'Vvot9Ly1tCj', 'GdvgFV5R1Z5',
-              'sT4fr6TAbpF', 'HxpKQynjfin', '8WUmhLawc2A', 'r47D5H71a5s',
-              'Pm6F8kyY3z2', '17DRP5sb8fy', 'Vvot9Ly1tCj', 'GdvgFV5R1Z5',
-              'sT4fr6TAbpF', 'HxpKQynjfin', '8WUmhLawc2A', 'r47D5H71a5s',
-              'Pm6F8kyY3z2', '17DRP5sb8fy', 'Vvot9Ly1tCj', 'GdvgFV5R1Z5']
+    scenes = [
+        "sT4fr6TAbpF",
+        "HxpKQynjfin",
+        "8WUmhLawc2A",
+        "r47D5H71a5s",
+        "Pm6F8kyY3z2",
+        "17DRP5sb8fy",
+        "Vvot9Ly1tCj",
+        "GdvgFV5R1Z5",
+        "sT4fr6TAbpF",
+        "HxpKQynjfin",
+        "8WUmhLawc2A",
+        "r47D5H71a5s",
+        "Pm6F8kyY3z2",
+        "17DRP5sb8fy",
+        "Vvot9Ly1tCj",
+        "GdvgFV5R1Z5",
+        "sT4fr6TAbpF",
+        "HxpKQynjfin",
+        "8WUmhLawc2A",
+        "r47D5H71a5s",
+        "Pm6F8kyY3z2",
+        "17DRP5sb8fy",
+        "Vvot9Ly1tCj",
+        "GdvgFV5R1Z5",
+    ]
 
     # scenes = ['rPc6DW4iMge', 'e9zR4mvMWw7', 'uNb9QFRL6hY', 'sKLMLpTHeUy', 's8pcmisQ38h', '759xd9YjKW5',
     #           'XcA2TqTSSAj', 'SN83YJsR3w2', '8WUmhLawc2A', 'JeFG25nYj2p', '17DRP5sb8fy', 'Uxmj2M2itWa',
@@ -100,21 +120,83 @@ def construct_env_configs_mp3d(config: Config) -> List[Config]:
     # scenes = dataset.get_scenes_to_load(config.DATASET)
 
     if num_processes == 1:
-        scene_splits = [['pRbA3pwrgk9']]
+        scene_splits = [["pRbA3pwrgk9"]]
     else:
-        small = ['rPc6DW4iMge', 'e9zR4mvMWw7', 'uNb9QFRL6hY', 'qoiz87JEwZ2', 'sKLMLpTHeUy', 's8pcmisQ38h', '759xd9YjKW5',
-                 'XcA2TqTSSAj', 'SN83YJsR3w2', '8WUmhLawc2A', 'JeFG25nYj2p', '17DRP5sb8fy', 'Uxmj2M2itWa',
-                 'XcA2TqTSSAj', 'SN83YJsR3w2', '8WUmhLawc2A', 'JeFG25nYj2p', '17DRP5sb8fy', 'Uxmj2M2itWa',
-                 'D7N2EKCX4Sj', 'b8cTxDM8gDG', 'sT4fr6TAbpF', 'S9hNv5qa7GM', '82sE5b5pLXE', 'pRbA3pwrgk9', 'aayBHfsNo7d',
-                 'cV4RVeZvu5T', 'i5noydFURQK', 'YmJkqBEsHnH', 'jh4fc5c5qoQ', 'VVfe2KiqLaN', '29hnd4uzFmX', 'Pm6F8kyY3z2',
-                 'JF19kD82Mey', 'GdvgFV5R1Z5', 'HxpKQynjfin', 'vyrNrziPKCB']
-        med = ['V2XKFyX4ASd', 'VFuaQ6m2Qom', 'ZMojNkEp431', '5LpN3gDmAk7', 'r47D5H71a5s', 'ULsKaCPVFJR',
-               'E9uDoFAP3SH', 'kEZ7cmS4wCh', 'ac26ZMwG7aT', 'dhjEzFoUFzH', 'mJXqzFtmKg4', 'p5wJjkQkbXX', 'Vvot9Ly1tCj',
-               'EDJbREhghzL', 'VzqfbhrpDEA', '7y3sRwLe3Va']
+        small = [
+            "rPc6DW4iMge",
+            "e9zR4mvMWw7",
+            "uNb9QFRL6hY",
+            "qoiz87JEwZ2",
+            "sKLMLpTHeUy",
+            "s8pcmisQ38h",
+            "759xd9YjKW5",
+            "XcA2TqTSSAj",
+            "SN83YJsR3w2",
+            "8WUmhLawc2A",
+            "JeFG25nYj2p",
+            "17DRP5sb8fy",
+            "Uxmj2M2itWa",
+            "XcA2TqTSSAj",
+            "SN83YJsR3w2",
+            "8WUmhLawc2A",
+            "JeFG25nYj2p",
+            "17DRP5sb8fy",
+            "Uxmj2M2itWa",
+            "D7N2EKCX4Sj",
+            "b8cTxDM8gDG",
+            "sT4fr6TAbpF",
+            "S9hNv5qa7GM",
+            "82sE5b5pLXE",
+            "pRbA3pwrgk9",
+            "aayBHfsNo7d",
+            "cV4RVeZvu5T",
+            "i5noydFURQK",
+            "YmJkqBEsHnH",
+            "jh4fc5c5qoQ",
+            "VVfe2KiqLaN",
+            "29hnd4uzFmX",
+            "Pm6F8kyY3z2",
+            "JF19kD82Mey",
+            "GdvgFV5R1Z5",
+            "HxpKQynjfin",
+            "vyrNrziPKCB",
+        ]
+        med = [
+            "V2XKFyX4ASd",
+            "VFuaQ6m2Qom",
+            "ZMojNkEp431",
+            "5LpN3gDmAk7",
+            "r47D5H71a5s",
+            "ULsKaCPVFJR",
+            "E9uDoFAP3SH",
+            "kEZ7cmS4wCh",
+            "ac26ZMwG7aT",
+            "dhjEzFoUFzH",
+            "mJXqzFtmKg4",
+            "p5wJjkQkbXX",
+            "Vvot9Ly1tCj",
+            "EDJbREhghzL",
+            "VzqfbhrpDEA",
+            "7y3sRwLe3Va",
+        ]
 
         scene_splits = [[] for _ in range(config.NUM_PROCESSES)]
-        distribute(small, scene_splits, num_gpus=8, procs_per_gpu=3, proc_offset=1, scenes_per_process=2)
-        distribute(med, scene_splits, num_gpus=8, procs_per_gpu=3, proc_offset=0, scenes_per_process=1)
+        distribute(
+            small,
+            scene_splits,
+            num_gpus=8,
+            procs_per_gpu=3,
+            proc_offset=1,
+            scenes_per_process=2,
+        )
+        distribute(
+            med,
+            scene_splits,
+            num_gpus=8,
+            procs_per_gpu=3,
+            proc_offset=0,
+            scenes_per_process=1,
+        )
 
         # gpu0 = [['pRbA3pwrgk9', '82sE5b5pLXE', 'S9hNv5qa7GM'],
         #         ['Uxmj2M2itWa', '17DRP5sb8fy', 'JeFG25nYj2p'],
@@ -145,7 +227,9 @@ def construct_env_configs_mp3d(config: Config) -> List[Config]:
         task_config.defrost()
         task_config.DATASET.CONTENT_SCENES = scene_splits[i]
 
-        task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = config.SIMULATOR_GPU_IDS[i % len(config.SIMULATOR_GPU_IDS)]
+        task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = config.SIMULATOR_GPU_IDS[
+            i % len(config.SIMULATOR_GPU_IDS)
+        ]
 
         task_config.freeze()
 
@@ -154,13 +238,15 @@ def construct_env_configs_mp3d(config: Config) -> List[Config]:
     return configs
 
 
-def distribute(data: List[str],
-               scene_splits: List[List],
-               num_gpus=8,
-               procs_per_gpu=4,
-               proc_offset=0,
-               scenes_per_process=1) -> None:
+def distribute(
+    data: List[str],
+    scene_splits: List[List],
+    num_gpus=8,
+    procs_per_gpu=4,
+    proc_offset=0,
+    scenes_per_process=1,
+) -> None:
     for idx, scene in enumerate(data):
         i = (idx // num_gpus) % scenes_per_process
         j = idx % num_gpus
-        scene_splits[j*procs_per_gpu + i + proc_offset].append(scene)
+        scene_splits[j * procs_per_gpu + i + proc_offset].append(scene)
