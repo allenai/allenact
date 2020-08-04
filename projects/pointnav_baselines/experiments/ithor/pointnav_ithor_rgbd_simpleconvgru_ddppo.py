@@ -1,21 +1,26 @@
+from typing import Dict, Any, List, Optional
+from math import ceil
+
 import gym
+import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
-from torchvision import models
+import numpy as np
+import glob
 
 from onpolicy_sync.losses.ppo import PPOConfig
-from projects.objectnav_baselines.models.object_nav_models import ResnetTensorObjectNavActorCritic
 from onpolicy_sync.losses import PPO
-from projects.objectnav_baselines.experiments.ithor.objectnav_ithor_base import ObjectNaviThorBaseConfig
-from rl_robothor.robothor_tasks import ObjectNavTask
-from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
-from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
+from rl_robothor.robothor_tasks import PointNavTask
+from rl_robothor.robothor_sensors import DepthSensorRoboThor, GPSCompassSensorRoboThor
+from rl_ai2thor.ai2thor_sensors import RGBSensorThor
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
+from projects.pointnav_baselines.models.point_nav_models import PointNavActorCriticSimpleConvRNN
+from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base import PointNaviThorBaseConfig
 
 
-class ObjectNaviThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
-    """An Object Navigation experiment configuration in iThor with RGB input"""
+class PointNaviThorRGBPPOExperimentConfig(PointNaviThorBaseConfig):
+    """An Point Navigation experiment configuration in iThor with RGBD input"""
 
     def __init__(self):
         super().__init__()
@@ -28,39 +33,33 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
                     "uuid": "rgb_lowres",
                 }
             ),
-            GoalObjectTypeThorSensor({
-                "object_types": self.TARGET_TYPES,
-            }),
-        ]
-
-        self.PREPROCESSORS = [
-            Builder(ResnetPreProcessorHabitat,
+            DepthSensorRoboThor(
                 {
-                    "input_height": self.SCREEN_SIZE,
-                    "input_width": self.SCREEN_SIZE,
-                    "output_width": 7,
-                    "output_height": 7,
-                    "output_dims": 512,
-                    "pool": False,
-                    "torchvision_resnet_model": models.resnet18,
-                    "input_uuids": ["rgb_lowres"],
-                    "output_uuid": "rgb_resnet",
-                    "parallel": False,
+                    "height": self.SCREEN_SIZE,
+                    "width": self.SCREEN_SIZE,
+                    "use_resnet_normalization": True,
+                    "uuid": "depth",
                 }
             ),
+            GPSCompassSensorRoboThor({}),
         ]
 
+        self.PREPROCESSORS = []
+
         self.OBSERVATIONS = [
-            "rgb_resnet",
-            "goal_object_type_ind",
+            "rgb_lowres",
+            "depth_lowres",
+            "target_coordinates_ind",
         ]
+
 
     @classmethod
     def tag(cls):
-        return "Objectnav-iTHOR-RGB-ResNetGRU-DDPPO"
+        return "Pointnav-iTHOR-RGBD-SimpleConv-DDPPO"
 
-    def training_pipeline(self, **kwargs):
-        ppo_steps = int(300000000)
+    @classmethod
+    def training_pipeline(cls, **kwargs):
+        ppo_steps = int(75000000)
         lr = 3e-4
         num_mini_batch = 1
         update_repeats = 3
@@ -79,11 +78,11 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
+            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig, )},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
-            advance_scene_rollout_period=self.ADVANCE_SCENE_ROLLOUT_PERIOD,
+            advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
                 PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps)
             ],
@@ -94,11 +93,13 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ResnetTensorObjectNavActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask._actions)),
+        return PointNavActorCriticSimpleConvRNN(
+            action_space=gym.spaces.Discrete(len(PointNavTask._actions)),
             observation_space=kwargs["observation_set"].observation_spaces,
-            goal_sensor_uuid="goal_object_type_ind",
-            rgb_resnet_preprocessor_uuid="rgb_resnet",
+            goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
-            goal_dims=32,
+            embed_coordinates=False,
+            coordinate_dims=2,
+            num_rnn_layers=1,
+            rnn_type='GRU'
         )

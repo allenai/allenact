@@ -15,24 +15,23 @@ from utils.experiment_utils import Builder
 
 
 class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
-    """An Object Navigation experiment configuration in iThor"""
-
+    """The base config for all RoboTHOR ObjectNav experiments"""
     def __init__(self):
         super().__init__()
         self.TARGET_TYPES = sorted(
             [
                 'AlarmClock',
                 'Apple',
-                'Book',
+                'BaseballBat',
+                'BasketBall',
                 'Bowl',
-                'Box',
-                'Candle',
                 'GarbageCan',
                 'HousePlant',
                 'Laptop',
-                'SoapBottle',
+                'Mug',
+                'SprayBottle',
                 'Television',
-                'Toaster'
+                'Vase'
             ]
         )
         self.ENV_ARGS = dict(
@@ -49,9 +48,11 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
             include_private_scenes=False,
         )
 
+        self.NUM_PROCESSES = 80
         self.TRAIN_GPU_IDS = [0, 1, 2, 3, 4, 5, 6]
         self.VALID_GPU_IDS = [7]
         self.TEST_GPU_IDS = [7]
+        self.ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
 
         self.TRAIN_DATASET_DIR = "dataset/robothor/objectnav/train"
         self.VAL_DATASET_DIR = "dataset/robothor/objectnav/val"
@@ -85,7 +86,7 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
         # Disable parallelization for validation process
         if mode == "valid":
             for prep in self.PREPROCESSORS:
-                prep.kwargs["config"]["parallel"] = False
+                prep.kwargs["parallel"] = False
 
         observation_set = Builder(ObservationSet, kwargs=dict(
             source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS

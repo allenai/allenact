@@ -10,31 +10,15 @@ from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBas
 from rl_base.task import TaskSampler
 from rl_base.preprocessor import ObservationSet
 from rl_robothor.robothor_tasks import ObjectNavTask
-from rl_robothor.robothor_task_samplers import ObjectNavDatasetTaskSampler
+from rl_robothor.robothor_task_samplers import PointNavDatasetTaskSampler
 from utils.experiment_utils import Builder
 
 
-class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
-    """The base config for all iTHOR ObjectNav experiments"""
+class PointNaviThorBaseConfig(ObjectNavBaseConfig):
+    """The base config for all iTHOR PointNav experiments"""
 
     def __init__(self):
         super().__init__()
-        self.TARGET_TYPES = sorted(
-            [
-                'AlarmClock',
-                'Apple',
-                'Book',
-                'Bowl',
-                'Box',
-                'Candle',
-                'GarbageCan',
-                'HousePlant',
-                'Laptop',
-                'SoapBottle',
-                'Television',
-                'Toaster'
-            ]
-        )
         self.ENV_ARGS = dict(
             width=self.CAMERA_WIDTH,
             height=self.CAMERA_HEIGHT,
@@ -42,7 +26,6 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
             applyActionNoise=self.STOCHASTIC,
             agentType="stochastic",
             rotateStepDegrees=self.ROTATION_DEGREES,
-            visibilityDistance=self.VISIBILITY_DISTANCE,
             gridSize=self.STEP_SIZE,
             snapToGrid=False,
             agentMode="bot",
@@ -53,10 +36,9 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         self.TRAIN_GPU_IDS = [0, 1, 2, 3, 4, 5, 6]
         self.VALID_GPU_IDS = [7]
         self.TEST_GPU_IDS = [7]
-        self.ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
 
-        self.TRAIN_DATASET_DIR = "dataset/ithor/objectnav/train"
-        self.VAL_DATASET_DIR = "dataset/ithor/objectnav/val"
+        self.TRAIN_DATASET_DIR = "dataset/ithor/pointnav/train"
+        self.VAL_DATASET_DIR = "dataset/ithor/pointnav/val"
 
 
     def split_num_processes(self, ndevices):
@@ -103,7 +85,7 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return ObjectNavDatasetTaskSampler(**kwargs)
+        return PointNavDatasetTaskSampler(**kwargs)
 
     @staticmethod
     def _partition_inds(n: int, num_parts: int):

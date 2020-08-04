@@ -25,7 +25,7 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 
 
 class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
-    """An Object Navigation experiment configuration in RoboThor"""
+    """A Point Navigation experiment configuration in RoboThor"""
 
     # Task Parameters
     MAX_STEPS = 500
@@ -48,6 +48,11 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     VALIDATION_GPUS = [7]
     TESTING_GPUS = [7]
 
+    # Dataset Parameters
+    TRAIN_DATASET_DIR = "dataset/robothor/objectnav/train"
+    VAL_DATASET_DIR = "dataset/robothor/objectnav/val"
+
+
     SENSORS = [
         RGBSensorThor(
             {
@@ -62,18 +67,18 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     PREPROCESSORS = [
         Builder(ResnetPreProcessorHabitat,
-                dict(config={
-                    "input_height": SCREEN_SIZE,
-                    "input_width": SCREEN_SIZE,
-                    "output_width": 7,
-                    "output_height": 7,
-                    "output_dims": 512,
-                    "pool": False,
-                    "torchvision_resnet_model": models.resnet18,
-                    "input_uuids": ["rgb_lowres"],
-                    "output_uuid": "rgb_resnet",
-                    "parallel": False,  # TODO False for debugging
-                })
+            {
+                "input_height": SCREEN_SIZE,
+                "input_width": SCREEN_SIZE,
+                "output_width": 7,
+                "output_height": 7,
+                "output_dims": 512,
+                "pool": False,
+                "torchvision_resnet_model": models.resnet18,
+                "input_uuids": ["rgb_lowres"],
+                "output_uuid": "rgb_resnet",
+                "parallel": False,  # TODO False for debugging
+            }
         ),
     ]
 
@@ -88,11 +93,6 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         rotateStepDegrees=30.0,
         visibilityDistance=1.0,
         gridSize=0.25,
-        continuousMode=True,
-        applyActionNoise=True,
-        agentType="stochastic",
-        snapToGrid=False,
-        agentMode="bot"
     )
 
     @classmethod
@@ -114,19 +114,19 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         max_grad_norm = 0.5
         return TrainingPipeline(
             save_interval=save_interval,
-            log_interval=log_interval,
+            metric_accumulate_interval=log_interval,
             optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
+            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig, )},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
             advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
-                PipelineStage(loss_names=["ppo_loss"], end_criterion=ppo_steps)
+                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps)
             ],
             lr_scheduler_builder=Builder(
                 LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
@@ -143,17 +143,17 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
             workers_per_device = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [0, 1, 2, 3, 4, 5, 6] * workers_per_device
+            gpu_ids = [] if not torch.cuda.is_available() else self.TRAINING_GPUS * workers_per_device
             nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
-            sampler_devices = [0, 1, 2, 3, 4, 5, 6]
+            sampler_devices = self.TRAINING_GPUS
             render_video = False
         elif mode == "valid":
             nprocesses = 1
-            gpu_ids = [] if not torch.cuda.is_available() else [7]
+            gpu_ids = [] if not torch.cuda.is_available() else self.VALIDATION_GPUS
             render_video = False
         elif mode == "test":
-            nprocesses = 15
-            gpu_ids = [] if not torch.cuda.is_available() else [7]
+            nprocesses = 1
+            gpu_ids = [] if not torch.cuda.is_available() else self.TESTING_GPUS
             render_video = False
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
@@ -161,7 +161,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         # Disable parallelization for validation process
         if mode == "valid":
             for prep in self.PREPROCESSORS:
-                prep.kwargs["config"]["parallel"] = False
+                prep.kwargs["parallel"] = False
 
         observation_set = Builder(ObservationSet, kwargs=dict(
             source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
@@ -179,7 +179,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return ResnetTensorPointNavActorCritic(
-            action_space=gym.spaces.Discrete(len(PointNavTask.action_names())),
+            action_space=gym.spaces.Discrete(len(PointNavTask._actions)),
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             rgb_resnet_preprocessor_uuid="rgb_resnet",
@@ -229,7 +229,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             "scenes": scenes[inds[process_ind]:inds[process_ind + 1]],
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(PointNavTask._actions)),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG
@@ -244,13 +244,13 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            "dataset/robothor/pointnav/train/content",
+            self.TRAIN_DATASET_DIR + '/episodes/',
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = "dataset/robothor/pointnav/train/content"
+        res["scene_directory"] = self.TRAIN_DATASET_DIR
         res["loop_dataset"] = True
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
@@ -269,13 +269,13 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            "dataset/robothor/pointnav/val/content",
+            self.VAL_DATASET_DIR + '/episodes/',
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = "dataset/robothor/pointnav/val/content"
+        res["scene_directory"] = self.VAL_DATASET_DIR
         res["loop_dataset"] = False
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
@@ -293,13 +293,13 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            "dataset/robothor/pointnav/val/content",
+            self.VAL_DATASET_DIR + '/episodes/',
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = "dataset/robothor/pointnav/val/content"
+        res["scene_directory"] = self.VAL_DATASET_DIR
         res["loop_dataset"] = False
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)

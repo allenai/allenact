@@ -1,21 +1,26 @@
+from typing import Dict, Any, List, Optional
+from math import ceil
+
 import gym
+import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
-from torchvision import models
+import numpy as np
+import glob
 
 from onpolicy_sync.losses.ppo import PPOConfig
-from projects.objectnav_baselines.models.object_nav_models import ResnetTensorObjectNavActorCritic
 from onpolicy_sync.losses import PPO
-from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base import ObjectNavRoboThorBaseConfig
-from rl_robothor.robothor_tasks import ObjectNavTask
-from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
-from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
+from rl_robothor.robothor_tasks import PointNavTask
+from rl_robothor.robothor_sensors import GPSCompassSensorRoboThor
+from rl_ai2thor.ai2thor_sensors import RGBSensorThor
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
+from projects.pointnav_baselines.models.point_nav_models import PointNavActorCriticSimpleConvRNN
+from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base import PointNaviThorBaseConfig
 
 
-class ObjectNaviThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig):
-    """An Object Navigation experiment configuration in RoboThor with RGB input"""
+class PointNaviThorRGBPPOExperimentConfig(PointNaviThorBaseConfig):
+    """An Point Navigation experiment configuration in iThor with RGB input"""
 
     def __init__(self):
         super().__init__()
@@ -28,39 +33,24 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig):
                     "uuid": "rgb_lowres",
                 }
             ),
-            GoalObjectTypeThorSensor({
-                "object_types": self.TARGET_TYPES,
-            }),
+            GPSCompassSensorRoboThor({}),
         ]
 
-        self.PREPROCESSORS = [
-            Builder(ResnetPreProcessorHabitat,
-                    {
-                        "input_height": self.SCREEN_SIZE,
-                        "input_width": self.SCREEN_SIZE,
-                        "output_width": 7,
-                        "output_height": 7,
-                        "output_dims": 512,
-                        "pool": False,
-                        "torchvision_resnet_model": models.resnet18,
-                        "input_uuids": ["rgb_lowres"],
-                        "output_uuid": "rgb_resnet",
-                        "parallel": False,  # TODO False for debugging
-                }
-            ),
-        ]
+        self.PREPROCESSORS = []
 
         self.OBSERVATIONS = [
-            "rgb_resnet",
-            "goal_object_type_ind",
+            "rgb_lowres",
+            "target_coordinates_ind",
         ]
+
 
     @classmethod
     def tag(cls):
-        return "Objectnav-RoboTHOR-RGB-ResNetGRU-DDPPO"
+        return "Pointnav-iTHOR-RGB-SimpleConv-DDPPO"
 
-    def training_pipeline(self, **kwargs):
-        ppo_steps = int(300000000)
+    @classmethod
+    def training_pipeline(cls, **kwargs):
+        ppo_steps = int(75000000)
         lr = 3e-4
         num_mini_batch = 1
         update_repeats = 3
@@ -83,7 +73,7 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig):
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
-            advance_scene_rollout_period=self.ADVANCE_SCENE_ROLLOUT_PERIOD,
+            advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
                 PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps)
             ],
@@ -94,11 +84,13 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig):
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ResnetTensorObjectNavActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask._actions)),
+        return PointNavActorCriticSimpleConvRNN(
+            action_space=gym.spaces.Discrete(len(PointNavTask._actions)),
             observation_space=kwargs["observation_set"].observation_spaces,
-            goal_sensor_uuid="goal_object_type_ind",
-            rgb_resnet_preprocessor_uuid="rgb_resnet",
+            goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
-            goal_dims=32,
+            embed_coordinates=False,
+            coordinate_dims=2,
+            num_rnn_layers=1,
+            rnn_type='GRU'
         )

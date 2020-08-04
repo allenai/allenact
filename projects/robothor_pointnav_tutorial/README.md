@@ -21,18 +21,35 @@ they have never seen before based on their experience navigating similar buildin
 #### What is an environment anyways?
 Environments are worlds in which embodied agents exist. If our embodied agent is simply a neural network 
 that is being trained in a simulator, than that simulator is its environment. Similarly if our agent is a
-physical robot then its environment is the real world. There are many simulators designed for the training
+physical robot then its environment is the real world. The agent interacts with the environment by taking one
+of several available actions (such as "move forward", or "turn left"). After each action that the environment
+produces a new frame that the agent can analyse to determine its next step. For many tasks, including PointNav
+the agent also has a special "stop" action which indicates that the agent thinks it has reached the target.
+After this action is called the agent will be reset to a new location, regardless if it actually reached the
+target. The hope is that after enough training the agent will learn to correctly asses that it has successfully
+navigated to the target.
+
+There are many simulators designed for the training
 of embodied agents. In this tutorial we will be using a simulator called RoboTHOR, 
-that is designed specifically to be tested on a real robot, in a controlled real world environment that looks
-visually very similar to the simulated environment. RoboTHOR contains 60 different virtual scenes with different
- floor plans and furniture, and 15 validation scenes.
+which is designed specifically to train models that can easily be transferred to a real robot, by providing a
+photo realistic virtual environment and a real world replica of the environemnt that researchers can have access to. 
+RoboTHOR contains 60 different virtual scenes with different floor plans and furniture, and 15 validation scenes.
 
 It is also important to mention that **embodied-rl**
 has a class abstraction called Environment. This is not the actual simulator game engine or robotics controller,
-but rather a shallow wrapper that provides a uniform interface.
+but rather a shallow wrapper that provides a uniform interface to the actual environment.
 
 #### Learning algorithm
-Finally let us briefly touch on the algorithm that we will use to train our embodied agent to navigate.
+Finally let us briefly touch on the algorithm that we will use to train our embodied agent to navigate. While
+*embodied-rl* offers us great flexibility to train models using complex pipelines, we will be using a simple
+pure reinforcement learning approach for this tutorial. More specifically, we will be using DD-PPO,
+a decentralized and distributed variant of the ubiquitous PPO algorithm. For those unfamiliar with Reinforcement
+Learning we highly recommend this tutorial by Andrej Karpathy (http://karpathy.github.io/2016/05/31/rl/), and this 
+book by Sutton and Barto (http://www.incompleteideas.net/book/the-book-2nd.html). Essentially what we are doing
+is letting our agent explore the environment on its own, rewarding it for taking actions that bring it closer
+to its goal and punishing it for actions that take it away from its goal. We then optimize the agent's model
+to maximize this reward.
+
 
 ## Dataset Setup
 To train the model on the pointnav task, we need to download the dataset and precomputed cache of distances 
@@ -51,7 +68,7 @@ We can download and unzip the data with the following commands:
 Now comes the most important part of the tutorial, we are going to write an experiment config file.
 
 Unlike a library that can be imported into python, **embodied-rl** is structured as a framework with 
-a runner script called `main.py` which will run the experiment specified in a config file. This design 
+a runner script called `ddmain.py` which will run the experiment specified in a config file. This design 
 forces us to keep meticulous records of exactly which settings were used to produce a particular result,
 which can be very useful given how expensive RL models are to train.
 
@@ -61,7 +78,7 @@ We will start by creating a new directory inside the `projects` directory. We ca
 our experiments neatly organized. Now we create a file called `pointnav_robothor_rgb_ddppo` inside the
 `experiments` folder (again the name of this file is arbitrary).
 
-We then start off by importing `ExperimentConfig` from the framework and defining a new subclass:
+We start off by importing `ExperimentConfig` from the framework and defining a new subclass:
 ```
 from rl_base.experiment_config import ExperimentConfig
 class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
@@ -123,29 +140,356 @@ to running everything on the CPU with only 1 process.
     TESTING_GPUS = [7]
 ```
 
+Since we are using a dataset to train our model we need to define the path to where we have stored it. If we
+download the dataset instructed above we can define the path as follows
+```
+    # Dataset Parameters
+    TRAIN_DATASET_DIR = "dataset/robothor/objectnav/train"
+    VAL_DATASET_DIR = "dataset/robothor/objectnav/val"
+```
+
+
 Next we define the sensors. `RGBSensorThor` is the environment's implementation of an RGB sensor. It takes the
 raw image outputted by the simulator and resizes it, to the input dimensions for our neural network that we
 specified above. It also performs normalization if we want. `GPSCompassSensorRoboThor` is a sensor that tracks
 the point our agent needs to move to. It tells us the direction and distance to our goal at every time step.
 ```
-SENSORS = [
-        RGBSensorThor(
-            {
-                "height": SCREEN_SIZE,
-                "width": SCREEN_SIZE,
-                "use_resnet_normalization": True,
-                "uuid": "rgb_lowres",
-            }
-        ),
-        GPSCompassSensorRoboThor({}),
+    SENSORS = [
+            RGBSensorThor(
+                {
+                    "height": SCREEN_SIZE,
+                    "width": SCREEN_SIZE,
+                    "use_resnet_normalization": True,
+                    "uuid": "rgb_lowres",
+                }
+            ),
+            GPSCompassSensorRoboThor({}),
     ]
 
 ```
 
+For the sake of this example we are also going to be using a preprocessor with out model. In *embodied-rl*
+the preprocessor abstraction is designed with large models with frozen weights in mind. These models often
+hail from the ResNet family and transform the raw pixels that our agent observes in the environment, into a
+complex embedding, which then gets stored and used as input to our trainable model instead of the original image.
+Most other preprocessing work is done in the sensor classes (as we just saw with the RGB
+sensor scaling and normalizing our input), but for the sake of efficiency, all neural network preprocessing should
+use this abstraction.
+```
+    PREPROCESSORS = [
+            Builder(ResnetPreProcessorHabitat,
+                {
+                    "input_height": SCREEN_SIZE,
+                    "input_width": SCREEN_SIZE,
+                    "output_width": 7,
+                    "output_height": 7,
+                    "output_dims": 512,
+                    "pool": False,
+                    "torchvision_resnet_model": models.resnet18,
+                    "input_uuids": ["rgb_lowres"],
+                    "output_uuid": "rgb_resnet",
+                    "parallel": False,  # TODO False for debugging
+                }
+            ),
+    ]
+```
+
+Next we must define all of the observation inputs that our model will use. These are just
+the hardcoded ids of the sensors we are using in the experiment.
+```    
+    OBSERVATIONS = [
+        "rgb_resnet",
+        "target_coordinates_ind",
+    ]
+```
+
+Finally we must define the settings of our simulator. We set the camera dimensions to the values
+we defined earlier. We set rotateStepDegrees to 30 degrees, which means that every time the agent takes a
+turn action, they will rotate by 30 degrees. We set grid size to 0.25 which means that every time the
+agent moves forward, it will do so by 0.25 meters. 
+```    
+    ENV_ARGS = dict(
+            width=CAMERA_WIDTH,
+            height=CAMERA_HEIGHT,
+            rotateStepDegrees=30.0,
+            gridSize=0.25,
+    )
+```
+
+
+Now we move on to the methods that we must define to finish implementing an experiment config. Firstly we
+have a simple method that just returns the name of the experiment.
+
+```
+   @classmethod
+    def tag(cls):
+        return "PointNavRobothorRGBPPO"
+```
+
+
+
+Next we define the training pipeline. In this function we specify exactly which algorithm or algorithms
+we will use to train our model. In this simple example we are using the PPO loss with a learning rate of 3e-4.
+We specify 250 million steps of training and a rollout length of 30 with the `ppo_steps` and `num_steps` parameters
+respectively. All the other standard PPO parameters are also present in this function. `metric_accumulate_interval`
+sets the frequency at which data is accumulated form al the processes and logged while `save_interval` sets how
+often we save the model weights and run a validation on them.
+
+```
+    @classmethod
+    def training_pipeline(cls, **kwargs):
+        ppo_steps = int(250000000)
+        lr = 3e-4
+        num_mini_batch = 1
+        update_repeats = 3
+        num_steps = 30
+        save_interval = 5000000
+        metric_accumulate_interval = 10000
+        gamma = 0.99
+        use_gae = True
+        gae_lambda = 0.95
+        max_grad_norm = 0.5
+        return TrainingPipeline(
+            save_interval=save_interval,
+            metric_accumulate_interval=metric_accumulate_interval,
+            optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
+            num_mini_batch=num_mini_batch,
+            update_repeats=update_repeats,
+            max_grad_norm=max_grad_norm,
+            num_steps=num_steps,
+            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig, )},
+            gamma=gamma,
+            use_gae=use_gae,
+            gae_lambda=gae_lambda,
+            advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
+            pipeline_stages=[
+                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps)
+            ],
+            lr_scheduler_builder=Builder(
+                LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
+            ),
+        )
+```
+
+
+We define the helper method `split_num_processes` to split the different scenes that we want to train with
+amongst the different devices that are available. "machine_params" returns the hardware parameters of each
+process, based on the list of devices we defined above.
+```
+    def split_num_processes(self, ndevices):
+        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(self.NUM_PROCESSES, ndevices)
+        res = [0] * ndevices
+        for it in range(self.NUM_PROCESSES):
+            res[it % ndevices] += 1
+        return res
+
+    def machine_params(self, mode="train", **kwargs):
+        if mode == "train":
+            workers_per_device = 1
+            gpu_ids = [] if not torch.cuda.is_available() else self.TRAINING_GPUS * workers_per_device
+            nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
+            sampler_devices = self.TRAINING_GPUS
+            render_video = False
+        elif mode == "valid":
+            nprocesses = 1
+            gpu_ids = [] if not torch.cuda.is_available() else self.VALIDATION_GPUS
+            render_video = False
+        elif mode == "test":
+            nprocesses = 1
+            gpu_ids = [] if not torch.cuda.is_available() else self.TESTING_GPUS
+            render_video = False
+        else:
+            raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
+
+        # Disable parallelization for validation process
+        if mode == "valid":
+            for prep in self.PREPROCESSORS:
+                prep.kwargs["parallel"] = False
+
+        observation_set = Builder(ObservationSet, kwargs=dict(
+            source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
+        )) if mode == 'train' or nprocesses > 0 else None
+
+        return {
+            "nprocesses": nprocesses,
+            "gpu_ids": gpu_ids,
+            "sampler_devices": sampler_devices if mode == "train" else gpu_ids,
+            "observation_set": observation_set,
+            "render_video": render_video,
+        }
+```
+
+Now we define the actual model that we will be using. **embodied-rl** offers first class support for PyTorch,
+so any PyTorch model will work here, as long as its forward method accepts a dictionary with sensor names as
+keys and their input tensors as values. Here we borrow a model from the `pointnav_baselines` project (which
+unsurprisingly contains several pointnav baselines). It is a small convolutional network that expects the 
+output of a resnet as its rgb input followed by a single layered GRU. The model accepts as input the number of different
+actions our agent can perform in the environment through the `action_space` parameter, which we get from the 
+task definition. We also define the shape of the inputs we are going to be passing to the model with `observation_space`
+We specify the names of our sensors with `goal_sensor_uuid` and `rgb_resnet_preprocessor_uuid`. Finally we define
+the size of our RNN with `hidden_layer` and the size of the embedding of our goal sensor data (the direction and
+distance to the target) with `goal_dims`.
+```
+    # Define Model
+    @classmethod
+    def create_model(cls, **kwargs) -> nn.Module:
+        return ResnetTensorPointNavActorCritic(
+            action_space=gym.spaces.Discrete(len(PointNavTask._actions)),
+            observation_space=kwargs["observation_set"].observation_spaces,
+            goal_sensor_uuid="target_coordinates_ind",
+            rgb_resnet_preprocessor_uuid="rgb_resnet",
+            hidden_size=512,
+            goal_dims=32,
+        )
+```
+
+We also need to define the task sampler that we will be using. This is a piece of code that generates instances
+of tasks for our agent to perform (essentially starting locations and targets for pointnav). Since we are getting
+our tasks from a dataset, the task sampler is a very simple code that just reads the specified file and sets
+the agent to the next starting locations whenever the agent exceeds the maximum number of steps or selects the
+`stop` action.
+```
+    # Define Task Sampler
+    @classmethod
+    def make_sampler_fn(cls, **kwargs) -> TaskSampler:
+        return PointNavDatasetTaskSampler(**kwargs)
+```
+You might notice that we did not specify the task sampler's arguments, but are rather passing them in. The
+reason for this is that each process will have its own task sampler, and we need to specify exactly which scenes
+each process should work with. If we have a several GPUS and many scenes this process of distributing the work can 
+be rather complicated so we define a few helper functions to do just this.
+```
+    # Utility Functions for distributing scenes between GPUs
+    @staticmethod
+    def _partition_inds(n: int, num_parts: int):
+        return np.round(np.linspace(0, n, num_parts + 1, endpoint=True)).astype(
+            np.int32
+        )
+
+    def _get_sampler_args_for_scene_split(
+        self,
+        scenes_dir: str,
+        process_ind: int,
+        total_processes: int,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
+    ) -> Dict[str, Any]:
+        path = scenes_dir + "*.json.gz" if scenes_dir[-1] == "/" else scenes_dir + "/*.json.gz"
+        scenes = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(path)]
+        if total_processes > len(scenes):  # oversample some scenes -> bias
+            if total_processes % len(scenes) != 0:
+                print(
+                    "Warning: oversampling some of the scenes to feed all processes."
+                    " You can avoid this by setting a number of workers divisible by the number of scenes"
+                )
+            scenes = scenes * int(ceil(total_processes / len(scenes)))
+            scenes = scenes[: total_processes * (len(scenes) // total_processes)]
+        else:
+            if len(scenes) % total_processes != 0:
+                print(
+                    "Warning: oversampling some of the scenes to feed all processes."
+                    " You can avoid this by setting a number of workers divisor of the number of scenes"
+                )
+        inds = self._partition_inds(len(scenes), total_processes)
+
+        return {
+            "scenes": scenes[inds[process_ind]:inds[process_ind + 1]],
+            "max_steps": self.MAX_STEPS,
+            "sensors": self.SENSORS,
+            "action_space": gym.spaces.Discrete(len(PointNavTask._actions)),
+            "seed": seeds[process_ind] if seeds is not None else None,
+            "deterministic_cudnn": deterministic_cudnn,
+            "rewards_config": self.REWARD_CONFIG
+        }
+```
+
+The very last thing we need to define are the sampler arguments themselves. We define them separately for a train,
+validation and test sampler, but in this case they are almost the same. The arguments need to include the location
+of the dataset and distance cache as well as the environment arguments for our simulator, both which we defined above
+and are just referencing here. The only consequential difference between these task samplers is that we specify whether 
+to loop over the dataset or not (we want this for training since we want to train for several epochs, but obviously
+we do not need this for validation and testing) and the set the path to the train set vs. the val set 
+(since the test scenes of RoboTHOR are private we are also testing on our validation
+set).
+```
+    def train_task_sampler_args(
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]] = None,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
+    ) -> Dict[str, Any]:
+        res = self._get_sampler_args_for_scene_split(
+            self.TRAIN_DATASET_DIR + '/episodes/',
+            process_ind,
+            total_processes,
+            seeds=seeds,
+            deterministic_cudnn=deterministic_cudnn,
+        )
+        res["scene_directory"] = self.TRAIN_DATASET_DIR
+        res["loop_dataset"] = True
+        res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
+        res["env_args"]["x_display"] = (
+            ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
+        )
+        res["allow_flipping"] = True
+        return res
+
+    def valid_task_sampler_args(
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]] = None,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
+    ) -> Dict[str, Any]:
+        res = self._get_sampler_args_for_scene_split(
+            self.VAL_DATASET_DIR + '/episodes/',
+            process_ind,
+            total_processes,
+            seeds=seeds,
+            deterministic_cudnn=deterministic_cudnn,
+        )
+        res["scene_directory"] = self.VAL_DATASET_DIR
+        res["loop_dataset"] = False
+        res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
+        res["env_args"]["x_display"] = (
+            ("0.%d" % devices[process_ind % len(devices)]) if devices is not None and len(devices) > 0 else None
+        )
+        return res
+
+    def test_task_sampler_args(
+            self,
+            process_ind: int,
+            total_processes: int,
+            devices: Optional[List[int]] = None,
+            seeds: Optional[List[int]] = None,
+            deterministic_cudnn: bool = False,
+    ) -> Dict[str, Any]:
+        res = self._get_sampler_args_for_scene_split(
+            self.VAL_DATASET_DIR + '/episodes/',
+            process_ind,
+            total_processes,
+            seeds=seeds,
+            deterministic_cudnn=deterministic_cudnn,
+        )
+        res["scene_directory"] = self.VAL_DATASET_DIR
+        res["loop_dataset"] = False
+        res["env_args"] = {}
+        res["env_args"].update(self.ENV_ARGS)
+        res["env_args"]["x_display"] = "10.0"
+        return res
+
+```
+
+This is it! If we copy all of the code into a file we should be able to run our experiment!
 
 
 ## Testing Pre-Trained Model
-With the model all set up, we can try testing it with pre trained weights.
+With the experiment all set up, we can try testing it with pre trained weights.
 
 We can download and unzip these weights with the following commands:
 ```
@@ -167,7 +511,25 @@ For our current setup the following command would work:
 ```
 python ddmain.py -o projects/pointnav_robothor_rgb/storage/ -c projects/pointnav_robothor_rgb/weights/NAME -t -b projects/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
 ```
-The scripts should produce results that look like this:
-**PHOTO**
+The scripts should produce an output that look like this:
+**insert photo**
 
 ## Training Model From Scratch
+We can also train the model from scratch by running:
+```
+python ddmain.py -o <PATH_TO_OUTPUT> -c -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
+```
+But be aware, training this takes nearly 2 days on a machine with 8 GPU. For our current setup the following command would work:
+```
+python ddmain.py -o projects/pointnav_robothor_rgb/storage/ -b projects/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
+```
+If we start up a tensorboard server during training and specify that `output_dir=storage` the output should look
+something like this:
+**insert photo**
+
+
+## Conclusion
+In this tutorial we learned how to create a new PointNav experiment using **embodied-rl**. There are many simple
+and obvious ways to modify the experiment from here - changing the model, the learning algorithm and the environment
+each require very few lines of code changed in the above file, allowing us to explore our embodied ai research ideas
+across different frameworks with ease.

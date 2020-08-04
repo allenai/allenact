@@ -34,6 +34,7 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
             dtype=np.float32,
         )
         super().__init__(**prepare_locals_for_super(locals()))
+        self.uuid = "target_coordinates_ind"
 
     def _compute_pointgoal(self, source_position, source_rotation, goal_position):
         direction_vector = goal_position - source_position
@@ -141,12 +142,10 @@ def quaternion_rotate_vector(quat: np.quaternion, v: np.array) -> np.array:
 
 class DepthSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any):
-        super().__init__(config, *args, **kwargs)
-
+        self.config = config
         def f(x, k, default):
             return x[k] if k in x else default
 
-        self.uuid = f(config, "uuid", None)
         self.height: Optional[int] = f(config, "height", None)
         self.width: Optional[int] = f(config, "width", None)
         self.should_normalize = f(config, "use_resnet_normalization", False)
@@ -176,6 +175,8 @@ class DepthSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
         )
 
         self.to_pil = transforms.ToPILImage()
+        super().__init__(config, self.observation_space, *args, **kwargs)
+        self.uuid = f(config, "uuid", None)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "depth_lowres"
