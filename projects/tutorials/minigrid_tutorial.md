@@ -8,24 +8,24 @@ MiniGrid-Empty-Random-5x5 task looks like
 
 ![MiniGridEmptyRandom5x5 task example](./minigrid_environment.png)
 
-The observations for the agent are an egocentric subset of the entire grid. For example, if the agent is placed in the
-first row while looking up, only cells in the first row will be observable, as shown by the highlighted rectangle around
-the agent (red arrow). Gray cells correspond to walls.
+The observation for the agent is a subset of the entire grid simulating a simplified limited field of view. For example,
+if the agent is placed in the first row while looking up, only cells in the first row will be observable, as shown by
+the highlighted rectangle (observed subset of the grid) around the agent (red arrow). Gray cells correspond to walls.
 
 # Experiment configuration file
 
 Our complete experiment consists of:
 - Training a basic model with memory.
-- Validation on a small set of tasks running in parallel with training.
+- Validation on a small set of tasks (running in parallel with training).
 - A second step where we test saved checkpoints with a larger set of tasks.
 The entire configuration for the experiment, including training, validation and testing, is encapsulated in a single 
 class implementing an `ExperimentConfig` abstraction. For this tutorial, we will follow the config under
 [projects/tutorials/minigrid_tutorial.py](./minigrid_tutorial.py). 
 
-The `ExperimentConfig` abstraction, which is the one used by an
-[OnPolicyTrainer](/onpolicy_sync/light_engine/#onpolicytrainer) class (for training) and two flavors of an
+The `ExperimentConfig` abstraction is used by the
+[OnPolicyTrainer](/onpolicy_sync/light_engine/#onpolicytrainer) class (for training) and two variations of the
 [OnPolicyInference](/onpolicy_sync/light_engine/#onpolicyinference) class (for validation and testing)
-that are invoked through the entry script `ddmain.py`, includes:
+invoked through the entry script `ddmain.py`. It includes:
 - A `tag` method to identify the experiment.
 - A `create_model` method to instantiate actor-critic models.
 - A `make_sampler_fn` method to instantiate task samplers.
@@ -50,7 +50,7 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
 
 A readily available Sensor type for MiniGrid,
 [EgocentricMiniGridSensor](/api/extensions/rl_minigrid/minigrid_sensors/#egocentricminigridsensor),
-allows us to extract observations for our agent in a suitable format for an `ActorCritic` agent to consume:
+allows us to extract observations for our agent in a format consumable by an `ActorCritic` agent:
 
 ```python
     SENSORS = [
@@ -58,7 +58,7 @@ allows us to extract observations for our agent in a suitable format for an `Act
     ]
 ```
 
-We define our model using an existing implementation for Actor-Critic models with recurrent memory for MiniGrid
+We define our Actor-Critic model using an existing implementation with recurrent memory for MiniGrid
 environments, [MiniGridSimpleConvRNN](/api/extensions/rl_minigrid/minigrid_models/#minigridsimpleconvrnn):
 
 ```python
@@ -73,10 +73,10 @@ environments, [MiniGridSimpleConvRNN](/api/extensions/rl_minigrid/minigrid_model
         )
 ```
 
-## Task sampler
+## Task samplers
 
-We use an available TaskSampler for MiniGrid environments,
-[MiniGridTaskSampler](/api/extensions/rl_minigrid/minigrid_tasks/#minigridtasksampler):
+We use an available TaskSampler class for MiniGrid environments that allows to sample both random and deterministic
+tasks, [MiniGridTaskSampler](/api/extensions/rl_minigrid/minigrid_tasks/#minigridtasksampler):
 
 ```python
     @classmethod
@@ -84,7 +84,7 @@ We use an available TaskSampler for MiniGrid environments,
         return MiniGridTaskSampler(**kwargs)
 ```
 
-In order to define the sampler's arguments, we differentiate the running mode (one of `train`, `valid` and `test`):
+In order to define the task samplers' arguments for `train`, `valid` and `test`:
 
 ```python
     def train_task_sampler_args(
@@ -118,7 +118,7 @@ In order to define the sampler's arguments, we differentiate the running mode (o
         return self._get_sampler_args(process_ind=process_ind, mode="test")
 ```
 
-For convenience, we have implemented a `_get_sampler_args` method:
+For convenience, we define a `_get_sampler_args` method:
 
 ```python
     def _get_sampler_args(self, process_ind: int, mode: str) -> Dict[str, Any]:
@@ -201,7 +201,7 @@ for which the model weights need to be known.
 
 # Training
 
-We have a complete implementation of the experiment configuration class described above in
+We have a complete implementation of this experiment's configuration class in
 [projects/tutorials/minigrid_tutorial.py](./minigrid_tutorial.py).
 To start training from scratch, we just need to invoke
 
@@ -213,29 +213,24 @@ tail -f /PATH/TO/log_minigrid_experiment
 
 from the project root folder.
 - With `-b projects/tutorials` we set the base folder to search for the `minigrid_tutorial` experiment configuration.
-- With `-m 1` we constrain the number of subprocesses to 1 (i.e. all task samplers will run on a single process).
+- With `-m 1` we constrain the number of subprocesses to 1 (i.e. all task samplers will run in a single process).
 - With `-o /PATH/TO/minigrid_output` we set the output folder.
 - With `-s 12345` we set the random seed.
-in the same process).
 
 If we have Tensorboard installed, we can track progress with
-
 ```bash
 tensorboard --logdir /PATH/TO/minigrid_output
 ```
-
 which will default to the URL http://localhost:6006/.
 
 After 150,000 steps, the script will terminate and several checkpoints will be saved in the output folder.
 The training curves should look similar to
-
 ![training curves](./minigrid_train.png)
 
 If everything went well, the `valid` success rate should converge to 1 and the mean episode length to a value below 4.
 (For perfectly uniform sampling, the expectation for the optimal policy is 3.75 steps.) Since this is RL, if the run
 failed to converge to the optimal policy, we can just try to re-run, for example with a different seed. The validation
 curves should looks similar to
-
 ![validation curves](./minigrid_valid.png)
 
 # Testing
@@ -253,5 +248,5 @@ tail -f /PATH/TO/log_minigrid_test
 Again, if everything went well, the `test` success rate should converge to 1 and the mean episode length to a value
 below 4. Detailed results are saved under a `metrics` subfolder in the output folder.
 The test curves should look similar to
-
 ![test curves](./minigrid_test.png)
+
