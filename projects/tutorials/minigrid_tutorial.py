@@ -70,21 +70,38 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
         return EmptyRandomEnv5x5()
 
     def _get_sampler_args(self, process_ind: int, mode: str) -> Dict[str, Any]:
-        num_eval_tasks_per_sampler = 20 if mode == "valid" else 40
+        """
+        Generate initialization arguments for train, valid, and test TaskSamplers.
+
+        # Parameters
+        process_ind : index of the current task sampler
+        mode:  one of `train`, `valid`, or `test`
+        """
+        if mode == "train":
+            max_tasks = None  # infinite training tasks
+            task_seeds_list = None  # no predefined random seeds for training
+            deterministic_sampling = False  # randomly sample tasks in training
+        else:
+            max_tasks = 20 + 20 * (mode == "test")  # 20 tasks for valid, 40 for test
+
+            # one seed for each task to sample:
+            # - ensures different seeds for each sampler, and
+            # - ensures a deterministic set of sampled tasks.
+            task_seeds_list = list(
+                range(process_ind * max_tasks, (process_ind + 1) * max_tasks)
+            )
+
+            deterministic_sampling = (
+                True  # deterministically sample task in validation/testing
+            )
+
         return dict(
-            env_class=self.make_env,
-            sensors=self.SENSORS,
-            env_info=dict(),
-            max_tasks=None if mode == "train" else num_eval_tasks_per_sampler,
-            deterministic_sampling=False if mode == "train" else True,
-            task_seeds_list=None
-            if mode == "train"
-            else list(
-                range(
-                    process_ind * num_eval_tasks_per_sampler,
-                    (process_ind + 1) * num_eval_tasks_per_sampler,
-                )
-            ),
+            max_tasks=max_tasks,  # see above
+            env_class=self.make_env,  # builder for third-party environment (defined below)
+            sensors=self.SENSORS,  # sensors used to return observations to the agent
+            env_info=dict(),  # parameters for environment builder (none for now)
+            task_seeds_list=task_seeds_list,  # see above
+            deterministic_sampling=deterministic_sampling,  # see above
         )
 
     @classmethod
