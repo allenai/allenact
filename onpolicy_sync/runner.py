@@ -215,7 +215,7 @@ class OnPolicyRunner(object):
         self,
         checkpoint: Optional[str] = None,
         restart_pipeline: bool = False,
-        max_processes_per_trainer: Optional[int] = None,
+        max_sampler_processes_per_worker: Optional[int] = None,
     ):
         self.save_project_state()
 
@@ -253,7 +253,7 @@ class OnPolicyRunner(object):
                     device=devices[trainer_it],
                     distributed_port=distributed_port,
                     distributed_barrier=distributed_barrier,
-                    max_processes_per_trainer=max_processes_per_trainer,
+                    max_sampler_processes_per_worker=max_sampler_processes_per_worker,
                 ),
             )
             train.start()
@@ -278,6 +278,7 @@ class OnPolicyRunner(object):
                     deterministic_cudnn=self.deterministic_cudnn,
                     mp_ctx=self.mp_ctx,
                     device=device,
+                    max_sampler_processes_per_worker=max_sampler_processes_per_worker,
                 ),
             )
             valid.start()
@@ -293,8 +294,14 @@ class OnPolicyRunner(object):
 
         self.log(self.local_start_time_str, num_trainers)
 
+        return self.local_start_time_str
+
     def start_test(
-        self, experiment_date: str, cp: Optional[str] = None, skip_checkpoints: int = 0,
+        self,
+        experiment_date: str,
+        cp: Optional[str] = None,
+        skip_checkpoints: int = 0,
+        max_sampler_processes_per_worker: Optional[int] = None,
     ):
         devices = self.worker_devices("test")
         self.get_visualizer("test")
@@ -318,6 +325,7 @@ class OnPolicyRunner(object):
                     num_workers=num_testers,
                     device=devices[tester_it],
                     distributed_barrier=distributed_barrier,
+                    max_sampler_processes_per_worker=max_sampler_processes_per_worker,
                 ),
             )
 
@@ -352,7 +360,7 @@ class OnPolicyRunner(object):
         with open(fname, "w") as f:
             json.dump([], f, indent=4, sort_keys=True)
 
-        self.log(
+        return self.log(
             self.checkpoint_start_time_str(checkpoints[0]), num_testers, steps, fname
         )
 
@@ -423,16 +431,19 @@ class OnPolicyRunner(object):
         get_logger().info("Git diff saved to {}".format(base_dir))
 
         # Recursively saving configs
-        for file in self.loaded_config_src_files:
-            base, module = self.loaded_config_src_files[file]
-            parts = module.split(".")
+        if self.loaded_config_src_files is not None:
+            for file in self.loaded_config_src_files:
+                base, module = self.loaded_config_src_files[file]
+                parts = module.split(".")
 
-            src_file = os.path.sep.join([base] + parts) + ".py"
-            assert os.path.isfile(src_file), "Config file {} not found".format(src_file)
+                src_file = os.path.sep.join([base] + parts) + ".py"
+                assert os.path.isfile(src_file), "Config file {} not found".format(
+                    src_file
+                )
 
-            dst_file = os.path.join(base_dir, os.path.join(*parts[1:]),) + ".py"
-            os.makedirs(os.path.dirname(dst_file), exist_ok=True)
-            shutil.copy(src_file, dst_file)
+                dst_file = os.path.join(base_dir, os.path.join(*parts[1:]),) + ".py"
+                os.makedirs(os.path.dirname(dst_file), exist_ok=True)
+                shutil.copy(src_file, dst_file)
 
         get_logger().info("Config files saved to {}".format(base_dir))
 
@@ -704,6 +715,7 @@ class OnPolicyRunner(object):
             if log_writer is not None:
                 log_writer.close()
             self.close()
+            return test_results
 
     def get_checkpoint_files(
         self,
