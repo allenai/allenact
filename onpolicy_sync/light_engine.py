@@ -974,7 +974,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             if self.is_distributed:
                 self.num_workers_done.set("done", str(0))
                 self.num_workers_steps.set("steps", str(0))
-                # Ensure all workers are done before incrementing num_workers_steps
+                # Ensure all workers are done before incrementing num_workers_{steps, done}
                 idx = self.distributed_barrier.wait()  # here we synchronize
                 if idx == 0:
                     self.distributed_barrier.reset()
