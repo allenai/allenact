@@ -17,7 +17,8 @@ the highlighted rectangle (observed subset of the grid) around the agent (red ar
 Our complete experiment consists of:
 - Training a basic model with memory to solve the navigation task.
 - Validation on a small set of tasks (running in parallel with training).
-- A second step where we test saved checkpoints with a larger set of tasks.
+- A second stage where we test saved checkpoints with a larger set of tasks.
+
 The entire configuration for the experiment, including training, validation and testing, is encapsulated in a single 
 class implementing an `ExperimentConfig` abstraction. For this tutorial, we will follow the config under
 [projects/tutorials/minigrid_tutorial.py](./minigrid_tutorial.py). 
@@ -58,7 +59,9 @@ allows us to extract observations for our agent in a format consumable by an `Ac
     ]
 ```
 The three `view_channels` include objects, colors and states corresponding to a partially observable image tensor
-equivalent to that in `ImgObsWrapper` in https://github.com/maximecb/gym-minigrid#wrappers.
+equivalent to that in `ImgObsWrapper` in https://github.com/maximecb/gym-minigrid#wrappers. The relatively large
+`agent_view_size` means the view will only be clipped by the environment walls in the forward and lateral directions
+with respect to the agent's orientation.
 
 We define our Actor-Critic model using an implementation with recurrent memory for MiniGrid
 environments, [MiniGridSimpleConvRNN](/api/extensions/rl_minigrid/minigrid_models/#minigridsimpleconvrnn):
@@ -78,7 +81,7 @@ environments, [MiniGridSimpleConvRNN](/api/extensions/rl_minigrid/minigrid_model
 ## Task samplers
 
 We use an available TaskSampler class for MiniGrid environments that allows to sample both random and deterministic
-tasks, [MiniGridTaskSampler](/api/extensions/rl_minigrid/minigrid_tasks/#minigridtasksampler):
+`MiniGridTasks`, [MiniGridTaskSampler](/api/extensions/rl_minigrid/minigrid_tasks/#minigridtasksampler):
 
 ```python
     @classmethod
