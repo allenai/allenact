@@ -197,7 +197,7 @@ from the project root folder.
 - With `-s 12345` we set the random seed.
 in the same process).
 
-If we have tensorboard installed, we can track the progress with
+If we have Tensorboard installed, we can track the progress with
 
 ```bash
 tensorboard --logdir /PATH/TO/minigrid_output
@@ -218,9 +218,9 @@ The validation curves should looks similar to
 
 # Testing
 
-The start date of the experiment is used as the name of one of the subfolders in the path to the checkpoint stored in
-the output folder in the format `YYYY-MM-DD_HH-MM-SS`. In order to test for that experiment, we need to pass that date
-with the option `-t EXPERIMENT_DATE`:
+The start date of the experiment, in `YYYY-MM-DD_HH-MM-SS` format, is used as the name of one of the subfolders in the
+path to the checkpoints saved under the output folder.
+In order to test for a specific experiment, we need to pass its date with the option `-t EXPERIMENT_DATE`:
 
 ```bash
 python ddmain.py minigrid_tutorial -b projects/tutorials -m 1 -o /PATH/TO/minigrid_output -s 12345 -t EXPERIMENT_DATE &> /PATH/TO/log_minigrid_test &
