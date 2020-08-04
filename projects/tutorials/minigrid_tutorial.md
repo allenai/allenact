@@ -29,7 +29,8 @@ class implementing the `ExperimentConfig` abstraction. For this tutorial, we wil
 The `ExperimentConfig` abstraction is used by the
 [OnPolicyTrainer](/onpolicy_sync/light_engine/#onpolicytrainer) class (for training) and the
 [OnPolicyInference](/onpolicy_sync/light_engine/#onpolicyinference) class (for validation and testing)
-invoked through the entry script `ddmain.py`. It includes:
+invoked through the entry script [ddmain.py](../../ddmain.py) that calls an orchestrating
+[OnPolicyRunner](/onpolicy_sync/runner/#onpolicyrunner) class. It includes:
 - A `tag` method to identify the experiment.
 - A `create_model` method to instantiate actor-critic models.
 - A `make_sampler_fn` method to instantiate task samplers.
