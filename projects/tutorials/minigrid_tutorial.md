@@ -4,9 +4,7 @@
 A MiniGrid Empty Random 5x5 task consists of a grid of dimensions 5x5 where an agent spawned at a random
 location and orientation has to navigate to the cell in the bottom right corner of the grid. A visualization of the
 environment for a random such task looks like
-
 ![MiniGridEmptyRandom5x5 task example](./minigrid_environment.png)
-
 The observations for the agent are an egocentric subset of the entire grid. For example, if the agent is placed in the
 first row while looking up, only cells in the first row will be observable, as shown by the highlighted rectangle around
 the agent (red arrow). 
@@ -19,10 +17,22 @@ The entire configuration for the experiment, including training, validation and 
 class implementing an `ExperimentConfig`. For this tutorial, we will follow the config under
 [projects/tutorials/minigrid_tutorial.py](./minigrid_tutorial.py). 
 
+The `ExperimentConfig` abstraction, which is the one used by an
+[OnPolicyTrainer](/onpolicy_sync/light_engine/#onpolicytrainer) class (for training) and two flavors of an
+[OnPolicyInference](/onpolicy_sync/light_engine/#onpolicyinference) class (for validation and testing)
+that are invoked through the entry script `ddmain.py`, includes:
+- A tag to identify the experiment (`tag` method).
+- A method to instantiate actor-critic models (`create_model`).
+- A method to instantiate task samplers (`make_sampler_fn`).
+- Methods describing initialization parameters for task samplers used in training, validation, and testing;
+including the assignment of workers to devices for running environments (`{train,valid,test}_task_sampler_args`).
+- Machine configuration parameters that will be used e.g. for training or validation (`machine_params` method).
+- A possibly multi-staged training pipeline with different types of losses, an optimizer, and other parameters like
+learning rates, batch sizes, etc. (`training_pipeline` method).
+
 ## Preliminaries
 
-We first give a name to our configuration class, which implements the abstract
-`ExperimentConfig`, and identify the experiment through a `tag`.  
+We first give a name to our experiment configuration class, and identify the experiment through a `tag`.  
 
 ```python
 class MiniGridTutorialExperimentConfig(ExperimentConfig):
@@ -31,7 +41,7 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
         return "MiniGridTutorial"
 ```
 
-## Sensors
+## Sensors and Model
 
 A readily available Sensor type for MiniGrid,
 [EgocentricMiniGridSensor](/api/extensions/rl_minigrid/minigrid_sensors/#egocentricminigridsensor),
@@ -42,8 +52,6 @@ allows us to extract observations for our agent in a suitable format for an `Act
         EgocentricMiniGridSensor(agent_view_size=10, view_channels=3),
     ]
 ```
-
-## Model
 
 We define our model using an existing implementation for Actor-Critic models with recurrent memory for MiniGrid
 environments, [MiniGridSimpleConvRNN](/api/extensions/rl_minigrid/minigrid_models/#minigridsimpleconvrnn):
