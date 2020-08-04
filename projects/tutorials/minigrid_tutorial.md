@@ -202,11 +202,18 @@ If we have tensorboard installed, we can track the progress with
 tensorboard --logdir /PATH/TO/minigrid_output
 ```
 
-which will default to `http://localhost:6006/`.
+which will default to the URL http://localhost:6006/.
 
 After approximately 150000 steps, the script will terminate and several checkpoints will be saved in the output folder.
+The training curves should look similar to
+
+![training curves](./minigrid_train.png)
+
 If everything went well, the `valid` success rate should converge to 1 and the mean episode length to a value below 4.
 (For perfectly uniform sampling, the expectation for the optimal policy is 3.75 steps.)
+The validation curves should looks similar to
+
+![validation curves](./minigrid_valid.png)
 
 # Testing
 
@@ -222,3 +229,6 @@ tail -f /PATH/TO/log_minigrid_test
 
 Again, if everything went well, the `test` success rate should converge to 1 and the mean episode length to a value
 below 4. Detailed results are saved under a `metrics` subfolder in the oputput folder.
+The test curves should look similar to
+
+![test curves](./minigrid_test.png)
