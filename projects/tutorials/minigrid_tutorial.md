@@ -252,7 +252,8 @@ The validation curves should look similar to:
 
 The training start date for the experiment, in `YYYY-MM-DD_HH-MM-SS` format, is used as the name of one of the
 subfolders in the path to the checkpoints, saved under the output folder.
-In order to test for a specific experiment, we need to pass its date with the option `-t EXPERIMENT_DATE`:
+In order to test for a specific experiment, we need to pass its training start date with the option
+`-t EXPERIMENT_DATE`:
 
 ```bash
 python ddmain.py minigrid_tutorial -b projects/tutorials -m 1 -o /PATH/TO/minigrid_output -s 12345 \
@@ -264,4 +265,5 @@ tail -f /PATH/TO/log_minigrid_test
 Again, if everything went well, the `test` success rate should converge to 1 and the mean episode length to a value
 below 4. Detailed results are saved under a `metrics` subfolder in the output folder.
 The test curves should look similar to:
+
 ![test curves](./minigrid_test.png)
