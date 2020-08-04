@@ -11,7 +11,7 @@ import time
 import traceback
 from collections import OrderedDict, defaultdict
 from multiprocessing.context import BaseContext
-from typing import Optional, Dict, Union, Tuple, Sequence, List, Any, Callable
+from typing import Optional, Dict, Union, Tuple, Sequence, List, Any
 
 import torch
 import torch.distributions
@@ -25,12 +25,13 @@ from utils.experiment_utils import ScalarMeanTracker, set_deterministic_cudnn, s
 from utils.misc_utils import all_equal, get_git_diff_of_project
 from utils.system import get_logger, find_free_port
 from utils.tensor_utils import SummaryWriter
-
-
 # Has results queue (aggregated per trainer), checkpoints queue and mp context
 # Instantiates train, validate, and test workers
 # Logging
 # Saves configs, makes folder for trainer models
+from utils.viz_utils import SimpleViz
+
+
 class OnPolicyRunner(object):
     def __init__(
         self,
@@ -52,7 +53,7 @@ class OnPolicyRunner(object):
         self.mp_ctx = self.init_context(mp_ctx, multiprocessing_start_method)
         self.extra_tag = extra_tag
         self.mode = mode
-        self.visualizer: Optional[Callable[..., None]] = None
+        self.visualizer: Optional[SimpleViz] = None
 
         assert self.mode in [
             "train",

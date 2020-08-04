@@ -72,7 +72,7 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
     def quaternion_rotate_vector(quat: np.quaternion, v: np.array) -> np.array:
         r"""Rotates a vector by a quaternion
         Args:
-            quaternion: The quaternion to rotate by
+            quat: The quaternion to rotate by
             v: The vector to rotate
         Returns:
             np.array: The rotated vector

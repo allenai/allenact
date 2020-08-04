@@ -529,6 +529,7 @@ class MiniGridTaskSampler(TaskSampler):
             task_cache_uid = str(self._last_env_seed)
 
         if repeating and task_has_same_seed_reset:
+            # noinspection PyUnresolvedReferences
             self.env.same_seed_reset()
         else:
             self.env.seed(self._last_env_seed)

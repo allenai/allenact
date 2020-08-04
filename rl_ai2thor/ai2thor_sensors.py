@@ -1,4 +1,3 @@
-import typing
 from typing import Any, Dict, Optional, List
 
 import gym

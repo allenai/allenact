@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List
 
 import gym
 import numpy as np
@@ -8,8 +8,8 @@ from gym.spaces.dict import Dict as SpaceDict
 
 from rl_base.preprocessor import Preprocessor
 from utils.cacheless_frcnn import fasterrcnn_resnet50_fpn
-from utils.system import get_logger
 from utils.misc_utils import prepare_locals_for_super
+from utils.system import get_logger
 
 
 class BatchedFasterRCNN(torch.nn.Module):

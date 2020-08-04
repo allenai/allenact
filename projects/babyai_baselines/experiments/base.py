@@ -79,7 +79,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig):
     @classmethod
     def rl_loss_default(cls, alg: str, steps: Optional[int] = None):
         if alg == "ppo":
-            assert steps != None
+            assert steps is not None
             return {
                 "loss": Builder(
                     PPO, kwargs={"clip_decay": LinearDecay(steps)}, default=PPOConfig,
