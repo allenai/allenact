@@ -242,9 +242,9 @@ The training curves should look similar to:
 ![training curves](./minigrid_train.png)
 
 If everything went well, the `valid` success rate should converge to 1 and the mean episode length to a value below 4.
-(For perfectly uniform sampling, the expectation for the optimal policy is 3.75 steps.) In the not-so-unlikely event of
-the run failing to converge to the optimal policy, we can just try to re-run (for example with a different random seed).
-The validation curves should look similar to:
+(For perfectly uniform sampling and complete observation, the expectation for the optimal policy is 3.75 steps.) In the
+not-so-unlikely event of the run failing to converge to a near-optimal policy, we can just try to re-run (for example
+with a different random seed). The validation curves should look similar to:
 
 ![validation curves](./minigrid_valid.png)
 
