@@ -13,16 +13,16 @@ the agent (red arrow).
 
 # Experiment configuration file
 
-Our experiment consists of training a basic model with memory to complete the task running in parallel with validation
-on a small set of tasks and a second step where we test all saved checkpoints with a larger test set. The entire
-configuration for the experiment, including training, validation and testing, is encapsulated in a single
-`ExperimentConfig` class. For this tutorial, we will follow the config under
+Our experiment consists of training a basic model with memory to complete each task, running in parallel with
+validation on a small set of tasks, and a second step where we test all saved checkpoints with a larger set of tasks.
+The entire configuration for the experiment, including training, validation and testing, is encapsulated in a single 
+class implementing an `ExperimentConfig`. For this tutorial, we will follow the config under
 [projects/tutorials/minigrid_tutorial.py](./minigrid_tutorial.py). 
 
 ## Preliminaries
 
-We first give a name to our configuration class, implementing the abstract
-`ExperimentConfig`. We also identify the experiment through a `tag`.  
+We first give a name to our configuration class, which implements the abstract
+`ExperimentConfig`, and identify the experiment through a `tag`.  
 
 ```python
 class MiniGridTutorialExperimentConfig(ExperimentConfig):
@@ -33,7 +33,9 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
 
 ## Sensors
 
-An existing Sensor type for MiniGrid, [EgocentricMiniGridSensor](/api/extenstions/rl_minigrid/minigrid_sensors/#egocentricminigridsensor), allows us to extract observations for our agent in the correct format:
+A readily available Sensor type for MiniGrid,
+[EgocentricMiniGridSensor](/api/extensions/rl_minigrid/minigrid_sensors/#egocentricminigridsensor),
+allows us to extract observations for our agent in a suitable format for an `ActorCritic` agent to consume:
 
 ```python
     SENSORS = [
@@ -43,8 +45,8 @@ An existing Sensor type for MiniGrid, [EgocentricMiniGridSensor](/api/extenstion
 
 ## Model
 
-We define our model using the existing implementation for Actor-Critic models with recurrent memory for MiniGrid
-environments, [MiniGridSimpleConvRNN](/api/extenstions/rl_minigrid/minigrid_models/#minigridsimpleconvrnn):
+We define our model using an existing implementation for Actor-Critic models with recurrent memory for MiniGrid
+environments, [MiniGridSimpleConvRNN](/api/extensions/rl_minigrid/minigrid_models/#minigridsimpleconvrnn):
 
 ```python
     @classmethod
@@ -60,7 +62,8 @@ environments, [MiniGridSimpleConvRNN](/api/extenstions/rl_minigrid/minigrid_mode
 
 ## Task sampler
 
-We use the available TaskSampler for MiniGrid environments, [MiniGridTaskSampler](/api/extenstions/rl_minigrid/minigrid_tasks/#minigridtasksampler):
+We use an available TaskSampler for MiniGrid environments,
+[MiniGridTaskSampler](/api/extensions/rl_minigrid/minigrid_tasks/#minigridtasksampler):
 
 ```python
     @classmethod
@@ -68,7 +71,7 @@ We use the available TaskSampler for MiniGrid environments, [MiniGridTaskSampler
         return MiniGridTaskSampler(**kwargs)
 ```
 
-In order to define its arguments, we differentiate the running mode (one of `train`, `valid` and `test`):
+In order to define the sampler's arguments, we differentiate the running mode (one of `train`, `valid` and `test`):
 
 ```python
     def train_task_sampler_args(
@@ -146,12 +149,13 @@ Given the simplicity of the task and model, we can quickly train the model on th
         }
 ```
 
-We allocate a larger number of samplers for training (128) than for validation (16), and we default to CPU usage by
-setting an empty list of GPUs.
+We allocate a larger number of samplers for training (128) than for validation or testing (16), and we default to CPU
+usage by returning an empty list of `gpu_ids`.
 
 ## Training pipeline
 
-The last step required before training is the training pipeline. In this case, we just use plain PPO:
+The last definition required before training is a training pipeline. In this case, we just use a single stage with PPO
+with linearly decaying learning rate:
 
 ```python
     @classmethod
@@ -184,8 +188,9 @@ for which the model weights need to be known.
 
 # Training
 
-We have a complete implementation of the configuration described above under `projects/tutorials/minigrid_tutorial.py`.
-To start training from scratch we just need to invoke
+We have a complete implementation of the experiment configuration class described above in
+[projects/tutorials/minigrid_tutorial.py](./minigrid_tutorial.py).
+To start training from scratch, we just need to invoke
 
 ```bash
 python ddmain.py minigrid_tutorial -b projects/tutorials -m 1 -o /PATH/TO/minigrid_output -s 12345 &> /PATH/TO/log_minigrid_experiment &
@@ -200,7 +205,7 @@ from the project root folder.
 - With `-s 12345` we set the random seed.
 in the same process).
 
-If we have Tensorboard installed, we can track the progress with
+If we have Tensorboard installed, we can track progress with
 
 ```bash
 tensorboard --logdir /PATH/TO/minigrid_output
@@ -214,15 +219,16 @@ The training curves should look similar to
 ![training curves](./minigrid_train.png)
 
 If everything went well, the `valid` success rate should converge to 1 and the mean episode length to a value below 4.
-(For perfectly uniform sampling, the expectation for the optimal policy is 3.75 steps.)
-The validation curves should looks similar to
+(For perfectly uniform sampling, the expectation for the optimal policy is 3.75 steps.) Since this is RL, if the run
+failed to converge to the optimal policy, we can just try to re-run, for example with a different seed. The validation
+curves should looks similar to
 
 ![validation curves](./minigrid_valid.png)
 
 # Testing
 
-The start date of the experiment, in `YYYY-MM-DD_HH-MM-SS` format, is used as the name of one of the subfolders in the
-path to the checkpoints saved under the output folder.
+The training start date for the experiment, in `YYYY-MM-DD_HH-MM-SS` format, is used as the name of one of the
+subfolders in the path to the checkpoints, saved under the output folder.
 In order to test for a specific experiment, we need to pass its date with the option `-t EXPERIMENT_DATE`:
 
 ```bash
@@ -232,7 +238,7 @@ tail -f /PATH/TO/log_minigrid_test
 ```
 
 Again, if everything went well, the `test` success rate should converge to 1 and the mean episode length to a value
-below 4. Detailed results are saved under a `metrics` subfolder in the oputput folder.
+below 4. Detailed results are saved under a `metrics` subfolder in the output folder.
 The test curves should look similar to
 
 ![test curves](./minigrid_test.png)
