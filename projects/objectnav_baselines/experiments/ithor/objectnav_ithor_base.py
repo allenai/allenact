@@ -166,7 +166,7 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
             "object_types": self.TARGET_TYPES,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(ObjectNavTask._actions)),
+            "action_space": gym.spaces.Discrete(len(ObjectNavTask.class_action_names())),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG,
