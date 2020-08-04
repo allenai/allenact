@@ -144,7 +144,7 @@ where, for convenience, we have defined a `_get_sampler_args` method:
     def _get_sampler_args(self, process_ind: int, mode: str) -> Dict[str, Any]:
         """
         Generate initialization arguments for train, valid and test TaskSamplers.
-        By default, tasks sampled will have a maximum length of 10 steps and  
+
         # Parameters
         process_ind: index of the current task sampler
         mode: one of `train`, `valid` or `test`
@@ -179,8 +179,10 @@ where, for convenience, we have defined a `_get_sampler_args` method:
 
 Note that the `env_class` argument to the Task Sampler is the one determining which task type we are going to train the
 model for (in this case, `MiniGrid-Empty-Random-5x5-v0` from https://github.com/maximecb/gym-minigrid#empty-environment)
-. For training, we opt for a default random sampling, whereas for validation and test we define fixed sets of randomly
-sampled tasks without needing to explicitly define a dataset.
+. The sparse reward is
+[given by the environment](https://github.com/maximecb/gym-minigrid/blob/6e22a44dc67414b647063692258a4f95ce789161/gym_minigrid/minigrid.py#L819)
+, and the maximum task length is 100. For training, we opt for a default random sampling, whereas for validation and
+test we define fixed sets of randomly sampled tasks without needing to explicitly define a dataset.
 
 In this toy example, the maximum number of different tasks is 32. For validation we sample 320 tasks using 16 samplers,
 or 640 for testing, so we can be fairly sure that all possible tasks are visited at least once during evaluation.
