@@ -1,7 +1,7 @@
 # Third-party environments: MiniGrid
  
-This tutorial assumes the [installation instructions](/#installation) have already been followed and, to some
-extent, the `embodied-ai` framework's [abstractions](/overview/abstractions) are known.
+This tutorial assumes the [installation instructions](../README.md#installation) have already been followed and, to some
+extent, the `embodied-ai` framework's [abstractions](../overview/abstractions.md) are known.
 
 We will use a trivial task type to show how to:
 
@@ -31,13 +31,13 @@ Our complete experiment consists of:
 
 The entire configuration for the experiment, including training, validation, and testing, is encapsulated in a single 
 class implementing the `ExperimentConfig` abstraction. For this tutorial, we will follow the config under
-[projects/tutorials/minigrid_tutorial.py](/api/projects/tutorials/minigrid_tutorial). 
+[projects/tutorials/minigrid_tutorial.py](../api/projects/tutorials/minigrid_tutorial.md). 
 
 The `ExperimentConfig` abstraction is used by the
-[OnPolicyTrainer](/api/onpolicy_sync/light_engine/#onpolicytrainer) class (for training) and the
-[OnPolicyInference](/api/onpolicy_sync/light_engine/#onpolicyinference) class (for validation and testing)
+[OnPolicyTrainer](../api/onpolicy_sync/light_engine.md#onpolicytrainer) class (for training) and the
+[OnPolicyInference](../api/onpolicy_sync/light_engine.md#onpolicyinference) class (for validation and testing)
 invoked through the entry script `ddmain.py` that calls an orchestrating
-[OnPolicyRunner](/api/onpolicy_sync/runner/#onpolicyrunner) class. It includes:
+[OnPolicyRunner](../api/onpolicy_sync/runner.md#onpolicyrunner) class. It includes:
 
 * A `tag` method to identify the experiment.
 * A `create_model` method to instantiate actor-critic models.
@@ -62,7 +62,7 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
 ### Sensors and Model
 
 A readily available Sensor type for MiniGrid,
-[EgocentricMiniGridSensor](/api/extensions/rl_minigrid/minigrid_sensors/#egocentricminigridsensor),
+[EgocentricMiniGridSensor](../api/extensions/rl_minigrid/minigrid_sensors.md#egocentricminigridsensor),
 allows us to extract observations in a format consumable by an `ActorCriticModel` agent:
 
 ```python
@@ -77,7 +77,7 @@ relatively large `agent_view_size` means the view will only be clipped by the en
 lateral directions with respect to the agent's orientation.
 
 We define our `ActorCriticModel` agent using a lightweight implementation with recurrent memory for MiniGrid
-environments, [MiniGridSimpleConvRNN](/api/extensions/rl_minigrid/minigrid_models/#minigridsimpleconvrnn):
+environments, [MiniGridSimpleConvRNN](../api/extensions/rl_minigrid/minigrid_models.md#minigridsimpleconvrnn):
 
 ```python
     @classmethod
@@ -94,7 +94,8 @@ environments, [MiniGridSimpleConvRNN](/api/extensions/rl_minigrid/minigrid_model
 ### Task samplers
 
 We use an available TaskSampler implementation for MiniGrid environments that allows to sample both random and
-deterministic `MiniGridTasks`, [MiniGridTaskSampler](/api/extensions/rl_minigrid/minigrid_tasks/#minigridtasksampler):
+deterministic `MiniGridTasks`,
+[MiniGridTaskSampler](../api/extensions/rl_minigrid/minigrid_tasks.md#minigridtasksampler):
 
 ```python
     @classmethod
@@ -181,7 +182,8 @@ where, for convenience, we have defined a `_get_sampler_args` method:
 ```
 
 Note that the `env_class` argument to the Task Sampler is the one determining which task type we are going to train the
-model for (in this case, `MiniGrid-Empty-Random-5x5-v0` from [gym-minigrid](https://github.com/maximecb/gym-minigrid#empty-environment))
+model for (in this case, `MiniGrid-Empty-Random-5x5-v0` from
+[gym-minigrid](https://github.com/maximecb/gym-minigrid#empty-environment))
 . The sparse reward is
 [given by the environment](https://github.com/maximecb/gym-minigrid/blob/6e22a44dc67414b647063692258a4f95ce789161/gym_minigrid/minigrid.py#L819)
 , and the maximum task length is 100. For training, we opt for a default random sampling, whereas for validation and
@@ -243,7 +245,7 @@ for which the model weights need to be known.
 ## Training and validation
 
 We have a complete implementation of this experiment's configuration class in
-[projects/tutorials/minigrid_tutorial.py](/api/projects/tutorials/minigrid_tutorial).
+[projects/tutorials/minigrid_tutorial.py](../api/projects/tutorials/minigrid_tutorial.md).
 To start training from scratch, we just need to invoke
 
 ```bash
