@@ -17,7 +17,7 @@ Since both the `RoboTHOR` and the `iTHOR` environment stem from the same family 
 by the same organization, switching between the two is incredibly easy. We literally have to only change
 the path parameter to point to an iTHOR dataset rather than the RoboTHOR one.
 
-```
+```python
     # Dataset Parameters
     TRAIN_DATASET_DIR = "dataset/ithor/objectnav/train"
     VAL_DATASET_DIR = "dataset/ithor/objectnav/val"
@@ -27,7 +27,7 @@ That's it!
 
 We might also want to modify the `tag` method to accurately reflect our config but this will not change
 the behavior at all and is merely a bookkeeping convenience.
-``` 
+```python
     @classmethod
     def tag(cls):
         return "PointNavRobothorRGBPPO"
@@ -43,7 +43,7 @@ because the habitat dataset is formatted differently and thus needs to be parsed
 As part of our environment modification, we need to switch from using RoboTHOR sensors to using Habitat sensors.
 The implementation of sensors we provide offer an uniform interface across all the environments so we simply have
 to swap out our sensor classes:
-```
+```python
     SENSORS = [
         DepthSensorHabitat(
             height=SCREEN_SIZE,
@@ -56,7 +56,7 @@ to swap out our sensor classes:
 
 Next we need to define the simulator config:
 
-```
+```python
     CONFIG = habitat.get_config("configs/gibson.yaml")
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
@@ -88,7 +88,7 @@ decided to leave this way of passing in configurations exposed to the user to of
 of the underlying environment.
 
 Finally we need to replace the task sampler and its argument generating functions:
-```
+```python
     # Define Task Sampler
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
@@ -154,7 +154,7 @@ As we can see this code looks very similar as well, we simply need to pass sligh
 
 ## Running a Test
 With the setup complete, we should be able to run a test using the exact same command as in the last tutorial:
-```
+```bash
 python ddmain.py -o projects/pointnav_transfer_turotial/ -c projects/pointnav_robothor_rgb/weights/<REDACTED> -t -b projects/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
 ```
 This should test the model trained in RoboTHOR on either iTHOR or Habitat (depending on which modifications we made).

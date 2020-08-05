@@ -82,7 +82,7 @@ We then define the task parameters. For PointNav, these include the maximum numb
 can take before being reset (this prevents the agent from wondering on forever), and a configuration
 for the reward function that we will be using. 
 
-```
+```python
     # Task Parameters
     MAX_STEPS = 500
     REWARD_CONFIG = {
@@ -104,7 +104,7 @@ with them.
 Next, we set the parameters of the simulator itself. Here we select a resolution at which the engine will render
 every frame (640 by 480) and a resolution at which the image will be fed into the neural network (here it is set
 to a 224 by 224 box).
-```
+```python
     # Simulator Parameters
     CAMERA_WIDTH = 640
     CAMERA_HEIGHT = 480
@@ -119,7 +119,7 @@ the model should be trained. Similarly `VALIDATION_GPUS` and `TESTING_GPUS` hold
 the current model, to show the progress on the validation set, so reserving a GPU for validation can be a good idea.
 If our hardware setup does not include a GPU, these fields can be set to empty lists, as the codebase will default
 to running everything on the CPU with only 1 process.
-```
+```python
     # Training Engine Parameters
     ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
     NUM_PROCESSES = 60
@@ -130,7 +130,7 @@ to running everything on the CPU with only 1 process.
 
 Since we are using a dataset to train our model we need to define the path to where we have stored it. If we
 download the dataset instructed above we can define the path as follows
-```
+```python
     # Dataset Parameters
     TRAIN_DATASET_DIR = "dataset/robothor/objectnav/train"
     VAL_DATASET_DIR = "dataset/robothor/objectnav/val"
@@ -141,7 +141,7 @@ Next, we define the sensors. `RGBSensorThor` is the environment's implementation
 raw image outputted by the simulator and resizes it, to the input dimensions for our neural network that we
 specified above. It also performs normalization if we want. `GPSCompassSensorRoboThor` is a sensor that tracks
 the point our agent needs to move to. It tells us the direction and distance to our goal at every time step.
-```
+```python
     SENSORS = [
             RGBSensorThor(
                 {
@@ -163,7 +163,7 @@ complex embedding, which then gets stored and used as input to our trainable mod
 Most other preprocessing work is done in the sensor classes (as we just saw with the RGB
 sensor scaling and normalizing our input), but for the sake of efficiency, all neural network preprocessing should
 use this abstraction.
-```
+```python
     PREPROCESSORS = [
             Builder(ResnetPreProcessorHabitat,
                 {
@@ -184,7 +184,7 @@ use this abstraction.
 
 Next, we must define all of the observation inputs that our model will use. These are just
 the hardcoded ids of the sensors we are using in the experiment.
-```    
+```python
     OBSERVATIONS = [
         "rgb_resnet",
         "target_coordinates_ind",
@@ -195,7 +195,7 @@ Finally, we must define the settings of our simulator. We set the camera dimensi
 we defined earlier. We set rotateStepDegrees to 30 degrees, which means that every time the agent takes a
 turn action, they will rotate by 30 degrees. We set grid size to 0.25 which means that every time the
 agent moves forward, it will do so by 0.25 meters. 
-```    
+```python
     ENV_ARGS = dict(
             width=CAMERA_WIDTH,
             height=CAMERA_HEIGHT,
@@ -208,7 +208,7 @@ agent moves forward, it will do so by 0.25 meters.
 Now we move on to the methods that we must define to finish implementing an experiment config. Firstly we
 have a simple method that just returns the name of the experiment.
 
-```
+```python
    @classmethod
     def tag(cls):
         return "PointNavRobothorRGBPPO"
@@ -223,7 +223,7 @@ respectively. All the other standard PPO parameters are also present in this fun
 sets the frequency at which data is accumulated from all the processes and logged while `save_interval` sets how
 often we save the model weights and run validation on them.
 
-```
+```python
     @classmethod
     def training_pipeline(cls, **kwargs):
         ppo_steps = int(250000000)
@@ -263,7 +263,7 @@ often we save the model weights and run validation on them.
 We define the helper method `split_num_processes` to split the different scenes that we want to train with
 amongst the different available devices. "machine_params" returns the hardware parameters of each
 process, based on the list of devices we defined above.
-```
+```python
     def split_num_processes(self, ndevices):
         assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(self.NUM_PROCESSES, ndevices)
         res = [0] * ndevices
@@ -315,7 +315,7 @@ actions our agent can perform in the environment through the `action_space` para
 We specify the names of our sensors with `goal_sensor_uuid` and `rgb_resnet_preprocessor_uuid`. Finally, we define
 the size of our RNN with `hidden_layer` and the size of the embedding of our goal sensor data (the direction and
 distance to the target) with `goal_dims`.
-```
+```python
     # Define Model
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
@@ -334,7 +334,7 @@ of tasks for our agent to perform (essentially starting locations and targets fo
 our tasks from a dataset, the task sampler is a very simple code that just reads the specified file and sets
 the agent to the next starting locations whenever the agent exceeds the maximum number of steps or selects the
 `stop` action.
-```
+```python
     # Define Task Sampler
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
@@ -343,7 +343,7 @@ the agent to the next starting locations whenever the agent exceeds the maximum 
 You might notice that we did not specify the task sampler's arguments, but are rather passing them in. The
 reason for this is that each process will have its own task sampler, and we need to specify exactly which scenes
 each process should work with. If we have several GPUS and many scenes this process of distributing the work can be rather complicated so we define a few helper functions to do just this.
-```
+```python
     # Utility Functions for distributing scenes between GPUs
     @staticmethod
     def _partition_inds(n: int, num_parts: int):
@@ -393,7 +393,7 @@ validation, and test sampler, but in this case, they are almost the same. The ar
 of the dataset and distance cache as well as the environment arguments for our simulator, both of which we defined above
 and are just referencing here. The only consequential differences between these task samplers are the path to the dataset we are using (train or validation) and whether we want to loop over the dataset or not (we want this for training since we want to train for several epochs, but we do not need this for validation and testing). Since the test scenes of RoboTHOR are private we are also testing on our validation
 set.
-```
+```python
     def train_task_sampler_args(
         self,
         process_ind: int,
@@ -474,7 +474,7 @@ This is it! If we copy all of the code into a file we should be able to run our 
 With the experiment all set up, we can try testing it with pre-trained weights.
 
 We can download and unzip these weights with the following commands:
-```
+```bash
 mkdir projects/pointnav_robothor_rgb/weights
 cd projects/pointnav_robothor_rgb/weights
 cd models
@@ -482,7 +482,7 @@ wget <REDACTED>
 unzip magic
 ```
 We can then test the model by running:
-```
+```bash
 python ddmain.py -o <PATH_TO_OUTPUT> -c <PATH_TO_CHECKPOINT> -t -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
 ```
 Where `PATH_TO_OUTPUT` is the location where the results of the test will be dumped, `PATH_TO_CHECKPOINT` is the 
@@ -490,7 +490,7 @@ location of the downloaded model weights, `<BASE_DIRECTORY_OF_YOUR_EXPERIMENT>` 
 experiment definition is stored and <EXPERIMENT_NAME> is simply the name of our experiment (without the file extension).
 
 For our current setup the following command would work:
-```
+```bash
 python ddmain.py -o projects/pointnav_robothor_rgb/storage/ -c projects/pointnav_robothor_rgb/weights/NAME -t -b projects/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
 ```
 The scripts should produce a json output in the specified folder containing the results of our test.
