@@ -5,7 +5,9 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from onpolicy_sync.losses import PPO
 from onpolicy_sync.losses.ppo import PPOConfig
-from projects.pointnav_baselines.experiments.robothor.pointnav_robothor_base import PointNavRoboThorBaseConfig
+from projects.pointnav_baselines.experiments.robothor.pointnav_robothor_base import (
+    PointNavRoboThorBaseConfig,
+)
 from projects.pointnav_baselines.models.point_nav_models import (
     PointNavActorCriticSimpleConvRNN,
 )
