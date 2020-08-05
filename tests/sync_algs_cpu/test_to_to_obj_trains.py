@@ -1,7 +1,5 @@
 import math
-import os
 
-from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from onpolicy_sync.runner import OnPolicyRunner
 from projects.babyai_baselines.experiments.go_to_obj.ppo import (
     PPOBabyAIGoToObjExperimentConfig,
@@ -12,7 +10,7 @@ class TestGoToObjTrains(object):
     def test_ppo_trains(self, tmpdir):
         cfg = PPOBabyAIGoToObjExperimentConfig()
 
-        output_dir: str = tmpdir.mkdir("experiment_output").dirname
+        output_dir: str = tmpdir.mkdir("experiment_output")
 
         train_runner = OnPolicyRunner(
             config=cfg,
