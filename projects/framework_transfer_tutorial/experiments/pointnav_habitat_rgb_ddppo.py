@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
+import habitat
 from torchvision import models
 
 from onpolicy_sync.losses import PPO
@@ -15,13 +16,16 @@ from onpolicy_sync.losses.ppo import PPOConfig
 from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )
-from rl_ai2thor.ai2thor_sensors import RGBSensorThor
+from rl_habitat.habitat_sensors import (
+    RGBSensorHabitat,
+    TargetCoordinatesSensorHabitat,
+)
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.preprocessor import ObservationSet
 from rl_base.task import TaskSampler
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
-from rl_robothor.robothor_sensors import GPSCompassSensorRoboThor
-from rl_robothor.robothor_task_samplers import PointNavDatasetTaskSampler
+from rl_habitat.habitat_task_samplers import PointNavTaskSampler
+from rl_habitat.habitat_utils import construct_env_configs
 from rl_robothor.robothor_tasks import PointNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
@@ -44,24 +48,60 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     SCREEN_SIZE = 224
 
     # Training Engine Parameters
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10**13
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
     NUM_PROCESSES = 60
     TRAINING_GPUS = [0, 1, 2, 3, 4, 5, 6]
     VALIDATION_GPUS = [7]
     TESTING_GPUS = [7]
 
-    # Dataset Parameters
-    TRAIN_DATASET_DIR = "dataset/robothor/objectnav/train"
-    VAL_DATASET_DIR = "dataset/robothor/objectnav/val"
+    TRAIN_SCENES = (
+        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
+    )
+    VALID_SCENES = (
+        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/val/val.json.gz"
+    )
+    TEST_SCENES = (
+        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/test/test.json.gz"
+    )
+
+    TRAIN_GPUS = [0, 1, 2, 3, 4, 5, 6, 7]
+    VALIDATION_GPUS = [7]
+    TESTING_GPUS = [7]
+
+    NUM_PROCESSES = 80
+    CONFIG = habitat.get_config("configs/gibson.yaml")
+    CONFIG.defrost()
+    CONFIG.NUM_PROCESSES = NUM_PROCESSES
+    CONFIG.SIMULATOR_GPU_IDS = TRAIN_GPUS
+    CONFIG.DATASET.SCENES_DIR = "habitat/habitat-api/data/scene_datasets/"
+    CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
+    CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
+    CONFIG.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
+    CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = CAMERA_WIDTH
+    CONFIG.SIMULATOR.RGB_SENSOR.HEIGHT = CAMERA_HEIGHT
+    CONFIG.SIMULATOR.TURN_ANGLE = 30
+    CONFIG.SIMULATOR.FORWARD_STEP_SIZE = 0.25
+    CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS = MAX_STEPS
+
+    CONFIG.TASK.TYPE = "Nav-v0"
+    CONFIG.TASK.SUCCESS_DISTANCE = 0.2
+    CONFIG.TASK.SENSORS = ["POINTGOAL_WITH_GPS_COMPASS_SENSOR"]
+    CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.GOAL_FORMAT = "POLAR"
+    CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.DIMENSIONALITY = 2
+    CONFIG.TASK.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
+    CONFIG.TASK.MEASUREMENTS = ["DISTANCE_TO_GOAL", "SPL"]
+    CONFIG.TASK.SPL.TYPE = "SPL"
+    CONFIG.TASK.SPL.SUCCESS_DISTANCE = 0.2
+
+    CONFIG.MODE = "train"
 
     SENSORS = [
-        RGBSensorThor(
+        RGBSensorHabitat(
             height=SCREEN_SIZE,
             width=SCREEN_SIZE,
             use_resnet_normalization=True,
-            uuid="rgb_lowres",
         ),
-        GPSCompassSensorRoboThor(),
+        TargetCoordinatesSensorHabitat(coordinate_dims=2),
     ]
 
     PREPROCESSORS = [
@@ -87,17 +127,11 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         "target_coordinates_ind",
     ]
 
-    ENV_ARGS = dict(
-        width=CAMERA_WIDTH,
-        height=CAMERA_HEIGHT,
-        rotateStepDegrees=30.0,
-        visibilityDistance=1.0,
-        gridSize=0.25,
-    )
+    TRAIN_CONFIGS = construct_env_configs(self.CONFIG)
 
     @classmethod
     def tag(cls):
-        return "PointNavRobothorRGBPPO"
+        return "PointNavHabitatRGBPPO"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
@@ -189,7 +223,6 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         return {
             "nprocesses": nprocesses,
             "gpu_ids": gpu_ids,
-            "sampler_devices": sampler_devices if mode == "train" else gpu_ids,
             "observation_set": observation_set,
             "render_video": render_video,
         }
@@ -209,54 +242,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     # Define Task Sampler
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return PointNavDatasetTaskSampler(**kwargs)
-
-    # Utility Functions for distributing scenes between GPUs
-    @staticmethod
-    def _partition_inds(n: int, num_parts: int):
-        return np.round(np.linspace(0, n, num_parts + 1, endpoint=True)).astype(
-            np.int32
-        )
-
-    def _get_sampler_args_for_scene_split(
-        self,
-        scenes_dir: str,
-        process_ind: int,
-        total_processes: int,
-        seeds: Optional[List[int]] = None,
-        deterministic_cudnn: bool = False,
-    ) -> Dict[str, Any]:
-        path = (
-            scenes_dir + "*.json.gz"
-            if scenes_dir[-1] == "/"
-            else scenes_dir + "/*.json.gz"
-        )
-        scenes = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(path)]
-        if total_processes > len(scenes):  # oversample some scenes -> bias
-            if total_processes % len(scenes) != 0:
-                print(
-                    "Warning: oversampling some of the scenes to feed all processes."
-                    " You can avoid this by setting a number of workers divisible by the number of scenes"
-                )
-            scenes = scenes * int(ceil(total_processes / len(scenes)))
-            scenes = scenes[: total_processes * (len(scenes) // total_processes)]
-        else:
-            if len(scenes) % total_processes != 0:
-                print(
-                    "Warning: oversampling some of the scenes to feed all processes."
-                    " You can avoid this by setting a number of workers divisor of the number of scenes"
-                )
-        inds = self._partition_inds(len(scenes), total_processes)
-
-        return {
-            "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
-            "max_steps": self.MAX_STEPS,
-            "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
-            "seed": seeds[process_ind] if seeds is not None else None,
-            "deterministic_cudnn": deterministic_cudnn,
-            "rewards_config": self.REWARD_CONFIG,
-        }
+        return PointNavTaskSampler(**kwargs)
 
     def train_task_sampler_args(
         self,
@@ -266,24 +252,14 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        res = self._get_sampler_args_for_scene_split(
-            self.TRAIN_DATASET_DIR + "/episodes/",
-            process_ind,
-            total_processes,
-            seeds=seeds,
-            deterministic_cudnn=deterministic_cudnn,
-        )
-        res["scene_directory"] = self.TRAIN_DATASET_DIR
-        res["loop_dataset"] = True
-        res["env_args"] = {}
-        res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)])
-            if devices is not None and len(devices) > 0
-            else None
-        )
-        res["allow_flipping"] = True
-        return res
+        config = self.TRAIN_CONFIGS[process_ind]
+        return {
+            "env_config": config,
+            "max_steps": self.MAX_STEPS,
+            "sensors": self.SENSORS,
+            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "distance_to_goal": self.DISTANCE_TO_GOAL,
+        }
 
     def valid_task_sampler_args(
         self,
@@ -293,23 +269,18 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        res = self._get_sampler_args_for_scene_split(
-            self.VAL_DATASET_DIR + "/episodes/",
-            process_ind,
-            total_processes,
-            seeds=seeds,
-            deterministic_cudnn=deterministic_cudnn,
-        )
-        res["scene_directory"] = self.VAL_DATASET_DIR
-        res["loop_dataset"] = False
-        res["env_args"] = {}
-        res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)])
-            if devices is not None and len(devices) > 0
-            else None
-        )
-        return res
+        config = self.CONFIG.clone()
+        config.defrost()
+        config.DATASET.DATA_PATH = self.VALID_SCENES
+        config.MODE = "validate"
+        config.freeze()
+        return {
+            "env_config": config,
+            "max_steps": self.MAX_STEPS,
+            "sensors": self.SENSORS,
+            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "distance_to_goal": self.DISTANCE_TO_GOAL,
+        }
 
     def test_task_sampler_args(
         self,
@@ -319,16 +290,12 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        res = self._get_sampler_args_for_scene_split(
-            self.VAL_DATASET_DIR + "/episodes/",
-            process_ind,
-            total_processes,
-            seeds=seeds,
-            deterministic_cudnn=deterministic_cudnn,
-        )
-        res["scene_directory"] = self.VAL_DATASET_DIR
-        res["loop_dataset"] = False
-        res["env_args"] = {}
-        res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = "10.0"
-        return res
+        config = self.TEST_CONFIGS[process_ind]
+        return {
+            "env_config": config,
+            "max_steps": self.MAX_STEPS,
+            "sensors": self.SENSORS,
+            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "distance_to_goal": self.DISTANCE_TO_GOAL,
+        }
+
