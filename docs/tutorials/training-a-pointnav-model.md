@@ -36,13 +36,13 @@ which is designed specifically to train models that can easily be transferred to
 photo-realistic virtual environment and a real-world replica of the environment that researchers can have access to. 
 RoboTHOR contains 60 different virtual scenes with different floor plans and furniture and 15 validation scenes.
 
-It is also important to mention that **embodied-rl**
+It is also important to mention that **embodied-ai**
 has a class abstraction called Environment. This is not the actual simulator game engine or robotics controller,
 but rather a shallow wrapper that provides a uniform interface to the actual environment.
 
 #### Learning algorithm
 Finally, let us briefly touch on the algorithm that we will use to train our embodied agent to navigate. While
-*embodied-rl* offers us great flexibility to train models using complex pipelines, we will be using a simple
+*embodied-ai* offers us great flexibility to train models using complex pipelines, we will be using a simple
 pure reinforcement learning approach for this tutorial. More specifically, we will be using DD-PPO,
 a decentralized and distributed variant of the ubiquitous PPO algorithm. For those unfamiliar with Reinforcement
 Learning we highly recommend this tutorial by Andrej Karpathy (http://karpathy.github.io/2016/05/31/rl/), and this book by Sutton and Barto (http://www.incompleteideas.net/book/the-book-2nd.html). Essentially what we are doing
@@ -58,14 +58,16 @@ for moving closer to the target in terms of geodesic distance - the actual path 
 straight line distance).
 
 We can download and unzip the data with the following commands:
-```wget <REDACTED>```
-```unzip <REDACTED>```
+```bash
+wget <REDACTED>
+unzip <REDACTED>
+```
 
 
 ## Config File Setup
 Now comes the most important part of the tutorial, we are going to write an experiment config file.
 
-Unlike a library that can be imported into python, **embodied-rl** is structured as a framework with a runner script called `ddmain.py` which will run the experiment specified in a config file. This design forces us to keep meticulous records of exactly which settings were used to produce a particular result,
+Unlike a library that can be imported into python, **embodied-ai** is structured as a framework with a runner script called `ddmain.py` which will run the experiment specified in a config file. This design forces us to keep meticulous records of exactly which settings were used to produce a particular result,
 which can be very useful given how expensive RL models are to train.
 
 We will start by creating a new directory inside the `projects` directory. We can name this whatever we want but for now, we will go with `robothor_pointnav_tutuorial`. Then we can create a directory called 
@@ -74,12 +76,12 @@ our experiments neatly organized. Now we create a file called `pointnav_robothor
 `experiments` folder (again the name of this file is arbitrary).
 
 We start off by importing `ExperimentConfig` from the framework and defining a new subclass:
-```
+```python
 from rl_base.experiment_config import ExperimentConfig
 class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 ```
 We then define the task parameters. For PointNav, these include the maximum number of steps our agent
-can take before being reset (this prevents the agent from wondering on forever), and a configuration
+can take before being reset (this prevents the agent from wandering on forever), and a configuration
 for the reward function that we will be using. 
 
 ```python
@@ -97,7 +99,7 @@ We give the agent a reward of -0.01 for each action that it takes (this is to en
 in as few actions as possible), and a reward of 10.0 if the agent manages to successfully reach its destination.
 If the agent selects the `stop` action without reaching the target we do not punish it (although this is
 sometimes useful for preventing the agent from stopping prematurely). Finally, our agent gets rewarded if it moves
-closer to the target and gets punished if it moves further. `shaping_weight` controls how strong this signal should
+closer to the target and gets punished if it moves further away. `shaping_weight` controls how strong this signal should
 be and is here set to 1.0. These parameters work well for training an agent on PointNav, but feel free to play around
 with them.
 
@@ -121,7 +123,7 @@ If our hardware setup does not include a GPU, these fields can be set to empty l
 to running everything on the CPU with only 1 process.
 ```python
     # Training Engine Parameters
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 10**13
     NUM_PROCESSES = 60
     TRAINING_GPUS = [0, 1, 2, 3, 4, 5, 6]
     VALIDATION_GPUS = [7]
@@ -144,19 +146,17 @@ the point our agent needs to move to. It tells us the direction and distance to 
 ```python
     SENSORS = [
             RGBSensorThor(
-                {
-                    "height": SCREEN_SIZE,
-                    "width": SCREEN_SIZE,
-                    "use_resnet_normalization": True,
-                    "uuid": "rgb_lowres",
-                }
+                height=SCREEN_SIZE,
+                width=SCREEN_SIZE,
+                use_resnet_normalization=True,
+                uuid="rgb_lowres",
             ),
-            GPSCompassSensorRoboThor({}),
+            GPSCompassSensorRoboThor(),
     ]
 
 ```
 
-For the sake of this example, we are also going to be using a preprocessor with our model. In *embodied-rl*
+For the sake of this example, we are also going to be using a preprocessor with our model. In *embodied-ai*
 the preprocessor abstraction is designed with large models with frozen weights in mind. These models often
 hail from the ResNet family and transform the raw pixels that our agent observes in the environment, into a
 complex embedding, which then gets stored and used as input to our trainable model instead of the original image.
@@ -307,9 +307,8 @@ process, based on the list of devices we defined above.
         }
 ```
 
-Now we define the actual model that we will be using. **embodied-rl** offers first-class support for PyTorch,
-so any PyTorch model will work here, as long as its forward method accepts a dictionary with sensor names as
-keys and their input tensors as values. Here we borrow a model from the `pointnav_baselines` project (which
+Now we define the actual model that we will be using. **embodied-ai** offers first-class support for PyTorch,
+so any PyTorch model that implements the provided `ActorCriticModel` class will work here. Here we borrow a model from the `pointnav_baselines` project (which
 unsurprisingly contains several PointNav baselines). It is a small convolutional network that expects the output of a ResNet as its rgb input followed by a single-layered GRU. The model accepts as input the number of different
 actions our agent can perform in the environment through the `action_space` parameter, which we get from the task definition. We also define the shape of the inputs we are going to be passing to the model with `observation_space`
 We specify the names of our sensors with `goal_sensor_uuid` and `rgb_resnet_preprocessor_uuid`. Finally, we define
@@ -479,7 +478,7 @@ mkdir projects/pointnav_robothor_rgb/weights
 cd projects/pointnav_robothor_rgb/weights
 cd models
 wget <REDACTED>
-unzip magic
+unzip <REDACTED>
 ```
 We can then test the model by running:
 ```bash
@@ -510,7 +509,7 @@ something like this:
 
 
 ## Conclusion
-In this tutorial, we learned how to create a new PointNav experiment using **embodied-rl**. There are many simple
+In this tutorial, we learned how to create a new PointNav experiment using **embodied-ai**. There are many simple
 and obvious ways to modify the experiment from here - changing the model, the learning algorithm and the environment
 each requires very few lines of code changed in the above file, allowing us to explore our embodied ai research ideas
 across different frameworks with ease.

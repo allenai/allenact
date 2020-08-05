@@ -17,7 +17,7 @@ from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )
 from rl_habitat.habitat_sensors import (
-    DepthSensorHabitat,
+    RGBSensorHabitat,
     TargetCoordinatesSensorHabitat,
 )
 from rl_base.experiment_config import ExperimentConfig
@@ -96,7 +96,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     CONFIG.MODE = "train"
 
     SENSORS = [
-        DepthSensorHabitat(
+        RGBSensorHabitat(
             height=SCREEN_SIZE,
             width=SCREEN_SIZE,
             use_resnet_normalization=True,

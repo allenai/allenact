@@ -14,7 +14,7 @@ us to train neural networks in one environment and test them in another.
 ## RoboTHOR to iTHOR
 ![iTHOR Framework](../img/iTHOR_framework.png)
 Since both the `RoboTHOR` and the `iTHOR` environment stem from the same family and are developed
-by the same organization, switching between the two is incredibly easy. We literally have to only change
+by the same organization, switching between the two is incredibly easy. We only have to change
 the path parameter to point to an iTHOR dataset rather than the RoboTHOR one.
 
 ```python
@@ -90,6 +90,7 @@ of the underlying environment.
 Finally we need to replace the task sampler and its argument generating functions:
 ```python
     # Define Task Sampler
+    from from rl_habitat.habitat_task_samplers import PointNavTaskSampler
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
         return PointNavTaskSampler(**kwargs)
