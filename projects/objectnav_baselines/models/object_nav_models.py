@@ -471,6 +471,7 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
             rnn_hidden_states,
         )
 
+
 class ResnetTensorGoalEncoder(nn.Module):
     def __init__(
         self,

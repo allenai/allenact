@@ -104,9 +104,8 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
 ###  Metrics, rendering and expert actions
 
 Finally, we define methods to render and evaluate the current task, and optionally generate expert actions to be used
-e.g. for DAGGER training.
+e.g. for DAgger training.
 ```python
-
     def render(self, mode: str = "rgb", *args, **kwargs) -> numpy.ndarray:
         assert mode == "rgb", "only rgb rendering is implemented"
         return self.env.current_frame

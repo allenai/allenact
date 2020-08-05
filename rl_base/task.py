@@ -327,6 +327,12 @@ class TaskSampler(abc.ABC):
         """Checks if all observation spaces of tasks that can be sampled are
         equal.
 
+        This will almost always simply return `True`. A case in which it should
+        return `False` includes, for example, a setting where you design
+        a `TaskSampler` that can generate different types of tasks, i.e.
+        point navigation tasks and object navigation tasks. In this case, these
+        different tasks may output different types of observations.
+
         # Returns
 
         True if all Tasks that can be sampled by this sampler have the
