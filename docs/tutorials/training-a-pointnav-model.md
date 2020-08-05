@@ -31,7 +31,7 @@ navigated to the target.
 ![RoboTHOR Sim vs. Real](../img/RoboTHOR_sim_real.jpg)
 
 There are many simulators designed for the training
-of embodied agents. In this tutorial, we will be using a simulator called RoboTHOR, 
+of embodied agents. In this tutorial, we will be using a simulator called [RoboTHOR](https://ai2thor.allenai.org/robothor/), 
 which is designed specifically to train models that can easily be transferred to a real robot, by providing a
 photo-realistic virtual environment and a real-world replica of the environment that researchers can have access to. 
 RoboTHOR contains 60 different virtual scenes with different floor plans and furniture and 15 validation scenes.
@@ -47,7 +47,7 @@ pure reinforcement learning approach for this tutorial. More specifically, we wi
 a decentralized and distributed variant of the ubiquitous PPO algorithm. For those unfamiliar with Reinforcement
 Learning we highly recommend this tutorial by Andrej Karpathy (http://karpathy.github.io/2016/05/31/rl/), and this book by Sutton and Barto (http://www.incompleteideas.net/book/the-book-2nd.html). Essentially what we are doing
 is letting our agent explore the environment on its own, rewarding it for taking actions that bring it closer
-to its goal and punishing it for actions that take it away from its goal. We then optimize the agent's model
+to its goal and penalizing it for actions that take it away from its goal. We then optimize the agent's model
 to maximize this reward.
 
 
