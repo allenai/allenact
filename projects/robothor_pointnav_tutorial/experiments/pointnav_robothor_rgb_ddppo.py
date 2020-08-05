@@ -44,7 +44,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     SCREEN_SIZE = 224
 
     # Training Engine Parameters
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10**13
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 10 ** 13
     NUM_PROCESSES = 60
     TRAINING_GPUS = [0, 1, 2, 3, 4, 5, 6]
     VALIDATION_GPUS = [7]

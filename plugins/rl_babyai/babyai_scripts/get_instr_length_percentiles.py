@@ -4,7 +4,7 @@ import os
 import babyai
 import numpy as np
 
-from extensions.rl_babyai.babyai_constants import BABYAI_EXPERT_TRAJECTORIES_DIR
+from plugins.rl_babyai.babyai_constants import BABYAI_EXPERT_TRAJECTORIES_DIR
 
 # Boss level
 # [(50, 11.0), (90, 22.0), (99, 32.0), (99.9, 38.0), (99.99, 43.0)]

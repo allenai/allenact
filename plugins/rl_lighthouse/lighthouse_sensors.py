@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import patsy
 
-from extensions.rl_lighthouse.lighthouse_environment import LightHouseEnvironment
+from plugins.rl_lighthouse.lighthouse_environment import LightHouseEnvironment
 from rl_base.sensor import Sensor, prepare_locals_for_super
 from rl_base.task import Task
 

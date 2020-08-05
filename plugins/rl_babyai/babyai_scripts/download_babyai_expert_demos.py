@@ -1,7 +1,7 @@
 import os
 import platform
 
-from extensions.rl_babyai.babyai_constants import BABYAI_EXPERT_TRAJECTORIES_DIR
+from plugins.rl_babyai.babyai_constants import BABYAI_EXPERT_TRAJECTORIES_DIR
 
 LEVEL_TO_TRAIN_VALID_IDS = {
     "BossLevel": (

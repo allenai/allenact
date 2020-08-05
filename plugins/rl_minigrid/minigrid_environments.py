@@ -182,15 +182,15 @@ class LavaCrossingS11N7(CrossingEnv):
 
 register(
     id="MiniGrid-LavaCrossingS25N10-v0",
-    entry_point="extensions.rl_minigrid.minigrid_environments:LavaCrossingS25N10",
+    entry_point="plugins.rl_minigrid.minigrid_environments:LavaCrossingS25N10",
 )
 
 register(
     id="MiniGrid-LavaCrossingS15N7-v0",
-    entry_point="extensions.rl_minigrid.minigrid_environments:LavaCrossingS15N7",
+    entry_point="plugins.rl_minigrid.minigrid_environments:LavaCrossingS15N7",
 )
 
 register(
     id="MiniGrid-LavaCrossingS11N7-v0",
-    entry_point="extensions.rl_minigrid.minigrid_environments:LavaCrossingS11N7",
+    entry_point="plugins.rl_minigrid.minigrid_environments:LavaCrossingS11N7",
 )

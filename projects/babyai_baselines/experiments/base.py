@@ -7,9 +7,9 @@ import torch.nn as nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from extensions.rl_babyai.babyai_models import BabyAIRecurrentACModel
-from extensions.rl_babyai.babyai_tasks import BabyAITask, BabyAITaskSampler
-from extensions.rl_minigrid.minigrid_sensors import (
+from plugins.rl_babyai.babyai_models import BabyAIRecurrentACModel
+from plugins.rl_babyai.babyai_tasks import BabyAITask, BabyAITaskSampler
+from plugins.rl_minigrid.minigrid_sensors import (
     EgocentricMiniGridSensor,
     MiniGridMissionSensor,
 )

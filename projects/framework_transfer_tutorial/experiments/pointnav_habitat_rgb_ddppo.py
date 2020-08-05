@@ -97,9 +97,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     SENSORS = [
         RGBSensorHabitat(
-            height=SCREEN_SIZE,
-            width=SCREEN_SIZE,
-            use_resnet_normalization=True,
+            height=SCREEN_SIZE, width=SCREEN_SIZE, use_resnet_normalization=True,
         ),
         TargetCoordinatesSensorHabitat(coordinate_dims=2),
     ]
@@ -298,4 +296,3 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
         }
-
