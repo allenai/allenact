@@ -56,11 +56,11 @@ nav:
       - minigrid_sensors: api/plugins/rl_minigrid/minigrid_sensors.md
       - minigrid_models: api/plugins/rl_minigrid/minigrid_models.md
     - rl_lighthouse:
-      - lighthouse_models: api/plugins/rl_lighthouse/lighthouse_models.md
-      - lighthouse_environment: api/plugins/rl_lighthouse/lighthouse_environment.md
-      - lighthouse_tasks: api/plugins/rl_lighthouse/lighthouse_tasks.md
-      - lighthouse_sensors: api/plugins/rl_lighthouse/lighthouse_sensors.md
-      - lighthouse_util: api/plugins/rl_lighthouse/lighthouse_util.md
+      - lighthouse_models: api/plugins/lighthouse_plugin/lighthouse_models.md
+      - lighthouse_environment: api/plugins/lighthouse_plugin/lighthouse_environment.md
+      - lighthouse_tasks: api/plugins/lighthouse_plugin/lighthouse_tasks.md
+      - lighthouse_sensors: api/plugins/lighthouse_plugin/lighthouse_sensors.md
+      - lighthouse_util: api/plugins/lighthouse_plugin/lighthouse_util.md
   - models:
     - basic_models: api/models/basic_models.md
     - frcnn_tensor_object_nav_models: api/models/frcnn_tensor_object_nav_models.md

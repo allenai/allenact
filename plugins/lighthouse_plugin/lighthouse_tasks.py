@@ -6,8 +6,8 @@ import gym
 import numpy as np
 from gym.utils import seeding
 
-from plugins.rl_lighthouse.lighthouse_environment import LightHouseEnvironment
-from plugins.rl_lighthouse.lighthouse_sensors import get_corner_observation
+from plugins.lighthouse_plugin.lighthouse_environment import LightHouseEnvironment
+from plugins.lighthouse_plugin.lighthouse_sensors import get_corner_observation
 
 raise ImportError("missing advisor")
 # from projects.advisor.lighthouse_constants import (
