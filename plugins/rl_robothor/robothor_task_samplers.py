@@ -6,8 +6,8 @@ from typing import List, Optional, Union, Dict, Any
 
 import gym
 
-from rl_base.sensor import Sensor
-from rl_base.task import TaskSampler
+from common.rl_base.sensor import Sensor
+from common.rl_base.task import TaskSampler
 from plugins.rl_robothor.robothor_environment import RoboThorEnvironment
 from plugins.rl_robothor.robothor_tasks import ObjectNavTask, PointNavTask
 from utils.cache_utils import find_nearest_point_in_cache

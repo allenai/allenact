@@ -5,8 +5,8 @@ from typing import Dict, Union, Tuple
 
 import torch
 
-from rl_base.common import Loss, ActorCriticOutput
-from rl_base.distributions import CategoricalDistr
+from common.rl_base.common import Loss, ActorCriticOutput
+from common.rl_base.distributions import CategoricalDistr
 
 
 class AbstractActorCriticLoss(Loss):

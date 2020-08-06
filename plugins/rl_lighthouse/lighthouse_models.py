@@ -7,8 +7,8 @@ from gym.spaces.dict import Dict as SpaceDict
 from torch import nn
 
 from common.algorithms.onpolicy_sync.policy import ActorCriticModel
-from rl_base.common import ActorCriticOutput, DistributionType
-from rl_base.distributions import CategoricalDistr
+from common.rl_base.common import ActorCriticOutput, DistributionType
+from common.rl_base.distributions import CategoricalDistr
 
 
 class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):

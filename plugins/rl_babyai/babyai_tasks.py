@@ -9,9 +9,9 @@ import numpy as np
 from gym.utils import seeding
 from gym_minigrid.minigrid import MiniGridEnv
 
-from rl_base.common import RLStepResult
-from rl_base.sensor import Sensor, SensorSuite
-from rl_base.task import Task, TaskSampler
+from common.rl_base.common import RLStepResult
+from common.rl_base.sensor import Sensor, SensorSuite
+from common.rl_base.task import Task, TaskSampler
 from utils.system import get_logger
 
 

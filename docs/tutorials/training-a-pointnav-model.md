@@ -77,7 +77,7 @@ our experiments neatly organized. Now we create a file called `pointnav_robothor
 
 We start off by importing `ExperimentConfig` from the framework and defining a new subclass:
 ```python
-from rl_base.experiment_config import ExperimentConfig
+from common.rl_base.experiment_config import ExperimentConfig
 class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 ```
 We then define the task parameters. For PointNav, these include the maximum number of steps our agent

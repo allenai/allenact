@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from gym.spaces.dict import Dict as SpaceDict
 
-from rl_base.preprocessor import Preprocessor
+from common.rl_base.preprocessor import Preprocessor
 from utils.cacheless_frcnn import fasterrcnn_resnet50_fpn
 from utils.misc_utils import prepare_locals_for_super
 from utils.system import get_logger

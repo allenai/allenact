@@ -17,9 +17,9 @@ from plugins.rl_habitat.habitat_sensors import (
     RGBSensorHabitat,
     TargetCoordinatesSensorHabitat,
 )
-from rl_base.experiment_config import ExperimentConfig
-from rl_base.preprocessor import ObservationSet
-from rl_base.task import TaskSampler
+from common.rl_base.experiment_config import ExperimentConfig
+from common.rl_base.preprocessor import ObservationSet
+from common.rl_base.task import TaskSampler
 from plugins.rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.rl_habitat.habitat_task_samplers import PointNavTaskSampler
 from plugins.rl_habitat.habitat_utils import construct_env_configs

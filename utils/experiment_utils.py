@@ -13,7 +13,7 @@ import torch
 from torch import optim
 
 from common.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
-from rl_base.common import Loss
+from common.rl_base.common import Loss
 
 
 def recursive_update(

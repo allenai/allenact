@@ -6,8 +6,8 @@ import gym
 
 from plugins.rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
 from plugins.rl_ai2thor.object_nav.tasks import ObjectNavTask
-from rl_base.sensor import Sensor
-from rl_base.task import TaskSampler
+from common.rl_base.sensor import Sensor
+from common.rl_base.task import TaskSampler
 from utils.experiment_utils import set_deterministic_cudnn, set_seed
 from utils.system import get_logger
 

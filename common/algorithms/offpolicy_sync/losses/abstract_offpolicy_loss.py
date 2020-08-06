@@ -6,7 +6,7 @@ from typing import Dict, Union, Tuple
 
 import torch
 
-from rl_base.common import Loss
+from common.rl_base.common import Loss
 
 ModelType = typing.TypeVar("ModelType")
 

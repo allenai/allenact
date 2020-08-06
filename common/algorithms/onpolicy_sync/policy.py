@@ -11,8 +11,8 @@ import torch
 from gym.spaces.dict import Dict as SpaceDict
 from torch import nn
 
-from rl_base.common import ActorCriticOutput, Memory
-from rl_base.distributions import CategoricalDistr
+from common.rl_base.common import ActorCriticOutput, Memory
+from common.rl_base.distributions import CategoricalDistr
 
 DistributionType = TypeVar("DistributionType")
 

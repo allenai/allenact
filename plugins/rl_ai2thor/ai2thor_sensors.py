@@ -5,8 +5,8 @@ import numpy as np
 
 from plugins.rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
 from plugins.rl_ai2thor.object_nav.tasks import ObjectNavTask
-from rl_base.sensor import Sensor, RGBSensor
-from rl_base.task import Task
+from common.rl_base.sensor import Sensor, RGBSensor
+from common.rl_base.task import Task
 from utils.misc_utils import prepare_locals_for_super
 
 

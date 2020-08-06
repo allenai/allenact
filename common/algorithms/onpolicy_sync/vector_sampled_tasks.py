@@ -25,8 +25,8 @@ import numpy as np
 from gym.spaces.dict import Dict as SpaceDict
 from setproctitle import setproctitle as ptitle
 
-from rl_base.common import RLStepResult
-from rl_base.task import TaskSampler
+from common.rl_base.common import RLStepResult
+from common.rl_base.task import TaskSampler
 from utils.misc_utils import partition_sequence
 from utils.system import get_logger
 from utils.tensor_utils import tile_images

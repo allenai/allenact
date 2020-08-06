@@ -15,9 +15,9 @@ from plugins.rl_ai2thor.ithor_constants import (
     LOOK_UP,
     END,
 )
-from rl_base.common import RLStepResult
-from rl_base.sensor import Sensor
-from rl_base.task import Task
+from common.rl_base.common import RLStepResult
+from common.rl_base.sensor import Sensor
+from common.rl_base.task import Task
 
 
 class ObjectNavTask(Task[AI2ThorEnvironment]):

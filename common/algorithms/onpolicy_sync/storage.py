@@ -10,7 +10,7 @@ import numpy as np
 import torch
 
 from common.algorithms.onpolicy_sync.policy import ActorCriticModel
-from rl_base.common import Memory
+from common.rl_base.common import Memory
 from utils.system import get_logger
 
 
