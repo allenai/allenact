@@ -9,8 +9,8 @@ import torch
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from common.rl_base.preprocessor import ObservationSet
 from common.rl_base.task import TaskSampler
-from plugins.rl_robothor.robothor_task_samplers import ObjectNavDatasetTaskSampler
-from plugins.rl_robothor.robothor_tasks import ObjectNavTask
+from plugins.robothor_plugin.robothor_task_samplers import ObjectNavDatasetTaskSampler
+from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from utils.experiment_utils import Builder
 
 

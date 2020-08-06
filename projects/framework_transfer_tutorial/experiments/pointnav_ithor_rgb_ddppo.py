@@ -20,9 +20,9 @@ from common.rl_base.experiment_config import ExperimentConfig
 from common.rl_base.preprocessor import ObservationSet
 from common.rl_base.task import TaskSampler
 from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
-from plugins.rl_robothor.robothor_sensors import GPSCompassSensorRoboThor
-from plugins.rl_robothor.robothor_task_samplers import PointNavDatasetTaskSampler
-from plugins.rl_robothor.robothor_tasks import PointNavTask
+from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
+from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
+from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 

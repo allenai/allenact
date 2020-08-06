@@ -52,7 +52,7 @@ class ThorViz(TrajectoryViz):
         scenes: Union[
             Tuple[str, int, int, int, int], Sequence[Tuple[str, int, int, int, int]]
         ] = ("FloorPlan_Val{}_{}", 1, 3, 1, 5),
-        room_path: Sequence[str] = ("rl_robothor", "data", "topdown"),
+        room_path: Sequence[str] = ("plugins", "robothor_plugin", "data", "topdown"),
         viz_rows_cols: Tuple[int, int] = (448, 448),
         single_color: bool = False,
         view_triangle_only_on_last: bool = True,

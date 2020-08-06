@@ -8,8 +8,8 @@ import gym
 
 from common.rl_base.sensor import Sensor
 from common.rl_base.task import TaskSampler
-from plugins.rl_robothor.robothor_environment import RoboThorEnvironment
-from plugins.rl_robothor.robothor_tasks import ObjectNavTask, PointNavTask
+from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
+from plugins.robothor_plugin.robothor_tasks import ObjectNavTask, PointNavTask
 from utils.cache_utils import find_nearest_point_in_cache
 from utils.experiment_utils import set_seed, set_deterministic_cudnn
 from utils.system import get_logger

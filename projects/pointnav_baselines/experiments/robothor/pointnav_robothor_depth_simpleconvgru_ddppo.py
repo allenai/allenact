@@ -11,11 +11,11 @@ from projects.pointnav_baselines.experiments.robothor.pointnav_robothor_base imp
 from projects.pointnav_baselines.models.point_nav_models import (
     PointNavActorCriticSimpleConvRNN,
 )
-from plugins.rl_robothor.robothor_sensors import (
+from plugins.robothor_plugin.robothor_sensors import (
     DepthSensorRoboThor,
     GPSCompassSensorRoboThor,
 )
-from plugins.rl_robothor.robothor_tasks import PointNavTask
+from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
