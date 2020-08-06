@@ -12,8 +12,8 @@ from gym.spaces.dict import Dict as SpaceDict
 from torch import Tensor
 
 from common.algorithms.onpolicy_sync.policy import ActorCriticModel
-from common.rl_base.common import ActorCriticOutput
-from common.rl_base.distributions import CategoricalDistr
+from common.base_abstractions.common import ActorCriticOutput
+from common.base_abstractions.distributions import CategoricalDistr
 
 
 class BabyAIACModelWrapped(babyai.model.ACModel):

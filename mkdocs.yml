@@ -147,12 +147,12 @@ nav:
     - ai2thor_sensors: api/ithor_plugin/ai2thor_sensors.md
     - ai2thor_util: api/ithor_plugin/ai2thor_util.md
   - rl_base:
-    - experiment_config: api/rl_base/experiment_config.md
-    - task: api/rl_base/task.md
-    - sensor: api/rl_base/sensor.md
-    - preprocessor: api/rl_base/preprocessor.md
-    - distributions: api/rl_base/distributions.md
-    - common: api/rl_base/common.md
+    - experiment_config: api/base_abstractions/experiment_config.md
+    - task: api/base_abstractions/task.md
+    - sensor: api/base_abstractions/sensor.md
+    - preprocessor: api/base_abstractions/preprocessor.md
+    - distributions: api/base_abstractions/distributions.md
+    - common: api/base_abstractions/common.md
   - rl_habitat:
     - habitat_constants: api/habitat_plugin/habitat_constants.md
     - habitat_tasks: api/habitat_plugin/habitat_tasks.md

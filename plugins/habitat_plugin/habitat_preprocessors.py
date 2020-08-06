@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torchvision import models
 
-from common.rl_base.preprocessor import Preprocessor
+from common.base_abstractions.preprocessor import Preprocessor
 from utils.misc_utils import prepare_locals_for_super
 from utils.system import get_logger
 

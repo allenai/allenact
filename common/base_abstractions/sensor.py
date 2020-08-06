@@ -24,12 +24,12 @@ from gym.spaces import Dict as SpaceDict
 from torch import nn
 from torchvision import transforms, models
 
-from common.rl_base.common import EnvType
+from common.base_abstractions.common import EnvType
 from utils.misc_utils import prepare_locals_for_super
 from utils.tensor_utils import ScaleBothSides
 
 if TYPE_CHECKING:
-    from common.rl_base.task import SubTaskType
+    from common.base_abstractions.task import SubTaskType
 else:
     SubTaskType = TypeVar("SubTaskType", bound="Task")
 

@@ -4,14 +4,14 @@ import gym
 import numpy as np
 from pyquaternion import Quaternion
 
-from common.rl_base.sensor import (
+from common.base_abstractions.sensor import (
     Sensor,
     RGBSensor,
     RGBResNetSensor,
     DepthSensor,
     DepthResNetSensor,
 )
-from common.rl_base.task import Task
+from common.base_abstractions.task import Task
 from plugins.habitat_plugin.habitat_environment import HabitatEnvironment
 from plugins.habitat_plugin.habitat_tasks import PointNavTask  # type: ignore
 from utils.misc_utils import prepare_locals_for_super

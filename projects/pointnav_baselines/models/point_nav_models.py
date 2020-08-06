@@ -12,8 +12,8 @@ from common.algorithms.onpolicy_sync.policy import (
     LinearCriticHead,
     LinearActorHead,
 )
-from common.rl_base.common import ActorCriticOutput
-from common.rl_base.distributions import CategoricalDistr
+from common.base_abstractions.common import ActorCriticOutput
+from common.base_abstractions.distributions import CategoricalDistr
 
 
 # from habitat_baselines.rl.ddppo.policy.resnet_policy import (

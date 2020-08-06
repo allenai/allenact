@@ -4,9 +4,9 @@ import gym
 import numpy as np
 from ai2thor.util.metrics import compute_single_spl
 
-from common.rl_base.common import RLStepResult
-from common.rl_base.sensor import Sensor
-from common.rl_base.task import Task
+from common.base_abstractions.common import RLStepResult
+from common.base_abstractions.sensor import Sensor
+from common.base_abstractions.task import Task
 from plugins.robothor_plugin.robothor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,

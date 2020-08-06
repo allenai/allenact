@@ -16,9 +16,9 @@ raise ImportError("missing advisor")
 #     FOUND_TARGET_REWARD,
 # )
 
-from common.rl_base.common import RLStepResult
-from common.rl_base.sensor import Sensor, SensorSuite
-from common.rl_base.task import Task, TaskSampler
+from common.base_abstractions.common import RLStepResult
+from common.base_abstractions.sensor import Sensor, SensorSuite
+from common.base_abstractions.task import Task, TaskSampler
 from utils.experiment_utils import set_seed
 from utils.system import get_logger
 

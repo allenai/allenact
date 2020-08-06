@@ -4,8 +4,8 @@ import gym
 import numpy as np
 import quaternion  # noqa # pylint: disable=unused-import
 
-from common.rl_base.sensor import Sensor, RGBSensor, DepthSensor
-from common.rl_base.task import Task
+from common.base_abstractions.sensor import Sensor, RGBSensor, DepthSensor
+from common.base_abstractions.task import Task
 from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from utils.misc_utils import prepare_locals_for_super

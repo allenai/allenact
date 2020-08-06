@@ -12,8 +12,8 @@ from plugins.minigrid_plugin.minigrid_models import MiniGridSimpleConvRNN
 from plugins.minigrid_plugin.minigrid_sensors import EgocentricMiniGridSensor
 from plugins.minigrid_plugin.minigrid_tasks import MiniGridTaskSampler, MiniGridTask
 from common.algorithms.onpolicy_sync.losses.ppo import PPO, PPOConfig
-from common.rl_base.experiment_config import ExperimentConfig, TaskSampler
-from common.rl_base.sensor import SensorSuite
+from common.base_abstractions.experiment_config import ExperimentConfig, TaskSampler
+from common.base_abstractions.sensor import SensorSuite
 from utils.experiment_utils import TrainingPipeline, Builder, PipelineStage, LinearDecay
 
 

@@ -16,9 +16,9 @@ from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )
 from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
-from common.rl_base.experiment_config import ExperimentConfig
-from common.rl_base.preprocessor import ObservationSet
-from common.rl_base.task import TaskSampler
+from common.base_abstractions.experiment_config import ExperimentConfig
+from common.base_abstractions.preprocessor import ObservationSet
+from common.base_abstractions.task import TaskSampler
 from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler

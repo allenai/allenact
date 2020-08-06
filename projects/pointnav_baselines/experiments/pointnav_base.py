@@ -1,4 +1,4 @@
-from common.rl_base.experiment_config import ExperimentConfig
+from common.base_abstractions.experiment_config import ExperimentConfig
 
 
 class PointNavBaseConfig(ExperimentConfig):
