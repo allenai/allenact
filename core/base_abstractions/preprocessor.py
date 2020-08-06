@@ -7,7 +7,7 @@ import networkx as nx
 import torch
 from gym.spaces import Dict as SpaceDict
 
-from common.base_abstractions.sensor import Sensor, SensorSuite
+from core.base_abstractions.sensor import Sensor, SensorSuite
 from utils.experiment_utils import Builder
 
 

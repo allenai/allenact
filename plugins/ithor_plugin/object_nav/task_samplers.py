@@ -6,8 +6,8 @@ import gym
 
 from plugins.ithor_plugin.ithor_environment import IThorEnvironment
 from plugins.ithor_plugin.object_nav.tasks import ObjectNavTask
-from common.base_abstractions.sensor import Sensor
-from common.base_abstractions.task import TaskSampler
+from core.base_abstractions.sensor import Sensor
+from core.base_abstractions.task import TaskSampler
 from utils.experiment_utils import set_deterministic_cudnn, set_seed
 from utils.system import get_logger
 

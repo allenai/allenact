@@ -6,9 +6,9 @@ import gym
 import numpy as np
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 
-from common.base_abstractions.misc import RLStepResult
-from common.base_abstractions.sensor import Sensor
-from common.base_abstractions.task import Task
+from core.base_abstractions.misc import RLStepResult
+from core.base_abstractions.sensor import Sensor
+from core.base_abstractions.task import Task
 from plugins.habitat_plugin.habitat_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,

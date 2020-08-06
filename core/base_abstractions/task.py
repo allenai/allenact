@@ -14,8 +14,8 @@ import gym
 import numpy as np
 from gym.spaces.dict import Dict as SpaceDict
 
-from common.base_abstractions.misc import RLStepResult
-from common.base_abstractions.sensor import Sensor, SensorSuite
+from core.base_abstractions.misc import RLStepResult
+from core.base_abstractions.sensor import Sensor, SensorSuite
 
 EnvType = TypeVar("EnvType")
 

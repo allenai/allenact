@@ -4,8 +4,8 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 
-from common.algorithms.onpolicy_sync.losses import PPO
-from common.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from core.algorithms.onpolicy_sync.losses import PPO
+from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from projects.objectnav_baselines.experiments.ithor.objectnav_ithor_base import (
     ObjectNaviThorBaseConfig,
 )

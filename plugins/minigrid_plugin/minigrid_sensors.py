@@ -8,8 +8,8 @@ import torch
 from babyai.utils.format import InstructionsPreprocessor
 from gym_minigrid.minigrid import MiniGridEnv
 
-from common.base_abstractions.sensor import Sensor, prepare_locals_for_super
-from common.base_abstractions.task import Task, SubTaskType
+from core.base_abstractions.sensor import Sensor, prepare_locals_for_super
+from core.base_abstractions.task import Task, SubTaskType
 
 # fmt: off
 ALL_VOCAB_TOKENS = [

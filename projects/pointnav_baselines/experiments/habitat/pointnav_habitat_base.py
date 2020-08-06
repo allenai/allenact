@@ -5,8 +5,8 @@ import habitat
 import torch
 
 from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
-from common.base_abstractions.preprocessor import ObservationSet
-from common.base_abstractions.task import TaskSampler
+from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.task import TaskSampler
 from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
 from plugins.habitat_plugin.habitat_tasks import PointNavTask
 from utils.experiment_utils import Builder

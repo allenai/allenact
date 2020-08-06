@@ -7,8 +7,8 @@ import numpy as np
 import torch
 
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
-from common.base_abstractions.preprocessor import ObservationSet
-from common.base_abstractions.task import TaskSampler
+from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from utils.experiment_utils import Builder

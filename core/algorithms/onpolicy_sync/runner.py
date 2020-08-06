@@ -19,11 +19,11 @@ import torch.multiprocessing as mp
 import torch.optim
 from setproctitle import setproctitle as ptitle
 
-from common.algorithms.onpolicy_sync.light_engine import (
+from core.algorithms.onpolicy_sync.light_engine import (
     OnPolicyTrainer,
     OnPolicyInference,
 )
-from common.base_abstractions.experiment_config import ExperimentConfig
+from core.base_abstractions.experiment_config import ExperimentConfig
 from utils.experiment_utils import ScalarMeanTracker, set_deterministic_cudnn, set_seed
 from utils.misc_utils import all_equal, get_git_diff_of_project
 from utils.system import get_logger, find_free_port

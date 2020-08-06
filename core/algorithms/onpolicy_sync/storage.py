@@ -9,8 +9,8 @@ from typing import Union, List, Dict, Tuple, DefaultDict, Sequence
 import numpy as np
 import torch
 
-from common.algorithms.onpolicy_sync.policy import ActorCriticModel
-from common.base_abstractions.misc import Memory
+from core.algorithms.onpolicy_sync.policy import ActorCriticModel
+from core.base_abstractions.misc import Memory
 from utils.system import get_logger
 
 

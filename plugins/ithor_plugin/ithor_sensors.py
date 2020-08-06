@@ -5,8 +5,8 @@ import numpy as np
 
 from plugins.ithor_plugin.ithor_environment import IThorEnvironment
 from plugins.ithor_plugin.object_nav.tasks import ObjectNavTask
-from common.base_abstractions.sensor import Sensor, RGBSensor
-from common.base_abstractions.task import Task
+from core.base_abstractions.sensor import Sensor, RGBSensor
+from core.base_abstractions.task import Task
 from utils.misc_utils import prepare_locals_for_super
 
 

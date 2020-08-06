@@ -13,14 +13,14 @@ from plugins.minigrid_plugin.minigrid_sensors import (
     EgocentricMiniGridSensor,
     MiniGridMissionSensor,
 )
-from common.algorithms.onpolicy_sync.losses import PPO, A2C
-from common.algorithms.onpolicy_sync.losses.a2cacktr import A2CConfig
-from common.algorithms.onpolicy_sync.losses.imitation import Imitation
-from common.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from common.base_abstractions.misc import Loss
-from common.base_abstractions.experiment_config import ExperimentConfig
-from common.base_abstractions.sensor import SensorSuite, Sensor, ExpertActionSensor
-from common.base_abstractions.task import TaskSampler
+from core.algorithms.onpolicy_sync.losses import PPO, A2C
+from core.algorithms.onpolicy_sync.losses.a2cacktr import A2CConfig
+from core.algorithms.onpolicy_sync.losses.imitation import Imitation
+from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from core.base_abstractions.misc import Loss
+from core.base_abstractions.experiment_config import ExperimentConfig
+from core.base_abstractions.sensor import SensorSuite, Sensor, ExpertActionSensor
+from core.base_abstractions.task import TaskSampler
 from utils.experiment_utils import Builder, LinearDecay, PipelineStage, TrainingPipeline
 
 

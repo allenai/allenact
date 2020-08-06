@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from common.base_abstractions.distributions import AddBias
+from core.base_abstractions.distributions import AddBias
 
 
 # TODO: In order to make this code faster:

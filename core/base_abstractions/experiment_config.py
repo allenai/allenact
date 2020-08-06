@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional, List
 
 import torch.nn as nn
 
-from common.base_abstractions.task import TaskSampler
+from core.base_abstractions.task import TaskSampler
 from utils.experiment_utils import TrainingPipeline
 
 

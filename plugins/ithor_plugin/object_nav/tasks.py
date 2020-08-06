@@ -15,9 +15,9 @@ from plugins.ithor_plugin.ithor_constants import (
     LOOK_UP,
     END,
 )
-from common.base_abstractions.misc import RLStepResult
-from common.base_abstractions.sensor import Sensor
-from common.base_abstractions.task import Task
+from core.base_abstractions.misc import RLStepResult
+from core.base_abstractions.sensor import Sensor
+from core.base_abstractions.task import Task
 
 
 class ObjectNavTask(Task[IThorEnvironment]):

@@ -6,7 +6,7 @@ from typing import Dict, Union, Tuple
 
 import torch
 
-from common.base_abstractions.misc import Loss
+from core.base_abstractions.misc import Loss
 
 ModelType = typing.TypeVar("ModelType")
 

@@ -16,9 +16,9 @@ from gym_minigrid.minigrid import (
 )
 
 from plugins.minigrid_plugin.minigrid_environments import AskForHelpSimpleCrossing
-from common.base_abstractions.misc import RLStepResult
-from common.base_abstractions.sensor import Sensor, SensorSuite
-from common.base_abstractions.task import Task, TaskSampler
+from core.base_abstractions.misc import RLStepResult
+from core.base_abstractions.sensor import Sensor, SensorSuite
+from core.base_abstractions.task import Task, TaskSampler
 from utils.system import get_logger
 
 

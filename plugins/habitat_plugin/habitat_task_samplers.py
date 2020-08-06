@@ -4,8 +4,8 @@ import gym
 import habitat
 from habitat.config import Config
 
-from common.base_abstractions.sensor import Sensor
-from common.base_abstractions.task import TaskSampler
+from core.base_abstractions.sensor import Sensor
+from core.base_abstractions.task import TaskSampler
 from plugins.habitat_plugin.habitat_environment import HabitatEnvironment
 from plugins.habitat_plugin.habitat_tasks import PointNavTask, ObjectNavTask  # type: ignore
 

@@ -8,8 +8,8 @@ from torch.optim.lr_scheduler import LambdaLR
 import habitat
 from torchvision import models
 
-from common.algorithms.onpolicy_sync.losses import PPO
-from common.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from core.algorithms.onpolicy_sync.losses import PPO
+from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )
@@ -17,9 +17,9 @@ from plugins.habitat_plugin.habitat_sensors import (
     RGBSensorHabitat,
     TargetCoordinatesSensorHabitat,
 )
-from common.base_abstractions.experiment_config import ExperimentConfig
-from common.base_abstractions.preprocessor import ObservationSet
-from common.base_abstractions.task import TaskSampler
+from core.base_abstractions.experiment_config import ExperimentConfig
+from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.task import TaskSampler
 from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
 from plugins.habitat_plugin.habitat_utils import construct_env_configs

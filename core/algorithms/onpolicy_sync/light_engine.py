@@ -27,11 +27,11 @@ except ImportError as e:
 
 from torch.optim.lr_scheduler import _LRScheduler
 
-from common.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
-from common.algorithms.onpolicy_sync.policy import ActorCriticModel
-from common.algorithms.onpolicy_sync.storage import RolloutStorage
-from common.algorithms.onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
-from common.base_abstractions.experiment_config import ExperimentConfig
+from core.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
+from core.algorithms.onpolicy_sync.policy import ActorCriticModel
+from core.algorithms.onpolicy_sync.storage import RolloutStorage
+from core.algorithms.onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
+from core.base_abstractions.experiment_config import ExperimentConfig
 from utils.experiment_utils import (
     ScalarMeanTracker,
     set_deterministic_cudnn,

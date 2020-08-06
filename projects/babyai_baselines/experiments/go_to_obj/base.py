@@ -8,8 +8,8 @@ from torch.optim.lr_scheduler import LambdaLR
 from plugins.babyai_plugin.babyai_models import BabyAIRecurrentACModel
 from plugins.babyai_plugin.babyai_tasks import BabyAITask
 from projects.babyai_baselines.experiments.base import BaseBabyAIExperimentConfig
-from common.base_abstractions.misc import Loss
-from common.base_abstractions.sensor import SensorSuite
+from core.base_abstractions.misc import Loss
+from core.base_abstractions.sensor import SensorSuite
 from utils.experiment_utils import Builder, LinearDecay, PipelineStage, TrainingPipeline
 
 

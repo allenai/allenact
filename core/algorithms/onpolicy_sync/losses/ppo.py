@@ -6,9 +6,9 @@ from typing import Optional, Callable
 
 import torch
 
-from common.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
-from common.base_abstractions.misc import ActorCriticOutput
-from common.base_abstractions.distributions import CategoricalDistr
+from core.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
+from core.base_abstractions.misc import ActorCriticOutput
+from core.base_abstractions.distributions import CategoricalDistr
 
 
 class PPO(AbstractActorCriticLoss):

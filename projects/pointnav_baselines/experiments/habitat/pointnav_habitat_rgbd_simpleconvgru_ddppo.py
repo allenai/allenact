@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from common.algorithms.onpolicy_sync.losses import PPO
-from common.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from core.algorithms.onpolicy_sync.losses import PPO
+from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from projects.pointnav_baselines.experiments.habitat.pointnav_habitat_base import (
     PointNavHabitatBaseConfig,
 )

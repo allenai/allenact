@@ -6,14 +6,14 @@ import torch
 import torch.nn as nn
 from gym.spaces import Dict as SpaceDict
 
-from common.models.basic_models import RNNStateEncoder
-from common.algorithms.onpolicy_sync.policy import (
+from core.models.basic_models import RNNStateEncoder
+from core.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     LinearActorHead,
     LinearCriticHead,
 )
-from common.base_abstractions.misc import ActorCriticOutput
-from common.base_abstractions.distributions import CategoricalDistr
+from core.base_abstractions.misc import ActorCriticOutput
+from core.base_abstractions.distributions import CategoricalDistr
 
 
 class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):

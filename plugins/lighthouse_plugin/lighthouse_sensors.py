@@ -7,8 +7,8 @@ import pandas as pd
 import patsy
 
 from plugins.lighthouse_plugin.lighthouse_environment import LightHouseEnvironment
-from common.base_abstractions.sensor import Sensor, prepare_locals_for_super
-from common.base_abstractions.task import Task
+from core.base_abstractions.sensor import Sensor, prepare_locals_for_super
+from core.base_abstractions.task import Task
 
 
 def get_corner_observation(
