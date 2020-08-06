@@ -6,8 +6,8 @@ from habitat.config import Config
 
 from rl_base.sensor import Sensor
 from rl_base.task import TaskSampler
-from rl_habitat.habitat_environment import HabitatEnvironment
-from rl_habitat.habitat_tasks import PointNavTask, ObjectNavTask  # type: ignore
+from plugins.rl_habitat.habitat_environment import HabitatEnvironment
+from plugins.rl_habitat.habitat_tasks import PointNavTask, ObjectNavTask  # type: ignore
 
 
 class PointNavTaskSampler(TaskSampler):

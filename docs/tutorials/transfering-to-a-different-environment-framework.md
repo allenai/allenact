@@ -90,7 +90,7 @@ of the underlying environment.
 Finally we need to replace the task sampler and its argument generating functions:
 ```python
     # Define Task Sampler
-    from from rl_habitat.habitat_task_samplers import PointNavTaskSampler
+    from plugins.rl_habitat.habitat_task_samplers import PointNavTaskSampler
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
         return PointNavTaskSampler(**kwargs)

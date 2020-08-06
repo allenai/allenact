@@ -11,9 +11,12 @@ from projects.pointnav_baselines.experiments.habitat.pointnav_habitat_base impor
 from projects.pointnav_baselines.models.point_nav_models import (
     PointNavActorCriticSimpleConvRNN,
 )
-from rl_habitat.habitat_sensors import RGBSensorHabitat, TargetCoordinatesSensorHabitat
-from rl_habitat.habitat_tasks import PointNavTask
-from rl_habitat.habitat_utils import construct_env_configs
+from plugins.rl_habitat.habitat_sensors import (
+    RGBSensorHabitat,
+    TargetCoordinatesSensorHabitat,
+)
+from plugins.rl_habitat.habitat_tasks import PointNavTask
+from plugins.rl_habitat.habitat_utils import construct_env_configs
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 

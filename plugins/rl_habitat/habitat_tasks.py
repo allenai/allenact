@@ -9,7 +9,7 @@ from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor
 from rl_base.task import Task
-from rl_habitat.habitat_constants import (
+from plugins.rl_habitat.habitat_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
     ROTATE_RIGHT,
@@ -17,7 +17,7 @@ from rl_habitat.habitat_constants import (
     LOOK_UP,
     LOOK_DOWN,
 )
-from rl_habitat.habitat_environment import HabitatEnvironment
+from plugins.rl_habitat.habitat_environment import HabitatEnvironment
 
 
 class HabitatTask(Task[HabitatEnvironment]):

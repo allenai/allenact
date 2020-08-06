@@ -1,9 +1,6 @@
-import glob
-from math import ceil
 from typing import Dict, Any, List, Optional
 
 import gym
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -16,16 +13,16 @@ from onpolicy_sync.losses.ppo import PPOConfig
 from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )
-from rl_habitat.habitat_sensors import (
+from plugins.rl_habitat.habitat_sensors import (
     RGBSensorHabitat,
     TargetCoordinatesSensorHabitat,
 )
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.preprocessor import ObservationSet
 from rl_base.task import TaskSampler
-from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
-from rl_habitat.habitat_task_samplers import PointNavTaskSampler
-from rl_habitat.habitat_utils import construct_env_configs
+from plugins.rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
+from plugins.rl_habitat.habitat_task_samplers import PointNavTaskSampler
+from plugins.rl_habitat.habitat_utils import construct_env_configs
 from rl_robothor.robothor_tasks import PointNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
@@ -125,7 +122,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         "target_coordinates_ind",
     ]
 
-    TRAIN_CONFIGS = construct_env_configs(self.CONFIG)
+    TRAIN_CONFIGS = construct_env_configs(CONFIG)
 
     @classmethod
     def tag(cls):
