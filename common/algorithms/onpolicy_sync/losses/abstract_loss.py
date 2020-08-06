@@ -5,7 +5,7 @@ from typing import Dict, Union, Tuple
 
 import torch
 
-from common.base_abstractions.common import Loss, ActorCriticOutput
+from common.base_abstractions.misc import Loss, ActorCriticOutput
 from common.base_abstractions.distributions import CategoricalDistr
 
 

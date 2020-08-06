@@ -15,7 +15,7 @@ from plugins.ithor_plugin.ithor_constants import (
     LOOK_UP,
     END,
 )
-from common.base_abstractions.common import RLStepResult
+from common.base_abstractions.misc import RLStepResult
 from common.base_abstractions.sensor import Sensor
 from common.base_abstractions.task import Task
 

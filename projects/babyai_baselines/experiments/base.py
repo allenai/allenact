@@ -17,7 +17,7 @@ from common.algorithms.onpolicy_sync.losses import PPO, A2C
 from common.algorithms.onpolicy_sync.losses.a2cacktr import A2CConfig
 from common.algorithms.onpolicy_sync.losses.imitation import Imitation
 from common.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from common.base_abstractions.common import Loss
+from common.base_abstractions.misc import Loss
 from common.base_abstractions.experiment_config import ExperimentConfig
 from common.base_abstractions.sensor import SensorSuite, Sensor, ExpertActionSensor
 from common.base_abstractions.task import TaskSampler

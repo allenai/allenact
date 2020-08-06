@@ -18,7 +18,7 @@ from common.algorithms.onpolicy_sync.policy import (
     LinearCriticHead,
     LinearActorHead,
 )
-from common.base_abstractions.common import ActorCriticOutput
+from common.base_abstractions.misc import ActorCriticOutput
 from common.base_abstractions.distributions import CategoricalDistr
 
 

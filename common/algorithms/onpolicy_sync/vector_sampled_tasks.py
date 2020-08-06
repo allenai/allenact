@@ -25,7 +25,7 @@ import numpy as np
 from gym.spaces.dict import Dict as SpaceDict
 from setproctitle import setproctitle as ptitle
 
-from common.base_abstractions.common import RLStepResult
+from common.base_abstractions.misc import RLStepResult
 from common.base_abstractions.task import TaskSampler
 from utils.misc_utils import partition_sequence
 from utils.system import get_logger

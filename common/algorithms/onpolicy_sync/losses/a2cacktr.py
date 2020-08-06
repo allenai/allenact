@@ -5,7 +5,7 @@ from typing import Tuple, Dict, Union, Optional
 import torch
 
 from common.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
-from common.base_abstractions.common import ActorCriticOutput
+from common.base_abstractions.misc import ActorCriticOutput
 from common.base_abstractions.distributions import CategoricalDistr
 from utils.system import get_logger
 

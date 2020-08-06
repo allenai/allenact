@@ -19,7 +19,7 @@ from gym.spaces.dict import Dict as SpaceDict
 from torch import nn
 
 from common.algorithms.onpolicy_sync.policy import ActorCriticModel, DistributionType
-from common.base_abstractions.common import ActorCriticOutput
+from common.base_abstractions.misc import ActorCriticOutput
 from common.base_abstractions.distributions import CategoricalDistr
 from utils.model_utils import make_cnn
 

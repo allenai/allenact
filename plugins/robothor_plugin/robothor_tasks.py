@@ -4,7 +4,7 @@ import gym
 import numpy as np
 from ai2thor.util.metrics import compute_single_spl
 
-from common.base_abstractions.common import RLStepResult
+from common.base_abstractions.misc import RLStepResult
 from common.base_abstractions.sensor import Sensor
 from common.base_abstractions.task import Task
 from plugins.robothor_plugin.robothor_constants import (

@@ -24,7 +24,7 @@ from gym.spaces import Dict as SpaceDict
 from torch import nn
 from torchvision import transforms, models
 
-from common.base_abstractions.common import EnvType
+from common.base_abstractions.misc import EnvType
 from utils.misc_utils import prepare_locals_for_super
 from utils.tensor_utils import ScaleBothSides
 
