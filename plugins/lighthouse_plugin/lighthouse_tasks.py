@@ -9,12 +9,16 @@ from gym.utils import seeding
 from plugins.lighthouse_plugin.lighthouse_environment import LightHouseEnvironment
 from plugins.lighthouse_plugin.lighthouse_sensors import get_corner_observation
 
-raise ImportError("missing advisor")
-# from projects.advisor.lighthouse_constants import (
-#     DISCOUNT_FACTOR,
-#     STEP_PENALTY,
-#     FOUND_TARGET_REWARD,
-# )
+try:
+    from projects.advisor.lighthouse_constants import (
+        DISCOUNT_FACTOR,
+        STEP_PENALTY,
+        FOUND_TARGET_REWARD,
+    )
+except Exception:
+    DISCOUNT_FACTOR, STEP_PENALTY, FOUND_TARGET_REWARD = 0, 0, 0
+    raise ImportError("missing advisor")
+
 
 from core.base_abstractions.misc import RLStepResult
 from core.base_abstractions.sensor import Sensor, SensorSuite

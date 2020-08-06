@@ -50,7 +50,7 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
             self.semantic_embedding = nn.Embedding(33, embedding_dim=8)
             self.image_conv = nn.Sequential(
                 nn.Conv2d(in_channels=24, out_channels=16, kernel_size=(2, 2)),
-                *self.image_conv[1:]
+                *self.image_conv[1:]  # type:ignore
             )
             self.image_conv[0].apply(babyai.model.initialize_parameters)
 
@@ -149,7 +149,7 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         obs = babyai.rl.DictList()
 
         images = images.view(rollouts_len, nsamplers, *images.shape[1:])
-        masks = masks.view(rollouts_len, nsamplers, *masks.shape[1:])
+        masks = masks.view(rollouts_len, nsamplers, *masks.shape[1:])  # type:ignore
 
         # needs_reset = (masks != 1.0).view(nrollouts, -1).any(-1)
         if instrs is not None:
@@ -157,14 +157,16 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
 
         needs_instr_reset_mask = masks != 1.0
         needs_instr_reset_mask[0] = 1
-        needs_instr_reset_mask: Tensor = needs_instr_reset_mask.squeeze(-1)
+        needs_instr_reset_mask = needs_instr_reset_mask.squeeze(-1)
         instr_embeddings: Optional[torch.Tensor] = None
         if self.use_instr:
             instr_reset_multi_inds = list(
                 (int(a), int(b))
                 for a, b in zip(*np.where(needs_instr_reset_mask.cpu().numpy()))
             )
-            time_ind_to_which_need_instr_reset = [[] for _ in range(rollouts_len)]
+            time_ind_to_which_need_instr_reset: List[List] = [
+                [] for _ in range(rollouts_len)
+            ]
             reset_multi_ind_to_index = {
                 mi: i for i, mi in enumerate(instr_reset_multi_inds)
             }
@@ -265,9 +267,9 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         images = observations["minigrid_ego_image"]
         if self.use_cnn2:
             images_shape = images.shape
-            images = images + torch.LongTensor([0, 11, 22]).view(1, 1, 1, 3).to(
-                images.device
-            )
+            images = images + torch.LongTensor([0, 11, 22]).view(  # type:ignore
+                1, 1, 1, 3
+            ).to(images.device)
             images = self.semantic_embedding(images).view(*images_shape[:3], 24)
         images = images.permute(0, 3, 1, 2).float()
 
@@ -284,7 +286,7 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
 
         needs_instr_reset_mask = masks != 1.0
         needs_instr_reset_mask[0] = 1
-        needs_instr_reset_mask: Tensor = needs_instr_reset_mask.squeeze(-1)
+        needs_instr_reset_mask = needs_instr_reset_mask.squeeze(-1)
         blocking_inds: List[int] = np.where(
             needs_instr_reset_mask.view(rollouts_len, -1).any(-1).cpu().numpy()
         )[0].tolist()
@@ -296,7 +298,9 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
                 (int(a), int(b))
                 for a, b in zip(*np.where(needs_instr_reset_mask.cpu().numpy()))
             )
-            time_ind_to_which_need_instr_reset = [[] for _ in range(rollouts_len)]
+            time_ind_to_which_need_instr_reset: List[List] = [
+                [] for _ in range(rollouts_len)
+            ]
             reset_multi_ind_to_index = {
                 mi: i for i, mi in enumerate(instr_reset_multi_inds)
             }

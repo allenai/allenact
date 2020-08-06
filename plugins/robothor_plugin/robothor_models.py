@@ -1,5 +1,5 @@
 import typing
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Union, Sequence
 
 import gym
 import torch
@@ -147,7 +147,9 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         self.train()
 
     @property
-    def recurrent_hidden_state_size(self) -> int:
+    def recurrent_hidden_state_size(
+        self,
+    ) -> Union[int, Dict[str, Tuple[Sequence[int], int, torch.dtype]]]:
         """The recurrent hidden state size of the model."""
         return self.hidden_size
 
@@ -184,7 +186,7 @@ class ResnetTensorObjectNavActorCriticMemory(ResnetTensorObjectNavActorCritic):
     @property
     def recurrent_hidden_state_size(
         self,
-    ) -> Dict[str, Tuple[Tuple[int, ...], int, torch.dtype]]:
+    ) -> Dict[str, Tuple[Sequence[int], int, torch.dtype]]:
         """The memory spec of the model: A dictionary with string keys and
         tuple values, each with the dimensions of the memory, e.g. (2, 32) for
         two layers of 32-dimensional recurrent hidden states; an integer

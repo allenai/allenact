@@ -608,7 +608,7 @@ class OnPolicyRunner(object):
         last_train_steps = 0
         last_train_time = time.time()
         # test_steps = sorted(test_steps, reverse=True)
-        test_results = []
+        test_results: List[Dict] = []
         unfinished_workers = nworkers
 
         try:

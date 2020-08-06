@@ -5,6 +5,8 @@ from typing import Sequence, Tuple, Union
 import torch
 from torch import nn
 
+from core.models.basic_models import Flatten
+
 
 def init_linear_layer(
     module: nn.Linear, weight_init: Callable, bias_init: Callable, gain=1
@@ -77,7 +79,7 @@ def make_cnn(
         if it < len(layer_channels) - 1:
             net.add_module("relu_{}".format(it), nn.ReLU(inplace=True))
 
-    net.add_module("flatten", nn.Flatten())
+    net.add_module("flatten", Flatten())
     net.add_module(
         "fc",
         nn.Linear(layer_channels[-1] * output_width * output_height, output_channels),

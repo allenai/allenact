@@ -17,10 +17,10 @@ from torch import optim
 from torch.nn.parallel import DistributedDataParallel
 
 try:
-    from torch.nn.parallel import DistributedDataParallelCPU
+    from torch.nn.parallel import DistributedDataParallelCPU  # type:ignore
 except ImportError as e:
 
-    class DistributedDataParallelCPU(object):
+    class DistributedDataParallelCPU(object):  # type:ignore
         def __init__(self, *args, **kwargs):
             raise e
 
@@ -149,7 +149,7 @@ class OnPolicyRLEngine(object):
                 observation_set = self.machine_params["make_preprocessors_fns"][0]()
                 set_seed(self.seed)
                 self.actor_critic = typing.cast(
-                    torch.nn.Module,
+                    ActorCriticModel,
                     self.config.create_model(observation_set=observation_set),
                 ).to(self.device)
                 del observation_set
@@ -174,17 +174,19 @@ class OnPolicyRLEngine(object):
                 ).to(self.device)
 
         self.is_distributed = False
-        self.store: Optional[torch.distributed.TCPStore] = None
+        self.store: Optional[torch.distributed.TCPStore] = None  # type:ignore
         if self.num_workers > 1:
             if self.mode == "train":
-                self.store = torch.distributed.TCPStore(
+                self.store = torch.distributed.TCPStore(  # type:ignore
                     "127.0.0.1",
                     self.distributed_port,
                     self.num_workers,
                     self.worker_id == 0,
                 )
-                cpu_device = torch.device(self.device) == torch.device("cpu")
-                torch.distributed.init_process_group(
+                cpu_device = torch.device(self.device) == torch.device(  # type:ignore
+                    "cpu"
+                )
+                torch.distributed.init_process_group(  # type:ignore
                     backend="gloo" if cpu_device else "nccl",
                     store=self.store,
                     rank=self.worker_id,
@@ -195,8 +197,8 @@ class OnPolicyRLEngine(object):
                 else:
                     self.actor_critic = DistributedDataParallel(
                         self.actor_critic,
-                        device_ids=[self.device],
-                        output_device=self.device,
+                        device_ids=[cast(Union[int, torch.device], self.device)],
+                        output_device=cast(Union[int, torch.device], self.device),
                     )
 
             self.is_distributed = True  # for testing, this only means we need to synchronize after each checkpoint
@@ -210,7 +212,7 @@ class OnPolicyRLEngine(object):
         self.training_pipeline: Optional[TrainingPipeline] = None
 
     @property
-    def vector_tasks(self, debug=False):  # TODO debug
+    def vector_tasks(self):
         if self._vector_tasks is None and self.num_samplers > 0:
             if self.is_distributed:
                 total_processes = sum(
@@ -240,7 +242,7 @@ class OnPolicyRLEngine(object):
     def worker_seeds(nprocesses: int, initial_seed: Optional[int]) -> List[int]:
         """Create a collection of seeds for workers without modifying the RNG
         state."""
-        rstate: Optional = None
+        rstate = None  # type:ignore
         if initial_seed is not None:
             rstate = random.getstate()
             random.seed(initial_seed)
@@ -278,7 +280,7 @@ class OnPolicyRLEngine(object):
             fn(
                 process_ind=process_offset + it,
                 total_processes=total_processes,
-                devices=[self.device]
+                devices=[cast(int, self.device)]
                 if self.is_distributed or self.mode == "test"
                 else devices,  # TODO is this ever used?!
                 seeds=seeds,
@@ -307,7 +309,7 @@ class OnPolicyRLEngine(object):
             if not self.mode == "train" or not self.is_distributed
             else self.actor_critic.module
         )
-        target.load_state_dict(ckpt["model_state_dict"])
+        target.load_state_dict(ckpt["model_state_dict"])  # type:ignore
 
         return ckpt
 
@@ -446,14 +448,18 @@ class OnPolicyRLEngine(object):
         rewards: Union[List, torch.Tensor]
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
 
-        rewards = torch.tensor(rewards, dtype=torch.float, device=self.device)
+        rewards = torch.tensor(
+            rewards,
+            dtype=torch.float,
+            device=cast(Union[torch.device, str, None], self.device),
+        )
         rewards = rewards.unsqueeze(1)
 
         # If done then clean the history of observations.
         masks = torch.tensor(
             [[0.0] if done else [1.0] for done in dones],
             dtype=torch.float32,
-            device=self.device,
+            device=cast(Union[torch.device, str, None], self.device),
         )
 
         npaused, keep, batch = self.remove_paused(observations)
@@ -574,7 +580,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         self.training_pipeline: TrainingPipeline = config.training_pipeline()
 
-        self.optimizer: optim.Optimizer = self.training_pipeline.optimizer_builder(
+        self.optimizer: optim.optimizer.Optimizer = self.training_pipeline.optimizer_builder(
             params=[p for p in self.actor_critic.parameters() if p.requires_grad]
         )
 
@@ -587,11 +593,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self.distributed_barrier = distributed_barrier
         if self.is_distributed:
             # Tracks how many workers have finished their rollout
-            self.num_workers_done = torch.distributed.PrefixStore(
+            self.num_workers_done = torch.distributed.PrefixStore(  # type:ignore
                 "num_workers_done", self.store
             )
             # Tracks the number of steps taken by each worker in current rollout
-            self.num_workers_steps = torch.distributed.PrefixStore(
+            self.num_workers_steps = torch.distributed.PrefixStore(  # type:ignore
                 "num_workers_steps", self.store
             )
             self.distributed_preemption_threshold = distributed_preemption_threshold
@@ -645,7 +651,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         )
 
         save_dict = {
-            "model_state_dict": target.state_dict(),
+            "model_state_dict": target.state_dict(),  # type:ignore
             "total_steps": self.training_pipeline.total_steps,  # Total steps including current stage
             "optimizer_state_dict": self.optimizer.state_dict(),  # type: ignore
             "training_pipeline_state_dict": self.training_pipeline.state_dict(),
@@ -665,7 +671,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
     ) -> Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]]:
         ckpt = super().checkpoint_load(ckpt)
 
-        self.training_pipeline.load_state_dict(ckpt["training_pipeline_state_dict"])
+        self.training_pipeline.load_state_dict(
+            cast(Dict[str, Any], ckpt["training_pipeline_state_dict"])
+        )
         if restart_pipeline:
             self.training_pipeline.restart_pipeline()
         else:
@@ -924,7 +932,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
     def apply_teacher_forcing(
         self,
-        actions: torch.tensor,
+        actions: torch.Tensor,
         step_observation: Dict[str, torch.Tensor],
         step_count: int,
     ):

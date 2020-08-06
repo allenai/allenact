@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, cast, Union
 
 import gym
 import numpy as np
@@ -183,9 +183,11 @@ class FasterRCNNPreProcessorRoboThor(Preprocessor):
             if device is not None
             else ("cuda" if self.parallel and torch.cuda.is_available() else "cpu")
         )
-        self.device_ids = device_ids or list(range(torch.cuda.device_count()))
+        self.device_ids = device_ids or cast(
+            List[torch.device], list(range(torch.cuda.device_count()))
+        )
 
-        self.frcnn = BatchedFasterRCNN(
+        self.frcnn: Union[BatchedFasterRCNN, torch.nn.DataParallel] = BatchedFasterRCNN(
             thres=self.detector_thres,
             maxdets=self.max_dets,
             res=self.detector_spatial_res,

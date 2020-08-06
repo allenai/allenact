@@ -1,6 +1,6 @@
 import abc
 import json
-from typing import Dict, Any, Union, Optional, List, Tuple, Sequence, Callable
+from typing import Dict, Any, Union, Optional, List, Tuple, Sequence, Callable, cast
 
 import numpy as np
 from matplotlib import pyplot as plt, markers
@@ -58,7 +58,7 @@ class AbstractViz:
         self,
         mode: str,
         path_to_id: Sequence[str],
-        episode_ids: Sequence[Union[Sequence[str], str]],
+        episode_ids: Union[Sequence[Sequence[str]], Sequence[str]],
         force: bool = False,
     ):
         self.mode = mode
@@ -67,7 +67,7 @@ class AbstractViz:
             self.episode_ids = (
                 list(episode_ids)
                 if not isinstance(episode_ids[0], str)
-                else [list(episode_ids)]
+                else [list(cast(List[str], episode_ids))]
             )
 
     @abc.abstractmethod
@@ -264,7 +264,7 @@ class AgentViewViz(AbstractViz):
         self.episode_ids = (
             list(episode_ids)
             if not isinstance(episode_ids[0], str)
-            else [list(episode_ids)]
+            else [list(cast(List[str], episode_ids))]
         )
 
     def log(
@@ -456,12 +456,12 @@ class ActorViz(AbstractViz):
         fontsize: int = 5,
     ):
         super().__init__(label, actor_critic_source=True)
-        self.action_names_path = (
+        self.action_names_path: Optional[Sequence[str]] = (
             list(action_names_path) if action_names_path is not None else None
         )
         self.figsize = figsize
         self.fontsize = fontsize
-        self.action_names = None
+        self.action_names: Optional[List[str]] = None
 
     def log(
         self,
@@ -571,8 +571,10 @@ class SimpleViz(AbstractViz):
             self.actor_critic_source,
         ) = self._setup_sources()
 
-        self.data = {}  # dict of episode id to list of dicts with collected data
-        self.last_it2epid = []
+        self.data: Dict[
+            int, List[Dict]
+        ] = {}  # dict of episode id to list of dicts with collected data
+        self.last_it2epid: List[str] = []
 
     def _setup_sources(self):
         rollout_sources, vector_task_sources = [], []
@@ -782,7 +784,7 @@ class SimpleViz(AbstractViz):
         self,
         log_writer: SummaryWriter,
         task_outputs: Optional[List[Any]],
-        render: Optional[List[Any]],
+        render: Optional[Dict[str, List[Dict[str, Any]]]],
         num_steps: int,
     ):
         for v in self.viz:

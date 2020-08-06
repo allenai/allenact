@@ -1,5 +1,5 @@
 import math
-from typing import Dict, Any
+from typing import Dict, Any, Union
 
 
 def _pos_to_str(pos: Dict[str, float]) -> str:
@@ -114,14 +114,15 @@ def find_nearest_point_in_cache(
     cache: Dict[str, Any], point: Dict[str, float]
 ) -> Dict[str, float]:
     best_delta = float("inf")
+    closest_point: Dict[str, float] = {}
     for p in cache:
-        p = _str_to_pos(p)
+        pos = _str_to_pos(p)
         delta = (
-            abs(point["x"] - p["x"])
-            + abs(point["y"] - p["y"])
-            + abs(point["z"] - p["z"])
+            abs(point["x"] - pos["x"])
+            + abs(point["y"] - pos["y"])
+            + abs(point["z"] - pos["z"])
         )
         if delta < best_delta:
             best_delta = delta
-            closest_point = p
+            closest_point = pos
     return closest_point

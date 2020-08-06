@@ -209,7 +209,7 @@ class SimpleCNN(nn.Module):
             depth_observations = observations["depth"]
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             depth_observations = depth_observations.permute(0, 3, 1, 2)
-            cnn_output_list.append(self.depth_cnn(depth_observations))
+            cnn_output_list.append(self.depth_cnn(depth_observations))  # type:ignore
 
         return torch.cat(cnn_output_list, dim=1)
 
@@ -332,9 +332,9 @@ class RNNStateEncoder(nn.Module):
             if isinstance(hidden_states, tuple):
                 # noinspection PyTypeChecker
                 hidden_states = tuple(
-                    v * masks
+                    v * masks  # type:ignore
                     + (1.0 - masks) * (self.init_hidden_state.repeat(1, v.shape[1], 1))  # type: ignore
-                    for v in hidden_states
+                    for v in hidden_states  # type:ignore
                 )  # type: ignore
             else:
                 # noinspection PyTypeChecker

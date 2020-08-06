@@ -41,7 +41,7 @@ class BaseBabyAIGoToLocalExperimentConfig(BaseBabyAIExperimentConfig):
         return cls.NUM_TRAIN_SAMPLERS * 64
 
     @classmethod
-    def _training_pipeline(
+    def _training_pipeline(  # type:ignore
         cls,
         named_losses: Dict[str, Union[Loss, Builder]],
         pipeline_stages: List[PipelineStage],

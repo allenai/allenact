@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
-from core.models.basic_models import SimpleCNN, RNNStateEncoder
+from core.models.basic_models import SimpleCNN, RNNStateEncoder, Flatten
 from core.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     LinearCriticHead,
@@ -342,7 +342,7 @@ class PointNavActorCriticTrainResNet50RNN(ActorCriticModel[CategoricalDistr]):
             nn.Conv2d(1024, 32, (1, 1)),
             nn.ReLU(),
             # nn.AdaptiveAvgPool2d((1,1)),
-            nn.Flatten(),
+            Flatten(),
             nn.Linear(2048, 512),
         )
 
@@ -563,7 +563,7 @@ class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
                 combiner_hidden_out_dims,
             )
         else:
-            self.goal_visual_encoder = ResnetDualTensorGoalEncoder(
+            self.goal_visual_encoder = ResnetDualTensorGoalEncoder(  # type:ignore
                 self.observation_space,
                 goal_sensor_uuid,
                 rgb_resnet_preprocessor_uuid,
