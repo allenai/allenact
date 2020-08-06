@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
-from models.basic_models import SimpleCNN, RNNStateEncoder
+from common.models.basic_models import SimpleCNN, RNNStateEncoder
 from onpolicy_sync.policy import ActorCriticModel, LinearCriticHead, LinearActorHead
 from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
