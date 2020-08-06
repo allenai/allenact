@@ -19,7 +19,7 @@ from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from common.rl_base.experiment_config import ExperimentConfig
 from common.rl_base.preprocessor import ObservationSet
 from common.rl_base.task import TaskSampler
-from plugins.rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
+from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.rl_robothor.robothor_sensors import GPSCompassSensorRoboThor
 from plugins.rl_robothor.robothor_task_samplers import PointNavDatasetTaskSampler
 from plugins.rl_robothor.robothor_tasks import PointNavTask

@@ -12,8 +12,8 @@ from common.rl_base.sensor import (
     DepthResNetSensor,
 )
 from common.rl_base.task import Task
-from plugins.rl_habitat.habitat_environment import HabitatEnvironment
-from plugins.rl_habitat.habitat_tasks import PointNavTask  # type: ignore
+from plugins.habitat_plugin.habitat_environment import HabitatEnvironment
+from plugins.habitat_plugin.habitat_tasks import PointNavTask  # type: ignore
 from utils.misc_utils import prepare_locals_for_super
 
 

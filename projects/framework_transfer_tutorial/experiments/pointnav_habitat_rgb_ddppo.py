@@ -13,16 +13,16 @@ from common.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )
-from plugins.rl_habitat.habitat_sensors import (
+from plugins.habitat_plugin.habitat_sensors import (
     RGBSensorHabitat,
     TargetCoordinatesSensorHabitat,
 )
 from common.rl_base.experiment_config import ExperimentConfig
 from common.rl_base.preprocessor import ObservationSet
 from common.rl_base.task import TaskSampler
-from plugins.rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
-from plugins.rl_habitat.habitat_task_samplers import PointNavTaskSampler
-from plugins.rl_habitat.habitat_utils import construct_env_configs
+from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
+from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
+from plugins.habitat_plugin.habitat_utils import construct_env_configs
 from plugins.rl_robothor.robothor_tasks import PointNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 

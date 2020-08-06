@@ -154,16 +154,16 @@ nav:
     - distributions: api/rl_base/distributions.md
     - common: api/rl_base/common.md
   - rl_habitat:
-    - habitat_constants: api/rl_habitat/habitat_constants.md
-    - habitat_tasks: api/rl_habitat/habitat_tasks.md
-    - habitat_sensors: api/rl_habitat/habitat_sensors.md
-    - habitat_environment: api/rl_habitat/habitat_environment.md
-    - habitat_preprocessors: api/rl_habitat/habitat_preprocessors.md
-    - habitat_task_samplers: api/rl_habitat/habitat_task_samplers.md
+    - habitat_constants: api/habitat_plugin/habitat_constants.md
+    - habitat_tasks: api/habitat_plugin/habitat_tasks.md
+    - habitat_sensors: api/habitat_plugin/habitat_sensors.md
+    - habitat_environment: api/habitat_plugin/habitat_environment.md
+    - habitat_preprocessors: api/habitat_plugin/habitat_preprocessors.md
+    - habitat_task_samplers: api/habitat_plugin/habitat_task_samplers.md
     - scripts:
-      - agent_demo: api/rl_habitat/scripts/agent_demo.md
-      - make_map: api/rl_habitat/scripts/make_map.md
-    - habitat_utils: api/rl_habitat/habitat_utils.md
+      - agent_demo: api/habitat_plugin/scripts/agent_demo.md
+      - make_map: api/habitat_plugin/scripts/make_map.md
+    - habitat_utils: api/habitat_plugin/habitat_utils.md
   - rl_robothor:
     - robothor_preprocessors: api/rl_robothor/robothor_preprocessors.md
     - robothor_task_samplers: api/rl_robothor/robothor_task_samplers.md

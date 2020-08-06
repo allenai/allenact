@@ -11,7 +11,7 @@ from habitat.core.simulator import Observations, AgentState, ShortestPathPoint
 
 class HabitatEnvironment(object):
     def __init__(self, config: Config, dataset: Dataset, x_display: str = None) -> None:
-        # print("rl_habitat env constructor")
+        # print("habitat_plugin env constructor")
         self.x_display = x_display
         self.env = habitat.Env(config=config, dataset=dataset)
         # Set the target to a random goal from the provided list for this episode
@@ -51,7 +51,7 @@ class HabitatEnvironment(object):
         return self.env.current_episode
 
     def start(self):
-        print("No need to start a rl_habitat env")
+        print("No need to start a habitat_plugin env")
 
     def stop(self):
         self.env.close()
