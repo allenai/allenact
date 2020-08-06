@@ -15,7 +15,7 @@ from gym_minigrid.minigrid import (
     WorldObj,
 )
 
-from plugins.rl_minigrid.minigrid_environments import AskForHelpSimpleCrossing
+from plugins.minigrid_plugin.minigrid_environments import AskForHelpSimpleCrossing
 from common.rl_base.common import RLStepResult
 from common.rl_base.sensor import Sensor, SensorSuite
 from common.rl_base.task import Task, TaskSampler
