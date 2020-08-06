@@ -13,8 +13,8 @@ import networkx as nx
 import numpy as np
 from ai2thor.controller import Controller
 
-from rl_ai2thor.ai2thor_util import round_to_factor
-from rl_ai2thor.ithor_constants import VISIBILITY_DISTANCE, FOV
+from plugins.rl_ai2thor.ai2thor_util import round_to_factor
+from plugins.rl_ai2thor.ithor_constants import VISIBILITY_DISTANCE, FOV
 
 
 class AI2ThorEnvironment(object):

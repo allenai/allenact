@@ -5,9 +5,9 @@ from typing import Dict, Tuple, List, Any, Optional
 import gym
 import numpy as np
 
-from rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
-from rl_ai2thor.ai2thor_util import round_to_factor
-from rl_ai2thor.ithor_constants import (
+from plugins.rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
+from plugins.rl_ai2thor.ai2thor_util import round_to_factor
+from plugins.rl_ai2thor.ithor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
     ROTATE_RIGHT,

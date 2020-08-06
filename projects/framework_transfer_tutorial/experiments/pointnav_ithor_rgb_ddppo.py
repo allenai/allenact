@@ -15,7 +15,7 @@ from onpolicy_sync.losses.ppo import PPOConfig
 from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )
-from rl_ai2thor.ai2thor_sensors import RGBSensorThor
+from plugins.rl_ai2thor.ai2thor_sensors import RGBSensorThor
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.preprocessor import ObservationSet
 from rl_base.task import TaskSampler

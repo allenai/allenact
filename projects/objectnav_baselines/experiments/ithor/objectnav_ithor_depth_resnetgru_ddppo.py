@@ -12,7 +12,7 @@ from projects.objectnav_baselines.experiments.ithor.objectnav_ithor_base import 
 from projects.objectnav_baselines.models.object_nav_models import (
     ResnetTensorObjectNavActorCritic,
 )
-from rl_ai2thor.ai2thor_sensors import GoalObjectTypeThorSensor
+from plugins.rl_ai2thor.ai2thor_sensors import GoalObjectTypeThorSensor
 from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from rl_robothor.robothor_sensors import DepthSensorRoboThor
 from rl_robothor.robothor_tasks import ObjectNavTask

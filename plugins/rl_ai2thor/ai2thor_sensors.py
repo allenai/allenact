@@ -3,8 +3,8 @@ from typing import Any, Dict, Optional, List
 import gym
 import numpy as np
 
-from rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
-from rl_ai2thor.object_nav.tasks import ObjectNavTask
+from plugins.rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
+from plugins.rl_ai2thor.object_nav.tasks import ObjectNavTask
 from rl_base.sensor import Sensor, RGBSensor
 from rl_base.task import Task
 from utils.misc_utils import prepare_locals_for_super
