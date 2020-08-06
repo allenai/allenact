@@ -3,17 +3,20 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from onpolicy_sync.losses import PPO
-from onpolicy_sync.losses.ppo import PPOConfig
+from core.algorithms.onpolicy_sync.losses import PPO
+from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from projects.pointnav_baselines.experiments.robothor.pointnav_robothor_base import (
     PointNavRoboThorBaseConfig,
 )
 from projects.pointnav_baselines.models.point_nav_models import (
     PointNavActorCriticSimpleConvRNN,
 )
-from rl_ai2thor.ai2thor_sensors import RGBSensorThor
-from rl_robothor.robothor_sensors import DepthSensorRoboThor, GPSCompassSensorRoboThor
-from rl_robothor.robothor_tasks import PointNavTask
+from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
+from plugins.robothor_plugin.robothor_sensors import (
+    DepthSensorRoboThor,
+    GPSCompassSensorRoboThor,
+)
+from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 

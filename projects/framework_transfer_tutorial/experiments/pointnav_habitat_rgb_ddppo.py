@@ -1,9 +1,6 @@
-import glob
-from math import ceil
 from typing import Dict, Any, List, Optional
 
 import gym
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -11,22 +8,22 @@ from torch.optim.lr_scheduler import LambdaLR
 import habitat
 from torchvision import models
 
-from onpolicy_sync.losses import PPO
-from onpolicy_sync.losses.ppo import PPOConfig
+from core.algorithms.onpolicy_sync.losses import PPO
+from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )
-from rl_habitat.habitat_sensors import (
+from plugins.habitat_plugin.habitat_sensors import (
     RGBSensorHabitat,
     TargetCoordinatesSensorHabitat,
 )
-from rl_base.experiment_config import ExperimentConfig
-from rl_base.preprocessor import ObservationSet
-from rl_base.task import TaskSampler
-from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
-from rl_habitat.habitat_task_samplers import PointNavTaskSampler
-from rl_habitat.habitat_utils import construct_env_configs
-from rl_robothor.robothor_tasks import PointNavTask
+from core.base_abstractions.experiment_config import ExperimentConfig
+from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.task import TaskSampler
+from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
+from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
+from plugins.habitat_plugin.habitat_utils import construct_env_configs
+from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -97,9 +94,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     SENSORS = [
         RGBSensorHabitat(
-            height=SCREEN_SIZE,
-            width=SCREEN_SIZE,
-            use_resnet_normalization=True,
+            height=SCREEN_SIZE, width=SCREEN_SIZE, use_resnet_normalization=True,
         ),
         TargetCoordinatesSensorHabitat(coordinate_dims=2),
     ]
@@ -127,7 +122,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         "target_coordinates_ind",
     ]
 
-    TRAIN_CONFIGS = construct_env_configs(self.CONFIG)
+    TRAIN_CONFIGS = construct_env_configs(CONFIG)
 
     @classmethod
     def tag(cls):
@@ -298,4 +293,3 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
         }
-

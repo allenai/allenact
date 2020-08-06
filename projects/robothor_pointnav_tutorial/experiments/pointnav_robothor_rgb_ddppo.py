@@ -10,19 +10,19 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 
-from onpolicy_sync.losses import PPO
-from onpolicy_sync.losses.ppo import PPOConfig
+from core.algorithms.onpolicy_sync.losses import PPO
+from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )
-from rl_ai2thor.ai2thor_sensors import RGBSensorThor
-from rl_base.experiment_config import ExperimentConfig
-from rl_base.preprocessor import ObservationSet
-from rl_base.task import TaskSampler
-from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
-from rl_robothor.robothor_sensors import GPSCompassSensorRoboThor
-from rl_robothor.robothor_task_samplers import PointNavDatasetTaskSampler
-from rl_robothor.robothor_tasks import PointNavTask
+from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
+from core.base_abstractions.experiment_config import ExperimentConfig
+from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.task import TaskSampler
+from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
+from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
+from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
+from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -44,7 +44,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     SCREEN_SIZE = 224
 
     # Training Engine Parameters
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10**13
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 10 ** 13
     NUM_PROCESSES = 60
     TRAINING_GPUS = [0, 1, 2, 3, 4, 5, 6]
     VALIDATION_GPUS = [7]

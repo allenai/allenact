@@ -21,7 +21,7 @@ We need to define the methods `action_space`, `render`, `_step`, `reached_termin
 ### Initialization, action space and termination
 Let's start with the definition of the action space and task initialization:
 ```python
-class ObjectNavTask(Task[AI2ThorEnvironment]):
+class ObjectNavTask(Task[IThorEnvironment]):
     _actions = (
         'MOVE_AHEAD', 'ROTATE_LEFT', 'ROTATE_RIGHT',
         'LOOK_DOWN', 'LOOK_UP', 'END'
@@ -29,7 +29,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
 
     def __init__(
         self,
-        env: AI2ThorEnvironment,
+        env: IThorEnvironment,
         sensors: List[Sensor],
         task_info: Dict[str, Any],
         max_steps: int,
@@ -62,7 +62,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
 ### Step method
 Next, we define the main method `_step` that will be called every time the agent produces a new action: 
 ```python
-class ObjectNavTask(Task[AI2ThorEnvironment]):
+class ObjectNavTask(Task[IThorEnvironment]):
     ...
     def _step(self, action: int) -> RLStepResult:
         action_str = self.class_action_names()[action]
@@ -151,7 +151,7 @@ class ObjectNavTaskSampler(TaskSampler):
         self.scenes = scenes
         self.object_types = object_types
         self.grid_size = 0.25
-        self.env: Optional[AI2ThorEnvironment] = None
+        self.env: Optional[IThorEnvironment] = None
         self.sensors = sensors
         self.max_steps = max_steps
         self._action_sapce = action_space
@@ -171,8 +171,8 @@ class ObjectNavTaskSampler(TaskSampler):
     def reset(self):
         self.scene_id = 0
     
-    def _create_environment(self) -> AI2ThorEnvironment:
-        env = AI2ThorEnvironment(
+    def _create_environment(self) -> IThorEnvironment:
+        env = IThorEnvironment(
             make_agents_visible=False,
             object_open_speed=0.05,
             restrict_to_initially_reachable_points=True,

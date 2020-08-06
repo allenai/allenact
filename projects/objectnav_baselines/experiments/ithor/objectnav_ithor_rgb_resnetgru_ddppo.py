@@ -4,17 +4,17 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 
-from onpolicy_sync.losses import PPO
-from onpolicy_sync.losses.ppo import PPOConfig
+from core.algorithms.onpolicy_sync.losses import PPO
+from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from projects.objectnav_baselines.experiments.ithor.objectnav_ithor_base import (
     ObjectNaviThorBaseConfig,
 )
 from projects.objectnav_baselines.models.object_nav_models import (
     ResnetTensorObjectNavActorCritic,
 )
-from rl_ai2thor.ai2thor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
-from rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
-from rl_robothor.robothor_tasks import ObjectNavTask
+from plugins.ithor_plugin.ithor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
+from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
+from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
