@@ -6,7 +6,7 @@ from typing import Optional, Callable
 
 import torch
 
-from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
+from common.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
 

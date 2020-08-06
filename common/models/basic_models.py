@@ -18,7 +18,7 @@ import torch
 from gym.spaces.dict import Dict as SpaceDict
 from torch import nn
 
-from onpolicy_sync.policy import ActorCriticModel, DistributionType
+from common.algorithms.onpolicy_sync.policy import ActorCriticModel, DistributionType
 from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
 from utils.model_utils import make_cnn

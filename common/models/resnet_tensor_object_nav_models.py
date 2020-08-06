@@ -7,7 +7,11 @@ import torch.nn as nn
 from gym.spaces import Dict as SpaceDict
 
 from common.models.basic_models import RNNStateEncoder
-from onpolicy_sync.policy import ActorCriticModel, LinearActorHead, LinearCriticHead
+from common.algorithms.onpolicy_sync.policy import (
+    ActorCriticModel,
+    LinearActorHead,
+    LinearCriticHead,
+)
 from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
 

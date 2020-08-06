@@ -11,7 +11,7 @@ from typing import Dict, Tuple
 import gin
 from setproctitle import setproctitle as ptitle
 
-from onpolicy_sync.runner import OnPolicyRunner
+from common.algorithms.onpolicy_sync.runner import OnPolicyRunner
 from rl_base.experiment_config import ExperimentConfig
 from utils.system import get_logger
 

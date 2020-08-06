@@ -6,7 +6,7 @@ import torch
 from gym.spaces.dict import Dict as SpaceDict
 from torch import nn
 
-from onpolicy_sync.policy import ActorCriticModel
+from common.algorithms.onpolicy_sync.policy import ActorCriticModel
 from rl_base.common import ActorCriticOutput, DistributionType
 from rl_base.distributions import CategoricalDistr
 

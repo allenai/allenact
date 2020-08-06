@@ -12,7 +12,7 @@ import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
 from common.models.basic_models import SimpleCNN, RNNStateEncoder
-from onpolicy_sync.policy import (
+from common.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     LinearActorCriticHead,
     LinearCriticHead,

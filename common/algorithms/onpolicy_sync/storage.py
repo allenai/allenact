@@ -9,7 +9,7 @@ from typing import Union, List, Dict, Tuple, DefaultDict, Sequence
 import numpy as np
 import torch
 
-from onpolicy_sync.policy import ActorCriticModel
+from common.algorithms.onpolicy_sync.policy import ActorCriticModel
 from rl_base.common import Memory
 from utils.system import get_logger
 

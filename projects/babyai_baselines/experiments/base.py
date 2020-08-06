@@ -13,10 +13,10 @@ from plugins.rl_minigrid.minigrid_sensors import (
     EgocentricMiniGridSensor,
     MiniGridMissionSensor,
 )
-from onpolicy_sync.losses import PPO, A2C
-from onpolicy_sync.losses.a2cacktr import A2CConfig
-from onpolicy_sync.losses.imitation import Imitation
-from onpolicy_sync.losses.ppo import PPOConfig
+from common.algorithms.onpolicy_sync.losses import PPO, A2C
+from common.algorithms.onpolicy_sync.losses.a2cacktr import A2CConfig
+from common.algorithms.onpolicy_sync.losses.imitation import Imitation
+from common.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from rl_base.common import Loss
 from rl_base.experiment_config import ExperimentConfig
 from rl_base.sensor import SensorSuite, Sensor, ExpertActionSensor

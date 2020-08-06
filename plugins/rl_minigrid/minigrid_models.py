@@ -8,7 +8,7 @@ from gym.spaces.dict import Dict as SpaceDict
 from torch import nn
 
 from common.models.basic_models import LinearActorCritic, RNNActorCritic
-from onpolicy_sync.policy import ActorCriticModel
+from common.algorithms.onpolicy_sync.policy import ActorCriticModel
 from rl_base.distributions import CategoricalDistr
 from utils.misc_utils import prepare_locals_for_super
 

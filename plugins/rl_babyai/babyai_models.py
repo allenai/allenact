@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from gym.spaces.dict import Dict as SpaceDict
 from torch import Tensor
 
-from onpolicy_sync.policy import ActorCriticModel
+from common.algorithms.onpolicy_sync.policy import ActorCriticModel
 from rl_base.common import ActorCriticOutput
 from rl_base.distributions import CategoricalDistr
 

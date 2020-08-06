@@ -8,8 +8,8 @@ from torch.optim.lr_scheduler import LambdaLR
 import habitat
 from torchvision import models
 
-from onpolicy_sync.losses import PPO
-from onpolicy_sync.losses.ppo import PPOConfig
+from common.algorithms.onpolicy_sync.losses import PPO
+from common.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )

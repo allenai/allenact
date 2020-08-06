@@ -4,7 +4,7 @@ import os
 import py
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
-from onpolicy_sync.runner import OnPolicyRunner
+from common.algorithms.onpolicy_sync.runner import OnPolicyRunner
 from projects.babyai_baselines.experiments.go_to_obj.ppo import (
     PPOBabyAIGoToObjExperimentConfig,
 )
