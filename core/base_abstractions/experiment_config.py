@@ -10,7 +10,18 @@ from core.base_abstractions.task import TaskSampler
 from utils.experiment_utils import TrainingPipeline
 
 
-class ExperimentConfig(abc.ABC):
+class FrozenClassVariables(type):
+    """Metaclass for ExperimentConfig.
+
+    Ensures ExperimentConfig class-level attributes cannot be modified.
+    ExperimentConfig attributes can still be modified at the object level.
+    """
+
+    def __setattr__(cls, attr, value):
+        raise RuntimeError("Cannot edit class-level attributes.")
+
+
+class ExperimentConfig(metaclass=FrozenClassVariables):
     """Abstract class used to define experiments.
 
     Instead of using yaml or text files, experiments in our framework
