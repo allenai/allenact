@@ -3,7 +3,7 @@ import os
 
 import babyai
 
-from plugins.rl_babyai.babyai_constants import BABYAI_EXPERT_TRAJECTORIES_DIR
+from plugins.babyai_plugin.babyai_constants import BABYAI_EXPERT_TRAJECTORIES_DIR
 
 
 def make_small_demos(dir):

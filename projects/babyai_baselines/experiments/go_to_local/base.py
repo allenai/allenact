@@ -6,8 +6,8 @@ import torch.nn as nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from plugins.rl_babyai.babyai_models import BabyAIRecurrentACModel
-from plugins.rl_babyai.babyai_tasks import BabyAITask
+from plugins.babyai_plugin.babyai_models import BabyAIRecurrentACModel
+from plugins.babyai_plugin.babyai_tasks import BabyAITask
 from projects.babyai_baselines.experiments.base import BaseBabyAIExperimentConfig
 from common.rl_base.common import Loss
 from common.rl_base.sensor import SensorSuite
