@@ -11,7 +11,7 @@ from projects.pointnav_baselines.experiments.robothor.pointnav_robothor_base imp
 from projects.pointnav_baselines.models.point_nav_models import (
     PointNavActorCriticSimpleConvRNN,
 )
-from plugins.rl_ai2thor.ai2thor_sensors import RGBSensorThor
+from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from plugins.rl_robothor.robothor_sensors import (
     DepthSensorRoboThor,
     GPSCompassSensorRoboThor,

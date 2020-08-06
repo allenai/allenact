@@ -13,11 +13,11 @@ import networkx as nx
 import numpy as np
 from ai2thor.controller import Controller
 
-from plugins.rl_ai2thor.ai2thor_util import round_to_factor
-from plugins.rl_ai2thor.ithor_constants import VISIBILITY_DISTANCE, FOV
+from plugins.ithor_plugin.ithor_util import round_to_factor
+from plugins.ithor_plugin.ithor_constants import VISIBILITY_DISTANCE, FOV
 
 
-class AI2ThorEnvironment(object):
+class IThorEnvironment(object):
     """Wrapper for the ai2thor controller providing additional functionality
     and bookkeeping.
 

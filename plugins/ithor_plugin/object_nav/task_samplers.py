@@ -4,8 +4,8 @@ from typing import List, Dict, Optional, Any, Union
 
 import gym
 
-from plugins.rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
-from plugins.rl_ai2thor.object_nav.tasks import ObjectNavTask
+from plugins.ithor_plugin.ithor_environment import IThorEnvironment
+from plugins.ithor_plugin.object_nav.tasks import ObjectNavTask
 from common.rl_base.sensor import Sensor
 from common.rl_base.task import TaskSampler
 from utils.experiment_utils import set_deterministic_cudnn, set_seed
@@ -33,7 +33,7 @@ class ObjectNavTaskSampler(TaskSampler):
         self.scenes = scenes
         self.object_types = object_types
         self.grid_size = 0.25
-        self.env: Optional[AI2ThorEnvironment] = None
+        self.env: Optional[IThorEnvironment] = None
         self.sensors = sensors
         self.max_steps = max_steps
         self._action_space = action_space
@@ -57,8 +57,8 @@ class ObjectNavTaskSampler(TaskSampler):
 
         self.reset()
 
-    def _create_environment(self) -> AI2ThorEnvironment:
-        env = AI2ThorEnvironment(
+    def _create_environment(self) -> IThorEnvironment:
+        env = IThorEnvironment(
             make_agents_visible=False,
             object_open_speed=0.05,
             restrict_to_initially_reachable_points=True,

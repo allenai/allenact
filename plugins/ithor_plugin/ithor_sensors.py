@@ -3,21 +3,21 @@ from typing import Any, Dict, Optional, List
 import gym
 import numpy as np
 
-from plugins.rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
-from plugins.rl_ai2thor.object_nav.tasks import ObjectNavTask
+from plugins.ithor_plugin.ithor_environment import IThorEnvironment
+from plugins.ithor_plugin.object_nav.tasks import ObjectNavTask
 from common.rl_base.sensor import Sensor, RGBSensor
 from common.rl_base.task import Task
 from utils.misc_utils import prepare_locals_for_super
 
 
-class RGBSensorThor(RGBSensor[AI2ThorEnvironment, Task[AI2ThorEnvironment]]):
+class RGBSensorThor(RGBSensor[IThorEnvironment, Task[IThorEnvironment]]):
     """Sensor for RGB images in AI2-THOR.
 
-    Returns from a running AI2ThorEnvironment instance, the current RGB
+    Returns from a running IThorEnvironment instance, the current RGB
     frame corresponding to the agent's egocentric view.
     """
 
-    def frame_from_env(self, env: AI2ThorEnvironment) -> np.ndarray:
+    def frame_from_env(self, env: IThorEnvironment) -> np.ndarray:
         return env.current_frame.copy()
 
 
@@ -60,7 +60,7 @@ class GoalObjectTypeThorSensor(Sensor):
 
     def get_observation(
         self,
-        env: AI2ThorEnvironment,
+        env: IThorEnvironment,
         task: Optional[ObjectNavTask],
         *args: Any,
         **kwargs: Any

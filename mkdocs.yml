@@ -139,13 +139,13 @@ nav:
       - experiments:
         - pointnav_robothor_rgb_ddppo: api/projects/robothor_pointnav_tutorial/experiments/pointnav_robothor_rgb_ddppo.md
   - rl_ai2thor:
-    - ai2thor_environment: api/rl_ai2thor/ai2thor_environment.md
-    - ithor_constants: api/rl_ai2thor/ithor_constants.md
+    - ai2thor_environment: api/ithor_plugin/ai2thor_environment.md
+    - ithor_constants: api/ithor_plugin/ithor_constants.md
     - object_nav:
-      - tasks: api/rl_ai2thor/object_nav/tasks.md
-      - task_samplers: api/rl_ai2thor/object_nav/task_samplers.md
-    - ai2thor_sensors: api/rl_ai2thor/ai2thor_sensors.md
-    - ai2thor_util: api/rl_ai2thor/ai2thor_util.md
+      - tasks: api/ithor_plugin/object_nav/tasks.md
+      - task_samplers: api/ithor_plugin/object_nav/task_samplers.md
+    - ai2thor_sensors: api/ithor_plugin/ai2thor_sensors.md
+    - ai2thor_util: api/ithor_plugin/ai2thor_util.md
   - rl_base:
     - experiment_config: api/rl_base/experiment_config.md
     - task: api/rl_base/task.md

@@ -5,9 +5,9 @@ from typing import Dict, Tuple, List, Any, Optional
 import gym
 import numpy as np
 
-from plugins.rl_ai2thor.ai2thor_environment import AI2ThorEnvironment
-from plugins.rl_ai2thor.ai2thor_util import round_to_factor
-from plugins.rl_ai2thor.ithor_constants import (
+from plugins.ithor_plugin.ithor_environment import IThorEnvironment
+from plugins.ithor_plugin.ithor_util import round_to_factor
+from plugins.ithor_plugin.ithor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
     ROTATE_RIGHT,
@@ -20,7 +20,7 @@ from common.rl_base.sensor import Sensor
 from common.rl_base.task import Task
 
 
-class ObjectNavTask(Task[AI2ThorEnvironment]):
+class ObjectNavTask(Task[IThorEnvironment]):
     """Defines the object navigation task in AI2-THOR.
 
     In object navigation an agent is randomly initialized into an AI2-THOR scene and must
@@ -60,7 +60,7 @@ class ObjectNavTask(Task[AI2ThorEnvironment]):
 
     def __init__(
         self,
-        env: AI2ThorEnvironment,
+        env: IThorEnvironment,
         sensors: List[Sensor],
         task_info: Dict[str, Any],
         max_steps: int,
