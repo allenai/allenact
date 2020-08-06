@@ -12,8 +12,8 @@ from projects.pointnav_baselines.models.point_nav_models import (
     PointNavActorCriticSimpleConvRNN,
 )
 from plugins.rl_ai2thor.ai2thor_sensors import RGBSensorThor
-from rl_robothor.robothor_sensors import GPSCompassSensorRoboThor
-from rl_robothor.robothor_tasks import PointNavTask
+from plugins.rl_robothor.robothor_sensors import GPSCompassSensorRoboThor
+from plugins.rl_robothor.robothor_tasks import PointNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 

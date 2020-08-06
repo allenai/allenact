@@ -7,7 +7,7 @@ from ai2thor.util.metrics import compute_single_spl
 from rl_base.common import RLStepResult
 from rl_base.sensor import Sensor
 from rl_base.task import Task
-from rl_robothor.robothor_constants import (
+from plugins.rl_robothor.robothor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
     ROTATE_RIGHT,
@@ -15,7 +15,7 @@ from rl_robothor.robothor_constants import (
     LOOK_UP,
     LOOK_DOWN,
 )
-from rl_robothor.robothor_environment import RoboThorEnvironment
+from plugins.rl_robothor.robothor_environment import RoboThorEnvironment
 from utils.cache_utils import get_distance, get_distance_to_object
 from utils.system import get_logger
 

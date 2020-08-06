@@ -23,7 +23,7 @@ from rl_base.task import TaskSampler
 from plugins.rl_habitat.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.rl_habitat.habitat_task_samplers import PointNavTaskSampler
 from plugins.rl_habitat.habitat_utils import construct_env_configs
-from rl_robothor.robothor_tasks import PointNavTask
+from plugins.rl_robothor.robothor_tasks import PointNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 

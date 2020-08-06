@@ -6,8 +6,8 @@ import quaternion  # noqa # pylint: disable=unused-import
 
 from rl_base.sensor import Sensor, RGBSensor, DepthSensor
 from rl_base.task import Task
-from rl_robothor.robothor_environment import RoboThorEnvironment
-from rl_robothor.robothor_tasks import PointNavTask
+from plugins.rl_robothor.robothor_environment import RoboThorEnvironment
+from plugins.rl_robothor.robothor_tasks import PointNavTask
 from utils.misc_utils import prepare_locals_for_super
 
 
