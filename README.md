@@ -1,136 +1,51 @@
 # Embodied-AI
+`embodied-ai` is a library designed for research in embodied AI with a focus on modularity and flexibility. 
 
-`embodied-ai` is a library designed for research in embodied reinforcement learning with
-a focus on modularity, flexibility, and low cognitive overhead. This work builds upon
-the [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail) 
-library of Ilya Kostrikov and uses some data structures from FAIR's 
-[habitat-api](https://github.com/facebookresearch/habitat-api).
+### Features & Highlights
 
-## Table of contents
-
-1. [Why embodied-ai?](#why)
-1. [Installation](#installation)
-1. [Contributions](#contributions)
-1. [Citiation](#citation)
-
-## Why `embodied-ai`?
-
-There are an increasingly 
-[large collection](https://winderresearch.com/a-comparison-of-reinforcement-learning-frameworks-dopamine-rllib-keras-rl-coach-trfl-tensorforce-coach-and-more/) 
-of deep reinforcement learning packages and so it is natural to question why we introduce another framework
-reproducing many of the same algorithms and ideas. After performing of survey of existing frameworks we
-could not find a package delivering all of the following features, each of which we considered critical.
-
-1. *Decoupled tasks and environments*: In embodied AI research it is important to be 
-   able to define many tasks for a single environment; for instance, the [AI2-THOR](https://ai2thor.allenai.org/)
-   environment has been used with tasks such as  
-   
+* _Decoupled tasks and environments_: In embodied AI research it is important to be able to define many tasks for a single environment; for instance, the [AI2-THOR](https://ai2thor.allenai.org/) environment has been used with tasks such as  
     * [semantic/object navigation](https://arxiv.org/abs/1810.06543),
     * [interactive question answering](https://arxiv.org/abs/1712.03316),
     * [multi-agent furniture lifting](https://prior.allenai.org/projects/two-body-problem), and
-    * [adversarial hide-and-seek](https://arxiv.org/abs/1912.08195).
-   
+    * [adversarial hide-and-seek](https://arxiv.org/abs/1912.08195). 
+
     We have designed `embodied-ai` to easily support a wide variety of tasks designed for individual environments.
 
-1. *First-class pytorch support*: While many well-developed libraries exist for reinforcement learning in 
-   tensorflow, we are one of a few to target pytorch.
-1. *Configuration as code*: In `embodied-ai` experiments are 
-   defined using python classes, so knowing how to extend an abstract python class we can define an
-   experiment.
-1. *Type checking and documentation*: We have put significant effort into providing extensive documentation and type
-   annotations throughout our codebase.
+* _Support for several environments_: We support different environments used for Embodied AI research such as [AI2-THOR](https://ai2thor.allenai.org/), [Habitat](https://aihabitat.org/) and [MiniGrid](https://github.com/maximecb/gym-minigrid). We have made it easy to incorporate new environments.
+* _Different input modalities_: The framework supports a variety of input modalities such as RGB images, depth, language and GPS readings. 
+* _Various training pipelines_: The framework includes not only various training algorithms (A2C, PPO, DAgger, etc.) but also a mechanism to integrate different types of algorithms (e.g., imitation learning followed by reinforcement learning). 
+* _First-class PyTorch support_: While many well-developed libraries exist for reinforcement learning in 
+   Tensorflow, we are one of a few to target PyTorch.
 
+### Support
 
-## Installation
+`embodied-ai` currently supports the following environments, tasks, and algorithms.  We are actively working on integrating recently developed models and frameworks. Nevertheless, we provide tutorials to make it straightforward to integrate the algorithms, tasks, or environments of your choice. 
 
-Begin by cloning this repository to your local machine and moving into the top-level directory
-
-```bash
-git clone git@github.com:allenai/embodied-rl.git
-cd embodied-rl
-```
-
-This library has been tested **only in python 3.6**, the following assumes you have a working
-version of **python 3.6** installed locally. In order to install requirements we recommend
-using [`pipenv`](https://pipenv.kennethreitz.org/en/latest/) but also include instructions if
-you would prefer to install things directly using `pip`.
-
-### Installing requirements with `pipenv` (*recommended*)
-
-If you have already installed [`pipenv`](https://pipenv.kennethreitz.org/en/latest/), you may
-run the following to install all requirements.
-
-```bash
-pipenv install --skip-lock --dev
-```
-
-### Installing requirements with `pip`
-
-Note: *do not* run the following if you have already installed requirements with `pipenv`
-as above. If you prefer using `pip`, you may install all requirements as follows
-
-```bash
-pip install -r requirements.txt
-```
-
-Depending on your machine configuration, you may need to use `pip3` instead of `pip` in the
-above.
-
-### Run your first experiment
-
-You are now ready to [run your first experiment](./overview/running-your-first-experiment.md).
+  |   Environments             |      Tasks      |   Algorithms    |
+  | -------------------------- | --------------- | --------------- |
+  | [iTHOR](https://ai2thor.allenai.org/ithor/), [RoboTHOR](https://ai2thor.allenai.org/robothor/), [Habitat](https://aihabitat.org/), [MiniGrid](https://github.com/maximecb/gym-minigrid) | [PointNav](https://arxiv.org/pdf/1807.06757.pdf), [ObjectNav](https://arxiv.org/pdf/2006.13171.pdf), [MiniGrid tasks](https://github.com/maximecb/gym-minigrid), [ALFRED](https://arxiv.org/pdf/1912.01734.pdf)  | [A2C](https://arxiv.org/pdf/1611.05763.pdf), [PPO](https://arxiv.org/pdf/1707.06347.pdf), [DD-PPO](https://arxiv.org/pdf/1911.00357.pdf), [DAgger](https://www.ri.cmu.edu/pub_files/2011/4/Ross-AISTATS11-NoRegret.pdf) |
 
 
 
-## Habitat Setup
 
-[AI Habitat](https://aihabitat.org/) is a simulation platform for research in embodied artificial intelligence, developed by Facebook. It consists of two packages, [habitat-sim](https://github.com/facebookresearch/habitat-sim) (the low leve, efficient game engine that runs the simulator), and [habitat-api](https://github.com/facebookresearch/habitat-api) (the high level library for interacting with the simulator in python).
-
-The Embodied-RL library comes with out-of-the-box support for the Habitat environment. There are two ways to set up the Embodied-RL library to work with Habitat:
-
-- [Use a Pre Built Docker Container](#Use a Pre Built Docker Container) (recommended)
-- Build Your Own Docker Container
-- Install Locally
-
-### Use a Pre Built Docker Container (recommended)
-
-We provide an image of a docker container that contains a working installation of the`embodied-rl` library (commit #), `habitat-api` (commit #) and `habitat-sim` (commit #) as well as the `gibson` and `mp3d` datasets. The container image is 41GB, but it contains everything you need to start training a baseline agent in habitat.
-
-### Build Your Own Docker Container
-
-To 
-
-### Install Locally
-
-To 
-
-
-
-## Contributions
-
-We in the Perceptual Reasoning and Interaction Research (PRIOR) group at the
- Allen Institute for AI (AI2, @allenai) welcome contributions from the greater community. If
- you would like to make such a contributions we recommend first submitting an 
- [issue](https://github.com/allenai/embodied-rl/issues) describing your proposed improvement.
- Doing so can ensure we can validate your suggestions before you spend a great deal of time
- upon them. Small (or validated) improvements and bug fixes should be made via a pull request
- from your fork of this repository.
-
-All code in this repository is subject to formatting, documentation, and type-annotation
-guidelines. For more details, please see the our [contribution guidelines](./CONTRIBUTING.md).   
+### Quick links
+* [Github Repository](https://github.com/allenai/embodied-rl)
+* [Installation - TODO]()
+* [Pre-trained Models - TODO]()
 
 ## Citation
-
 If you use this work, please cite:
 
 ```text
-@misc{embodied-ai,
-  author = {Luca Weihs and Jordi Salvador},
-  title = {A Python Package for Embodied Reinforcement Learning},
+@article{embodied-ai,
+  author = {Luca Weihs and Jordi Salvador and Klemen Kotar and Unnat Jain and Kuo-Hao Zeng and Roozbeh Mottaghi and Aniruddha Kembhavi},
+  title = {A Framework for Reproducible, Reusable, and Robust Embodied AI Research},
   year = {2020},
-  publisher = {GitHub},
-  journal = {GitHub repository},
-  howpublished = {\url{https://github.com/allenai/embodied-rl}},
+  journal = {arXiv},
 }
 
 ```
+
+<!-- ## Acknowledgments
+This work builds upon the [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail) library of Ilya Kostrikov and uses some data structures from FAIR's [habitat-api](https://github.com/facebookresearch/habitat-api).
+ -->
