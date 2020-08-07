@@ -1,43 +1,52 @@
-# Embodied-AI
-`embodied-ai` is a library designed for research in embodied AI with a focus on modularity and flexibility. 
 
-### Features & Highlights
+<div align="center">
+    <br>
+    <img src="docs/img/placeholderLogo.png" />
+    <br>
+    <i>An open source Framework for Reproducible, Reusable, and Robust Embodied-AI Research.</i>
+    </p>
+    <hr/>
+</div>
 
-* _Decoupled tasks and environments_: In embodied AI research it is important to be able to define many tasks for a single environment; for instance, the [AI2-THOR](https://ai2thor.allenai.org/) environment has been used with tasks such as  
-    * [semantic/object navigation](https://arxiv.org/abs/1810.06543),
-    * [interactive question answering](https://arxiv.org/abs/1712.03316),
-    * [multi-agent furniture lifting](https://prior.allenai.org/projects/two-body-problem), and
-    * [adversarial hide-and-seek](https://arxiv.org/abs/1912.08195). 
+EmbodiedAI2 is a modular and flexible learning framework designed with a focus on the unique requirements of Embodied-AI research. It provides first-class support for a growing collection of embodied environments, tasks and algorithms, provides reproductions of state-of-the-art models and includes extensive documentation, tutorials, start-up code, and pre-trained models.
 
-    We have designed `embodied-ai` to easily support a wide variety of tasks designed for individual environments.
+## Quick Links
 
-* _Support for several environments_: We support different environments used for Embodied AI research such as [AI2-THOR](https://ai2thor.allenai.org/), [Habitat](https://aihabitat.org/) and [MiniGrid](https://github.com/maximecb/gym-minigrid). We have made it easy to incorporate new environments.
-* _Different input modalities_: The framework supports a variety of input modalities such as RGB images, depth, language and GPS readings. 
-* _Various training pipelines_: The framework includes not only various training algorithms (A2C, PPO, DAgger, etc.) but also a mechanism to integrate different types of algorithms (e.g., imitation learning followed by reinforcement learning). 
+- [Website - TODO](https://embodiedai.allenai.org/)
+- [Github - TODO](https://github.com/allenai/embodied-rl)
+- [Documentation - TODO](https://docs.embodiedai.allenai.org/)
+- [Install](docs/getting_started/installation.md)
+- [Tutorials](docs/tutorials/minigrid-tutorial.md)
+- [Contributing Guidelines](CONTRIBUTING.md)
+- [Citation](#citation)
+
+## Features & Highlights
+
+* _Support for multiple environments_: We provide support for the [i-THOR](https://ai2thor.allenai.org/ithor/), [Robo-THOR](https://ai2thor.allenai.org/robothor/) and [Habitat](https://aihabitat.org/) embodied environments as well as for grid-worlds including [MiniGrid](https://github.com/maximecb/gym-minigrid).
+* _Task Abstraction_: Tasks and environments are decoupled in EmbodiedAI2, enabling researchers to easily implement a large variety of tasks in the same environment.
+* _Algorithms_: We provide support for a variety of on-policy algorithms including [PPO](https://arxiv.org/pdf/1707.06347.pdf), [DD-PPO](https://arxiv.org/pdf/1911.00357.pdf), [A2C](https://arxiv.org/pdf/1611.05763.pdf), Imitation Learning and [DAgger](https://www.ri.cmu.edu/pub_files/2011/4/Ross-AISTATS11-NoRegret.pdf) as well as offline training such as offline IL.
+* _Sequential Algorithms_: EmbodiedAI2 makes it trivial to experiment with different sequences of training routines, which are often the key to successful policies.
+* _Simultaneous Losses_: EmbodiedAI2 allows researchers to easily combine various losses while training models (for instance, use an external self-supervised loss while optimizing a PPO loss).
+* _Multi-agent support_: EmbodiedAI2 provides support for multi-agent algorithms and tasks.
+* _Visualizations_: We provide out of the box support to easily visualize first person and third person cameras for agents as well as intermediate model tensors, integrated into Tensorboard.
+* _Pre-trained models_: EmbodiedAI2 provides code and models for a number of standard Embodied AI tasks.
+* _Tutorials_: We provide start-up code and extensive tutorials to help ramp up new researchers to the field of EmbodiedAI2.
 * _First-class PyTorch support_: While many well-developed libraries exist for reinforcement learning in 
    Tensorflow, we are one of a few to target PyTorch.
 
-### Support
+## Contributions
+We in the Perceptual Reasoning and Interaction Research (PRIOR) group at the Allen Institute for AI (AI2, @allenai) welcome contributions from the greater community. If you would like to make such a contributions we recommend first submitting an issue describing your proposed improvement. Doing so can ensure we can validate your suggestions before you spend a great deal of time upon them. Small (or validated) improvements and bug fixes should be made via a pull request from your fork of this repository.
 
-`embodied-ai` currently supports the following environments, tasks, and algorithms.  We are actively working on integrating recently developed models and frameworks. Nevertheless, we provide tutorials to make it straightforward to integrate the algorithms, tasks, or environments of your choice. 
+All code in this repository is subject to formatting, documentation, and type-annotation guidelines. For more details, please see the our [contribution guidelines](CONTRIBUTING.md).
 
-  |   Environments             |      Tasks      |   Algorithms    |
-  | -------------------------- | --------------- | --------------- |
-  | [iTHOR](https://ai2thor.allenai.org/ithor/), [RoboTHOR](https://ai2thor.allenai.org/robothor/), [Habitat](https://aihabitat.org/), [MiniGrid](https://github.com/maximecb/gym-minigrid) | [PointNav](https://arxiv.org/pdf/1807.06757.pdf), [ObjectNav](https://arxiv.org/pdf/2006.13171.pdf), [MiniGrid tasks](https://github.com/maximecb/gym-minigrid), [ALFRED](https://arxiv.org/pdf/1912.01734.pdf)  | [A2C](https://arxiv.org/pdf/1611.05763.pdf), [PPO](https://arxiv.org/pdf/1707.06347.pdf), [DD-PPO](https://arxiv.org/pdf/1911.00357.pdf), [DAgger](https://www.ri.cmu.edu/pub_files/2011/4/Ross-AISTATS11-NoRegret.pdf) |
-
-
-
-
-### Quick links
-* [Github Repository](https://github.com/allenai/embodied-rl)
-* [Installation - TODO]()
-* [Pre-trained Models - TODO]()
+## Acknowledgments
+This work builds upon the [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail) library of Ilya Kostrikov and uses some data structures from FAIR's [habitat-api](https://github.com/facebookresearch/habitat-api).
 
 ## Citation
 If you use this work, please cite:
 
-```text
-@article{embodied-ai,
+```bibtex
+@article{EmbodiedAI2,
   author = {Luca Weihs and Jordi Salvador and Klemen Kotar and Unnat Jain and Kuo-Hao Zeng and Roozbeh Mottaghi and Aniruddha Kembhavi},
   title = {A Framework for Reproducible, Reusable, and Robust Embodied AI Research},
   year = {2020},
@@ -46,6 +55,3 @@ If you use this work, please cite:
 
 ```
 
-<!-- ## Acknowledgments
-This work builds upon the [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail) library of Ilya Kostrikov and uses some data structures from FAIR's [habitat-api](https://github.com/facebookresearch/habitat-api).
- -->
