@@ -158,7 +158,7 @@ def project_readme_paths_to_nav_structure(project_readmes):
 
 if __name__ == "__main__":
     print("Copying all README.md files to docs.")
-    shutil.copy("README.md", "docs/README.md")
+    shutil.copy("README.md", "docs/index.md")
 
     project_readmes = []
     for readme_file_path in glob.glob("projects/**/README.md", recursive=True):
@@ -171,14 +171,8 @@ if __name__ == "__main__":
     print("Copying LICENSE file to docs.")
     shutil.copy("LICENSE", "docs/LICENSE.md")
 
-    print("Copying ROADMAP.md file to docs.")
-    shutil.copy("ROADMAP.md", "docs/ROADMAP.md")
-
     print("Copying CONTRIBUTING.md file to docs.")
     shutil.copy("CONTRIBUTING.md", "docs/CONTRIBUTING.md")
-
-    print("Copying CNAME file to docs.")
-    shutil.copy("CNAME", "docs/CNAME")
 
     print("Building the docs.")
     parent_folder_path = Path(__file__).parent.parent
@@ -235,3 +229,4 @@ if __name__ == "__main__":
 
     with open(yaml_path, "w") as f:
         yaml.dump(mkdocs_yaml, f)
+
