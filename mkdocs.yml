@@ -22,6 +22,7 @@ edit_uri: edit/master/docs/
 docs_dir: docs
 
 nav:
+- Overview: index.md
 - Getting started:
   - Installation: getting_started/installation.md
   - Run your first experiment: getting_started/running-your-first-experiment.md

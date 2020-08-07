@@ -1,5 +1,8 @@
 # Running your first experiment
 
+## TODO: replace the following with a simple experiment that finishes in 2-3 minutes
+
+
 Assuming you have [installed all of the requirements](/#installation), you can run your first experiment by calling 
 
 ```bash
