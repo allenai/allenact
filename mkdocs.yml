@@ -33,10 +33,15 @@ nav:
   - PointNav in RoboTHOR: tutorials/training-a-pointnav-model.md
   - Swapping environments: tutorials/transfering-to-a-different-environment-framework.md
 - HowTos:
-  - Defining an experiment: howtos/defining-an-experiment.md
-  - Changing rewards and losses: howtos/changing-rewards-and-losses.md
-  - Defining a new model: howtos/defining-a-new-model.md
-  - Defining a new Task: howtos/defining-a-new-task.md
+  - Define an experiment: howtos/defining-an-experiment.md
+  - Change rewards and losses: howtos/changing-rewards-and-losses.md
+  - Define a new model: howtos/defining-a-new-model.md
+  - Define a new task: howtos/defining-a-new-task.md
+  - Define a new training pipeline: howtos/defining-a-new-training-pipeline.md
+  - Visualize results: howtos/visualizing-results.md
+  - Run a multi-agent experiment: howtos/running-a-multi-agent-experiment.md
+
+
 - Projects:
   - BabyAI baselines: projects/babyai_baselines/README.md
 - Notebooks:
