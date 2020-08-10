@@ -1,18 +1,42 @@
+from typing import Dict, Any, List, Optional
+
+from torch import nn
+
 from core.base_abstractions.experiment_config import ExperimentConfig
+from utils.experiment_utils import TrainingPipeline
+from core.base_abstractions.task import TaskSampler
 
 
 class MyConfig(ExperimentConfig):
     MY_VAR: int = 3
+
+    def tag(cls) -> str:
+        return ""
+
+    @classmethod
+    def training_pipeline(cls, **kwargs) -> TrainingPipeline:
+        return None
+
+    @classmethod
+    def create_model(cls, **kwargs) -> nn.Module:
+        return None
+
+    @classmethod
+    def make_sampler_fn(cls, **kwargs) -> TaskSampler:
+        return None
 
     def my_var_is(cls, val):
         assert cls.MY_VAR == val
 
 
 class MySpecConfig(MyConfig):
+    @classmethod
+    def machine_params(cls, mode="train", **kwargs) -> Dict[str, Any]:
+        return {}
+
     MY_VAR = 6
 
 
-cfg = MyConfig()
 scfg = MySpecConfig()
 
 
@@ -56,8 +80,13 @@ class TestFrozenAttribs(object):
 
         val = 5
 
-        cfg.MY_VAR = val
-        cfg.my_var_is(val)
+        failed = False
+        try:
+            MyConfig()
+        except:
+            failed = True
+        assert failed
+
         scfg.MY_VAR = val
         scfg.my_var_is(val)
 
@@ -77,9 +106,6 @@ class TestFrozenAttribs(object):
 
         for fork_method in ["forkserver", "fork"]:
             ctxt = mp.get_context(fork_method)
-            p = ctxt.Process(target=self.my_func, kwargs=dict(config=cfg, val=val))
-            p.start()
-            p.join()
             p = ctxt.Process(target=self.my_func, kwargs=dict(config=scfg, val=val))
             p.start()
             p.join()
