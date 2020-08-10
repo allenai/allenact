@@ -10,7 +10,7 @@ from core.base_abstractions.task import TaskSampler
 from utils.experiment_utils import TrainingPipeline
 
 
-class FrozenClassVariables(type):
+class FrozenClassVariables(abc.ABCMeta):
     """Metaclass for ExperimentConfig.
 
     Ensures ExperimentConfig class-level attributes cannot be modified.
@@ -18,7 +18,20 @@ class FrozenClassVariables(type):
     """
 
     def __setattr__(cls, attr, value):
-        raise RuntimeError("Cannot edit class-level attributes.")
+        if isinstance(cls, type) and (
+            attr != "__abstractmethods__" and not attr.startswith("_abc_")
+        ):
+            raise RuntimeError(
+                "Cannot edit class-level attributes.\n"
+                "Changing the values of class-level attributes is disabled in ExperimentConfig classes.\n"
+                "This is to prevent problems that can occur otherwise when using multiprocessing.\n"
+                "If you wish to change the value of a configuration, please do so for an instance of that"
+                "configuration.\nTriggered by attempting to modify {}".format(
+                    cls.__name__
+                )
+            )
+        else:
+            super().__setattr__(attr, value)
 
 
 class ExperimentConfig(metaclass=FrozenClassVariables):
@@ -80,6 +93,7 @@ class ExperimentConfig(metaclass=FrozenClassVariables):
         raise NotImplementedError()
 
     @classmethod
+    @abc.abstractmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
         """Create the TaskSampler given keyword arguments.
 
@@ -89,7 +103,7 @@ class ExperimentConfig(metaclass=FrozenClassVariables):
         `ExperimentConfig.test_task_sampler_args` depending on whether
         the user has chosen to train, validate, or test.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def train_task_sampler_args(
         self,
