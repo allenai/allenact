@@ -556,17 +556,8 @@ class RolloutStorage:
                 if key == self.DEFAULT_RNN_MEMORY_NAME:
                     return flattened_batch[key]
 
-        nested_dict: Callable[..., defaultdict] = lambda: defaultdict(nested_dict)
-        result = nested_dict()
+        result: Dict = defaultdict()
         for name in flattened_batch:
-            # if name not in self.flattened_spaces[storage_type]:
-            #     result[name] = flattened_batch[name]
-            # else:
-            #     full_path = self.flattened_spaces[storage_type][name]
-            #     cur_dict = result
-            #     for part in full_path[:-1]:
-            #         cur_dict = cur_dict[part]
-            #     cur_dict[full_path[-1]] = flattened_batch[name]
             full_path = self.flattened_spaces[storage_type][name]
             cur_dict = result
             for part in full_path[:-1]:

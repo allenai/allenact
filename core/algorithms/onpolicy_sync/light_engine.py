@@ -276,13 +276,19 @@ class OnPolicyRLEngine(object):
             total_processes = self.num_samplers
             process_offset = 0
 
+        devices_list: Optional[List[int]] = None
+        if (self.is_distributed or self.mode == "test") and isinstance(
+            self.device, int
+        ):
+            devices_list = [cast(int, self.device)]
+        elif all([isinstance(dev, int) for dev in devices]):
+            devices_list = devices[:]
+
         return [
             fn(
                 process_ind=process_offset + it,
                 total_processes=total_processes,
-                devices=[cast(int, self.device)]
-                if self.is_distributed or self.mode == "test"
-                else devices,  # TODO is this ever used?!
+                devices=devices_list,
                 seeds=seeds,
             )
             for it in range(self.num_samplers)
@@ -449,9 +455,7 @@ class OnPolicyRLEngine(object):
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
 
         rewards = torch.tensor(
-            rewards,
-            dtype=torch.float,
-            device=cast(Union[torch.device, str, None], self.device),
+            rewards, dtype=torch.float, device=self.device,  # type:ignore
         )
         rewards = rewards.unsqueeze(1)
 
@@ -459,7 +463,7 @@ class OnPolicyRLEngine(object):
         masks = torch.tensor(
             [[0.0] if done else [1.0] for done in dones],
             dtype=torch.float32,
-            device=cast(Union[torch.device, str, None], self.device),
+            device=self.device,  # type:ignore
         )
 
         npaused, keep, batch = self.remove_paused(observations)

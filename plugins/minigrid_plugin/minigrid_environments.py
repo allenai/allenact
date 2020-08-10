@@ -1,5 +1,5 @@
 import copy
-from typing import Optional
+from typing import Optional, Set
 
 import numpy as np
 from gym import register
@@ -66,7 +66,7 @@ class AskForHelpSimpleCrossing(CrossingEnv):
         self.exploration_reward = exploration_reward
         self.death_penalty = death_penalty
 
-        self.explored_points: set = set()
+        self.explored_points: Set = set()
         self._was_successful = False
         self.toggle_is_permanent = toggle_is_permenant
 
