@@ -21,21 +21,7 @@ from torch import nn
 from core.algorithms.onpolicy_sync.policy import ActorCriticModel, DistributionType
 from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
-from utils.model_utils import make_cnn
-
-
-class Flatten(nn.Module):
-    """Flatten input tensor so that it is of shape (batchs x -1)."""
-
-    def forward(self, x):
-        """Flatten input tensor.
-
-        # Parameters
-        x : Tensor of size (batches x ...) to flatten to size (batches x -1)
-        # Returns
-        Flattened tensor.
-        """
-        return x.reshape(x.size(0), -1)
+from utils.model_utils import make_cnn, Flatten
 
 
 class SimpleCNN(nn.Module):
