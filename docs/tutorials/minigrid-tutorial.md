@@ -1,4 +1,4 @@
-# Third-party environments: MiniGrid
+# Tutorial: Navigation in MiniGrid
  
 This tutorial assumes the [installation instructions](../README.md#installation) have already been followed and, to some
 extent, the `embodied-ai` framework's [abstractions](../overview/abstractions.md) are known.

@@ -1,4 +1,4 @@
-# Framework Transfer Tutorial
+# Tutorial: Swapping in a new environment
 
 ## Introduction
 This tutorial was designed as a continuation of the `Robothor Pointnav Tutorial` and explains

@@ -1,4 +1,4 @@
-# RoboTHOR PointNav Tutorial
+# Tutorial: PointNav in RoboTHOR
 ![RoboTHOR Robot](../img/RoboTHOR_robot.jpg)
 ## Introduction
 One of the most obvious tasks that an embodied agent should master is navigating the world it inhabits.
