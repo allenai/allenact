@@ -32,6 +32,8 @@ nav:
   - Navigation in Minigrid: tutorials/minigrid-tutorial.md
   - PointNav in RoboTHOR: tutorials/training-a-pointnav-model.md
   - Swapping environments: tutorials/transfering-to-a-different-environment-framework.md
+  - Using a pre-trained model: tutorials/running_inference_on_a_pretrained_model.md
+  - IL to RL with pipelines: tutorials/training-pipelines.md
 - HowTos:
   - Define an experiment: howtos/defining-an-experiment.md
   - Change rewards and losses: howtos/changing-rewards-and-losses.md
