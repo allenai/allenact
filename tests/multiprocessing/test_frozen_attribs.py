@@ -30,11 +30,14 @@ class MyConfig(ExperimentConfig):
 
 
 class MySpecConfig(MyConfig):
+    MY_VAR = 6
+
     @classmethod
     def machine_params(cls, mode="train", **kwargs) -> Dict[str, Any]:
         return {}
 
-    MY_VAR = 6
+    def tag(cls) -> str:
+        return "SpecTag"
 
 
 scfg = MySpecConfig()
