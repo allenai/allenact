@@ -25,8 +25,8 @@ class MyConfig(ExperimentConfig):
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
         return None
 
-    def my_var_is(cls, val):
-        assert cls.MY_VAR == val
+    def my_var_is(self, val):
+        assert self.MY_VAR == val
 
 
 class MySpecConfig(MyConfig):
