@@ -154,3 +154,6 @@ tmp/
 
 # Zip files
 *.zip
+
+# VSCode
+.vscode/

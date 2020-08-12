@@ -12,8 +12,8 @@ import numpy as np
 import torch
 from torch import optim
 
-from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
-from rl_base.common import Loss
+from core.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
+from core.base_abstractions.misc import Loss
 
 
 def recursive_update(

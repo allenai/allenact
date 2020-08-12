@@ -7,20 +7,20 @@ import torch.nn as nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from extensions.rl_babyai.babyai_models import BabyAIRecurrentACModel
-from extensions.rl_babyai.babyai_tasks import BabyAITask, BabyAITaskSampler
-from extensions.rl_minigrid.minigrid_sensors import (
+from plugins.babyai_plugin.babyai_models import BabyAIRecurrentACModel
+from plugins.babyai_plugin.babyai_tasks import BabyAITask, BabyAITaskSampler
+from plugins.minigrid_plugin.minigrid_sensors import (
     EgocentricMiniGridSensor,
     MiniGridMissionSensor,
 )
-from onpolicy_sync.losses import PPO, A2C
-from onpolicy_sync.losses.a2cacktr import A2CConfig
-from onpolicy_sync.losses.imitation import Imitation
-from onpolicy_sync.losses.ppo import PPOConfig
-from rl_base.common import Loss
-from rl_base.experiment_config import ExperimentConfig
-from rl_base.sensor import SensorSuite, Sensor, ExpertActionSensor
-from rl_base.task import TaskSampler
+from core.algorithms.onpolicy_sync.losses import PPO, A2C
+from core.algorithms.onpolicy_sync.losses.a2cacktr import A2CConfig
+from core.algorithms.onpolicy_sync.losses.imitation import Imitation
+from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from core.base_abstractions.misc import Loss
+from core.base_abstractions.experiment_config import ExperimentConfig
+from core.base_abstractions.sensor import SensorSuite, Sensor, ExpertActionSensor
+from core.base_abstractions.task import TaskSampler
 from utils.experiment_utils import Builder, LinearDecay, PipelineStage, TrainingPipeline
 
 

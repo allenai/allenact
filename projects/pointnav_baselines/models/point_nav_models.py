@@ -6,10 +6,14 @@ import torch
 import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
-from models.basic_models import SimpleCNN, RNNStateEncoder
-from onpolicy_sync.policy import ActorCriticModel, LinearCriticHead, LinearActorHead
-from rl_base.common import ActorCriticOutput
-from rl_base.distributions import CategoricalDistr
+from core.models.basic_models import SimpleCNN, RNNStateEncoder
+from core.algorithms.onpolicy_sync.policy import (
+    ActorCriticModel,
+    LinearCriticHead,
+    LinearActorHead,
+)
+from core.base_abstractions.misc import ActorCriticOutput
+from core.base_abstractions.distributions import CategoricalDistr
 
 
 # from habitat_baselines.rl.ddppo.policy.resnet_policy import (

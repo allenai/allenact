@@ -1,6 +1,6 @@
 import math
 
-from onpolicy_sync.runner import OnPolicyRunner
+from core.algorithms.onpolicy_sync.runner import OnPolicyRunner
 from projects.babyai_baselines.experiments.go_to_obj.ppo import (
     PPOBabyAIGoToObjExperimentConfig,
 )
@@ -10,7 +10,7 @@ class TestGoToObjTrains(object):
     def test_ppo_trains(self, tmpdir):
         cfg = PPOBabyAIGoToObjExperimentConfig()
 
-        output_dir: str = tmpdir.mkdir("experiment_output")
+        output_dir = tmpdir.mkdir("experiment_output")
 
         train_runner = OnPolicyRunner(
             config=cfg,
