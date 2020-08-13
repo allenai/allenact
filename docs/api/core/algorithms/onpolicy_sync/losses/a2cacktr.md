@@ -1,4 +1,4 @@
-# core.algorithms.onpolicy_sync.losses.a2cacktr [[source]](https://github.com/allenai/embodied-rl/tree/master/core/algorithms/onpolicy_sync/losses/a2cacktr.py)
+# core.algorithms.onpolicy_sync.losses.a2cacktr [[source]](https://github.com/allenai/allenact/tree/master/core/algorithms/onpolicy_sync/losses/a2cacktr.py)
 Implementation of A2C and ACKTR losses.
 ## A2C
 ```python

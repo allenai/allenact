@@ -1,4 +1,4 @@
-# projects.objectnav_baselines.models.object_nav_models [[source]](https://github.com/allenai/embodied-rl/tree/master/projects/objectnav_baselines/models/object_nav_models.py)
+# projects.objectnav_baselines.models.object_nav_models [[source]](https://github.com/allenai/allenact/tree/master/projects/objectnav_baselines/models/object_nav_models.py)
 Baseline models for use in the object navigation task.
 
 Object navigation is currently available as a Task in AI2-THOR and

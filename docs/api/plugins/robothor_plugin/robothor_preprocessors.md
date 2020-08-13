@@ -1,4 +1,4 @@
-# plugins.robothor_plugin.robothor_preprocessors [[source]](https://github.com/allenai/embodied-rl/tree/master/plugins/robothor_plugin/robothor_preprocessors.py)
+# plugins.robothor_plugin.robothor_preprocessors [[source]](https://github.com/allenai/allenact/tree/master/plugins/robothor_plugin/robothor_preprocessors.py)
 
 ## BatchedFasterRCNN
 ```python

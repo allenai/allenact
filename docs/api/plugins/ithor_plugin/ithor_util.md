@@ -1,4 +1,4 @@
-# plugins.ithor_plugin.ithor_util [[source]](https://github.com/allenai/embodied-rl/tree/master/plugins/ithor_plugin/ithor_util.py)
+# plugins.ithor_plugin.ithor_util [[source]](https://github.com/allenai/allenact/tree/master/plugins/ithor_plugin/ithor_util.py)
 
 ## round_to_factor
 ```python

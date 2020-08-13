@@ -108,7 +108,7 @@ While it is not quite as important for this task type (as we test our agent in t
 are a lot of good reasons we would like to sample tasks differently during training than during validation or testing.
 One good reason, that is applicable in this tutorial, is that, during training, we would like to be able to sample tasks
 forever while, during testing, we would like to sample a fixed number of tasks (as otherwise we would never finish
-testing!). In `embodied-ai` this is made possible by defining different arguments for the task sampler:
+testing!). In `allenact` this is made possible by defining different arguments for the task sampler:
 
 ```python
     def train_task_sampler_args(

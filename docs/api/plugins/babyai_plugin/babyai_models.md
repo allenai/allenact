@@ -1,4 +1,4 @@
-# plugins.babyai_plugin.babyai_models [[source]](https://github.com/allenai/embodied-rl/tree/master/plugins/babyai_plugin/babyai_models.py)
+# plugins.babyai_plugin.babyai_models [[source]](https://github.com/allenai/allenact/tree/master/plugins/babyai_plugin/babyai_models.py)
 
 ## BabyAIACModelWrapped
 ```python

@@ -1,4 +1,4 @@
-# core.base_abstractions.experiment_config [[source]](https://github.com/allenai/embodied-rl/tree/master/core/base_abstractions/experiment_config.py)
+# core.base_abstractions.experiment_config [[source]](https://github.com/allenai/allenact/tree/master/core/base_abstractions/experiment_config.py)
 Defines the `ExperimentConfig` abstract class used as the basis of all
 experiments.
 ## ExperimentConfig
@@ -139,4 +139,13 @@ validation process.
 
 See `ExperimentConfig.train_task_sampler_args` for parameter
 definitions.
+
+## FrozenClassVariables
+```python
+FrozenClassVariables(self, /, *args, **kwargs)
+```
+Metaclass for ExperimentConfig.
+
+Ensures ExperimentConfig class-level attributes cannot be modified.
+ExperimentConfig attributes can still be modified at the object level.
 

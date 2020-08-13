@@ -1,4 +1,4 @@
-# plugins.minigrid_plugin.minigrid_tasks [[source]](https://github.com/allenai/embodied-rl/tree/master/plugins/minigrid_plugin/minigrid_tasks.py)
+# plugins.minigrid_plugin.minigrid_tasks [[source]](https://github.com/allenai/allenact/tree/master/plugins/minigrid_plugin/minigrid_tasks.py)
 
 ## MiniGridTask
 ```python

@@ -1,4 +1,4 @@
-# plugins.ithor_plugin.ithor_tasks [[source]](https://github.com/allenai/embodied-rl/tree/master/plugins/ithor_plugin/ithor_tasks.py)
+# plugins.ithor_plugin.ithor_tasks [[source]](https://github.com/allenai/allenact/tree/master/plugins/ithor_plugin/ithor_tasks.py)
 
 ## ObjectNavTask
 ```python

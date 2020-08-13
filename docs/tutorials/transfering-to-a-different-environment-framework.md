@@ -5,7 +5,7 @@ This tutorial was designed as a continuation of the `Robothor Pointnav Tutorial`
 how to modify the experiment config created in that tutorial to work with the iTHOR and
 Habitat environments.
 
-Cross-platform support is one of the key design goals of `embodied-ai`. This is achieved through
+Cross-platform support is one of the key design goals of `allenact`. This is achieved through
 a total decoupling of the environment code from the engine, model and algorithm code, so that
 swapping in a new environment is as plug and play as possible. Crucially we will be able to 
 run a model on different environments without touching the model code at all, which will allow
@@ -162,4 +162,4 @@ This should test the model trained in RoboTHOR on either iTHOR or Habitat (depen
 
 ## Conclusion
 In this tutorial, we learned how to modify our experiment configurations to work with different environments. By
-providing a high level of modularity and out-of-the-box support for both `Habitat` and `THOR`, two of the most popular embodied frameworks out there **embodied-ai** hopes to give researchers the ability to validate their results across many platforms and help guide them towards genuine progress. The source code for this tutorial can be found in `/projects/framework_transfer_tutorial`.
+providing a high level of modularity and out-of-the-box support for both `Habitat` and `THOR`, two of the most popular embodied frameworks out there **AllenAct** hopes to give researchers the ability to validate their results across many platforms and help guide them towards genuine progress. The source code for this tutorial can be found in `/projects/framework_transfer_tutorial`.

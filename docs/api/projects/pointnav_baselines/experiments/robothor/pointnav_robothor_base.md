@@ -1,4 +1,4 @@
-# projects.pointnav_baselines.experiments.robothor.pointnav_robothor_base [[source]](https://github.com/allenai/embodied-rl/tree/master/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_base.py)
+# projects.pointnav_baselines.experiments.robothor.pointnav_robothor_base [[source]](https://github.com/allenai/allenact/tree/master/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_base.py)
 
 ## PointNavRoboThorBaseConfig
 ```python

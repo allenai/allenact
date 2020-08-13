@@ -45,7 +45,7 @@ def render_file(
         # noinspection PyShadowingNames
         with open(to_file, "w") as f:
             doc_split = call_result.split("\n")
-            github_path = "https://github.com/allenai/embodied-rl/tree/master/"
+            github_path = "https://github.com/allenai/allenact/tree/master/"
             path = (
                 github_path + doc_split[0].replace("# ", "").replace(".", "/") + ".py"
             )
@@ -99,7 +99,7 @@ def build_docs(
             print("\nSKIPPING {}\n".format(relative_path))
             continue
 
-        # without_embodied_rl = str(root_path).replace("embodied-rl/", "")
+        # without_embodied_rl = str(root_path).replace("allenact/", "")
         new_path = os.path.relpath(root_path, base_dir).replace(".", "")
         target_dir = os.path.join(docs_dir, new_path)
         if not os.path.exists(target_dir):
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     mkdocs_yaml = yaml.load(yaml_path)
     site_nav = mkdocs_yaml["nav"]
     # TODO Find a way to do the following in a way that results in nice titles.
-    # projects_key = "Projects using embodied-ai"
+    # projects_key = "Projects using allenact"
     # nav_obj = None
     # for obj in site_nav:
     #     if projects_key in obj:

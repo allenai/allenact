@@ -1,4 +1,4 @@
-# core.models.basic_models [[source]](https://github.com/allenai/embodied-rl/tree/master/core/models/basic_models.py)
+# core.models.basic_models [[source]](https://github.com/allenai/allenact/tree/master/core/models/basic_models.py)
 Basic building block torch networks that can be used across a variety of
 tasks.
 ## Flatten

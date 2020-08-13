@@ -1,18 +1,15 @@
 # Contributing
 
-We in the Perceptural Reasoning and Interaction Research (PRIOR) group at the
- Allen Institute for AI (AI2, @allenai) welcome contributions from the greater community. If
- you would like to make such a contributions we recommend first submitting an 
- [issue](https://github.com/allenai/embodied-rl/issues) describing your proposed improvement.
- Doing so can ensure we can validate your suggestions before you spend a great deal of time
- upon them. Small (or validated) improvements and bug fixes should be made via a pull request
- from your fork of the repository at [https://github.com/allenai/embodied-rl](https://github.com/allenai/embodied-rl).
+We welcome contributions from the greater community. If you would like to make such a contributions we recommend first submitting an [issue](https://github.com/allenai/allenact/issues) describing your proposed improvement.
+Doing so can ensure we can validate your suggestions before you spend a great deal of time
+upon them. Improvements and bug fixes should be made via a pull request
+from your fork of the repository at [https://github.com/allenai/allenact](https://github.com/allenai/allenact).
  
 All code in pull requests should adhere to the following guidelines.
 
 ## Found a bug or want to suggest an enhancement?
 
-Please submit an [issue](https://github.com/allenai/embodied-rl/issues) in which you note the steps
+Please submit an [issue](https://github.com/allenai/allenact/issues) in which you note the steps
 to reproduce the bug or in which you detail the enhancement.
 
 ## Making a pull request?

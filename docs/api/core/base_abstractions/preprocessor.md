@@ -1,4 +1,4 @@
-# core.base_abstractions.preprocessor [[source]](https://github.com/allenai/embodied-rl/tree/master/core/base_abstractions/preprocessor.py)
+# core.base_abstractions.preprocessor [[source]](https://github.com/allenai/allenact/tree/master/core/base_abstractions/preprocessor.py)
 
 ## ObservationSet
 ```python

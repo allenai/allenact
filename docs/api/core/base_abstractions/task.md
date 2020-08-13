@@ -1,4 +1,4 @@
-# core.base_abstractions.task [[source]](https://github.com/allenai/embodied-rl/tree/master/core/base_abstractions/task.py)
+# core.base_abstractions.task [[source]](https://github.com/allenai/allenact/tree/master/core/base_abstractions/task.py)
 Defines the primary data structures by which agents interact with their
 environment.
 ## EnvType

@@ -1,4 +1,4 @@
-# plugins.robothor_plugin.robothor_task_samplers [[source]](https://github.com/allenai/embodied-rl/tree/master/plugins/robothor_plugin/robothor_task_samplers.py)
+# plugins.robothor_plugin.robothor_task_samplers [[source]](https://github.com/allenai/allenact/tree/master/plugins/robothor_plugin/robothor_task_samplers.py)
 
 ## ObjectNavDatasetTaskSampler
 ```python

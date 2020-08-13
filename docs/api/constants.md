@@ -1,2 +1,2 @@
-# constants [[source]](https://github.com/allenai/embodied-rl/tree/master/constants.py)
+# constants [[source]](https://github.com/allenai/allenact/tree/master/constants.py)
 

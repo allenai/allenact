@@ -1,4 +1,4 @@
-# projects.babyai_baselines.experiments.go_to_obj.bc_teacher_forcing [[source]](https://github.com/allenai/embodied-rl/tree/master/projects/babyai_baselines/experiments/go_to_obj/bc_teacher_forcing.py)
+# projects.babyai_baselines.experiments.go_to_obj.bc_teacher_forcing [[source]](https://github.com/allenai/allenact/tree/master/projects/babyai_baselines/experiments/go_to_obj/bc_teacher_forcing.py)
 
 ## PPOBabyAIGoToObjExperimentConfig
 ```python

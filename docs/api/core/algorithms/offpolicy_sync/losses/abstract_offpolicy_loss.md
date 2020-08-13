@@ -1,4 +1,4 @@
-# core.algorithms.offpolicy_sync.losses.abstract_offpolicy_loss [[source]](https://github.com/allenai/embodied-rl/tree/master/core/algorithms/offpolicy_sync/losses/abstract_offpolicy_loss.py)
+# core.algorithms.offpolicy_sync.losses.abstract_offpolicy_loss [[source]](https://github.com/allenai/allenact/tree/master/core/algorithms/offpolicy_sync/losses/abstract_offpolicy_loss.py)
 Defining abstract loss classes for actor critic models.
 ## AbstractOffPolicyLoss
 ```python
