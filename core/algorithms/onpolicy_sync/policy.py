@@ -94,8 +94,8 @@ class LinearActorCriticHead(nn.Module):
 
     def forward(self, x):
         out = self.actor_and_critic(x)
-        logits = out[:, :-1]
-        values = out[:, -1:]
+        logits = out[..., :-1]
+        values = out[..., -1:]
         # noinspection PyArgumentList
         return CategoricalDistr(logits=logits), values
 

@@ -25,8 +25,9 @@ class RolloutStorage:
     def __init__(
         self,
         num_steps: int,
-        num_processes: int,
+        num_samplers: int,
         actor_critic: ActorCriticModel,
+        num_agents: int = 1,
         *args,
         **kwargs,
     ):
@@ -40,6 +41,8 @@ class RolloutStorage:
             "memory": dict(),
             "observations": dict(),
         }
+
+        self.names = ["step", "sampler", "agent", None]
 
         action_space = actor_critic.action_space
         num_recurrent_layers = cast(
@@ -56,28 +59,41 @@ class RolloutStorage:
             else 0
         )  # actually a memory spec if num_rnn_layers is < 0
         self.memory: Memory = self.create_memory(
-            num_recurrent_layers, spec, num_processes
+            num_recurrent_layers, spec, num_samplers, num_agents
         )
 
         self.observations: Dict[str, Tuple[torch.Tensor, int]] = Memory()
 
-        self.rewards = torch.zeros(num_steps, num_processes, 1)
-        self.value_preds = torch.zeros(num_steps + 1, num_processes, 1)
-        self.returns = torch.zeros(num_steps + 1, num_processes, 1)
-
-        self.action_log_probs = torch.zeros(num_steps, num_processes, 1)
+        self.rewards = torch.zeros(
+            num_steps, num_samplers, num_agents, 1, names=self.names
+        )
+        self.value_preds = torch.zeros(
+            num_steps + 1, num_samplers, num_agents, 1, names=self.names
+        )
+        self.returns = torch.zeros(
+            num_steps + 1, num_samplers, num_agents, 1, names=self.names
+        )
+        self.action_log_probs = torch.zeros(
+            num_steps, num_samplers, num_agents, 1, names=self.names
+        )
         if action_space.__class__.__name__ == "Discrete":
             action_shape = 1
         else:
             action_shape = action_space.shape[0]
 
-        self.actions = torch.zeros(num_steps, num_processes, action_shape)
-        self.prev_actions = torch.zeros(num_steps + 1, num_processes, action_shape)
+        self.actions = torch.zeros(
+            num_steps, num_samplers, num_agents, action_shape, names=self.names,
+        )
+        self.prev_actions = torch.zeros(
+            num_steps + 1, num_samplers, num_agents, action_shape, names=self.names,
+        )
         if action_space.__class__.__name__ == "Discrete":
             self.actions = self.actions.long()
             self.prev_actions = self.prev_actions.long()
 
-        self.masks = torch.ones(num_steps + 1, num_processes, 1)
+        self.masks = torch.ones(
+            num_steps + 1, num_samplers, num_agents, 1, names=self.names
+        )
 
         self.step = 0
 
@@ -89,12 +105,23 @@ class RolloutStorage:
         self,
         num_recurrent_layers: int,
         spec: Union[Dict[str, Tuple[Sequence[int], int, torch.dtype]], int],
-        num_processes: int,
+        num_samplers: int,
+        num_agents: int,
     ):
         if num_recurrent_layers >= 0:
             assert isinstance(spec, int)
-            all_dims = [self.num_steps + 1, num_recurrent_layers, num_processes, spec]
-            tensor = torch.zeros(*all_dims, dtype=torch.float32)
+            all_dims = [
+                self.num_steps + 1,
+                num_recurrent_layers,
+                num_samplers,
+                num_agents,
+                spec,
+            ]
+            tensor = torch.zeros(
+                *all_dims,
+                dtype=torch.float32,
+                names=self.names[:1] + ["layer"] + self.names[1:],
+            )
             memory = Memory(
                 {
                     self.DEFAULT_RNN_MEMORY_NAME: (
@@ -118,10 +145,16 @@ class RolloutStorage:
                 all_dims = (
                     [self.num_steps + 1]
                     + list(other_dims[:sampler_dim])
-                    + [num_processes]
+                    + [num_samplers, num_agents]
                     + list(other_dims[sampler_dim:])
                 )
-                tensor = torch.zeros(*all_dims, dtype=dtype)
+                all_names = (
+                    self.names[:1]
+                    + [None] * sampler_dim
+                    + self.names[1:-1]  # skip last None
+                    + [None] * (len(other_dims) - sampler_dim)
+                )
+                tensor = torch.zeros(*all_dims, dtype=dtype, names=all_names)
                 memory.check_append(key, tensor, sampler_dim + 1)
                 self.flattened_spaces["memory"][key] = [key]
                 self.reverse_flattened_spaces["memory"][(key,)] = [key]
@@ -210,13 +243,12 @@ class RolloutStorage:
                 if flatten_name not in storage:
                     storage[flatten_name] = (
                         torch.zeros_like(current_data)  # type:ignore
-                        .unsqueeze(0)
+                        # .unsqueeze(0)
                         .repeat(
                             self.num_steps
                             + 1,  # valid for both observations and memory
                             *(1 for _ in range(len(current_data.shape))),
-                        )
-                        .to(
+                        ).to(
                             torch.device("cpu")
                             if self.actions.get_device() < 0
                             else self.actions.get_device()
@@ -234,7 +266,7 @@ class RolloutStorage:
                         tuple(path + [name])
                     ] = flatten_name
 
-                storage[flatten_name][0][time_step].copy_(current_data)
+                storage[flatten_name][0][time_step : time_step + 1].copy_(current_data)
 
     def insert(
         self,
@@ -258,30 +290,33 @@ class RolloutStorage:
 
             self.insert_memory(cast(Memory, memory), time_step=self.step + 1)
         else:
-            assert self.memory[self.DEFAULT_RNN_MEMORY_NAME][0].shape[-1] == 0
+            assert self.memory[self.DEFAULT_RNN_MEMORY_NAME][0].shape[-1] == 0  # 0 dims
 
-        self.actions[self.step].copy_(actions)  # type:ignore
-        self.prev_actions[self.step + 1].copy_(actions)  # type:ignore
-        self.action_log_probs[self.step].copy_(action_log_probs)  # type:ignore
-        self.value_preds[self.step].copy_(value_preds)  # type:ignore
-        self.rewards[self.step].copy_(rewards)  # type:ignore
-        self.masks[self.step + 1].copy_(masks)  # type:ignore
+        self.actions[self.step : self.step + 1].copy_(actions)  # type:ignore
+        self.prev_actions[self.step + 1 : self.step + 2].copy_(actions)  # type:ignore
+        self.action_log_probs[self.step : self.step + 1].copy_(  # type:ignore
+            action_log_probs
+        )
+        self.value_preds[self.step : self.step + 1].copy_(value_preds)  # type:ignore
+        self.rewards[self.step : self.step + 1].copy_(rewards)  # type:ignore
+        self.masks[self.step + 1 : self.step + 2].copy_(masks)  # type:ignore
 
         self.step = (self.step + 1) % self.num_steps
 
     def reshape(self, keep_list: Sequence[int]):
         keep_list = list(keep_list)
-        if self.actions.shape[1] == len(keep_list):
-            return
+        if self.actions.shape[1] == len(keep_list):  # samplers dim
+            return  # we are keeping everything, no need to copy
+
         for sensor in self.observations:
             self.observations[sensor] = (
                 self.observations[sensor][0][:, keep_list],
                 self.observations[sensor][1],
             )
+
         memory_index = torch.as_tensor(
             keep_list, dtype=torch.int64, device=self.masks.device
         )
-        # get_logger().debug("keep_list {} memory_index {}".format(keep_list, memory_index))
         for name in self.memory:
             self.memory[name] = (
                 self.memory[name][0].index_select(
@@ -416,15 +451,15 @@ class RolloutStorage:
             advantages.std() + 1e-5
         )
 
-        num_processes = self.rewards.size(1)
-        assert num_processes >= num_mini_batch, (
+        num_samplers = self.rewards.size(1)
+        assert num_samplers >= num_mini_batch, (
             "The number of processes ({}) "
             "must be greater than or equal to the number of "
-            "mini batches ({}).".format(num_processes, num_mini_batch)
+            "mini batches ({}).".format(num_samplers, num_mini_batch)
         )
 
         inds = np.round(
-            np.linspace(0, num_processes, num_mini_batch + 1, endpoint=True)
+            np.linspace(0, num_samplers, num_mini_batch + 1, endpoint=True)
         ).astype(np.int32)
         pairs = list(zip(inds[:-1], inds[1:]))
         random.shuffle(pairs)
@@ -462,7 +497,9 @@ class RolloutStorage:
                                 device=self.memory[name][0].device,
                             ),
                         )
-                        .squeeze(self.memory[name][1])[0, ...],
+                        .squeeze(self.memory[name][1])[
+                            :1, ...
+                        ],  # keep only initial memory!
                     )
 
                 actions_batch.append(self.actions[:, ind])
@@ -475,7 +512,7 @@ class RolloutStorage:
                 adv_targ.append(advantages[:, ind])
                 norm_adv_targ.append(normalized_advantages[:, ind])
 
-            T, N = self.num_steps, end_ind - start_ind
+            # T, N = self.num_steps, end_ind - start_ind
 
             # These are all tensors of size (T, N, -1)
             for sensor in observations_batch:
@@ -502,7 +539,10 @@ class RolloutStorage:
             for name in memory_batch:
                 # noinspection PyTypeChecker
                 memory_batch[name] = torch.stack(  # type:ignore
-                    memory_batch[name], self.memory[name][1] - 1
+                    memory_batch[name],
+                    self.memory[name][
+                        1
+                    ],  # - 1, we don't squeeze out the single step dim, so no need to subtract 1
                 )  # actor-critic sampler axis
 
             # # Flatten the (T, N, ...) tensors to (T * N, ...)
@@ -531,7 +571,6 @@ class RolloutStorage:
                 "observations": self.unflatten_batch(
                     observations_batch, "observations"
                 ),
-                # "recurrent_hidden_states": recurrent_hidden_states_batch,
                 "memory": self.unflatten_batch(memory_batch, "memory"),
                 "actions": actions_batch,
                 "prev_actions": prev_actions_batch,

@@ -7,17 +7,17 @@ from torch import nn
 
 
 class Flatten(nn.Module):
-    """Flatten input tensor so that it is of shape (batchs x -1)."""
+    """Flatten input tensor so that it is of shape (steps x samplers x agents x -1)."""
 
     def forward(self, x):
         """Flatten input tensor.
 
         # Parameters
-        x : Tensor of size (batches x ...) to flatten to size (batches x -1)
+        x : Tensor of size (steps x samplers x agents x ...) to flatten to size (steps x samplers x agents x -1)
         # Returns
         Flattened tensor.
         """
-        return x.reshape(x.size(0), -1)
+        return x.reshape(x.size(0), x.size(1), x.size(2), -1)
 
 
 def init_linear_layer(
@@ -64,14 +64,22 @@ def make_cnn(
     layer_channels: Sequence[int],
     kernel_sizes: Sequence[Union[int, Tuple[int, int]]],
     strides: Sequence[Union[int, Tuple[int, int]]],
+    paddings: Sequence[Union[int, Tuple[int, int]]],
+    dilations: Sequence[Union[int, Tuple[int, int]]],
     output_height: int,
     output_width: int,
     output_channels: int,
-):
+    flatten: bool = True,
+    output_relu: bool = True,
+) -> nn.Module:
     assert (
-        len(layer_channels) == len(kernel_sizes) == len(strides)
-    ), "Mismatched sizes: layers {} kernels {} strides {}".format(
-        layer_channels, kernel_sizes, strides
+        len(layer_channels)
+        == len(kernel_sizes)
+        == len(strides)
+        == len(paddings)
+        == len(dilations)
+    ), "Mismatched sizes: layers {} kernels {} strides {} paddings {} dilations {}".format(
+        layer_channels, kernel_sizes, strides, paddings, dilations
     )
 
     net = nn.Sequential()
@@ -86,17 +94,23 @@ def make_cnn(
                 out_channels=current_channels,
                 kernel_size=kernel_sizes[it],
                 stride=strides[it],
+                padding=paddings[it],
+                dilation=dilations[it],
             ),
         )
         if it < len(layer_channels) - 1:
             net.add_module("relu_{}".format(it), nn.ReLU(inplace=True))
 
-    net.add_module("flatten", Flatten())
-    net.add_module(
-        "fc",
-        nn.Linear(layer_channels[-1] * output_width * output_height, output_channels),
-    )
-    net.add_module("out_relu", nn.ReLU(True))
+    if flatten:
+        net.add_module("flatten", Flatten())
+        net.add_module(
+            "fc",
+            nn.Linear(
+                layer_channels[-1] * output_width * output_height, output_channels
+            ),
+        )
+    if output_relu:
+        net.add_module("out_relu", nn.ReLU(True))
 
     return net
 
@@ -105,11 +119,11 @@ def compute_cnn_output(
     cnn: nn.Module,
     cnn_input: torch.Tensor,
     permute_order: Optional[Tuple[int, ...]] = (
-        0,
-        3,
-        1,
-        2,
-    ),  # [FLAT_BATCH x CHANNEL x HEIGHT X WIDTH] from [FLAT_BATCH x HEIGHT x WIDTH x CHANNEL]
+        0,  # FLAT_BATCH (flattening steps, samplers and agents)
+        3,  # CHANNELS
+        1,  # HEIGHT
+        2,  # WIDTH
+    ),  # from [FLAT_BATCH x HEIGHT x WIDTH x CHANNEL] flattened input
 ):
     """Computes CNN outputs for given inputs.
 
@@ -118,24 +132,22 @@ def compute_cnn_output(
     cnn : A torch CNN.
     cnn_input: A torch Tensor with inputs.
     permute_order: A permutation Tuple to provide PyTorch dimension order, default (0, 3, 1, 2), where 0 corresponds to
-                   the flattened batch dimensions (combining batch and step)
+                   the flattened batch dimensions (combining step, sampler and agent)
 
     # Returns
 
-    CNN output with dimensions [BATCH (x STEPS) x CHANNEL x HEIGHT X WIDTH].
+    CNN output with dimensions [STEPS x SAMPLER x AGENT x CHANNEL (x HEIGHT X WIDTH)].
     """
-    nsteps: Optional[int] = None
-    bsize: Optional[int] = None
-    if len(cnn_input.shape) == 5:
-        nsteps, bsize = cnn_input.shape[:2]
-        # Make FLAT_BATCH = nsteps * bsize
-        cnn_input = cnn_input.reshape((-1) + cnn_input.shape[2:])
+    nsteps, nsamplers, nagents = cnn_input.shape[:3]
+    # Make FLAT_BATCH = nsteps * nsamplers * nagents
+    cnn_input = cnn_input.reshape((-1,) + cnn_input.shape[3:])
 
     if permute_order is not None:
         cnn_input = cnn_input.permute(*permute_order)
     cnn_output = cnn(cnn_input)
 
-    if nsteps is not None:
-        cnn_output = cnn_output.reshape((nsteps, bsize) + cnn_output.shape[1:])
+    cnn_output = cnn_output.reshape(
+        (nsteps, nsamplers, nagents,) + cnn_output.shape[1:]
+    )
 
     return cnn_output

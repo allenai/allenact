@@ -138,7 +138,7 @@ class MiniGridSimpleConvRNN(MiniGridSimpleConvBase):
             "minigrid_ego_image"
         ].shape
         self.actor_critic = RNNActorCritic(
-            input_key=self.ac_key,
+            input_uuid=self.ac_key,
             action_space=action_space,
             observation_space=SpaceDict(
                 {

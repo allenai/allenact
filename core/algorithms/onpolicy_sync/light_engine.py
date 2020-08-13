@@ -1116,7 +1116,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.run_pipeline(
                 RolloutStorage(
                     num_steps=self.training_pipeline.num_steps,
-                    num_processes=self.num_samplers,
+                    num_samplers=self.num_samplers,
                     actor_critic=self.actor_critic
                     if isinstance(self.actor_critic, ActorCriticModel)
                     else typing.cast(ActorCriticModel, self.actor_critic.module),
