@@ -12,7 +12,7 @@ ResnetPreProcessorHabitat(
     output_width: int,
     output_dims: int,
     pool: bool,
-    torchvision_resnet_model: Callable[..., torchvision.models.resnet.ResNet] = <function resnet18 at 0x12718c1f0>,
+    torchvision_resnet_model: Callable[..., torchvision.models.resnet.ResNet] = <function resnet18 at 0x13114f1f0>,
     parallel: bool = True,
     device: Optional[torch.device] = None,
     device_ids: Optional[List[torch.device]] = None,

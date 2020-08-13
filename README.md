@@ -14,7 +14,7 @@
 - [Website & Docs](https://allenact.org/)
 - [Github](https://github.com/allenai/allenact)
 - [Install](docs/getting_started/installation.md)
-- [Tutorials](docs/tutorials/minigrid-tutorial.md)
+- [Tutorials](https://allenact.org/tutorials/list)
 - [Citation](#citation)
 
 ## Features & Highlights

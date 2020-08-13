@@ -29,6 +29,7 @@ nav:
   - Structure of the codebase: getting_started/structure.md
   - Primary abstractions: getting_started/abstractions.md
 - Tutorials:
+  - AllenAct Tutorials: tutorials/index.md
   - Navigation in Minigrid: tutorials/minigrid-tutorial.md
   - PointNav in RoboTHOR: tutorials/training-a-pointnav-model.md
   - Swapping environments: tutorials/transfering-to-a-different-environment-framework.md

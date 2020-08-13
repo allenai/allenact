@@ -292,7 +292,7 @@ VectorSampledTasks(
     auto_resample_when_done: bool = True,
     multiprocessing_start_method: Optional[str] = 'forkserver',
     mp_ctx: Optional[multiprocessing.context.BaseContext] = None,
-    metrics_out_queue: <bound method BaseContext.Queue of <multiprocessing.context.DefaultContext object at 0x10de72250>> = None,
+    metrics_out_queue: <bound method BaseContext.Queue of <multiprocessing.context.DefaultContext object at 0x102129250>> = None,
     should_log: bool = True,
     max_processes: Optional[int] = None,
 ) -> None
