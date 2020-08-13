@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Any
 
 import torch
 from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
@@ -9,8 +9,7 @@ from torchvision.models.utils import load_state_dict_from_url
 
 
 class CachelessAnchorGenerator(AnchorGenerator):
-    def forward(self, image_list, feature_maps):
-        # type: (ImageList, List[Tensor]) -> torch.Tensor
+    def forward(self, image_list: Any, feature_maps: Any):
         grid_sizes = list([feature_map.shape[-2:] for feature_map in feature_maps])
         image_size = image_list.tensors.shape[-2:]
         strides = [
@@ -19,7 +18,7 @@ class CachelessAnchorGenerator(AnchorGenerator):
         dtype, device = feature_maps[0].dtype, feature_maps[0].device
         self.set_cell_anchors(dtype, device)
         anchors_over_all_feature_maps = self.grid_anchors(grid_sizes, strides)
-        anchors = torch.jit.annotate(List[List[torch.Tensor]], [])
+        anchors = torch.jit.annotate(List[List[torch.Tensor]], [])  # type:ignore
         for i, (image_height, image_width) in enumerate(image_list.image_sizes):
             anchors_in_image = []
             for anchors_per_feature_map in anchors_over_all_feature_maps:

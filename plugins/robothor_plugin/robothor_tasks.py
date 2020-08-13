@@ -68,10 +68,10 @@ class PointNavTask(Task[RoboThorEnvironment]):
             )
 
         self.optimal_distance = self.last_geodesic_distance
-        self._rewards = []
-        self._distance_to_goal = []
+        self._rewards: List[float] = []
+        self._distance_to_goal: List[float] = []
         self._metrics = None
-        self.path = (
+        self.path: List[Any] = (
             []
         )  # the initial coordinate will be directly taken from the optimal path
         self.num_moves_made = 0
@@ -266,10 +266,10 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             self.last_geodesic_distance = self.env.dist_to_object(
                 self.task_info["object_type"]
             )
-        self._rewards = []
-        self._distance_to_goal = []
+        self._rewards: List[float] = []
+        self._distance_to_goal: List[float] = []
         self._metrics = None
-        self.path = (
+        self.path: List = (
             []
         )  # the initial coordinate will be directly taken from the optimal path
         self.task_info["followed_path"] = [self.env.agent_state()]
@@ -396,7 +396,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             )
         return res
 
-    def get_observations(self) -> Any:
+    def get_observations(self, **kwargs) -> Any:
         obs = self.sensor_suite.get_observations(env=self.env, task=self)
         if self.mirror:
             for o in obs:

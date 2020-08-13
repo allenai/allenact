@@ -2,7 +2,7 @@ import copy
 import json
 import math
 import os
-from typing import Tuple, Sequence, Union, Dict, Optional, Any
+from typing import Tuple, Sequence, Union, Dict, Optional, Any, cast, Generator, List
 
 import cv2
 import numpy as np
@@ -67,8 +67,10 @@ class ThorViz(TrajectoryViz):
         )
 
         if isinstance(scenes[0], str):
-            scenes = [scenes]  # make it list of tuples
-        self.scenes = scenes
+            scenes = [
+                cast(Tuple[str, int, int, int, int], scenes)
+            ]  # make it list of tuples
+        self.scenes = cast(List[Tuple[str, int, int, int, int]], scenes)
 
         self.room_path = os.path.join(*room_path)
         os.makedirs(self.room_path, exist_ok=True)
@@ -94,7 +96,9 @@ class ThorViz(TrajectoryViz):
             self.controller = None
 
     @staticmethod
-    def iterate_scenes(all_scenes: Sequence[Tuple[str, int, int, int, int]]) -> str:
+    def iterate_scenes(
+        all_scenes: Sequence[Tuple[str, int, int, int, int]]
+    ) -> Generator[str, None, None]:
         for scenes in all_scenes:
             for wall in range(scenes[1], scenes[2] + 1):
                 for furniture in range(scenes[3], scenes[4] + 1):
@@ -332,7 +336,7 @@ class ThorViz(TrajectoryViz):
         cv2.imwrite(image_path, top_down_view)
 
     def make_fig(self, episode: Any, episode_id: str) -> Figure:
-        trajectory: Sequence[Dict[str:Any]] = self._access(
+        trajectory: Sequence[Dict[str, Any]] = self._access(
             episode, self.path_to_trajectory
         )
 

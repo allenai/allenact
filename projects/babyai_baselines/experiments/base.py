@@ -28,7 +28,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig):
     """Base experimental config."""
 
     LEVEL: Optional[str] = None
-    TOTAL_RL_TRAIN_STEPS = None
+    TOTAL_RL_TRAIN_STEPS: Optional[int] = None
     AGENT_VIEW_SIZE: int = 7
     ROLLOUT_STEPS: Optional[int] = None
     NUM_TRAIN_SAMPLERS: Optional[int] = None
@@ -39,7 +39,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig):
     USE_EXPERT = False
     SHOULD_LOG = True
     PPO_NUM_MINI_BATCH = 2
-    ARCH = None
+    ARCH: Optional[str] = None
     NUM_CKPTS_TO_SAVE = 50
 
     TEST_SEED_OFFSET = 0
@@ -61,7 +61,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig):
                 ),
             ]
             + (
-                [MiniGridMissionSensor(instr_len=cls.INSTR_LEN)]
+                [MiniGridMissionSensor(instr_len=cls.INSTR_LEN)]  # type:ignore
                 if cls.USE_INSTR
                 else []
             )
@@ -201,7 +201,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig):
         self,
         process_ind: int,
         total_processes: int,
-        devices: Optional[List[int]],
+        devices: Optional[List[int]] = None,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
@@ -211,7 +211,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig):
         self,
         process_ind: int,
         total_processes: int,
-        devices: Optional[List[int]],
+        devices: Optional[List[int]] = None,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:

@@ -126,12 +126,12 @@ class RoboThorEnvironment:
 
     def path_corners(
         self, target: Union[str, Dict[str, float]]
-    ) -> Collection[Dict[str, float]]:
+    ) -> List[Dict[str, float]]:
         """Returns an array with a sequence of xyz dictionaries objects
         representing the corners of the shortest path to the object of given
         type or end point location."""
         pose = self.agent_state()
-        position = {k: float(pose[k]) for k in ["x", "y", "z"]}
+        position = {k: pose[k] for k in ["x", "y", "z"]}
         # get_logger().debug("initial pos in path corners {} target {}".format(pose, target))
         try:
             if isinstance(target, str):
@@ -234,7 +234,7 @@ class RoboThorEnvironment:
         if len(corners) == 0:
             return float("inf")
 
-        sum = 0
+        sum = 0.0
         for it in range(1, len(corners)):
             sum += math.sqrt(
                 (corners[it]["x"] - corners[it - 1]["x"]) ** 2
@@ -283,7 +283,7 @@ class RoboThorEnvironment:
             dist = -1.0  # -1.0 for unreachable
         return dist
 
-    def agent_state(self) -> Dict[str, Union[Dict[str, float], float]]:
+    def agent_state(self) -> Dict:
         """Return agent position, rotation and horizon."""
         agent_meta = self.last_event.metadata["agent"]
         return {
@@ -438,9 +438,7 @@ class RoboThorEnvironment:
         """
         return self.controller.last_event.metadata["actionReturn"]
 
-    def step(
-        self, action_dict: Dict[str, Union[str, int, float]]
-    ) -> ai2thor.server.Event:
+    def step(self, action_dict: Dict) -> ai2thor.server.Event:
         """Take a step in the ai2thor environment."""
         return self.controller.step(**action_dict)
 
@@ -555,7 +553,7 @@ class RoboThorCachedEnvironment:
     ):
         self.agent_position = _pos_to_str(pose)
         self.agent_rotation = (
-            math.floor(rotation / 90.0) * 90
+            math.floor(rotation["y"] / 90.0) * 90
         )  # round to nearest 90 degree angle
         return True
 
@@ -567,9 +565,9 @@ class RoboThorCachedEnvironment:
             handle.close()
             self.agent_position = list(self.view_cache.keys())[0]
             self.agent_rotation = list(self.view_cache[self.agent_position].keys())[0]
-            self.known_good_locations: Dict[str, Any] = {
-                self.scene_name: copy.deepcopy(self.currently_reachable_points)
-            }
+            self.known_good_locations[self.scene_name] = copy.deepcopy(
+                self.currently_reachable_points
+            )
             self._last_action = "None"
             assert len(self.known_good_locations[self.scene_name]) > 10
         except:

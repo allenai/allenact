@@ -25,7 +25,7 @@ class GoalObjectTypeThorSensor(Sensor):
     def __init__(
         self,
         object_types: List[str],
-        target_to_detector_map: Optional[Dict[str, int]] = None,
+        target_to_detector_map: Optional[Dict[str, str]] = None,
         detector_types: Optional[List[str]] = None,
         uuid: str = "goal_object_type_ind",
         **kwargs: Any

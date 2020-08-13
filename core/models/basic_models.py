@@ -21,21 +21,7 @@ from torch import nn
 from core.algorithms.onpolicy_sync.policy import ActorCriticModel, DistributionType
 from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
-from utils.model_utils import make_cnn, compute_cnn_output
-
-
-class Flatten(nn.Module):
-    """Flatten input tensor so that it is of shape (batchs x -1)."""
-
-    def forward(self, x):
-        """Flatten input tensor.
-
-        # Parameters
-        x : Tensor of size (batches x ...) to flatten to size (batches x -1)
-        # Returns
-        Flattened tensor.
-        """
-        return x.reshape(x.size(0), -1)
+from utils.model_utils import make_cnn, compute_cnn_output, Flatten
 
 
 class SimpleCNN(nn.Module):
@@ -50,7 +36,18 @@ class SimpleCNN(nn.Module):
     output_size : The size of the embedding vector to produce.
     """
 
-    def __init__(self, observation_space: SpaceDict, output_size: int):
+    def __init__(
+        self,
+        observation_space: SpaceDict,
+        output_size: int,
+        layer_channels: Sequence[int] = (32, 64, 32),
+        kernel_sizes: Sequence[Tuple[int, int]] = ((8, 8), (4, 4), (3, 3)),
+        layers_stride: Sequence[Tuple[int, int]] = ((4, 4), (2, 2), (1, 1)),
+        paddings: Sequence[Tuple[int, int]] = ((0, 0), (0, 0), (0, 0)),
+        dilations: Sequence[Tuple[int, int]] = ((1, 1), (1, 1), (1, 1)),
+        rgb_uuid: str = "rgb",
+        depth_uuid: str = "depth",
+    ):
         """Initializer.
 
         # Parameters
@@ -59,29 +56,34 @@ class SimpleCNN(nn.Module):
         output_size : See class attributes documentation.
         """
         super().__init__()
-        if "rgb" in observation_space.spaces:
-            self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
+
+        self.rgb_uuid = rgb_uuid
+        self.depth_uuid = depth_uuid
+
+        if self.rgb_uuid in observation_space.spaces:
+            self._n_input_rgb = observation_space.spaces[self.rgb_uuid].shape[2]
         else:
             self._n_input_rgb = 0
 
-        if "depth" in observation_space.spaces:
-            self._n_input_depth = observation_space.spaces["depth"].shape[2]
+        if self.depth_uuid in observation_space.spaces:
+            self._n_input_depth = observation_space.spaces[self.depth_uuid].shape[2]
         else:
             self._n_input_depth = 0
 
-        # kernel size for different CNN layers
-        self._cnn_layers_kernel_size = [(8, 8), (4, 4), (3, 3)]
-
-        # strides for different CNN layers
-        self._cnn_layers_stride = [(4, 4), (2, 2), (1, 1)]
+        # layer hyperparameters
+        self._cnn_layers_channels = list(layer_channels)
+        self._cnn_layers_kernel_size = list(kernel_sizes)
+        self._cnn_layers_stride = list(layers_stride)
+        self._cnn_layers_paddings = list(paddings)
+        self._cnn_layers_dilations = list(dilations)
 
         if self._n_input_rgb > 0:
             rgb_cnn_dims = np.array(
-                observation_space.spaces["rgb"].shape[:2], dtype=np.float32
+                observation_space.spaces[self.rgb_uuid].shape[:2], dtype=np.float32
             )
         if self._n_input_depth > 0:
             depth_cnn_dims = np.array(
-                observation_space.spaces["depth"].shape[:2], dtype=np.float32
+                observation_space.spaces[self.depth_uuid].shape[:2], dtype=np.float32
             )
         if self._n_input_rgb <= 0 and self._n_input_depth <= 0:
             assert self.is_blind
@@ -90,24 +92,28 @@ class SimpleCNN(nn.Module):
             self.cnn = nn.Sequential()
         else:
             if self._n_input_rgb > 0:
-                for kernel_size, stride in zip(
-                    self._cnn_layers_kernel_size, self._cnn_layers_stride
+                for kernel_size, stride, padding, dilation in zip(
+                    self._cnn_layers_kernel_size,
+                    self._cnn_layers_stride,
+                    self._cnn_layers_paddings,
+                    self._cnn_layers_dilations,
                 ):
                     # noinspection PyUnboundLocalVariable
                     rgb_cnn_dims = self._conv_output_dim(
                         dimension=rgb_cnn_dims,
-                        padding=np.array([0, 0], dtype=np.float32),
-                        dilation=np.array([1, 1], dtype=np.float32),
+                        padding=np.array(padding, dtype=np.float32),
+                        dilation=np.array(dilation, dtype=np.float32),
                         kernel_size=np.array(kernel_size, dtype=np.float32),
                         stride=np.array(stride, dtype=np.float32),
                     )
-                layer_channels = [32, 64, 32]
                 # noinspection PyUnboundLocalVariable
                 self.rgb_cnn = make_cnn(
                     input_channels=self._n_input_rgb,
-                    layer_channels=layer_channels,
+                    layer_channels=self._cnn_layers_channels,
                     kernel_sizes=self._cnn_layers_kernel_size,
                     strides=self._cnn_layers_stride,
+                    paddings=self._cnn_layers_paddings,
+                    dilations=self._cnn_layers_dilations,
                     output_height=rgb_cnn_dims[0],
                     output_width=rgb_cnn_dims[1],
                     output_channels=output_size,
@@ -115,24 +121,28 @@ class SimpleCNN(nn.Module):
                 self.layer_init(self.rgb_cnn)
 
             if self._n_input_depth > 0:
-                for kernel_size, stride in zip(
-                    self._cnn_layers_kernel_size, self._cnn_layers_stride
+                for kernel_size, stride, padding, dilation in zip(
+                    self._cnn_layers_kernel_size,
+                    self._cnn_layers_stride,
+                    self._cnn_layers_paddings,
+                    self._cnn_layers_dilations,
                 ):
                     # noinspection PyUnboundLocalVariable
                     depth_cnn_dims = self._conv_output_dim(
                         dimension=depth_cnn_dims,
-                        padding=np.array([0, 0], dtype=np.float32),
-                        dilation=np.array([1, 1], dtype=np.float32),
+                        padding=np.array(padding, dtype=np.float32),
+                        dilation=np.array(dilation, dtype=np.float32),
                         kernel_size=np.array(kernel_size, dtype=np.float32),
                         stride=np.array(stride, dtype=np.float32),
                     )
-                layer_channels = [32, 64, 32]
                 # noinspection PyUnboundLocalVariable
                 self.rgb_cnn = make_cnn(
                     input_channels=self._n_input_depth,
-                    layer_channels=layer_channels,
+                    layer_channels=self._cnn_layers_channels,
                     kernel_sizes=self._cnn_layers_kernel_size,
                     strides=self._cnn_layers_stride,
+                    paddings=self._cnn_layers_paddings,
+                    dilations=self._cnn_layers_dilations,
                     output_height=depth_cnn_dims[0],
                     output_width=depth_cnn_dims[1],
                     output_channels=output_size,
@@ -183,7 +193,7 @@ class SimpleCNN(nn.Module):
 
     @staticmethod
     def layer_init(cnn) -> None:
-        """Initialize layer parameters using kaiming normal."""
+        """Initialize layer parameters using Kaiming normal."""
         for layer in cnn:
             if isinstance(layer, (nn.Conv2d, nn.Linear)):
                 nn.init.kaiming_normal_(layer.weight, nn.init.calculate_gain("relu"))
@@ -197,7 +207,7 @@ class SimpleCNN(nn.Module):
         return self._n_input_rgb + self._n_input_depth == 0
 
     def forward(self, observations: Dict[str, torch.Tensor]):  # type: ignore
-        cnn_output_list = []
+        cnn_output_list: List[torch.Tensor] = []
 
         if self.is_blind:
             return torch.cat(cnn_output_list, dim=1)
@@ -212,9 +222,18 @@ class SimpleCNN(nn.Module):
                 compute_cnn_output(self.depth_cnn, observations["depth"])
             )
 
-        channels_dim = 1  # for [sampler x channel x height x width]
-        if len(cnn_output_list[0].shape) == 5:
+        if len(cnn_output_list[0].shape) == 2:
+            channels_dim = 1  # for [sampler x channels] (flattened)
+        elif len(cnn_output_list[0].shape) == 3:
+            channels_dim = 2  # for [step x sampler x channels] (flattened)
+        elif len(cnn_output_list[0].shape) == 4:
+            channels_dim = 1  # for [sampler x channel x height x width]
+        elif len(cnn_output_list[0].shape) == 5:
             channels_dim = 2  # [step x sampler x channel x height x width]
+        else:
+            raise RuntimeError(
+                "Wrong CNN output tensor shape {}".format(cnn_output_list[0].shape)
+            )
 
         return torch.cat(cnn_output_list, dim=channels_dim)
 
@@ -337,9 +356,9 @@ class RNNStateEncoder(nn.Module):
             if isinstance(hidden_states, tuple):
                 # noinspection PyTypeChecker
                 hidden_states = tuple(
-                    v * masks
+                    v * masks  # type:ignore
                     + (1.0 - masks) * (self.init_hidden_state.repeat(1, v.shape[1], 1))  # type: ignore
-                    for v in hidden_states
+                    for v in hidden_states  # type:ignore
                 )  # type: ignore
             else:
                 # noinspection PyTypeChecker

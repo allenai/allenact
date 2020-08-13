@@ -23,7 +23,7 @@ from utils.system import get_logger
 
 
 class MiniGridTask(Task[Union[CrossingEnv]]):
-    _ACTION_NAMES = ("left", "right", "forward")
+    _ACTION_NAMES: Tuple[str, ...] = ("left", "right", "forward")
     _ACTION_IND_TO_MINIGRID_IND = tuple(
         MiniGridEnv.Actions.__members__[name].value for name in _ACTION_NAMES
     )
@@ -109,7 +109,9 @@ class MiniGridTask(Task[Union[CrossingEnv]]):
             object_indices = [
                 x
                 for x, y in enumerate(self.env.grid.grid)
-                if (y is not None and isinstance(y, object_type))
+                if (
+                    y is not None and isinstance(y, object_type)  # type:ignore
+                )  # TODO: bug?!
             ]
         object_tuples = [
             (o % self.env.width, o // self.env.width) for o in object_indices
@@ -379,7 +381,7 @@ class AskForHelpSimpleCrossingTask(MiniGridTask):
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
 
-        self.did_toggle = []
+        self.did_toggle: List[bool] = []
 
     def _step(self, action: int) -> RLStepResult:
         self.did_toggle.append(self._ACTION_NAMES[action] == "toggle")
@@ -405,7 +407,7 @@ class MiniGridTaskSampler(TaskSampler):
         task_seeds_list: Optional[List[int]] = None,
         deterministic_sampling: bool = False,
         cache_graphs: Optional[bool] = False,
-        task_class: Callable[[Any], Union[MiniGridTask]] = MiniGridTask,
+        task_class: Callable[..., MiniGridTask] = MiniGridTask,
         repeat_failed_task_for_min_steps: int = 0,
         extra_task_kwargs: Optional[Dict] = None,
         **kwargs,
@@ -423,8 +425,8 @@ class MiniGridTaskSampler(TaskSampler):
             extra_task_kwargs if extra_task_kwargs is not None else {}
         )
 
-        self._last_env_seed = None
-        self._last_task = None
+        self._last_env_seed: Optional[int] = None
+        self._last_task: Optional[MiniGridTask] = None
         self._number_of_steps_taken_with_task_seed = 0
 
         assert (not deterministic_sampling) or repeat_failed_task_for_min_steps <= 0, (

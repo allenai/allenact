@@ -194,8 +194,8 @@ class VectorSampledTasks(object):
             for j in range(len(part))
         ]
 
-    def _partition_to_processes(self, input: typing.Iterator):
-        subparts_list = [[] for _ in range(self._num_processes)]
+    def _partition_to_processes(self, input: Union[typing.Iterator, typing.Sequence]):
+        subparts_list: List[List] = [[] for _ in range(self._num_processes)]
 
         input = list(input)
         assert len(input) == len(self.sampler_index_to_process_ind_and_subprocess_ind)
@@ -326,6 +326,7 @@ class VectorSampledTasks(object):
         )
         self._workers = []
         k = 0
+        id: Union[int, str]
         for id, stuff in enumerate(
             zip(worker_connections, parent_connections, sampler_fn_args_list)
         ):

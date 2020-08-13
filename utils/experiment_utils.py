@@ -5,8 +5,18 @@ import copy
 import random
 import typing
 from collections import OrderedDict
-from typing import Callable
-from typing import NamedTuple, Dict, Any, Union, Iterator, Optional, List, Tuple
+from typing import (
+    Callable,
+    NamedTuple,
+    Dict,
+    Any,
+    Union,
+    Iterator,
+    Optional,
+    List,
+    Tuple,
+    cast,
+)
 
 import numpy as np
 import torch
@@ -531,7 +541,7 @@ class TrainingPipeline(object):
                     )()
 
             self.current_stage.named_losses = {
-                loss_name: self.named_losses[loss_name]
+                loss_name: cast(AbstractActorCriticLoss, self.named_losses[loss_name])
                 for loss_name in self.current_stage.loss_names
             }
         return self.current_stage.named_losses

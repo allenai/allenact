@@ -1,4 +1,4 @@
-from typing import Dict, Any, Callable, Optional, List, Union
+from typing import Dict, Any, Callable, Optional, List, Union, cast
 
 import gym
 import numpy as np
@@ -78,7 +78,9 @@ class ResnetPreProcessorHabitat(Preprocessor):
             if device is not None
             else ("cuda" if self.parallel and torch.cuda.is_available() else "cpu")
         )
-        self.device_ids = device_ids or list(range(torch.cuda.device_count()))
+        self.device_ids = device_ids or cast(
+            List[torch.device], list(range(torch.cuda.device_count()))
+        )
 
         self.resnet: Union[
             ResNetEmbedder, torch.nn.DataParallel[ResNetEmbedder]

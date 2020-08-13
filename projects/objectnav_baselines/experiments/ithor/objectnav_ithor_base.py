@@ -58,8 +58,10 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         self.TRAIN_DATASET_DIR = "dataset/ithor/objectnav/train"
         self.VAL_DATASET_DIR = "dataset/ithor/objectnav/val"
 
+        self.SENSORS = None
+
     def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(
+        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
             self.NUM_PROCESSES, ndevices
         )
         res = [0] * ndevices

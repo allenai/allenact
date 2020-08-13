@@ -143,8 +143,8 @@ class BabyAITaskSampler(TaskSampler):
             extra_task_kwargs if extra_task_kwargs is not None else {}
         )
 
-        self._last_env_seed = None
-        self._last_task = None
+        self._last_env_seed: Optional[int] = None
+        self._last_task: Optional[BabyAITask] = None
 
         assert (self.num_unique_seeds is None) or (
             0 < self.num_unique_seeds
