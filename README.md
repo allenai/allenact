@@ -35,12 +35,26 @@ EmbodiedAI2 is a modular and flexible learning framework designed with a focus o
    Tensorflow, we are one of a few to target PyTorch.
 
 ## Contributions
-We in the Perceptual Reasoning and Interaction Research (PRIOR) group at the Allen Institute for AI (AI2, @allenai) welcome contributions from the greater community. If you would like to make such a contributions we recommend first submitting an issue describing your proposed improvement. Doing so can ensure we can validate your suggestions before you spend a great deal of time upon them. Small (or validated) improvements and bug fixes should be made via a pull request from your fork of this repository.
+We welcome contributions from the greater community. If you would like to make such a contributions we recommend first submitting an [issue](https://github.com/allenai/embodied-rl/issues) describing your proposed improvement. Doing so can ensure we can validate your suggestions before you spend a great deal of time upon them. Improvements and bug fixes should be made via a pull request from your fork of the repository at [https://github.com/allenai/embodied-rl](https://github.com/allenai/embodied-rl).
 
 All code in this repository is subject to formatting, documentation, and type-annotation guidelines. For more details, please see the our [contribution guidelines](CONTRIBUTING.md).
 
 ## Acknowledgments
 This work builds upon the [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail) library of Ilya Kostrikov and uses some data structures from FAIR's [habitat-api](https://github.com/facebookresearch/habitat-api).
+
+## License
+AllenAct is MIT licensed, as found in the [LICENSE](LICENSE.md) file.
+
+## Team
+AllenAct is an open-source project built by members of the PRIOR research group at the Allen Institute for Artificial Intelligence (AI2). AI2 is a non-profit institute with the mission to contribute to humanity through high-impact AI research and engineering.
+
+<div align="left">
+    <br>
+    <img src="docs/img/PRIORLogoBlackEmbedded.png" style="height:100px !important;">
+     &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+    <img src="docs/img/AI2_Logo_Square_Gradients_crop.png" style="height:100px !important;">
+    <br>
+</div>
 
 ## Citation
 If you use this work, please cite:
@@ -54,4 +68,5 @@ If you use this work, please cite:
 }
 
 ```
+
 
