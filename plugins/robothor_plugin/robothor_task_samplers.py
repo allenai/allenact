@@ -751,7 +751,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
         self.distance_caches = {
             scene: self._load_distance_cache(
                 scene, scene_directory + "/distance_caches"
-            )[0]
+            )
             for scene in scenes
         }
         self.env_class = env_class
@@ -803,7 +803,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
         random.shuffle(data)
         return data
 
-    def _load_distance_cache(self, scene: str, base_directory: str) -> List[Dict]:
+    def _load_distance_cache(self, scene: str, base_directory: str) -> Dict:
         filename = (
             "/".join([base_directory, scene])
             if base_directory[-1] != "/"
