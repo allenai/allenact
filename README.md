@@ -50,9 +50,9 @@ AllenAct is an open-source project built by members of the PRIOR research group 
 
 <div align="left">
     <br>
-    <img src="docs/img/PRIORLogoBlackEmbedded.png" style="height:100px !important;">
+    <img src="docs/img/PRIORLogoBlackEmbedded.png">
      &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
-    <img src="docs/img/AI2_Logo_Square_Gradients_crop.png" style="height:100px !important;">
+    <img src="docs/img/AI2_Logo_Square_Gradients_crop.png">
     <br>
 </div>
 
