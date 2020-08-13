@@ -836,6 +836,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     if isinstance(batch[key], torch.Tensor):
                         bsize = batch[key].shape[0]
                         if bsize > 0:
+                            bsize *= batch[key].shape[1]
                             break
                 assert bsize is not None, "TODO check recursively for batch size"
 

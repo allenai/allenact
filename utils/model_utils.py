@@ -1,6 +1,6 @@
 """Functions used to initialize and manipulate pytorch models."""
 from collections import Callable
-from typing import Sequence, Tuple, Union
+from typing import Sequence, Tuple, Union, Optional
 
 import torch
 from torch import nn
@@ -85,3 +85,43 @@ def make_cnn(
     net.add_module("out_relu", nn.ReLU(True))
 
     return net
+
+
+def compute_cnn_output(
+    cnn: nn.Module,
+    cnn_input: torch.Tensor,
+    permute_order: Optional[Tuple[int, ...]] = (
+        0,
+        3,
+        1,
+        2,
+    ),  # [FLAT_BATCH x CHANNEL x HEIGHT X WIDTH] from [FLAT_BATCH x HEIGHT x WIDTH x CHANNEL]
+):
+    """Computes CNN outputs for given inputs.
+
+    # Parameters
+
+    cnn : A torch CNN.
+    cnn_input: A torch Tensor with inputs.
+    permute_order: A permutation Tuple to provide PyTorch dimension order, default (0, 3, 1, 2), where 0 corresponds to
+                   the flattened batch dimensions (combining batch and step)
+
+    # Returns
+
+    CNN output with dimensions [BATCH (x STEPS) x CHANNEL x HEIGHT X WIDTH].
+    """
+    nsteps: Optional[int] = None
+    bsize: Optional[int] = None
+    if len(cnn_input.shape) == 5:
+        nsteps, bsize = cnn_input.shape[:2]
+        # Make FLAT_BATCH = nsteps * bsize
+        cnn_input = cnn_input.reshape((-1) + cnn_input.shape[2:])
+
+    if permute_order is not None:
+        cnn_input = cnn_input.permute(*permute_order)
+    cnn_output = cnn(cnn_input)
+
+    if nsteps is not None:
+        cnn_output = cnn_output.reshape((nsteps, bsize) + cnn_output.shape[1:])
+
+    return cnn_output

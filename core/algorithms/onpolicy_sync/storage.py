@@ -501,25 +501,25 @@ class RolloutStorage:
                     memory_batch[name], self.memory[name][1] - 1
                 )  # actor-critic sampler axis
 
-            # Flatten the (T, N, ...) tensors to (T * N, ...)
-            for sensor in observations_batch:
-                # noinspection PyTypeChecker
-                observations_batch[sensor] = self._flatten_helper(
-                    t=T,
-                    n=N,
-                    tensor=typing.cast(torch.Tensor, observations_batch[sensor]),
-                )
-
-            actions_batch = self._flatten_helper(T, N, actions_batch)
-            prev_actions_batch = self._flatten_helper(T, N, prev_actions_batch)
-            value_preds_batch = self._flatten_helper(T, N, value_preds_batch)
-            return_batch = self._flatten_helper(T, N, return_batch)
-            masks_batch = self._flatten_helper(T, N, masks_batch)
-            old_action_log_probs_batch = self._flatten_helper(
-                T, N, old_action_log_probs_batch
-            )
-            adv_targ = self._flatten_helper(T, N, adv_targ)
-            norm_adv_targ = self._flatten_helper(T, N, norm_adv_targ)
+            # # Flatten the (T, N, ...) tensors to (T * N, ...)
+            # for sensor in observations_batch:
+            #     # noinspection PyTypeChecker
+            #     observations_batch[sensor] = self._flatten_helper(
+            #         t=T,
+            #         n=N,
+            #         tensor=typing.cast(torch.Tensor, observations_batch[sensor]),
+            #     )
+            #
+            # actions_batch = self._flatten_helper(T, N, actions_batch)
+            # prev_actions_batch = self._flatten_helper(T, N, prev_actions_batch)
+            # value_preds_batch = self._flatten_helper(T, N, value_preds_batch)
+            # return_batch = self._flatten_helper(T, N, return_batch)
+            # masks_batch = self._flatten_helper(T, N, masks_batch)
+            # old_action_log_probs_batch = self._flatten_helper(
+            #     T, N, old_action_log_probs_batch
+            # )
+            # adv_targ = self._flatten_helper(T, N, adv_targ)
+            # norm_adv_targ = self._flatten_helper(T, N, norm_adv_targ)
 
             yield {
                 "observations": self.unflatten_batch(
@@ -578,7 +578,7 @@ class RolloutStorage:
         self, step: int, storage_type: str
     ) -> Dict[str, Union[Dict, torch.Tensor]]:
         storage = getattr(self, storage_type)
-        batch = {key: storage[key][0][step] for key in storage}
+        batch = {key: storage[key][0][step : step + 1] for key in storage}
         return self.unflatten_batch(batch, storage_type)
 
     def pick_observation_step(self, step: int) -> Dict[str, Union[Dict, torch.Tensor]]:
@@ -591,16 +591,16 @@ class RolloutStorage:
         # return self.unflatten_spaces(observations_batch)
         return self.pick_step(step, "memory")
 
-    @staticmethod
-    def _flatten_helper(t: int, n: int, tensor: torch.Tensor) -> torch.Tensor:
-        """Given a tensor of size (t, n, ..), flatten it to size (t*n, ...).
-
-        Args:
-            t: first dimension of tensor.
-            n: second dimension of tensor.
-            tensor: target tensor to be flattened.
-
-        Returns:
-            flattened tensor of size (t*n, ...)
-        """
-        return tensor.view(t * n, *tensor.size()[2:])
+    # @staticmethod
+    # def _flatten_helper(t: int, n: int, tensor: torch.Tensor) -> torch.Tensor:
+    #     """Given a tensor of size (t, n, ..), flatten it to size (t*n, ...).
+    #
+    #     Args:
+    #         t: first dimension of tensor.
+    #         n: second dimension of tensor.
+    #         tensor: target tensor to be flattened.
+    #
+    #     Returns:
+    #         flattened tensor of size (t*n, ...)
+    #     """
+    #     return tensor.view(t * n, *tensor.size()[2:])

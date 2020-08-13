@@ -21,7 +21,7 @@ from torch import nn
 from core.algorithms.onpolicy_sync.policy import ActorCriticModel, DistributionType
 from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
-from utils.model_utils import make_cnn
+from utils.model_utils import make_cnn, compute_cnn_output
 
 
 class Flatten(nn.Module):
@@ -198,20 +198,25 @@ class SimpleCNN(nn.Module):
 
     def forward(self, observations: Dict[str, torch.Tensor]):  # type: ignore
         cnn_output_list = []
+
+        if self.is_blind:
+            return torch.cat(cnn_output_list, dim=1)
+
         if self._n_input_rgb > 0:
-            rgb_observations = observations["rgb"]
-            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
-            rgb_observations = rgb_observations.permute(0, 3, 1, 2)
-            # rgb_observations = rgb_observations / 255.0  # normalize RGB
-            cnn_output_list.append(self.rgb_cnn(rgb_observations))
+            cnn_output_list.append(
+                compute_cnn_output(self.rgb_cnn, observations["rgb"])
+            )
 
         if self._n_input_depth > 0:
-            depth_observations = observations["depth"]
-            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
-            depth_observations = depth_observations.permute(0, 3, 1, 2)
-            cnn_output_list.append(self.depth_cnn(depth_observations))
+            cnn_output_list.append(
+                compute_cnn_output(self.depth_cnn, observations["depth"])
+            )
 
-        return torch.cat(cnn_output_list, dim=1)
+        channels_dim = 1  # for [sampler x channel x height x width]
+        if len(cnn_output_list[0].shape) == 5:
+            channels_dim = 2  # [step x sampler x channel x height x width]
+
+        return torch.cat(cnn_output_list, dim=channels_dim)
 
 
 class RNNStateEncoder(nn.Module):
@@ -382,13 +387,16 @@ class RNNStateEncoder(nn.Module):
             The masks to be applied to hidden state at every timestep, equal to 0 whenever the previous step finalized
             the task, 1 elsewhere.
         """
-        # x is a (T, N, -1) tensor flattened to (T * N, -1)
+        # x is a (T, N, -1) tensor NO LONGER flattened to (T * N, -1)
         n = hidden_states.size(1)
         t = int(x.size(0) / n)
+        assert (t, n) == x.shape[
+            :2
+        ], "expected shape {} not matching with input {}".format((t, n), x.shape[:2])
 
-        # unflatten
-        x = cast(torch.FloatTensor, x.view(t, n, x.size(1)))
-        masks = cast(torch.FloatTensor, masks.view(t, n))
+        # # unflatten
+        # x = cast(torch.FloatTensor, x.view(t, n, x.size(1)))
+        # masks = cast(torch.FloatTensor, masks.view(t, n))
 
         # steps in sequence which have zero for any agent. Assume t=0 has
         # a zero in it.
@@ -423,7 +431,8 @@ class RNNStateEncoder(nn.Module):
             outputs.append(rnn_scores)
 
         # x is a (T, N, -1) tensor
-        x = cast(torch.FloatTensor, torch.cat(outputs, dim=0).view(t * n, -1))
+        # x = cast(torch.FloatTensor, torch.cat(outputs, dim=0).view(t * n, -1))
+        x = cast(torch.FloatTensor, torch.cat(outputs, dim=0))
         hidden_states = self._pack_hidden(unpacked_hidden_states)
         return x, hidden_states
 
