@@ -51,8 +51,6 @@ nav:
   - ObjectNav baselines: projects/objectnav_baselines/README.md
   - Advisor code: projects/advisor_2020/README.md
   - Two Body Problem code: projects/two_body_problem_2019/README.md
-- Notebooks:
-  - First book: notebooks/firstbook.md
 - FAQ: FAQ.md
 - Contributing: CONTRIBUTING.md
 - Licence: LICENSE.md
