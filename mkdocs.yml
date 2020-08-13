@@ -8,7 +8,7 @@ theme:
     primary: blue
     accent: grey
   logo: img/PriorLogo_CircleOnly.svg
-  favicon: img/PriorLogo_CircleOnly.svg
+  favicon: img/PriorLogo_CircleOnly_Blue.svg
   highlightjs: true
   hljs_languages:
   - python
