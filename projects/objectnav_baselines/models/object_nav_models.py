@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
-from core.models.basic_models import SimpleCNN, RNNStateEncoder
+from core.models.basic_models import SimpleCNN, RNNStateEncoder, Flatten
 from core.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     LinearActorCriticHead,
@@ -100,7 +100,7 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
-        return self.object_type_embedding(
+        return self.object_type_embedding(  # type:ignore
             observations[self.goal_sensor_uuid].to(torch.int64)
         )
 
@@ -230,7 +230,7 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
-        return self.object_type_embedding(
+        return self.object_type_embedding(  # type:ignore
             observations[self.goal_sensor_uuid].to(torch.int64)
         )
 
@@ -273,7 +273,7 @@ class ObjectNavResNetActorCritic(ActorCriticModel[CategoricalDistr]):
                 )
             )
         perception_emb = torch.cat(embs, dim=1)
-        x = [self.visual_encoder(perception_emb)] + x
+        x = [self.visual_encoder(perception_emb)] + x  # type:ignore
 
         x_cat = cast(torch.FloatTensor, torch.cat(x, dim=1))  # type: ignore
         x_out, rnn_hidden_states = self.state_encoder(x_cat, rnn_hidden_states, masks)
@@ -318,7 +318,7 @@ class ObjectNavActorCriticTrainResNet50RNN(ActorCriticModel[CategoricalDistr]):
             nn.Conv2d(1024, 32, (1, 1)),
             nn.ReLU(),
             # nn.AdaptiveAvgPool2d((1,1)),
-            nn.Flatten(),
+            Flatten(),
             nn.Linear(2048, 512),
         )
 
@@ -356,7 +356,7 @@ class ObjectNavActorCriticTrainResNet50RNN(ActorCriticModel[CategoricalDistr]):
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
-        return self.object_type_embedding(
+        return self.object_type_embedding(  # type:ignore
             observations[self.goal_sensor_uuid].to(torch.int64)
         )
 
@@ -423,7 +423,7 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
                 combiner_hidden_out_dims,
             )
         else:
-            self.goal_visual_encoder = ResnetDualTensorGoalEncoder(
+            self.goal_visual_encoder = ResnetDualTensorGoalEncoder(  # type:ignore
                 self.observation_space,
                 goal_sensor_uuid,
                 rgb_resnet_preprocessor_uuid,

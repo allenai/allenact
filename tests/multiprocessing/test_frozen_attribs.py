@@ -10,6 +10,7 @@ from core.base_abstractions.task import TaskSampler
 class MyConfig(ExperimentConfig):
     MY_VAR: int = 3
 
+    @classmethod
     def tag(cls) -> str:
         return ""
 
@@ -36,6 +37,7 @@ class MySpecConfig(MyConfig):
     def machine_params(cls, mode="train", **kwargs) -> Dict[str, Any]:
         return {}
 
+    @classmethod
     def tag(cls) -> str:
         return "SpecTag"
 
@@ -115,5 +117,5 @@ class TestFrozenAttribs(object):
 
 
 if __name__ == "__main__":
-    TestFrozenAttribs().test_frozen_inheritance()
-    TestFrozenAttribs().test_frozen_experiment_config()
+    TestFrozenAttribs().test_frozen_inheritance()  # type:ignore
+    TestFrozenAttribs().test_frozen_experiment_config()  # type:ignore

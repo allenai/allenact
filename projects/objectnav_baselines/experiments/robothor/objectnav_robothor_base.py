@@ -58,8 +58,10 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
         self.TRAIN_DATASET_DIR = "dataset/robothor/objectnav/train"
         self.VAL_DATASET_DIR = "dataset/robothor/objectnav/val"
 
+        self.SENSORS = None
+
     def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(
+        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
             self.NUM_PROCESSES, ndevices
         )
         res = [0] * ndevices
@@ -166,7 +168,9 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
             "object_types": self.TARGET_TYPES,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(ObjectNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(
+                len(ObjectNavTask.class_action_names())
+            ),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG,

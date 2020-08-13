@@ -4,7 +4,7 @@
 import random
 import typing
 from collections import defaultdict
-from typing import Union, List, Dict, Tuple, DefaultDict, Sequence
+from typing import Union, List, Dict, Tuple, DefaultDict, Sequence, cast, Any, Callable
 
 import numpy as np
 import torch
@@ -42,10 +42,13 @@ class RolloutStorage:
         }
 
         action_space = actor_critic.action_space
-        num_recurrent_layers = (
-            actor_critic.num_recurrent_layers
-            if "num_recurrent_layers" in dir(actor_critic)
-            else 0
+        num_recurrent_layers = cast(
+            int,
+            (
+                actor_critic.num_recurrent_layers
+                if "num_recurrent_layers" in dir(actor_critic)
+                else 0
+            ),
         )
         spec = (
             actor_critic.recurrent_hidden_state_size
@@ -85,7 +88,7 @@ class RolloutStorage:
     def create_memory(
         self,
         num_recurrent_layers: int,
-        spec: Union[Dict[str, Tuple[Tuple[int, ...], int, torch.dtype]], int],
+        spec: Union[Dict[str, Tuple[Sequence[int], int, torch.dtype]], int],
         num_processes: int,
     ):
         if num_recurrent_layers >= 0:
@@ -124,7 +127,7 @@ class RolloutStorage:
                 self.reverse_flattened_spaces["memory"][(key,)] = [key]
             return memory
 
-    def to(self, device: int):
+    def to(self, device: torch.device):
         for sensor in self.observations:
             self.observations[sensor] = (
                 self.observations[sensor][0].to(device),
@@ -151,23 +154,22 @@ class RolloutStorage:
         )
 
     def insert_observations(
-        self, observations: Dict[str, Union[torch.Tensor, Dict]], time_step: int
+        self, observations: Any, time_step: int,
     ):
         self.insert_tensors(
             storage_name="observations", unflattened=observations, time_step=time_step
         )
 
     def insert_initial_observations(
-        self, observations: Dict[str, Union[torch.Tensor, Dict]]
+        self,
+        observations: Dict[str, Union[torch.Tensor, Dict, Tuple[torch.Tensor, int]]],
     ):
         self.insert_tensors(
             storage_name="observations", unflattened=observations, time_step=0
         )
 
     def insert_memory(
-        self,
-        memory: Dict[str, Union[torch.Tensor, Dict, Tuple[torch.Tensor, int]]],
-        time_step: int,
+        self, memory: Memory, time_step: int,
     ):
         self.insert_tensors(
             storage_name="memory", unflattened=memory, time_step=time_step
@@ -176,7 +178,7 @@ class RolloutStorage:
     def insert_tensors(
         self,
         storage_name: str,
-        unflattened: Dict[str, Union[torch.Tensor, Dict, Tuple[torch.Tensor, int]]],
+        unflattened: Any,
         prefix: str = "",
         path: Sequence[str] = (),
         time_step: int = 0,
@@ -207,7 +209,7 @@ class RolloutStorage:
                 flatten_name = prefix + name
                 if flatten_name not in storage:
                     storage[flatten_name] = (
-                        torch.zeros_like(current_data)
+                        torch.zeros_like(current_data)  # type:ignore
                         .unsqueeze(0)
                         .repeat(
                             self.num_steps
@@ -215,7 +217,7 @@ class RolloutStorage:
                             *(1 for _ in range(len(current_data.shape))),
                         )
                         .to(
-                            "cpu"
+                            torch.device("cpu")
                             if self.actions.get_device() < 0
                             else self.actions.get_device()
                         ),
@@ -254,16 +256,16 @@ class RolloutStorage:
             if isinstance(memory, torch.Tensor):
                 memory = self.rnn_to_memory(memory)
 
-            self.insert_memory(memory, time_step=self.step + 1)
+            self.insert_memory(cast(Memory, memory), time_step=self.step + 1)
         else:
             assert self.memory[self.DEFAULT_RNN_MEMORY_NAME][0].shape[-1] == 0
 
-        self.actions[self.step].copy_(actions)
-        self.prev_actions[self.step + 1].copy_(actions)
-        self.action_log_probs[self.step].copy_(action_log_probs)
-        self.value_preds[self.step].copy_(value_preds)
-        self.rewards[self.step].copy_(rewards)
-        self.masks[self.step + 1].copy_(masks)
+        self.actions[self.step].copy_(actions)  # type:ignore
+        self.prev_actions[self.step + 1].copy_(actions)  # type:ignore
+        self.action_log_probs[self.step].copy_(action_log_probs)  # type:ignore
+        self.value_preds[self.step].copy_(value_preds)  # type:ignore
+        self.rewards[self.step].copy_(rewards)  # type:ignore
+        self.masks[self.step + 1].copy_(masks)  # type:ignore
 
         self.step = (self.step + 1) % self.num_steps
 
@@ -399,7 +401,7 @@ class RolloutStorage:
                     + gamma * self.value_preds[step + 1] * self.masks[step + 1]
                     - self.value_preds[step]
                 )
-                gae = delta + gamma * tau * self.masks[step + 1] * gae
+                gae = delta + gamma * tau * self.masks[step + 1] * gae  # type:ignore
                 self.returns[step] = gae + self.value_preds[step]
         else:
             self.returns[-1] = next_value
@@ -478,18 +480,20 @@ class RolloutStorage:
             # These are all tensors of size (T, N, -1)
             for sensor in observations_batch:
                 # noinspection PyTypeChecker
-                observations_batch[sensor] = torch.stack(
+                observations_batch[sensor] = torch.stack(  # type:ignore
                     observations_batch[sensor], 1
                 )  # new sampler dimension
 
-            actions_batch = torch.stack(actions_batch, 1)
-            prev_actions_batch = torch.stack(prev_actions_batch, 1)
-            value_preds_batch = torch.stack(value_preds_batch, 1)
-            return_batch = torch.stack(return_batch, 1)
-            masks_batch = torch.stack(masks_batch, 1)
-            old_action_log_probs_batch = torch.stack(old_action_log_probs_batch, 1)
-            adv_targ = torch.stack(adv_targ, 1)
-            norm_adv_targ = torch.stack(norm_adv_targ, 1)
+            actions_batch = torch.stack(actions_batch, 1)  # type:ignore
+            prev_actions_batch = torch.stack(prev_actions_batch, 1)  # type:ignore
+            value_preds_batch = torch.stack(value_preds_batch, 1)  # type:ignore
+            return_batch = torch.stack(return_batch, 1)  # type:ignore
+            masks_batch = torch.stack(masks_batch, 1)  # type:ignore
+            old_action_log_probs_batch = torch.stack(  # type:ignore
+                old_action_log_probs_batch, 1
+            )
+            adv_targ = torch.stack(adv_targ, 1)  # type:ignore
+            norm_adv_targ = torch.stack(norm_adv_targ, 1)  # type:ignore
 
             # # States is just a (num_recurrent_layers, N, -1) tensor
             # recurrent_hidden_states_batch = torch.stack(
@@ -497,29 +501,31 @@ class RolloutStorage:
             # )
             for name in memory_batch:
                 # noinspection PyTypeChecker
-                memory_batch[name] = torch.stack(
+                memory_batch[name] = torch.stack(  # type:ignore
                     memory_batch[name], self.memory[name][1] - 1
                 )  # actor-critic sampler axis
 
             # Flatten the (T, N, ...) tensors to (T * N, ...)
             for sensor in observations_batch:
                 # noinspection PyTypeChecker
-                observations_batch[sensor] = self._flatten_helper(
-                    t=T,
-                    n=N,
-                    tensor=typing.cast(torch.Tensor, observations_batch[sensor]),
+                observations_batch[sensor] = self._flatten_helper(  # type:ignore
+                    t=T, n=N, tensor=cast(torch.Tensor, observations_batch[sensor]),
                 )
 
-            actions_batch = self._flatten_helper(T, N, actions_batch)
-            prev_actions_batch = self._flatten_helper(T, N, prev_actions_batch)
-            value_preds_batch = self._flatten_helper(T, N, value_preds_batch)
-            return_batch = self._flatten_helper(T, N, return_batch)
-            masks_batch = self._flatten_helper(T, N, masks_batch)
-            old_action_log_probs_batch = self._flatten_helper(
-                T, N, old_action_log_probs_batch
+            actions_batch = self._flatten_helper(T, N, actions_batch)  # type:ignore
+            prev_actions_batch = self._flatten_helper(  # type:ignore
+                T, N, cast(torch.Tensor, prev_actions_batch)
             )
-            adv_targ = self._flatten_helper(T, N, adv_targ)
-            norm_adv_targ = self._flatten_helper(T, N, norm_adv_targ)
+            value_preds_batch = self._flatten_helper(  # type:ignore
+                T, N, cast(torch.Tensor, value_preds_batch)
+            )
+            return_batch = self._flatten_helper(T, N, return_batch)  # type:ignore
+            masks_batch = self._flatten_helper(T, N, masks_batch)  # type:ignore
+            old_action_log_probs_batch = self._flatten_helper(  # type:ignore
+                T, N, cast(torch.Tensor, old_action_log_probs_batch)
+            )
+            adv_targ = self._flatten_helper(T, N, adv_targ)  # type:ignore
+            norm_adv_targ = self._flatten_helper(T, N, norm_adv_targ)  # type:ignore
 
             yield {
                 "observations": self.unflatten_batch(
@@ -550,17 +556,8 @@ class RolloutStorage:
                 if key == self.DEFAULT_RNN_MEMORY_NAME:
                     return flattened_batch[key]
 
-        nested_dict = lambda: defaultdict(nested_dict)
-        result = nested_dict()
+        result: Dict = defaultdict()
         for name in flattened_batch:
-            # if name not in self.flattened_spaces[storage_type]:
-            #     result[name] = flattened_batch[name]
-            # else:
-            #     full_path = self.flattened_spaces[storage_type][name]
-            #     cur_dict = result
-            #     for part in full_path[:-1]:
-            #         cur_dict = cur_dict[part]
-            #     cur_dict[full_path[-1]] = flattened_batch[name]
             full_path = self.flattened_spaces[storage_type][name]
             cur_dict = result
             for part in full_path[:-1]:

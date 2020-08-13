@@ -61,4 +61,4 @@ class TestGoToObjTrains(object):
 
 
 if __name__ == "__main__":
-    TestGoToObjTrains().test_ppo_trains()
+    TestGoToObjTrains().test_ppo_trains()  # type:ignore

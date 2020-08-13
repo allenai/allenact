@@ -120,6 +120,6 @@ class LinearActorHead(nn.Module):
         nn.init.constant_(self.linear.bias, 0)
 
     def forward(self, x: torch.FloatTensor):  # type: ignore
-        x = self.linear(x)
+        x = self.linear(x)  # type:ignore
         # noinspection PyArgumentList
         return CategoricalDistr(logits=x)

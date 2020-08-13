@@ -141,4 +141,4 @@ class AddBias(nn.Module):
         else:
             bias = self._bias.t().view(1, -1, 1, 1)
 
-        return x + bias
+        return x + bias  # type:ignore

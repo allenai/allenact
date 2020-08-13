@@ -21,21 +21,7 @@ from torch import nn
 from core.algorithms.onpolicy_sync.policy import ActorCriticModel, DistributionType
 from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
-from utils.model_utils import make_cnn
-
-
-class Flatten(nn.Module):
-    """Flatten input tensor so that it is of shape (batchs x -1)."""
-
-    def forward(self, x):
-        """Flatten input tensor.
-
-        # Parameters
-        x : Tensor of size (batches x ...) to flatten to size (batches x -1)
-        # Returns
-        Flattened tensor.
-        """
-        return x.reshape(x.size(0), -1)
+from utils.model_utils import make_cnn, Flatten
 
 
 class SimpleCNN(nn.Module):
@@ -209,7 +195,7 @@ class SimpleCNN(nn.Module):
             depth_observations = observations["depth"]
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             depth_observations = depth_observations.permute(0, 3, 1, 2)
-            cnn_output_list.append(self.depth_cnn(depth_observations))
+            cnn_output_list.append(self.depth_cnn(depth_observations))  # type:ignore
 
         return torch.cat(cnn_output_list, dim=1)
 
@@ -332,9 +318,9 @@ class RNNStateEncoder(nn.Module):
             if isinstance(hidden_states, tuple):
                 # noinspection PyTypeChecker
                 hidden_states = tuple(
-                    v * masks
+                    v * masks  # type:ignore
                     + (1.0 - masks) * (self.init_hidden_state.repeat(1, v.shape[1], 1))  # type: ignore
-                    for v in hidden_states
+                    for v in hidden_states  # type:ignore
                 )  # type: ignore
             else:
                 # noinspection PyTypeChecker
