@@ -1,4 +1,4 @@
-# core.base_abstractions.misc [[source]](https://github.com/allenai/embodied-rl/tree/master/core/base_abstractions/misc.py)
+# core.base_abstractions.misc [[source]](https://github.com/allenai/allenact/tree/master/core/base_abstractions/misc.py)
 
 ## DistributionType
 Type variable.

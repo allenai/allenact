@@ -1,11 +1,141 @@
-# projects.babyai_baselines.experiments.go_to_local.base [[source]](https://github.com/allenai/allenact/tree/master/projects/babyai_baselines/experiments/go_to_local/base.py)
+# projects.tutorials.pointnav_robothor_rgb_ddppo [[source]](https://github.com/allenai/allenact/tree/master/projects/tutorials/pointnav_robothor_rgb_ddppo.py)
 
-## BaseBabyAIGoToLocalExperimentConfig
+## ObjectNavRoboThorRGBPPOExperimentConfig
 ```python
-BaseBabyAIGoToLocalExperimentConfig(self, /, *args, **kwargs)
+ObjectNavRoboThorRGBPPOExperimentConfig(self, /, *args, **kwargs)
 ```
-Base experimental config.
-### ARCH
+A Point Navigation experiment configuration in RoboThor.
+### ADVANCE_SCENE_ROLLOUT_PERIOD
+int([x]) -> integer
+int(x, base=10) -> integer
+
+Convert a number or string to an integer, or return 0 if no arguments
+are given.  If x is a number, return x.__int__().  For floating point
+numbers, this truncates towards zero.
+
+If x is not a number or if base is given, then x must be a string,
+bytes, or bytearray instance representing an integer literal in the
+given base.  The literal can be preceded by '+' or '-' and be surrounded
+by whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.
+Base 0 means to interpret the base from the string as an integer literal.
+>>> int('0b100', base=0)
+4
+### CAMERA_HEIGHT
+int([x]) -> integer
+int(x, base=10) -> integer
+
+Convert a number or string to an integer, or return 0 if no arguments
+are given.  If x is a number, return x.__int__().  For floating point
+numbers, this truncates towards zero.
+
+If x is not a number or if base is given, then x must be a string,
+bytes, or bytearray instance representing an integer literal in the
+given base.  The literal can be preceded by '+' or '-' and be surrounded
+by whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.
+Base 0 means to interpret the base from the string as an integer literal.
+>>> int('0b100', base=0)
+4
+### CAMERA_WIDTH
+int([x]) -> integer
+int(x, base=10) -> integer
+
+Convert a number or string to an integer, or return 0 if no arguments
+are given.  If x is a number, return x.__int__().  For floating point
+numbers, this truncates towards zero.
+
+If x is not a number or if base is given, then x must be a string,
+bytes, or bytearray instance representing an integer literal in the
+given base.  The literal can be preceded by '+' or '-' and be surrounded
+by whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.
+Base 0 means to interpret the base from the string as an integer literal.
+>>> int('0b100', base=0)
+4
+### ENV_ARGS
+dict() -> new empty dictionary
+dict(mapping) -> new dictionary initialized from a mapping object's
+    (key, value) pairs
+dict(iterable) -> new dictionary initialized as if via:
+    d = {}
+    for k, v in iterable:
+        d[k] = v
+dict(**kwargs) -> new dictionary initialized with the name=value pairs
+    in the keyword argument list.  For example:  dict(one=1, two=2)
+### MAX_STEPS
+int([x]) -> integer
+int(x, base=10) -> integer
+
+Convert a number or string to an integer, or return 0 if no arguments
+are given.  If x is a number, return x.__int__().  For floating point
+numbers, this truncates towards zero.
+
+If x is not a number or if base is given, then x must be a string,
+bytes, or bytearray instance representing an integer literal in the
+given base.  The literal can be preceded by '+' or '-' and be surrounded
+by whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.
+Base 0 means to interpret the base from the string as an integer literal.
+>>> int('0b100', base=0)
+4
+### NUM_PROCESSES
+int([x]) -> integer
+int(x, base=10) -> integer
+
+Convert a number or string to an integer, or return 0 if no arguments
+are given.  If x is a number, return x.__int__().  For floating point
+numbers, this truncates towards zero.
+
+If x is not a number or if base is given, then x must be a string,
+bytes, or bytearray instance representing an integer literal in the
+given base.  The literal can be preceded by '+' or '-' and be surrounded
+by whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.
+Base 0 means to interpret the base from the string as an integer literal.
+>>> int('0b100', base=0)
+4
+### OBSERVATIONS
+Built-in mutable sequence.
+
+If no argument is given, the constructor creates a new empty list.
+The argument must be an iterable if specified.
+### PREPROCESSORS
+Built-in mutable sequence.
+
+If no argument is given, the constructor creates a new empty list.
+The argument must be an iterable if specified.
+### REWARD_CONFIG
+dict() -> new empty dictionary
+dict(mapping) -> new dictionary initialized from a mapping object's
+    (key, value) pairs
+dict(iterable) -> new dictionary initialized as if via:
+    d = {}
+    for k, v in iterable:
+        d[k] = v
+dict(**kwargs) -> new dictionary initialized with the name=value pairs
+    in the keyword argument list.  For example:  dict(one=1, two=2)
+### SCREEN_SIZE
+int([x]) -> integer
+int(x, base=10) -> integer
+
+Convert a number or string to an integer, or return 0 if no arguments
+are given.  If x is a number, return x.__int__().  For floating point
+numbers, this truncates towards zero.
+
+If x is not a number or if base is given, then x must be a string,
+bytes, or bytearray instance representing an integer literal in the
+given base.  The literal can be preceded by '+' or '-' and be surrounded
+by whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.
+Base 0 means to interpret the base from the string as an integer literal.
+>>> int('0b100', base=0)
+4
+### SENSORS
+Built-in mutable sequence.
+
+If no argument is given, the constructor creates a new empty list.
+The argument must be an iterable if specified.
+### TESTING_GPUS
+Built-in mutable sequence.
+
+If no argument is given, the constructor creates a new empty list.
+The argument must be an iterable if specified.
+### TRAIN_DATASET_DIR
 str(object='') -> str
 str(bytes_or_buffer[, encoding[, errors]]) -> str
 
@@ -16,28 +146,12 @@ Otherwise, returns the result of object.__str__() (if defined)
 or repr(object).
 encoding defaults to sys.getdefaultencoding().
 errors defaults to 'strict'.
-### INCLUDE_AUXILIARY_HEAD
-bool(x) -> bool
+### TRAINING_GPUS
+Built-in mutable sequence.
 
-Returns True when the argument x is true, False otherwise.
-The builtins True and False are the only two instances of the class bool.
-The class bool is a subclass of the class int, and cannot be subclassed.
-### INSTR_LEN
-int([x]) -> integer
-int(x, base=10) -> integer
-
-Convert a number or string to an integer, or return 0 if no arguments
-are given.  If x is a number, return x.__int__().  For floating point
-numbers, this truncates towards zero.
-
-If x is not a number or if base is given, then x must be a string,
-bytes, or bytearray instance representing an integer literal in the
-given base.  The literal can be preceded by '+' or '-' and be surrounded
-by whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.
-Base 0 means to interpret the base from the string as an integer literal.
->>> int('0b100', base=0)
-4
-### LEVEL
+If no argument is given, the constructor creates a new empty list.
+The argument must be an iterable if specified.
+### VAL_DATASET_DIR
 str(object='') -> str
 str(bytes_or_buffer[, encoding[, errors]]) -> str
 
@@ -48,120 +162,8 @@ Otherwise, returns the result of object.__str__() (if defined)
 or repr(object).
 encoding defaults to sys.getdefaultencoding().
 errors defaults to 'strict'.
-### NUM_CKPTS_TO_SAVE
-int([x]) -> integer
-int(x, base=10) -> integer
+### VALIDATION_GPUS
+Built-in mutable sequence.
 
-Convert a number or string to an integer, or return 0 if no arguments
-are given.  If x is a number, return x.__int__().  For floating point
-numbers, this truncates towards zero.
-
-If x is not a number or if base is given, then x must be a string,
-bytes, or bytearray instance representing an integer literal in the
-given base.  The literal can be preceded by '+' or '-' and be surrounded
-by whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.
-Base 0 means to interpret the base from the string as an integer literal.
->>> int('0b100', base=0)
-4
-### NUM_TEST_TASKS
-int([x]) -> integer
-int(x, base=10) -> integer
-
-Convert a number or string to an integer, or return 0 if no arguments
-are given.  If x is a number, return x.__int__().  For floating point
-numbers, this truncates towards zero.
-
-If x is not a number or if base is given, then x must be a string,
-bytes, or bytearray instance representing an integer literal in the
-given base.  The literal can be preceded by '+' or '-' and be surrounded
-by whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.
-Base 0 means to interpret the base from the string as an integer literal.
->>> int('0b100', base=0)
-4
-### NUM_TRAIN_SAMPLERS
-int([x]) -> integer
-int(x, base=10) -> integer
-
-Convert a number or string to an integer, or return 0 if no arguments
-are given.  If x is a number, return x.__int__().  For floating point
-numbers, this truncates towards zero.
-
-If x is not a number or if base is given, then x must be a string,
-bytes, or bytearray instance representing an integer literal in the
-given base.  The literal can be preceded by '+' or '-' and be surrounded
-by whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.
-Base 0 means to interpret the base from the string as an integer literal.
->>> int('0b100', base=0)
-4
-### PPO_NUM_MINI_BATCH
-int([x]) -> integer
-int(x, base=10) -> integer
-
-Convert a number or string to an integer, or return 0 if no arguments
-are given.  If x is a number, return x.__int__().  For floating point
-numbers, this truncates towards zero.
-
-If x is not a number or if base is given, then x must be a string,
-bytes, or bytearray instance representing an integer literal in the
-given base.  The literal can be preceded by '+' or '-' and be surrounded
-by whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.
-Base 0 means to interpret the base from the string as an integer literal.
->>> int('0b100', base=0)
-4
-### ROLLOUT_STEPS
-int([x]) -> integer
-int(x, base=10) -> integer
-
-Convert a number or string to an integer, or return 0 if no arguments
-are given.  If x is a number, return x.__int__().  For floating point
-numbers, this truncates towards zero.
-
-If x is not a number or if base is given, then x must be a string,
-bytes, or bytearray instance representing an integer literal in the
-given base.  The literal can be preceded by '+' or '-' and be surrounded
-by whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.
-Base 0 means to interpret the base from the string as an integer literal.
->>> int('0b100', base=0)
-4
-### TOTAL_IL_TRAIN_STEPS
-int([x]) -> integer
-int(x, base=10) -> integer
-
-Convert a number or string to an integer, or return 0 if no arguments
-are given.  If x is a number, return x.__int__().  For floating point
-numbers, this truncates towards zero.
-
-If x is not a number or if base is given, then x must be a string,
-bytes, or bytearray instance representing an integer literal in the
-given base.  The literal can be preceded by '+' or '-' and be surrounded
-by whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.
-Base 0 means to interpret the base from the string as an integer literal.
->>> int('0b100', base=0)
-4
-### TOTAL_RL_TRAIN_STEPS
-int([x]) -> integer
-int(x, base=10) -> integer
-
-Convert a number or string to an integer, or return 0 if no arguments
-are given.  If x is a number, return x.__int__().  For floating point
-numbers, this truncates towards zero.
-
-If x is not a number or if base is given, then x must be a string,
-bytes, or bytearray instance representing an integer literal in the
-given base.  The literal can be preceded by '+' or '-' and be surrounded
-by whitespace.  The base defaults to 10.  Valid bases are 0 and 2-36.
-Base 0 means to interpret the base from the string as an integer literal.
->>> int('0b100', base=0)
-4
-### USE_INSTR
-bool(x) -> bool
-
-Returns True when the argument x is true, False otherwise.
-The builtins True and False are the only two instances of the class bool.
-The class bool is a subclass of the class int, and cannot be subclassed.
-### USE_LR_DECAY
-bool(x) -> bool
-
-Returns True when the argument x is true, False otherwise.
-The builtins True and False are the only two instances of the class bool.
-The class bool is a subclass of the class int, and cannot be subclassed.
+If no argument is given, the constructor creates a new empty list.
+The argument must be an iterable if specified.

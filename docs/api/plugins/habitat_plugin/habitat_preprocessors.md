@@ -1,4 +1,4 @@
-# plugins.habitat_plugin.habitat_preprocessors [[source]](https://github.com/allenai/embodied-rl/tree/master/plugins/habitat_plugin/habitat_preprocessors.py)
+# plugins.habitat_plugin.habitat_preprocessors [[source]](https://github.com/allenai/allenact/tree/master/plugins/habitat_plugin/habitat_preprocessors.py)
 
 ## ResnetPreProcessorHabitat
 ```python
@@ -12,7 +12,7 @@ ResnetPreProcessorHabitat(
     output_width: int,
     output_dims: int,
     pool: bool,
-    torchvision_resnet_model: Callable[..., torchvision.models.resnet.ResNet] = <function resnet18 at 0x12cdb11f0>,
+    torchvision_resnet_model: Callable[..., torchvision.models.resnet.ResNet] = <function resnet18 at 0x12a91e1f0>,
     parallel: bool = True,
     device: Optional[torch.device] = None,
     device_ids: Optional[List[torch.device]] = None,

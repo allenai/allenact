@@ -1,4 +1,4 @@
-# core.algorithms.onpolicy_sync.losses.ppo [[source]](https://github.com/allenai/embodied-rl/tree/master/core/algorithms/onpolicy_sync/losses/ppo.py)
+# core.algorithms.onpolicy_sync.losses.ppo [[source]](https://github.com/allenai/allenact/tree/master/core/algorithms/onpolicy_sync/losses/ppo.py)
 Defining the PPO loss for actor critic type models.
 ## PPO
 ```python

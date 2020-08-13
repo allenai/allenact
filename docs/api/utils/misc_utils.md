@@ -1,4 +1,4 @@
-# utils.misc_utils [[source]](https://github.com/allenai/embodied-rl/tree/master/utils/misc_utils.py)
+# utils.misc_utils [[source]](https://github.com/allenai/allenact/tree/master/utils/misc_utils.py)
 
 ## HashableDict
 ```python

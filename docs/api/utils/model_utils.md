@@ -1,4 +1,4 @@
-# utils.model_utils [[source]](https://github.com/allenai/embodied-rl/tree/master/utils/model_utils.py)
+# utils.model_utils [[source]](https://github.com/allenai/allenact/tree/master/utils/model_utils.py)
 Functions used to initialize and manipulate pytorch models.
 ## init_linear_layer
 ```python

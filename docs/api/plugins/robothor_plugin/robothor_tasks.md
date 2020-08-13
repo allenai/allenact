@@ -1,4 +1,4 @@
-# plugins.robothor_plugin.robothor_tasks [[source]](https://github.com/allenai/embodied-rl/tree/master/plugins/robothor_plugin/robothor_tasks.py)
+# plugins.robothor_plugin.robothor_tasks [[source]](https://github.com/allenai/allenact/tree/master/plugins/robothor_plugin/robothor_tasks.py)
 
 ## ObjectNavTask
 ```python

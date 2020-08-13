@@ -1,4 +1,4 @@
-# core.base_abstractions.distributions [[source]](https://github.com/allenai/embodied-rl/tree/master/core/base_abstractions/distributions.py)
+# core.base_abstractions.distributions [[source]](https://github.com/allenai/allenact/tree/master/core/base_abstractions/distributions.py)
 
 ## AddBias
 ```python

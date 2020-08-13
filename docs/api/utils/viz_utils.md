@@ -1,4 +1,4 @@
-# utils.viz_utils [[source]](https://github.com/allenai/embodied-rl/tree/master/utils/viz_utils.py)
+# utils.viz_utils [[source]](https://github.com/allenai/allenact/tree/master/utils/viz_utils.py)
 
 ## AbstractViz
 ```python

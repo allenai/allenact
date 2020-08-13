@@ -1,4 +1,4 @@
-# core.algorithms.onpolicy_sync.policy [[source]](https://github.com/allenai/embodied-rl/tree/master/core/algorithms/onpolicy_sync/policy.py)
+# core.algorithms.onpolicy_sync.policy [[source]](https://github.com/allenai/allenact/tree/master/core/algorithms/onpolicy_sync/policy.py)
 
 ## ActorCriticModel
 ```python

@@ -1,4 +1,4 @@
-# core.base_abstractions.sensor [[source]](https://github.com/allenai/embodied-rl/tree/master/core/base_abstractions/sensor.py)
+# core.base_abstractions.sensor [[source]](https://github.com/allenai/allenact/tree/master/core/base_abstractions/sensor.py)
 
 ## ResNetSensor
 ```python

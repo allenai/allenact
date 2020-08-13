@@ -55,7 +55,7 @@ and an [example implementation](/api/onpolicy_sync/losses/ppo/#ppo).
 
 ## Experiment configuration
 
-In `embodied-ai`, experiments are definied by implementing the abstract `ExperimentConfig` class. The methods
+In `allenact`, experiments are definied by implementing the abstract `ExperimentConfig` class. The methods
 of this implementation are then called during training/inference to properly set up the desired experiment. For example,
 the `ExperimentConfig.create_model` method will be called at the beginning of training to create the model
 to be trained. See either the ["designing your first minigrid experiment"]() or the ["designing an experiment for point navigation"]()

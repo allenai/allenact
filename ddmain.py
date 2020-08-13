@@ -20,7 +20,7 @@ def get_args():
     """Creates the argument parser and parses any input arguments."""
 
     parser = argparse.ArgumentParser(
-        description="embodied-ai",
+        description="allenact",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 

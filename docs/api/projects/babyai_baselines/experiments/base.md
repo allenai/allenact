@@ -1,4 +1,4 @@
-# projects.babyai_baselines.experiments.base [[source]](https://github.com/allenai/embodied-rl/tree/master/projects/babyai_baselines/experiments/base.py)
+# projects.babyai_baselines.experiments.base [[source]](https://github.com/allenai/allenact/tree/master/projects/babyai_baselines/experiments/base.py)
 
 ## BaseBabyAIExperimentConfig
 ```python

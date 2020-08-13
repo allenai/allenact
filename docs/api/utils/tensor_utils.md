@@ -1,4 +1,4 @@
-# utils.tensor_utils [[source]](https://github.com/allenai/embodied-rl/tree/master/utils/tensor_utils.py)
+# utils.tensor_utils [[source]](https://github.com/allenai/allenact/tree/master/utils/tensor_utils.py)
 Functions used to manipulate pytorch tensors and numpy arrays.
 ## batch_observations
 ```python

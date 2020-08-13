@@ -8,14 +8,14 @@ Documentation is generated using [mkdoc](https://www.mkdocs.org/) and
 
 ### Building documentation locally
 
-If you have made no changes to the documentation and only wish to build documentation on your local machine, run the following from within the `embodied-ai` root directory. Note: This will generate HTML documentation within the `site` folder
+If you have made no changes to the documentation and only wish to build documentation on your local machine, run the following from within the `allenact` root directory. Note: This will generate HTML documentation within the `site` folder
 ```bash
 mkdocs build
 ```
 
 ### Serving documentation locally
 
-If you have made no changes to the documentation and only wish to serve documentation on your local machine (with live reloading of modified documentation), run the following from within the `embodied-ai` root directory.
+If you have made no changes to the documentation and only wish to serve documentation on your local machine (with live reloading of modified documentation), run the following from within the `allenact` root directory.
 ```bash
 mkdocs serve
 ```

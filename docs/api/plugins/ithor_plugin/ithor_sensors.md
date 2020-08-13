@@ -1,4 +1,4 @@
-# plugins.ithor_plugin.ithor_sensors [[source]](https://github.com/allenai/embodied-rl/tree/master/plugins/ithor_plugin/ithor_sensors.py)
+# plugins.ithor_plugin.ithor_sensors [[source]](https://github.com/allenai/allenact/tree/master/plugins/ithor_plugin/ithor_sensors.py)
 
 ## RGBSensorThor
 ```python

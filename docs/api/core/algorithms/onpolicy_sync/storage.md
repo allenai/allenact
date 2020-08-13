@@ -1,4 +1,4 @@
-# core.algorithms.onpolicy_sync.storage [[source]](https://github.com/allenai/embodied-rl/tree/master/core/algorithms/onpolicy_sync/storage.py)
+# core.algorithms.onpolicy_sync.storage [[source]](https://github.com/allenai/allenact/tree/master/core/algorithms/onpolicy_sync/storage.py)
 
 ## RolloutStorage
 ```python

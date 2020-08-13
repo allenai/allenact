@@ -1,4 +1,4 @@
-# plugins.minigrid_plugin.minigrid_environments [[source]](https://github.com/allenai/embodied-rl/tree/master/plugins/minigrid_plugin/minigrid_environments.py)
+# plugins.minigrid_plugin.minigrid_environments [[source]](https://github.com/allenai/allenact/tree/master/plugins/minigrid_plugin/minigrid_environments.py)
 
 ## AskForHelpSimpleCrossing
 ```python

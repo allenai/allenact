@@ -1,4 +1,4 @@
-# core.algorithms.onpolicy_sync.vector_sampled_tasks [[source]](https://github.com/allenai/embodied-rl/tree/master/core/algorithms/onpolicy_sync/vector_sampled_tasks.py)
+# core.algorithms.onpolicy_sync.vector_sampled_tasks [[source]](https://github.com/allenai/allenact/tree/master/core/algorithms/onpolicy_sync/vector_sampled_tasks.py)
 
 ## SingleProcessVectorSampledTasks
 ```python
@@ -292,7 +292,7 @@ VectorSampledTasks(
     auto_resample_when_done: bool = True,
     multiprocessing_start_method: Optional[str] = 'forkserver',
     mp_ctx: Optional[multiprocessing.context.BaseContext] = None,
-    metrics_out_queue: <bound method BaseContext.Queue of <multiprocessing.context.DefaultContext object at 0x1074f01c0>> = None,
+    metrics_out_queue: <bound method BaseContext.Queue of <multiprocessing.context.DefaultContext object at 0x101d361c0>> = None,
     should_log: bool = True,
     max_processes: Optional[int] = None,
 ) -> None

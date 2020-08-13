@@ -5,8 +5,8 @@
 Clone this repository to your local machine and move into the top-level directory
 
 ```bash
-git clone git@github.com:allenai/embodied-rl.git
-cd embodied-rl
+git clone git@github.com:allenai/allenact.git
+cd allenact
 ```
 
 **Note:** This library has been tested *only in python 3.6*. The following assumes you have a working

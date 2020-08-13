@@ -1,4 +1,4 @@
-# plugins.ithor_plugin.ithor_environment [[source]](https://github.com/allenai/embodied-rl/tree/master/plugins/ithor_plugin/ithor_environment.py)
+# plugins.ithor_plugin.ithor_environment [[source]](https://github.com/allenai/allenact/tree/master/plugins/ithor_plugin/ithor_environment.py)
 A wrapper for engaging with the THOR environment.
 ## IThorEnvironment
 ```python

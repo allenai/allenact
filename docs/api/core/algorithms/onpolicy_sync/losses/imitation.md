@@ -1,4 +1,4 @@
-# core.algorithms.onpolicy_sync.losses.imitation [[source]](https://github.com/allenai/embodied-rl/tree/master/core/algorithms/onpolicy_sync/losses/imitation.py)
+# core.algorithms.onpolicy_sync.losses.imitation [[source]](https://github.com/allenai/allenact/tree/master/core/algorithms/onpolicy_sync/losses/imitation.py)
 Defining imitation losses for actor critic type models.
 ## Imitation
 ```python

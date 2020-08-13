@@ -1,4 +1,4 @@
-# core.algorithms.onpolicy_sync.light_engine [[source]](https://github.com/allenai/embodied-rl/tree/master/core/algorithms/onpolicy_sync/light_engine.py)
+# core.algorithms.onpolicy_sync.light_engine [[source]](https://github.com/allenai/allenact/tree/master/core/algorithms/onpolicy_sync/light_engine.py)
 Defines the reinforcement learning `OnPolicyRLEngine`.
 ## OnPolicyRLEngine
 ```python
@@ -6,8 +6,8 @@ OnPolicyRLEngine(
     self,
     experiment_name: str,
     config: core.base_abstractions.experiment_config.ExperimentConfig,
-    results_queue: <bound method BaseContext.Queue of <multiprocessing.context.DefaultContext object at 0x10865e880>>,
-    checkpoints_queue: Optional[<bound method BaseContext.Queue of <multiprocessing.context.DefaultContext object at 0x10865e880>>],
+    results_queue: <bound method BaseContext.Queue of <multiprocessing.context.DefaultContext object at 0x106de3880>>,
+    checkpoints_queue: Optional[<bound method BaseContext.Queue of <multiprocessing.context.DefaultContext object at 0x106de3880>>],
     checkpoints_dir: str,
     mode: str = 'train',
     seed: Optional[int] = None,

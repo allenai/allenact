@@ -1,4 +1,4 @@
-# projects.pointnav_baselines.models.point_nav_models [[source]](https://github.com/allenai/embodied-rl/tree/master/projects/pointnav_baselines/models/point_nav_models.py)
+# projects.pointnav_baselines.models.point_nav_models [[source]](https://github.com/allenai/allenact/tree/master/projects/pointnav_baselines/models/point_nav_models.py)
 
 ## ResnetDualTensorGoalEncoder
 ```python

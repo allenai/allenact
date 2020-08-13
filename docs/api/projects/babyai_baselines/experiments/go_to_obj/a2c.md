@@ -1,4 +1,4 @@
-# projects.babyai_baselines.experiments.go_to_obj.a2c [[source]](https://github.com/allenai/embodied-rl/tree/master/projects/babyai_baselines/experiments/go_to_obj/a2c.py)
+# projects.babyai_baselines.experiments.go_to_obj.a2c [[source]](https://github.com/allenai/allenact/tree/master/projects/babyai_baselines/experiments/go_to_obj/a2c.py)
 
 ## A2CBabyAIGoToObjExperimentConfig
 ```python

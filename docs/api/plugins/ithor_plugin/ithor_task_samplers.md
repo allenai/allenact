@@ -1,4 +1,4 @@
-# plugins.ithor_plugin.ithor_task_samplers [[source]](https://github.com/allenai/embodied-rl/tree/master/plugins/ithor_plugin/ithor_task_samplers.py)
+# plugins.ithor_plugin.ithor_task_samplers [[source]](https://github.com/allenai/allenact/tree/master/plugins/ithor_plugin/ithor_task_samplers.py)
 
 ## ObjectNavTaskSampler
 ```python
