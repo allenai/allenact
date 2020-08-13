@@ -158,7 +158,11 @@ def project_readme_paths_to_nav_structure(project_readmes):
 
 if __name__ == "__main__":
     print("Copying all README.md files to docs.")
-    shutil.copy("README.md", "docs/index.md")
+    with open("README.md") as f:
+        readme_content = f.readlines()
+    readme_content = [x.replace("docs/", "") for x in readme_content]
+    with open("docs/index.md", "w") as f:
+        f.writelines(readme_content)
 
     project_readmes = []
     for readme_file_path in glob.glob("projects/**/README.md", recursive=True):
