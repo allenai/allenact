@@ -7,7 +7,7 @@ theme:
   palette:
     primary: blue
     accent: grey
-  logo: img/PriorLogo_CircleOnly.svg
+  logo: img/AllenAct_A_Greyscale.svg
   favicon: img/AllenAct_A.svg
   highlightjs: true
   hljs_languages:
