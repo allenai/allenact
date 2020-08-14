@@ -13,8 +13,8 @@
 
 - [Website & Docs](https://allenact.org/)
 - [Github](https://github.com/allenai/allenact)
-- [Install](getting_started/installation.md)
-- [Tutorials](https://allenact.org/tutorials/list)
+- [Install](https://allenact.org/installation/installation-allenact/)
+- [Tutorials](https://allenact.org/tutorials/)
 - [Citation](#citation)
 
 ## Features & Highlights

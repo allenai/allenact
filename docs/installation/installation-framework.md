@@ -1,6 +1,6 @@
-# Installation of supported frameworks
+# Installation of supported environments
 
-Below we provide installation instruction for a number of frameworks that we support.
+Below we provide installation instruction for a number of environments that we support.
 
 
 ## Installation of AI2-THOR

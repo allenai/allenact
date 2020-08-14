@@ -33,3 +33,7 @@ pip install -r requirements.txt
 
 Depending on your machine configuration, you may need to use `pip3` instead of `pip` in the
 above.
+
+### Installing supported environments
+
+We also provide installation instructions for the environments supported in AllenAct [here](../installation/installation-framework.md).
