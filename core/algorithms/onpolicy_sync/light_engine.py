@@ -402,7 +402,10 @@ class OnPolicyRLEngine(object):
         for p in reversed(paused):
             self.vector_tasks.pause_at(p)
 
+        # Group samplers along new dim:
         batch = batch_observations(running, device=self.device)
+        # Add step dim:
+        batch = batch_observations([batch])
 
         return len(paused), keep, batch
 
