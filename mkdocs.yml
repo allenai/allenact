@@ -47,8 +47,6 @@ nav:
 
 - Projects:
   - BabyAI baselines: projects/babyai_baselines/README.md
-- Notebooks:
-  - First book: notebooks/firstbook.md
 - FAQ: FAQ.md
 - Contributing: CONTRIBUTING.md
 - Licence: LICENSE.md
