@@ -1,6 +1,6 @@
-# Installation
+# Installation of AllenAct
 
-Clone this repository to your local machine and move into the top-level directory
+Clone the repository to your local machine and move into the top-level directory
 
 ```bash
 git clone git@github.com:allenai/allenact.git
