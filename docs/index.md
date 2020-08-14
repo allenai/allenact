@@ -1,8 +1,8 @@
 
 <div align="center">
-    <img src="img/placeholderLogo.jpg" />
+    <img src="img/AllenAct.png" />
     <br>
-    <i>An open source Framework for Reproducible, Reusable, and Robust Embodied-AI Research.</i>
+    <i><h3>An open source framework for research in Embodied-AI</h3></i>
     </p>
     <hr/>
 </div>
