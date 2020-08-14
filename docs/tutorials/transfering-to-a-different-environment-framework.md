@@ -12,7 +12,7 @@ run a model on different environments without touching the model code at all, wh
 us to train neural networks in one environment and test them in another.
 
 ## RoboTHOR to iTHOR
-![iTHOR Framework](../img/iTHOR_framework.png)
+![iTHOR Framework](../img/iTHOR_framework.jpg)
 Since both the `RoboTHOR` and the `iTHOR` environment stem from the same family and are developed
 by the same organization, switching between the two is incredibly easy. We only have to change
 the path parameter to point to an iTHOR dataset rather than the RoboTHOR one.
@@ -34,7 +34,7 @@ the behavior at all and is merely a bookkeeping convenience.
 ```
 
 ## RoboTHOR to Habitat
-![Habitat Framework](../img/habitat_framework.png)
+![Habitat Framework](../img/habitat_framework.jpg)
 Since the roboTHOR and Habitat simulators are sufficiently different and have different parameters to configure
 this transformation takes a bit more effort, but we only need to modify the environment config and TaskSampler (we
 have to change the former because the habitat simulator accepts a different format of configuration and the latter
