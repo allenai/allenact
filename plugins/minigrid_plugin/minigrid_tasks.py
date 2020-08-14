@@ -29,7 +29,7 @@ class MiniGridTask(Task[Union[CrossingEnv]]):
         MiniGridEnv.Actions.__members__[name].value for name in _ACTION_NAMES
     )
     _CACHED_GRAPHS: Dict[str, nx.DiGraph] = {}
-    """ Task around a MiniGrid Env, allows interfacing embodied-ai with
+    """ Task around a MiniGrid Env, allows interfacing allenact with
     MiniGrid tasks. (currently focussed towards LavaCrossing)
     """
 
