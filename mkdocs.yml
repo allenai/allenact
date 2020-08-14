@@ -23,8 +23,10 @@ docs_dir: docs
 
 nav:
 - Overview: index.md
+- Installation:
+  - Installation of AllenAct: installation/installation-allenact.md
+  - Installation of supported frameworks: installation/installation-framework.md
 - Getting started:
-  - Installation: getting_started/installation.md
   - Run your first experiment: getting_started/running-your-first-experiment.md
   - Structure of the codebase: getting_started/structure.md
   - Primary abstractions: getting_started/abstractions.md
@@ -43,8 +45,6 @@ nav:
   - Define a new training pipeline: howtos/defining-a-new-training-pipeline.md
   - Visualize results: howtos/visualizing-results.md
   - Run a multi-agent experiment: howtos/running-a-multi-agent-experiment.md
-
-
 - Projects:
   - BabyAI baselines: projects/babyai_baselines/README.md
   - PointNav baselines: projects/pointnav_baselines/README.md
