@@ -1,6 +1,6 @@
 import random
 import warnings
-from typing import Dict, Tuple, List, Any, Optional
+from typing import Dict, Tuple, List, Any, Optional, Union, Sequence, cast
 
 import gym
 import numpy as np
@@ -93,7 +93,10 @@ class ObjectNavTask(Task[IThorEnvironment]):
     def close(self) -> None:
         self.env.stop()
 
-    def _step(self, action: int) -> RLStepResult:
+    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        assert isinstance(action, int)
+        action = cast(int, action)
+
         action_str = self.class_action_names()[action]
 
         if action_str == END:

@@ -27,7 +27,6 @@ class RolloutStorage:
         num_steps: int,
         num_samplers: int,
         actor_critic: ActorCriticModel,
-        num_agents: int = 1,
         *args,
         **kwargs,
     ):
@@ -45,36 +44,32 @@ class RolloutStorage:
         self.names = ["step", "sampler", "agent", None]
 
         action_space = actor_critic.action_space
-        num_recurrent_layers = cast(
-            int,
-            (
-                actor_critic.num_recurrent_layers
-                if "num_recurrent_layers" in dir(actor_critic)
-                else 0
-            ),
-        )
+        num_recurrent_layers = getattr(actor_critic, "num_recurrent_layers", 0)
         spec = (
             actor_critic.recurrent_hidden_state_size
             if "num_recurrent_layers" in dir(actor_critic)
             else 0
         )  # actually a memory spec if num_rnn_layers is < 0
+
+        self.num_agents = getattr(actor_critic, "num_agents", 1)
+
         self.memory: Memory = self.create_memory(
-            num_recurrent_layers, spec, num_samplers, num_agents
+            num_recurrent_layers, spec, num_samplers
         )
 
         self.observations: Dict[str, Tuple[torch.Tensor, int]] = Memory()
 
         self.rewards = torch.zeros(
-            num_steps, num_samplers, num_agents, 1, names=self.names
+            num_steps, num_samplers, self.num_agents, 1, names=self.names
         )
         self.value_preds = torch.zeros(
-            num_steps + 1, num_samplers, num_agents, 1, names=self.names
+            num_steps + 1, num_samplers, self.num_agents, 1, names=self.names
         )
         self.returns = torch.zeros(
-            num_steps + 1, num_samplers, num_agents, 1, names=self.names
+            num_steps + 1, num_samplers, self.num_agents, 1, names=self.names
         )
         self.action_log_probs = torch.zeros(
-            num_steps, num_samplers, num_agents, 1, names=self.names
+            num_steps, num_samplers, self.num_agents, 1, names=self.names
         )
         if action_space.__class__.__name__ == "Discrete":
             action_shape = 1
@@ -82,17 +77,21 @@ class RolloutStorage:
             action_shape = action_space.shape[0]
 
         self.actions = torch.zeros(
-            num_steps, num_samplers, num_agents, action_shape, names=self.names,
+            num_steps, num_samplers, self.num_agents, action_shape, names=self.names,
         )
         self.prev_actions = torch.zeros(
-            num_steps + 1, num_samplers, num_agents, action_shape, names=self.names,
+            num_steps + 1,
+            num_samplers,
+            self.num_agents,
+            action_shape,
+            names=self.names,
         )
         if action_space.__class__.__name__ == "Discrete":
             self.actions = self.actions.long()
             self.prev_actions = self.prev_actions.long()
 
         self.masks = torch.ones(
-            num_steps + 1, num_samplers, num_agents, 1, names=self.names
+            num_steps + 1, num_samplers, self.num_agents, 1, names=self.names
         )
 
         self.step = 0
@@ -106,7 +105,6 @@ class RolloutStorage:
         num_recurrent_layers: int,
         spec: Union[Dict[str, Tuple[Sequence[int], int, torch.dtype]], int],
         num_samplers: int,
-        num_agents: int,
     ):
         if num_recurrent_layers >= 0:
             assert isinstance(spec, int)
@@ -114,7 +112,7 @@ class RolloutStorage:
                 self.num_steps + 1,
                 num_recurrent_layers,
                 num_samplers,
-                num_agents,
+                self.num_agents,
                 spec,
             ]
             tensor = torch.zeros(
@@ -145,7 +143,7 @@ class RolloutStorage:
                 all_dims = (
                     [self.num_steps + 1]
                     + list(other_dims[:sampler_dim])
-                    + [num_samplers, num_agents]
+                    + [num_samplers, self.num_agents]
                     + list(other_dims[sampler_dim:])
                 )
                 all_names = (

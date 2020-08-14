@@ -1,6 +1,6 @@
 import abc
 import string
-from typing import List, Dict, Any, Optional, Tuple, Union
+from typing import List, Dict, Any, Optional, Tuple, Union, Sequence, cast
 
 import gym
 import numpy as np
@@ -65,7 +65,10 @@ class LightHouseTask(Task[LightHouseEnvironment], abc.ABC):
     def last_action(self, value: int):
         self._last_action = value
 
-    def step(self, action: int) -> RLStepResult:
+    def step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        assert isinstance(action, int)
+        action = cast(int, action)
+
         self.last_action = action
         return super(LightHouseTask, self).step(action=action)
 
@@ -113,7 +116,10 @@ class FindGoalLightHouseTask(LightHouseTask):
     def action_space(self) -> gym.spaces.Discrete:
         return gym.spaces.Discrete(2 * self.env.world_dim)
 
-    def _step(self, action: int) -> RLStepResult:
+    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        assert isinstance(action, int)
+        action = cast(int, action)
+
         success = self.env.step(action)
         reward = STEP_PENALTY
 

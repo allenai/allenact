@@ -102,11 +102,11 @@ class Task(Generic[EnvType]):
         one."""
         self._num_steps_taken += 1
 
-    def step(self, action: int) -> RLStepResult:
-        """Take an action in the environment.
+    def step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        """Take an action in the environment (one per agent).
 
         Takes the action in the environment corresponding to
-        `self.class_action_names()[action]` and returns
+        `self.class_action_names()[action]` for each action if it's a Sequence and returns
         observations (& rewards and any additional information)
         corresponding to the agent's new state. Note that this function
         should not be overwritten without care (instead
@@ -131,11 +131,11 @@ class Task(Generic[EnvType]):
         return sr.clone({"done": sr.done or self.is_done()})
 
     @abstractmethod
-    def _step(self, action: int) -> RLStepResult:
-        """Helper function called by `step` to take a step in the environment.
+    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        """Helper function called by `step` to take a step by each agent in the environment.
 
         Takes the action in the environment corresponding to
-        `self.class_action_names()[action]` and returns
+        `self.class_action_names()[action]` for each action in actions and returns
         observations (& rewards and any additional information)
         corresponding to the agent's new state. This function is called
         by the (public) `step` function and is what should be implemented

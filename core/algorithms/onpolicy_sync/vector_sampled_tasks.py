@@ -478,7 +478,7 @@ class VectorSampledTasks(object):
             )
         ]
 
-    def async_step(self, actions: List[int]) -> None:
+    def async_step(self, actions: List[List[int]]) -> None:
         """Asynchronously step in the vectorized Tasks.
 
         # Parameters
@@ -499,7 +499,7 @@ class VectorSampledTasks(object):
         self._is_waiting = False
         return observations
 
-    def step(self, actions: List[int]):
+    def step(self, actions: List[List[int]]):
         """Perform actions in the vectorized tasks.
 
         # Parameters
@@ -858,6 +858,9 @@ class SingleProcessVectorSampledTasks(object):
 
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
+                    # TODO Adding this for backward compatibility with existing tasks. Would be best to just send data.
+                    if len(data) == 1:
+                        data = data[0]
                     step_result = current_task.step(data)
                     if current_task.is_done():
                         metrics = current_task.metrics()
@@ -1034,7 +1037,7 @@ class SingleProcessVectorSampledTasks(object):
         """
         return self._vector_task_generators[index_process].send((STEP_COMMAND, action))
 
-    def step(self, actions: List[int]):
+    def step(self, actions: List[List[int]]):
         """Perform actions in the vectorized tasks.
 
         # Parameters

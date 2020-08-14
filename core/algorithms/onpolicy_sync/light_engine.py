@@ -426,8 +426,8 @@ class OnPolicyRLEngine(object):
             actor_critic_output, memory = self.actor_critic(
                 step_observation,
                 memory,
-                rollouts.prev_actions[rollouts.step],
-                rollouts.masks[rollouts.step],
+                rollouts.prev_actions[rollouts.step : rollouts.step + 1],
+                rollouts.masks[rollouts.step : rollouts.step + 1],
             )
 
         actions = (
@@ -449,7 +449,10 @@ class OnPolicyRLEngine(object):
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None):
         actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
 
-        outputs = self.vector_tasks.step([a[0].item() for a in actions])
+        # Squeeze step and action dimensions and send a list for each sampler's agents
+        outputs = self.vector_tasks.step(
+            [[a.item() for a in ac] for ac in actions.squeeze(0).squeeze(-1)]
+        )
 
         rewards: Union[List, torch.Tensor]
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
@@ -1203,7 +1206,9 @@ class OnPolicyInference(OnPolicyRLEngine):
         total_steps = ckpt["total_steps"]
 
         rollouts = RolloutStorage(
-            rollout_steps, self.num_samplers, cast(ActorCriticModel, self.actor_critic),
+            num_steps=rollout_steps,
+            num_samplers=self.num_samplers,
+            actor_critic=cast(ActorCriticModel, self.actor_critic),
         )
 
         if visualizer is not None:
