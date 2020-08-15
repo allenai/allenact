@@ -1,6 +1,6 @@
 
 <div align="center">
-    <img src="docs/img/placeholderLogo.png" />
+    <img src="docs/img/placeholderLogo.jpg" />
     <br>
     <i>An open source Framework for Reproducible, Reusable, and Robust Embodied-AI Research.</i>
     </p>
