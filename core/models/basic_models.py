@@ -311,7 +311,7 @@ class RNNStateEncoder(nn.Module):
                 hidden_states[0][self._num_recurrent_layers :],
             )
             return cast(Tuple[torch.FloatTensor, torch.FloatTensor], new_hidden_states)
-        return hidden_states[0]
+        return cast(torch.FloatTensor, hidden_states[0])
 
     def _mask_hidden(
         self,

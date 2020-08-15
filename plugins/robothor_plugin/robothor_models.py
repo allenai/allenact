@@ -149,7 +149,7 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
     @property
     def recurrent_hidden_state_size(
         self,
-    ) -> Union[int, Dict[str, Tuple[Sequence[int], int, torch.dtype]]]:
+    ) -> Union[int, Dict[str, Tuple[Sequence[Tuple[str, Optional[int]]], torch.dtype]]]:
         """The recurrent hidden state size of the model."""
         return self.hidden_size
 

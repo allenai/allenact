@@ -131,7 +131,7 @@ class Task(Generic[EnvType]):
             else:
                 self._total_reward = sr.reward[:]
         else:
-            self._total_reward += sr.reward
+            self._total_reward += float(sr.reward)  # type:ignore
 
         self._increment_num_steps_taken()
         # TODO: We need a better solution to the below. It's not a good idea

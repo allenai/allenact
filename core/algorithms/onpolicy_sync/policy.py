@@ -46,7 +46,7 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
     @abc.abstractmethod
     def recurrent_hidden_state_size(
         self,
-    ) -> Union[int, Dict[str, Tuple[Sequence[int], int, torch.dtype]]]:
+    ) -> Union[int, Dict[str, Tuple[Sequence[Tuple[str, Optional[int]]], torch.dtype]]]:
         """Non-negative integer corresponding to the dimension of the hidden
         state used by the agent or mapping from string memory names to Tuples
         of (0) sequences of axes dimensions excluding sampler axis; (1)
