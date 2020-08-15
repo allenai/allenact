@@ -1,8 +1,8 @@
 
 <div align="center">
-    <img src="docs/img/placeholderLogo.jpg" />
+    <img src="docs/img/AllenAct.png" />
     <br>
-    <i>An open source Framework for Reproducible, Reusable, and Robust Embodied-AI Research.</i>
+    <i><h3>An open source framework for research in Embodied-AI</h3></i>
     </p>
     <hr/>
 </div>
@@ -13,8 +13,8 @@
 
 - [Website & Docs](https://allenact.org/)
 - [Github](https://github.com/allenai/allenact)
-- [Install](docs/getting_started/installation.md)
-- [Tutorials](https://allenact.org/tutorials/list)
+- [Install](https://allenact.org/installation/installation-allenact/)
+- [Tutorials](https://allenact.org/tutorials/)
 - [Citation](#citation)
 
 ## Features & Highlights

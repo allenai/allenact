@@ -1,3 +1,4 @@
+## TODO: links to API should be fixed
 # Primary abstractions
 
 Our package relies on a collection of fundamental abstractions to define how, and in what task, the model should be trained
@@ -58,7 +59,7 @@ and an [example implementation](/api/onpolicy_sync/losses/ppo/#ppo).
 In `allenact`, experiments are definied by implementing the abstract `ExperimentConfig` class. The methods
 of this implementation are then called during training/inference to properly set up the desired experiment. For example,
 the `ExperimentConfig.create_model` method will be called at the beginning of training to create the model
-to be trained. See either the ["designing your first minigrid experiment"]() or the ["designing an experiment for point navigation"]()
+to be trained. See either the ["designing your first minigrid experiment"](/tutorials/minigrid-tutorial) or the ["designing an experiment for point navigation"](/tutorials/training-a-pointnav-model)
  tutorials to get an in-depth description of how these experiment configurations are defined in practice.    
 
 See also the [abstract `ExperimentConfig` class](/api/rl_base/experiment_config#experimentconfig) 

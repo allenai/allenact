@@ -1,8 +1,6 @@
-# Installation
+# Installation of AllenAct
 
-## TODO: Below, add instructions to install the environments, especially Habitat.
-
-Clone this repository to your local machine and move into the top-level directory
+Clone the repository to your local machine and move into the top-level directory
 
 ```bash
 git clone git@github.com:allenai/allenact.git
@@ -36,4 +34,6 @@ pip install -r requirements.txt
 Depending on your machine configuration, you may need to use `pip3` instead of `pip` in the
 above.
 
+### Installing supported environments
 
+We also provide installation instructions for the environments supported in AllenAct [here](../installation/installation-framework.md).
