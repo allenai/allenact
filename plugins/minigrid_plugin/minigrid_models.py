@@ -79,30 +79,32 @@ class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
 
     def forward(self, observations, recurrent_hidden_states, prev_actions, masks):
         minigrid_ego_image = observations["minigrid_ego_image"]
-        # nsteps, nsamplers, nagents = mini
-        nbatch, nrow, ncol, nchannels = minigrid_ego_image.shape
+        nsteps, nsamplers, nagents, nrow, ncol, nchannels = minigrid_ego_image.shape
+        # nbatch, nrow, ncol, nchannels = minigrid_ego_image.shape
         assert nrow == ncol == self.agent_view
         # assert nchannels == self.view_channels == 3
         assert nchannels == self.view_channels == self.num_channels
         embed_list = []
         if self.num_objects > 0:
             ego_object_embeds = self.object_embedding(
-                minigrid_ego_image[:, :, :, self.object_channel].long()
+                minigrid_ego_image[..., self.object_channel].long()
             )
             embed_list.append(ego_object_embeds)
         if self.num_colors > 0:
             ego_color_embeds = self.color_embedding(
-                minigrid_ego_image[:, :, :, self.color_channel].long()
+                minigrid_ego_image[..., self.color_channel].long()
             )
             embed_list.append(ego_color_embeds)
         if self.num_states > 0:
             ego_state_embeds = self.state_embedding(
-                minigrid_ego_image[:, :, :, self.state_channel].long()
+                minigrid_ego_image[..., self.state_channel].long()
             )
             embed_list.append(ego_state_embeds)
         ego_embeds = torch.cat(embed_list, dim=-1)
 
-        self.observations_for_ac[self.ac_key] = ego_embeds.view(nbatch, -1)
+        self.observations_for_ac[self.ac_key] = ego_embeds.view(
+            nsteps, nsamplers, nagents, -1
+        )
 
         # noinspection PyCallingNonCallable
         out, rnn_hidden_states = self.actor_critic(

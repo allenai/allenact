@@ -404,8 +404,9 @@ class OnPolicyRLEngine(object):
 
         # Group samplers along new dim:
         batch = batch_observations(running, device=self.device)
-        # Add step dim:
-        batch = batch_observations([batch])
+
+        # # Add step dim: TODO why don't we need this?!
+        # batch = batch_observations([batch])
 
         return len(paused), keep, batch
 
@@ -444,7 +445,7 @@ class OnPolicyRLEngine(object):
     @staticmethod
     def _active_memory(memory, keep):
         if isinstance(memory, torch.Tensor):  # rnn hidden state or no memory
-            return memory[:, keep] if memory.shape[1] > len(keep) else memory
+            return memory[:, :, keep] if memory.shape[2] > len(keep) else memory
         return (
             memory.index_select(keep) if memory is not None else memory
         )  # arbitrary memory or no memory
@@ -463,7 +464,9 @@ class OnPolicyRLEngine(object):
         rewards = torch.tensor(
             rewards, dtype=torch.float, device=self.device,  # type:ignore
         )
-        rewards = rewards.unsqueeze(1)
+        rewards = rewards.unsqueeze(0).unsqueeze(-1)  # add step and reward dims
+        if len(rewards.shape) == 3:  # only one agent with scalar reward
+            rewards = rewards.unsqueeze(-1)  # reward dim (previous is agent dim)
 
         # If done then clean the history of observations.
         masks = torch.tensor(
@@ -471,6 +474,7 @@ class OnPolicyRLEngine(object):
             dtype=torch.float32,
             device=self.device,  # type:ignore
         )
+        masks = masks.view(1, masks.shape[0], 1, 1).expand(-1, -1, rewards.shape[2], -1)
 
         npaused, keep, batch = self.remove_paused(observations)
 
@@ -482,11 +486,13 @@ class OnPolicyRLEngine(object):
             if len(keep) > 0
             else batch,
             memory=self._active_memory(memory, keep),
-            actions=actions[keep],
-            action_log_probs=actor_critic_output.distributions.log_probs(actions)[keep],
-            value_preds=actor_critic_output.values[keep],
-            rewards=rewards[keep],
-            masks=masks[keep],
+            actions=actions[:, keep],
+            action_log_probs=actor_critic_output.distributions.log_probs(actions)[
+                :, keep
+            ],
+            value_preds=actor_critic_output.values[:, keep],
+            rewards=rewards[:, keep],
+            masks=masks[:, keep],
         )
 
         # TODO we always miss tensors for the last action in the last episode of each worker
@@ -1033,8 +1039,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 actor_critic_output, _ = self.actor_critic(
                     rollouts.pick_observation_step(-1),
                     rollouts.pick_memory_step(-1),
-                    rollouts.prev_actions[-1],
-                    rollouts.masks[-1],
+                    rollouts.prev_actions[-1:],
+                    rollouts.masks[-1:],
                 )
 
             if self.is_distributed:

@@ -1,5 +1,5 @@
 import typing
-from typing import Tuple, Dict, Union, Sequence
+from typing import Tuple, Dict, Union, Sequence, Optional
 
 import gym
 import torch
@@ -186,16 +186,24 @@ class ResnetTensorObjectNavActorCriticMemory(ResnetTensorObjectNavActorCritic):
     @property
     def recurrent_hidden_state_size(
         self,
-    ) -> Dict[str, Tuple[Sequence[int], int, torch.dtype]]:
-        """The memory spec of the model: A dictionary with string keys and
-        tuple values, each with the dimensions of the memory, e.g. (2, 32) for
-        two layers of 32-dimensional recurrent hidden states; an integer
-        indicating the index of the sampler in a batch, e.g. 1 for RNNs; the
-        data type, e.g. torch.float32."""
+    ) -> Dict[str, Tuple[Sequence[Tuple[str, Optional[int]]], torch.dtype]]:
+        """The memory spec of the model: A dictionary with string keys (memory type identification) and
+        tuple values (memory type specification), each with:
+        1. memory shape, e.g. `(("step", None), ("layer", 2), ("sampler", None), ("agent", 1), ("hidden", 32))`
+        for an RNN, where the `step` dimension placeholder is *always* the first dimension,
+        the `sampler` dimension placeholder *always* precedes the `agent` dimension,
+        the `agent` dimension has the number of agents in the model and it's *always* the next one after `sampler`,
+        and `layer` and `hidden` correspond to the standard RNN hidden state parametrization;
+        2. the data type, e.g. `torch.float32`."""
         return {
             "rnn_hidden": (
-                (self.state_encoder.num_recurrent_layers, self.hidden_size),
-                1,
+                (
+                    ("step", None),
+                    ("layer", self.state_encoder.num_recurrent_layers),
+                    ("sampler", None),
+                    ("agent", 1),
+                    ("hidden", self.hidden_size),
+                ),
                 torch.float32,
             )
         }

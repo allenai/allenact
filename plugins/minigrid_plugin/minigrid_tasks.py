@@ -136,7 +136,7 @@ class MiniGridTask(Task[Union[CrossingEnv]]):
             "success": int(
                 self.env.was_successful
                 if hasattr(self.env, "was_successful")
-                else self._total_reward > 0
+                else self.cumulative_reward > 0
             ),
         }
 

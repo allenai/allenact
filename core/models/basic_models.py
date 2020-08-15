@@ -307,11 +307,11 @@ class RNNStateEncoder(nn.Module):
         layers)."""
         if "LSTM" in self._rnn_type:
             new_hidden_states = (
-                hidden_states[0 : self._num_recurrent_layers],
-                hidden_states[self._num_recurrent_layers :],
+                hidden_states[0][0 : self._num_recurrent_layers],
+                hidden_states[0][self._num_recurrent_layers :],
             )
             return cast(Tuple[torch.FloatTensor, torch.FloatTensor], new_hidden_states)
-        return hidden_states
+        return hidden_states[0]
 
     def _mask_hidden(
         self,
@@ -527,14 +527,14 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
             trainable_masked_hidden_state=True,
         )
 
-        self.head_key = "{}_{}".format("rnn", input_uuid)
+        self.head_uuid = "{}_{}".format("rnn", input_uuid)
 
         self.ac_nonrecurrent_head: ActorCriticModel[CategoricalDistr] = head_type(
-            input_key=self.head_key,
+            input_uuid=self.head_uuid,
             action_space=action_space,
             observation_space=SpaceDict(
                 {
-                    self.head_key: gym.spaces.Box(
+                    self.head_uuid: gym.spaces.Box(
                         low=np.float32(0.0), high=np.float32(1.0), shape=(hidden_size,)
                     )
                 }
@@ -565,7 +565,7 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
         )
 
         out, _ = self.ac_nonrecurrent_head(
-            observations={self.head_key: rnn_out},
+            observations={self.head_uuid: rnn_out},
             recurrent_hidden_states=None,
             prev_actions=prev_actions,
             masks=masks,

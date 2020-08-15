@@ -4,7 +4,7 @@
 import random
 import typing
 from collections import defaultdict
-from typing import Union, List, Dict, Tuple, DefaultDict, Sequence, cast, Any, Callable
+from typing import Union, List, Dict, Tuple, DefaultDict, Sequence, cast, Any, Optional
 
 import numpy as np
 import torch
@@ -20,7 +20,7 @@ class RolloutStorage:
     FLATTEN_SEPARATOR: str = "._AUTOFLATTEN_."
     DEFAULT_RNN_MEMORY_NAME: str = "._AUTO_RNN_HIDDEN_TO_MEMORY_."  # there can only be one memory with this name
     DEFAULT_RNN_MEMORY_ACCESSOR: str = "auto_rnn_hidden_to_memory"
-    DEFAULT_RNN_MEMORY_SAMPLER_AXIS: int = 1  # in actor-critic tensor shape
+    DEFAULT_RNN_MEMORY_SAMPLER_AXIS: int = 2  # in actor-critic tensor shape
 
     def __init__(
         self,
@@ -41,7 +41,8 @@ class RolloutStorage:
             "observations": dict(),
         }
 
-        self.names = ["step", "sampler", "agent", None]
+        # self.names = ["step", "sampler", "agent", None]
+        self.names = None
 
         action_space = actor_critic.action_space
         num_recurrent_layers = getattr(actor_critic, "num_recurrent_layers", 0)
@@ -57,19 +58,13 @@ class RolloutStorage:
             num_recurrent_layers, spec, num_samplers
         )
 
-        self.observations: Dict[str, Tuple[torch.Tensor, int]] = Memory()
+        self.observations: Memory = Memory()
 
-        self.rewards = torch.zeros(
-            num_steps, num_samplers, self.num_agents, 1, names=self.names
-        )
-        self.value_preds = torch.zeros(
-            num_steps + 1, num_samplers, self.num_agents, 1, names=self.names
-        )
-        self.returns = torch.zeros(
-            num_steps + 1, num_samplers, self.num_agents, 1, names=self.names
-        )
+        self.rewards = torch.zeros(num_steps, num_samplers, self.num_agents, 1,)
+        self.value_preds = torch.zeros(num_steps + 1, num_samplers, self.num_agents, 1,)
+        self.returns = torch.zeros(num_steps + 1, num_samplers, self.num_agents, 1,)
         self.action_log_probs = torch.zeros(
-            num_steps, num_samplers, self.num_agents, 1, names=self.names
+            num_steps, num_samplers, self.num_agents, 1,
         )
         if action_space.__class__.__name__ == "Discrete":
             action_shape = 1
@@ -77,22 +72,16 @@ class RolloutStorage:
             action_shape = action_space.shape[0]
 
         self.actions = torch.zeros(
-            num_steps, num_samplers, self.num_agents, action_shape, names=self.names,
+            num_steps, num_samplers, self.num_agents, action_shape,
         )
         self.prev_actions = torch.zeros(
-            num_steps + 1,
-            num_samplers,
-            self.num_agents,
-            action_shape,
-            names=self.names,
+            num_steps + 1, num_samplers, self.num_agents, action_shape,
         )
         if action_space.__class__.__name__ == "Discrete":
             self.actions = self.actions.long()
             self.prev_actions = self.prev_actions.long()
 
-        self.masks = torch.ones(
-            num_steps + 1, num_samplers, self.num_agents, 1, names=self.names
-        )
+        self.masks = torch.ones(num_steps + 1, num_samplers, self.num_agents, 1,)
 
         self.step = 0
 
@@ -103,7 +92,9 @@ class RolloutStorage:
     def create_memory(
         self,
         num_recurrent_layers: int,
-        spec: Union[Dict[str, Tuple[Sequence[int], int, torch.dtype]], int],
+        spec: Union[
+            Dict[str, Tuple[Sequence[Tuple[str, Optional[int]]], torch.dtype]], int
+        ],
         num_samplers: int,
     ):
         if num_recurrent_layers >= 0:
@@ -115,16 +106,12 @@ class RolloutStorage:
                 self.num_agents,
                 spec,
             ]
-            tensor = torch.zeros(
-                *all_dims,
-                dtype=torch.float32,
-                names=self.names[:1] + ["layer"] + self.names[1:],
-            )
+            tensor = torch.zeros(*all_dims, dtype=torch.float32,)
             memory = Memory(
                 {
                     self.DEFAULT_RNN_MEMORY_NAME: (
                         tensor,
-                        self.DEFAULT_RNN_MEMORY_SAMPLER_AXIS + 1,
+                        self.DEFAULT_RNN_MEMORY_SAMPLER_AXIS,
                     )
                 }
             )
@@ -139,23 +126,30 @@ class RolloutStorage:
             assert isinstance(spec, Dict)
             memory = Memory()
             for key in spec:
-                other_dims, sampler_dim, dtype = spec[key]
-                all_dims = (
-                    [self.num_steps + 1]
-                    + list(other_dims[:sampler_dim])
-                    + [num_samplers, self.num_agents]
-                    + list(other_dims[sampler_dim:])
+                dims_template, dtype = spec[key]
+                dim_to_pos = {dim[0]: it for it, dim in enumerate(dims_template)}
+
+                assert (
+                    "step" in dim_to_pos and dim_to_pos["step"] == 0
+                ), "`step` dim must be the first dimension"
+                assert (
+                    "sampler" in dim_to_pos
+                    and dim_to_pos["step"] < dim_to_pos["sampler"]
+                ), "`sampler` dim must be after `step` and before `agent`"
+                assert (
+                    "agent" in dim_to_pos
+                    and dim_to_pos["agent"] == dim_to_pos["sampler"] + 1
+                ), "`agent` dim must be after `agent`"
+
+                all_dims = [d[1] for d in dims_template]
+                all_dims[dim_to_pos["step"]] = self.num_steps + 1
+                all_dims[dim_to_pos["sampler"]] = num_samplers
+
+                memory.check_append(
+                    key, torch.zeros(*all_dims, dtype=dtype), dim_to_pos["sampler"]
                 )
-                all_names = (
-                    self.names[:1]
-                    + [None] * sampler_dim
-                    + self.names[1:-1]  # skip last None
-                    + [None] * (len(other_dims) - sampler_dim)
-                )
-                tensor = torch.zeros(*all_dims, dtype=dtype, names=all_names)
-                memory.check_append(key, tensor, sampler_dim + 1)
                 self.flattened_spaces["memory"][key] = [key]
-                self.reverse_flattened_spaces["memory"][(key,)] = [key]
+                self.reverse_flattened_spaces["memory"][(key,)] = [key]  # TODO
             return memory
 
     def to(self, device: torch.device):
@@ -230,28 +224,26 @@ class RolloutStorage:
                     time_step=time_step,
                 )
             else:
-                sampler_axis = (
-                    1  # we add axis 0 for step, so sampler is along axis=1 by default
-                )
+                sampler_dim = 1  # dim 0 for step
                 if isinstance(current_data, Sequence):
-                    sampler_axis += current_data[1]
+                    sampler_dim = current_data[1]
                     current_data = current_data[0]
 
                 flatten_name = prefix + name
                 if flatten_name not in storage:
                     storage[flatten_name] = (
                         torch.zeros_like(current_data)  # type:ignore
-                        # .unsqueeze(0)
                         .repeat(
                             self.num_steps
                             + 1,  # valid for both observations and memory
                             *(1 for _ in range(len(current_data.shape))),
-                        ).to(
+                        )
+                        .to(
                             torch.device("cpu")
                             if self.actions.get_device() < 0
                             else self.actions.get_device()
                         ),
-                        sampler_axis,
+                        sampler_dim,
                     )
 
                     assert (
@@ -306,22 +298,8 @@ class RolloutStorage:
         if self.actions.shape[1] == len(keep_list):  # samplers dim
             return  # we are keeping everything, no need to copy
 
-        for sensor in self.observations:
-            self.observations[sensor] = (
-                self.observations[sensor][0][:, keep_list],
-                self.observations[sensor][1],
-            )
-
-        memory_index = torch.as_tensor(
-            keep_list, dtype=torch.int64, device=self.masks.device
-        )
-        for name in self.memory:
-            self.memory[name] = (
-                self.memory[name][0].index_select(
-                    dim=self.memory[name][1], index=memory_index
-                ),
-                self.memory[name][1],
-            )
+        self.observations = self.observations.index_select(keep_list)
+        self.memory = self.memory.index_select(keep_list)
         self.actions = self.actions[:, keep_list]
         self.prev_actions = self.prev_actions[:, keep_list]
         self.action_log_probs = self.action_log_probs[:, keep_list]
@@ -612,7 +590,10 @@ class RolloutStorage:
         self, step: int, storage_type: str
     ) -> Dict[str, Union[Dict, torch.Tensor]]:
         storage = getattr(self, storage_type)
-        batch = {key: storage[key][0][step : step + 1] for key in storage}
+        if step >= 0:
+            batch = {key: storage[key][0][step : step + 1] for key in storage}
+        else:
+            batch = {key: storage[key][0][step:] for key in storage}
         return self.unflatten_batch(batch, storage_type)
 
     def pick_observation_step(self, step: int) -> Dict[str, Union[Dict, torch.Tensor]]:

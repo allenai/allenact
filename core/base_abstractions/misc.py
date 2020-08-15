@@ -1,6 +1,6 @@
 import abc
 import typing
-from typing import Dict, Any, TypeVar, Sequence, NamedTuple, Optional
+from typing import Dict, Any, TypeVar, Sequence, NamedTuple, Optional, List, Union
 
 import torch
 
@@ -10,7 +10,7 @@ DistributionType = TypeVar("DistributionType")
 
 class RLStepResult(NamedTuple):
     observation: Optional[Any]
-    reward: Optional[float]
+    reward: Optional[Union[float, List[float]]]
     done: Optional[bool]
     info: Optional[Dict[str, Any]]
 
@@ -131,12 +131,13 @@ class Memory(Dict):
 
     def index_select(self, keep: Sequence[int]):
         res = Memory()
-        if len(keep) == 0:
-            return res
+        valid = False
         for name in self:
             sampler_dim = self.sampler_dim(name)
             tensor = self.tensor(name)
-            assert 0 <= min(keep) and max(keep) < tensor.shape[sampler_dim]
+            assert len(keep) == 0 or (
+                0 <= min(keep) and max(keep) < tensor.shape[sampler_dim]
+            )
             if tensor.shape[sampler_dim] > len(keep):
                 tensor = tensor.index_select(
                     dim=sampler_dim,
@@ -145,6 +146,7 @@ class Memory(Dict):
                     ),
                 )
                 res.check_append(name, tensor, sampler_dim)
-        if len(res) > 0:
+                valid = True
+        if valid:
             return res
         return self
