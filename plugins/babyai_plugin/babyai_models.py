@@ -253,6 +253,19 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         masks: torch.FloatTensor,
         **kwargs
     ):
+        (
+            observations,
+            recurrent_hidden_states,
+            prev_actions,
+            masks,
+            num_steps,
+            num_samplers,
+            num_agents,
+            num_layers,
+        ) = self.adapt_inputs(
+            observations, recurrent_hidden_states, prev_actions, masks
+        )
+
         if self.lang_model != "gru":
             return self.forward_loop(
                 observations=observations,
@@ -409,67 +422,21 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
 
         embedding = embedding.view(rollouts_len * nsamplers, -1)
 
-        return (
-            ActorCriticOutput(
-                distributions=CategoricalDistr(logits=self.actor(embedding),),
-                values=self.critic(embedding),
-                extras=extra_predictions
-                if not self.include_auxiliary_head
-                else {
-                    **extra_predictions,
-                    "auxiliary_distributions": CategoricalDistr(
-                        logits=self.aux(embedding)
-                    ),
-                },
-            ),
-            memory,
+        ac_output = ActorCriticOutput(
+            distributions=CategoricalDistr(logits=self.actor(embedding),),
+            values=self.critic(embedding),
+            extras=extra_predictions
+            if not self.include_auxiliary_head
+            else {
+                **extra_predictions,
+                "auxiliary_distributions": CategoricalDistr(logits=self.aux(embedding)),
+            },
         )
+        hidden_states = memory
 
-
-class BabyAIRecurrentACModel(ActorCriticModel[CategoricalDistr]):
-    def __init__(
-        self,
-        action_space: gym.spaces.Discrete,
-        observation_space: SpaceDict,
-        image_dim=128,
-        memory_dim=128,
-        instr_dim=128,
-        use_instr=False,
-        lang_model="gru",
-        use_memory=False,
-        arch="cnn1",
-        aux_info=None,
-        include_auxiliary_head: bool = False,
-    ):
-        super().__init__(action_space=action_space, observation_space=observation_space)
-
-        assert "minigrid_ego_image" in observation_space.spaces
-        assert not use_instr or "minigrid_mission" in observation_space.spaces
-
-        self.memory_dim = memory_dim
-        self.include_auxiliary_head = include_auxiliary_head
-
-        self.baby_ai_model = BabyAIACModelWrapped(
-            obs_space={"image": 7 * 7 * 3, "instr": 100,},
-            action_space=action_space,
-            image_dim=image_dim,
-            memory_dim=memory_dim,
-            instr_dim=instr_dim,
-            use_instr=use_instr,
-            lang_model=lang_model,
-            use_memory=use_memory,
-            arch=arch,
-            aux_info=aux_info,
-            include_auxiliary_head=self.include_auxiliary_head,
+        return self.adapt_result(
+            ac_output, hidden_states, num_steps, num_samplers, num_agents, num_layers
         )
-
-    @property
-    def recurrent_hidden_state_size(self) -> int:
-        return 2 * self.memory_dim
-
-    @property
-    def num_recurrent_layers(self):
-        return 1
 
     @staticmethod
     def adapt_inputs(  # type: ignore
@@ -539,6 +506,13 @@ class BabyAIRecurrentACModel(ActorCriticModel[CategoricalDistr]):
         )
         values = ac_output.values.view(num_steps, num_samplers, num_agents, 1)
         extras = ac_output.extras  # ignore shape
+        # TODO confirm the shape of the auxiliary distribution is the same as the actor's
+        if "auxiliary_distributions" in extras:
+            extras["auxiliary_distributions"] = CategoricalDistr(
+                logits=extras["auxiliary_distributions"].logits.view(
+                    num_steps, num_samplers, num_agents, -1
+                ),
+            )
 
         hidden_states = hidden_states.view(
             num_steps, num_layers, num_samplers, num_agents, -1
@@ -551,6 +525,52 @@ class BabyAIRecurrentACModel(ActorCriticModel[CategoricalDistr]):
             hidden_states,
         )
 
+
+class BabyAIRecurrentACModel(ActorCriticModel[CategoricalDistr]):
+    def __init__(
+        self,
+        action_space: gym.spaces.Discrete,
+        observation_space: SpaceDict,
+        image_dim=128,
+        memory_dim=128,
+        instr_dim=128,
+        use_instr=False,
+        lang_model="gru",
+        use_memory=False,
+        arch="cnn1",
+        aux_info=None,
+        include_auxiliary_head: bool = False,
+    ):
+        super().__init__(action_space=action_space, observation_space=observation_space)
+
+        assert "minigrid_ego_image" in observation_space.spaces
+        assert not use_instr or "minigrid_mission" in observation_space.spaces
+
+        self.memory_dim = memory_dim
+        self.include_auxiliary_head = include_auxiliary_head
+
+        self.baby_ai_model = BabyAIACModelWrapped(
+            obs_space={"image": 7 * 7 * 3, "instr": 100,},
+            action_space=action_space,
+            image_dim=image_dim,
+            memory_dim=memory_dim,
+            instr_dim=instr_dim,
+            use_instr=use_instr,
+            lang_model=lang_model,
+            use_memory=use_memory,
+            arch=arch,
+            aux_info=aux_info,
+            include_auxiliary_head=self.include_auxiliary_head,
+        )
+
+    @property
+    def recurrent_hidden_state_size(self) -> int:
+        return 2 * self.memory_dim
+
+    @property
+    def num_recurrent_layers(self):
+        return 1
+
     def forward(  # type: ignore
         self,
         observations: Dict[str, torch.Tensor],
@@ -559,27 +579,10 @@ class BabyAIRecurrentACModel(ActorCriticModel[CategoricalDistr]):
         masks: torch.FloatTensor,
         **kwargs
     ):
-        (
-            observations,
-            recurrent_hidden_states,
-            prev_actions,
-            masks,
-            num_steps,
-            num_samplers,
-            num_agents,
-            num_layers,
-        ) = self.adapt_inputs(
-            observations, recurrent_hidden_states, prev_actions, masks
-        )
-
-        ac_output, hidden_states = self.baby_ai_model.forward(
+        return self.baby_ai_model.forward(
             observations=observations,
             recurrent_hidden_states=recurrent_hidden_states,
             prev_actions=prev_actions,
             masks=masks,
             **kwargs
-        )
-
-        return self.adapt_result(
-            ac_output, hidden_states, num_steps, num_samplers, num_agents, num_layers
         )
