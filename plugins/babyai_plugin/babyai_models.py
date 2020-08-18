@@ -471,6 +471,86 @@ class BabyAIRecurrentACModel(ActorCriticModel[CategoricalDistr]):
     def num_recurrent_layers(self):
         return 1
 
+    @staticmethod
+    def adapt_inputs(  # type: ignore
+        observations: Dict[str, torch.Tensor],
+        recurrent_hidden_states: torch.Tensor,
+        prev_actions: torch.LongTensor,
+        masks: torch.FloatTensor,
+    ):
+        def recursive_adapt_observations(obs, num_steps, num_samplers, num_agents):
+            for entry in obs:
+                if isinstance(obs[entry], Dict):
+                    recursive_adapt_observations(
+                        obs[entry], num_steps, num_samplers, num_agents
+                    )
+                else:
+                    assert isinstance(obs[entry], torch.Tensor)
+                    final_dims = obs[entry].shape[2:]  # no agents dim in observations!
+                    obs[entry] = obs[entry].view(
+                        num_steps * num_samplers * num_agents, *final_dims
+                    )
+
+        # INPUTS
+        # observations are of shape [num_steps, num_samplers, num_agents, ...]
+        # recurrent_hidden_states are of shape [num_steps, num_layers, num_samplers, num_agents, num_dims]
+        # prev_actions are of shape [num_steps, num_samplers, num_agents, 1]
+        # masks are of shape [num_steps, num_samplers, num_agents, 1]
+
+        num_steps, num_layers, num_samplers, num_agents = recurrent_hidden_states.shape[
+            :4
+        ]
+        assert num_agents == num_steps == 1
+
+        num_steps = masks.shape[0]
+
+        # Old-style inputs need to be
+        # observations [num_steps * num_samplers * num_agents, ...]
+        # recurrent_hidden_states [(num_steps,) num_layers, num_samplers * num_agents, num_dims]
+        # prev_actions [num_steps * num_samplers * num_agents, 1]
+        # masks [num_steps * num_samplers * num_agents, 1]
+
+        recursive_adapt_observations(observations, num_steps, num_samplers, num_agents)
+        recurrent_hidden_states = recurrent_hidden_states.view(
+            num_layers, num_samplers * num_agents, -1
+        )
+        prev_actions = prev_actions.view(  # type:ignore
+            num_steps * num_samplers * num_agents, 1
+        )
+        masks = masks.view(num_steps * num_samplers * num_agents, 1)  # type:ignore
+
+        return (
+            observations,
+            recurrent_hidden_states,
+            prev_actions,
+            masks,
+            num_steps,
+            num_samplers,
+            num_agents,
+            num_layers,
+        )
+
+    @staticmethod
+    def adapt_result(ac_output, hidden_states, num_steps, num_samplers, num_agents, num_layers):  # type: ignore
+        distributions = CategoricalDistr(
+            logits=ac_output.distributions.logits.view(
+                num_steps, num_samplers, num_agents, -1
+            ),
+        )
+        values = ac_output.values.view(num_steps, num_samplers, num_agents, 1)
+        extras = ac_output.extras  # ignore shape
+
+        hidden_states = hidden_states.view(
+            num_steps, num_layers, num_samplers, num_agents, -1
+        )
+
+        return (
+            ActorCriticOutput(
+                distributions=distributions, values=values, extras=extras
+            ),
+            hidden_states,
+        )
+
     def forward(  # type: ignore
         self,
         observations: Dict[str, torch.Tensor],
@@ -479,10 +559,27 @@ class BabyAIRecurrentACModel(ActorCriticModel[CategoricalDistr]):
         masks: torch.FloatTensor,
         **kwargs
     ):
-        return self.baby_ai_model.forward(
+        (
+            observations,
+            recurrent_hidden_states,
+            prev_actions,
+            masks,
+            num_steps,
+            num_samplers,
+            num_agents,
+            num_layers,
+        ) = self.adapt_inputs(
+            observations, recurrent_hidden_states, prev_actions, masks
+        )
+
+        ac_output, hidden_states = self.baby_ai_model.forward(
             observations=observations,
             recurrent_hidden_states=recurrent_hidden_states,
             prev_actions=prev_actions,
             masks=masks,
             **kwargs
+        )
+
+        return self.adapt_result(
+            ac_output, hidden_states, num_steps, num_samplers, num_agents, num_layers
         )

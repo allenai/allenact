@@ -132,14 +132,16 @@ class RolloutStorage:
                 assert (
                     "step" in dim_to_pos and dim_to_pos["step"] == 0
                 ), "`step` dim must be the first dimension"
+
                 assert (
                     "sampler" in dim_to_pos
                     and dim_to_pos["step"] < dim_to_pos["sampler"]
-                ), "`sampler` dim must be after `step` and before `agent`"
-                assert (
-                    "agent" in dim_to_pos
-                    and dim_to_pos["agent"] == dim_to_pos["sampler"] + 1
-                ), "`agent` dim must be after `agent`"
+                ), "`sampler` dim must be after `step` (and before `agent`)"
+
+                if "agent" in dim_to_pos:
+                    assert (
+                        dim_to_pos["agent"] == dim_to_pos["sampler"] + 1
+                    ), "`agent` dim must be right after `sampler`"
 
                 all_dims = [d[1] for d in dims_template]
                 all_dims[dim_to_pos["step"]] = self.num_steps + 1
@@ -149,7 +151,9 @@ class RolloutStorage:
                     key, torch.zeros(*all_dims, dtype=dtype), dim_to_pos["sampler"]
                 )
                 self.flattened_spaces["memory"][key] = [key]
-                self.reverse_flattened_spaces["memory"][(key,)] = [key]  # TODO
+                self.reverse_flattened_spaces["memory"][(key,)] = [
+                    key
+                ]  # TODO Jordi: remove this as in stashed jordi branch
             return memory
 
     def to(self, device: torch.device):
@@ -459,9 +463,6 @@ class RolloutStorage:
                         self.observations[sensor][0][:-1, ind]
                     )
 
-                # recurrent_hidden_states_batch.append(
-                #     self.recurrent_hidden_states[0, :, ind]
-                # )
                 for name in self.memory:
                     memory_batch[name].append(
                         self.memory[name][0]
@@ -488,8 +489,6 @@ class RolloutStorage:
                 adv_targ.append(advantages[:, ind])
                 norm_adv_targ.append(normalized_advantages[:, ind])
 
-            # T, N = self.num_steps, end_ind - start_ind
-
             # These are all tensors of size (T, N, -1)
             for sensor in observations_batch:
                 # noinspection PyTypeChecker
@@ -508,40 +507,11 @@ class RolloutStorage:
             adv_targ = torch.stack(adv_targ, 1)  # type:ignore
             norm_adv_targ = torch.stack(norm_adv_targ, 1)  # type:ignore
 
-            # # States is just a (num_recurrent_layers, N, -1) tensor
-            # recurrent_hidden_states_batch = torch.stack(
-            #     recurrent_hidden_states_batch, 1
-            # )
             for name in memory_batch:
                 # noinspection PyTypeChecker
                 memory_batch[name] = torch.stack(  # type:ignore
-                    memory_batch[name],
-                    self.memory[name][
-                        1
-                    ],  # - 1, we don't squeeze out the single step dim, so no need to subtract 1
-                )  # actor-critic sampler axis
-
-            # # Flatten the (T, N, ...) tensors to (T * N, ...)
-            # for sensor in observations_batch:
-            #     # noinspection PyTypeChecker
-            #     observations_batch[sensor] = self._flatten_helper(  # type:ignore
-            #         t=T, n=N, tensor=cast(torch.Tensor, observations_batch[sensor]),
-            #     )
-            #
-            # actions_batch = self._flatten_helper(T, N, actions_batch)  # type:ignore
-            # prev_actions_batch = self._flatten_helper(  # type:ignore
-            #     T, N, cast(torch.Tensor, prev_actions_batch)
-            # )
-            # value_preds_batch = self._flatten_helper(  # type:ignore
-            #     T, N, cast(torch.Tensor, value_preds_batch)
-            # )
-            # return_batch = self._flatten_helper(T, N, return_batch)  # type:ignore
-            # masks_batch = self._flatten_helper(T, N, masks_batch)  # type:ignore
-            # old_action_log_probs_batch = self._flatten_helper(  # type:ignore
-            #     T, N, cast(torch.Tensor, old_action_log_probs_batch)
-            # )
-            # adv_targ = self._flatten_helper(T, N, adv_targ)  # type:ignore
-            # norm_adv_targ = self._flatten_helper(T, N, norm_adv_targ)  # type:ignore
+                    memory_batch[name], self.memory[name][1],
+                )
 
             yield {
                 "observations": self.unflatten_batch(
@@ -597,25 +567,7 @@ class RolloutStorage:
         return self.unflatten_batch(batch, storage_type)
 
     def pick_observation_step(self, step: int) -> Dict[str, Union[Dict, torch.Tensor]]:
-        # observations_batch = {sensor: self.observations[sensor][step] for sensor in self.observations}
-        # return self.unflatten_spaces(observations_batch)
         return self.pick_step(step, "observations")
 
     def pick_memory_step(self, step: int) -> Dict[str, Union[Dict, torch.Tensor]]:
-        # memory_batch = {name: self.memory[name][step] for name in self.observations}
-        # return self.unflatten_spaces(observations_batch)
         return self.pick_step(step, "memory")
-
-    # @staticmethod
-    # def _flatten_helper(t: int, n: int, tensor: torch.Tensor) -> torch.Tensor:
-    #     """Given a tensor of size (t, n, ..), flatten it to size (t*n, ...).
-    #
-    #     Args:
-    #         t: first dimension of tensor.
-    #         n: second dimension of tensor.
-    #         tensor: target tensor to be flattened.
-    #
-    #     Returns:
-    #         flattened tensor of size (t*n, ...)
-    #     """
-    #     return tensor.view(t * n, *tensor.size()[2:])

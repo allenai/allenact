@@ -79,7 +79,12 @@ class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
 
     def forward(self, observations, recurrent_hidden_states, prev_actions, masks):
         minigrid_ego_image = observations["minigrid_ego_image"]
-        nsteps, nsamplers, nagents, nrow, ncol, nchannels = minigrid_ego_image.shape
+        nsteps, nsamplers, nrow, ncol, nchannels = minigrid_ego_image.shape  # assumes
+        nagents = recurrent_hidden_states.shape[3]
+        minigrid_ego_image = minigrid_ego_image.unsqueeze(2).expand(
+            -1, -1, nagents, -1, -1, -1
+        )
+
         # nbatch, nrow, ncol, nchannels = minigrid_ego_image.shape
         assert nrow == ncol == self.agent_view
         # assert nchannels == self.view_channels == 3

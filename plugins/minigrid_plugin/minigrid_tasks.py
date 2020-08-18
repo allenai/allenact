@@ -20,7 +20,6 @@ from core.base_abstractions.misc import RLStepResult
 from core.base_abstractions.sensor import Sensor, SensorSuite
 from core.base_abstractions.task import Task, TaskSampler
 from utils.system import get_logger
-from utils.tensor_utils import batch_observations
 
 
 class MiniGridTask(Task[Union[CrossingEnv]]):
@@ -83,11 +82,9 @@ class MiniGridTask(Task[Union[CrossingEnv]]):
     def get_observations(
         self, *args, minigrid_output_obs: Optional[Dict[str, Any]] = None, **kwargs
     ) -> Any:
-        single_obs = self.sensor_suite.get_observations(
+        return self.sensor_suite.get_observations(
             env=self.env, task=self, minigrid_output_obs=minigrid_output_obs
         )
-        # Stack all observations along a new axis (0) for agent, then engine will add sampler and step
-        return batch_observations([single_obs])
 
     def reached_terminal_state(self) -> bool:
         return self._minigrid_done

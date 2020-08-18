@@ -192,7 +192,8 @@ class ResnetTensorObjectNavActorCriticMemory(ResnetTensorObjectNavActorCritic):
         1. memory shape, e.g. `(("step", None), ("layer", 2), ("sampler", None), ("agent", 1), ("hidden", 32))`
         for an RNN, where the `step` dimension placeholder is *always* the first dimension,
         the `sampler` dimension placeholder *always* precedes the `agent` dimension,
-        the `agent` dimension has the number of agents in the model and it's *always* the next one after `sampler`,
+        the optional `agent` dimension has the number of agents in the model and,
+        if present, it's *always* the next one after `sampler`,
         and `layer` and `hidden` correspond to the standard RNN hidden state parametrization;
         2. the data type, e.g. `torch.float32`."""
         return {

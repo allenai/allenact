@@ -405,13 +405,17 @@ class OnPolicyRLEngine(object):
         # Group samplers along new dim:
         batch = batch_observations(running, device=self.device)
 
-        # # Add step dim: TODO why don't we need this?!
-        # batch = batch_observations([batch])
-
         return len(paused), keep, batch
 
     def initialize_rollouts(self, rollouts, visualizer=None):
         observations = self.vector_tasks.get_observations()
+
+        # # TODO Remove this (which breaks whenever observations already contain an agent dim)
+        # for it, observation in enumerate(observations):
+        #     # Stack each observation set along a new agent dim, sampler/step are added later
+        #     if observation is not None:
+        #         observations[it] = batch_observations([observation])
+
         npaused, keep, batch = self.remove_paused(observations)
         if npaused > 0:
             rollouts.reshape(keep)
@@ -465,8 +469,14 @@ class OnPolicyRLEngine(object):
             rewards, dtype=torch.float, device=self.device,  # type:ignore
         )
         rewards = rewards.unsqueeze(0).unsqueeze(-1)  # add step and reward dims
-        if len(rewards.shape) == 3:  # only one agent with scalar reward
+        if (
+            len(rewards.shape) == 3
+        ):  # only one agent with scalar reward TODO remove (assume dimensionless agent in observations)
             rewards = rewards.unsqueeze(-1)  # reward dim (previous is agent dim)
+            # for it, observation in enumerate(observations):
+            #     # Stack each observation set along a new agent dim, sampler/step are added later
+            #     if observation is not None:
+            #         observations[it] = batch_observations([observation])
 
         # If done then clean the history of observations.
         masks = torch.tensor(
