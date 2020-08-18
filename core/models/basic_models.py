@@ -25,7 +25,7 @@ from utils.model_utils import make_cnn, compute_cnn_output, Flatten
 
 
 class SimpleCNN(nn.Module):
-    """A Simple 3-Conv CNN followed by a fully connected layer. Takes in
+    """A Simple N-Conv CNN followed by a fully connected layer. Takes in
     observations (of type gym.spaces.dict) and produces an embedding of the
     `rgb_uuid` and/or `depth_uuid` components.
 
@@ -209,19 +209,33 @@ class SimpleCNN(nn.Module):
         if self.is_blind:
             return None
 
+        def check_use_agent(new_setting):
+            if use_agent is not None:
+                assert (
+                    use_agent is new_setting
+                ), "rgb and depth must both use an agent dim or none"
+            return new_setting
+
         cnn_output_list: List[torch.Tensor] = []
+        use_agent: Optional[bool] = None
 
         if self._n_input_rgb > 0:
+            use_agent = check_use_agent(len(observations[self.depth_uuid]) == 6)
             cnn_output_list.append(
                 compute_cnn_output(self.rgb_cnn, observations[self.rgb_uuid])
             )
 
         if self._n_input_depth > 0:
+            use_agent = check_use_agent(len(observations[self.depth_uuid]) == 6)
             cnn_output_list.append(
                 compute_cnn_output(self.depth_cnn, observations[self.depth_uuid])
             )
 
-        channels_dim = 3  # [step x sampler x agent x channel (x height x width)]
+        if use_agent:
+            channels_dim = 3  # [step, sampler, agent, channel (, height, width)]
+        else:
+            channels_dim = 2  # [step, sampler, channel (, height, width)]
+
         return torch.cat(cnn_output_list, dim=channels_dim)
 
 
@@ -297,7 +311,6 @@ class RNNStateEncoder(nn.Module):
                 torch.FloatTensor,
                 torch.cat([hidden_states[0], hidden_states[1]], dim=0),
             )
-
         return cast(torch.FloatTensor, hidden_states)
 
     def _unpack_hidden(
@@ -307,11 +320,11 @@ class RNNStateEncoder(nn.Module):
         layers)."""
         if "LSTM" in self._rnn_type:
             new_hidden_states = (
-                hidden_states[0][0 : self._num_recurrent_layers],
-                hidden_states[0][self._num_recurrent_layers :],
+                hidden_states[0 : self._num_recurrent_layers],
+                hidden_states[self._num_recurrent_layers :],
             )
             return cast(Tuple[torch.FloatTensor, torch.FloatTensor], new_hidden_states)
-        return cast(torch.FloatTensor, hidden_states[0])
+        return cast(torch.FloatTensor, hidden_states)
 
     def _mask_hidden(
         self,
@@ -320,14 +333,10 @@ class RNNStateEncoder(nn.Module):
     ) -> Union[Tuple[torch.FloatTensor, ...], torch.FloatTensor]:
         """Mask input hidden states given `masks`. Useful when masks represent
         steps on which a task has completed.
-
         # Parameters
-
         hidden_states : The hidden states.
         masks : Masks to apply to hidden states (see seq_forward).
-
         # Returns
-
         Masked hidden states. Here masked hidden states will be replaced with
         either all zeros (if `trainable_masked_hidden_state` was False) and will
         otherwise be a learnable collection of parameters.
@@ -355,7 +364,96 @@ class RNNStateEncoder(nn.Module):
 
         return hidden_states
 
-    def forward(  # type: ignore
+    def single_forward(
+        self,
+        x: torch.FloatTensor,
+        hidden_states: torch.FloatTensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[
+        torch.FloatTensor, Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]]
+    ]:
+        """Forward for a single-step input."""
+        (
+            x,
+            hidden_states,
+            masks,
+            has_agent,
+            nsteps,
+            nsamplers,
+            nagents,
+        ) = self.adapt_input(x, hidden_states, masks)
+
+        unpacked_hidden_states = self._unpack_hidden(hidden_states)
+
+        x, unpacked_hidden_states = self.rnn(
+            x,
+            self._mask_hidden(
+                unpacked_hidden_states, cast(torch.FloatTensor, masks[0].view(1, -1, 1))
+            ),
+        )
+
+        return self.adapt_result(
+            x,
+            self._pack_hidden(unpacked_hidden_states),
+            has_agent,
+            nsteps,
+            nsamplers,
+            nagents,
+        )
+
+    def adapt_input(
+        self,
+        x: torch.FloatTensor,
+        hidden_states: torch.FloatTensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[
+        torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, bool, int, int, int,
+    ]:
+        nsteps, nsamplers, nagents = masks.shape[:3]  # masks always have all dimensions
+
+        has_agent: bool
+        if len(hidden_states.shape) == 5:  # [1, layer, sampler, agent, hidden]
+            # x is a [step, sampler, agent, -1] tensor
+            has_agent = True
+        else:  # [1, layer, sampler, hidden]
+            # x is a [step, sampler, -1] tensor
+            has_agent = False
+
+        # Flatten (nsamplers, nagents)
+        x = x.view(nsteps, nsamplers * nagents, -1)  # type:ignore
+        masks = masks.view(nsteps, nsamplers * nagents)  # type:ignore
+
+        # Flatten (nsamplers, nagents) and remove step dim
+        hidden_states = hidden_states.view(  # type:ignore
+            self.num_recurrent_layers, nsamplers * nagents, -1
+        )
+
+        return x, hidden_states, masks, has_agent, nsteps, nsamplers, nagents
+
+    def adapt_result(
+        self,
+        outputs: torch.FloatTensor,
+        hidden_states: torch.FloatTensor,
+        has_agent: bool,
+        nsteps: int,
+        nsamplers: int,
+        nagents: int,
+    ) -> Tuple[
+        torch.FloatTensor, torch.FloatTensor,
+    ]:
+        output_dims = (nsteps, nsamplers) + ((nagents, -1) if has_agent else (-1,))
+        hidden_dims = (
+            (1, self.num_recurrent_layers, nsamplers)
+            + ((nagents,) if has_agent else tuple())
+            + (hidden_states.shape[-1],)
+        )
+
+        outputs = cast(torch.FloatTensor, outputs.view(*output_dims))
+        hidden_states = cast(torch.FloatTensor, hidden_states.view(*hidden_dims),)
+
+        return outputs, hidden_states
+
+    def seq_forward(  # type: ignore
         self,
         x: torch.FloatTensor,
         hidden_states: torch.FloatTensor,
@@ -373,36 +471,34 @@ class RNNStateEncoder(nn.Module):
             The masks to be applied to hidden state at every timestep, equal to 0 whenever the previous step finalized
             the task, 1 elsewhere.
         """
-        # x is a (Steps, Samplers, Agents, -1) tensor
-        nsteps, nsamplers, nagents = x.shape[:3]
+        (
+            x,
+            hidden_states,
+            masks,
+            has_agent,
+            nsteps,
+            nsamplers,
+            nagents,
+        ) = self.adapt_input(x, hidden_states, masks)
 
-        # Flatten (nsamplers, nagents)
-        x = x.view(nsteps, nsamplers * nagents, -1)  # type:ignore
-        masks = masks.view(nsteps, nsamplers * nagents)  # type:ignore
-        # only initial hidden state (1 step):
-        hidden_states = hidden_states.view(  # type:ignore
-            1, self.num_recurrent_layers, nsamplers * nagents, -1
-        )
-
-        # steps in sequence which have zero for any agent. Assume t=0 has
+        # steps in sequence which have zero for any episode. Assume t=0 has
         # a zero in it.
         has_zeros = (masks[1:] == 0.0).any(dim=-1).nonzero().squeeze().cpu()
-
         # +1 to correct the masks[1:]
         if has_zeros.dim() == 0:
             # handle scalar
             has_zeros = [has_zeros.item() + 1]  # type: ignore
         else:
             has_zeros = (has_zeros + 1).numpy().tolist()
-
         # add t=0 and t=T to the list
-        has_zeros = [0] + has_zeros + [nsteps]
+        has_zeros = cast(List[int], [0] + has_zeros + [nsteps])
 
         unpacked_hidden_states = self._unpack_hidden(
             cast(torch.FloatTensor, hidden_states)
         )
+
         outputs = []
-        for i in range(len(cast(List, has_zeros)) - 1):
+        for i in range(len(has_zeros) - 1):
             # process steps that don't have any zeros in masks together
             start_idx = int(has_zeros[i])
             end_idx = int(has_zeros[i + 1])
@@ -418,23 +514,27 @@ class RNNStateEncoder(nn.Module):
 
             outputs.append(rnn_scores)
 
-        x = cast(
-            torch.FloatTensor,
-            torch.cat(outputs, dim=0).view(nsteps, nsamplers, nagents, -1),
-        )
-        hidden_states = self._pack_hidden(unpacked_hidden_states)
-        hidden_states = cast(
-            torch.FloatTensor,
-            hidden_states.view(
-                -1,
-                self.num_recurrent_layers,
-                nsamplers,
-                nagents,
-                hidden_states.shape[-1],
-            ),
+        return self.adapt_result(
+            cast(torch.FloatTensor, torch.cat(outputs, dim=0)),
+            self._pack_hidden(unpacked_hidden_states),
+            has_agent,
+            nsteps,
+            nsamplers,
+            nagents,
         )
 
-        return x, hidden_states
+    def forward(  # type: ignore
+        self,
+        x: torch.FloatTensor,
+        hidden_states: torch.FloatTensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[
+        torch.FloatTensor, Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]]
+    ]:
+        nsteps = masks.shape[0]
+        if nsteps == 1:
+            return self.single_forward(x, hidden_states, masks)
+        return self.seq_forward(x, hidden_states, masks)
 
 
 class LinearActorCritic(ActorCriticModel[CategoricalDistr]):
@@ -474,7 +574,7 @@ class LinearActorCritic(ActorCriticModel[CategoricalDistr]):
         recurrent_hidden_states: torch.FloatTensor,
         prev_actions: torch.LongTensor,
         masks: torch.FloatTensor,
-        **kwargs
+        **kwargs,
     ) -> Tuple[ActorCriticOutput[DistributionType], Any]:
         out = self.linear(observations[self.input_uuid])
 
@@ -555,7 +655,7 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
         recurrent_hidden_states: torch.FloatTensor,
         prev_actions: torch.LongTensor,
         masks: torch.FloatTensor,
-        **kwargs
+        **kwargs,
     ) -> Tuple[ActorCriticOutput[DistributionType], Any]:
 
         rnn_out, recurrent_hidden_states = self.state_encoder(

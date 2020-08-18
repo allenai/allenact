@@ -7,17 +7,17 @@ from torch import nn
 
 
 class Flatten(nn.Module):
-    """Flatten input tensor so that it is of shape (steps x samplers x agents x -1)."""
+    """Flatten input tensor so that it is of shape (FLATTENED_BATCH x -1)."""
 
     def forward(self, x):
         """Flatten input tensor.
 
         # Parameters
-        x : Tensor of size (steps x samplers x agents x ...) to flatten to size (steps x samplers x agents x -1)
+        x : Tensor of size (FLATTENED_BATCH x ...) to flatten to size (FLATTENED_BATCH x -1)
         # Returns
         Flattened tensor.
         """
-        return x.reshape(x.size(0), x.size(1), x.size(2), -1)
+        return x.view(x.size(0), -1)
 
 
 def init_linear_layer(
@@ -120,10 +120,10 @@ def compute_cnn_output(
     cnn_input: torch.Tensor,
     permute_order: Optional[Tuple[int, ...]] = (
         0,  # FLAT_BATCH (flattening steps, samplers and agents)
-        3,  # CHANNELS
-        1,  # HEIGHT
-        2,  # WIDTH
-    ),  # from [FLAT_BATCH x HEIGHT x WIDTH x CHANNEL] flattened input
+        3,  # CHANNEL
+        1,  # ROW
+        2,  # COL
+    ),  # from [FLAT_BATCH x ROW x COL x CHANNEL] flattened input
 ):
     """Computes CNN outputs for given inputs.
 
@@ -136,18 +136,38 @@ def compute_cnn_output(
 
     # Returns
 
-    CNN output with dimensions [STEPS x SAMPLER x AGENT x CHANNEL (x HEIGHT X WIDTH)].
+    CNN output with dimensions [STEP, SAMPLER, AGENT, CHANNEL, (HEIGHT, WIDTH)].
     """
-    nsteps, nsamplers, nagents = cnn_input.shape[:3]
-    # Make FLAT_BATCH = nsteps * nsamplers * nagents
-    cnn_input = cnn_input.reshape((-1,) + cnn_input.shape[3:])
+    use_agents: bool
+    nsteps: int
+    nsamplers: int
+    nagents: int
+
+    assert len(cnn_input.shape) in [
+        5,
+        6,
+    ], "CNN input must have shape [STEP, SAMPLER, (AGENT,) dim1, dim2, dim3]"
+
+    if len(cnn_input.shape) == 6:
+        nsteps, nsamplers, nagents = cnn_input.shape[:3]
+        use_agents = True
+    else:
+        nsteps, nsamplers = cnn_input.shape[:2]
+        nagents = 1
+        use_agents = False
+
+    # Make FLAT_BATCH = nsteps * nsamplers (* nagents)
+    cnn_input = cnn_input.view((-1,) + cnn_input.shape[2 + int(use_agents) :])
 
     if permute_order is not None:
         cnn_input = cnn_input.permute(*permute_order)
     cnn_output = cnn(cnn_input)
 
-    cnn_output = cnn_output.reshape(
-        (nsteps, nsamplers, nagents,) + cnn_output.shape[1:]
-    )
+    if use_agents:
+        cnn_output = cnn_output.reshape(
+            (nsteps, nsamplers, nagents,) + cnn_output.shape[1:]
+        )
+    else:
+        cnn_output = cnn_output.reshape((nsteps, nsamplers,) + cnn_output.shape[1:])
 
     return cnn_output
