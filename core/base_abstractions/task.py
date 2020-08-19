@@ -129,7 +129,7 @@ class Task(Generic[EnvType]):
                 for it, rew in enumerate(sr.reward):
                     self._total_reward[it] += float(rew)
             else:
-                self._total_reward = sr.reward[:]
+                self._total_reward = [float(r) for r in sr.reward]
         else:
             self._total_reward += float(sr.reward)  # type:ignore
 

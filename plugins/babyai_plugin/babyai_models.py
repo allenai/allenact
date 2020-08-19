@@ -445,6 +445,7 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         prev_actions: torch.LongTensor,
         masks: torch.FloatTensor,
     ):
+        # Flatten all observation batch dims
         def recursive_adapt_observations(obs, num_steps, num_samplers, num_agents):
             for entry in obs:
                 if isinstance(obs[entry], Dict):
@@ -453,23 +454,22 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
                     )
                 else:
                     assert isinstance(obs[entry], torch.Tensor)
-                    final_dims = obs[entry].shape[2:]  # no agents dim in observations!
+                    final_dims = obs[entry].shape[
+                        2:
+                    ]  # assumes no agents dim in observations!
                     obs[entry] = obs[entry].view(
                         num_steps * num_samplers * num_agents, *final_dims
                     )
 
         # INPUTS
-        # observations are of shape [num_steps, num_samplers, num_agents, ...]
-        # recurrent_hidden_states are of shape [num_steps, num_layers, num_samplers, num_agents, num_dims]
+        # observations are of shape [num_steps, num_samplers, (num_agents,) ...]
+        # recurrent_hidden_states are of shape [num_steps, num_layers, num_samplers, (num_agents,) num_dims]
         # prev_actions are of shape [num_steps, num_samplers, num_agents, 1]
         # masks are of shape [num_steps, num_samplers, num_agents, 1]
 
-        num_steps, num_layers, num_samplers, num_agents = recurrent_hidden_states.shape[
-            :4
-        ]
-        assert num_agents == num_steps == 1
-
-        num_steps = masks.shape[0]
+        num_steps, num_samplers, num_agents = masks.shape[:3]
+        num_layers = recurrent_hidden_states.shape[1]
+        assert num_agents == 1
 
         # Old-style inputs need to be
         # observations [num_steps * num_samplers * num_agents, ...]
@@ -514,9 +514,7 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
                 ),
             )
 
-        hidden_states = hidden_states.view(
-            num_steps, num_layers, num_samplers, num_agents, -1
-        )
+        hidden_states = hidden_states.view(num_steps, num_layers, num_samplers, -1)
 
         return (
             ActorCriticOutput(

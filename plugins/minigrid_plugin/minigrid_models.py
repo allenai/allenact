@@ -79,16 +79,16 @@ class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
 
     def forward(self, observations, recurrent_hidden_states, prev_actions, masks):
         minigrid_ego_image = observations["minigrid_ego_image"]
-        nsteps, nsamplers, nrow, ncol, nchannels = minigrid_ego_image.shape  # assumes
-        nagents = recurrent_hidden_states.shape[3]
-        minigrid_ego_image = minigrid_ego_image.unsqueeze(2).expand(
-            -1, -1, nagents, -1, -1, -1
-        )
+        nrow, ncol, nchannels = minigrid_ego_image.shape[-3:]
+        nsteps, nsamplers, nagents = masks.shape[:3]
 
-        # nbatch, nrow, ncol, nchannels = minigrid_ego_image.shape
+        # minigrid_ego_image = minigrid_ego_image.unsqueeze(2).expand(
+        #     -1, -1, nagents, -1, -1, -1
+        # )
+
         assert nrow == ncol == self.agent_view
-        # assert nchannels == self.view_channels == 3
         assert nchannels == self.view_channels == self.num_channels
+
         embed_list = []
         if self.num_objects > 0:
             ego_object_embeds = self.object_embedding(
@@ -121,7 +121,7 @@ class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
 
         self.observations_for_ac[self.ac_key] = None
 
-        return (out, rnn_hidden_states)
+        return out, rnn_hidden_states
 
 
 class MiniGridSimpleConvRNN(MiniGridSimpleConvBase):

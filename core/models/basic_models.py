@@ -578,6 +578,9 @@ class LinearActorCritic(ActorCriticModel[CategoricalDistr]):
     ) -> Tuple[ActorCriticOutput[DistributionType], Any]:
         out = self.linear(observations[self.input_uuid])
 
+        if len(out.shape) == 3:
+            out = out.unsqueeze(-2)  # Enforce agent dimension
+
         # noinspection PyArgumentList
         return (
             ActorCriticOutput(

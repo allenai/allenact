@@ -94,6 +94,10 @@ class LinearActorCriticHead(nn.Module):
 
     def forward(self, x):
         out = self.actor_and_critic(x)
+
+        if len(out.shape) == 3:
+            out = out.unsqueeze(-2)  # Enforce agent dimension
+
         logits = out[..., :-1]
         values = out[..., -1:]
         # noinspection PyArgumentList
@@ -108,7 +112,12 @@ class LinearCriticHead(nn.Module):
         nn.init.constant_(self.fc.bias, 0)
 
     def forward(self, x):
-        return self.fc(x)
+        out = self.fc(x)
+
+        if len(out.shape) == 3:
+            out = out.unsqueeze(-2)  # Enforce agent dimension
+
+        return out
 
 
 class LinearActorHead(nn.Module):
@@ -121,5 +130,9 @@ class LinearActorHead(nn.Module):
 
     def forward(self, x: torch.FloatTensor):  # type: ignore
         x = self.linear(x)  # type:ignore
+
+        if len(x.shape) == 3:
+            x = x.unsqueeze(-2)  # Enforce agent dimension
+
         # noinspection PyArgumentList
         return CategoricalDistr(logits=x)

@@ -42,6 +42,7 @@ from utils.experiment_utils import (
 )
 from utils.system import get_logger
 from utils.tensor_utils import batch_observations
+from core.base_abstractions.misc import RLStepResult
 
 
 class OnPolicyRLEngine(object):
@@ -457,8 +458,11 @@ class OnPolicyRLEngine(object):
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None):
         actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
 
+        # if len(actions.shape) == 3:
+        #     actions = actions.unsqueeze(-2)  # add agent dim
+
         # Squeeze step and action dimensions and send a list for each sampler's agents
-        outputs = self.vector_tasks.step(
+        outputs: List[RLStepResult] = self.vector_tasks.step(
             [[a.item() for a in ac] for ac in actions.squeeze(0).squeeze(-1)]
         )
 
@@ -468,15 +472,15 @@ class OnPolicyRLEngine(object):
         rewards = torch.tensor(
             rewards, dtype=torch.float, device=self.device,  # type:ignore
         )
-        rewards = rewards.unsqueeze(0).unsqueeze(-1)  # add step and reward dims
-        if (
-            len(rewards.shape) == 3
-        ):  # only one agent with scalar reward TODO remove (assume dimensionless agent in observations)
+
+        # Rewards are of shape [sampler,] or [sampler, agent],
+        # reshape to [step, sampler, agent] or [step, sampler, agent, reward]
+        rewards = rewards.unsqueeze(0).unsqueeze(-1)
+
+        if len(rewards.shape) == 3:
+            # Rewards are of shape [step, sampler, agent]
+            # reshape to [step, sampler, agent, reward]
             rewards = rewards.unsqueeze(-1)  # reward dim (previous is agent dim)
-            # for it, observation in enumerate(observations):
-            #     # Stack each observation set along a new agent dim, sampler/step are added later
-            #     if observation is not None:
-            #         observations[it] = batch_observations([observation])
 
         # If done then clean the history of observations.
         masks = torch.tensor(
@@ -484,12 +488,26 @@ class OnPolicyRLEngine(object):
             dtype=torch.float32,
             device=self.device,  # type:ignore
         )
-        masks = masks.view(1, masks.shape[0], 1, 1).expand(-1, -1, rewards.shape[2], -1)
+
+        # Expand masks with new agents dimension
+        num_task_samplers = masks.shape[0]
+        num_agents = rewards.shape[2]
+        masks = masks.view(1, num_task_samplers, 1, 1).expand(-1, -1, num_agents, -1)
 
         npaused, keep, batch = self.remove_paused(observations)
 
         if npaused > 0:
             rollouts.reshape(keep)
+
+        # get_logger().debug(
+        #     "actions {} alp {} v {} r {} m {}".format(
+        #         actions.shape,
+        #         actor_critic_output.distributions.log_probs(actions).shape,
+        #         actor_critic_output.values.shape,
+        #         rewards.shape,
+        #         masks.shape,
+        #     )
+        # )
 
         rollouts.insert(
             observations=self._preprocess_observations(batch)
@@ -868,9 +886,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 bsize = None
                 for key in batch:
                     if isinstance(batch[key], torch.Tensor):
-                        bsize = batch[key].shape[0]
+                        num_rollout_steps, num_samplers = batch[key].shape[:2]
+                        bsize = num_rollout_steps * num_samplers
                         if bsize > 0:
-                            bsize *= batch[key].shape[1]
                             break
                 assert bsize is not None, "TODO check recursively for batch size"
 

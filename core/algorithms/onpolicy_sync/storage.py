@@ -103,7 +103,6 @@ class RolloutStorage:
                 self.num_steps + 1,
                 num_recurrent_layers,
                 num_samplers,
-                self.num_agents,
                 spec,
             ]
             tensor = torch.zeros(*all_dims, dtype=torch.float32,)
@@ -138,10 +137,10 @@ class RolloutStorage:
                     and dim_to_pos["step"] < dim_to_pos["sampler"]
                 ), "`sampler` dim must be after `step` (and before `agent`)"
 
-                if "agent" in dim_to_pos:
-                    assert (
-                        dim_to_pos["agent"] == dim_to_pos["sampler"] + 1
-                    ), "`agent` dim must be right after `sampler`"
+                assert (
+                    "agent" not in dim_to_pos
+                    or dim_to_pos["agent"] == dim_to_pos["sampler"] + 1
+                ), "`agent` dim must be right after `sampler`"
 
                 all_dims = [d[1] for d in dims_template]
                 all_dims[dim_to_pos["step"]] = self.num_steps + 1
@@ -433,7 +432,7 @@ class RolloutStorage:
 
         num_samplers = self.rewards.size(1)
         assert num_samplers >= num_mini_batch, (
-            "The number of processes ({}) "
+            "The number of task samplers ({}) "
             "must be greater than or equal to the number of "
             "mini batches ({}).".format(num_samplers, num_mini_batch)
         )
