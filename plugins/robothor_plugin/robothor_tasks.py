@@ -63,8 +63,8 @@ class PointNavTask(Task[RoboThorEnvironment]):
                 self.distance_cache, self.env.agent_state(), self.task_info["target"]
             )
         else:
-            self.last_geodesic_distance = self.env.dist_to_object(
-                self.task_info["object_type"]
+            self.last_geodesic_distance = self.env.dist_to_point(
+                self.task_info["target"]
             )
 
         self.optimal_distance = self.last_geodesic_distance
@@ -216,15 +216,14 @@ class PointNavTask(Task[RoboThorEnvironment]):
                     self.env.agent_state(),
                     self.task_info["target"],
                 )
+                spl = self.spl()
+                if spl is None:
+                    return {}
             else:
                 # TODO
-                raise NotImplementedError
-                # dist2tget = self._get_distance_to_target()
+                dist2tget = -1  # self._get_distance_to_target()
+                spl = self.spl() if len(self.episode_optimal_corners) > 1 else 0.0
             if dist2tget is None:
-                return {}
-
-            spl = self.spl()
-            if spl is None:
                 return {}
 
             return {

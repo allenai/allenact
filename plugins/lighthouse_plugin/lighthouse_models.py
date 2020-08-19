@@ -59,9 +59,12 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
     ) -> typing.Tuple[ActorCriticOutput[DistributionType], typing.Any]:
         out = self.linear(observations[self.key])
 
-        main_logits = out[:, : self.num_actions]
-        aux_logits = out[:, self.num_actions : -1]
-        values = out[:, -1:]
+        if len(out.shape) == 3:
+            out = out.unsqueeze(-2)  # Enforce agent dimension
+
+        main_logits = out[..., : self.num_actions]
+        aux_logits = out[..., self.num_actions : -1]
+        values = out[..., -1:]
 
         # noinspection PyArgumentList
         return (

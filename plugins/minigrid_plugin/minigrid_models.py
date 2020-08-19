@@ -82,10 +82,6 @@ class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
         nrow, ncol, nchannels = minigrid_ego_image.shape[-3:]
         nsteps, nsamplers, nagents = masks.shape[:3]
 
-        # minigrid_ego_image = minigrid_ego_image.unsqueeze(2).expand(
-        #     -1, -1, nagents, -1, -1, -1
-        # )
-
         assert nrow == ncol == self.agent_view
         assert nchannels == self.view_channels == self.num_channels
 

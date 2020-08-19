@@ -595,11 +595,11 @@ class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
         """Number of recurrent hidden layers."""
         return self.state_encoder.num_recurrent_layers
 
-    def get_object_type_encoding(
-        self, observations: Dict[str, torch.FloatTensor]
-    ) -> torch.FloatTensor:
-        """Get the object type encoding from input batched observations."""
-        return self.goal_visual_encoder.get_object_type_encoding(observations)
+    # def get_object_type_encoding(
+    #     self, observations: Dict[str, torch.FloatTensor]
+    # ) -> torch.FloatTensor:
+    #     """Get the object type encoding from input batched observations."""
+    #     return self.goal_visual_encoder.get_object_type_encoding(observations)
 
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
         x = self.goal_visual_encoder(observations)
@@ -681,7 +681,33 @@ class ResnetTensorGoalEncoder(nn.Module):
             -1, -1, self.resnet_tensor_shape[-2], self.resnet_tensor_shape[-1]
         )
 
+    def adapt_input(self, observations):
+        resnet = observations[self.resnet_uuid]
+
+        use_agent = False
+        nagent = 1
+
+        if len(resnet.shape) == 6:
+            use_agent = True
+            nstep, nsampler, nagent = resnet.shape[:3]
+        else:
+            nstep, nsampler = resnet.shape[:2]
+
+        observations[self.resnet_uuid] = resnet.view(-1, *resnet.shape[-3:])
+        observations[self.goal_uuid] = observations[self.goal_uuid].view(-1, 2)
+
+        return observations, use_agent, nstep, nsampler, nagent
+
+    def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
+        if use_agent:
+            return x.view(nstep, nsampler, nagent, -1)
+        return x.view(nstep, nsampler, -1)
+
     def forward(self, observations):
+        observations, use_agent, nstep, nsampler, nagent = self.adapt_input(
+            observations
+        )
+
         if self.blind:
             return self.embed_goal(observations[self.goal_uuid])
         embs = [
@@ -689,7 +715,9 @@ class ResnetTensorGoalEncoder(nn.Module):
             self.distribute_target(observations),
         ]
         x = self.target_obs_combiner(torch.cat(embs, dim=1,))
-        return x.view(x.size(0), -1)  # flatten
+        x = x.view(x.size(0), -1)  # flatten
+
+        return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
 
 
 class ResnetDualTensorGoalEncoder(nn.Module):
@@ -787,7 +815,35 @@ class ResnetDualTensorGoalEncoder(nn.Module):
             -1, -1, self.resnet_tensor_shape[-2], self.resnet_tensor_shape[-1]
         )
 
+    def adapt_input(self, observations):
+        rgb = observations[self.rgb_resnet_uuid]
+        depth = observations[self.depth_resnet_uuid]
+
+        use_agent = False
+        nagent = 1
+
+        if len(rgb.shape) == 6:
+            use_agent = True
+            nstep, nsampler, nagent = rgb.shape[:3]
+        else:
+            nstep, nsampler = rgb.shape[:2]
+
+        observations[self.rgb_resnet_uuid] = rgb.view(-1, *rgb.shape[-3:])
+        observations[self.depth_resnet_uuid] = depth.view(-1, *depth.shape[-3:])
+        observations[self.goal_uuid] = observations[self.goal_uuid].view(-1, 2)
+
+        return observations, use_agent, nstep, nsampler, nagent
+
+    def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
+        if use_agent:
+            return x.view(nstep, nsampler, nagent, -1)
+        return x.view(nstep, nsampler, -1)
+
     def forward(self, observations):
+        observations, use_agent, nstep, nsampler, nagent = self.adapt_input(
+            observations
+        )
+
         if self.blind:
             return self.embed_goal(observations[self.goal_uuid])
         rgb_embs = [
@@ -801,4 +857,6 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         ]
         depth_x = self.depth_target_obs_combiner(torch.cat(depth_embs, dim=1,))
         x = torch.cat([rgb_x, depth_x], dim=1)
-        return x.view(x.size(0), -1)  # flatten
+        x = x.view(x.size(0), -1)  # flatten
+
+        return self.adapt_output(x, use_agent, nstep, nsampler, nagent)

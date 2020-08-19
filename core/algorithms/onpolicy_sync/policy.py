@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
-from typing import TypeVar, Generic, Tuple, Optional, Union, Dict, Sequence
+from typing import TypeVar, Generic, Tuple, Optional, Union, Dict, Sequence, cast
 
 import gym
 import torch
@@ -132,7 +132,7 @@ class LinearActorHead(nn.Module):
         x = self.linear(x)  # type:ignore
 
         if len(x.shape) == 3:
-            x = x.unsqueeze(-2)  # Enforce agent dimension
+            x = cast(torch.FloatTensor, x.unsqueeze(-2))  # Enforce agent dimension
 
         # noinspection PyArgumentList
         return CategoricalDistr(logits=x)
