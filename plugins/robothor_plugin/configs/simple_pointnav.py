@@ -20,6 +20,8 @@ class SimplePointNavExperimentConfig(PointNavBaseConfig, NavBaseConfig):
     def create_model(cls, **kwargs) -> nn.Module:
         return PointNavActorCriticSimpleConvRNN(
             action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
-            observation_space=SensorSuite(cls.SENSORS).observation_spaces,
+            observation_space=SensorSuite(
+                cls.SENSORS  # type:ignore
+            ).observation_spaces,
             goal_sensor_uuid=PointNavBaseConfig.TARGET_UUID,
         )

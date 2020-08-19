@@ -1,5 +1,5 @@
 from math import ceil
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, cast
 import abc
 
 import gym
@@ -9,6 +9,7 @@ from core.base_abstractions.experiment_config import ExperimentConfig
 from plugins.robothor_plugin.robothor_sensors import (
     GPSCompassSensorRoboThor,
     DepthSensorRoboThor,
+    Sensor,
 )
 from plugins.robothor_plugin.robothor_task_samplers import PointNavTaskSampler
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
@@ -26,15 +27,18 @@ class PointNavBaseConfig(ExperimentConfig, abc.ABC):
 
     MAX_STEPS = 500
 
-    SENSORS = [
-        DepthSensorRoboThor(
-            use_normalization=True,
-            height=SCREEN_SIZE,
-            width=SCREEN_SIZE,
-            uuid=VISION_UUID,
-        ),
-        GPSCompassSensorRoboThor(uuid=TARGET_UUID),
-    ]
+    SENSORS = cast(
+        List[Sensor],
+        [
+            DepthSensorRoboThor(
+                use_normalization=True,
+                height=SCREEN_SIZE,
+                width=SCREEN_SIZE,
+                uuid=VISION_UUID,
+            ),
+            GPSCompassSensorRoboThor(uuid=TARGET_UUID),
+        ],
+    )
 
     ENV_ARGS = dict(
         width=CAMERA_WIDTH,

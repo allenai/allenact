@@ -1,26 +1,12 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, List
 import abc
 
-import torch
-import torch.optim as optim
-from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 
 from .nav_base import NavBaseConfig
-from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
-from core.algorithms.onpolicy_sync.losses import PPO
-from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from utils.experiment_utils import Builder
 from core.base_abstractions.preprocessor import ObservationSet, Sensor
 from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
-from utils.viz_utils import (
-    SimpleViz,
-    TrajectoryViz,
-    ActorViz,
-    AgentViewViz,
-    TensorViz1D,
-    TensorViz2D,
-)
-from plugins.robothor_plugin.robothor_viz import ThorViz
 
 
 class Resnet18NavBaseConfig(NavBaseConfig, abc.ABC):
