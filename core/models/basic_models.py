@@ -220,7 +220,7 @@ class SimpleCNN(nn.Module):
         use_agent: Optional[bool] = None
 
         if self._n_input_rgb > 0:
-            use_agent = check_use_agent(len(observations[self.depth_uuid]) == 6)
+            use_agent = check_use_agent(len(observations[self.rgb_uuid]) == 6)
             cnn_output_list.append(
                 compute_cnn_output(self.rgb_cnn, observations[self.rgb_uuid])
             )
