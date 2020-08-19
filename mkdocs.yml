@@ -7,7 +7,7 @@ theme:
   palette:
     primary: blue
     accent: grey
-  logo: img/AllenAct_A_Greyscale.svg
+  logo: img/AI2_Avatar_White.png
   favicon: img/AllenAct_A.svg
   highlightjs: true
   hljs_languages:
