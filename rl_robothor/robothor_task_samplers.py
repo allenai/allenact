@@ -10,7 +10,7 @@ from rl_base.sensor import Sensor
 from rl_base.task import TaskSampler
 from rl_robothor.robothor_environment import RoboThorEnvironment
 from rl_robothor.robothor_tasks import ObjectNavTask, PointNavTask
-from utils.cache_utils import find_nearest_point_in_cache
+from utils.cache_utils import find_nearest_point_in_cache, _str_to_pos
 from utils.experiment_utils import set_seed, set_deterministic_cudnn
 from utils.system import get_logger
 
@@ -870,7 +870,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
             "initial_position": ["initial_position"],
             "initial_orientation": episode["initial_orientation"],
             "target": find_nearest_point_in_cache(
-                distance_cache, episode["target_position"]
+                distance_cache, _str_to_pos(episode["target_position"])
             ),
             "shortest_path": episode["shortest_path"],
             "distance_to_target": episode["shortest_path_length"],
@@ -889,7 +889,8 @@ class PointNavDatasetTaskSampler(TaskSampler):
             self.max_tasks -= 1
 
         if not self.env.teleport(
-            episode["initial_position"], episode["initial_orientation"]
+            _str_to_pos(episode["initial_position"]),
+            {"x": 0.0, "y": episode["initial_orientation"], "z": 0.0}
         ):
             return self.next_task()
 
