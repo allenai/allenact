@@ -19,7 +19,7 @@ import torch.multiprocessing as mp
 import torch.optim
 from setproctitle import setproctitle as ptitle
 
-from core.algorithms.onpolicy_sync.light_engine import (
+from core.algorithms.onpolicy_sync.engine import (
     OnPolicyTrainer,
     OnPolicyInference,
 )

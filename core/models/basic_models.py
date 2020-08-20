@@ -671,7 +671,7 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
 
         out, _ = self.ac_nonrecurrent_head(
             observations={self.head_uuid: rnn_out},
-            recurrent_hidden_states=None,
+            memory=None,
             prev_actions=prev_actions,
             masks=masks,
         )

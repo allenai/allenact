@@ -449,11 +449,7 @@ class OnPolicyRLEngine(object):
 
     @staticmethod
     def _active_memory(memory, keep):
-        if isinstance(memory, torch.Tensor):  # rnn hidden state or no memory
-            return memory[:, :, keep] if memory.shape[2] > len(keep) else memory
-        return (
-            memory.index_select(keep) if memory is not None else memory
-        )  # arbitrary memory or no memory
+        return memory.index_select(keep) if memory is not None else memory
 
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None):
         actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)

@@ -17,7 +17,7 @@ exclude_files = [
     "run.py",
     "setup.py",
     "main.py",
-    "ddmain.py",
+    "main.py",
 ]
 
 
