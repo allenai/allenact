@@ -9,6 +9,8 @@
 
 **AllenAct** is a modular and flexible learning framework designed with a focus on the unique requirements of Embodied-AI research. It provides first-class support for a growing collection of embodied environments, tasks and algorithms, provides reproductions of state-of-the-art models and includes extensive documentation, tutorials, start-up code, and pre-trained models.
 
+AllenAct is built and backed by the [Allen Institute for AI (AI2)](https://allenai.org/). AI2 is a non-profit institute with the mission to contribute to humanity through high-impact AI research and engineering.
+
 ## Quick Links
 
 - [Website & Docs](https://allenact.org/)
@@ -43,7 +45,7 @@ This work builds upon the [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/
 AllenAct is MIT licensed, as found in the [LICENSE](LICENSE.md) file.
 
 ## Team
-AllenAct is an open-source project built by members of the PRIOR research group at the Allen Institute for Artificial Intelligence (AI2). AI2 is a non-profit institute with the mission to contribute to humanity through high-impact AI research and engineering.
+AllenAct is an open-source project built by members of the PRIOR research group at the Allen Institute for Artificial Intelligence (AI2). 
 
 <div align="left">
     <br>
@@ -59,7 +61,7 @@ If you use this work, please cite:
 ```bibtex
 @article{AllenAct,
   author = {Luca Weihs and Jordi Salvador and Klemen Kotar and Unnat Jain and Kuo-Hao Zeng and Roozbeh Mottaghi and Aniruddha Kembhavi},
-  title = {AllenAct: A Framework for Reproducible, Reusable, and Robust Embodied AI Research},
+  title = {AllenAct: A Framework for Embodied AI Research},
   year = {2020},
   journal = {arXiv},
 }
