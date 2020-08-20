@@ -167,8 +167,6 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
             self.goal_visual_encoder.output_dims, rnn_hidden_size,
         )
 
-        # self.actor = LinearActorHead(self.hidden_size, action_space.n)
-        # self.critic = LinearCriticHead(self.hidden_size)
         self.actor_critic = LinearActorCriticHead(self.hidden_size, action_space.n)
 
         self.train()
@@ -191,42 +189,10 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         """Number of recurrent hidden layers."""
         return self.state_encoder.num_recurrent_layers
 
-    def get_object_type_encoding(
-        self, observations: Dict[str, torch.FloatTensor]
-    ) -> torch.FloatTensor:
-        """Get the object type encoding from input batched observations."""
-        return self.goal_visual_encoder.get_object_type_encoding(observations)
-
-    def forward(self, observations, rnn_hidden_states, prev_actions, masks):
-        x = self.goal_visual_encoder(observations)
-        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
-
-        dists, vals = self.actor_critic(x)
-
-        return (
-            ActorCriticOutput(distributions=dists, values=vals, extras={},),
-            rnn_hidden_states,
-        )
-
-
-class ResnetTensorObjectNavActorCriticMemory(ResnetTensorObjectNavActorCritic):
-    @property
-    def recurrent_hidden_state_size(
-        self,
-    ) -> Dict[str, Tuple[Sequence[Tuple[str, Optional[int]]], torch.dtype]]:
-        """The memory spec of the model: A dictionary with string keys (memory type identification) and
-        tuple values (memory type specification), each with:
-        1. memory shape, e.g. `(("step", None), ("layer", 2), ("sampler", None), ("agent", 1), ("hidden", 32))`
-        for an RNN, where the `step` dimension placeholder is *always* the first dimension,
-        the `sampler` dimension placeholder *always* precedes the `agent` dimension,
-        the optional `agent` dimension has the number of agents in the model and,
-        if present, it's *always* the next one after `sampler`,
-        and `layer` and `hidden` correspond to the standard RNN hidden state parametrization;
-        2. the data type, e.g. `torch.float32`."""
+    def _recurrent_memory_specification(self):
         return {
             "rnn_hidden": (
                 (
-                    ("step", None),
                     ("layer", self.state_encoder.num_recurrent_layers),
                     ("sampler", None),
                     ("hidden", self.hidden_size),
@@ -235,34 +201,22 @@ class ResnetTensorObjectNavActorCriticMemory(ResnetTensorObjectNavActorCritic):
             )
         }
 
-    @property
-    def num_recurrent_layers(self) -> int:
-        """Returns -1, indicating we are using a memory specification in
-        recurrent_hidden_state_size."""
-        return -1
-
     def get_object_type_encoding(
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
         return self.goal_visual_encoder.get_object_type_encoding(observations)
 
-    def forward(self, observations, rnn_hidden_states, prev_actions, masks):
+    def forward(self, observations, memory, prev_actions, masks):
         x = self.goal_visual_encoder(observations)
 
-        x, mem_return = self.state_encoder(
-            x, rnn_hidden_states.tensor("rnn_hidden"), masks
-        )
-        rnn_hidden_states["rnn_hidden"] = (
-            mem_return,
-            rnn_hidden_states.sampler_dim("rnn_hidden"),
-        )
+        x, rnn_hidden_states = self.state_encoder(x, memory.tensor("rnn_hidden"), masks)
 
         dists, vals = self.actor_critic(x)
 
         return (
             ActorCriticOutput(distributions=dists, values=vals, extras={},),
-            rnn_hidden_states,
+            memory.set_tensor("rnn_hidden", rnn_hidden_states),
         )
 
 
@@ -513,19 +467,32 @@ class ResnetFasterRCNNTensorsObjectNavActorCritic(ActorCriticModel[CategoricalDi
         """Number of recurrent hidden layers."""
         return self.state_encoder.num_recurrent_layers
 
+    def _recurrent_memory_specification(self):
+        return {
+            "rnn_hidden": (
+                (
+                    ("layer", self.state_encoder.num_recurrent_layers),
+                    ("sampler", None),
+                    ("hidden", self.hidden_size),
+                ),
+                torch.float32,
+            )
+        }
+
     def get_object_type_encoding(
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
         return self.goal_visual_encoder.get_object_type_encoding(observations)
 
-    def forward(self, observations, rnn_hidden_states, prev_actions, masks):
+    def forward(self, observations, memory, prev_actions, masks):
         x = self.goal_visual_encoder(observations)
-        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
+
+        x, rnn_hidden_states = self.state_encoder(x, memory.tensor("rnn_hidden"), masks)
 
         dists, vals = self.actor_critic(x)
 
         return (
             ActorCriticOutput(distributions=dists, values=vals, extras={},),
-            rnn_hidden_states,
+            memory.set_tensor("rnn_hidden", rnn_hidden_states),
         )

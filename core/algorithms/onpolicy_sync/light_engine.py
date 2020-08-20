@@ -458,9 +458,6 @@ class OnPolicyRLEngine(object):
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None):
         actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
 
-        # if len(actions.shape) == 3:
-        #     actions = actions.unsqueeze(-2)  # add agent dim
-
         # Squeeze step and action dimensions and send a list for each sampler's agents
         outputs: List[RLStepResult] = self.vector_tasks.step(
             [[a.item() for a in ac] for ac in actions.squeeze(0).squeeze(-1)]
@@ -473,14 +470,24 @@ class OnPolicyRLEngine(object):
             rewards, dtype=torch.float, device=self.device,  # type:ignore
         )
 
-        # Rewards are of shape [sampler,] or [sampler, agent],
-        # reshape to [step, sampler, agent] or [step, sampler, agent, reward]
-        rewards = rewards.unsqueeze(0).unsqueeze(-1)
+        # # Rewards are of shape [sampler,] or [sampler, agent],
+        # # reshape to [step, sampler, agent] or [step, sampler, agent, reward]
+        # rewards = rewards.unsqueeze(0).unsqueeze(-1)
+        #
+        # if len(rewards.shape) == 3:
+        #     # Rewards are of shape [step, sampler, agent]
+        #     # reshape to [step, sampler, agent, reward]
+        #     rewards = rewards.unsqueeze(-1)  # reward dim (previous is agent dim)
 
-        if len(rewards.shape) == 3:
-            # Rewards are of shape [step, sampler, agent]
-            # reshape to [step, sampler, agent, reward]
-            rewards = rewards.unsqueeze(-1)  # reward dim (previous is agent dim)
+        # We want rewards to have dimensions [step, sampler, agent, reward]
+        if len(rewards.shape) == 1:
+            # Rewards are of shape [sampler,]
+            rewards = rewards.view(1, -1, 1, 1)
+        elif len(rewards.shape) == 2:
+            # Rewards are of shape [sampler, agent]
+            rewards = rewards.unsqueeze(0).unsqueeze(-1)
+        else:
+            raise NotImplementedError
 
         # If done then clean the history of observations.
         masks = torch.tensor(
@@ -498,16 +505,6 @@ class OnPolicyRLEngine(object):
 
         if npaused > 0:
             rollouts.reshape(keep)
-
-        # get_logger().debug(
-        #     "actions {} alp {} v {} r {} m {}".format(
-        #         actions.shape,
-        #         actor_critic_output.distributions.log_probs(actions).shape,
-        #         actor_critic_output.values.shape,
-        #         rewards.shape,
-        #         masks.shape,
-        #     )
-        # )
 
         rollouts.insert(
             observations=self._preprocess_observations(batch)
@@ -893,10 +890,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 assert bsize is not None, "TODO check recursively for batch size"
 
                 actor_critic_output, memory = self.actor_critic(
-                    batch["observations"],
-                    batch["memory"],
-                    batch["prev_actions"],
-                    batch["masks"],
+                    observations=batch["observations"],
+                    memory=batch["memory"],
+                    prev_actions=batch["prev_actions"],
+                    masks=batch["masks"],
                 )
 
                 info: Dict[str, float] = {}
@@ -1065,10 +1062,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
             with torch.no_grad():
                 actor_critic_output, _ = self.actor_critic(
-                    rollouts.pick_observation_step(-1),
-                    rollouts.pick_memory_step(-1),
-                    rollouts.prev_actions[-1:],
-                    rollouts.masks[-1:],
+                    observations=rollouts.pick_observation_step(-1),
+                    memory=rollouts.pick_memory_step(-1),
+                    prev_actions=rollouts.prev_actions[-1:],
+                    masks=rollouts.masks[-1:],
                 )
 
             if self.is_distributed:

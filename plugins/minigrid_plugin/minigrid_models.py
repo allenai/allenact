@@ -77,7 +77,7 @@ class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
 
         self.num_agents = 1
 
-    def forward(self, observations, recurrent_hidden_states, prev_actions, masks):
+    def forward(self, observations, memory, prev_actions, masks):
         minigrid_ego_image = observations["minigrid_ego_image"]
         nrow, ncol, nchannels = minigrid_ego_image.shape[-3:]
         nsteps, nsamplers, nagents = masks.shape[:3]
@@ -108,16 +108,16 @@ class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
         )
 
         # noinspection PyCallingNonCallable
-        out, rnn_hidden_states = self.actor_critic(
+        out, mem_return = self.actor_critic(
             observations=self.observations_for_ac,
-            recurrent_hidden_states=recurrent_hidden_states,
+            memory=memory,
             prev_actions=prev_actions,
             masks=masks,
         )
 
         self.observations_for_ac[self.ac_key] = None
 
-        return out, rnn_hidden_states
+        return out, mem_return
 
 
 class MiniGridSimpleConvRNN(MiniGridSimpleConvBase):
@@ -165,6 +165,7 @@ class MiniGridSimpleConvRNN(MiniGridSimpleConvBase):
             rnn_type=rnn_type,
             head_type=head_type,
         )
+        self.memory_key = "rnn"
 
         self.train()
 
@@ -175,6 +176,18 @@ class MiniGridSimpleConvRNN(MiniGridSimpleConvBase):
     @property
     def recurrent_hidden_state_size(self):
         return self._hidden_size
+
+    def _recurrent_memory_specification(self):
+        return {
+            self.memory_key: (
+                (
+                    ("layer", self.num_recurrent_layers),
+                    ("sampler", None),
+                    ("hidden", self.recurrent_hidden_state_size),
+                ),
+                torch.float32,
+            )
+        }
 
 
 class MiniGridSimpleConv(MiniGridSimpleConvBase):
@@ -211,6 +224,7 @@ class MiniGridSimpleConv(MiniGridSimpleConvBase):
                 }
             ),
         )
+        self.memory_key = None
 
         self.train()
 
@@ -221,3 +235,6 @@ class MiniGridSimpleConv(MiniGridSimpleConvBase):
     @property
     def recurrent_hidden_state_size(self):
         return 0
+
+    def _recurrent_memory_specification(self):
+        return None

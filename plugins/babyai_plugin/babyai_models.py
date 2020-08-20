@@ -1,5 +1,5 @@
 import typing
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, cast
 
 import babyai.model
 import babyai.rl
@@ -9,9 +9,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from gym.spaces.dict import Dict as SpaceDict
-from torch import Tensor
 
-from core.algorithms.onpolicy_sync.policy import ActorCriticModel
+from core.algorithms.onpolicy_sync.policy import (
+    ActorCriticModel,
+    ObservationType,
+    Memory,
+)
 from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
 
@@ -132,17 +135,16 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
 
     def forward_loop(
         self,
-        observations: Dict[str, torch.Tensor],
-        recurrent_hidden_states: torch.Tensor,
-        prev_actions: torch.LongTensor,
+        observations: ObservationType,
+        recurrent_hidden_states: torch.FloatTensor,
+        prev_actions: torch.Tensor,
         masks: torch.FloatTensor,
-        **kwargs
     ):
         results = []
-        images = observations["minigrid_ego_image"].float()
+        images = cast(torch.FloatTensor, observations["minigrid_ego_image"]).float()
         instrs: Optional[torch.Tensor] = None
         if "minigrid_mission" in observations:
-            instrs = observations["minigrid_mission"]
+            instrs = cast(torch.Tensor, observations["minigrid_mission"])
 
         _, nsamplers, _ = recurrent_hidden_states.shape
         rollouts_len = images.shape[0] // nsamplers
@@ -247,11 +249,10 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
     # noinspection PyMethodOverriding
     def forward(
         self,
-        observations: Dict[str, torch.Tensor],
-        recurrent_hidden_states: torch.Tensor,
-        prev_actions: torch.LongTensor,
+        observations: ObservationType,
+        recurrent_hidden_states: torch.FloatTensor,
+        prev_actions: torch.Tensor,
         masks: torch.FloatTensor,
-        **kwargs
     ):
         (
             observations,
@@ -272,19 +273,20 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
                 recurrent_hidden_states=recurrent_hidden_states,
                 prev_actions=prev_actions,
                 masks=masks,
-                **kwargs
             )
 
         assert recurrent_hidden_states.shape[0] == 1
 
-        images = observations["minigrid_ego_image"]
+        images = cast(torch.FloatTensor, observations["minigrid_ego_image"])
         if self.use_cnn2:
             images_shape = images.shape
             images = images + torch.LongTensor([0, 11, 22]).view(  # type:ignore
                 1, 1, 1, 3
             ).to(images.device)
-            images = self.semantic_embedding(images).view(*images_shape[:3], 24)
-        images = images.permute(0, 3, 1, 2).float()
+            images = self.semantic_embedding(images).view(  # type:ignore
+                *images_shape[:3], 24
+            )
+        images = images.permute(0, 3, 1, 2).float()  # type:ignore
 
         _, nsamplers, _ = recurrent_hidden_states.shape
         rollouts_len = images.shape[0] // nsamplers
@@ -294,7 +296,7 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         )
         instrs: Optional[torch.Tensor] = None
         if "minigrid_mission" in observations and self.use_instr:
-            instrs = observations["minigrid_mission"]
+            instrs = cast(torch.FloatTensor, observations["minigrid_mission"])
             instrs = instrs.view(rollouts_len, nsamplers, instrs.shape[-1])
 
         needs_instr_reset_mask = masks != 1.0
@@ -440,9 +442,9 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
 
     @staticmethod
     def adapt_inputs(  # type: ignore
-        observations: Dict[str, torch.Tensor],
-        recurrent_hidden_states: torch.Tensor,
-        prev_actions: torch.LongTensor,
+        observations: ObservationType,
+        recurrent_hidden_states: torch.FloatTensor,
+        prev_actions: torch.Tensor,
         masks: torch.FloatTensor,
     ):
         # Flatten all observation batch dims
@@ -478,8 +480,9 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         # masks [num_steps * num_samplers * num_agents, 1]
 
         recursive_adapt_observations(observations, num_steps, num_samplers, num_agents)
-        recurrent_hidden_states = recurrent_hidden_states.view(
-            num_layers, num_samplers * num_agents, -1
+        recurrent_hidden_states = cast(
+            torch.FloatTensor,
+            recurrent_hidden_states.view(num_layers, num_samplers * num_agents, -1),
         )
         prev_actions = prev_actions.view(  # type:ignore
             num_steps * num_samplers * num_agents, 1
@@ -514,7 +517,7 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
                 ),
             )
 
-        hidden_states = hidden_states.view(num_steps, num_layers, num_samplers, -1)
+        hidden_states = hidden_states.view(1, num_layers, num_samplers, -1)
 
         return (
             ActorCriticOutput(
@@ -560,6 +563,7 @@ class BabyAIRecurrentACModel(ActorCriticModel[CategoricalDistr]):
             aux_info=aux_info,
             include_auxiliary_head=self.include_auxiliary_head,
         )
+        self.memory_key = "rnn"
 
     @property
     def recurrent_hidden_state_size(self) -> int:
@@ -569,18 +573,26 @@ class BabyAIRecurrentACModel(ActorCriticModel[CategoricalDistr]):
     def num_recurrent_layers(self):
         return 1
 
-    def forward(  # type: ignore
-        self,
-        observations: Dict[str, torch.Tensor],
-        recurrent_hidden_states: torch.Tensor,
-        prev_actions: torch.LongTensor,
-        masks: torch.FloatTensor,
-        **kwargs
-    ):
-        return self.baby_ai_model.forward(
+    def _recurrent_memory_specification(self):
+        return {
+            self.memory_key: (
+                (
+                    ("layer", self.num_recurrent_layers),
+                    ("sampler", None),
+                    ("hidden", self.recurrent_hidden_state_size),
+                ),
+                torch.float32,
+            )
+        }
+
+    def forward(self, observations, memory, prev_actions, masks):
+        recurrent_hidden_states = memory.tensor(self.memory_key)
+        from utils.system import get_logger
+
+        out, recurrent_hidden_states = self.baby_ai_model.forward(
             observations=observations,
             recurrent_hidden_states=recurrent_hidden_states,
             prev_actions=prev_actions,
             masks=masks,
-            **kwargs
         )
+        return out, memory.set_tensor(self.memory_key, recurrent_hidden_states)

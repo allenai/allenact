@@ -137,6 +137,8 @@ class Memory(Dict):
             tensor = self.tensor(name)
             assert len(keep) == 0 or (
                 0 <= min(keep) and max(keep) < tensor.shape[sampler_dim]
+            ), "Got min(keep) {} max(keep) {} for tensor {} shape {} dim {}".format(
+                min(keep), max(keep), name, tensor.shape, sampler_dim
             )
             if tensor.shape[sampler_dim] > len(keep):
                 tensor = tensor.index_select(
@@ -149,4 +151,15 @@ class Memory(Dict):
                 valid = True
         if valid:
             return res
+        return self
+
+    def set_tensor(self, key: str, tensor: torch.Tensor) -> "Memory":
+        assert key in self
+        assert (
+            tensor.shape == self[key][0].shape
+        ), "setting tensor with shape {} for former {}".format(
+            tensor.shape, self[key][0].shape
+        )
+        self[key] = (tensor, self[key][1])
+
         return self

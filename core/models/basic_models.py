@@ -19,7 +19,7 @@ from gym.spaces.dict import Dict as SpaceDict
 from torch import nn
 
 from core.algorithms.onpolicy_sync.policy import ActorCriticModel, DistributionType
-from core.base_abstractions.misc import ActorCriticOutput
+from core.base_abstractions.misc import ActorCriticOutput, Memory
 from core.base_abstractions.distributions import CategoricalDistr
 from utils.model_utils import make_cnn, compute_cnn_output, Flatten
 
@@ -333,10 +333,14 @@ class RNNStateEncoder(nn.Module):
     ) -> Union[Tuple[torch.FloatTensor, ...], torch.FloatTensor]:
         """Mask input hidden states given `masks`. Useful when masks represent
         steps on which a task has completed.
+
         # Parameters
+
         hidden_states : The hidden states.
         masks : Masks to apply to hidden states (see seq_forward).
+
         # Returns
+
         Masked hidden states. Here masked hidden states will be replaced with
         either all zeros (if `trainable_masked_hidden_state` was False) and will
         otherwise be a learnable collection of parameters.
@@ -564,18 +568,10 @@ class LinearActorCritic(ActorCriticModel[CategoricalDistr]):
         nn.init.orthogonal_(self.linear.weight)
         nn.init.constant_(self.linear.bias, 0)
 
-    @property
-    def recurrent_hidden_state_size(self) -> int:
-        return 0
+    def _recurrent_memory_specification(self):
+        return None
 
-    def forward(  # type: ignore
-        self,
-        observations: Dict[str, torch.FloatTensor],
-        recurrent_hidden_states: torch.FloatTensor,
-        prev_actions: torch.LongTensor,
-        masks: torch.FloatTensor,
-        **kwargs,
-    ) -> Tuple[ActorCriticOutput[DistributionType], Any]:
+    def forward(self, observations, memory, prev_actions, masks):
         out = self.linear(observations[self.input_uuid])
 
         if len(out.shape) == 3:
@@ -644,6 +640,8 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
             ),
         )
 
+        self.memory_key = "rnn"
+
     @property
     def recurrent_hidden_state_size(self) -> int:
         return self.hidden_size
@@ -652,18 +650,22 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
     def num_recurrent_layers(self) -> int:
         return self.state_encoder.num_recurrent_layers
 
-    def forward(  # type: ignore
-        self,
-        observations: Dict[str, torch.FloatTensor],
-        recurrent_hidden_states: torch.FloatTensor,
-        prev_actions: torch.LongTensor,
-        masks: torch.FloatTensor,
-        **kwargs,
-    ) -> Tuple[ActorCriticOutput[DistributionType], Any]:
+    def _recurrent_memory_specification(self):
+        return {
+            self.memory_key: (
+                (
+                    ("layer", self.num_recurrent_layers),
+                    ("sampler", None),
+                    ("hidden", self.recurrent_hidden_state_size),
+                ),
+                torch.float32,
+            )
+        }
 
-        rnn_out, recurrent_hidden_states = self.state_encoder(
+    def forward(self, observations, memory, prev_actions, masks):
+        rnn_out, mem_return = self.state_encoder(
             x=observations[self.input_uuid],
-            hidden_states=recurrent_hidden_states,
+            hidden_states=memory.tensor(self.memory_key),
             masks=masks,
         )
 
@@ -677,5 +679,5 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
         # noinspection PyArgumentList
         return (
             out,
-            recurrent_hidden_states,
+            memory.set_tensor(self.memory_key, mem_return),
         )

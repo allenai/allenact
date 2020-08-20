@@ -49,14 +49,10 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
     def recurrent_hidden_state_size(self) -> int:
         return 0
 
-    def forward(  # type: ignore
-        self,
-        observations: Dict[str, torch.Tensor],
-        recurrent_hidden_states: Optional[torch.FloatTensor],
-        prev_actions: Optional[torch.LongTensor],
-        masks: Optional[torch.FloatTensor],
-        **kwargs
-    ) -> typing.Tuple[ActorCriticOutput[DistributionType], typing.Any]:
+    def _recurrent_memory_specification(self):
+        return None
+
+    def forward(self, observations, memory, prev_actions, masks):
         out = self.linear(observations[self.key])
 
         if len(out.shape) == 3:

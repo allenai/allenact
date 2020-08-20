@@ -95,6 +95,18 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         """Number of recurrent hidden layers."""
         return self.state_encoder.num_recurrent_layers
 
+    def _recurrent_memory_specification(self):
+        return dict(
+            rnn=(
+                (
+                    ("layer", self.num_recurrent_layers),
+                    ("sampler", None),
+                    ("hidden", self.recurrent_hidden_state_size),
+                ),
+                torch.float32,
+            )
+        )
+
     def get_object_type_encoding(
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
@@ -103,13 +115,9 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
             observations[self.goal_sensor_uuid].to(torch.int64)
         )
 
-    def forward(  # type: ignore
-        self,
-        observations: Dict[str, torch.FloatTensor],
-        rnn_hidden_states: torch.FloatTensor,
-        prev_actions: torch.LongTensor,
-        masks: torch.FloatTensor,
-    ) -> Tuple[ActorCriticOutput, torch.FloatTensor]:
+    def forward(
+        self, observations, memory, prev_actions, masks,
+    ):
         """Processes input batched observations to produce new actor and critic
         values. Processes input batched observations (along with prior hidden
         states, previous actions, and masks denoting which recurrent hidden
@@ -133,14 +141,16 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
             x = [perception_embed] + x
 
         x_cat = torch.cat(x, dim=-1)  # type: ignore
-        x_out, rnn_hidden_states = self.state_encoder(x_cat, rnn_hidden_states, masks)
+        x_out, rnn_hidden_states = self.state_encoder(
+            x_cat, memory.tensor("rnn"), masks
+        )
 
         # distributions, values = self.actor_and_critic(x_out)
         return (
             ActorCriticOutput(
                 distributions=self.actor(x_out), values=self.critic(x_out), extras={}
             ),
-            rnn_hidden_states,
+            memory.set_tensor("rnn", rnn_hidden_states),
         )
 
 
@@ -213,20 +223,32 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         """Number of recurrent hidden layers."""
         return self.state_encoder.num_recurrent_layers
 
+    def _recurrent_memory_specification(self):
+        return dict(
+            rnn=(
+                (
+                    ("layer", self.num_recurrent_layers),
+                    ("sampler", None),
+                    ("hidden", self.recurrent_hidden_state_size),
+                ),
+                torch.float32,
+            )
+        )
+
     def get_object_type_encoding(
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
         return self.goal_visual_encoder.get_object_type_encoding(observations)
 
-    def forward(self, observations, rnn_hidden_states, prev_actions, masks):
+    def forward(self, observations, memory, prev_actions, masks):
         x = self.goal_visual_encoder(observations)
-        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
+        x, rnn_hidden_states = self.state_encoder(x, memory.tensor("rnn"), masks)
         return (
             ActorCriticOutput(
                 distributions=self.actor(x), values=self.critic(x), extras={}
             ),
-            rnn_hidden_states,
+            memory.set_tensor("rnn", rnn_hidden_states),
         )
 
 

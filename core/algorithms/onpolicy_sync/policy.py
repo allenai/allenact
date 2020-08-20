@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
-from typing import TypeVar, Generic, Tuple, Optional, Union, Dict, Sequence, cast
+from typing import TypeVar, Generic, Tuple, Optional, Union, Dict, cast, Any
 
 import gym
 import torch
@@ -15,6 +15,13 @@ from core.base_abstractions.misc import ActorCriticOutput, Memory
 from core.base_abstractions.distributions import CategoricalDistr
 
 DistributionType = TypeVar("DistributionType")
+
+MemoryDimType = Tuple[str, Optional[int]]
+MemoryShapeType = Tuple[MemoryDimType, ...]
+MemorySpecType = Tuple[MemoryShapeType, torch.dtype]
+FullMemorySpecType = Dict[str, MemorySpecType]
+
+ObservationType = Dict[str, Union[torch.FloatTensor, Dict[str, Any]]]
 
 
 class ActorCriticModel(Generic[DistributionType], nn.Module):
@@ -43,27 +50,72 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
         self.observation_space = observation_space
 
     @property
-    @abc.abstractmethod
-    def recurrent_hidden_state_size(
-        self,
-    ) -> Union[int, Dict[str, Tuple[Sequence[Tuple[str, Optional[int]]], torch.dtype]]]:
-        """Non-negative integer corresponding to the dimension of the hidden
-        state used by the agent or mapping from string memory names to Tuples
-        of (0) sequences of axes dimensions excluding sampler axis; (1)
-        position for sampler axis; and (2) data types.
+    def recurrent_memory_specification(self) -> Optional[FullMemorySpecType]:
+        """The memory specification for the `ActorCriticModel` including the `step` dimension.
+        See docs for `_recurrent_memory_shape`
 
         # Returns
 
-        The hidden state dimension (non-negative integer) or dict with memory specification.
+        The memory specification from `_recurrent_memory_shape` prepended with a `step` dimension.
+        """
+        spec = self._recurrent_memory_specification()
+
+        if spec is None:
+            return spec
+
+        for key in spec:
+            dims, dtype = spec[key]
+            dim_to_pos = {dim[0]: it + 1 for it, dim in enumerate(dims)}
+
+            assert (
+                "step" not in dim_to_pos
+            ), "`step` is automatically added and cannot be reused"
+
+            spec[key] = ((("step", None),) + dims, dtype)
+            dim_to_pos["step"] = 0
+
+            assert (
+                "sampler" in dim_to_pos
+            ), "`sampler` dim must be defined (right before `agent` if present)"
+
+            assert (
+                "agent" not in dim_to_pos
+                or dim_to_pos["agent"] == dim_to_pos["sampler"] + 1
+            ), "`agent` dim must be right after `sampler`"
+
+        return spec
+
+    @abc.abstractmethod
+    def _recurrent_memory_specification(self) -> Optional[FullMemorySpecType]:
+        """Implementation of memory specification for the `ActorCriticModel`.
+
+        # Returns
+
+        If None, it indicates the model is memory-less.
+        Otherwise, it is a one-level dictionary with string keys (memory type identification) and
+        tuple values (memory type specification). Each specification tuple contains:
+        1. Memory type named shape, e.g.
+        `(("layer", 1), ("sampler", None), ("agent", 2), ("hidden", 32))`
+        for a two-agent GRU memory, where
+        the `sampler` dimension placeholder *always* precedes the optional `agent` dimension;
+        the optional `agent` dimension has the number of agents in the model and is *always* the one after `sampler`;
+        and `layer` and `hidden` correspond to the standard RNN hidden state parametrization.
+        2. The data type, e.g. `torch.float32`.
+
+        The inclusion of the `agent` dimension implies we are also including that dimension in our observation tensors.
+        For a single-agent ActorCritic model it is often more convenient to skip the agent dimension, e.g.
+        `(("layer", 1), ("sampler", None), ("hidden", 32))` for a GRU memory.
         """
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def forward(
-        self, *args, **kwargs
-    ) -> Tuple[
-        ActorCriticOutput[DistributionType], Optional[Union[torch.Tensor, Memory]]
-    ]:
+    def forward(  # type:ignore
+        self,
+        observations: Dict[str, Union[torch.FloatTensor, Dict[str, Any]]],
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         """Transforms input observations (& previous hidden state) into action
         probabilities and the state value.
 
