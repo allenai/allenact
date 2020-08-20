@@ -117,7 +117,7 @@ def expected_max_of_subset_statistic(vals: List[float], m: int):
     count_so_far = 0
     logdenom = math.log(comb(n, m))
 
-    expected_max = 0
+    expected_max = 0.0
     for val, num_occurances_of_val in vals_and_counts:
         count_so_far += num_occurances_of_val
         if count_so_far < m:

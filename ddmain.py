@@ -11,8 +11,8 @@ from typing import Dict, Tuple
 import gin
 from setproctitle import setproctitle as ptitle
 
-from onpolicy_sync.runner import OnPolicyRunner
-from rl_base.experiment_config import ExperimentConfig
+from core.algorithms.onpolicy_sync.runner import OnPolicyRunner
+from core.base_abstractions.experiment_config import ExperimentConfig
 from utils.system import get_logger
 
 
@@ -20,7 +20,7 @@ def get_args():
     """Creates the argument parser and parses any input arguments."""
 
     parser = argparse.ArgumentParser(
-        description="embodied-ai",
+        description="allenact",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 

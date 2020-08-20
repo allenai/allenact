@@ -3,21 +3,21 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from onpolicy_sync.losses import PPO
-from onpolicy_sync.losses.ppo import PPOConfig
+from core.algorithms.onpolicy_sync.losses import PPO
+from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from projects.pointnav_baselines.experiments.habitat.pointnav_habitat_base import (
     PointNavHabitatBaseConfig,
 )
 from projects.pointnav_baselines.models.point_nav_models import (
     PointNavActorCriticSimpleConvRNN,
 )
-from rl_habitat.habitat_sensors import (
+from plugins.habitat_plugin.habitat_sensors import (
     RGBSensorHabitat,
     DepthSensorHabitat,
     TargetCoordinatesSensorHabitat,
 )
-from rl_habitat.habitat_tasks import PointNavTask
-from rl_habitat.habitat_utils import construct_env_configs
+from plugins.habitat_plugin.habitat_tasks import PointNavTask
+from plugins.habitat_plugin.habitat_utils import construct_env_configs
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 

@@ -1,18 +1,18 @@
-# Framework Transfer Tutorial
+# Tutorial: Swapping in a new environment
 
 ## Introduction
 This tutorial was designed as a continuation of the `Robothor Pointnav Tutorial` and explains
 how to modify the experiment config created in that tutorial to work with the iTHOR and
 Habitat environments.
 
-Cross-platform support is one of the key design goals of `embodied-ai`. This is achieved through
+Cross-platform support is one of the key design goals of `allenact`. This is achieved through
 a total decoupling of the environment code from the engine, model and algorithm code, so that
 swapping in a new environment is as plug and play as possible. Crucially we will be able to 
 run a model on different environments without touching the model code at all, which will allow
 us to train neural networks in one environment and test them in another.
 
 ## RoboTHOR to iTHOR
-![iTHOR Framework](../img/iTHOR_framework.png)
+![iTHOR Framework](../img/iTHOR_framework.jpg)
 Since both the `RoboTHOR` and the `iTHOR` environment stem from the same family and are developed
 by the same organization, switching between the two is incredibly easy. We only have to change
 the path parameter to point to an iTHOR dataset rather than the RoboTHOR one.
@@ -34,7 +34,7 @@ the behavior at all and is merely a bookkeeping convenience.
 ```
 
 ## RoboTHOR to Habitat
-![Habitat Framework](../img/habitat_framework.png)
+![Habitat Framework](../img/habitat_framework.jpg)
 Since the roboTHOR and Habitat simulators are sufficiently different and have different parameters to configure
 this transformation takes a bit more effort, but we only need to modify the environment config and TaskSampler (we
 have to change the former because the habitat simulator accepts a different format of configuration and the latter
@@ -90,7 +90,7 @@ of the underlying environment.
 Finally we need to replace the task sampler and its argument generating functions:
 ```python
     # Define Task Sampler
-    from from rl_habitat.habitat_task_samplers import PointNavTaskSampler
+    from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
         return PointNavTaskSampler(**kwargs)
@@ -162,4 +162,4 @@ This should test the model trained in RoboTHOR on either iTHOR or Habitat (depen
 
 ## Conclusion
 In this tutorial, we learned how to modify our experiment configurations to work with different environments. By
-providing a high level of modularity and out-of-the-box support for both `Habitat` and `THOR`, two of the most popular embodied frameworks out there **embodied-ai** hopes to give researchers the ability to validate their results across many platforms and help guide them towards genuine progress. The source code for this tutorial can be found in `/projects/framework_transfer_tutorial`.
+providing a high level of modularity and out-of-the-box support for both `Habitat` and `THOR`, two of the most popular embodied frameworks out there **AllenAct** hopes to give researchers the ability to validate their results across many platforms and help guide them towards genuine progress. The source code for this tutorial can be found in `/projects/framework_transfer_tutorial`.

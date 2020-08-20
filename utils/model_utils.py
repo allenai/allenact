@@ -6,6 +6,20 @@ import torch
 from torch import nn
 
 
+class Flatten(nn.Module):
+    """Flatten input tensor so that it is of shape (batchs x -1)."""
+
+    def forward(self, x):
+        """Flatten input tensor.
+
+        # Parameters
+        x : Tensor of size (batches x ...) to flatten to size (batches x -1)
+        # Returns
+        Flattened tensor.
+        """
+        return x.reshape(x.size(0), -1)
+
+
 def init_linear_layer(
     module: nn.Linear, weight_init: Callable, bias_init: Callable, gain=1
 ):
@@ -77,7 +91,7 @@ def make_cnn(
         if it < len(layer_channels) - 1:
             net.add_module("relu_{}".format(it), nn.ReLU(inplace=True))
 
-    net.add_module("flatten", nn.Flatten())
+    net.add_module("flatten", Flatten())
     net.add_module(
         "fc",
         nn.Linear(layer_channels[-1] * output_width * output_height, output_channels),

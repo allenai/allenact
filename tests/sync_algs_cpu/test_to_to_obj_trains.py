@@ -1,25 +1,16 @@
 import math
-import os
 
-import py
-
-from constants import ABS_PATH_OF_TOP_LEVEL_DIR
-from onpolicy_sync.runner import OnPolicyRunner
+from core.algorithms.onpolicy_sync.runner import OnPolicyRunner
 from projects.babyai_baselines.experiments.go_to_obj.ppo import (
     PPOBabyAIGoToObjExperimentConfig,
 )
 
 
 class TestGoToObjTrains(object):
-    def test_ppo_trains(
-        self, tmpdir=py.path.local(os.path.join(ABS_PATH_OF_TOP_LEVEL_DIR, "tests/tmp"))
-    ):
+    def test_ppo_trains(self, tmpdir):
         cfg = PPOBabyAIGoToObjExperimentConfig()
 
-        tmpdir = tmpdir.join("experiment_output")
-        if not tmpdir.exists():
-            tmpdir.mkdir()
-        output_dir: str = tmpdir.dirname
+        output_dir = tmpdir.mkdir("experiment_output")
 
         train_runner = OnPolicyRunner(
             config=cfg,
@@ -70,4 +61,4 @@ class TestGoToObjTrains(object):
 
 
 if __name__ == "__main__":
-    TestGoToObjTrains().test_ppo_trains()
+    TestGoToObjTrains().test_ppo_trains()  # type:ignore
