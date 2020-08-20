@@ -45,10 +45,10 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     # Training Engine Parameters
     ADVANCE_SCENE_ROLLOUT_PERIOD = 10 ** 13
-    NUM_PROCESSES = 60
-    TRAINING_GPUS = [0, 1, 2, 3, 4, 5, 6]
-    VALIDATION_GPUS = [7]
-    TESTING_GPUS = [7]
+    NUM_PROCESSES = 20
+    TRAINING_GPUS = [0]
+    VALIDATION_GPUS = [0]
+    TESTING_GPUS = [0]
 
     # Dataset Parameters
     TRAIN_DATASET_DIR = "dataset/robothor/pointnav/debug"
@@ -77,7 +77,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 "torchvision_resnet_model": models.resnet18,
                 "input_uuids": ["rgb_lowres"],
                 "output_uuid": "rgb_resnet",
-                "parallel": False,  # TODO False for debugging
+                "parallel": False,
             },
         ),
     ]
