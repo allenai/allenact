@@ -2,7 +2,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import random
-import typing
 from collections import defaultdict
 from typing import Union, List, Dict, Tuple, DefaultDict, Sequence, cast, Any, Optional
 
@@ -19,7 +18,6 @@ class RolloutStorage:
 
     FLATTEN_SEPARATOR: str = "._AUTOFLATTEN_."
     DEFAULT_RNN_MEMORY_NAME: str = "._AUTO_RNN_HIDDEN_TO_MEMORY_."  # there can only be one memory with this name
-    DEFAULT_RNN_MEMORY_ACCESSOR: str = "auto_rnn_hidden_to_memory"
     DEFAULT_RNN_MEMORY_SAMPLER_AXIS: int = 2  # in actor-critic tensor shape
 
     def __init__(
@@ -32,11 +30,7 @@ class RolloutStorage:
     ):
         self.num_steps = num_steps
 
-        self.flattened_spaces: Dict[str, Dict[str, List[str]]] = {
-            "memory": dict(),
-            "observations": dict(),
-        }
-        self.reverse_flattened_spaces: Dict[str, Dict[Tuple, List[str]]] = {
+        self.flattened_to_unflattened: Dict[str, Dict[str, List[str]]] = {
             "memory": dict(),
             "observations": dict(),
         }
@@ -114,12 +108,9 @@ class RolloutStorage:
                     )
                 }
             )
-            self.flattened_spaces["memory"][self.DEFAULT_RNN_MEMORY_NAME] = [
+            self.flattened_to_unflattened["memory"][self.DEFAULT_RNN_MEMORY_NAME] = [
                 self.DEFAULT_RNN_MEMORY_NAME
             ]
-            self.reverse_flattened_spaces["memory"][
-                tuple([self.DEFAULT_RNN_MEMORY_ACCESSOR])
-            ] = [self.DEFAULT_RNN_MEMORY_NAME]
             return memory
         else:
             assert isinstance(spec, Dict)
@@ -149,10 +140,7 @@ class RolloutStorage:
                 memory.check_append(
                     key, torch.zeros(*all_dims, dtype=dtype), dim_to_pos["sampler"]
                 )
-                self.flattened_spaces["memory"][key] = [key]
-                self.reverse_flattened_spaces["memory"][(key,)] = [
-                    key
-                ]  # TODO Jordi: remove this as in stashed jordi branch
+                self.flattened_to_unflattened["memory"][key] = [key]
             return memory
 
     def to(self, device: torch.device):
@@ -171,18 +159,14 @@ class RolloutStorage:
         self.prev_actions = self.prev_actions.to(device)
         self.masks = self.masks.to(device)
 
-    def rnn_to_memory(self, rnn: torch.Tensor):
+    @classmethod
+    def rnn_to_memory(cls, rnn: torch.Tensor):
         return Memory(
-            [
-                (
-                    self.DEFAULT_RNN_MEMORY_NAME,
-                    (rnn, self.DEFAULT_RNN_MEMORY_SAMPLER_AXIS),
-                )
-            ]
+            [(cls.DEFAULT_RNN_MEMORY_NAME, (rnn, cls.DEFAULT_RNN_MEMORY_SAMPLER_AXIS),)]
         )
 
     def insert_observations(
-        self, observations: Any, time_step: int,
+        self, observations: Dict[str, Union[torch.Tensor, Dict]], time_step: int,
     ):
         self.insert_tensors(
             storage_name="observations", unflattened=observations, time_step=time_step
@@ -206,7 +190,7 @@ class RolloutStorage:
     def insert_tensors(
         self,
         storage_name: str,
-        unflattened: Any,
+        unflattened: Dict[str, Any],
         prefix: str = "",
         path: Sequence[str] = (),
         time_step: int = 0,
@@ -216,6 +200,7 @@ class RolloutStorage:
 
         for name in unflattened:
             current_data = unflattened[name]
+
             if not torch.is_tensor(current_data) and not isinstance(
                 current_data, tuple
             ):
@@ -226,40 +211,39 @@ class RolloutStorage:
                     path=path + [name],
                     time_step=time_step,
                 )
-            else:
-                sampler_dim = 1  # dim 0 for step
-                if isinstance(current_data, Sequence):
-                    sampler_dim = current_data[1]
-                    current_data = current_data[0]
+                continue
 
-                flatten_name = prefix + name
-                if flatten_name not in storage:
-                    storage[flatten_name] = (
-                        torch.zeros_like(current_data)  # type:ignore
-                        .repeat(
-                            self.num_steps
-                            + 1,  # valid for both observations and memory
-                            *(1 for _ in range(len(current_data.shape))),
-                        )
-                        .to(
-                            torch.device("cpu")
-                            if self.actions.get_device() < 0
-                            else self.actions.get_device()
-                        ),
-                        sampler_dim,
+            sampler_dim = 1  # dim 0 for step
+            if isinstance(current_data, tuple):
+                sampler_dim = current_data[1]
+                current_data = current_data[0]
+
+            flatten_name = prefix + name
+            if flatten_name not in storage:
+                storage[flatten_name] = (
+                    torch.zeros_like(current_data)  # type:ignore
+                    .repeat(
+                        self.num_steps + 1,  # valid for both observations and memory
+                        *(1 for _ in range(len(current_data.shape))),
                     )
+                    .to(
+                        torch.device("cpu")
+                        if self.actions.get_device() < 0
+                        else self.actions.get_device()
+                    ),
+                    sampler_dim,
+                )
 
-                    assert (
-                        flatten_name not in self.flattened_spaces[storage_name]
-                    ), "new flattened name {} already existing in flattened spaces[{}]".format(
-                        flatten_name, storage_name
-                    )
-                    self.flattened_spaces[storage_name][flatten_name] = path + [name]
-                    self.reverse_flattened_spaces[storage_name][
-                        tuple(path + [name])
-                    ] = flatten_name
+                assert (
+                    flatten_name not in self.flattened_to_unflattened[storage_name]
+                ), "new flattened name {} already existing in flattened spaces[{}]".format(
+                    flatten_name, storage_name
+                )
+                self.flattened_to_unflattened[storage_name][flatten_name] = path + [
+                    name
+                ]
 
-                storage[flatten_name][0][time_step : time_step + 1].copy_(current_data)
+            storage[flatten_name][0][time_step : time_step + 1].copy_(current_data)
 
     def insert(
         self,
@@ -542,7 +526,7 @@ class RolloutStorage:
 
         result: Dict = defaultdict()
         for name in flattened_batch:
-            full_path = self.flattened_spaces[storage_type][name]
+            full_path = self.flattened_to_unflattened[storage_type][name]
             cur_dict = result
             for part in full_path[:-1]:
                 cur_dict = cur_dict[part]

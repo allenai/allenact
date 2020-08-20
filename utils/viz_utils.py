@@ -14,11 +14,12 @@ from utils.tensor_utils import SummaryWriter, tile_images, process_video
 
 
 class AbstractViz:
-    rollout_episode_default_axis: int = 1
-    rnn_hidden_memory: Tuple[str, str] = (
+    ROLLOUT_EPISODE_DEFAULT_AXIS: int = 1
+    RNN_HIDDEN_MEMORY_ROLLOUT_SRC: Tuple[str, str] = (
         "memory",
-        RolloutStorage.DEFAULT_RNN_MEMORY_ACCESSOR,
+        RolloutStorage.DEFAULT_RNN_MEMORY_NAME,
     )  # to be used to access rnn hidden from memory
+    RNN_HIDDEN_MEMORY_LABEL: str = "rnn_hidden_memory"
 
     def __init__(
         self,
@@ -58,7 +59,7 @@ class AbstractViz:
         self,
         mode: str,
         path_to_id: Sequence[str],
-        episode_ids: Union[Sequence[Sequence[str]], Sequence[str]],
+        episode_ids: Sequence[Union[Sequence[str], str]],
         force: bool = False,
     ):
         self.mode = mode
@@ -340,7 +341,10 @@ class AbstractTensorViz(AbstractViz):
             if isinstance(rollout_source, str):
                 label = rollout_source[:]
             else:
-                label = "/".join(rollout_source)
+                if rollout_source == self.RNN_HIDDEN_MEMORY_ROLLOUT_SRC:
+                    label = self.RNN_HIDDEN_MEMORY_LABEL
+                else:
+                    label = "/".join(rollout_source)
 
         super().__init__(label, rollout_sources=[rollout_source])
 
@@ -416,7 +420,9 @@ class TensorViz1D(AbstractTensorViz):
 class TensorViz2D(AbstractTensorViz):
     def __init__(
         self,
-        rollout_source: Union[str, Sequence[str]] = AbstractViz.rnn_hidden_memory,
+        rollout_source: Union[
+            str, Sequence[str]
+        ] = AbstractViz.RNN_HIDDEN_MEMORY_ROLLOUT_SRC,
         label: Optional[str] = None,
         figsize: Tuple[int, int] = (10, 10),
         fontsize: int = 5,
@@ -687,18 +693,14 @@ class SimpleViz(AbstractViz):
                 datum_id = self._source_to_str(source, is_vector_task=False)
 
                 storage, path = source[0], source[1:]
-                if source == self.rnn_hidden_memory:
-                    path = rollout.DEFAULT_RNN_MEMORY_NAME
 
                 # Access storage
                 res = getattr(rollout, storage)
-                episode_dim = self.rollout_episode_default_axis
+                episode_dim = self.ROLLOUT_EPISODE_DEFAULT_AXIS
 
                 # Access sub-storage if path not empty
                 if len(path) > 0:
-                    for path_step in rollout.reverse_flattened_spaces[storage][
-                        tuple(path)
-                    ]:
+                    for path_step in path:
                         res = res[path_step]
                     res, episode_dim = res
 
@@ -760,7 +762,6 @@ class SimpleViz(AbstractViz):
 
     # to be called by engine
     def collect(self, vector_task=None, alive=None, rollout=None, actor_critic=None):
-
         if actor_critic is not None:
             # in phase with last_it2epid
             self._collect_actor_critic(actor_critic)
