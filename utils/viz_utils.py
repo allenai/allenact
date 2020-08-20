@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt, markers
 from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
 
+from core.algorithms.onpolicy_sync.storage import RolloutStorage
 from utils.experiment_utils import Builder
 from utils.system import get_logger
 from utils.tensor_utils import SummaryWriter, tile_images, process_video
@@ -683,12 +684,18 @@ class SimpleViz(AbstractViz):
 
                 # Access storage
                 res = getattr(rollout, storage)
-                episode_dim = self.ROLLOUT_EPISODE_DEFAULT_AXIS
+                episode_dim = {dim: it for it, dim in enumerate(rollout.dim_names)}[
+                    "sampler"
+                ]
 
                 # Access sub-storage if path not empty
                 if len(path) > 0:
-                    for path_step in path:
-                        res = res[path_step]
+                    flattened_name = rollout.unflattened_to_flattened[storage][
+                        tuple(path)
+                    ]
+                    # for path_step in path:
+                    #     res = res[path_step]
+                    res = res[flattened_name]
                     res, episode_dim = res
 
                 # Select latest step

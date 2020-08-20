@@ -32,6 +32,10 @@ class RolloutStorage:
             "memory": dict(),
             "observations": dict(),
         }
+        self.unflattened_to_flattened: Dict[str, Dict[Tuple[str, ...], str]] = {
+            "memory": dict(),
+            "observations": dict(),
+        }
 
         self.dim_names = ["step", "sampler", "agent", None]
 
@@ -94,6 +98,7 @@ class RolloutStorage:
                 key, torch.zeros(*all_dims, dtype=dtype), dim_to_pos["sampler"]
             )
             self.flattened_to_unflattened["memory"][key] = [key]
+            self.unflattened_to_flattened["memory"][(key,)] = key
         return memory
 
     def to(self, device: torch.device):
@@ -193,6 +198,9 @@ class RolloutStorage:
                 self.flattened_to_unflattened[storage_name][flatten_name] = path + [
                     name
                 ]
+                self.unflattened_to_flattened[storage_name][
+                    tuple(path + [name])
+                ] = flatten_name
 
             storage[flatten_name][0][time_step : time_step + 1].copy_(current_data)
 
