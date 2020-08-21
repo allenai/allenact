@@ -1,25 +1,21 @@
 import typing
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, Union, List
 
 import gym
 import torch
 import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
-from core.models.basic_models import SimpleCNN, RNNStateEncoder, Flatten
+from core.models.basic_models import SimpleCNN, RNNStateEncoder
 from core.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     LinearCriticHead,
     LinearActorHead,
     ObservationType,
+    DistributionType,
 )
 from core.base_abstractions.misc import ActorCriticOutput, Memory
 from core.base_abstractions.distributions import CategoricalDistr
-
-
-# from habitat_baselines.rl.ddppo.policy.resnet_policy import (
-#     PointNavResNetPolicy,
-# )
 
 
 class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
@@ -106,8 +102,15 @@ class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
             )
         )
 
-    def forward(self, observations, memory, prev_actions, masks):
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         target_encoding = self.get_target_coordinates_encoding(observations)
+        x: Union[torch.Tensor, List[torch.Tensor]]
         x = [target_encoding]
 
         if not self.is_blind:
@@ -208,9 +211,13 @@ class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
             )
         }
 
-    def forward(
-        self, observations, memory, prev_actions, masks,
-    ):
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         x = self.goal_visual_encoder(observations)
         x, rnn_hidden_states = self.state_encoder(
             x, memory.tensor(self.memory_key), masks

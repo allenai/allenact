@@ -10,6 +10,9 @@ from core.models.basic_models import RNNStateEncoder
 from core.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     LinearActorCriticHead,
+    DistributionType,
+    Memory,
+    ObservationType,
 )
 from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
@@ -207,7 +210,13 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         """Get the object type encoding from input batched observations."""
         return self.goal_visual_encoder.get_object_type_encoding(observations)
 
-    def forward(self, observations, memory, prev_actions, masks):
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         x = self.goal_visual_encoder(observations)
 
         x, rnn_hidden_states = self.state_encoder(x, memory.tensor("rnn_hidden"), masks)
@@ -485,7 +494,13 @@ class ResnetFasterRCNNTensorsObjectNavActorCritic(ActorCriticModel[CategoricalDi
         """Get the object type encoding from input batched observations."""
         return self.goal_visual_encoder.get_object_type_encoding(observations)
 
-    def forward(self, observations, memory, prev_actions, masks):
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         x = self.goal_visual_encoder(observations)
 
         x, rnn_hidden_states = self.state_encoder(x, memory.tensor("rnn_hidden"), masks)

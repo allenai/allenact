@@ -1,5 +1,5 @@
 import abc
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, Tuple, cast
 
 import gym
 import numpy as np
@@ -8,7 +8,13 @@ from gym.spaces.dict import Dict as SpaceDict
 from torch import nn
 
 from core.models.basic_models import LinearActorCritic, RNNActorCritic
-from core.algorithms.onpolicy_sync.policy import ActorCriticModel
+from core.algorithms.onpolicy_sync.policy import (
+    ActorCriticModel,
+    Memory,
+    DistributionType,
+    ActorCriticOutput,
+    ObservationType,
+)
 from core.base_abstractions.distributions import CategoricalDistr
 from utils.misc_utils import prepare_locals_for_super
 
@@ -77,8 +83,14 @@ class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
 
         self.num_agents = 1
 
-    def forward(self, observations, memory, prev_actions, masks):
-        minigrid_ego_image = observations["minigrid_ego_image"]
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
+        minigrid_ego_image = cast(torch.Tensor, observations["minigrid_ego_image"])
         nrow, ncol, nchannels = minigrid_ego_image.shape[-3:]
         nsteps, nsamplers, nagents = masks.shape[:3]
 

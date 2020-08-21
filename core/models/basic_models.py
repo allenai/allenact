@@ -662,7 +662,13 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
             )
         }
 
-    def forward(self, observations, memory, prev_actions, masks):
+    def forward(  # type:ignore
+        self,
+        observations: Dict[str, Union[torch.FloatTensor, Dict[str, Any]]],
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         rnn_out, mem_return = self.state_encoder(
             x=observations[self.input_uuid],
             hidden_states=memory.tensor(self.memory_key),

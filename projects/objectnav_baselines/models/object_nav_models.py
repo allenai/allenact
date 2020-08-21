@@ -4,18 +4,21 @@ Object navigation is currently available as a Task in AI2-THOR and
 Facebook's Habitat.
 """
 import typing
-from typing import cast, Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, cast
 
 import gym
 import torch
 import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
-from core.models.basic_models import SimpleCNN, RNNStateEncoder, Flatten
+from core.models.basic_models import SimpleCNN, RNNStateEncoder
 from core.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     LinearCriticHead,
     LinearActorHead,
+    DistributionType,
+    Memory,
+    ObservationType,
 )
 from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
@@ -115,9 +118,13 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
             observations[self.goal_sensor_uuid].to(torch.int64)
         )
 
-    def forward(
-        self, observations, memory, prev_actions, masks,
-    ):
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         """Processes input batched observations to produce new actor and critic
         values. Processes input batched observations (along with prior hidden
         states, previous actions, and masks denoting which recurrent hidden
@@ -133,7 +140,9 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         # Returns
         Tuple of the `ActorCriticOutput` and recurrent hidden state.
         """
-        target_encoding = self.get_object_type_encoding(observations)
+        target_encoding = self.get_object_type_encoding(
+            cast(Dict[str, torch.FloatTensor], observations)
+        )
         x = [target_encoding]
 
         if not self.is_blind:
@@ -241,7 +250,13 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         """Get the object type encoding from input batched observations."""
         return self.goal_visual_encoder.get_object_type_encoding(observations)
 
-    def forward(self, observations, memory, prev_actions, masks):
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         x = self.goal_visual_encoder(observations)
         x, rnn_hidden_states = self.state_encoder(x, memory.tensor("rnn"), masks)
         return (

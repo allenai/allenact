@@ -411,17 +411,11 @@ class OnPolicyRLEngine(object):
     def initialize_rollouts(self, rollouts, visualizer=None):
         observations = self.vector_tasks.get_observations()
 
-        # # TODO Remove this (which breaks whenever observations already contain an agent dim)
-        # for it, observation in enumerate(observations):
-        #     # Stack each observation set along a new agent dim, sampler/step are added later
-        #     if observation is not None:
-        #         observations[it] = batch_observations([observation])
-
         npaused, keep, batch = self.remove_paused(observations)
         if npaused > 0:
-            rollouts.reshape(keep)
+            rollouts.sampler_select(keep)
         rollouts.to(self.device)
-        rollouts.insert_initial_observations(
+        rollouts.insert_observations(
             self._preprocess_observations(batch) if len(keep) > 0 else batch
         )
         if visualizer is not None and len(keep) > 0:
@@ -449,7 +443,7 @@ class OnPolicyRLEngine(object):
 
     @staticmethod
     def _active_memory(memory, keep):
-        return memory.index_select(keep) if memory is not None else memory
+        return memory.sampler_select(keep) if memory is not None else memory
 
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None):
         actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
@@ -465,15 +459,6 @@ class OnPolicyRLEngine(object):
         rewards = torch.tensor(
             rewards, dtype=torch.float, device=self.device,  # type:ignore
         )
-
-        # # Rewards are of shape [sampler,] or [sampler, agent],
-        # # reshape to [step, sampler, agent] or [step, sampler, agent, reward]
-        # rewards = rewards.unsqueeze(0).unsqueeze(-1)
-        #
-        # if len(rewards.shape) == 3:
-        #     # Rewards are of shape [step, sampler, agent]
-        #     # reshape to [step, sampler, agent, reward]
-        #     rewards = rewards.unsqueeze(-1)  # reward dim (previous is agent dim)
 
         # We want rewards to have dimensions [step, sampler, agent, reward]
         if len(rewards.shape) == 1:
@@ -500,7 +485,7 @@ class OnPolicyRLEngine(object):
         npaused, keep, batch = self.remove_paused(observations)
 
         if npaused > 0:
-            rollouts.reshape(keep)
+            rollouts.sampler_select(keep)
 
         rollouts.insert(
             observations=self._preprocess_observations(batch)

@@ -1,5 +1,5 @@
 import typing
-from typing import Dict, Optional, List, cast
+from typing import Dict, Optional, List, cast, Union, Any, Tuple
 
 import babyai.model
 import babyai.rl
@@ -14,6 +14,7 @@ from core.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     ObservationType,
     Memory,
+    DistributionType,
 )
 from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
@@ -585,13 +586,18 @@ class BabyAIRecurrentACModel(ActorCriticModel[CategoricalDistr]):
             )
         }
 
-    def forward(self, observations, memory, prev_actions, masks):
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         recurrent_hidden_states = memory.tensor(self.memory_key)
-        from utils.system import get_logger
 
         out, recurrent_hidden_states = self.baby_ai_model.forward(
             observations=observations,
-            recurrent_hidden_states=recurrent_hidden_states,
+            recurrent_hidden_states=cast(torch.FloatTensor, recurrent_hidden_states),
             prev_actions=prev_actions,
             masks=masks,
         )

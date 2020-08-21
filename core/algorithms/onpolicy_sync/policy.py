@@ -111,7 +111,7 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
     @abc.abstractmethod
     def forward(  # type:ignore
         self,
-        observations: Dict[str, Union[torch.FloatTensor, Dict[str, Any]]],
+        observations: ObservationType,
         memory: Memory,
         prev_actions: torch.Tensor,
         masks: torch.FloatTensor,

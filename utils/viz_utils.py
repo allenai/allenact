@@ -683,9 +683,7 @@ class SimpleViz(AbstractViz):
 
                 # Access storage
                 res = getattr(rollout, storage)
-                episode_dim = {dim: it for it, dim in enumerate(rollout.dim_names)}[
-                    "sampler"
-                ]
+                episode_dim = rollout.dim_names.index("sampler")
 
                 # Access sub-storage if path not empty
                 if len(path) > 0:

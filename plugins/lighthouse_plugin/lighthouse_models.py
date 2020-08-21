@@ -1,12 +1,16 @@
 import typing
-from typing import Dict, Optional
+from typing import Optional, Tuple, cast
 
 import gym
 import torch
 from gym.spaces.dict import Dict as SpaceDict
 from torch import nn
 
-from core.algorithms.onpolicy_sync.policy import ActorCriticModel
+from core.algorithms.onpolicy_sync.policy import (
+    ActorCriticModel,
+    Memory,
+    ObservationType,
+)
 from core.base_abstractions.misc import ActorCriticOutput, DistributionType
 from core.base_abstractions.distributions import CategoricalDistr
 
@@ -52,8 +56,14 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
     def _recurrent_memory_specification(self):
         return None
 
-    def forward(self, observations, memory, prev_actions, masks):
-        out = self.linear(observations[self.key])
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
+        out = self.linear(cast(torch.Tensor, observations[self.key]))
 
         if len(out.shape) == 3:
             out = out.unsqueeze(-2)  # Enforce agent dimension
