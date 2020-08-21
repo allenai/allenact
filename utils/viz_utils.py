@@ -7,7 +7,6 @@ from matplotlib import pyplot as plt, markers
 from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
 
-from core.algorithms.onpolicy_sync.storage import RolloutStorage
 from utils.experiment_utils import Builder
 from utils.system import get_logger
 from utils.tensor_utils import SummaryWriter, tile_images, process_video
