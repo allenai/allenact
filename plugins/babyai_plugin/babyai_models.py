@@ -466,17 +466,17 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
 
         # INPUTS
         # observations are of shape [num_steps, num_samplers, (num_agents,) ...]
-        # recurrent_hidden_states are of shape [num_steps, num_layers, num_samplers, (num_agents,) num_dims]
+        # recurrent_hidden_states are of shape [num_layers, num_samplers, (num_agents,) num_dims]
         # prev_actions are of shape [num_steps, num_samplers, num_agents, 1]
         # masks are of shape [num_steps, num_samplers, num_agents, 1]
 
         num_steps, num_samplers, num_agents = masks.shape[:3]
-        num_layers = recurrent_hidden_states.shape[1]
+        num_layers = recurrent_hidden_states.shape[0]
         assert num_agents == 1
 
         # Old-style inputs need to be
         # observations [num_steps * num_samplers * num_agents, ...]
-        # recurrent_hidden_states [(num_steps,) num_layers, num_samplers * num_agents, num_dims]
+        # recurrent_hidden_states [num_layers, num_samplers * num_agents, num_dims]
         # prev_actions [num_steps * num_samplers * num_agents, 1]
         # masks [num_steps * num_samplers * num_agents, 1]
 
@@ -518,7 +518,7 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
                 ),
             )
 
-        hidden_states = hidden_states.view(1, num_layers, num_samplers, -1)
+        hidden_states = hidden_states.view(num_layers, num_samplers * num_agents, -1)
 
         return (
             ActorCriticOutput(
@@ -593,11 +593,11 @@ class BabyAIRecurrentACModel(ActorCriticModel[CategoricalDistr]):
         prev_actions: torch.Tensor,
         masks: torch.FloatTensor,
     ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
-        recurrent_hidden_states = memory.tensor(self.memory_key)
-
         out, recurrent_hidden_states = self.baby_ai_model.forward(
             observations=observations,
-            recurrent_hidden_states=cast(torch.FloatTensor, recurrent_hidden_states),
+            recurrent_hidden_states=cast(
+                torch.FloatTensor, memory.tensor(self.memory_key)
+            ),
             prev_actions=prev_actions,
             masks=masks,
         )

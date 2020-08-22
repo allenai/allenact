@@ -65,8 +65,14 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
     ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         out = self.linear(cast(torch.Tensor, observations[self.key]))
 
+        assert len(out.shape) in [
+            3,
+            4,
+        ], "observations must be [step, sampler, data] or [step, sampler, agent, data]"
+
         if len(out.shape) == 3:
-            out = out.unsqueeze(-2)  # Enforce agent dimension
+            # [step, sampler, data] -> [step, sampler, agent, data]
+            out = out.unsqueeze(-2)
 
         main_logits = out[..., : self.num_actions]
         aux_logits = out[..., self.num_actions : -1]

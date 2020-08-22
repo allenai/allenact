@@ -93,11 +93,10 @@ class RolloutStorage:
         for key in spec:
             dims_template, dtype = spec[key]
 
-            dim_names = [d[0] for d in dims_template]
+            dim_names = ["step"] + [d[0] for d in dims_template]
             sampler_dim = dim_names.index("sampler")
 
-            all_dims = [d[1] for d in dims_template]
-            all_dims[dim_names.index("step")] = self.num_steps + 1
+            all_dims = [self.num_steps + 1] + [d[1] for d in dims_template]
             all_dims[sampler_dim] = num_samplers
 
             memory.check_append(
@@ -171,6 +170,7 @@ class RolloutStorage:
 
             flatten_name = prefix + name
             if flatten_name not in storage:
+                assert storage_name == "observations"
                 storage[flatten_name] = (
                     torch.zeros_like(current_data)  # type:ignore
                     .repeat(
@@ -197,7 +197,13 @@ class RolloutStorage:
                     tuple(path + [name])
                 ] = flatten_name
 
-            storage[flatten_name][0][time_step : time_step + 1].copy_(current_data)
+            if storage_name == "observations":
+                # current_data has a step dimension
+                assert time_step >= 0
+                storage[flatten_name][0][time_step : time_step + 1].copy_(current_data)
+            else:
+                # current_data does not have a step dimension
+                storage[flatten_name][0][time_step].copy_(current_data)
 
     def insert(
         self,
@@ -366,8 +372,8 @@ class RolloutStorage:
         for start_ind, end_ind in pairs:
             cur_samplers = list(range(start_ind, end_ind))
 
-            memory_batch = self.memory.step_select(0).sampler_select(cur_samplers)
-            observations_batch = self.observations.slice(0, last=-1).sampler_select(
+            memory_batch = self.memory.step_squeeze(0).sampler_select(cur_samplers)
+            observations_batch = self.observations.slice(dim=0, stop=-1).sampler_select(
                 cur_samplers
             )
 
@@ -431,4 +437,4 @@ class RolloutStorage:
         return self.unflatten_observations(self.observations.step_select(step))
 
     def pick_memory_step(self, step: int) -> Memory:
-        return self.memory.step_select(step)
+        return self.memory.step_squeeze(step)

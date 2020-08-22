@@ -319,7 +319,7 @@ class ResnetTensorGoalEncoder(nn.Module):
     def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
         if use_agent:
             return x.view(nstep, nsampler, nagent, -1)
-        return x.view(nstep, nsampler, -1)
+        return x.view(nstep, nsampler * nagent, -1)
 
     def forward(self, observations):
         observations, use_agent, nstep, nsampler, nagent = self.adapt_input(

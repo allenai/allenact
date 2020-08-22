@@ -381,7 +381,8 @@ class RNNStateEncoder(nn.Module):
             x,
             hidden_states,
             masks,
-            has_agent,
+            mem_agent,
+            obs_agent,
             nsteps,
             nsamplers,
             nagents,
@@ -399,7 +400,8 @@ class RNNStateEncoder(nn.Module):
         return self.adapt_result(
             x,
             self._pack_hidden(unpacked_hidden_states),
-            has_agent,
+            mem_agent,
+            obs_agent,
             nsteps,
             nsamplers,
             nagents,
@@ -411,17 +413,38 @@ class RNNStateEncoder(nn.Module):
         hidden_states: torch.FloatTensor,
         masks: torch.FloatTensor,
     ) -> Tuple[
-        torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, bool, int, int, int,
+        torch.FloatTensor,
+        torch.FloatTensor,
+        torch.FloatTensor,
+        bool,
+        bool,
+        int,
+        int,
+        int,
     ]:
         nsteps, nsamplers, nagents = masks.shape[:3]  # masks always have all dimensions
 
-        has_agent: bool
-        if len(hidden_states.shape) == 5:  # [1, layer, sampler, agent, hidden]
-            # x is a [step, sampler, agent, -1] tensor
-            has_agent = True
-        else:  # [1, layer, sampler, hidden]
-            # x is a [step, sampler, -1] tensor
-            has_agent = False
+        assert len(hidden_states.shape) in [
+            3,
+            4,
+        ], "hidden_states must be [layer, sampler, hidden] or [layer, sampler, agent, hidden]"
+
+        assert len(x.shape) in [
+            3,
+            4,
+        ], "observations must be [step, sampler, data] or [step, sampler, agent, data]"
+
+        mem_agent: bool
+        if len(hidden_states.shape) == 4:  # [layer, sampler, agent, hidden]
+            mem_agent = True
+        else:  # [layer, sampler, hidden]
+            mem_agent = False
+
+        obs_agent: bool
+        if len(x.shape) == 4:  # [step, sampler, agent, dims]
+            obs_agent = True
+        else:  # [step, sampler, agent, dims]
+            obs_agent = False
 
         # Flatten (nsamplers, nagents)
         x = x.view(nsteps, nsamplers * nagents, -1)  # type:ignore
@@ -432,24 +455,23 @@ class RNNStateEncoder(nn.Module):
             self.num_recurrent_layers, nsamplers * nagents, -1
         )
 
-        return x, hidden_states, masks, has_agent, nsteps, nsamplers, nagents
+        return x, hidden_states, masks, mem_agent, obs_agent, nsteps, nsamplers, nagents
 
     def adapt_result(
         self,
         outputs: torch.FloatTensor,
         hidden_states: torch.FloatTensor,
-        has_agent: bool,
+        mem_agent: bool,
+        obs_agent: bool,
         nsteps: int,
         nsamplers: int,
         nagents: int,
     ) -> Tuple[
         torch.FloatTensor, torch.FloatTensor,
     ]:
-        output_dims = (nsteps, nsamplers) + ((nagents, -1) if has_agent else (-1,))
-        hidden_dims = (
-            (1, self.num_recurrent_layers, nsamplers)
-            + ((nagents,) if has_agent else tuple())
-            + (hidden_states.shape[-1],)
+        output_dims = (nsteps, nsamplers) + ((nagents, -1) if obs_agent else (-1,))
+        hidden_dims = (self.num_recurrent_layers, nsamplers) + (
+            (nagents, -1) if mem_agent else (-1,)
         )
 
         outputs = cast(torch.FloatTensor, outputs.view(*output_dims))
@@ -479,7 +501,8 @@ class RNNStateEncoder(nn.Module):
             x,
             hidden_states,
             masks,
-            has_agent,
+            mem_agent,
+            obs_agent,
             nsteps,
             nsamplers,
             nagents,
@@ -521,7 +544,8 @@ class RNNStateEncoder(nn.Module):
         return self.adapt_result(
             cast(torch.FloatTensor, torch.cat(outputs, dim=0)),
             self._pack_hidden(unpacked_hidden_states),
-            has_agent,
+            mem_agent,
+            obs_agent,
             nsteps,
             nsamplers,
             nagents,
@@ -574,8 +598,14 @@ class LinearActorCritic(ActorCriticModel[CategoricalDistr]):
     def forward(self, observations, memory, prev_actions, masks):
         out = self.linear(observations[self.input_uuid])
 
+        assert len(out.shape) in [
+            3,
+            4,
+        ], "observations must be [step, sampler, data] or [step, sampler, agent, data]"
+
         if len(out.shape) == 3:
-            out = out.unsqueeze(-2)  # Enforce agent dimension
+            # [step, sampler, data] -> [step, sampler, agent, data]
+            out = out.unsqueeze(-2)
 
         # noinspection PyArgumentList
         return (

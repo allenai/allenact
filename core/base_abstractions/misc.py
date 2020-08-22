@@ -257,8 +257,37 @@ class Memory(Dict):
                 )
         return res
 
+    def step_squeeze(self, step: int) -> "Memory":
+        """
+        Equivalent to simple indexing for the `step` (i.e first) dimension.
+
+        # Parameters
+
+        step: step to keep
+
+        # Returns
+
+        Sliced memory with a single step (and squeezed step dimension)
+        """
+        res = Memory()
+        for key in self:
+            tensor = self.tensor(key)
+            assert (
+                tensor.shape[0] > step
+            ), "attempting to access step {} for memory type {} of shape {}".format(
+                step, key, tensor.shape
+            )
+            res.check_append(
+                key, self.tensor(key)[step, ...], self.sampler_dim(key) - 1
+            )
+        return res
+
     def slice(
-        self, dim: int, first: Optional[int] = None, last: Optional[int] = None
+        self,
+        dim: int,
+        start: Optional[int] = None,
+        stop: Optional[int] = None,
+        step: int = 1,
     ) -> "Memory":
         """
         Slicing for dimensions that have same extents in all memory types. It also accepts negative indices.
@@ -266,15 +295,16 @@ class Memory(Dict):
         # Parameters
 
         dim: the dimension to slice
-        first: the index of the first item to keep if given (default 0 if None)
-        last: the index of the first item to discard if given (default tensor shape along `dim` if None)
+        start: the index of the first item to keep if given (default 0 if None)
+        stop: the index of the first item to discard if given (default tensor shape along `dim` if None)
+        step: the increment between consecutive indices (default 1)
 
         # Returns
 
         Sliced memory
         """
-        if first is None:
-            first = 0
+        if start is None:
+            start = 0
         checked = False
         total: Optional[int] = None
         index: Optional[torch.Tensor] = None
@@ -290,26 +320,25 @@ class Memory(Dict):
 
             if not checked:
                 total = tensor.shape[dim]
-                if first < 0:
-                    first += total
-                if last is None:
-                    last = total
-                elif last < 0:
-                    last += total
+                if start < 0:
+                    start += total
+                if stop is None:
+                    stop = total
+                elif stop < 0:
+                    stop += total
 
                 assert (
-                    0 <= first <= last <= total
+                    0 <= start <= stop <= total
                 ), "attempting to slice with first {} last {} for {} elems".format(
-                    first, last, total
+                    start, stop, total
                 )
 
                 # assume all tensors are in the same device
-                if last - first < total:
-                    index = torch.as_tensor(
-                        list(range(first, last)),
-                        dtype=torch.int64,
-                        device=tensor.device,
-                    )
+                index = torch.as_tensor(
+                    list(range(start, stop, step)),
+                    dtype=torch.int64,
+                    device=tensor.device,
+                )
 
                 checked = True
 
@@ -317,7 +346,7 @@ class Memory(Dict):
                 total == tensor.shape[dim]
             ), "attempting to slice along non-uniform dimension {}".format(dim)
 
-            if last - first < total:
+            if index.shape[0] < total:
                 res.check_append(
                     key,
                     tensor.index_select(dim=dim, index=index),

@@ -91,6 +91,7 @@ class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
         masks: torch.FloatTensor,
     ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         minigrid_ego_image = cast(torch.Tensor, observations["minigrid_ego_image"])
+        use_agent = minigrid_ego_image.shape == 6
         nrow, ncol, nchannels = minigrid_ego_image.shape[-3:]
         nsteps, nsamplers, nagents = masks.shape[:3]
 
@@ -115,9 +116,14 @@ class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
             embed_list.append(ego_state_embeds)
         ego_embeds = torch.cat(embed_list, dim=-1)
 
-        self.observations_for_ac[self.ac_key] = ego_embeds.view(
-            nsteps, nsamplers, nagents, -1
-        )
+        if use_agent:
+            self.observations_for_ac[self.ac_key] = ego_embeds.view(
+                nsteps, nsamplers, nagents, -1
+            )
+        else:
+            self.observations_for_ac[self.ac_key] = ego_embeds.view(
+                nsteps, nsamplers * nagents, -1
+            )
 
         # noinspection PyCallingNonCallable
         out, mem_return = self.actor_critic(
