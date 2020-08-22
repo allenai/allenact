@@ -73,7 +73,6 @@ class Loss(abc.ABC):
         raise NotImplementedError()
 
 
-# TODO document that the step dim is always 0 (as in policy's memory specification)
 class Memory(Dict):
     def __init__(self, *args, **kwargs):
         super().__init__()
@@ -229,7 +228,7 @@ class Memory(Dict):
 
     def step_select(self, step: int) -> "Memory":
         """
-        Equivalent to slicing with length 1 for the `step` (i.e first) dimension.
+        Equivalent to slicing with length 1 for the `step` (i.e first) dimension in rollouts storage.
 
         # Parameters
 
@@ -259,7 +258,7 @@ class Memory(Dict):
 
     def step_squeeze(self, step: int) -> "Memory":
         """
-        Equivalent to simple indexing for the `step` (i.e first) dimension.
+        Equivalent to simple indexing for the `step` (i.e first) dimension in rollouts storage.
 
         # Parameters
 
@@ -296,7 +295,7 @@ class Memory(Dict):
 
         dim: the dimension to slice
         start: the index of the first item to keep if given (default 0 if None)
-        stop: the index of the first item to discard if given (default tensor shape along `dim` if None)
+        stop: the index of the first item to discard if given (default tensor size along `dim` if None)
         step: the increment between consecutive indices (default 1)
 
         # Returns
