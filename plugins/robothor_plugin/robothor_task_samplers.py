@@ -2,7 +2,7 @@ import copy
 import gzip
 import json
 import random
-from typing import List, Optional, Union, Dict, Any
+from typing import List, Optional, Union, Dict, Any, cast
 
 import gym
 
@@ -212,7 +212,9 @@ class ObjectNavTaskSampler(TaskSampler):
                 )
 
             task_info["initial_position"] = {k: pose[k] for k in ["x", "y", "z"]}
-            task_info["initial_orientation"] = pose["rotation"]["y"]
+            task_info["initial_orientation"] = cast(Dict[str, float], pose["rotation"])[
+                "y"
+            ]
         else:
             next_task_id = self.dataset_first + self.max_tasks - 1
             # get_logger().debug("task {}".format(next_task_id))
@@ -310,6 +312,9 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             scene: self._load_dataset(scene, scene_directory + "/episodes")
             for scene in scenes
         }
+        get_logger().warning(
+            "Assuming the first entry in the cached list of dicts is the correct cache!!!"
+        )
         self.distance_caches = {
             scene: self._load_distance_cache(
                 scene, scene_directory + "/distance_caches"
@@ -368,7 +373,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         random.shuffle(data)
         return data
 
-    def _load_distance_cache(self, scene: str, base_directory: str) -> List[Dict]:
+    def _load_distance_cache(self, scene: str, base_directory: str) -> Dict:
         filename = (
             "/".join([base_directory, scene])
             if base_directory[-1] != "/"
@@ -530,7 +535,7 @@ class PointNavTaskSampler(TaskSampler):
         self.max_tasks: Optional[int] = None
         self.reset_tasks = max_tasks
 
-        self._last_sampled_task: Optional[ObjectNavTask] = None
+        self._last_sampled_task: Optional[PointNavTask] = None
 
         self.seed: Optional[int] = None
         self.set_seed(seed)
@@ -740,6 +745,9 @@ class PointNavDatasetTaskSampler(TaskSampler):
             scene: self._load_dataset(scene, scene_directory + "/episodes")
             for scene in scenes
         }
+        get_logger().warning(
+            "Assuming the first entry in the cached list of dicts is the correct cache!!!"
+        )
         self.distance_caches = {
             scene: self._load_distance_cache(
                 scene, scene_directory + "/distance_caches"
@@ -766,7 +774,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
         self.scene_index = 0
         self.episode_index = 0
 
-        self._last_sampled_task: Optional[ObjectNavTask] = None
+        self._last_sampled_task: Optional[PointNavTask] = None
 
         self.seed: Optional[int] = None
         self.set_seed(seed)
@@ -795,7 +803,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
         random.shuffle(data)
         return data
 
-    def _load_distance_cache(self, scene: str, base_directory: str) -> List[Dict]:
+    def _load_distance_cache(self, scene: str, base_directory: str) -> Dict:
         filename = (
             "/".join([base_directory, scene])
             if base_directory[-1] != "/"

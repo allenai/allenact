@@ -57,8 +57,10 @@ class TestGoToObjTrains(object):
         ), "Success counts don't seem to match"
         assert (
             tr["success"] > 0.95
-        ), "PPO did not seem to converge for the go_to_obj task."
+        ), "PPO did not seem to converge for the go_to_obj task (success {}).".format(
+            tr["success"]
+        )
 
 
 if __name__ == "__main__":
-    TestGoToObjTrains().test_ppo_trains()
+    TestGoToObjTrains().test_ppo_trains()  # type:ignore

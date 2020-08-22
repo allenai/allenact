@@ -8,7 +8,7 @@ environment."""
 
 import abc
 from abc import abstractmethod
-from typing import Dict, Any, Tuple, Generic, Union, Optional, TypeVar, Sequence
+from typing import Dict, Any, Tuple, Generic, Union, Optional, TypeVar, Sequence, List
 
 import gym
 import numpy as np
@@ -61,7 +61,7 @@ class Task(Generic[EnvType]):
         self.max_steps = max_steps
         self.observation_space = self.sensor_suite.observation_spaces
         self._num_steps_taken = 0
-        self._total_reward = 0.0
+        self._total_reward: Union[float, List[float]] = 0.0
 
     def get_observations(self, **kwargs) -> Any:
         return self.sensor_suite.get_observations(env=self.env, task=self, **kwargs)
@@ -102,11 +102,11 @@ class Task(Generic[EnvType]):
         one."""
         self._num_steps_taken += 1
 
-    def step(self, action: int) -> RLStepResult:
-        """Take an action in the environment.
+    def step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        """Take an action in the environment (one per agent).
 
         Takes the action in the environment corresponding to
-        `self.class_action_names()[action]` and returns
+        `self.class_action_names()[action]` for each action if it's a Sequence and returns
         observations (& rewards and any additional information)
         corresponding to the agent's new state. Note that this function
         should not be overwritten without care (instead
@@ -123,7 +123,16 @@ class Task(Generic[EnvType]):
         """
         assert not self.is_done()
         sr = self._step(action=action)
-        self._total_reward += float(sr.reward)
+
+        if isinstance(sr.reward, Sequence):
+            if isinstance(self._total_reward, Sequence):
+                for it, rew in enumerate(sr.reward):
+                    self._total_reward[it] += float(rew)
+            else:
+                self._total_reward = [float(r) for r in sr.reward]
+        else:
+            self._total_reward += float(sr.reward)  # type:ignore
+
         self._increment_num_steps_taken()
         # TODO: We need a better solution to the below. It's not a good idea
         #   to pre-increment the step counter as this might play poorly with `_step`
@@ -131,11 +140,11 @@ class Task(Generic[EnvType]):
         return sr.clone({"done": sr.done or self.is_done()})
 
     @abstractmethod
-    def _step(self, action: int) -> RLStepResult:
-        """Helper function called by `step` to take a step in the environment.
+    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        """Helper function called by `step` to take a step by each agent in the environment.
 
         Takes the action in the environment corresponding to
-        `self.class_action_names()[action]` and returns
+        `self.class_action_names()[action]` for each action in actions and returns
         observations (& rewards and any additional information)
         corresponding to the agent's new state. This function is called
         by the (public) `step` function and is what should be implemented
@@ -227,7 +236,7 @@ class Task(Generic[EnvType]):
         """
         return {
             "ep_length": self.num_steps_taken(),
-            "reward": self._total_reward,
+            "reward": self.cumulative_reward,
             "task_info": self.task_info,
         }
 
@@ -246,13 +255,17 @@ class Task(Generic[EnvType]):
 
     @property
     def cumulative_reward(self) -> float:
-        """Total cumulative in the task so far.
+        """Mean per-agent total cumulative in the task so far.
 
         # Returns
 
-        Cumulative reward as a float.
+        Mean per-agent cumulative reward as a float.
         """
-        return self._total_reward
+        return (
+            np.mean(self._total_reward).item()
+            if isinstance(self._total_reward, Sequence)
+            else self._total_reward
+        )
 
 
 SubTaskType = TypeVar("SubTaskType", bound=Task)

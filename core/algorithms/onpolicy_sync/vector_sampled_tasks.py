@@ -194,8 +194,8 @@ class VectorSampledTasks(object):
             for j in range(len(part))
         ]
 
-    def _partition_to_processes(self, input: typing.Iterator):
-        subparts_list = [[] for _ in range(self._num_processes)]
+    def _partition_to_processes(self, input: Union[typing.Iterator, typing.Sequence]):
+        subparts_list: List[List] = [[] for _ in range(self._num_processes)]
 
         input = list(input)
         assert len(input) == len(self.sampler_index_to_process_ind_and_subprocess_ind)
@@ -326,6 +326,7 @@ class VectorSampledTasks(object):
         )
         self._workers = []
         k = 0
+        id: Union[int, str]
         for id, stuff in enumerate(
             zip(worker_connections, parent_connections, sampler_fn_args_list)
         ):
@@ -477,7 +478,7 @@ class VectorSampledTasks(object):
             )
         ]
 
-    def async_step(self, actions: List[int]) -> None:
+    def async_step(self, actions: List[List[int]]) -> None:
         """Asynchronously step in the vectorized Tasks.
 
         # Parameters
@@ -498,7 +499,7 @@ class VectorSampledTasks(object):
         self._is_waiting = False
         return observations
 
-    def step(self, actions: List[int]):
+    def step(self, actions: List[List[int]]):
         """Perform actions in the vectorized tasks.
 
         # Parameters
@@ -857,6 +858,9 @@ class SingleProcessVectorSampledTasks(object):
 
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
+                    # TODO Adding this for backward compatibility with existing tasks. Would be best to just send data.
+                    if len(data) == 1:
+                        data = data[0]
                     step_result = current_task.step(data)
                     if current_task.is_done():
                         metrics = current_task.metrics()
@@ -1033,7 +1037,7 @@ class SingleProcessVectorSampledTasks(object):
         """
         return self._vector_task_generators[index_process].send((STEP_COMMAND, action))
 
-    def step(self, actions: List[int]):
+    def step(self, actions: List[List[int]]):
         """Perform actions in the vectorized tasks.
 
         # Parameters

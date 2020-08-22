@@ -1,6 +1,6 @@
 import random
 import warnings
-from typing import Tuple, Any, List, Dict, Optional, Union, Callable
+from typing import Tuple, Any, List, Dict, Optional, Union, Callable, Sequence, cast
 
 import gym
 import networkx as nx
@@ -23,12 +23,12 @@ from utils.system import get_logger
 
 
 class MiniGridTask(Task[Union[CrossingEnv]]):
-    _ACTION_NAMES = ("left", "right", "forward")
+    _ACTION_NAMES: Tuple[str, ...] = ("left", "right", "forward")
     _ACTION_IND_TO_MINIGRID_IND = tuple(
         MiniGridEnv.Actions.__members__[name].value for name in _ACTION_NAMES
     )
     _CACHED_GRAPHS: Dict[str, nx.DiGraph] = {}
-    """ Task around a MiniGrid Env, allows interfacing embodied-ai with
+    """ Task around a MiniGrid Env, allows interfacing allenact with
     MiniGrid tasks. (currently focussed towards LavaCrossing)
     """
 
@@ -60,9 +60,12 @@ class MiniGridTask(Task[Union[CrossingEnv]]):
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         return self.env.render(mode=mode)
 
-    def _step(self, action: int) -> RLStepResult:
+    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
         # if self.num_steps_taken() == 0:
         #     self.env.render()
+        assert isinstance(action, int)
+        action = cast(int, action)
+
         minigrid_obs, reward, self._minigrid_done, info = self.env.step(
             action=self._ACTION_IND_TO_MINIGRID_IND[action]
         )
@@ -109,7 +112,9 @@ class MiniGridTask(Task[Union[CrossingEnv]]):
             object_indices = [
                 x
                 for x, y in enumerate(self.env.grid.grid)
-                if (y is not None and isinstance(y, object_type))
+                if (
+                    y is not None and isinstance(y, object_type)  # type:ignore
+                )  # TODO: bug?!
             ]
         object_tuples = [
             (o % self.env.width, o // self.env.width) for o in object_indices
@@ -128,7 +133,7 @@ class MiniGridTask(Task[Union[CrossingEnv]]):
             "success": int(
                 self.env.was_successful
                 if hasattr(self.env, "was_successful")
-                else self._total_reward > 0
+                else self.cumulative_reward > 0
             ),
         }
 
@@ -379,9 +384,12 @@ class AskForHelpSimpleCrossingTask(MiniGridTask):
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
 
-        self.did_toggle = []
+        self.did_toggle: List[bool] = []
 
-    def _step(self, action: int) -> RLStepResult:
+    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        assert isinstance(action, int)
+        action = cast(int, action)
+
         self.did_toggle.append(self._ACTION_NAMES[action] == "toggle")
         return super(AskForHelpSimpleCrossingTask, self)._step(action=action)
 
@@ -405,7 +413,7 @@ class MiniGridTaskSampler(TaskSampler):
         task_seeds_list: Optional[List[int]] = None,
         deterministic_sampling: bool = False,
         cache_graphs: Optional[bool] = False,
-        task_class: Callable[[Any], Union[MiniGridTask]] = MiniGridTask,
+        task_class: Callable[..., MiniGridTask] = MiniGridTask,
         repeat_failed_task_for_min_steps: int = 0,
         extra_task_kwargs: Optional[Dict] = None,
         **kwargs,
@@ -423,8 +431,8 @@ class MiniGridTaskSampler(TaskSampler):
             extra_task_kwargs if extra_task_kwargs is not None else {}
         )
 
-        self._last_env_seed = None
-        self._last_task = None
+        self._last_env_seed: Optional[int] = None
+        self._last_task: Optional[MiniGridTask] = None
         self._number_of_steps_taken_with_task_seed = 0
 
         assert (not deterministic_sampling) or repeat_failed_task_for_min_steps <= 0, (

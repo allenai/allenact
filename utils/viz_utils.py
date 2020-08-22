@@ -1,25 +1,18 @@
 import abc
 import json
-from typing import Dict, Any, Union, Optional, List, Tuple, Sequence, Callable
+from typing import Dict, Any, Union, Optional, List, Tuple, Sequence, Callable, cast
 
 import numpy as np
 from matplotlib import pyplot as plt, markers
 from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
 
-from core.algorithms.onpolicy_sync.storage import RolloutStorage
 from utils.experiment_utils import Builder
 from utils.system import get_logger
 from utils.tensor_utils import SummaryWriter, tile_images, process_video
 
 
 class AbstractViz:
-    rollout_episode_default_axis: int = 1
-    rnn_hidden_memory: Tuple[str, str] = (
-        "memory",
-        RolloutStorage.DEFAULT_RNN_MEMORY_ACCESSOR,
-    )  # to be used to access rnn hidden from memory
-
     def __init__(
         self,
         label: Optional[str] = None,
@@ -67,7 +60,7 @@ class AbstractViz:
             self.episode_ids = (
                 list(episode_ids)
                 if not isinstance(episode_ids[0], str)
-                else [list(episode_ids)]
+                else [list(cast(List[str], episode_ids))]
             )
 
     @abc.abstractmethod
@@ -264,7 +257,7 @@ class AgentViewViz(AbstractViz):
         self.episode_ids = (
             list(episode_ids)
             if not isinstance(episode_ids[0], str)
-            else [list(episode_ids)]
+            else [list(cast(List[str], episode_ids))]
         )
 
     def log(
@@ -416,7 +409,7 @@ class TensorViz1D(AbstractTensorViz):
 class TensorViz2D(AbstractTensorViz):
     def __init__(
         self,
-        rollout_source: Union[str, Sequence[str]] = AbstractViz.rnn_hidden_memory,
+        rollout_source: Union[str, Sequence[str]] = ("memory", "rnn"),
         label: Optional[str] = None,
         figsize: Tuple[int, int] = (10, 10),
         fontsize: int = 5,
@@ -456,12 +449,12 @@ class ActorViz(AbstractViz):
         fontsize: int = 5,
     ):
         super().__init__(label, actor_critic_source=True)
-        self.action_names_path = (
+        self.action_names_path: Optional[Sequence[str]] = (
             list(action_names_path) if action_names_path is not None else None
         )
         self.figsize = figsize
         self.fontsize = fontsize
-        self.action_names = None
+        self.action_names: Optional[List[str]] = None
 
     def log(
         self,
@@ -571,8 +564,10 @@ class SimpleViz(AbstractViz):
             self.actor_critic_source,
         ) = self._setup_sources()
 
-        self.data = {}  # dict of episode id to list of dicts with collected data
-        self.last_it2epid = []
+        self.data: Dict[
+            int, List[Dict]
+        ] = {}  # dict of episode id to list of dicts with collected data
+        self.last_it2epid: List[str] = []
 
     def _setup_sources(self):
         rollout_sources, vector_task_sources = [], []
@@ -685,19 +680,19 @@ class SimpleViz(AbstractViz):
                 datum_id = self._source_to_str(source, is_vector_task=False)
 
                 storage, path = source[0], source[1:]
-                if source == self.rnn_hidden_memory:
-                    path = rollout.DEFAULT_RNN_MEMORY_NAME
 
                 # Access storage
                 res = getattr(rollout, storage)
-                episode_dim = self.rollout_episode_default_axis
+                episode_dim = rollout.dim_names.index("sampler")
 
                 # Access sub-storage if path not empty
                 if len(path) > 0:
-                    for path_step in rollout.reverse_flattened_spaces[storage][
+                    flattened_name = rollout.unflattened_to_flattened[storage][
                         tuple(path)
-                    ]:
-                        res = res[path_step]
+                    ]
+                    # for path_step in path:
+                    #     res = res[path_step]
+                    res = res[flattened_name]
                     res, episode_dim = res
 
                 # Select latest step
@@ -758,7 +753,6 @@ class SimpleViz(AbstractViz):
 
     # to be called by engine
     def collect(self, vector_task=None, alive=None, rollout=None, actor_critic=None):
-
         if actor_critic is not None:
             # in phase with last_it2epid
             self._collect_actor_critic(actor_critic)
@@ -782,7 +776,7 @@ class SimpleViz(AbstractViz):
         self,
         log_writer: SummaryWriter,
         task_outputs: Optional[List[Any]],
-        render: Optional[List[Any]],
+        render: Optional[Dict[str, List[Dict[str, Any]]]],
         num_steps: int,
     ):
         for v in self.viz:

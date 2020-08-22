@@ -1,5 +1,5 @@
 import typing
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, cast, Union, Any, Tuple
 
 import babyai.model
 import babyai.rl
@@ -9,9 +9,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from gym.spaces.dict import Dict as SpaceDict
-from torch import Tensor
 
-from core.algorithms.onpolicy_sync.policy import ActorCriticModel
+from core.algorithms.onpolicy_sync.policy import (
+    ActorCriticModel,
+    ObservationType,
+    Memory,
+    DistributionType,
+)
 from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
 
@@ -50,7 +54,7 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
             self.semantic_embedding = nn.Embedding(33, embedding_dim=8)
             self.image_conv = nn.Sequential(
                 nn.Conv2d(in_channels=24, out_channels=16, kernel_size=(2, 2)),
-                *self.image_conv[1:]
+                *self.image_conv[1:]  # type:ignore
             )
             self.image_conv[0].apply(babyai.model.initialize_parameters)
 
@@ -132,24 +136,23 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
 
     def forward_loop(
         self,
-        observations: Dict[str, torch.Tensor],
-        recurrent_hidden_states: torch.Tensor,
-        prev_actions: torch.LongTensor,
+        observations: ObservationType,
+        recurrent_hidden_states: torch.FloatTensor,
+        prev_actions: torch.Tensor,
         masks: torch.FloatTensor,
-        **kwargs
     ):
         results = []
-        images = observations["minigrid_ego_image"].float()
+        images = cast(torch.FloatTensor, observations["minigrid_ego_image"]).float()
         instrs: Optional[torch.Tensor] = None
         if "minigrid_mission" in observations:
-            instrs = observations["minigrid_mission"]
+            instrs = cast(torch.Tensor, observations["minigrid_mission"])
 
         _, nsamplers, _ = recurrent_hidden_states.shape
         rollouts_len = images.shape[0] // nsamplers
         obs = babyai.rl.DictList()
 
         images = images.view(rollouts_len, nsamplers, *images.shape[1:])
-        masks = masks.view(rollouts_len, nsamplers, *masks.shape[1:])
+        masks = masks.view(rollouts_len, nsamplers, *masks.shape[1:])  # type:ignore
 
         # needs_reset = (masks != 1.0).view(nrollouts, -1).any(-1)
         if instrs is not None:
@@ -157,14 +160,16 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
 
         needs_instr_reset_mask = masks != 1.0
         needs_instr_reset_mask[0] = 1
-        needs_instr_reset_mask: Tensor = needs_instr_reset_mask.squeeze(-1)
+        needs_instr_reset_mask = needs_instr_reset_mask.squeeze(-1)
         instr_embeddings: Optional[torch.Tensor] = None
         if self.use_instr:
             instr_reset_multi_inds = list(
                 (int(a), int(b))
                 for a, b in zip(*np.where(needs_instr_reset_mask.cpu().numpy()))
             )
-            time_ind_to_which_need_instr_reset = [[] for _ in range(rollouts_len)]
+            time_ind_to_which_need_instr_reset: List[List] = [
+                [] for _ in range(rollouts_len)
+            ]
             reset_multi_ind_to_index = {
                 mi: i for i, mi in enumerate(instr_reset_multi_inds)
             }
@@ -245,31 +250,44 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
     # noinspection PyMethodOverriding
     def forward(
         self,
-        observations: Dict[str, torch.Tensor],
-        recurrent_hidden_states: torch.Tensor,
-        prev_actions: torch.LongTensor,
+        observations: ObservationType,
+        recurrent_hidden_states: torch.FloatTensor,
+        prev_actions: torch.Tensor,
         masks: torch.FloatTensor,
-        **kwargs
     ):
+        (
+            observations,
+            recurrent_hidden_states,
+            prev_actions,
+            masks,
+            num_steps,
+            num_samplers,
+            num_agents,
+            num_layers,
+        ) = self.adapt_inputs(
+            observations, recurrent_hidden_states, prev_actions, masks
+        )
+
         if self.lang_model != "gru":
             return self.forward_loop(
                 observations=observations,
                 recurrent_hidden_states=recurrent_hidden_states,
                 prev_actions=prev_actions,
                 masks=masks,
-                **kwargs
             )
 
         assert recurrent_hidden_states.shape[0] == 1
 
-        images = observations["minigrid_ego_image"]
+        images = cast(torch.FloatTensor, observations["minigrid_ego_image"])
         if self.use_cnn2:
             images_shape = images.shape
-            images = images + torch.LongTensor([0, 11, 22]).view(1, 1, 1, 3).to(
-                images.device
+            images = images + torch.LongTensor([0, 11, 22]).view(  # type:ignore
+                1, 1, 1, 3
+            ).to(images.device)
+            images = self.semantic_embedding(images).view(  # type:ignore
+                *images_shape[:3], 24
             )
-            images = self.semantic_embedding(images).view(*images_shape[:3], 24)
-        images = images.permute(0, 3, 1, 2).float()
+        images = images.permute(0, 3, 1, 2).float()  # type:ignore
 
         _, nsamplers, _ = recurrent_hidden_states.shape
         rollouts_len = images.shape[0] // nsamplers
@@ -279,12 +297,12 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         )
         instrs: Optional[torch.Tensor] = None
         if "minigrid_mission" in observations and self.use_instr:
-            instrs = observations["minigrid_mission"]
+            instrs = cast(torch.FloatTensor, observations["minigrid_mission"])
             instrs = instrs.view(rollouts_len, nsamplers, instrs.shape[-1])
 
         needs_instr_reset_mask = masks != 1.0
         needs_instr_reset_mask[0] = 1
-        needs_instr_reset_mask: Tensor = needs_instr_reset_mask.squeeze(-1)
+        needs_instr_reset_mask = needs_instr_reset_mask.squeeze(-1)
         blocking_inds: List[int] = np.where(
             needs_instr_reset_mask.view(rollouts_len, -1).any(-1).cpu().numpy()
         )[0].tolist()
@@ -296,7 +314,9 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
                 (int(a), int(b))
                 for a, b in zip(*np.where(needs_instr_reset_mask.cpu().numpy()))
             )
-            time_ind_to_which_need_instr_reset = [[] for _ in range(rollouts_len)]
+            time_ind_to_which_need_instr_reset: List[List] = [
+                [] for _ in range(rollouts_len)
+            ]
             reset_multi_ind_to_index = {
                 mi: i for i, mi in enumerate(instr_reset_multi_inds)
             }
@@ -405,20 +425,106 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
 
         embedding = embedding.view(rollouts_len * nsamplers, -1)
 
+        ac_output = ActorCriticOutput(
+            distributions=CategoricalDistr(logits=self.actor(embedding),),
+            values=self.critic(embedding),
+            extras=extra_predictions
+            if not self.include_auxiliary_head
+            else {
+                **extra_predictions,
+                "auxiliary_distributions": CategoricalDistr(logits=self.aux(embedding)),
+            },
+        )
+        hidden_states = memory
+
+        return self.adapt_result(
+            ac_output, hidden_states, num_steps, num_samplers, num_agents, num_layers
+        )
+
+    @staticmethod
+    def adapt_inputs(  # type: ignore
+        observations: ObservationType,
+        recurrent_hidden_states: torch.FloatTensor,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ):
+        # Flatten all observation batch dims
+        def recursive_adapt_observations(obs, num_steps, num_samplers, num_agents):
+            for entry in obs:
+                if isinstance(obs[entry], Dict):
+                    recursive_adapt_observations(
+                        obs[entry], num_steps, num_samplers, num_agents
+                    )
+                else:
+                    assert isinstance(obs[entry], torch.Tensor)
+                    final_dims = obs[entry].shape[
+                        2:
+                    ]  # assumes no agents dim in observations!
+                    obs[entry] = obs[entry].view(
+                        num_steps * num_samplers * num_agents, *final_dims
+                    )
+
+        # INPUTS
+        # observations are of shape [num_steps, num_samplers, (num_agents,) ...]
+        # recurrent_hidden_states are of shape [num_layers, num_samplers, (num_agents,) num_dims]
+        # prev_actions are of shape [num_steps, num_samplers, num_agents, 1]
+        # masks are of shape [num_steps, num_samplers, num_agents, 1]
+
+        num_steps, num_samplers, num_agents = masks.shape[:3]
+        num_layers = recurrent_hidden_states.shape[0]
+        assert num_agents == 1
+
+        # Old-style inputs need to be
+        # observations [num_steps * num_samplers * num_agents, ...]
+        # recurrent_hidden_states [num_layers, num_samplers * num_agents, num_dims]
+        # prev_actions [num_steps * num_samplers * num_agents, 1]
+        # masks [num_steps * num_samplers * num_agents, 1]
+
+        recursive_adapt_observations(observations, num_steps, num_samplers, num_agents)
+        recurrent_hidden_states = cast(
+            torch.FloatTensor,
+            recurrent_hidden_states.view(num_layers, num_samplers * num_agents, -1),
+        )
+        prev_actions = prev_actions.view(  # type:ignore
+            num_steps * num_samplers * num_agents, 1
+        )
+        masks = masks.view(num_steps * num_samplers * num_agents, 1)  # type:ignore
+
+        return (
+            observations,
+            recurrent_hidden_states,
+            prev_actions,
+            masks,
+            num_steps,
+            num_samplers,
+            num_agents,
+            num_layers,
+        )
+
+    @staticmethod
+    def adapt_result(ac_output, hidden_states, num_steps, num_samplers, num_agents, num_layers):  # type: ignore
+        distributions = CategoricalDistr(
+            logits=ac_output.distributions.logits.view(
+                num_steps, num_samplers, num_agents, -1
+            ),
+        )
+        values = ac_output.values.view(num_steps, num_samplers, num_agents, 1)
+        extras = ac_output.extras  # ignore shape
+        # TODO confirm the shape of the auxiliary distribution is the same as the actor's
+        if "auxiliary_distributions" in extras:
+            extras["auxiliary_distributions"] = CategoricalDistr(
+                logits=extras["auxiliary_distributions"].logits.view(
+                    num_steps, num_samplers, num_agents, -1
+                ),
+            )
+
+        hidden_states = hidden_states.view(num_layers, num_samplers * num_agents, -1)
+
         return (
             ActorCriticOutput(
-                distributions=CategoricalDistr(logits=self.actor(embedding),),
-                values=self.critic(embedding),
-                extras=extra_predictions
-                if not self.include_auxiliary_head
-                else {
-                    **extra_predictions,
-                    "auxiliary_distributions": CategoricalDistr(
-                        logits=self.aux(embedding)
-                    ),
-                },
+                distributions=distributions, values=values, extras=extras
             ),
-            memory,
+            hidden_states,
         )
 
 
@@ -458,6 +564,7 @@ class BabyAIRecurrentACModel(ActorCriticModel[CategoricalDistr]):
             aux_info=aux_info,
             include_auxiliary_head=self.include_auxiliary_head,
         )
+        self.memory_key = "rnn"
 
     @property
     def recurrent_hidden_state_size(self) -> int:
@@ -467,18 +574,31 @@ class BabyAIRecurrentACModel(ActorCriticModel[CategoricalDistr]):
     def num_recurrent_layers(self):
         return 1
 
-    def forward(  # type: ignore
+    def _recurrent_memory_specification(self):
+        return {
+            self.memory_key: (
+                (
+                    ("layer", self.num_recurrent_layers),
+                    ("sampler", None),
+                    ("hidden", self.recurrent_hidden_state_size),
+                ),
+                torch.float32,
+            )
+        }
+
+    def forward(  # type:ignore
         self,
-        observations: Dict[str, torch.Tensor],
-        recurrent_hidden_states: torch.Tensor,
-        prev_actions: torch.LongTensor,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
         masks: torch.FloatTensor,
-        **kwargs
-    ):
-        return self.baby_ai_model.forward(
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
+        out, recurrent_hidden_states = self.baby_ai_model.forward(
             observations=observations,
-            recurrent_hidden_states=recurrent_hidden_states,
+            recurrent_hidden_states=cast(
+                torch.FloatTensor, memory.tensor(self.memory_key)
+            ),
             prev_actions=prev_actions,
             masks=masks,
-            **kwargs
         )
+        return out, memory.set_tensor(self.memory_key, recurrent_hidden_states)

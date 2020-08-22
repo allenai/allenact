@@ -1,6 +1,6 @@
 # TODO: @klemenkotar please fix all type errors
 
-from typing import Tuple, List, Dict, Any, Optional
+from typing import Tuple, List, Dict, Any, Optional, Union, Sequence, cast
 
 import gym
 import numpy as np
@@ -36,7 +36,7 @@ class HabitatTask(Task[HabitatEnvironment]):
         self._last_action: Optional[str] = None
         self._last_action_ind: Optional[int] = None
         self._last_action_success: Optional[bool] = None
-        self._actions_taken = []
+        self._actions_taken: List[str] = []
         self._positions = []
         pos = self.get_observations()["agent_position_and_rotation"]
         self._positions.append(
@@ -116,13 +116,16 @@ class PointNavTask(Task[HabitatEnvironment]):
         return self.env.env.episode_over
 
     @classmethod
-    def class_action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
         return cls._actions
 
     def close(self) -> None:
         self.env.stop()
 
-    def _step(self, action: int) -> RLStepResult:
+    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        assert isinstance(action, int)
+        action = cast(int, action)
+
         action_str = self.class_action_names()[action]
 
         self.env.step({"action": action_str})
@@ -248,13 +251,16 @@ class ObjectNavTask(HabitatTask):
         return self.env.env.episode_over
 
     @classmethod
-    def class_action_names(cls) -> Tuple[str, ...]:
+    def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
         return cls._actions
 
     def close(self) -> None:
         self.env.stop()
 
-    def _step(self, action: int) -> RLStepResult:
+    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        assert isinstance(action, int)
+        action = cast(int, action)
+
         old_pos = self.get_observations()["agent_position_and_rotation"]
 
         action_str = self.action_names()[action]

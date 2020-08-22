@@ -17,10 +17,10 @@ from torch import optim
 from torch.nn.parallel import DistributedDataParallel
 
 try:
-    from torch.nn.parallel import DistributedDataParallelCPU
+    from torch.nn.parallel import DistributedDataParallelCPU  # type:ignore
 except ImportError as e:
 
-    class DistributedDataParallelCPU(object):
+    class DistributedDataParallelCPU(object):  # type:ignore
         def __init__(self, *args, **kwargs):
             raise e
 
@@ -42,6 +42,7 @@ from utils.experiment_utils import (
 )
 from utils.system import get_logger
 from utils.tensor_utils import batch_observations
+from core.base_abstractions.misc import RLStepResult
 
 
 class OnPolicyRLEngine(object):
@@ -149,7 +150,7 @@ class OnPolicyRLEngine(object):
                 observation_set = self.machine_params["make_preprocessors_fns"][0]()
                 set_seed(self.seed)
                 self.actor_critic = typing.cast(
-                    torch.nn.Module,
+                    ActorCriticModel,
                     self.config.create_model(observation_set=observation_set),
                 ).to(self.device)
                 del observation_set
@@ -174,17 +175,19 @@ class OnPolicyRLEngine(object):
                 ).to(self.device)
 
         self.is_distributed = False
-        self.store: Optional[torch.distributed.TCPStore] = None
+        self.store: Optional[torch.distributed.TCPStore] = None  # type:ignore
         if self.num_workers > 1:
             if self.mode == "train":
-                self.store = torch.distributed.TCPStore(
+                self.store = torch.distributed.TCPStore(  # type:ignore
                     "127.0.0.1",
                     self.distributed_port,
                     self.num_workers,
                     self.worker_id == 0,
                 )
-                cpu_device = torch.device(self.device) == torch.device("cpu")
-                torch.distributed.init_process_group(
+                cpu_device = torch.device(self.device) == torch.device(  # type:ignore
+                    "cpu"
+                )
+                torch.distributed.init_process_group(  # type:ignore
                     backend="gloo" if cpu_device else "nccl",
                     store=self.store,
                     rank=self.worker_id,
@@ -195,8 +198,8 @@ class OnPolicyRLEngine(object):
                 else:
                     self.actor_critic = DistributedDataParallel(
                         self.actor_critic,
-                        device_ids=[self.device],
-                        output_device=self.device,
+                        device_ids=[cast(Union[int, torch.device], self.device)],
+                        output_device=cast(Union[int, torch.device], self.device),
                     )
 
             self.is_distributed = True  # for testing, this only means we need to synchronize after each checkpoint
@@ -210,7 +213,7 @@ class OnPolicyRLEngine(object):
         self.training_pipeline: Optional[TrainingPipeline] = None
 
     @property
-    def vector_tasks(self, debug=False):  # TODO debug
+    def vector_tasks(self):
         if self._vector_tasks is None and self.num_samplers > 0:
             if self.is_distributed:
                 total_processes = sum(
@@ -240,7 +243,7 @@ class OnPolicyRLEngine(object):
     def worker_seeds(nprocesses: int, initial_seed: Optional[int]) -> List[int]:
         """Create a collection of seeds for workers without modifying the RNG
         state."""
-        rstate: Optional = None
+        rstate = None  # type:ignore
         if initial_seed is not None:
             rstate = random.getstate()
             random.seed(initial_seed)
@@ -274,13 +277,19 @@ class OnPolicyRLEngine(object):
             total_processes = self.num_samplers
             process_offset = 0
 
+        devices_list: Optional[List[int]] = None
+        if (self.is_distributed or self.mode == "test") and isinstance(
+            self.device, int
+        ):
+            devices_list = [cast(int, self.device)]
+        elif all([isinstance(dev, int) for dev in devices]):
+            devices_list = devices[:]
+
         return [
             fn(
                 process_ind=process_offset + it,
                 total_processes=total_processes,
-                devices=[self.device]
-                if self.is_distributed or self.mode == "test"
-                else devices,  # TODO is this ever used?!
+                devices=devices_list,
                 seeds=seeds,
             )
             for it in range(self.num_samplers)
@@ -307,7 +316,7 @@ class OnPolicyRLEngine(object):
             if not self.mode == "train" or not self.is_distributed
             else self.actor_critic.module
         )
-        target.load_state_dict(ckpt["model_state_dict"])
+        target.load_state_dict(ckpt["model_state_dict"])  # type:ignore
 
         return ckpt
 
@@ -394,17 +403,19 @@ class OnPolicyRLEngine(object):
         for p in reversed(paused):
             self.vector_tasks.pause_at(p)
 
+        # Group samplers along new dim:
         batch = batch_observations(running, device=self.device)
 
         return len(paused), keep, batch
 
     def initialize_rollouts(self, rollouts, visualizer=None):
         observations = self.vector_tasks.get_observations()
+
         npaused, keep, batch = self.remove_paused(observations)
         if npaused > 0:
-            rollouts.reshape(keep)
+            rollouts.sampler_select(keep)
         rollouts.to(self.device)
-        rollouts.insert_initial_observations(
+        rollouts.insert_observations(
             self._preprocess_observations(batch) if len(keep) > 0 else batch
         )
         if visualizer is not None and len(keep) > 0:
@@ -418,8 +429,8 @@ class OnPolicyRLEngine(object):
             actor_critic_output, memory = self.actor_critic(
                 step_observation,
                 memory,
-                rollouts.prev_actions[rollouts.step],
-                rollouts.masks[rollouts.step],
+                rollouts.prev_actions[rollouts.step : rollouts.step + 1],
+                rollouts.masks[rollouts.step : rollouts.step + 1],
             )
 
         actions = (
@@ -432,45 +443,62 @@ class OnPolicyRLEngine(object):
 
     @staticmethod
     def _active_memory(memory, keep):
-        if isinstance(memory, torch.Tensor):  # rnn hidden state or no memory
-            return memory[:, keep] if memory.shape[1] > len(keep) else memory
-        return (
-            memory.index_select(keep) if memory is not None else memory
-        )  # arbitrary memory or no memory
+        return memory.sampler_select(keep) if memory is not None else memory
 
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None):
         actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
 
-        outputs = self.vector_tasks.step([a[0].item() for a in actions])
+        # Squeeze step and action dimensions and send a list for each sampler's agents
+        outputs: List[RLStepResult] = self.vector_tasks.step(
+            [[a.item() for a in ac] for ac in actions.squeeze(0).squeeze(-1)]
+        )
 
         rewards: Union[List, torch.Tensor]
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
 
-        rewards = torch.tensor(rewards, dtype=torch.float, device=self.device)
-        rewards = rewards.unsqueeze(1)
+        rewards = torch.tensor(
+            rewards, dtype=torch.float, device=self.device,  # type:ignore
+        )
+
+        # We want rewards to have dimensions [step, sampler, agent, reward]
+        if len(rewards.shape) == 1:
+            # Rewards are of shape [sampler,]
+            rewards = rewards.view(1, -1, 1, 1)
+        elif len(rewards.shape) == 2:
+            # Rewards are of shape [sampler, agent]
+            rewards = rewards.unsqueeze(0).unsqueeze(-1)
+        else:
+            raise NotImplementedError
 
         # If done then clean the history of observations.
         masks = torch.tensor(
             [[0.0] if done else [1.0] for done in dones],
             dtype=torch.float32,
-            device=self.device,
+            device=self.device,  # type:ignore
         )
+
+        # Expand masks with new agents dimension
+        num_task_samplers = masks.shape[0]
+        num_agents = rewards.shape[2]
+        masks = masks.view(1, num_task_samplers, 1, 1).expand(-1, -1, num_agents, -1)
 
         npaused, keep, batch = self.remove_paused(observations)
 
         if npaused > 0:
-            rollouts.reshape(keep)
+            rollouts.sampler_select(keep)
 
         rollouts.insert(
             observations=self._preprocess_observations(batch)
             if len(keep) > 0
             else batch,
             memory=self._active_memory(memory, keep),
-            actions=actions[keep],
-            action_log_probs=actor_critic_output.distributions.log_probs(actions)[keep],
-            value_preds=actor_critic_output.values[keep],
-            rewards=rewards[keep],
-            masks=masks[keep],
+            actions=actions[:, keep],
+            action_log_probs=actor_critic_output.distributions.log_probs(actions)[
+                :, keep
+            ],
+            value_preds=actor_critic_output.values[:, keep],
+            rewards=rewards[:, keep],
+            masks=masks[:, keep],
         )
 
         # TODO we always miss tensors for the last action in the last episode of each worker
@@ -574,7 +602,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         self.training_pipeline: TrainingPipeline = config.training_pipeline()
 
-        self.optimizer: optim.Optimizer = self.training_pipeline.optimizer_builder(
+        self.optimizer: optim.optimizer.Optimizer = self.training_pipeline.optimizer_builder(
             params=[p for p in self.actor_critic.parameters() if p.requires_grad]
         )
 
@@ -587,11 +615,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self.distributed_barrier = distributed_barrier
         if self.is_distributed:
             # Tracks how many workers have finished their rollout
-            self.num_workers_done = torch.distributed.PrefixStore(
+            self.num_workers_done = torch.distributed.PrefixStore(  # type:ignore
                 "num_workers_done", self.store
             )
             # Tracks the number of steps taken by each worker in current rollout
-            self.num_workers_steps = torch.distributed.PrefixStore(
+            self.num_workers_steps = torch.distributed.PrefixStore(  # type:ignore
                 "num_workers_steps", self.store
             )
             self.distributed_preemption_threshold = distributed_preemption_threshold
@@ -645,7 +673,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         )
 
         save_dict = {
-            "model_state_dict": target.state_dict(),
+            "model_state_dict": target.state_dict(),  # type:ignore
             "total_steps": self.training_pipeline.total_steps,  # Total steps including current stage
             "optimizer_state_dict": self.optimizer.state_dict(),  # type: ignore
             "training_pipeline_state_dict": self.training_pipeline.state_dict(),
@@ -665,7 +693,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
     ) -> Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]]:
         ckpt = super().checkpoint_load(ckpt)
 
-        self.training_pipeline.load_state_dict(ckpt["training_pipeline_state_dict"])
+        self.training_pipeline.load_state_dict(
+            cast(Dict[str, Any], ckpt["training_pipeline_state_dict"])
+        )
         if restart_pipeline:
             self.training_pipeline.restart_pipeline()
         else:
@@ -834,16 +864,17 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 bsize = None
                 for key in batch:
                     if isinstance(batch[key], torch.Tensor):
-                        bsize = batch[key].shape[0]
+                        num_rollout_steps, num_samplers = batch[key].shape[:2]
+                        bsize = num_rollout_steps * num_samplers
                         if bsize > 0:
                             break
                 assert bsize is not None, "TODO check recursively for batch size"
 
                 actor_critic_output, memory = self.actor_critic(
-                    batch["observations"],
-                    batch["memory"],
-                    batch["prev_actions"],
-                    batch["masks"],
+                    observations=batch["observations"],
+                    memory=batch["memory"],
+                    prev_actions=batch["prev_actions"],
+                    masks=batch["masks"],
                 )
 
                 info: Dict[str, float] = {}
@@ -924,7 +955,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
     def apply_teacher_forcing(
         self,
-        actions: torch.tensor,
+        actions: torch.Tensor,
         step_observation: Dict[str, torch.Tensor],
         step_count: int,
     ):
@@ -1012,10 +1043,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
             with torch.no_grad():
                 actor_critic_output, _ = self.actor_critic(
-                    rollouts.pick_observation_step(-1),
-                    rollouts.pick_memory_step(-1),
-                    rollouts.prev_actions[-1],
-                    rollouts.masks[-1],
+                    observations=rollouts.pick_observation_step(-1),
+                    memory=rollouts.pick_memory_step(-1),
+                    prev_actions=rollouts.prev_actions[-1:],
+                    masks=rollouts.masks[-1:],
                 )
 
             if self.is_distributed:
@@ -1103,7 +1134,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.run_pipeline(
                 RolloutStorage(
                     num_steps=self.training_pipeline.num_steps,
-                    num_processes=self.num_samplers,
+                    num_samplers=self.num_samplers,
                     actor_critic=self.actor_critic
                     if isinstance(self.actor_critic, ActorCriticModel)
                     else typing.cast(ActorCriticModel, self.actor_critic.module),
@@ -1190,7 +1221,9 @@ class OnPolicyInference(OnPolicyRLEngine):
         total_steps = ckpt["total_steps"]
 
         rollouts = RolloutStorage(
-            rollout_steps, self.num_samplers, cast(ActorCriticModel, self.actor_critic),
+            num_steps=rollout_steps,
+            num_samplers=self.num_samplers,
+            actor_critic=cast(ActorCriticModel, self.actor_critic),
         )
 
         if visualizer is not None:

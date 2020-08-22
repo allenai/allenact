@@ -4,7 +4,7 @@ All actor-critic models must implement the interface described by the
 [ActorCriticModel class](/api/onpolicy_sync/policy/#actorcriticmodel). This interface includes two methods that need to be 
 implemented:
 
-* `recurrent_hidden_state_size`, returning the size of the model's hidden state; and 
+* `recurrent_memory_specification`, returning a description of the model's recurrent memory; and 
 * `forward`, returning an [ActorCriticOutput](/api/rl_base/common/#actorcriticoutput) given the current observation,
 hidden state and previous actions.
 

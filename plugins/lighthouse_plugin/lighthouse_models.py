@@ -1,12 +1,16 @@
 import typing
-from typing import Dict, Optional
+from typing import Optional, Tuple, cast
 
 import gym
 import torch
 from gym.spaces.dict import Dict as SpaceDict
 from torch import nn
 
-from core.algorithms.onpolicy_sync.policy import ActorCriticModel
+from core.algorithms.onpolicy_sync.policy import (
+    ActorCriticModel,
+    Memory,
+    ObservationType,
+)
 from core.base_abstractions.misc import ActorCriticOutput, DistributionType
 from core.base_abstractions.distributions import CategoricalDistr
 
@@ -49,19 +53,30 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
     def recurrent_hidden_state_size(self) -> int:
         return 0
 
-    def forward(  # type: ignore
-        self,
-        observations: Dict[str, torch.Tensor],
-        recurrent_hidden_states: Optional[torch.FloatTensor],
-        prev_actions: Optional[torch.LongTensor],
-        masks: Optional[torch.FloatTensor],
-        **kwargs
-    ) -> typing.Tuple[ActorCriticOutput[DistributionType], typing.Any]:
-        out = self.linear(observations[self.key])
+    def _recurrent_memory_specification(self):
+        return None
 
-        main_logits = out[:, : self.num_actions]
-        aux_logits = out[:, self.num_actions : -1]
-        values = out[:, -1:]
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
+        out = self.linear(cast(torch.Tensor, observations[self.key]))
+
+        assert len(out.shape) in [
+            3,
+            4,
+        ], "observations must be [step, sampler, data] or [step, sampler, agent, data]"
+
+        if len(out.shape) == 3:
+            # [step, sampler, data] -> [step, sampler, agent, data]
+            out = out.unsqueeze(-2)
+
+        main_logits = out[..., : self.num_actions]
+        aux_logits = out[..., self.num_actions : -1]
+        values = out[..., -1:]
 
         # noinspection PyArgumentList
         return (

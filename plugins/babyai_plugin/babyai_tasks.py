@@ -1,6 +1,6 @@
 import random
 import signal
-from typing import Tuple, Any, List, Dict, Optional, Union, Callable
+from typing import Tuple, Any, List, Dict, Optional, Union, Callable, Sequence, cast
 
 import babyai
 import babyai.bot
@@ -48,7 +48,9 @@ class BabyAITask(Task[MiniGridEnv]):
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         return self.env.render(mode=mode)
 
-    def _step(self, action: int) -> RLStepResult:
+    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        assert isinstance(action, int)
+        action = cast(int, action)
 
         minigrid_obs, reward, done, info = self.env.step(action=action)
         self._last_action = action
@@ -143,8 +145,8 @@ class BabyAITaskSampler(TaskSampler):
             extra_task_kwargs if extra_task_kwargs is not None else {}
         )
 
-        self._last_env_seed = None
-        self._last_task = None
+        self._last_env_seed: Optional[int] = None
+        self._last_task: Optional[BabyAITask] = None
 
         assert (self.num_unique_seeds is None) or (
             0 < self.num_unique_seeds

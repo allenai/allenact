@@ -17,7 +17,7 @@ exclude_files = [
     "run.py",
     "setup.py",
     "main.py",
-    "ddmain.py",
+    "main.py",
 ]
 
 
@@ -45,7 +45,7 @@ def render_file(
         # noinspection PyShadowingNames
         with open(to_file, "w") as f:
             doc_split = call_result.split("\n")
-            github_path = "https://github.com/allenai/embodied-rl/tree/master/"
+            github_path = "https://github.com/allenai/allenact/tree/master/"
             path = (
                 github_path + doc_split[0].replace("# ", "").replace(".", "/") + ".py"
             )
@@ -99,7 +99,7 @@ def build_docs(
             print("\nSKIPPING {}\n".format(relative_path))
             continue
 
-        # without_embodied_rl = str(root_path).replace("embodied-rl/", "")
+        # without_embodied_rl = str(root_path).replace("allenact/", "")
         new_path = os.path.relpath(root_path, base_dir).replace(".", "")
         target_dir = os.path.join(docs_dir, new_path)
         if not os.path.exists(target_dir):
@@ -158,7 +158,11 @@ def project_readme_paths_to_nav_structure(project_readmes):
 
 if __name__ == "__main__":
     print("Copying all README.md files to docs.")
-    shutil.copy("README.md", "docs/README.md")
+    with open("README.md") as f:
+        readme_content = f.readlines()
+    readme_content = [x.replace("docs/", "") for x in readme_content]
+    with open("docs/index.md", "w") as f:
+        f.writelines(readme_content)
 
     project_readmes = []
     for readme_file_path in glob.glob("projects/**/README.md", recursive=True):
@@ -171,14 +175,8 @@ if __name__ == "__main__":
     print("Copying LICENSE file to docs.")
     shutil.copy("LICENSE", "docs/LICENSE.md")
 
-    print("Copying ROADMAP.md file to docs.")
-    shutil.copy("ROADMAP.md", "docs/ROADMAP.md")
-
     print("Copying CONTRIBUTING.md file to docs.")
     shutil.copy("CONTRIBUTING.md", "docs/CONTRIBUTING.md")
-
-    print("Copying CNAME file to docs.")
-    shutil.copy("CNAME", "docs/CNAME")
 
     print("Building the docs.")
     parent_folder_path = Path(__file__).parent.parent
@@ -193,7 +191,7 @@ if __name__ == "__main__":
     mkdocs_yaml = yaml.load(yaml_path)
     site_nav = mkdocs_yaml["nav"]
     # TODO Find a way to do the following in a way that results in nice titles.
-    # projects_key = "Projects using embodied-ai"
+    # projects_key = "Projects using allenact"
     # nav_obj = None
     # for obj in site_nav:
     #     if projects_key in obj:

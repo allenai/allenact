@@ -19,7 +19,7 @@ import torch.multiprocessing as mp
 import torch.optim
 from setproctitle import setproctitle as ptitle
 
-from core.algorithms.onpolicy_sync.light_engine import (
+from core.algorithms.onpolicy_sync.engine import (
     OnPolicyTrainer,
     OnPolicyInference,
 )
@@ -608,7 +608,7 @@ class OnPolicyRunner(object):
         last_train_steps = 0
         last_train_time = time.time()
         # test_steps = sorted(test_steps, reverse=True)
-        test_results = []
+        test_results: List[Dict] = []
         unfinished_workers = nworkers
 
         try:

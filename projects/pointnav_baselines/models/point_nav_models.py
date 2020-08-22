@@ -1,5 +1,5 @@
 import typing
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, Union, List
 
 import gym
 import torch
@@ -11,14 +11,11 @@ from core.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     LinearCriticHead,
     LinearActorHead,
+    ObservationType,
+    DistributionType,
 )
-from core.base_abstractions.misc import ActorCriticOutput
+from core.base_abstractions.misc import ActorCriticOutput, Memory
 from core.base_abstractions.distributions import CategoricalDistr
-
-
-# from habitat_baselines.rl.ddppo.policy.resnet_policy import (
-#     PointNavResNetPolicy,
-# )
 
 
 class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
@@ -93,8 +90,27 @@ class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
     def recurrent_hidden_state_size(self):
         return self._hidden_size
 
-    def forward(self, observations, rnn_hidden_states, prev_actions, masks):
+    def _recurrent_memory_specification(self):
+        return dict(
+            rnn=(
+                (
+                    ("layer", self.num_recurrent_layers),
+                    ("sampler", None),
+                    ("hidden", self.recurrent_hidden_state_size),
+                ),
+                torch.float32,
+            )
+        )
+
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         target_encoding = self.get_target_coordinates_encoding(observations)
+        x: Union[torch.Tensor, List[torch.Tensor]]
         x = [target_encoding]
 
         if not self.is_blind:
@@ -103,427 +119,14 @@ class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
                 perception_embed = self.sensor_fuser(perception_embed)
             x = [perception_embed] + x
 
-        x = torch.cat(x, dim=1)
-        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
+        x = torch.cat(x, dim=-1)
+        x, rnn_hidden_states = self.state_encoder(x, memory.tensor("rnn"), masks)
 
-        return (
-            ActorCriticOutput(
-                distributions=self.actor(x), values=self.critic(x), extras={}
-            ),
-            rnn_hidden_states,
+        ac_output = ActorCriticOutput(
+            distributions=self.actor(x), values=self.critic(x), extras={}
         )
 
-
-class PointNavActorCriticResNet50(ActorCriticModel[CategoricalDistr]):
-    def __init__(
-        self,
-        action_space: gym.spaces.Discrete,
-        observation_space: SpaceDict,
-        goal_sensor_uuid: str,
-        hidden_size=512,
-        embed_coordinates=False,
-        coordinate_embedding_dim=8,
-        coordinate_dims=2,
-    ):
-        super().__init__(action_space=action_space, observation_space=observation_space)
-
-        self.goal_sensor_uuid = goal_sensor_uuid
-        self.embed_coordinates = embed_coordinates
-        self._hidden_size = hidden_size + coordinate_dims
-        if self.embed_coordinates:
-            self.coorinate_embedding_size = coordinate_embedding_dim
-        else:
-            self.coorinate_embedding_size = coordinate_dims
-
-        if "rgb" in observation_space.spaces and "depth" in observation_space.spaces:
-            self.visual_encoder = nn.Linear(4096, hidden_size)
-        else:
-            self.visual_encoder = nn.Linear(2048, hidden_size)
-
-        self.actor = LinearActorHead(self._hidden_size, action_space.n)
-        self.critic = LinearCriticHead(self._hidden_size)
-
-        if self.embed_coordinates:
-            self.coordinate_embedding = nn.Linear(
-                coordinate_dims, coordinate_embedding_dim
-            )
-
-        self.train()
-
-    @property
-    def output_size(self):
-        return self._hidden_size
-
-    @property
-    def is_blind(self):
-        return False
-
-    @property
-    def num_recurrent_layers(self):
-        return 0
-
-    def get_target_coordinates_encoding(self, observations):
-        if self.embed_coordinates:
-            return self.coordinate_embedding(
-                observations[self.goal_sensor_uuid].to(torch.float32)
-            )
-        else:
-            return observations[self.goal_sensor_uuid].to(torch.float32)
-
-    def recurrent_hidden_state_size(self):
-        return self._hidden_size
-
-    def forward(self, observations, rnn_hidden_states, prev_actions, masks):
-        target_encoding = self.get_target_coordinates_encoding(observations)
-
-        x = [target_encoding]
-
-        embs = []
-        if "rgb_resnet" in observations:
-            embs.append(
-                observations["rgb_resnet"].view(
-                    -1, observations["rgb_resnet"].shape[-1]
-                )
-            )
-        if "depth_resnet" in observations:
-            embs.append(
-                observations["depth_resnet"].view(
-                    -1, observations["depth_resnet"].shape[-1]
-                )
-            )
-        emb = torch.cat(embs, dim=1)
-
-        x = [self.visual_encoder(emb)] + x
-
-        x = torch.cat(x, dim=1)
-
-        return (
-            ActorCriticOutput(
-                distributions=self.actor(x), values=self.critic(x), extras={}
-            ),
-            torch.zeros((1, x.shape[0], self._hidden_size)),
-        )
-
-
-class PointNavActorCriticResNet50RNN(ActorCriticModel[CategoricalDistr]):
-    def __init__(
-        self,
-        action_space: gym.spaces.Discrete,
-        observation_space: SpaceDict,
-        goal_sensor_uuid: str,
-        hidden_size=512,
-        embed_coordinates=False,
-        coordinate_embedding_dim=8,
-        coordinate_dims=2,
-        num_rnn_layers=1,
-        rnn_type="GRU",
-    ):
-        super().__init__(action_space=action_space, observation_space=observation_space)
-
-        self.goal_sensor_uuid = goal_sensor_uuid
-        self._hidden_size = hidden_size
-        self.embed_coordinates = embed_coordinates
-        if self.embed_coordinates:
-            self.coorinate_embedding_size = coordinate_embedding_dim
-        else:
-            self.coorinate_embedding_size = coordinate_dims
-
-        if "rgb" in observation_space.spaces and "depth" in observation_space.spaces:
-            self.visual_encoder = nn.Linear(4096, hidden_size)
-        else:
-            self.visual_encoder = nn.Linear(2048, hidden_size)
-
-        self.state_encoder = RNNStateEncoder(
-            (0 if self.is_blind else self.recurrent_hidden_state_size)
-            + self.coorinate_embedding_size,
-            self._hidden_size,
-            num_layers=num_rnn_layers,
-            rnn_type=rnn_type,
-        )
-
-        self.actor = LinearActorHead(self._hidden_size, action_space.n)
-        self.critic = LinearCriticHead(self._hidden_size)
-
-        if self.embed_coordinates:
-            self.coordinate_embedding = nn.Linear(
-                coordinate_dims, coordinate_embedding_dim
-            )
-
-        self.train()
-
-    @property
-    def output_size(self):
-        return self.recurrent_hidden_state_size
-
-    @property
-    def is_blind(self):
-        return False
-
-    @property
-    def num_recurrent_layers(self):
-        return self.state_encoder.num_recurrent_layers
-
-    def get_target_coordinates_encoding(self, observations):
-        if self.embed_coordinates:
-            return self.coordinate_embedding(
-                observations[self.goal_sensor_uuid].to(torch.float32)
-            )
-        else:
-            return observations[self.goal_sensor_uuid].to(torch.float32)
-
-    @property
-    def recurrent_hidden_state_size(self):
-        return self._hidden_size
-
-    def forward(self, observations, rnn_hidden_states, prev_actions, masks):
-        target_encoding = self.get_target_coordinates_encoding(observations)
-        x = [target_encoding]
-
-        embs = []
-        if "rgb_resnet" in observations:
-            embs.append(
-                observations["rgb_resnet"].view(observations["rgb_resnet"].shape[0], -1)
-            )
-        if "depth_resnet" in observations:
-            embs.append(
-                observations["depth_resnet"].view(
-                    observations["depth_resnet"].shape[0], -1
-                )
-            )
-        emb = torch.cat(embs, dim=1)
-
-        x = [self.visual_encoder(emb)] + x
-        x = torch.cat(x, dim=1)
-
-        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
-
-        return (
-            ActorCriticOutput(
-                distributions=self.actor(x), values=self.critic(x), extras={}
-            ),
-            rnn_hidden_states,
-        )
-
-
-class PointNavActorCriticTrainResNet50RNN(ActorCriticModel[CategoricalDistr]):
-    def __init__(
-        self,
-        action_space: gym.spaces.Discrete,
-        observation_space: SpaceDict,
-        goal_sensor_uuid: str,
-        hidden_size=512,
-        embed_coordinates=False,
-        coordinate_embedding_dim=8,
-        coordinate_dims=2,
-        num_rnn_layers=1,
-        rnn_type="GRU",
-    ):
-        super().__init__(action_space=action_space, observation_space=observation_space)
-
-        self.goal_sensor_uuid = goal_sensor_uuid
-        self._hidden_size = hidden_size
-        self.embed_coordinates = embed_coordinates
-        if self.embed_coordinates:
-            self.coorinate_embedding_size = coordinate_embedding_dim
-        else:
-            self.coorinate_embedding_size = coordinate_dims
-
-        self.visual_encoder = nn.Sequential(
-            nn.Conv2d(2048, 2048, (1, 1)),
-            nn.ReLU(),
-            nn.Conv2d(2048, 2048, (1, 1)),
-            nn.ReLU(),
-            nn.Conv2d(2048, 1024, (1, 1)),
-            nn.ReLU(),
-            nn.Conv2d(1024, 1024, (1, 1)),
-            nn.ReLU(),
-            nn.Conv2d(1024, 1024, (1, 1)),
-            nn.ReLU(),
-            nn.Conv2d(1024, 32, (1, 1)),
-            nn.ReLU(),
-            # nn.AdaptiveAvgPool2d((1,1)),
-            nn.Flatten(),
-            nn.Linear(2048, 512),
-        )
-
-        self.state_encoder = RNNStateEncoder(
-            (0 if self.is_blind else self.recurrent_hidden_state_size)
-            + self.coorinate_embedding_size,
-            self._hidden_size,
-            num_layers=num_rnn_layers,
-            rnn_type=rnn_type,
-        )
-
-        self.actor = LinearActorHead(self._hidden_size, action_space.n)
-        self.critic = LinearCriticHead(self._hidden_size)
-
-        if self.embed_coordinates:
-            self.coordinate_embedding = nn.Linear(
-                coordinate_dims, coordinate_embedding_dim
-            )
-
-        self.train()
-
-    @property
-    def output_size(self):
-        return self.recurrent_hidden_state_size
-
-    @property
-    def is_blind(self):
-        return False
-
-    @property
-    def num_recurrent_layers(self):
-        return self.state_encoder.num_recurrent_layers
-
-    def get_target_coordinates_encoding(self, observations):
-        if self.embed_coordinates:
-            return self.coordinate_embedding(
-                observations[self.goal_sensor_uuid].to(torch.float32)
-            )
-        else:
-            return observations[self.goal_sensor_uuid].to(torch.float32)
-
-    def recurrent_hidden_state_size(self):
-        return self._hidden_size
-
-    def forward(self, observations, rnn_hidden_states, prev_actions, masks):
-        target_encoding = self.get_target_coordinates_encoding(observations)
-        x = [target_encoding]
-
-        embs = []
-        if "rgb_resnet" in observations:
-            embs.append(self.visual_encoder(observations["rgb_resnet"]))
-        if "depth_resnet" in observations:
-            embs.append(self.visual_encoder(observations["depth_resnet"]))
-        emb = torch.cat(embs, dim=1)
-
-        x = [emb] + x
-        x = torch.cat(x, dim=1)
-
-        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
-
-        return (
-            ActorCriticOutput(
-                distributions=self.actor(x), values=self.critic(x), extras={}
-            ),
-            rnn_hidden_states,
-        )
-
-
-# class PointNavActorCriticResNeXTPreTrainedRNN(ActorCriticModel[CategoricalDistr]):
-#     def __init__(
-#         self,
-#         action_space: gym.spaces.Discrete,
-#         observation_space: SpaceDict,
-#         goal_sensor_uuid: str,
-#         hidden_size=512,
-#         embed_coordinates=False,
-#         coordinate_embedding_dim=8,
-#         coordinate_dims=2,
-#         num_rnn_layers=1,
-#         rnn_type='GRU'
-#     ):
-#         super().__init__(action_space=action_space, observation_space=observation_space)
-#         self.goal_sensor_uuid = goal_sensor_uuid
-#         self._hidden_size = hidden_size
-#         self.embed_coordinates = embed_coordinates
-#         if self.embed_coordinates:
-#             self.coorinate_embedding_size = coordinate_embedding_dim
-#         else:
-#             self.coorinate_embedding_size = coordinate_dims
-#
-#
-#         visual_encoder_weights = torch.load(
-#             "models/weights/gibson-2plus-mp3d-train-val-test-se-resneXt50-rgb.pth",
-#             map_location="cpu"
-#         )
-#
-#         pretrained_resnet = PointNavResNetPolicy(
-#             observation_space=observation_space,
-#             action_space=action_space,
-#             goal_sensor_uuid=goal_sensor_uuid,
-#             backbone=visual_encoder_weights['model_args'].backbone,
-#             hidden_size=visual_encoder_weights['model_args'].hidden_size,
-#             num_recurrent_layers=visual_encoder_weights['model_args'].num_recurrent_layers,
-#             resnet_baseplanes=visual_encoder_weights['model_args'].resnet_baseplanes,
-#             rnn_type=visual_encoder_weights['model_args'].rnn_type
-#         )
-#
-#         prefix = "actor_critic.net.visual_encoder."
-#         pretrained_resnet.net.visual_encoder.load_state_dict(
-#             {
-#                 k[len(prefix):]: v
-#                 for k, v in visual_encoder_weights["state_dict"].items()
-#                 if (k.startswith(prefix) and not "running_mean_and_var" in k)
-#             }
-#         )
-#
-#         self.visual_encoder = pretrained_resnet.net.visual_encoder
-#         self.compressor = nn.Sequential(
-#             nn.Flatten(),
-#             nn.ReLU(),
-#             nn.Linear(2048, 512)
-#         )
-#
-#         self.state_encoder = RNNStateEncoder(
-#             (0 if self.is_blind else self.recurrent_hidden_state_size)
-#             + self.coorinate_embedding_size,
-#             self._hidden_size,
-#             num_layers=num_rnn_layers,
-#             rnn_type=rnn_type
-#         )
-#
-#         self.actor = LinearActorHead(
-#             self._hidden_size, action_space.n
-#         )
-#         self.critic = LinearCriticHead(
-#             self._hidden_size
-#         )
-#
-#         if self.embed_coordinates:
-#             self.coordinate_embedding = nn.Linear(coordinate_dims, coordinate_embedding_dim)
-#
-#         self.train()
-#
-#     @property
-#     def output_size(self):
-#         return self._hidden_size
-#
-#     @property
-#     def is_blind(self):
-#         return False
-#
-#     @property
-#     def num_recurrent_layers(self):
-#         return self.state_encoder.num_recurrent_layers
-#
-#     def get_target_coordinates_encoding(self, observations):
-#         if self.embed_coordinates:
-#             return self.coordinate_embedding(
-#                 observations[self.goal_sensor_uuid].to(torch.float32)
-#             )
-#         else:
-#             return observations[self.goal_sensor_uuid].to(torch.float32)
-#
-#     def recurrent_hidden_state_size(self):
-#         return self._hidden_size
-#
-#     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
-#         target_encoding = self.get_target_coordinates_encoding(observations)
-#         x = [target_encoding]
-#
-#         x = [self.compressor(self.visual_encoder(observations))] + x
-#         x = torch.cat(x, dim=1)
-#
-#         x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
-#
-#         return (
-#             ActorCriticOutput(
-#                 distributions=self.actor(x), values=self.critic(x), extras={}
-#             ),
-#             rnn_hidden_states,
-#         )
+        return ac_output, memory.set_tensor("rnn", rnn_hidden_states)
 
 
 class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
@@ -563,7 +166,7 @@ class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
                 combiner_hidden_out_dims,
             )
         else:
-            self.goal_visual_encoder = ResnetDualTensorGoalEncoder(
+            self.goal_visual_encoder = ResnetDualTensorGoalEncoder(  # type:ignore
                 self.observation_space,
                 goal_sensor_uuid,
                 rgb_resnet_preprocessor_uuid,
@@ -578,6 +181,7 @@ class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
         self.actor = LinearActorHead(self._hidden_size, action_space.n)
         self.critic = LinearCriticHead(self._hidden_size)
         self.train()
+        self.memory_key = "rnn"
 
     @property
     def recurrent_hidden_state_size(self) -> int:
@@ -595,20 +199,34 @@ class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
         """Number of recurrent hidden layers."""
         return self.state_encoder.num_recurrent_layers
 
-    def get_object_type_encoding(
-        self, observations: Dict[str, torch.FloatTensor]
-    ) -> torch.FloatTensor:
-        """Get the object type encoding from input batched observations."""
-        return self.goal_visual_encoder.get_object_type_encoding(observations)
+    def _recurrent_memory_specification(self):
+        return {
+            self.memory_key: (
+                (
+                    ("layer", self.num_recurrent_layers),
+                    ("sampler", None),
+                    ("hidden", self.recurrent_hidden_state_size),
+                ),
+                torch.float32,
+            )
+        }
 
-    def forward(self, observations, rnn_hidden_states, prev_actions, masks):
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         x = self.goal_visual_encoder(observations)
-        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
+        x, rnn_hidden_states = self.state_encoder(
+            x, memory.tensor(self.memory_key), masks
+        )
         return (
             ActorCriticOutput(
                 distributions=self.actor(x), values=self.critic(x), extras={}
             ),
-            rnn_hidden_states,
+            memory.set_tensor(self.memory_key, rnn_hidden_states),
         )
 
 
@@ -681,7 +299,33 @@ class ResnetTensorGoalEncoder(nn.Module):
             -1, -1, self.resnet_tensor_shape[-2], self.resnet_tensor_shape[-1]
         )
 
+    def adapt_input(self, observations):
+        resnet = observations[self.resnet_uuid]
+
+        use_agent = False
+        nagent = 1
+
+        if len(resnet.shape) == 6:
+            use_agent = True
+            nstep, nsampler, nagent = resnet.shape[:3]
+        else:
+            nstep, nsampler = resnet.shape[:2]
+
+        observations[self.resnet_uuid] = resnet.view(-1, *resnet.shape[-3:])
+        observations[self.goal_uuid] = observations[self.goal_uuid].view(-1, 2)
+
+        return observations, use_agent, nstep, nsampler, nagent
+
+    def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
+        if use_agent:
+            return x.view(nstep, nsampler, nagent, -1)
+        return x.view(nstep, nsampler * nagent, -1)
+
     def forward(self, observations):
+        observations, use_agent, nstep, nsampler, nagent = self.adapt_input(
+            observations
+        )
+
         if self.blind:
             return self.embed_goal(observations[self.goal_uuid])
         embs = [
@@ -689,7 +333,9 @@ class ResnetTensorGoalEncoder(nn.Module):
             self.distribute_target(observations),
         ]
         x = self.target_obs_combiner(torch.cat(embs, dim=1,))
-        return x.view(x.size(0), -1)  # flatten
+        x = x.view(x.size(0), -1)  # flatten
+
+        return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
 
 
 class ResnetDualTensorGoalEncoder(nn.Module):
@@ -787,7 +433,35 @@ class ResnetDualTensorGoalEncoder(nn.Module):
             -1, -1, self.resnet_tensor_shape[-2], self.resnet_tensor_shape[-1]
         )
 
+    def adapt_input(self, observations):
+        rgb = observations[self.rgb_resnet_uuid]
+        depth = observations[self.depth_resnet_uuid]
+
+        use_agent = False
+        nagent = 1
+
+        if len(rgb.shape) == 6:
+            use_agent = True
+            nstep, nsampler, nagent = rgb.shape[:3]
+        else:
+            nstep, nsampler = rgb.shape[:2]
+
+        observations[self.rgb_resnet_uuid] = rgb.view(-1, *rgb.shape[-3:])
+        observations[self.depth_resnet_uuid] = depth.view(-1, *depth.shape[-3:])
+        observations[self.goal_uuid] = observations[self.goal_uuid].view(-1, 2)
+
+        return observations, use_agent, nstep, nsampler, nagent
+
+    def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
+        if use_agent:
+            return x.view(nstep, nsampler, nagent, -1)
+        return x.view(nstep, nsampler, -1)
+
     def forward(self, observations):
+        observations, use_agent, nstep, nsampler, nagent = self.adapt_input(
+            observations
+        )
+
         if self.blind:
             return self.embed_goal(observations[self.goal_uuid])
         rgb_embs = [
@@ -801,4 +475,6 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         ]
         depth_x = self.depth_target_obs_combiner(torch.cat(depth_embs, dim=1,))
         x = torch.cat([rgb_x, depth_x], dim=1)
-        return x.view(x.size(0), -1)  # flatten
+        x = x.view(x.size(0), -1)  # flatten
+
+        return self.adapt_output(x, use_agent, nstep, nsampler, nagent)

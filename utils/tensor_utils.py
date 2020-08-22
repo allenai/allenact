@@ -162,19 +162,14 @@ def batch_observations(
 
         return batch
 
-    def fill_dict_from_observations(
-        batch: Dict[str, Union[Dict, List]], observation: Dict[str, Any]
-    ) -> None:
+    def fill_dict_from_observations(batch: Any, observation: Dict[str, Any]) -> None:
         for sensor in observation:
             if isinstance(observation[sensor], Dict):
                 fill_dict_from_observations(batch[sensor], observation[sensor])
             else:
                 batch[sensor].append(to_tensor(observation[sensor]))
 
-    def dict_to_batch(
-        batch: Dict[str, Union[Dict, List]], device: Optional[torch.device] = None
-    ) -> None:
-        batch = typing.cast(Union[Dict, List, torch.Tensor], batch)
+    def dict_to_batch(batch: Any, device: Optional[torch.device] = None) -> None:
         for sensor in batch:
             if isinstance(batch[sensor], Dict):
                 dict_to_batch(batch[sensor], device)

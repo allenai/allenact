@@ -27,6 +27,7 @@ from torchvision import transforms, models
 from core.base_abstractions.misc import EnvType
 from utils.misc_utils import prepare_locals_for_super
 from utils.tensor_utils import ScaleBothSides
+from core.models.basic_models import Flatten
 
 if TYPE_CHECKING:
     from core.base_abstractions.task import SubTaskType
@@ -475,10 +476,10 @@ class ResNetSensor(VisionSensor[EnvType, SubTaskType], ABC):
         self.to_tensor = transforms.ToTensor()
 
         self.resnet = nn.Sequential(
-            *list(models.resnet50(pretrained=True).children())[:-1] + [nn.Flatten()]
+            *list(models.resnet50(pretrained=True).children())[:-1] + [Flatten()]
         ).eval()
 
-        self.device = "cpu"
+        self.device: torch.device = torch.device("cpu")
 
         super().__init__(**prepare_locals_for_super(locals()))
 

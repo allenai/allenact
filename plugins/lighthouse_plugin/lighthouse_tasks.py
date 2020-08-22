@@ -1,6 +1,6 @@
 import abc
 import string
-from typing import List, Dict, Any, Optional, Tuple, Union
+from typing import List, Dict, Any, Optional, Tuple, Union, Sequence, cast
 
 import gym
 import numpy as np
@@ -9,12 +9,16 @@ from gym.utils import seeding
 from plugins.lighthouse_plugin.lighthouse_environment import LightHouseEnvironment
 from plugins.lighthouse_plugin.lighthouse_sensors import get_corner_observation
 
-raise ImportError("missing advisor")
-# from projects.advisor.lighthouse_constants import (
-#     DISCOUNT_FACTOR,
-#     STEP_PENALTY,
-#     FOUND_TARGET_REWARD,
-# )
+try:
+    from projects.advisor.lighthouse_constants import (
+        DISCOUNT_FACTOR,
+        STEP_PENALTY,
+        FOUND_TARGET_REWARD,
+    )
+except Exception:
+    DISCOUNT_FACTOR, STEP_PENALTY, FOUND_TARGET_REWARD = 0, 0, 0
+    raise ImportError("missing advisor")
+
 
 from core.base_abstractions.misc import RLStepResult
 from core.base_abstractions.sensor import Sensor, SensorSuite
@@ -61,7 +65,10 @@ class LightHouseTask(Task[LightHouseEnvironment], abc.ABC):
     def last_action(self, value: int):
         self._last_action = value
 
-    def step(self, action: int) -> RLStepResult:
+    def step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        assert isinstance(action, int)
+        action = cast(int, action)
+
         self.last_action = action
         return super(LightHouseTask, self).step(action=action)
 
@@ -109,7 +116,10 @@ class FindGoalLightHouseTask(LightHouseTask):
     def action_space(self) -> gym.spaces.Discrete:
         return gym.spaces.Discrete(2 * self.env.world_dim)
 
-    def _step(self, action: int) -> RLStepResult:
+    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        assert isinstance(action, int)
+        action = cast(int, action)
+
         success = self.env.step(action)
         reward = STEP_PENALTY
 
