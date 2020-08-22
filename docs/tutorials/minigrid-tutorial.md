@@ -284,7 +284,7 @@ In order to test for a specific experiment, we need to pass its training start d
 `-t EXPERIMENT_DATE`:
 
 ```bash
-python ddmain.py minigrid_tutorial -b projects/tutorials -m 1 -o /PATH/TO/minigrid_output -s 12345 -t EXPERIMENT_DATE
+python main.py minigrid_tutorial -b projects/tutorials -m 1 -o /PATH/TO/minigrid_output -s 12345 -t EXPERIMENT_DATE
 ```
 
 Again, if everything went well, the `test` success rate should converge to 1 and the mean episode length to a value

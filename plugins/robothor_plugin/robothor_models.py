@@ -1,5 +1,5 @@
 import typing
-from typing import Tuple, Dict, Union, Sequence
+from typing import Tuple, Dict, Union, Sequence, Optional
 
 import gym
 import torch
@@ -9,8 +9,10 @@ from gym.spaces import Dict as SpaceDict
 from core.models.basic_models import RNNStateEncoder
 from core.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
-    LinearActorHead,
-    LinearCriticHead,
+    LinearActorCriticHead,
+    DistributionType,
+    Memory,
+    ObservationType,
 )
 from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
@@ -96,7 +98,33 @@ class ResnetTensorGoalEncoder(nn.Module):
             -1, -1, self.resnet_tensor_shape[-2], self.resnet_tensor_shape[-1]
         )
 
+    def adapt_input(self, observations):
+        resnet = observations[self.resnet_uuid]
+
+        use_agent = False
+        nagent = 1
+
+        if len(resnet.shape) == 6:
+            use_agent = True
+            nstep, nsampler, nagent = resnet.shape[:3]
+        else:
+            nstep, nsampler = resnet.shape[:2]
+
+        observations[self.resnet_uuid] = resnet.view(-1, *resnet.shape[-3:])
+        observations[self.goal_uuid] = observations[self.goal_uuid].view(-1, 1)
+
+        return observations, use_agent, nstep, nsampler, nagent
+
+    def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
+        if use_agent:
+            return x.view(nstep, nsampler, nagent, -1)
+        return x.view(nstep, nsampler * nagent, -1)
+
     def forward(self, observations):
+        observations, use_agent, nstep, nsampler, nagent = self.adapt_input(
+            observations
+        )
+
         if self.blind:
             return self.embed_class(observations[self.goal_uuid])
 
@@ -106,8 +134,9 @@ class ResnetTensorGoalEncoder(nn.Module):
         ]
 
         x = self.target_obs_combiner(torch.cat(embs, dim=-3,))
+        x = x.view(x.size(0), -1)  # flatten
 
-        return x.view(x.size(0), -1)  # flatten
+        return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
 
 
 class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
@@ -141,15 +170,14 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
             self.goal_visual_encoder.output_dims, rnn_hidden_size,
         )
 
-        self.actor = LinearActorHead(self.hidden_size, action_space.n)
-        self.critic = LinearCriticHead(self.hidden_size)
+        self.actor_critic = LinearActorCriticHead(self.hidden_size, action_space.n)
 
         self.train()
 
     @property
     def recurrent_hidden_state_size(
         self,
-    ) -> Union[int, Dict[str, Tuple[Sequence[int], int, torch.dtype]]]:
+    ) -> Union[int, Dict[str, Tuple[Sequence[Tuple[str, Optional[int]]], torch.dtype]]]:
         """The recurrent hidden state size of the model."""
         return self.hidden_size
 
@@ -164,70 +192,40 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         """Number of recurrent hidden layers."""
         return self.state_encoder.num_recurrent_layers
 
-    def get_object_type_encoding(
-        self, observations: Dict[str, torch.FloatTensor]
-    ) -> torch.FloatTensor:
-        """Get the object type encoding from input batched observations."""
-        return self.goal_visual_encoder.get_object_type_encoding(observations)
-
-    def forward(self, observations, rnn_hidden_states, prev_actions, masks):
-        x = self.goal_visual_encoder(observations)
-        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
-
-        return (
-            ActorCriticOutput(
-                distributions=self.actor(x), values=self.critic(x), extras={}
-            ),
-            rnn_hidden_states,
-        )
-
-
-class ResnetTensorObjectNavActorCriticMemory(ResnetTensorObjectNavActorCritic):
-    @property
-    def recurrent_hidden_state_size(
-        self,
-    ) -> Dict[str, Tuple[Sequence[int], int, torch.dtype]]:
-        """The memory spec of the model: A dictionary with string keys and
-        tuple values, each with the dimensions of the memory, e.g. (2, 32) for
-        two layers of 32-dimensional recurrent hidden states; an integer
-        indicating the index of the sampler in a batch, e.g. 1 for RNNs; the
-        data type, e.g. torch.float32."""
+    def _recurrent_memory_specification(self):
         return {
             "rnn_hidden": (
-                (self.state_encoder.num_recurrent_layers, self.hidden_size),
-                1,
+                (
+                    ("layer", self.state_encoder.num_recurrent_layers),
+                    ("sampler", None),
+                    ("hidden", self.hidden_size),
+                ),
                 torch.float32,
             )
         }
 
-    @property
-    def num_recurrent_layers(self) -> int:
-        """Returns -1, indicating we are using a memory specification in
-        recurrent_hidden_state_size."""
-        return -1
-
     def get_object_type_encoding(
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
         return self.goal_visual_encoder.get_object_type_encoding(observations)
 
-    def forward(self, observations, rnn_hidden_states, prev_actions, masks):
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         x = self.goal_visual_encoder(observations)
 
-        x, mem_return = self.state_encoder(
-            x, rnn_hidden_states.tensor("rnn_hidden"), masks
-        )
-        rnn_hidden_states["rnn_hidden"] = (
-            mem_return,
-            rnn_hidden_states.sampler_dim("rnn_hidden"),
-        )
+        x, rnn_hidden_states = self.state_encoder(x, memory.tensor("rnn_hidden"), masks)
+
+        dists, vals = self.actor_critic(x)
 
         return (
-            ActorCriticOutput(
-                distributions=self.actor(x), values=self.critic(x), extras={}
-            ),
-            rnn_hidden_states,
+            ActorCriticOutput(distributions=dists, values=vals, extras={},),
+            memory.set_tensor("rnn_hidden", rnn_hidden_states),
         )
 
 
@@ -367,7 +365,41 @@ class ResnetFasterRCNNTensorsGoalEncoder(nn.Module):
     def embed_boxes(self, observations):
         return self.box_embedder(observations[self.detector_uuid]["frcnn_boxes"])
 
+    def adapt_input(self, observations):
+        boxes = observations[self.detector_uuid]["frcnn_boxes"]
+        classes = observations[self.detector_uuid]["frcnn_classes"]
+
+        use_agent = False
+        nagent = 1
+
+        if len(boxes.shape) == 6:
+            use_agent = True
+            nstep, nsampler, nagent = boxes.shape[:3]
+        else:
+            nstep, nsampler = boxes.shape[:2]
+
+        observations[self.detector_uuid]["frcnn_boxes"] = boxes.view(
+            -1, *boxes.shape[-3:]
+        )
+
+        observations[self.detector_uuid]["frcnn_classes"] = classes.view(
+            -1, *classes.shape[-3:]
+        )
+
+        observations[self.goal_uuid] = observations[self.goal_uuid].view(-1, 1)
+
+        return observations, use_agent, nstep, nsampler, nagent
+
+    def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
+        if use_agent:
+            return x.view(nstep, nsampler, nagent, -1)
+        return x.view(nstep, nsampler * nagent, -1)
+
     def forward(self, observations):
+        observations, use_agent, nstep, nsampler, nagent = self.adapt_input(
+            observations
+        )
+
         if self.blind:
             return self.embed_class(observations[self.goal_uuid])
 
@@ -380,7 +412,9 @@ class ResnetFasterRCNNTensorsGoalEncoder(nn.Module):
 
         x = self.target_obs_combiner(torch.cat(embs, dim=-3,))
 
-        return x.view(x.size(0), -1)  # flatten
+        x = x.view(x.size(0), -1)  # flatten
+
+        return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
 
 
 class ResnetFasterRCNNTensorsObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
@@ -422,8 +456,7 @@ class ResnetFasterRCNNTensorsObjectNavActorCritic(ActorCriticModel[CategoricalDi
             self.goal_visual_encoder.output_dims, rnn_hidden_size,
         )
 
-        self.actor = LinearActorHead(self.hidden_size, action_space.n)
-        self.critic = LinearCriticHead(self.hidden_size)
+        self.actor_critic = LinearActorCriticHead(self.hidden_size, action_space.n)
 
         self.train()
 
@@ -443,19 +476,38 @@ class ResnetFasterRCNNTensorsObjectNavActorCritic(ActorCriticModel[CategoricalDi
         """Number of recurrent hidden layers."""
         return self.state_encoder.num_recurrent_layers
 
+    def _recurrent_memory_specification(self):
+        return {
+            "rnn_hidden": (
+                (
+                    ("layer", self.state_encoder.num_recurrent_layers),
+                    ("sampler", None),
+                    ("hidden", self.hidden_size),
+                ),
+                torch.float32,
+            )
+        }
+
     def get_object_type_encoding(
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
         return self.goal_visual_encoder.get_object_type_encoding(observations)
 
-    def forward(self, observations, rnn_hidden_states, prev_actions, masks):
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         x = self.goal_visual_encoder(observations)
-        x, rnn_hidden_states = self.state_encoder(x, rnn_hidden_states, masks)
+
+        x, rnn_hidden_states = self.state_encoder(x, memory.tensor("rnn_hidden"), masks)
+
+        dists, vals = self.actor_critic(x)
 
         return (
-            ActorCriticOutput(
-                distributions=self.actor(x), values=self.critic(x), extras={}
-            ),
-            rnn_hidden_states,
+            ActorCriticOutput(distributions=dists, values=vals, extras={},),
+            memory.set_tensor("rnn_hidden", rnn_hidden_states),
         )

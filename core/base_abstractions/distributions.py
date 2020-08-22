@@ -33,13 +33,7 @@ class CategoricalDistr(Distr):
         return super().sample(sample_shape).unsqueeze(-1)
 
     def log_probs(self, actions: torch.LongTensor) -> torch.FloatTensor:
-        return (
-            super()
-            .log_prob(actions.squeeze(-1))
-            .view(actions.size(0), -1)
-            .sum(-1)
-            .unsqueeze(-1)
-        )
+        return super().log_prob(actions.squeeze(-1)).unsqueeze(-1)
 
     @lazy_property
     def log_probs_tensor(self):

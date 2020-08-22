@@ -1,6 +1,6 @@
 import random
 import warnings
-from typing import Tuple, Any, List, Dict, Optional, Union, Callable
+from typing import Tuple, Any, List, Dict, Optional, Union, Callable, Sequence, cast
 
 import gym
 import networkx as nx
@@ -60,9 +60,12 @@ class MiniGridTask(Task[Union[CrossingEnv]]):
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         return self.env.render(mode=mode)
 
-    def _step(self, action: int) -> RLStepResult:
+    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
         # if self.num_steps_taken() == 0:
         #     self.env.render()
+        assert isinstance(action, int)
+        action = cast(int, action)
+
         minigrid_obs, reward, self._minigrid_done, info = self.env.step(
             action=self._ACTION_IND_TO_MINIGRID_IND[action]
         )
@@ -130,7 +133,7 @@ class MiniGridTask(Task[Union[CrossingEnv]]):
             "success": int(
                 self.env.was_successful
                 if hasattr(self.env, "was_successful")
-                else self._total_reward > 0
+                else self.cumulative_reward > 0
             ),
         }
 
@@ -383,7 +386,10 @@ class AskForHelpSimpleCrossingTask(MiniGridTask):
 
         self.did_toggle: List[bool] = []
 
-    def _step(self, action: int) -> RLStepResult:
+    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        assert isinstance(action, int)
+        action = cast(int, action)
+
         self.did_toggle.append(self._ACTION_NAMES[action] == "toggle")
         return super(AskForHelpSimpleCrossingTask, self)._step(action=action)
 

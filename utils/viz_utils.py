@@ -7,19 +7,12 @@ from matplotlib import pyplot as plt, markers
 from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
 
-from core.algorithms.onpolicy_sync.storage import RolloutStorage
 from utils.experiment_utils import Builder
 from utils.system import get_logger
 from utils.tensor_utils import SummaryWriter, tile_images, process_video
 
 
 class AbstractViz:
-    rollout_episode_default_axis: int = 1
-    rnn_hidden_memory: Tuple[str, str] = (
-        "memory",
-        RolloutStorage.DEFAULT_RNN_MEMORY_ACCESSOR,
-    )  # to be used to access rnn hidden from memory
-
     def __init__(
         self,
         label: Optional[str] = None,
@@ -58,7 +51,7 @@ class AbstractViz:
         self,
         mode: str,
         path_to_id: Sequence[str],
-        episode_ids: Union[Sequence[Sequence[str]], Sequence[str]],
+        episode_ids: Sequence[Union[Sequence[str], str]],
         force: bool = False,
     ):
         self.mode = mode
@@ -416,7 +409,7 @@ class TensorViz1D(AbstractTensorViz):
 class TensorViz2D(AbstractTensorViz):
     def __init__(
         self,
-        rollout_source: Union[str, Sequence[str]] = AbstractViz.rnn_hidden_memory,
+        rollout_source: Union[str, Sequence[str]] = ("memory", "rnn"),
         label: Optional[str] = None,
         figsize: Tuple[int, int] = (10, 10),
         fontsize: int = 5,
@@ -687,19 +680,19 @@ class SimpleViz(AbstractViz):
                 datum_id = self._source_to_str(source, is_vector_task=False)
 
                 storage, path = source[0], source[1:]
-                if source == self.rnn_hidden_memory:
-                    path = rollout.DEFAULT_RNN_MEMORY_NAME
 
                 # Access storage
                 res = getattr(rollout, storage)
-                episode_dim = self.rollout_episode_default_axis
+                episode_dim = rollout.dim_names.index("sampler")
 
                 # Access sub-storage if path not empty
                 if len(path) > 0:
-                    for path_step in rollout.reverse_flattened_spaces[storage][
+                    flattened_name = rollout.unflattened_to_flattened[storage][
                         tuple(path)
-                    ]:
-                        res = res[path_step]
+                    ]
+                    # for path_step in path:
+                    #     res = res[path_step]
+                    res = res[flattened_name]
                     res, episode_dim = res
 
                 # Select latest step
@@ -760,7 +753,6 @@ class SimpleViz(AbstractViz):
 
     # to be called by engine
     def collect(self, vector_task=None, alive=None, rollout=None, actor_critic=None):
-
         if actor_critic is not None:
             # in phase with last_it2epid
             self._collect_actor_critic(actor_critic)

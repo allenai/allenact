@@ -1,4 +1,4 @@
-from typing import Tuple, List, Dict, Any, Optional
+from typing import Tuple, List, Dict, Any, Optional, Union, Sequence, cast
 
 import gym
 import numpy as np
@@ -63,8 +63,8 @@ class PointNavTask(Task[RoboThorEnvironment]):
                 self.distance_cache, self.env.agent_state(), self.task_info["target"]
             )
         else:
-            self.last_geodesic_distance = self.env.dist_to_object(
-                self.task_info["object_type"]
+            self.last_geodesic_distance = self.env.dist_to_point(
+                self.task_info["target"]
             )
 
         self.optimal_distance = self.last_geodesic_distance
@@ -90,7 +90,10 @@ class PointNavTask(Task[RoboThorEnvironment]):
     def close(self) -> None:
         self.env.stop()
 
-    def _step(self, action: int) -> RLStepResult:
+    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        assert isinstance(action, int)
+        action = cast(int, action)
+
         action_str = self.action_names()[action]
 
         if action_str == END:
@@ -213,15 +216,14 @@ class PointNavTask(Task[RoboThorEnvironment]):
                     self.env.agent_state(),
                     self.task_info["target"],
                 )
+                spl = self.spl()
+                if spl is None:
+                    return {}
             else:
                 # TODO
-                raise NotImplementedError
-                # dist2tget = self._get_distance_to_target()
+                dist2tget = -1  # self._get_distance_to_target()
+                spl = self.spl() if len(self.episode_optimal_corners) > 1 else 0.0
             if dist2tget is None:
-                return {}
-
-            spl = self.spl()
-            if spl is None:
                 return {}
 
             return {
@@ -276,9 +278,11 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self.task_info["taken_actions"] = []
         self.task_info["action_names"] = self.action_names()
 
-        if not task_info["distance_to_target"]:
+        if "distance_to_target" not in task_info or not task_info["distance_to_target"]:
             self.episode_optimal_corners = self.env.path_corners(
                 task_info["target"]
+                if "target" in task_info
+                else task_info["object_type"]
             )  # assume it's valid (sampler must take care)!
         self.num_moves_made = 0
         self.optimal_distance = self.last_geodesic_distance
@@ -297,7 +301,10 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
     def close(self) -> None:
         self.env.stop()
 
-    def _step(self, action: int) -> RLStepResult:
+    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        assert isinstance(action, int)
+        action = cast(int, action)
+
         action_str = self.action_names()[action]
 
         if self.mirror:
@@ -416,10 +423,11 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 self.env.agent_state(),
                 self.task_info["object_type"],
             )
+            spl = self.spl()
         else:
             # TODO
-            raise NotImplementedError
-            # dist2tget = self._get_distance_to_target()
+            dist2tget = -1  # self._get_distance_to_target()
+            spl = self.spl() if len(self.episode_optimal_corners) > 1 else 0.0
         if not self.is_done():
             return {}
         else:
@@ -428,7 +436,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 "ep_length": self.num_steps_taken(),
                 "total_reward": np.sum(self._rewards),
                 "dist_to_target": dist2tget,
-                "spl": self.spl(),
+                "spl": spl,
                 "task_info": self.task_info,
             }
             self._rewards = []

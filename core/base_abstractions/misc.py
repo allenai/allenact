@@ -1,6 +1,6 @@
 import abc
 import typing
-from typing import Dict, Any, TypeVar, Sequence, NamedTuple, Optional
+from typing import Dict, Any, TypeVar, Sequence, NamedTuple, Optional, List, Union
 
 import torch
 
@@ -10,7 +10,7 @@ DistributionType = TypeVar("DistributionType")
 
 class RLStepResult(NamedTuple):
     observation: Optional[Any]
-    reward: Optional[float]
+    reward: Optional[Union[float, List[float]]]
     done: Optional[bool]
     info: Optional[Dict[str, Any]]
 
@@ -73,12 +73,13 @@ class Loss(abc.ABC):
         raise NotImplementedError()
 
 
+# TODO document that the step dim is always 0 (as in policy's memory specification)
 class Memory(Dict):
     def __init__(self, *args, **kwargs):
         super().__init__()
         if len(args) > 0:
             assert len(args) == 1, (
-                "Only 1 Sequence[Tuple[str, Tuple[torch.Tensor, int]]]"
+                "Only one of Sequence[Tuple[str, Tuple[torch.Tensor, int]]]"
                 "or Dict[str, Tuple[torch.Tensor, int]] accepted as unnamed args"
             )
             if isinstance(args[0], Sequence):
@@ -103,7 +104,22 @@ class Memory(Dict):
                 tensor, dim = kwargs[key]
                 self.check_append(key, tensor, dim)
 
-    def check_append(self, key: str, tensor: torch.Tensor, sampler_dim: int):
+    def check_append(
+        self, key: str, tensor: torch.Tensor, sampler_dim: int
+    ) -> "Memory":
+        """
+        Appends a new memory type given its identifier, its memory tensor and its sampler dim.
+
+        # Parameters
+
+        key: string identifier of the memory type
+        tensor: memory tensor
+        sampler_dim: sampler dimension
+
+        # Returns
+
+        Updated Memory
+        """
         assert isinstance(key, str), "key {} must be str".format(key)
         assert isinstance(
             tensor, torch.Tensor
@@ -121,22 +137,60 @@ class Memory(Dict):
 
         self[key] = (tensor, sampler_dim)
 
-    def tensor(self, key: str):
+        return self
+
+    def tensor(self, key: str) -> torch.Tensor:
+        """
+        Returns the memory tensor for a given memory type.
+
+        # Parameters
+
+        key: string identifier of the memory type
+
+        # Returns
+
+        Memory tensor for type `key`
+        """
         assert key in self, "Missing key {}".format(key)
         return self[key][0]
 
-    def sampler_dim(self, key: str):
+    def sampler_dim(self, key: str) -> int:
+        """
+        Returns the sampler dimension for the given memory type.
+
+        # Parameters
+
+        key: string identifier of the memory type
+
+        # Returns
+
+        The sampler dim
+        """
         assert key in self, "Missing key {}".format(key)
         return self[key][1]
 
-    def index_select(self, keep: Sequence[int]):
+    def sampler_select(self, keep: Sequence[int]) -> "Memory":
+        """
+        Equivalent to PyTorch index_select along the `sampler_dim` of each memory type.
+
+        # Parameters
+
+        keep: a list of sampler indices to keep
+
+        # Returns
+
+        Selected memory
+        """
         res = Memory()
-        if len(keep) == 0:
-            return res
+        valid = False
         for name in self:
             sampler_dim = self.sampler_dim(name)
             tensor = self.tensor(name)
-            assert 0 <= min(keep) and max(keep) < tensor.shape[sampler_dim]
+            assert len(keep) == 0 or (
+                0 <= min(keep) and max(keep) < tensor.shape[sampler_dim]
+            ), "Got min(keep)={} max(keep)={} for memory type {} with shape {}, dim {}".format(
+                min(keep), max(keep), name, tensor.shape, sampler_dim
+            )
             if tensor.shape[sampler_dim] > len(keep):
                 tensor = tensor.index_select(
                     dim=sampler_dim,
@@ -145,6 +199,162 @@ class Memory(Dict):
                     ),
                 )
                 res.check_append(name, tensor, sampler_dim)
-        if len(res) > 0:
+                valid = True
+        if valid:
             return res
         return self
+
+    def set_tensor(self, key: str, tensor: torch.Tensor) -> "Memory":
+        """
+        Replaces tensor for given key with an updated version
+
+        # Parameters
+
+        key: memory type identifier to update
+        tensor: updated tensor
+
+        # Returns
+
+        Updated memory
+        """
+        assert key in self, "Missing key {}".format(key)
+        assert (
+            tensor.shape == self[key][0].shape
+        ), "setting tensor with shape {} for former {}".format(
+            tensor.shape, self[key][0].shape
+        )
+        self[key] = (tensor, self[key][1])
+
+        return self
+
+    def step_select(self, step: int) -> "Memory":
+        """
+        Equivalent to slicing with length 1 for the `step` (i.e first) dimension.
+
+        # Parameters
+
+        step: step to keep
+
+        # Returns
+
+        Sliced memory with a single step
+        """
+        res = Memory()
+        for key in self:
+            tensor = self.tensor(key)
+            assert (
+                tensor.shape[0] > step
+            ), "attempting to access step {} for memory type {} of shape {}".format(
+                step, key, tensor.shape
+            )
+            if step != -1:
+                res.check_append(
+                    key, self.tensor(key)[step : step + 1, ...], self.sampler_dim(key)
+                )
+            else:
+                res.check_append(
+                    key, self.tensor(key)[step:, ...], self.sampler_dim(key)
+                )
+        return res
+
+    def step_squeeze(self, step: int) -> "Memory":
+        """
+        Equivalent to simple indexing for the `step` (i.e first) dimension.
+
+        # Parameters
+
+        step: step to keep
+
+        # Returns
+
+        Sliced memory with a single step (and squeezed step dimension)
+        """
+        res = Memory()
+        for key in self:
+            tensor = self.tensor(key)
+            assert (
+                tensor.shape[0] > step
+            ), "attempting to access step {} for memory type {} of shape {}".format(
+                step, key, tensor.shape
+            )
+            res.check_append(
+                key, self.tensor(key)[step, ...], self.sampler_dim(key) - 1
+            )
+        return res
+
+    def slice(
+        self,
+        dim: int,
+        start: Optional[int] = None,
+        stop: Optional[int] = None,
+        step: int = 1,
+    ) -> "Memory":
+        """
+        Slicing for dimensions that have same extents in all memory types. It also accepts negative indices.
+
+        # Parameters
+
+        dim: the dimension to slice
+        start: the index of the first item to keep if given (default 0 if None)
+        stop: the index of the first item to discard if given (default tensor shape along `dim` if None)
+        step: the increment between consecutive indices (default 1)
+
+        # Returns
+
+        Sliced memory
+        """
+        if start is None:
+            start = 0
+        checked = False
+        total: Optional[int] = None
+        index: Optional[torch.Tensor] = None
+
+        res = Memory()
+        for key in self:
+            tensor = self.tensor(key)
+            assert (
+                len(tensor.shape) > dim
+            ), "attempting to access dim {} for memory type {} of shape {}".format(
+                dim, key, tensor.shape
+            )
+
+            if not checked:
+                total = tensor.shape[dim]
+                if start < 0:
+                    start += total
+                if stop is None:
+                    stop = total
+                elif stop < 0:
+                    stop += total
+
+                assert (
+                    0 <= start <= stop <= total
+                ), "attempting to slice with first {} last {} for {} elems".format(
+                    start, stop, total
+                )
+
+                # assume all tensors are in the same device
+                index = torch.as_tensor(
+                    list(range(start, stop, step)),
+                    dtype=torch.int64,
+                    device=tensor.device,
+                )
+
+                checked = True
+
+            assert (
+                total == tensor.shape[dim]
+            ), "attempting to slice along non-uniform dimension {}".format(dim)
+
+            if index.shape[0] < total:
+                res.check_append(
+                    key,
+                    tensor.index_select(dim=dim, index=index),
+                    self.sampler_dim(key),
+                )
+            else:
+                res.check_append(
+                    key, tensor, self.sampler_dim(key),
+                )
+
+        return res

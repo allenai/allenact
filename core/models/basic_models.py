@@ -19,24 +19,37 @@ from gym.spaces.dict import Dict as SpaceDict
 from torch import nn
 
 from core.algorithms.onpolicy_sync.policy import ActorCriticModel, DistributionType
-from core.base_abstractions.misc import ActorCriticOutput
+from core.base_abstractions.misc import ActorCriticOutput, Memory
 from core.base_abstractions.distributions import CategoricalDistr
-from utils.model_utils import make_cnn, Flatten
+from utils.model_utils import make_cnn, compute_cnn_output, Flatten
 
 
 class SimpleCNN(nn.Module):
-    """A Simple 3-Conv CNN followed by a fully connected layer. Takes in
+    """A Simple N-Conv CNN followed by a fully connected layer. Takes in
     observations (of type gym.spaces.dict) and produces an embedding of the
-    `"rgb"` and/or `"depth"` components.
+    `rgb_uuid` and/or `depth_uuid` components.
 
     # Attributes
 
-    observation_space : The observation_space of the agent, should have 'rgb' or 'depth' as
+    observation_space : The observation_space of the agent, should have `rgb_uuid` or `depth_uuid` as
         a component (otherwise it is a blind model).
     output_size : The size of the embedding vector to produce.
     """
 
-    def __init__(self, observation_space: SpaceDict, output_size: int):
+    def __init__(
+        self,
+        observation_space: SpaceDict,
+        output_size: int,
+        layer_channels: Sequence[int] = (32, 64, 32),
+        kernel_sizes: Sequence[Tuple[int, int]] = ((8, 8), (4, 4), (3, 3)),
+        layers_stride: Sequence[Tuple[int, int]] = ((4, 4), (2, 2), (1, 1)),
+        paddings: Sequence[Tuple[int, int]] = ((0, 0), (0, 0), (0, 0)),
+        dilations: Sequence[Tuple[int, int]] = ((1, 1), (1, 1), (1, 1)),
+        rgb_uuid: str = "rgb",
+        depth_uuid: str = "depth",
+        flatten: bool = True,
+        output_relu: bool = True,
+    ):
         """Initializer.
 
         # Parameters
@@ -45,85 +58,95 @@ class SimpleCNN(nn.Module):
         output_size : See class attributes documentation.
         """
         super().__init__()
-        if "rgb" in observation_space.spaces:
-            self._n_input_rgb = observation_space.spaces["rgb"].shape[2]
+
+        self.rgb_uuid = rgb_uuid
+        if self.rgb_uuid in observation_space.spaces:
+            self._n_input_rgb = observation_space.spaces[self.rgb_uuid].shape[2]
+            assert self._n_input_rgb >= 0
         else:
             self._n_input_rgb = 0
 
-        if "depth" in observation_space.spaces:
-            self._n_input_depth = observation_space.spaces["depth"].shape[2]
+        self.depth_uuid = depth_uuid
+        if self.depth_uuid in observation_space.spaces:
+            self._n_input_depth = observation_space.spaces[self.depth_uuid].shape[2]
+            assert self._n_input_depth >= 0
         else:
             self._n_input_depth = 0
 
-        # kernel size for different CNN layers
-        self._cnn_layers_kernel_size = [(8, 8), (4, 4), (3, 3)]
+        if not self.is_blind:
+            # hyperparameters for layers
+            self._cnn_layers_channels = list(layer_channels)
+            self._cnn_layers_kernel_size = list(kernel_sizes)
+            self._cnn_layers_stride = list(layers_stride)
+            self._cnn_layers_paddings = list(paddings)
+            self._cnn_layers_dilations = list(dilations)
 
-        # strides for different CNN layers
-        self._cnn_layers_stride = [(4, 4), (2, 2), (1, 1)]
-
-        if self._n_input_rgb > 0:
-            rgb_cnn_dims = np.array(
-                observation_space.spaces["rgb"].shape[:2], dtype=np.float32
-            )
-        if self._n_input_depth > 0:
-            depth_cnn_dims = np.array(
-                observation_space.spaces["depth"].shape[:2], dtype=np.float32
-            )
-        if self._n_input_rgb <= 0 and self._n_input_depth <= 0:
-            assert self.is_blind
-
-        if self.is_blind:
-            self.cnn = nn.Sequential()
-        else:
             if self._n_input_rgb > 0:
-                for kernel_size, stride in zip(
-                    self._cnn_layers_kernel_size, self._cnn_layers_stride
-                ):
-                    # noinspection PyUnboundLocalVariable
-                    rgb_cnn_dims = self._conv_output_dim(
-                        dimension=rgb_cnn_dims,
-                        padding=np.array([0, 0], dtype=np.float32),
-                        dilation=np.array([1, 1], dtype=np.float32),
-                        kernel_size=np.array(kernel_size, dtype=np.float32),
-                        stride=np.array(stride, dtype=np.float32),
-                    )
-                layer_channels = [32, 64, 32]
-                # noinspection PyUnboundLocalVariable
-                self.rgb_cnn = make_cnn(
-                    input_channels=self._n_input_rgb,
-                    layer_channels=layer_channels,
-                    kernel_sizes=self._cnn_layers_kernel_size,
-                    strides=self._cnn_layers_stride,
-                    output_height=rgb_cnn_dims[0],
-                    output_width=rgb_cnn_dims[1],
-                    output_channels=output_size,
+                input_rgb_cnn_dims = np.array(
+                    observation_space.spaces[self.rgb_uuid].shape[:2], dtype=np.float32
                 )
-                self.layer_init(self.rgb_cnn)
+                self.rgb_cnn = self.make_cnn_from_params(
+                    output_size=output_size,
+                    input_dims=input_rgb_cnn_dims,
+                    input_channels=self._n_input_rgb,
+                    flatten=flatten,
+                    output_relu=output_relu,
+                )
 
             if self._n_input_depth > 0:
-                for kernel_size, stride in zip(
-                    self._cnn_layers_kernel_size, self._cnn_layers_stride
-                ):
-                    # noinspection PyUnboundLocalVariable
-                    depth_cnn_dims = self._conv_output_dim(
-                        dimension=depth_cnn_dims,
-                        padding=np.array([0, 0], dtype=np.float32),
-                        dilation=np.array([1, 1], dtype=np.float32),
-                        kernel_size=np.array(kernel_size, dtype=np.float32),
-                        stride=np.array(stride, dtype=np.float32),
-                    )
-                layer_channels = [32, 64, 32]
-                # noinspection PyUnboundLocalVariable
-                self.rgb_cnn = make_cnn(
-                    input_channels=self._n_input_depth,
-                    layer_channels=layer_channels,
-                    kernel_sizes=self._cnn_layers_kernel_size,
-                    strides=self._cnn_layers_stride,
-                    output_height=depth_cnn_dims[0],
-                    output_width=depth_cnn_dims[1],
-                    output_channels=output_size,
+                input_depth_cnn_dims = np.array(
+                    observation_space.spaces[self.depth_uuid].shape[:2],
+                    dtype=np.float32,
                 )
-                self.layer_init(self.depth_cnn)
+                self.depth_cnn = self.make_cnn_from_params(
+                    output_size=output_size,
+                    input_dims=input_depth_cnn_dims,
+                    input_channels=self._n_input_depth,
+                    flatten=flatten,
+                    output_relu=output_relu,
+                )
+
+    def make_cnn_from_params(
+        self,
+        output_size: int,
+        input_dims: np.ndarray,
+        input_channels: int,
+        flatten: bool,
+        output_relu: bool,
+    ) -> nn.Module:
+        output_dims = input_dims
+        for kernel_size, stride, padding, dilation in zip(
+            self._cnn_layers_kernel_size,
+            self._cnn_layers_stride,
+            self._cnn_layers_paddings,
+            self._cnn_layers_dilations,
+        ):
+            # noinspection PyUnboundLocalVariable
+            output_dims = self._conv_output_dim(
+                dimension=output_dims,
+                padding=np.array(padding, dtype=np.float32),
+                dilation=np.array(dilation, dtype=np.float32),
+                kernel_size=np.array(kernel_size, dtype=np.float32),
+                stride=np.array(stride, dtype=np.float32),
+            )
+
+        # noinspection PyUnboundLocalVariable
+        cnn = make_cnn(
+            input_channels=input_channels,
+            layer_channels=self._cnn_layers_channels,
+            kernel_sizes=self._cnn_layers_kernel_size,
+            strides=self._cnn_layers_stride,
+            paddings=self._cnn_layers_paddings,
+            dilations=self._cnn_layers_dilations,
+            output_height=output_dims[0],
+            output_width=output_dims[1],
+            output_channels=output_size,
+            flatten=flatten,
+            output_relu=output_relu,
+        )
+        self.layer_init(cnn)
+
+        return cnn
 
     @staticmethod
     def _conv_output_dim(
@@ -169,7 +192,7 @@ class SimpleCNN(nn.Module):
 
     @staticmethod
     def layer_init(cnn) -> None:
-        """Initialize layer parameters using kaiming normal."""
+        """Initialize layer parameters using Kaiming normal."""
         for layer in cnn:
             if isinstance(layer, (nn.Conv2d, nn.Linear)):
                 nn.init.kaiming_normal_(layer.weight, nn.init.calculate_gain("relu"))
@@ -178,26 +201,42 @@ class SimpleCNN(nn.Module):
 
     @property
     def is_blind(self):
-        """True if the observation space doesn't include `"rgb"` or
-        `"depth"`."""
+        """True if the observation space doesn't include `self.rgb_uuid` or
+        `self.depth_uuid`."""
         return self._n_input_rgb + self._n_input_depth == 0
 
     def forward(self, observations: Dict[str, torch.Tensor]):  # type: ignore
-        cnn_output_list = []
+        if self.is_blind:
+            return None
+
+        def check_use_agent(new_setting):
+            if use_agent is not None:
+                assert (
+                    use_agent is new_setting
+                ), "rgb and depth must both use an agent dim or none"
+            return new_setting
+
+        cnn_output_list: List[torch.Tensor] = []
+        use_agent: Optional[bool] = None
+
         if self._n_input_rgb > 0:
-            rgb_observations = observations["rgb"]
-            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
-            rgb_observations = rgb_observations.permute(0, 3, 1, 2)
-            # rgb_observations = rgb_observations / 255.0  # normalize RGB
-            cnn_output_list.append(self.rgb_cnn(rgb_observations))
+            use_agent = check_use_agent(len(observations[self.rgb_uuid]) == 6)
+            cnn_output_list.append(
+                compute_cnn_output(self.rgb_cnn, observations[self.rgb_uuid])
+            )
 
         if self._n_input_depth > 0:
-            depth_observations = observations["depth"]
-            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
-            depth_observations = depth_observations.permute(0, 3, 1, 2)
-            cnn_output_list.append(self.depth_cnn(depth_observations))  # type:ignore
+            use_agent = check_use_agent(len(observations[self.depth_uuid]) == 6)
+            cnn_output_list.append(
+                compute_cnn_output(self.depth_cnn, observations[self.depth_uuid])
+            )
 
-        return torch.cat(cnn_output_list, dim=1)
+        if use_agent:
+            channels_dim = 3  # [step, sampler, agent, channel (, height, width)]
+        else:
+            channels_dim = 2  # [step, sampler, channel (, height, width)]
+
+        return torch.cat(cnn_output_list, dim=channels_dim)
 
 
 class RNNStateEncoder(nn.Module):
@@ -260,8 +299,8 @@ class RNNStateEncoder(nn.Module):
     def _pack_hidden(
         self, hidden_states: Union[torch.FloatTensor, Sequence[torch.FloatTensor]]
     ) -> torch.FloatTensor:
-        """Stacks hiddens states in an LSTM together (if using a GRU rather
-        than an LSTM this is just the identitiy).
+        """Stacks hidden states in an LSTM together (if using a GRU rather
+        than an LSTM this is just the identity).
 
         # Parameters
 
@@ -272,7 +311,6 @@ class RNNStateEncoder(nn.Module):
                 torch.FloatTensor,
                 torch.cat([hidden_states[0], hidden_states[1]], dim=0),
             )
-
         return cast(torch.FloatTensor, hidden_states)
 
     def _unpack_hidden(
@@ -286,7 +324,7 @@ class RNNStateEncoder(nn.Module):
                 hidden_states[self._num_recurrent_layers :],
             )
             return cast(Tuple[torch.FloatTensor, torch.FloatTensor], new_hidden_states)
-        return hidden_states
+        return cast(torch.FloatTensor, hidden_states)
 
     def _mask_hidden(
         self,
@@ -338,19 +376,110 @@ class RNNStateEncoder(nn.Module):
     ) -> Tuple[
         torch.FloatTensor, Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]]
     ]:
-        """Forward for a non-sequence input."""
+        """Forward for a single-step input."""
+        (
+            x,
+            hidden_states,
+            masks,
+            mem_agent,
+            obs_agent,
+            nsteps,
+            nsamplers,
+            nagents,
+        ) = self.adapt_input(x, hidden_states, masks)
+
         unpacked_hidden_states = self._unpack_hidden(hidden_states)
+
         x, unpacked_hidden_states = self.rnn(
-            x.unsqueeze(0),
+            x,
             self._mask_hidden(
-                unpacked_hidden_states, cast(torch.FloatTensor, masks.unsqueeze(0))
+                unpacked_hidden_states, cast(torch.FloatTensor, masks[0].view(1, -1, 1))
             ),
         )
-        x = cast(torch.FloatTensor, x.squeeze(0))
-        hidden_states = self._pack_hidden(unpacked_hidden_states)
-        return x, hidden_states
 
-    def seq_forward(
+        return self.adapt_result(
+            x,
+            self._pack_hidden(unpacked_hidden_states),
+            mem_agent,
+            obs_agent,
+            nsteps,
+            nsamplers,
+            nagents,
+        )
+
+    def adapt_input(
+        self,
+        x: torch.FloatTensor,
+        hidden_states: torch.FloatTensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[
+        torch.FloatTensor,
+        torch.FloatTensor,
+        torch.FloatTensor,
+        bool,
+        bool,
+        int,
+        int,
+        int,
+    ]:
+        nsteps, nsamplers, nagents = masks.shape[:3]  # masks always have all dimensions
+
+        assert len(hidden_states.shape) in [
+            3,
+            4,
+        ], "hidden_states must be [layer, sampler, hidden] or [layer, sampler, agent, hidden]"
+
+        assert len(x.shape) in [
+            3,
+            4,
+        ], "observations must be [step, sampler, data] or [step, sampler, agent, data]"
+
+        mem_agent: bool
+        if len(hidden_states.shape) == 4:  # [layer, sampler, agent, hidden]
+            mem_agent = True
+        else:  # [layer, sampler, hidden]
+            mem_agent = False
+
+        obs_agent: bool
+        if len(x.shape) == 4:  # [step, sampler, agent, dims]
+            obs_agent = True
+        else:  # [step, sampler, agent, dims]
+            obs_agent = False
+
+        # Flatten (nsamplers, nagents)
+        x = x.view(nsteps, nsamplers * nagents, -1)  # type:ignore
+        masks = masks.view(nsteps, nsamplers * nagents)  # type:ignore
+
+        # Flatten (nsamplers, nagents) and remove step dim
+        hidden_states = hidden_states.view(  # type:ignore
+            self.num_recurrent_layers, nsamplers * nagents, -1
+        )
+
+        return x, hidden_states, masks, mem_agent, obs_agent, nsteps, nsamplers, nagents
+
+    def adapt_result(
+        self,
+        outputs: torch.FloatTensor,
+        hidden_states: torch.FloatTensor,
+        mem_agent: bool,
+        obs_agent: bool,
+        nsteps: int,
+        nsamplers: int,
+        nagents: int,
+    ) -> Tuple[
+        torch.FloatTensor, torch.FloatTensor,
+    ]:
+        output_dims = (nsteps, nsamplers) + ((nagents, -1) if obs_agent else (-1,))
+        hidden_dims = (self.num_recurrent_layers, nsamplers) + (
+            (nagents, -1) if mem_agent else (-1,)
+        )
+
+        outputs = cast(torch.FloatTensor, outputs.view(*output_dims))
+        hidden_states = cast(torch.FloatTensor, hidden_states.view(*hidden_dims),)
+
+        return outputs, hidden_states
+
+    def seq_forward(  # type: ignore
         self,
         x: torch.FloatTensor,
         hidden_states: torch.FloatTensor,
@@ -362,37 +491,41 @@ class RNNStateEncoder(nn.Module):
 
         # Parameters
 
-        x : (T, N, -1) Tensor that has been flattened to (T * N, -1).
+        x : (Steps, Samplers, Agents, -1) tensor.
         hidden_states : The starting hidden states.
-        masks : A (T, N) tensor flattened to (T * N).
+        masks : A (Steps, Samplers, Agents) tensor.
             The masks to be applied to hidden state at every timestep, equal to 0 whenever the previous step finalized
             the task, 1 elsewhere.
         """
-        # x is a (T, N, -1) tensor flattened to (T * N, -1)
-        n = hidden_states.size(1)
-        t = int(x.size(0) / n)
+        (
+            x,
+            hidden_states,
+            masks,
+            mem_agent,
+            obs_agent,
+            nsteps,
+            nsamplers,
+            nagents,
+        ) = self.adapt_input(x, hidden_states, masks)
 
-        # unflatten
-        x = cast(torch.FloatTensor, x.view(t, n, x.size(1)))
-        masks = cast(torch.FloatTensor, masks.view(t, n))
-
-        # steps in sequence which have zero for any agent. Assume t=0 has
+        # steps in sequence which have zero for any episode. Assume t=0 has
         # a zero in it.
         has_zeros = (masks[1:] == 0.0).any(dim=-1).nonzero().squeeze().cpu()
-
         # +1 to correct the masks[1:]
         if has_zeros.dim() == 0:
             # handle scalar
             has_zeros = [has_zeros.item() + 1]  # type: ignore
         else:
             has_zeros = (has_zeros + 1).numpy().tolist()
-
         # add t=0 and t=T to the list
-        has_zeros = [0] + has_zeros + [t]
+        has_zeros = cast(List[int], [0] + has_zeros + [nsteps])
 
-        unpacked_hidden_states = self._unpack_hidden(hidden_states)
+        unpacked_hidden_states = self._unpack_hidden(
+            cast(torch.FloatTensor, hidden_states)
+        )
+
         outputs = []
-        for i in range(len(cast(List, has_zeros)) - 1):
+        for i in range(len(has_zeros) - 1):
             # process steps that don't have any zeros in masks together
             start_idx = int(has_zeros[i])
             end_idx = int(has_zeros[i + 1])
@@ -408,10 +541,15 @@ class RNNStateEncoder(nn.Module):
 
             outputs.append(rnn_scores)
 
-        # x is a (T, N, -1) tensor
-        x = cast(torch.FloatTensor, torch.cat(outputs, dim=0).view(t * n, -1))
-        hidden_states = self._pack_hidden(unpacked_hidden_states)
-        return x, hidden_states
+        return self.adapt_result(
+            cast(torch.FloatTensor, torch.cat(outputs, dim=0)),
+            self._pack_hidden(unpacked_hidden_states),
+            mem_agent,
+            obs_agent,
+            nsteps,
+            nsamplers,
+            nagents,
+        )
 
     def forward(  # type: ignore
         self,
@@ -421,34 +559,30 @@ class RNNStateEncoder(nn.Module):
     ) -> Tuple[
         torch.FloatTensor, Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]]
     ]:
-        """Calls `seq_forward` or `single_forward` depending on the input size.
-
-        See the above methods for more information.
-        """
-        if x.size(0) == hidden_states.size(1):
+        nsteps = masks.shape[0]
+        if nsteps == 1:
             return self.single_forward(x, hidden_states, masks)
-        else:
-            return self.seq_forward(x, hidden_states, masks)
+        return self.seq_forward(x, hidden_states, masks)
 
 
 class LinearActorCritic(ActorCriticModel[CategoricalDistr]):
     def __init__(
         self,
-        input_key: str,
+        input_uuid: str,
         action_space: gym.spaces.Discrete,
         observation_space: SpaceDict,
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
         assert (
-            input_key in observation_space.spaces
+            input_uuid in observation_space.spaces
         ), "LinearActorCritic expects only a single observational input."
-        self.key = input_key
+        self.input_uuid = input_uuid
 
-        box_space: gym.spaces.Box = observation_space[self.key]
+        box_space: gym.spaces.Box = observation_space[self.input_uuid]
         assert isinstance(box_space, gym.spaces.Box), (
             "LinearActorCritic requires that"
-            "observation space corresponding to the input key is a Box space."
+            "observation space corresponding to the input uuid is a Box space."
         )
         assert len(box_space.shape) == 1
         self.in_dim = box_space.shape[0]
@@ -458,25 +592,26 @@ class LinearActorCritic(ActorCriticModel[CategoricalDistr]):
         nn.init.orthogonal_(self.linear.weight)
         nn.init.constant_(self.linear.bias, 0)
 
-    @property
-    def recurrent_hidden_state_size(self) -> int:
-        return 0
+    def _recurrent_memory_specification(self):
+        return None
 
-    def forward(  # type: ignore
-        self,
-        observations: Dict[str, torch.FloatTensor],
-        recurrent_hidden_states: torch.FloatTensor,
-        prev_actions: torch.LongTensor,
-        masks: torch.FloatTensor,
-        **kwargs
-    ) -> Tuple[ActorCriticOutput[DistributionType], Any]:
-        out = self.linear(observations[self.key])
+    def forward(self, observations, memory, prev_actions, masks):
+        out = self.linear(observations[self.input_uuid])
+
+        assert len(out.shape) in [
+            3,
+            4,
+        ], "observations must be [step, sampler, data] or [step, sampler, agent, data]"
+
+        if len(out.shape) == 3:
+            # [step, sampler, data] -> [step, sampler, agent, data]
+            out = out.unsqueeze(-2)
 
         # noinspection PyArgumentList
         return (
             ActorCriticOutput(
-                distributions=CategoricalDistr(logits=out[:, :-1]),
-                values=cast(torch.FloatTensor, out[:, -1:]),
+                distributions=CategoricalDistr(logits=out[..., :-1]),
+                values=cast(torch.FloatTensor, out[..., -1:]),
                 extras={},
             ),
             None,
@@ -486,7 +621,7 @@ class LinearActorCritic(ActorCriticModel[CategoricalDistr]):
 class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
     def __init__(
         self,
-        input_key: str,
+        input_uuid: str,
         action_space: gym.spaces.Discrete,
         observation_space: SpaceDict,
         hidden_size: int = 128,
@@ -501,14 +636,14 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
         self.rnn_type = rnn_type
 
         assert (
-            input_key in observation_space.spaces
+            input_uuid in observation_space.spaces
         ), "LinearActorCritic expects only a single observational input."
-        self.key = input_key
+        self.input_uuid = input_uuid
 
-        box_space: gym.spaces.Box = observation_space[self.key]
+        box_space: gym.spaces.Box = observation_space[self.input_uuid]
         assert isinstance(box_space, gym.spaces.Box), (
             "RNNActorCritic requires that"
-            "observation space corresponding to the input key is a Box space."
+            "observation space corresponding to the input uuid is a Box space."
         )
         assert len(box_space.shape) == 1
         self.in_dim = box_space.shape[0]
@@ -521,22 +656,21 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
             trainable_masked_hidden_state=True,
         )
 
-        self.head_key = "{}_{}".format("rnn", input_key)
-        self._head_observation_dict: Dict[str, Optional[torch.Tensor]] = {
-            self.head_key: None
-        }
+        self.head_uuid = "{}_{}".format("rnn", input_uuid)
 
         self.ac_nonrecurrent_head: ActorCriticModel[CategoricalDistr] = head_type(
-            input_key=self.head_key,
+            input_uuid=self.head_uuid,
             action_space=action_space,
             observation_space=SpaceDict(
                 {
-                    self.head_key: gym.spaces.Box(
+                    self.head_uuid: gym.spaces.Box(
                         low=np.float32(0.0), high=np.float32(1.0), shape=(hidden_size,)
                     )
                 }
             ),
         )
+
+        self.memory_key = "rnn"
 
     @property
     def recurrent_hidden_state_size(self) -> int:
@@ -546,34 +680,40 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
     def num_recurrent_layers(self) -> int:
         return self.state_encoder.num_recurrent_layers
 
-    def forward(  # type: ignore
-        self,
-        observations: Dict[str, torch.FloatTensor],
-        recurrent_hidden_states: torch.FloatTensor,
-        prev_actions: torch.LongTensor,
-        masks: torch.FloatTensor,
-        **kwargs
-    ) -> Tuple[ActorCriticOutput[DistributionType], Any]:
+    def _recurrent_memory_specification(self):
+        return {
+            self.memory_key: (
+                (
+                    ("layer", self.num_recurrent_layers),
+                    ("sampler", None),
+                    ("hidden", self.recurrent_hidden_state_size),
+                ),
+                torch.float32,
+            )
+        }
 
-        rnn_out, recurrent_hidden_states = self.state_encoder(
-            x=observations[self.key],
-            hidden_states=recurrent_hidden_states,
+    def forward(  # type:ignore
+        self,
+        observations: Dict[str, Union[torch.FloatTensor, Dict[str, Any]]],
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
+        rnn_out, mem_return = self.state_encoder(
+            x=observations[self.input_uuid],
+            hidden_states=memory.tensor(self.memory_key),
             masks=masks,
         )
 
-        self._head_observation_dict[self.head_key] = rnn_out
-
         out, _ = self.ac_nonrecurrent_head(
-            observations=self._head_observation_dict,
-            recurrent_hidden_states=None,
+            observations={self.head_uuid: rnn_out},
+            memory=None,
             prev_actions=prev_actions,
             masks=masks,
         )
 
-        self._head_observation_dict[self.head_key] = None
-
         # noinspection PyArgumentList
         return (
             out,
-            recurrent_hidden_states,
+            memory.set_tensor(self.memory_key, mem_return),
         )

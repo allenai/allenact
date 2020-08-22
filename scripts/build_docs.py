@@ -17,7 +17,7 @@ exclude_files = [
     "run.py",
     "setup.py",
     "main.py",
-    "ddmain.py",
+    "main.py",
 ]
 
 
@@ -233,4 +233,3 @@ if __name__ == "__main__":
 
     with open(yaml_path, "w") as f:
         yaml.dump(mkdocs_yaml, f)
-
