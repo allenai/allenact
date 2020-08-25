@@ -269,11 +269,19 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         )
 
         if self.lang_model != "gru":
-            return self.forward_loop(
+            ac_output, hidden_states = self.forward_loop(
                 observations=observations,
                 recurrent_hidden_states=recurrent_hidden_states,
                 prev_actions=prev_actions,
                 masks=masks,
+            )
+            return self.adapt_result(
+                ac_output,
+                hidden_states[-1:],
+                num_steps,
+                num_samplers,
+                num_agents,
+                num_layers,
             )
 
         assert recurrent_hidden_states.shape[0] == 1
