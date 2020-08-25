@@ -887,19 +887,21 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 if isinstance(total_loss, torch.Tensor):
                     total_loss.backward()  # synchronize
 
-                # From https://github.com/pytorch/pytorch/issues/43135
-                reductions = []
-                for p in self.actor_critic.parameters():
-                    # to speed it up, you can also organize grads to larger buckets to make allreduce more efficient
-                    if p.requires_grad:
-                        reductions.append(dist.all_reduce(p.grad, async_op=True))
-                for reduction in reductions:
-                    reduction.wait()
+                if self.is_distributed:
+                    # From https://github.com/pytorch/pytorch/issues/43135
+                    reductions = []
+                    for p in self.actor_critic.parameters():
+                        # to speed it up, you can also organize grads to larger buckets to make allreduce more efficient
+                        if p.requires_grad:
+                            reductions.append(dist.all_reduce(p.grad, async_op=True))
+                    for reduction in reductions:
+                        reduction.wait()
 
-                nn.utils.clip_grad_norm_(
-                    self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
-                )
-                self.optimizer.step()  # type: ignore
+                if self.is_distributed or isinstance(total_loss, torch.Tensor):
+                    nn.utils.clip_grad_norm_(
+                        self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
+                    )
+                    self.optimizer.step()  # type: ignore
 
         # # TODO Useful for ensuring correctness of distributed infrastructure
         # state_dict = self.actor_critic.state_dict()
@@ -912,83 +914,83 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         #     )
         # )
 
-    # class OffPolicyState:
-    #     def __init__(self, memory, epochs, losses, loss_weights):
-    #         self.memory = memory
-    #         self.epochs = epochs
-    #         self.losses = losses
-    #         self.loss_weights = loss_weights
-    #
-    # def offpolicy_update(
-    #     self,
-    #     offpolicy: OffPolicyState,
-    #     updates: int,
-    #     data_iterator: Optional[Iterator],
-    #     data_iterator_builder: typing.Callable[[], Iterator],
-    # ) -> Iterator:
-    #     for e in range(updates):
-    #         if data_iterator is None:
-    #             data_iterator = data_iterator_builder()
-    #             offpolicy.memory.clear()
-    #             if offpolicy.epochs is None:
-    #                 offpolicy.epochs = 0
-    #             else:
-    #                 offpolicy.epochs += 1
-    #
-    #         try:
-    #             batch = next(data_iterator)
-    #         except StopIteration:
-    #             data_iterator = data_iterator_builder()
-    #             offpolicy.memory.clear()
-    #             offpolicy.epochs += 1
-    #             batch = next(data_iterator)
-    #
-    #         batch = to_device_recursively(batch, device=self.device, inplace=True)
-    #
-    #         info: Dict[str, float] = dict()
-    #         info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
-    #
-    #         total_loss: Optional[torch.Tensor] = None
-    #         for loss_name in offpolicy.losses:
-    #             loss, loss_weight = (
-    #                 offpolicy.losses[loss_name],
-    #                 offpolicy.loss_weights[loss_name],
-    #             )
-    #
-    #             current_loss, current_info, offpolicy.memory = loss.loss(
-    #                 model=self.actor_critic,
-    #                 batch=batch,
-    #                 step_count=self.step_count,
-    #                 memory=offpolicy.memory,
-    #             )
-    #             if total_loss is None:
-    #                 total_loss = loss_weight * current_loss
-    #             else:
-    #                 total_loss = total_loss + loss_weight * current_loss
-    #
-    #             for key in current_info:
-    #                 info[loss_name + "/" + key] = current_info[key]
-    #         assert total_loss is not None, "No losses specified?"
-    #
-    #         info["total_loss"] = total_loss.item()
-    #         self.tracking_info["update"].append(("update_package", info, bsize))
-    #
-    #         # if isinstance(total_loss, torch.Tensor):
-    #         self.optimizer.zero_grad()  # type: ignore
-    #         total_loss.backward()  # synchronize
-    #         nn.utils.clip_grad_norm_(
-    #             self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
-    #         )
-    #         self.optimizer.step()  # type: ignore
-    #         # else:
-    #         #     get_logger().warning(
-    #         #         "Total loss ({}) was not a FloatTensor, it is a {}.".format(
-    #         #             total_loss, type(total_loss)
-    #         #         )
-    #         #     )
-    #
-    #         offpolicy.memory = detach_recursively(input=offpolicy.memory, inplace=True)
-    #     return data_iterator
+    class OffPolicyState:
+        def __init__(self, memory, epochs, losses, loss_weights):
+            self.memory = memory
+            self.epochs = epochs
+            self.losses = losses
+            self.loss_weights = loss_weights
+
+    def offpolicy_update(
+        self,
+        offpolicy: OffPolicyState,
+        updates: int,
+        data_iterator: Optional[Iterator],
+        data_iterator_builder: typing.Callable[[], Iterator],
+    ) -> Iterator:
+        for e in range(updates):
+            if data_iterator is None:
+                data_iterator = data_iterator_builder()
+                offpolicy.memory.clear()
+                if offpolicy.epochs is None:
+                    offpolicy.epochs = 0
+                else:
+                    offpolicy.epochs += 1
+
+            try:
+                batch = next(data_iterator)
+            except StopIteration:
+                data_iterator = data_iterator_builder()
+                offpolicy.memory.clear()
+                offpolicy.epochs += 1
+                batch = next(data_iterator)
+
+            batch = to_device_recursively(batch, device=self.device, inplace=True)
+
+            info: Dict[str, float] = dict()
+            info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
+
+            total_loss: Optional[torch.Tensor] = None
+            for loss_name in offpolicy.losses:
+                loss, loss_weight = (
+                    offpolicy.losses[loss_name],
+                    offpolicy.loss_weights[loss_name],
+                )
+
+                current_loss, current_info, offpolicy.memory = loss.loss(
+                    model=self.actor_critic,
+                    batch=batch,
+                    step_count=self.step_count,
+                    memory=offpolicy.memory,
+                )
+                if total_loss is None:
+                    total_loss = loss_weight * current_loss
+                else:
+                    total_loss = total_loss + loss_weight * current_loss
+
+                for key in current_info:
+                    info[loss_name + "/" + key] = current_info[key]
+            assert total_loss is not None, "No losses specified?"
+
+            info["total_loss"] = total_loss.item()
+            self.tracking_info["update"].append(("update_package", info, bsize))
+
+            # if isinstance(total_loss, torch.Tensor):
+            self.optimizer.zero_grad()  # type: ignore
+            total_loss.backward()  # synchronize
+            nn.utils.clip_grad_norm_(
+                self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
+            )
+            self.optimizer.step()  # type: ignore
+            # else:
+            #     get_logger().warning(
+            #         "Total loss ({}) was not a FloatTensor, it is a {}.".format(
+            #             total_loss, type(total_loss)
+            #         )
+            #     )
+
+            offpolicy.memory = detach_recursively(input=offpolicy.memory, inplace=True)
+        return data_iterator
 
     def apply_teacher_forcing(
         self,
