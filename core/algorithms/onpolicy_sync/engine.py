@@ -900,7 +900,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
                 )
                 self.optimizer.step()  # type: ignore
-                self.training_pipeline.backprop_count += 1  # TODO do we use this? for distributed it won't be reliable anyway
 
         # # TODO Useful for ensuring correctness of distributed infrastructure
         # state_dict = self.actor_critic.state_dict()

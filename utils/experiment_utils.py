@@ -449,7 +449,6 @@ class TrainingPipeline(object):
 
         self._current_stage: Optional[PipelineStage] = None
 
-        self.backprop_count = 0
         self.rollout_count = 0
         self.off_policy_epochs = None
 
@@ -515,7 +514,6 @@ class TrainingPipeline(object):
                 for ps in self.pipeline_stages
             ],
             rollout_count=self.rollout_count,
-            backprop_count=self.backprop_count,
             off_policy_epochs=self.off_policy_epochs,
         )
 
@@ -525,7 +523,6 @@ class TrainingPipeline(object):
             ps.steps_taken_in_stage = stage_info["steps_taken_in_stage"]
 
         self.rollout_count = state_dict["rollout_count"]
-        self.backprop_count = state_dict["backprop_count"]
         self.off_policy_epochs = state_dict["off_policy_epochs"]
 
         self._refresh_current_stage(force_stage_search_from_start=True)
