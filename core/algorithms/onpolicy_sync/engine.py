@@ -6,23 +6,15 @@ import traceback
 import typing
 from collections import defaultdict
 from multiprocessing.context import BaseContext
-from typing import Optional, Any, Dict, Union, List, Tuple, Sequence, cast
+from typing import Optional, Any, Dict, Union, List, Tuple, Sequence, cast, Iterator
 
 import torch
 import torch.distributions
 import torch.multiprocessing as mp
+import torch.distributed as dist
 import torch.optim
 from torch import nn
 from torch import optim
-from torch.nn.parallel import DistributedDataParallel
-
-try:
-    from torch.nn.parallel import DistributedDataParallelCPU  # type:ignore
-except ImportError as e:
-
-    class DistributedDataParallelCPU(object):  # type:ignore
-        def __init__(self, *args, **kwargs):
-            raise e
 
 
 from torch.optim.lr_scheduler import _LRScheduler
@@ -41,7 +33,11 @@ from utils.experiment_utils import (
     PipelineStage,
 )
 from utils.system import get_logger
-from utils.tensor_utils import batch_observations
+from utils.tensor_utils import (
+    batch_observations,
+    to_device_recursively,
+    detach_recursively,
+)
 from core.base_abstractions.misc import RLStepResult
 
 
@@ -137,9 +133,7 @@ class OnPolicyRLEngine(object):
         self._vector_tasks: Optional[VectorSampledTasks] = None
 
         self.observation_set = None
-        self.actor_critic: Optional[
-            Union[DistributedDataParallel, ActorCriticModel]
-        ] = None
+        self.actor_critic: Optional[ActorCriticModel] = None
         if self.num_samplers > 0:
             if (
                 "make_preprocessors_fns" in self.machine_params
@@ -193,14 +187,6 @@ class OnPolicyRLEngine(object):
                     rank=self.worker_id,
                     world_size=self.num_workers,
                 )
-                if cpu_device:
-                    self.actor_critic = DistributedDataParallelCPU(self.actor_critic)
-                else:
-                    self.actor_critic = DistributedDataParallel(
-                        self.actor_critic,
-                        device_ids=[cast(Union[int, torch.device], self.device)],
-                        output_device=cast(Union[int, torch.device], self.device),
-                    )
 
             self.is_distributed = True  # for testing, this only means we need to synchronize after each checkpoint
 
@@ -311,12 +297,7 @@ class OnPolicyRLEngine(object):
             Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]], ckpt,
         )
 
-        target = (
-            self.actor_critic
-            if not self.mode == "train" or not self.is_distributed
-            else self.actor_critic.module
-        )
-        target.load_state_dict(ckpt["model_state_dict"])  # type:ignore
+        self.actor_critic.load_state_dict(ckpt["model_state_dict"])  # type:ignore
 
         return ckpt
 
@@ -575,7 +556,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         distributed_port: int = 0,
         deterministic_agent: bool = False,
         distributed_preemption_threshold: float = 0.7,
-        distributed_barrier: Optional[mp.Barrier] = None,
         max_sampler_processes_per_worker: Optional[int] = None,
         **kwargs,
     ):
@@ -612,7 +592,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 optimizer=self.optimizer
             )
 
-        self.distributed_barrier = distributed_barrier
         if self.is_distributed:
             # Tracks how many workers have finished their rollout
             self.num_workers_done = torch.distributed.PrefixStore(  # type:ignore
@@ -640,8 +619,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         seed = (seed ^ (self.training_pipeline.total_steps + 1)) % (
             2 ** 31 - 1
         )  # same seed for all workers
-        # TODO: fix for distributed test
-        if self.mode == "train":
+
+        if self.mode == "train" or self.mode == "test":
             return self.worker_seeds(self.num_workers, seed)[
                 self.worker_id
             ]  # doesn't modify the current rng state
@@ -668,12 +647,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             ),
         )
 
-        target = (
-            self.actor_critic if not self.is_distributed else self.actor_critic.module
-        )
-
         save_dict = {
-            "model_state_dict": target.state_dict(),  # type:ignore
+            "model_state_dict": self.actor_critic.state_dict(),  # type:ignore
             "total_steps": self.training_pipeline.total_steps,  # Total steps including current stage
             "optimizer_state_dict": self.optimizer.state_dict(),  # type: ignore
             "training_pipeline_state_dict": self.training_pipeline.state_dict(),
@@ -879,8 +854,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
                 info: Dict[str, float] = {}
 
-                if self.lr_scheduler is not None:
-                    info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
+                # if self.lr_scheduler is not None:
+                info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
 
                 total_loss: Optional[torch.Tensor] = None
                 for loss_name in self.training_pipeline.current_stage_losses:
@@ -907,51 +882,114 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 info["total_loss"] = total_loss.item()
                 self.tracking_info["update"].append(("update_package", info, bsize))
 
+                self.optimizer.zero_grad()  # type: ignore
+
                 if isinstance(total_loss, torch.Tensor):
-                    self.optimizer.zero_grad()  # type: ignore
                     total_loss.backward()  # synchronize
-                    nn.utils.clip_grad_norm_(
-                        self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
-                    )
-                    self.optimizer.step()  # type: ignore
-                    self.training_pipeline.backprop_count += 1
-                else:
-                    get_logger().warning(
-                        "{} worker {}"
-                        "Total loss ({}) is not a FloatTensor, it is a {}. This can happen when using teacher"
-                        "enforcing alone if the expert does not know the optimal action".format(
-                            self.mode, self.worker_id, total_loss, type(total_loss)
-                        )
-                    )
-                    if self.is_distributed:
-                        # TODO test the hack actually works
-                        zero_loss = (
-                            (
-                                torch.zeros_like(actor_critic_output.distributions)
-                                * actor_critic_output.distributions
-                            ).sum()
-                            + (
-                                torch.zeros_like(actor_critic_output.values)
-                                * actor_critic_output.values
-                            ).sum()
-                        )
-                        self.optimizer.zero_grad()  # type: ignore
-                        zero_loss.backward()  # synchronize
-                        nn.utils.clip_grad_norm_(
-                            self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
-                        )
-                        self.optimizer.step()  # type: ignore
-                        self.training_pipeline.backprop_count += 1
+
+                # From https://github.com/pytorch/pytorch/issues/43135
+                reductions = []
+                for p in self.actor_critic.parameters():
+                    # to speed it up, you can also organize grads to larger buckets to make allreduce more efficient
+                    if p.requires_grad:
+                        reductions.append(dist.all_reduce(p.grad, async_op=True))
+                for reduction in reductions:
+                    reduction.wait()
+
+                nn.utils.clip_grad_norm_(
+                    self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
+                )
+                self.optimizer.step()  # type: ignore
+                self.training_pipeline.backprop_count += 1  # TODO do we use this? for distributed it won't be reliable anyway
 
         # # TODO Useful for ensuring correctness of distributed infrastructure
-        # target = self.actor_critic.module if self.is_distributed else self.actor_critic
-        # state_dict = target.state_dict()
+        # state_dict = self.actor_critic.state_dict()
         # keys = sorted(list(state_dict.keys()))
-        # get_logger().debug("worker {} param 0 {} param -1 {}".format(
-        #     self.worker_id,
-        #     state_dict[keys[0]].flatten()[0],
-        #     state_dict[keys[-1]].flatten()[-1],
-        # ))
+        # get_logger().debug(
+        #     "worker {} param 0 {} param -1 {}".format(
+        #         self.worker_id,
+        #         state_dict[keys[0]].flatten()[0],
+        #         state_dict[keys[-1]].flatten()[-1],
+        #     )
+        # )
+
+    # class OffPolicyState:
+    #     def __init__(self, memory, epochs, losses, loss_weights):
+    #         self.memory = memory
+    #         self.epochs = epochs
+    #         self.losses = losses
+    #         self.loss_weights = loss_weights
+    #
+    # def offpolicy_update(
+    #     self,
+    #     offpolicy: OffPolicyState,
+    #     updates: int,
+    #     data_iterator: Optional[Iterator],
+    #     data_iterator_builder: typing.Callable[[], Iterator],
+    # ) -> Iterator:
+    #     for e in range(updates):
+    #         if data_iterator is None:
+    #             data_iterator = data_iterator_builder()
+    #             offpolicy.memory.clear()
+    #             if offpolicy.epochs is None:
+    #                 offpolicy.epochs = 0
+    #             else:
+    #                 offpolicy.epochs += 1
+    #
+    #         try:
+    #             batch = next(data_iterator)
+    #         except StopIteration:
+    #             data_iterator = data_iterator_builder()
+    #             offpolicy.memory.clear()
+    #             offpolicy.epochs += 1
+    #             batch = next(data_iterator)
+    #
+    #         batch = to_device_recursively(batch, device=self.device, inplace=True)
+    #
+    #         info: Dict[str, float] = dict()
+    #         info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
+    #
+    #         total_loss: Optional[torch.Tensor] = None
+    #         for loss_name in offpolicy.losses:
+    #             loss, loss_weight = (
+    #                 offpolicy.losses[loss_name],
+    #                 offpolicy.loss_weights[loss_name],
+    #             )
+    #
+    #             current_loss, current_info, offpolicy.memory = loss.loss(
+    #                 model=self.actor_critic,
+    #                 batch=batch,
+    #                 step_count=self.step_count,
+    #                 memory=offpolicy.memory,
+    #             )
+    #             if total_loss is None:
+    #                 total_loss = loss_weight * current_loss
+    #             else:
+    #                 total_loss = total_loss + loss_weight * current_loss
+    #
+    #             for key in current_info:
+    #                 info[loss_name + "/" + key] = current_info[key]
+    #         assert total_loss is not None, "No losses specified?"
+    #
+    #         info["total_loss"] = total_loss.item()
+    #         self.tracking_info["update"].append(("update_package", info, bsize))
+    #
+    #         # if isinstance(total_loss, torch.Tensor):
+    #         self.optimizer.zero_grad()  # type: ignore
+    #         total_loss.backward()  # synchronize
+    #         nn.utils.clip_grad_norm_(
+    #             self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
+    #         )
+    #         self.optimizer.step()  # type: ignore
+    #         # else:
+    #         #     get_logger().warning(
+    #         #         "Total loss ({}) was not a FloatTensor, it is a {}.".format(
+    #         #             total_loss, type(total_loss)
+    #         #         )
+    #         #     )
+    #
+    #         offpolicy.memory = detach_recursively(input=offpolicy.memory, inplace=True)
+    #     return data_iterator
 
     def apply_teacher_forcing(
         self,
@@ -1015,9 +1053,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_done.set("done", str(0))
                 self.num_workers_steps.set("steps", str(0))
                 # Ensure all workers are done before incrementing num_workers_{steps, done}
-                idx = self.distributed_barrier.wait()  # here we synchronize
-                if idx == 0:
-                    self.distributed_barrier.reset()
+                dist.barrier()
 
             self.former_steps = self.step_count
             for step in range(self.training_pipeline.num_steps):
@@ -1055,9 +1091,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_steps.add("steps", self.step_count - self.former_steps)
 
                 # Ensure all workers are done before updating step counter
-                idx = self.distributed_barrier.wait()  # here we synchronize
-                if idx == 0:
-                    self.distributed_barrier.reset()
+                dist.barrier()
 
                 ndone = int(self.num_workers_done.get("done"))
                 assert (
@@ -1182,7 +1216,6 @@ class OnPolicyInference(OnPolicyRLEngine):
         deterministic_agent: bool = True,
         worker_id: int = 0,
         num_workers: int = 1,
-        distributed_barrier: Optional[mp.Barrier] = None,
         **kwargs,
     ):
         super().__init__(
@@ -1205,8 +1238,6 @@ class OnPolicyInference(OnPolicyRLEngine):
         # get_logger().debug("{} worker {} using device {}".format(self.mode, self.worker_id, self.device))
 
         self.deterministic_agent = deterministic_agent
-
-        self.distributed_barrier = distributed_barrier
 
     def run_eval(
         self,
@@ -1328,12 +1359,6 @@ class OnPolicyInference(OnPolicyRLEngine):
             cond = not checkpoints_queue.empty()
         return data
 
-    def barrier(self):
-        if self.is_distributed:
-            idx = self.distributed_barrier.wait()  # here we synchronize
-            if idx == 0:
-                self.distributed_barrier.reset()
-
     def process_checkpoints(self):
         assert (
             self.mode != "train"
@@ -1393,7 +1418,7 @@ class OnPolicyInference(OnPolicyRLEngine):
 
                         self.results_queue.put(eval_package)
 
-                        self.barrier()
+                        dist.barrier()
                     else:
                         self.results_queue.put(
                             ("{}_package".format(self.mode), None, -1)

@@ -232,10 +232,8 @@ class OnPolicyRunner(object):
         )  # same for all workers. used during initialization of the model
 
         distributed_port = 0
-        distributed_barrier = None
         if num_trainers > 1:
             distributed_port = find_free_port()
-            distributed_barrier = self.mp_ctx.Barrier(num_trainers)
 
         for trainer_it in range(num_trainers):
             train: mp.process.BaseProcess = self.mp_ctx.Process(
@@ -257,7 +255,6 @@ class OnPolicyRunner(object):
                     num_workers=num_trainers,
                     device=devices[trainer_it],
                     distributed_port=distributed_port,
-                    distributed_barrier=distributed_barrier,
                     max_sampler_processes_per_worker=max_sampler_processes_per_worker,
                 ),
             )
@@ -312,10 +309,6 @@ class OnPolicyRunner(object):
         self.get_visualizer("test")
         num_testers = len(devices)
 
-        distributed_barrier = None
-        if num_testers > 1:
-            distributed_barrier = self.mp_ctx.Barrier(num_testers)
-
         for tester_it in range(num_testers):
             test: mp.process.BaseProcess = self.mp_ctx.Process(
                 target=self.test_loop,
@@ -329,7 +322,6 @@ class OnPolicyRunner(object):
                     mp_ctx=self.mp_ctx,
                     num_workers=num_testers,
                     device=devices[tester_it],
-                    distributed_barrier=distributed_barrier,
                     max_sampler_processes_per_worker=max_sampler_processes_per_worker,
                 ),
             )
