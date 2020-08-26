@@ -6,7 +6,10 @@ from typing import Optional, Callable
 
 import torch
 
-from core.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
+from core.algorithms.onpolicy_sync.losses.abstract_loss import (
+    AbstractActorCriticLoss,
+    ObservationType,
+)
 from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
 
@@ -46,7 +49,7 @@ class PPO(AbstractActorCriticLoss):
     def loss_per_step(
         self,
         step_count: int,
-        batch: Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]],
+        batch: ObservationType,
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
     ) -> Dict[str, typing.Tuple[torch.Tensor, Optional[float]]]:
 
@@ -87,7 +90,7 @@ class PPO(AbstractActorCriticLoss):
     def loss(  # type: ignore
         self,
         step_count: int,
-        batch: Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]],
+        batch: ObservationType,
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
         **kwargs
@@ -143,7 +146,7 @@ class PPOValue(AbstractActorCriticLoss):
     def loss(  # type: ignore
         self,
         step_count: int,
-        batch: Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]],
+        batch: ObservationType,
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
         **kwargs

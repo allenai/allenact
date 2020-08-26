@@ -4,7 +4,10 @@ from typing import Tuple, Dict, Union, Optional
 
 import torch
 
-from core.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
+from core.algorithms.onpolicy_sync.losses.abstract_loss import (
+    AbstractActorCriticLoss,
+    ObservationType,
+)
 from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
 from utils.system import get_logger
@@ -35,7 +38,7 @@ class A2CACKTR(AbstractActorCriticLoss):
     def loss_per_step(  # type: ignore
         self,
         step_count: int,
-        batch: Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]],
+        batch: ObservationType,
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
     ) -> Dict[str, Tuple[torch.Tensor, Optional[float]]]:
         actions = typing.cast(torch.LongTensor, batch["actions"])
@@ -68,7 +71,7 @@ class A2CACKTR(AbstractActorCriticLoss):
     def loss(  # type: ignore
         self,
         step_count: int,
-        batch: Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]],
+        batch: ObservationType,
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
         **kwargs,

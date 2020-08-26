@@ -21,7 +21,7 @@ MemoryShapeType = Tuple[MemoryDimType, ...]
 MemorySpecType = Tuple[MemoryShapeType, torch.dtype]
 FullMemorySpecType = Dict[str, MemorySpecType]
 
-ObservationType = Dict[str, Union[torch.FloatTensor, Dict[str, Any]]]
+ObservationType = Dict[str, Union[torch.Tensor, Dict[str, Any]]]
 
 
 class ActorCriticModel(Generic[DistributionType], nn.Module):

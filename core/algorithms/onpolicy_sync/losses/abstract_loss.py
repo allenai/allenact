@@ -6,6 +6,7 @@ from typing import Dict, Union, Tuple
 import torch
 
 from core.base_abstractions.misc import Loss, ActorCriticOutput
+from core.algorithms.onpolicy_sync.policy import ObservationType
 from core.base_abstractions.distributions import CategoricalDistr
 
 
@@ -17,7 +18,7 @@ class AbstractActorCriticLoss(Loss):
     def loss(  # type: ignore
         self,
         step_count: int,
-        batch: Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]],
+        batch: ObservationType,
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
         **kwargs,
