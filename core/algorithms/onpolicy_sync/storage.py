@@ -111,9 +111,8 @@ class RolloutStorage:
         return memory
 
     def to(self, device: torch.device):
-        for storage in [self.observations, self.memory]:
-            for key in storage:
-                storage.set_tensor(key, storage.tensor(key).to(device))
+        self.observations.to(device)
+        self.memory.to(device)
         self.rewards = self.rewards.to(device)
         self.value_preds = self.value_preds.to(device)
         self.returns = self.returns.to(device)

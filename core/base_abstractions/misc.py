@@ -357,3 +357,10 @@ class Memory(Dict):
                 )
 
         return res
+
+    def to(self, device: torch.device) -> "Memory":
+        for key in self:
+            tensor = self.tensor(key)
+            if tensor.device != device:
+                self.set_tensor(key, tensor.to(device))
+        return self
