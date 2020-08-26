@@ -787,7 +787,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self,
         scalars: ScalarMeanTracker,
         tracking_info: Dict[str, List],
-        type_str: str = "update_package",
+        type_str: str,  # = "update_package",
     ) -> Tuple[str, Dict[str, float], int]:
         assert scalars.empty, "Found non-empty scalars {}".format(scalars.counts)
 
@@ -882,22 +882,29 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 info["total_loss"] = total_loss.item()
                 self.tracking_info["update"].append(("update_package", info, bsize))
 
-                self.optimizer.zero_grad()  # type: ignore
+                can_step: bool = False
 
                 if isinstance(total_loss, torch.Tensor):
-                    total_loss.backward()  # synchronize
+                    self.optimizer.zero_grad()  # type: ignore
+                    can_step = True
+                    total_loss.backward()
 
                 if self.is_distributed:
+                    if not can_step:
+                        self.optimizer.zero_grad()  # type: ignore
+                        can_step = True
                     # From https://github.com/pytorch/pytorch/issues/43135
                     reductions = []
                     for p in self.actor_critic.parameters():
-                        # to speed it up, you can also organize grads to larger buckets to make allreduce more efficient
+                        # you can also organize grads to larger buckets to make allreduce more efficient
                         if p.requires_grad:
-                            reductions.append(dist.all_reduce(p.grad, async_op=True))
+                            reductions.append(
+                                dist.all_reduce(p.grad, async_op=True)
+                            )  # synchronize
                     for reduction in reductions:
                         reduction.wait()
 
-                if self.is_distributed or isinstance(total_loss, torch.Tensor):
+                if can_step:
                     nn.utils.clip_grad_norm_(
                         self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
                     )
@@ -914,35 +921,29 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         #     )
         # )
 
-    class OffPolicyState:
-        def __init__(self, memory, epochs, losses, loss_weights):
-            self.memory = memory
-            self.epochs = epochs
-            self.losses = losses
-            self.loss_weights = loss_weights
-
     def offpolicy_update(
         self,
-        offpolicy: OffPolicyState,
         updates: int,
         data_iterator: Optional[Iterator],
         data_iterator_builder: typing.Callable[[], Iterator],
     ) -> Iterator:
+        stage = self.training_pipeline.current_stage
+
         for e in range(updates):
             if data_iterator is None:
                 data_iterator = data_iterator_builder()
-                offpolicy.memory.clear()
-                if offpolicy.epochs is None:
-                    offpolicy.epochs = 0
+                stage.offpolicy_memory.clear()
+                if stage.offpolicy_epochs is None:
+                    stage.offpolicy_epochs = 0
                 else:
-                    offpolicy.epochs += 1
+                    stage.offpolicy_epochs += 1
 
             try:
                 batch = next(data_iterator)
             except StopIteration:
                 data_iterator = data_iterator_builder()
-                offpolicy.memory.clear()
-                offpolicy.epochs += 1
+                stage.offpolicy_memory.clear()
+                stage.offpolicy_epochs += 1
                 batch = next(data_iterator)
 
             batch = to_device_recursively(batch, device=self.device, inplace=True)
@@ -950,18 +951,20 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             info: Dict[str, float] = dict()
             info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
 
+            bsize: Optional[int] = None
+
             total_loss: Optional[torch.Tensor] = None
-            for loss_name in offpolicy.losses:
+            for loss_name in stage.offpolicy_named_loss_weights:
                 loss, loss_weight = (
-                    offpolicy.losses[loss_name],
-                    offpolicy.loss_weights[loss_name],
+                    self.training_pipeline.current_stage_offpolicy_losses[loss_name],
+                    stage.offpolicy_named_loss_weights[loss_name],
                 )
 
-                current_loss, current_info, offpolicy.memory = loss.loss(
+                current_loss, current_info, stage.offpolicy_memory, bsize = loss.loss(
                     model=self.actor_critic,
                     batch=batch,
                     step_count=self.step_count,
-                    memory=offpolicy.memory,
+                    memory=stage.offpolicy_memory,
                 )
                 if total_loss is None:
                     total_loss = loss_weight * current_loss
@@ -969,27 +972,41 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     total_loss = total_loss + loss_weight * current_loss
 
                 for key in current_info:
-                    info[loss_name + "/" + key] = current_info[key]
+                    info["offpolicy/" + loss_name + "/" + key] = current_info[key]
             assert total_loss is not None, "No losses specified?"
 
-            info["total_loss"] = total_loss.item()
+            info["offpolicy/total_loss"] = total_loss.item()
             self.tracking_info["update"].append(("update_package", info, bsize))
 
-            # if isinstance(total_loss, torch.Tensor):
-            self.optimizer.zero_grad()  # type: ignore
-            total_loss.backward()  # synchronize
-            nn.utils.clip_grad_norm_(
-                self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
-            )
-            self.optimizer.step()  # type: ignore
-            # else:
-            #     get_logger().warning(
-            #         "Total loss ({}) was not a FloatTensor, it is a {}.".format(
-            #             total_loss, type(total_loss)
-            #         )
-            #     )
+            can_step: bool = False
 
-            offpolicy.memory = detach_recursively(input=offpolicy.memory, inplace=True)
+            if isinstance(total_loss, torch.Tensor):
+                self.optimizer.zero_grad()  # type: ignore
+                can_step = True
+                total_loss.backward()
+
+            if self.is_distributed:
+                if not can_step:
+                    self.optimizer.zero_grad()  # type: ignore
+                    can_step = True
+                reductions = []
+                for p in self.actor_critic.parameters():
+                    if p.requires_grad:
+                        reductions.append(
+                            dist.all_reduce(p.grad, async_op=True)
+                        )  # synchronize
+                for reduction in reductions:
+                    reduction.wait()
+
+            if can_step:
+                nn.utils.clip_grad_norm_(
+                    self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
+                )
+                self.optimizer.step()  # type: ignore
+
+            stage.offpolicy_memory = detach_recursively(
+                input=stage.offpolicy_memory, inplace=True
+            )
         return data_iterator
 
     def apply_teacher_forcing(
@@ -1045,6 +1062,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self.last_log = self.training_pipeline.total_steps
         self.last_save = self.training_pipeline.total_steps
 
+        offpolicy_data_iterator: Optional[Iterator] = None
+
         while True:
             self.training_pipeline.before_rollout()
             if self.training_pipeline.current_stage is None:
@@ -1061,17 +1080,19 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.collect_rollout_step(rollouts=rollouts)
                 if self.is_distributed:
                     # Preempt stragglers
-                    # TODO: Add a bit more description of his behavior.
+                    # Each worker will stop collecting steps for the current rollout whenever a
+                    # 100 * distributed_preemption_threshold percentage of workers are finished collecting their
+                    # rollout steps and we have collected at least 25% but less than 90% of the steps.
                     num_done = int(self.num_workers_done.get("done"))
                     if (
                         num_done
                         > self.distributed_preemption_threshold * self.num_workers
-                        and self.training_pipeline.num_steps / 4
+                        and 0.25 * self.training_pipeline.num_steps
                         <= step
-                        < 0.95 * (self.training_pipeline.num_steps - 1)
+                        < 0.9 * self.training_pipeline.num_steps
                     ):
                         get_logger().debug(
-                            "{} worker {} narrowed rollouts at step {} ({}) with {} done".format(
+                            "{} worker {} narrowed rollouts after {} steps (out of {}) with {} workers done".format(
                                 self.mode, self.worker_id, rollouts.step, step, num_done
                             )
                         )
@@ -1097,7 +1118,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 ndone = int(self.num_workers_done.get("done"))
                 assert (
                     ndone == self.num_workers
-                ), "# workers done {} <> # workers {}".format(ndone, self.num_workers)
+                ), "# workers done {} != # workers {}".format(ndone, self.num_workers)
 
                 # get the actual step_count
                 self.step_count = (
@@ -1115,6 +1136,16 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.training_pipeline.rollout_count += 1
 
             rollouts.after_update()
+
+            if self.training_pipeline.current_stage.offpolicy_component is not None:
+                offpolicy_component = (
+                    self.training_pipeline.current_stage.offpolicy_component
+                )
+                offpolicy_data_iterator = self.offpolicy_update(
+                    updates=offpolicy_component.updates,
+                    data_iterator=offpolicy_data_iterator,
+                    data_iterator_builder=offpolicy_component.data_iterator_builder,
+                )
 
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step(epoch=self.training_pipeline.total_steps)
@@ -1419,7 +1450,8 @@ class OnPolicyInference(OnPolicyRLEngine):
 
                         self.results_queue.put(eval_package)
 
-                        dist.barrier()
+                        if self.is_distributed:
+                            dist.barrier()
                     else:
                         self.results_queue.put(
                             ("{}_package".format(self.mode), None, -1)
