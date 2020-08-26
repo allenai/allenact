@@ -15,6 +15,7 @@ from core.algorithms.offpolicy_sync.losses.abstract_offpolicy_loss import (
 )
 from core.algorithms.onpolicy_sync.policy import ActorCriticModel, ObservationType
 from plugins.minigrid_plugin.minigrid_sensors import MiniGridMissionSensor
+from utils.misc_utils import partition_limits
 from utils.system import get_logger
 
 _DATASET_CACHE: Dict[str, Any] = {}
@@ -91,6 +92,7 @@ class ExpertTrajectoryIterator(Iterator):
         rollout_len: int,
         instr_len: Optional[int],
         restrict_max_steps_in_dataset: Optional[int] = None,
+        num_data_length_clusters: int = 8,
     ):
         super(ExpertTrajectoryIterator, self).__init__()
         self.restrict_max_steps_in_dataset = restrict_max_steps_in_dataset
@@ -104,39 +106,76 @@ class ExpertTrajectoryIterator(Iterator):
                 restricted_data.append(d)
                 cur_len += len(d[2])
             data = restricted_data
-            if cur_len > restrict_max_steps_in_dataset:
-                # throw away the last steps in the last trajec
-                data[-1] = data[-1][: restrict_max_steps_in_dataset - cur_len]
+
+        self.num_data_lengths = min(num_data_length_clusters, len(data) // nrollouts)
+        data_lengths = sorted(
+            [(len(d), it) for it, d in enumerate(data)], key=lambda x: (x[0], x[1])
+        )
+        sorted_inds = [l[1] for l in data_lengths]
+        data_limits = partition_limits(
+            num_items=len(data_lengths), num_parts=self.num_data_lengths
+        )
+        get_logger().debug("Using cluster limits {}".format(data_limits))
 
         self.data = data
-        self.trajectory_inds = list(range(len(data)))
         self.instr_len = instr_len
-        random.shuffle(self.trajectory_inds)
+        # self.trajectory_inds = list(range(len(data)))
+        # random.shuffle(self.trajectory_inds)
+        # assert nrollouts <= len(self.trajectory_inds), "Too many rollouts requested."
 
-        assert nrollouts <= len(self.trajectory_inds), "Too many rollouts requested."
+        self.trajectory_inds = [
+            sorted_inds[data_limits[i] : data_limits[i + 1]]
+            for i in range(self.num_data_lengths)
+        ]
+        for i in range(self.num_data_lengths):
+            random.shuffle(self.trajectory_inds[i])
+        assert nrollouts <= sum(
+            len(ti) for ti in self.trajectory_inds
+        ), "Too many rollouts requested."
 
         self.nrollouts = nrollouts
         self.rollout_len = rollout_len
 
+        self.current_data_length = [
+            random.randint(0, self.num_data_lengths - 1) for _ in range(nrollouts)
+        ]
+
         self.rollout_queues: List[queue.Queue] = [
             queue.Queue() for _ in range(nrollouts)
         ]
-        for q in self.rollout_queues:
-            self.add_data_to_rollout_queue(q)
+        for it, q in enumerate(self.rollout_queues):
+            self.add_data_to_rollout_queue(q, it)
 
         self.minigrid_mission_sensor: Optional[MiniGridMissionSensor] = None
         if instr_len is not None:
             self.minigrid_mission_sensor = MiniGridMissionSensor(instr_len)
 
-    def add_data_to_rollout_queue(self, q: queue.Queue) -> bool:
+    def add_data_to_rollout_queue(self, q: queue.Queue, sampler: int) -> bool:
         assert q.empty()
-        if len(self.trajectory_inds) == 0:
+
+        start = self.current_data_length[sampler]
+        cond = True
+        while cond:
+            self.current_data_length[sampler] = (
+                self.current_data_length[sampler] + 1
+            ) % self.num_data_lengths
+            cond = (
+                len(self.trajectory_inds[self.current_data_length[sampler]]) == 0
+                and self.current_data_length[sampler] != start
+            )
+
+        # if len(self.trajectory_inds) == 0:
+        if len(self.trajectory_inds[self.current_data_length[sampler]]) == 0:
             return False
 
         for i, step in enumerate(
-            babyai.utils.demos.transform_demos([self.data[self.trajectory_inds.pop()]])[
-                0
-            ]
+            babyai.utils.demos.transform_demos(
+                [
+                    self.data[
+                        self.trajectory_inds[self.current_data_length[sampler]].pop()
+                    ]
+                ]
+            )[0]
         ):
             q.put((*step, i == 0))
 
@@ -150,7 +189,7 @@ class ExpertTrajectoryIterator(Iterator):
         q = self.rollout_queues[rollout_ind]
         while len(masks) != self.rollout_len:
             if q.empty():
-                if not self.add_data_to_rollout_queue(q):
+                if not self.add_data_to_rollout_queue(q, rollout_ind):
                     raise StopIteration()
 
             obs, expert_action, _, is_first_obs = cast(
