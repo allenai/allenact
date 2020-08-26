@@ -5,10 +5,10 @@ import habitat
 import torch
 
 from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
-from rl_base.preprocessor import ObservationSet
-from rl_base.task import TaskSampler
-from rl_habitat.habitat_task_samplers import PointNavTaskSampler
-from rl_habitat.habitat_tasks import PointNavTask
+from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.task import TaskSampler
+from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
+from plugins.habitat_plugin.habitat_tasks import PointNavTask
 from utils.experiment_utils import Builder
 
 
@@ -58,12 +58,16 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig):
         self.VALIDATION_GPUS = [7]
         self.TESTING_GPUS = [7]
 
+        self.TRAIN_CONFIGS = None
+        self.TEST_CONFIGS = None
+        self.SENSORS = None
+
     @classmethod
     def tag(cls):
         return "PointNav"
 
     def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(
+        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
             self.NUM_PROCESSES, ndevices
         )
         res = [0] * ndevices
@@ -139,7 +143,7 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig):
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
         }
 
@@ -160,7 +164,7 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig):
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
         }
 
@@ -177,6 +181,6 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig):
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
         }

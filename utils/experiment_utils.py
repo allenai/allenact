@@ -5,15 +5,25 @@ import copy
 import random
 import typing
 from collections import OrderedDict
-from typing import Callable
-from typing import NamedTuple, Dict, Any, Union, Iterator, Optional, List, Tuple
+from typing import (
+    Callable,
+    NamedTuple,
+    Dict,
+    Any,
+    Union,
+    Iterator,
+    Optional,
+    List,
+    Tuple,
+    cast,
+)
 
 import numpy as np
 import torch
 from torch import optim
 
-from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
-from rl_base.common import Loss
+from core.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
+from core.base_abstractions.misc import Loss
 
 
 def recursive_update(
@@ -531,7 +541,7 @@ class TrainingPipeline(object):
                     )()
 
             self.current_stage.named_losses = {
-                loss_name: self.named_losses[loss_name]
+                loss_name: cast(AbstractActorCriticLoss, self.named_losses[loss_name])
                 for loss_name in self.current_stage.loss_names
             }
         return self.current_stage.named_losses

@@ -1,13 +1,13 @@
-# Third-party environments: MiniGrid
+# Tutorial: Navigation in MiniGrid
  
-This tutorial assumes the [installation instructions](../README.md#installation) have already been followed and, to some
-extent, the `embodied-ai` framework's [abstractions](../overview/abstractions.md) are known.
-
-We will use a trivial task type to show how to:
+In this tutorial, we will train an agent to complete the `MiniGrid-Empty-Random-5x5-v0` task within the [MiniGrid](https://github.com/maximecb/gym-minigrid) environment. We will demonstrate how to:
 
 * Write an experiment configuration file with a simple training pipeline from scratch.
-* Use one of the supported third-party environments with minimal user effort. 
+* Use one of the supported environments with minimal user effort.
 * Train, validate and test your experiment from the command line.
+
+This tutorial assumes the [installation instructions](../getting_started/installation.md) have already been followed and, to some
+extent, this framework's [abstractions](../getting_started/abstractions.md) are known.
 
 ## The task
 A `MiniGrid-Empty-Random-5x5-v0` task consists of a grid of dimensions 5x5 where an agent spawned at a random
@@ -31,13 +31,13 @@ Our complete experiment consists of:
 
 The entire configuration for the experiment, including training, validation, and testing, is encapsulated in a single 
 class implementing the `ExperimentConfig` abstraction. For this tutorial, we will follow the config under
-[projects/tutorials/minigrid_tutorial.py](../api/projects/tutorials/minigrid_tutorial.md). 
+`projects/tutorials/minigrid_tutorial.py`. 
 
 The `ExperimentConfig` abstraction is used by the
-[OnPolicyTrainer](../api/onpolicy_sync/light_engine.md#onpolicytrainer) class (for training) and the
-[OnPolicyInference](../api/onpolicy_sync/light_engine.md#onpolicyinference) class (for validation and testing)
+[OnPolicyTrainer](../api/core/algorithms/onpolicy_sync/light_engine.md#onpolicytrainer) class (for training) and the
+[OnPolicyInference](../api/core/algorithms/onpolicy_sync/light_engine.md#onpolicyinference) class (for validation and testing)
 invoked through the entry script `ddmain.py` that calls an orchestrating
-[OnPolicyRunner](../api/onpolicy_sync/runner.md#onpolicyrunner) class. It includes:
+[OnPolicyRunner](../api/core/algorithms/onpolicy_sync/runner.md#onpolicyrunner) class. It includes:
 
 * A `tag` method to identify the experiment.
 * A `create_model` method to instantiate actor-critic models.
@@ -62,7 +62,7 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
 ### Sensors and Model
 
 A readily available Sensor type for MiniGrid,
-[EgocentricMiniGridSensor](../api/extensions/rl_minigrid/minigrid_sensors.md#egocentricminigridsensor),
+[EgocentricMiniGridSensor](../api/plugins/minigrid_plugin/minigrid_sensors.md#egocentricminigridsensor),
 allows us to extract observations in a format consumable by an `ActorCriticModel` agent:
 
 ```python
@@ -77,7 +77,7 @@ relatively large `agent_view_size` means the view will only be clipped by the en
 lateral directions with respect to the agent's orientation.
 
 We define our `ActorCriticModel` agent using a lightweight implementation with recurrent memory for MiniGrid
-environments, [MiniGridSimpleConvRNN](../api/extensions/rl_minigrid/minigrid_models.md#minigridsimpleconvrnn):
+environments, [MiniGridSimpleConvRNN](../api/plugins/minigrid_plugin/minigrid_models.md#minigridsimpleconvrnn):
 
 ```python
     @classmethod
@@ -95,7 +95,7 @@ environments, [MiniGridSimpleConvRNN](../api/extensions/rl_minigrid/minigrid_mod
 
 We use an available TaskSampler implementation for MiniGrid environments that allows to sample both random and
 deterministic `MiniGridTasks`,
-[MiniGridTaskSampler](../api/extensions/rl_minigrid/minigrid_tasks.md#minigridtasksampler):
+[MiniGridTaskSampler](../api/plugins/minigrid_plugin/minigrid_tasks.md#minigridtasksampler):
 
 ```python
     @classmethod
@@ -108,7 +108,7 @@ While it is not quite as important for this task type (as we test our agent in t
 are a lot of good reasons we would like to sample tasks differently during training than during validation or testing.
 One good reason, that is applicable in this tutorial, is that, during training, we would like to be able to sample tasks
 forever while, during testing, we would like to sample a fixed number of tasks (as otherwise we would never finish
-testing!). In `embodied-ai` this is made possible by defining different arguments for the task sampler:
+testing!). In `allenact` this is made possible by defining different arguments for the task sampler:
 
 ```python
     def train_task_sampler_args(
@@ -244,8 +244,7 @@ for which the model weights need to be known.
 
 ## Training and validation
 
-We have a complete implementation of this experiment's configuration class in
-[projects/tutorials/minigrid_tutorial.py](../api/projects/tutorials/minigrid_tutorial.md).
+We have a complete implementation of this experiment's configuration class in `projects/tutorials/minigrid_tutorial.py`.
 To start training from scratch, we just need to invoke
 
 ```bash
@@ -285,7 +284,7 @@ In order to test for a specific experiment, we need to pass its training start d
 `-t EXPERIMENT_DATE`:
 
 ```bash
-python ddmain.py minigrid_tutorial -b projects/tutorials -m 1 -o /PATH/TO/minigrid_output -s 12345 -t EXPERIMENT_DATE
+python main.py minigrid_tutorial -b projects/tutorials -m 1 -o /PATH/TO/minigrid_output -s 12345 -t EXPERIMENT_DATE
 ```
 
 Again, if everything went well, the `test` success rate should converge to 1 and the mean episode length to a value
