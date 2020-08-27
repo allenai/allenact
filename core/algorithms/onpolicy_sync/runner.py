@@ -666,6 +666,11 @@ class OnPolicyRunner(object):
                     elif package[0] == "train_stopped":
                         if package[1] == 0:
                             finalized = True
+                            if not self.running_validation:
+                                get_logger().info(
+                                    "Terminating runner after trainer done (no validation)"
+                                )
+                                break
                         else:
                             raise Exception(
                                 "Train worker {} abnormally terminated".format(
