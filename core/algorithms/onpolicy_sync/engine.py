@@ -1013,9 +1013,20 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         step_observation: Dict[str, torch.Tensor],
         step_count: int,
     ):
+        if len(actions.shape) == len(step_observation["expert_action"].shape) + 1:
+            # Missing agent dimension
+            step_observation["expert_action"] = step_observation[
+                "expert_action"
+            ].unsqueeze(-2)
         tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
-        expert_actions = step_observation["expert_action"][..., 0:1]
-        expert_action_exists_mask = step_observation["expert_action"][..., 1:2]
+        expert_actions = step_observation["expert_action"][..., :1]
+        expert_action_exists_mask = step_observation["expert_action"][..., 1:]
+
+        assert (
+            expert_actions.shape == actions.shape
+        ), "expert actions shape {} doesn't match the model's {}".format(
+            expert_actions.shape, actions.shape
+        )
 
         teacher_forcing_mask = (
             torch.distributions.bernoulli.Bernoulli(
@@ -1028,7 +1039,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             .to(self.device)
         ) * expert_action_exists_mask
 
-        actions = torch.where(teacher_forcing_mask, expert_actions, actions)
+        actions = torch.where(teacher_forcing_mask.byte(), expert_actions, actions)
 
         return (
             actions,
