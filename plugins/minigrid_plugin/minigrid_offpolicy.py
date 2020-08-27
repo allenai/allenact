@@ -140,7 +140,7 @@ class ExpertTrajectoryIterator(Iterator):
         data_limits = partition_limits(
             num_items=len(data_lengths), num_parts=self.num_data_lengths
         )
-        get_logger().debug("Using cluster limits {}".format(data_limits))
+        # get_logger().debug("Using cluster limits {}".format(data_limits))
 
         self.data = data
         self.instr_len = instr_len
