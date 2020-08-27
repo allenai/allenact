@@ -219,7 +219,7 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
             "did not return a valid numpy array."
         )
         return np.array(
-            np.concatenate((policy, [expert_was_successful]), axis=0), dtype=np.float32
+            np.concatenate((policy, [expert_was_successful]), axis=-1), dtype=np.float32
         )
 
 
