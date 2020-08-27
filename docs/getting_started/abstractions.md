@@ -6,7 +6,8 @@ and evaluated. A subset of these abstractions are described in plain language be
 (formal) documentation of the abstraction as well as a link to an example implementation of the abstract (if relevant).
 The following provides a high-level description of how these abstractions interact.
 
-![abstractions-overview](../img/abstractions-overview.svg)
+
+![abstractions-overview](../img/abstractions.png)
 
 ## Task
 
