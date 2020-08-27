@@ -19,8 +19,14 @@ the path parameter to point to an iTHOR dataset rather than the RoboTHOR one.
 
 ```python
     # Dataset Parameters
-    TRAIN_DATASET_DIR = "dataset/ithor/objectnav/train"
-    VAL_DATASET_DIR = "dataset/ithor/objectnav/val"
+    TRAIN_DATASET_DIR = "projects/pointnav_baselines/dataset/ithor/train"
+    VAL_DATASET_DIR = "projects/pointnav_baselines/dataset/ithor/val"
+```
+
+We also have to download the `iTHOR-Pointnav` dataset, if we have not done so already:
+```shell script
+cd projects/pointnav_baselines/dataset
+sh download_pointnav_dataset.sh robothor
 ```
 
 That's it!
@@ -152,13 +158,6 @@ Finally we need to replace the task sampler and its argument generating function
 ```
 
 As we can see this code looks very similar as well, we simply need to pass slightly different parameters.
-
-## Running a Test
-With the setup complete, we should be able to run a test using the exact same command as in the last tutorial:
-```bash
-python ddmain.py -o projects/pointnav_transfer_turotial/ -c projects/pointnav_robothor_rgb/weights/<REDACTED> -t -b projects/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
-```
-This should test the model trained in RoboTHOR on either iTHOR or Habitat (depending on which modifications we made).
 
 ## Conclusion
 In this tutorial, we learned how to modify our experiment configurations to work with different environments. By
