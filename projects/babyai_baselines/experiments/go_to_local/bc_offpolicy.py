@@ -15,8 +15,8 @@ from projects.babyai_baselines.experiments.go_to_local.base import (
 from utils.experiment_utils import PipelineStage, OffPolicyPipelineComponent
 
 
-class OffPolicyBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentConfig):
-    """Off policy imitation."""
+class BCOffPolicyBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentConfig):
+    """BC Off policy imitation."""
 
     DATASET: Optional[List[Tuple[str, bytes, List[int], MiniGridEnv.Actions]]] = None
 

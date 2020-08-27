@@ -6,7 +6,18 @@ import traceback
 import typing
 from collections import defaultdict
 from multiprocessing.context import BaseContext
-from typing import Optional, Any, Dict, Union, List, Tuple, Sequence, cast, Iterator
+from typing import (
+    Optional,
+    Any,
+    Dict,
+    Union,
+    List,
+    Tuple,
+    Sequence,
+    cast,
+    Iterator,
+    Callable,
+)
 
 import torch
 import torch.distributions
@@ -784,10 +795,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
     # aggregates info of specific type from PipelineProgressState list
     def aggregate_info(
-        self,
-        scalars: ScalarMeanTracker,
-        tracking_info: Dict[str, List],
-        type_str: str,  # = "update_package",
+        self, scalars: ScalarMeanTracker, tracking_info: Dict[str, List], type_str: str,
     ) -> Tuple[str, Dict[str, float], int]:
         assert scalars.empty, "Found non-empty scalars {}".format(scalars.counts)
 
@@ -854,7 +862,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
                 info: Dict[str, float] = {}
 
-                # if self.lr_scheduler is not None:
                 info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
 
                 total_loss: Optional[torch.Tensor] = None
@@ -877,14 +884,18 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     for key in current_info:
                         info[loss_name + "/" + key] = current_info[key]
 
-                assert total_loss is not None, "No losses specified?"
+                assert (
+                    total_loss is not None
+                ), "No losses specified for training in stage {}".format(
+                    self.training_pipeline.current_stage_index
+                )
 
                 info["total_loss"] = total_loss.item()
                 self.tracking_info["update"].append(("update_package", info, bsize))
 
-                self.update_step(total_loss)
+                self.backprop_step(total_loss)
 
-        # # TODO Useful for ensuring correctness of distributed infrastructure
+        # # TODO Unit test to ensure correctness of distributed infrastructure
         # state_dict = self.actor_critic.state_dict()
         # keys = sorted(list(state_dict.keys()))
         # get_logger().debug(
@@ -895,26 +906,20 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         #     )
         # )
 
-    def make_offpolicy_iterator(
-        self, data_iterator_builder: typing.Callable[..., Iterator]
-    ):
+    def make_offpolicy_iterator(self, data_iterator_builder: Callable[..., Iterator]):
         stage = self.training_pipeline.current_stage
         kwargs = stage.offpolicy_component.data_iterator_kwargs_generator()
-        kwargs.update({"current_worker": self.worker_id})
-        return data_iterator_builder(**kwargs)
+        assert (
+            "current_worker" not in kwargs
+        ), "current_worker is reserved for the engine to be passed to the offpolicy data iterator builder"
+        return data_iterator_builder(current_worker=self.worker_id, **kwargs)
 
-    def update_step(self, total_loss):
-        can_step: bool = False
-
+    def backprop_step(self, total_loss):
+        self.optimizer.zero_grad()  # type: ignore
         if isinstance(total_loss, torch.Tensor):
-            self.optimizer.zero_grad()  # type: ignore
-            can_step = True
             total_loss.backward()
 
         if self.is_distributed:
-            if not can_step:
-                self.optimizer.zero_grad()  # type: ignore
-                can_step = True
             # From https://github.com/pytorch/pytorch/issues/43135
             reductions = []
             for p in self.actor_critic.parameters():
@@ -928,17 +933,16 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             for reduction in reductions:
                 reduction.wait()
 
-        if can_step:
-            nn.utils.clip_grad_norm_(
-                self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
-            )
-            self.optimizer.step()  # type: ignore
+        nn.utils.clip_grad_norm_(
+            self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
+        )
+        self.optimizer.step()  # type: ignore
 
     def offpolicy_update(
         self,
         updates: int,
         data_iterator: Optional[Iterator],
-        data_iterator_builder: typing.Callable[..., Iterator],
+        data_iterator_builder: Callable[..., Iterator],
     ) -> Iterator:
         stage = self.training_pipeline.current_stage
 
@@ -986,12 +990,17 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
                 for key in current_info:
                     info["offpolicy/" + loss_name + "/" + key] = current_info[key]
-            assert total_loss is not None, "No losses specified?"
+
+            assert (
+                total_loss is not None
+            ), "No offline losses specified for training in stage {}".format(
+                self.training_pipeline.current_stage_index
+            )
 
             info["offpolicy/total_loss"] = total_loss.item()
             self.tracking_info["update"].append(("update_package", info, bsize))
 
-            self.update_step(total_loss)
+            self.backprop_step(total_loss)
 
             stage.offpolicy_memory = detach_recursively(
                 input=stage.offpolicy_memory, inplace=True

@@ -2,7 +2,7 @@ import os
 
 import torch
 
-from .pure_offpolicy import OffPolicyBabyAIGoToLocalExperimentConfig
+from .bc_offpolicy import BCOffPolicyBabyAIGoToLocalExperimentConfig
 from plugins.babyai_plugin.babyai_constants import BABYAI_EXPERT_TRAJECTORIES_DIR
 from plugins.minigrid_plugin.minigrid_offpolicy import (
     MiniGridOffPolicyExpertCELoss,
@@ -11,8 +11,8 @@ from plugins.minigrid_plugin.minigrid_offpolicy import (
 from utils.experiment_utils import PipelineStage, OffPolicyPipelineComponent
 
 
-class DistributedOffPolicyBabyAIGoToLocalExperimentConfig(
-    OffPolicyBabyAIGoToLocalExperimentConfig
+class DistributedBCOffPolicyBabyAIGoToLocalExperimentConfig(
+    BCOffPolicyBabyAIGoToLocalExperimentConfig
 ):
     """Distributed Off policy imitation."""
 

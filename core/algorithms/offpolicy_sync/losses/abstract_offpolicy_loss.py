@@ -26,10 +26,12 @@ class AbstractOffPolicyLoss(typing.Generic[ModelType], Loss):
         # Parameters
 
         model: model to run on data batch (both assumed to be on the same device)
-        batch: data to use as input for model (already in the same device as model)
+        batch: data to use as input for model (already on the same device as model)
         memory: model memory before processing current data batch
 
         # Returns
+
+        A tuple with:
 
         current_loss: total loss
         current_info: additional information about the current loss

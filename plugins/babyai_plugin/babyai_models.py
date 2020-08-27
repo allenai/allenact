@@ -465,10 +465,10 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         masks: torch.FloatTensor,
     ):
         # Flatten all observation batch dims
-        def recursive_adapt_observations(obs, num_steps, num_samplers, num_agents):
+        def recursively_adapt_observations(obs, num_steps, num_samplers, num_agents):
             for entry in obs:
                 if isinstance(obs[entry], Dict):
-                    recursive_adapt_observations(
+                    recursively_adapt_observations(
                         obs[entry], num_steps, num_samplers, num_agents
                     )
                 else:
@@ -497,7 +497,9 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         # prev_actions [num_steps * num_samplers * num_agents, 1]
         # masks [num_steps * num_samplers * num_agents, 1]
 
-        recursive_adapt_observations(observations, num_steps, num_samplers, num_agents)
+        recursively_adapt_observations(
+            observations, num_steps, num_samplers, num_agents
+        )
         recurrent_hidden_states = cast(
             torch.FloatTensor,
             recurrent_hidden_states.view(num_layers, num_samplers * num_agents, -1),
@@ -539,10 +541,10 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         hidden_states = hidden_states.view(num_layers, num_samplers * num_agents, -1)
 
         # Unflatten all observation batch dims
-        def recursive_adapt_observations(obs, num_steps, num_samplers, num_agents):
+        def recursively_adapt_observations(obs, num_steps, num_samplers, num_agents):
             for entry in obs:
                 if isinstance(obs[entry], Dict):
-                    recursive_adapt_observations(
+                    recursively_adapt_observations(
                         obs[entry], num_steps, num_samplers, num_agents
                     )
                 else:
@@ -555,7 +557,9 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
                             num_steps, num_samplers * num_agents, *final_dims
                         )
 
-        recursive_adapt_observations(observations, num_steps, num_samplers, num_agents)
+        recursively_adapt_observations(
+            observations, num_steps, num_samplers, num_agents
+        )
 
         return (
             ActorCriticOutput(
