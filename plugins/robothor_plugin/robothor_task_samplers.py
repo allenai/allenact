@@ -899,7 +899,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
 
         if not self.env.teleport(
             _str_to_pos(episode["initial_position"]),
-            {"x": 0.0, "y": episode["initial_orientation"], "z": 0.0}
+            {"x": 0.0, "y": episode["initial_orientation"], "z": 0.0},
         ):
             return self.next_task()
 
