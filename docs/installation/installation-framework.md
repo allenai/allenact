@@ -45,14 +45,16 @@ long as you do not turn off your machine).
 
 To run experiments using Habitat please use our docker image using the following command:
 
-`docker pull klemenkotar/allenact-habitat`
+`docker pull klemenkotar/allenact-habitat:latest`
 
-This container includes the 0.1 release of `allenact`, the 1.0 release of `habitat` as well
-as the `Gibson` and `MP3D` datasets. You then need to launch the container and attach into it then
-proceed to run your experiments using `allenact` as you normally would.
+This container includes the 0.1 release of `allenact`, the 0.15 release of `habitat` as well
+as the `Gibson` point navigation dataset and scene assets. You then need to launch the container 
+and attach into it:
 
-`docker launch container`
+`docker run klemenkotar/allenact-habitat --runtime=nvidia -it`
 
+Once inside the container activate the conda environment:
 
-
-
+`conda activate allenact`
+ 
+The proceed to run your experiments using `allenact` as you normally would.
