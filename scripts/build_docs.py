@@ -229,7 +229,8 @@ if __name__ == "__main__":
             nav_obj = obj
             break
 
-    nav_obj[docs_key] = nav_entries
+    # Uncomment this line when you want to build and publish API docs
+    # nav_obj[docs_key] = nav_entries
 
     with open(yaml_path, "w") as f:
         yaml.dump(mkdocs_yaml, f)
