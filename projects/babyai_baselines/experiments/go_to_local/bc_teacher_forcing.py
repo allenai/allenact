@@ -1,13 +1,23 @@
+import torch
+
 from projects.babyai_baselines.experiments.go_to_local.base import (
     BaseBabyAIGoToLocalExperimentConfig,
 )
 from utils.experiment_utils import PipelineStage, LinearDecay
 
 
-class PPOBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentConfig):
-    """Behavior clone (with teacher forcing) then PPO."""
+class BCTeacherForcingBabyAIGoToLocalExperimentConfig(
+    BaseBabyAIGoToLocalExperimentConfig
+):
+    """Behavior clone with teacher forcing."""
 
     USE_EXPERT = True
+
+    GPU_ID = 0 if torch.cuda.is_available() else None
+
+    @classmethod
+    def METRIC_ACCUMULATE_INTERVAL(cls):
+        return 1
 
     @classmethod
     def tag(cls):
