@@ -52,9 +52,9 @@ To run experiments using Habitat please use our docker image using the following
 
 `docker pull klemenkotar/allenact-habitat:latest`
 
-This container includes the 0.1 release of `allenact`, the 0.15 release of `habitat` as well
-as the `Gibson` point navigation dataset. You then need to launch the container 
-and attach into it:
+This container includes the 0.1.0 release of `allenact`, the 0.1.5 release of `habitat` as well
+as the `Gibson` point navigation dataset (this is a set of start and goal positions provided by habitat).
+You then need to launch the container and attach into it:
 
 `docker run klemenkotar/allenact-habitat --runtime=nvidia -it`
 
@@ -62,5 +62,5 @@ Once inside the container activate the conda environment:
 
 `conda activate allenact`
  
-From within the environemnt download the Gibson dataset using the [instructions provided by the authors](https://github.com/StanfordVL/GibsonEnv/blob/master/gibson/data/README.md#download).
+From within the container download the Gibson scene files into the `dataset` folder using the [instructions provided by the authors](https://github.com/StanfordVL/GibsonEnv/blob/master/gibson/data/README.md#download).
 Then proceed to run your experiments using `allenact` as you normally would.
