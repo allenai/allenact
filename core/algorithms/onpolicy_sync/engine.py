@@ -882,35 +882,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 info["total_loss"] = total_loss.item()
                 self.tracking_info["update"].append(("update_package", info, bsize))
 
-                can_step: bool = False
-
-                if isinstance(total_loss, torch.Tensor):
-                    self.optimizer.zero_grad()  # type: ignore
-                    can_step = True
-                    total_loss.backward()
-
-                if self.is_distributed:
-                    if not can_step:
-                        self.optimizer.zero_grad()  # type: ignore
-                        can_step = True
-                    # From https://github.com/pytorch/pytorch/issues/43135
-                    reductions = []
-                    for p in self.actor_critic.parameters():
-                        # you can also organize grads to larger buckets to make allreduce more efficient
-                        if p.requires_grad:
-                            if p.grad is None:
-                                p.grad = torch.zeros_like(p.data)
-                            reductions.append(
-                                dist.all_reduce(p.grad, async_op=True,)
-                            )  # synchronize
-                    for reduction in reductions:
-                        reduction.wait()
-
-                if can_step:
-                    nn.utils.clip_grad_norm_(
-                        self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
-                    )
-                    self.optimizer.step()  # type: ignore
+                self.update_step(total_loss)
 
         # # TODO Useful for ensuring correctness of distributed infrastructure
         # state_dict = self.actor_critic.state_dict()
@@ -930,6 +902,37 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         kwargs = stage.offpolicy_component.data_iterator_kwargs_generator()
         kwargs.update({"current_worker": self.worker_id})
         return data_iterator_builder(**kwargs)
+
+    def update_step(self, total_loss):
+        can_step: bool = False
+
+        if isinstance(total_loss, torch.Tensor):
+            self.optimizer.zero_grad()  # type: ignore
+            can_step = True
+            total_loss.backward()
+
+        if self.is_distributed:
+            if not can_step:
+                self.optimizer.zero_grad()  # type: ignore
+                can_step = True
+            # From https://github.com/pytorch/pytorch/issues/43135
+            reductions = []
+            for p in self.actor_critic.parameters():
+                # you can also organize grads to larger buckets to make allreduce more efficient
+                if p.requires_grad:
+                    if p.grad is None:
+                        p.grad = torch.zeros_like(p.data)
+                    reductions.append(
+                        dist.all_reduce(p.grad, async_op=True,)
+                    )  # synchronize
+            for reduction in reductions:
+                reduction.wait()
+
+        if can_step:
+            nn.utils.clip_grad_norm_(
+                self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
+            )
+            self.optimizer.step()  # type: ignore
 
     def offpolicy_update(
         self,
@@ -988,33 +991,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             info["offpolicy/total_loss"] = total_loss.item()
             self.tracking_info["update"].append(("update_package", info, bsize))
 
-            can_step: bool = False
-
-            if isinstance(total_loss, torch.Tensor):
-                self.optimizer.zero_grad()  # type: ignore
-                can_step = True
-                total_loss.backward()
-
-            if self.is_distributed:
-                if not can_step:
-                    self.optimizer.zero_grad()  # type: ignore
-                    can_step = True
-                reductions = []
-                for p in self.actor_critic.parameters():
-                    if p.requires_grad:
-                        if p.grad is None:
-                            p.grad = torch.zeros_like(p.data)
-                        reductions.append(
-                            dist.all_reduce(p.grad, async_op=True,)
-                        )  # synchronize
-                for reduction in reductions:
-                    reduction.wait()
-
-            if can_step:
-                nn.utils.clip_grad_norm_(
-                    self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
-                )
-                self.optimizer.step()  # type: ignore
+            self.update_step(total_loss)
 
             stage.offpolicy_memory = detach_recursively(
                 input=stage.offpolicy_memory, inplace=True
