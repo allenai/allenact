@@ -45,14 +45,14 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     # Training Engine Parameters
     ADVANCE_SCENE_ROLLOUT_PERIOD = 10 ** 13
-    NUM_PROCESSES = 60
-    TRAINING_GPUS = [0, 1, 2, 3, 4, 5, 6]
-    VALIDATION_GPUS = [7]
-    TESTING_GPUS = [7]
+    NUM_PROCESSES = 20
+    TRAINING_GPUS = [0]
+    VALIDATION_GPUS = [0]
+    TESTING_GPUS = [0]
 
     # Dataset Parameters
-    TRAIN_DATASET_DIR = "dataset/robothor/objectnav/train"
-    VAL_DATASET_DIR = "dataset/robothor/objectnav/val"
+    TRAIN_DATASET_DIR = "dataset/robothor/pointnav/debug"
+    VAL_DATASET_DIR = "dataset/robothor/pointnav/debug"
 
     SENSORS = [
         RGBSensorThor(
@@ -77,7 +77,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 "torchvision_resnet_model": models.resnet18,
                 "input_uuids": ["rgb_lowres"],
                 "output_uuid": "rgb_resnet",
-                "parallel": False,  # TODO False for debugging
+                "parallel": False,
             },
         ),
     ]
@@ -107,7 +107,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         update_repeats = 3
         num_steps = 30
         save_interval = 5000000
-        log_interval = 10000
+        log_interval = 1000
         gamma = 0.99
         use_gae = True
         gae_lambda = 0.95
@@ -151,7 +151,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 else self.TRAINING_GPUS * workers_per_device
             )
             nprocesses = (
-                1
+                8
                 if not torch.cuda.is_available()
                 else self.split_num_processes(len(gpu_ids))
             )
