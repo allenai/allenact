@@ -52,6 +52,7 @@ class DistributedOffPolicyBabyAIGoToLocalExperimentConfig(
             named_losses={
                 "offpolicy_expert_ce_loss": MiniGridOffPolicyExpertCELoss(
                     total_episodes_in_epoch=int(1e6)
+                    // cls.expert_ce_loss_kwargs_generator()["num_workers"]
                 ),
             },
             pipeline_stages=[
