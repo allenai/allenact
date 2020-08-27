@@ -225,19 +225,17 @@ class OnPolicyRunner(object):
         self.save_project_state()
 
         devices = self.worker_devices("train")
-        num_trainers = len(devices)
+        num_workers = len(devices)
 
         seed = (
             self.seed
         )  # same for all workers. used during initialization of the model
 
         distributed_port = 0
-        distributed_barrier = None
-        if num_trainers > 1:
+        if num_workers > 1:
             distributed_port = find_free_port()
-            distributed_barrier = self.mp_ctx.Barrier(num_trainers)
 
-        for trainer_it in range(num_trainers):
+        for trainer_it in range(num_workers):
             train: mp.process.BaseProcess = self.mp_ctx.Process(
                 target=self.train_loop,
                 kwargs=dict(
@@ -254,10 +252,9 @@ class OnPolicyRunner(object):
                     seed=seed,
                     deterministic_cudnn=self.deterministic_cudnn,
                     mp_ctx=self.mp_ctx,
-                    num_workers=num_trainers,
+                    num_workers=num_workers,
                     device=devices[trainer_it],
                     distributed_port=distributed_port,
-                    distributed_barrier=distributed_barrier,
                     max_sampler_processes_per_worker=max_sampler_processes_per_worker,
                 ),
             )
@@ -297,7 +294,7 @@ class OnPolicyRunner(object):
                 "No processes allocated to validation, no validation will be run."
             )
 
-        self.log(self.local_start_time_str, num_trainers)
+        self.log(self.local_start_time_str, num_workers)
 
         return self.local_start_time_str
 
@@ -312,10 +309,6 @@ class OnPolicyRunner(object):
         self.get_visualizer("test")
         num_testers = len(devices)
 
-        distributed_barrier = None
-        if num_testers > 1:
-            distributed_barrier = self.mp_ctx.Barrier(num_testers)
-
         for tester_it in range(num_testers):
             test: mp.process.BaseProcess = self.mp_ctx.Process(
                 target=self.test_loop,
@@ -329,7 +322,6 @@ class OnPolicyRunner(object):
                     mp_ctx=self.mp_ctx,
                     num_workers=num_testers,
                     device=devices[tester_it],
-                    distributed_barrier=distributed_barrier,
                     max_sampler_processes_per_worker=max_sampler_processes_per_worker,
                 ),
             )

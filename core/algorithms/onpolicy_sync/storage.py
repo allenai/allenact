@@ -111,9 +111,8 @@ class RolloutStorage:
         return memory
 
     def to(self, device: torch.device):
-        for storage in [self.observations, self.memory]:
-            for key in storage:
-                storage.set_tensor(key, storage.tensor(key).to(device))
+        self.observations.to(device)
+        self.memory.to(device)
         self.rewards = self.rewards.to(device)
         self.value_preds = self.value_preds.to(device)
         self.returns = self.returns.to(device)
@@ -174,7 +173,7 @@ class RolloutStorage:
                 storage[flatten_name] = (
                     torch.zeros_like(current_data)  # type:ignore
                     .repeat(
-                        self.num_steps + 1,  # valid for both observations and memory
+                        self.num_steps + 1,  # required for observations (and memory)
                         *(1 for _ in range(len(current_data.shape))),
                     )
                     .to(
@@ -373,8 +372,8 @@ class RolloutStorage:
             cur_samplers = list(range(start_ind, end_ind))
 
             memory_batch = self.memory.step_squeeze(0).sampler_select(cur_samplers)
-            observations_batch = self.observations.slice(dim=0, stop=-1).sampler_select(
-                cur_samplers
+            observations_batch = self.unflatten_observations(
+                self.observations.slice(dim=0, stop=-1).sampler_select(cur_samplers)
             )
 
             actions_batch = []
@@ -409,8 +408,8 @@ class RolloutStorage:
             norm_adv_targ = torch.stack(norm_adv_targ, 1)  # type:ignore
 
             yield {
-                "observations": self.unflatten_observations(observations_batch),
-                "memory": Memory(memory_batch),
+                "observations": observations_batch,
+                "memory": memory_batch,
                 "actions": actions_batch,
                 "prev_actions": prev_actions_batch,
                 "values": value_preds_batch,

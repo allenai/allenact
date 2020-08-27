@@ -1,11 +1,14 @@
 """Defining imitation losses for actor critic type models."""
 
 import typing
-from typing import Dict, Union
+from typing import Dict
 
 import torch
 
-from core.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
+from core.algorithms.onpolicy_sync.losses.abstract_loss import (
+    AbstractActorCriticLoss,
+    ObservationType,
+)
 from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
 
@@ -16,7 +19,7 @@ class Imitation(AbstractActorCriticLoss):
     def loss(  # type: ignore
         self,
         step_count: int,
-        batch: Dict[str, Union[Dict[str, torch.Tensor], torch.Tensor]],
+        batch: ObservationType,
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
         **kwargs

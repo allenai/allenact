@@ -21,12 +21,14 @@ from tensorboardX.x2num import make_np as tbxmake_np
 from utils.system import get_logger
 
 
-def to_device_recursively(input: Any, device: str, inplace: bool = True):
+def to_device_recursively(
+    input: Any, device: Union[str, torch.device, int], inplace: bool = True
+):
     """Recursively places tensors on the appropriate device."""
     if input is None:
         return input
     elif isinstance(input, torch.Tensor):
-        return input.to(device)
+        return input.to(device)  # type: ignore
     elif isinstance(input, tuple):
         return tuple(
             to_device_recursively(input=subinput, device=device, inplace=inplace)

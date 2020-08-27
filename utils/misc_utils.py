@@ -177,3 +177,11 @@ def prepare_locals_for_super(local_vars, args_name="args", kwargs_name="kwargs")
         kwargs.update(new_locals)
         new_locals = kwargs
     return new_locals
+
+
+def partition_limits(num_items: int, num_parts: int):
+    return (
+        np.round(np.linspace(0, num_items, num_parts + 1, endpoint=True))
+        .astype(np.int32)
+        .tolist()
+    )
