@@ -302,10 +302,11 @@ class NeverEarlyStoppingCriterion(EarlyStoppingCriterion):
 
 
 class OffPolicyPipelineComponent(NamedTuple):
-    data_iterator_builder: Callable[[], Iterator]
+    data_iterator_builder: Callable[..., Iterator]
     loss_names: List[str]
     updates: int
     loss_weights: Optional[typing.Sequence[float]] = None
+    data_iterator_kwargs_generator: Callable[[], Dict] = lambda: {}
 
 
 class PipelineStage(object):

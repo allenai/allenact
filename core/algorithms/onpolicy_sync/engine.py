@@ -898,8 +898,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     for p in self.actor_critic.parameters():
                         # you can also organize grads to larger buckets to make allreduce more efficient
                         if p.requires_grad:
+                            if p.grad is None:
+                                p.grad = torch.zeros_like(p.data)
                             reductions.append(
-                                dist.all_reduce(p.grad, async_op=True)
+                                dist.all_reduce(p.grad, async_op=True,)
                             )  # synchronize
                     for reduction in reductions:
                         reduction.wait()
@@ -921,17 +923,25 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         #     )
         # )
 
+    def make_offpolicy_iterator(
+        self, data_iterator_builder: typing.Callable[..., Iterator]
+    ):
+        stage = self.training_pipeline.current_stage
+        kwargs = stage.offpolicy_component.data_iterator_kwargs_generator()
+        kwargs.update({"current_worker": self.worker_id})
+        return data_iterator_builder(**kwargs)
+
     def offpolicy_update(
         self,
         updates: int,
         data_iterator: Optional[Iterator],
-        data_iterator_builder: typing.Callable[[], Iterator],
+        data_iterator_builder: typing.Callable[..., Iterator],
     ) -> Iterator:
         stage = self.training_pipeline.current_stage
 
         for e in range(updates):
             if data_iterator is None:
-                data_iterator = data_iterator_builder()
+                data_iterator = self.make_offpolicy_iterator(data_iterator_builder)
                 stage.offpolicy_memory.clear()
                 if stage.offpolicy_epochs is None:
                     stage.offpolicy_epochs = 0
@@ -941,7 +951,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             try:
                 batch = next(data_iterator)
             except StopIteration:
-                data_iterator = data_iterator_builder()
+                data_iterator = self.make_offpolicy_iterator(data_iterator_builder)
                 stage.offpolicy_memory.clear()
                 stage.offpolicy_epochs += 1
                 batch = next(data_iterator)
@@ -992,8 +1002,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 reductions = []
                 for p in self.actor_critic.parameters():
                     if p.requires_grad:
+                        if p.grad is None:
+                            p.grad = torch.zeros_like(p.data)
                         reductions.append(
-                            dist.all_reduce(p.grad, async_op=True)
+                            dist.all_reduce(p.grad, async_op=True,)
                         )  # synchronize
                 for reduction in reductions:
                     reduction.wait()

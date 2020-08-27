@@ -1,37 +1,44 @@
 import os
-from typing import Optional, List, Tuple
 
 import torch
-from gym_minigrid.minigrid import MiniGridEnv
 
+from .pure_offpolicy import OffPolicyBabyAIGoToLocalExperimentConfig
 from plugins.babyai_plugin.babyai_constants import BABYAI_EXPERT_TRAJECTORIES_DIR
 from plugins.minigrid_plugin.minigrid_offpolicy import (
     MiniGridOffPolicyExpertCELoss,
     create_minigrid_offpolicy_data_iterator,
 )
-from projects.babyai_baselines.experiments.go_to_local.base import (
-    BaseBabyAIGoToLocalExperimentConfig,
-)
 from utils.experiment_utils import PipelineStage, OffPolicyPipelineComponent
 
 
-class OffPolicyBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentConfig):
-    """Off policy imitation."""
-
-    DATASET: Optional[List[Tuple[str, bytes, List[int], MiniGridEnv.Actions]]] = None
-
-    GPU_ID = 0 if torch.cuda.is_available() else None
-
-    def __init__(self):
-        super().__init__()
+class DistributedOffPolicyBabyAIGoToLocalExperimentConfig(
+    OffPolicyBabyAIGoToLocalExperimentConfig
+):
+    """Distributed Off policy imitation."""
 
     @classmethod
     def tag(cls):
-        return "BabyAIGoToLocalBCOffPolicy"
+        return "DistributedBabyAIGoToLocalBCOffPolicy"
 
     @classmethod
-    def METRIC_ACCUMULATE_INTERVAL(cls):
-        return 1
+    def machine_params(
+        cls, mode="train", gpu_id="default", n_train_processes="default", **kwargs
+    ):
+        res = super().machine_params(mode, gpu_id, n_train_processes, **kwargs)
+
+        if (
+            res["nprocesses"] > 0
+            and isinstance(res["gpu_ids"][0], int)
+            and res["gpu_ids"][0] >= 0
+        ):
+            res["nprocesses"] = [res["nprocesses"] // 2] * 2
+            res["gpu_ids"] = [0, 1]
+
+        return res
+
+    @classmethod
+    def expert_ce_loss_kwargs_generator(cls):
+        return dict(num_workers=len(cls.machine_params("train")["gpu_ids"]))
 
     @classmethod
     def training_pipeline(cls, **kwargs):
@@ -64,6 +71,7 @@ class OffPolicyBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentConf
                             instr_len=cls.INSTR_LEN,
                             **kwargs,
                         ),
+                        data_iterator_kwargs_generator=cls.expert_ce_loss_kwargs_generator,
                         loss_names=["offpolicy_expert_ce_loss"],
                         updates=num_mini_batch * update_repeats,
                     ),

@@ -91,8 +91,12 @@ class ExpertTrajectoryIterator(Iterator):
         nrollouts: int,
         rollout_len: int,
         instr_len: Optional[int],
+        current_worker: int,
         restrict_max_steps_in_dataset: Optional[int] = None,
         num_data_length_clusters: int = 8,
+        worker_samplers: Optional[List[int]] = None,
+        total_num_samplers: Optional[int] = None,
+        num_workers: Optional[int] = None,
     ):
         super(ExpertTrajectoryIterator, self).__init__()
         self.restrict_max_steps_in_dataset = restrict_max_steps_in_dataset
@@ -107,6 +111,27 @@ class ExpertTrajectoryIterator(Iterator):
                 cur_len += len(d[2])
             data = restricted_data
 
+        if total_num_samplers is not None:
+            assert worker_samplers is not None
+            assert num_workers is None
+            parts = partition_limits(len(data), total_num_samplers)
+            new_data = []
+            for sampler in worker_samplers:
+                new_data.extend(data[parts[sampler] : parts[sampler + 1]])
+            # get_logger().debug(
+            #     "{} {} using {}/{} data".format(
+            #         current_worker, worker_samplers, len(new_data), len(data)
+            #     )
+            # )
+            data = new_data
+        elif num_workers is not None:
+            parts = partition_limits(len(data), num_workers)
+            new_data = data[parts[current_worker] : parts[current_worker + 1]]
+            # get_logger().debug(
+            #     "{} using {}/{} data".format(current_worker, len(new_data), len(data))
+            # )
+            data = new_data
+
         self.num_data_lengths = min(num_data_length_clusters, len(data) // nrollouts)
         data_lengths = sorted(
             [(len(d), it) for it, d in enumerate(data)], key=lambda x: (x[0], x[1])
@@ -119,9 +144,6 @@ class ExpertTrajectoryIterator(Iterator):
 
         self.data = data
         self.instr_len = instr_len
-        # self.trajectory_inds = list(range(len(data)))
-        # random.shuffle(self.trajectory_inds)
-        # assert nrollouts <= len(self.trajectory_inds), "Too many rollouts requested."
 
         self.trajectory_inds = [
             sorted_inds[data_limits[i] : data_limits[i + 1]]
@@ -164,7 +186,6 @@ class ExpertTrajectoryIterator(Iterator):
                 and self.current_data_length[sampler] != start
             )
 
-        # if len(self.trajectory_inds) == 0:
         if len(self.trajectory_inds[self.current_data_length[sampler]]) == 0:
             return False
 
@@ -247,9 +268,22 @@ def create_minigrid_offpolicy_data_iterator(
     nrollouts: int,
     rollout_len: int,
     instr_len: Optional[int],
+    current_worker: int,
     restrict_max_steps_in_dataset: Optional[int] = None,
+    worker_samplers: Optional[List[int]] = None,
+    total_num_samplers: Optional[int] = None,
+    num_workers: Optional[int] = None,
 ) -> ExpertTrajectoryIterator:
     path = os.path.abspath(path)
+
+    if worker_samplers is not None:
+        assert len(worker_samplers) == nrollouts
+    assert (worker_samplers is None) == (
+        total_num_samplers is None
+    ), "both worker_samplers and total_num_samplers must be simultaneously defined or not"
+    assert (
+        worker_samplers is None or num_workers is None
+    ), "only one of worker_samplers and num_workers can be defined"
 
     if path not in _DATASET_CACHE:
         get_logger().info(
@@ -262,10 +296,15 @@ def create_minigrid_offpolicy_data_iterator(
                 len(_DATASET_CACHE[path])
             )
         )
+
     return ExpertTrajectoryIterator(
         data=_DATASET_CACHE[path],
         nrollouts=nrollouts,
         rollout_len=rollout_len,
         instr_len=instr_len,
+        current_worker=current_worker,
         restrict_max_steps_in_dataset=restrict_max_steps_in_dataset,
+        worker_samplers=worker_samplers,
+        total_num_samplers=total_num_samplers,
+        num_workers=num_workers,
     )
