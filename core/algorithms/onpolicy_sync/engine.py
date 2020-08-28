@@ -625,7 +625,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self.last_save: Optional[int] = None
 
     def advance_seed(
-        self, seed: Optional[int], call_worker_seeds=True
+        self, seed: Optional[int], return_same_seed_per_worker=False
     ) -> Optional[int]:
         if seed is None:
             return seed
@@ -633,10 +633,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             2 ** 31 - 1
         )  # same seed for all workers
 
-        if not call_worker_seeds:
-            return seed
-
-        if self.mode == "train" or self.mode == "test":
+        if (not return_same_seed_per_worker) and (
+            self.mode == "train" or self.mode == "test"
+        ):
             return self.worker_seeds(self.num_workers, seed)[
                 self.worker_id
             ]  # doesn't modify the current rng state
@@ -922,7 +921,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             rollouts_per_worker = self.num_samplers_per_worker
 
         # common seed for all workers (in case we wish to shuffle the full dataset before iterating on one partition)
-        seed = self.advance_seed(self.seed, call_worker_seeds=False)
+        seed = self.advance_seed(self.seed, return_same_seed_per_worker=True)
 
         kwargs = stage.offpolicy_component.data_iterator_kwargs_generator(
             self.worker_id, rollouts_per_worker, seed
