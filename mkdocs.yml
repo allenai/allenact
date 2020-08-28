@@ -43,14 +43,14 @@ nav:
   - Define a new model: howtos/defining-a-new-model.md
   - Define a new task: howtos/defining-a-new-task.md
   - Define a new training pipeline: howtos/defining-a-new-training-pipeline.md
-  - Visualize results: howtos/visualizing-results.md
-  - Run a multi-agent experiment: howtos/running-a-multi-agent-experiment.md
+  # - Visualize results: howtos/visualizing-results.md
+  # - Run a multi-agent experiment: howtos/running-a-multi-agent-experiment.md
 - Projects:
   - BabyAI baselines: projects/babyai_baselines/README.md
   - PointNav baselines: projects/pointnav_baselines/README.md
   - ObjectNav baselines: projects/objectnav_baselines/README.md
-  - Advisor code: projects/advisor_2020/README.md
-  - Two Body Problem code: projects/two_body_problem_2019/README.md
+  # - Advisor code: projects/advisor_2020/README.md
+  # - Two Body Problem code: projects/two_body_problem_2019/README.md
 - FAQ: FAQ.md
 - Contributing: CONTRIBUTING.md
 - Licence: LICENSE.md

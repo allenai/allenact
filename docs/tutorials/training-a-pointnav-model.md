@@ -70,7 +70,7 @@ sh download_pointnav_dataset.sh robothor
 ## Config File Setup
 Now comes the most important part of the tutorial, we are going to write an experiment config file.
 
-Unlike a library that can be imported into python, **AllenAct** is structured as a framework with a runner script called `ddmain.py` which will run the experiment specified in a config file. This design forces us to keep meticulous records of exactly which settings were used to produce a particular result,
+Unlike a library that can be imported into python, **AllenAct** is structured as a framework with a runner script called `main.py` which will run the experiment specified in a config file. This design forces us to keep meticulous records of exactly which settings were used to produce a particular result,
 which can be very useful given how expensive RL models are to train.
 
 We will start by creating a new directory inside the `projects` directory. We can name this whatever we want but for now, we will go with `robothor_pointnav_tutuorial`. Then we can create a directory called 
@@ -515,11 +515,11 @@ Note that we changed both the train and test dataset to debug, so the model will
 
 We can not train a model by running:
 ```
-python ddmain.py -o <PATH_TO_OUTPUT> -c -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
+python main.py -o <PATH_TO_OUTPUT> -c -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
 ```
 If using the same configuration as we have set up, the following command should work:
 ```
-python ddmain.py -o projects/tutorials/pointnav_robothor_rgb/storage/ -b projects/tutorials/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
+python main.py -o projects/tutorials/pointnav_robothor_rgb/storage/ -b projects/tutorials/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
 ```
 If we start up a tensorboard server during training and specify that `output_dir=storage` the output should look
 something like this:
@@ -529,11 +529,11 @@ something like this:
 ## Training Model On Full Dataset
 We can also train the model on the full dataset by changing back our dataset path and running:
 ```
-python ddmain.py -o <PATH_TO_OUTPUT> -c -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
+python main.py -o <PATH_TO_OUTPUT> -c -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
 ```
 But be aware, training this takes nearly 2 days on a machine with 8 GPU. For our current setup the following command would work:
 ```
-python ddmain.py -o projects/tutorials/pointnav_robothor_rgb/storage/ -b projects/tutorials/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
+python main.py -o projects/tutorials/pointnav_robothor_rgb/storage/ -b projects/tutorials/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
 ```
 If we start up a tensorboard server during training and specify that `output_dir=storage` the output should look
 something like this:

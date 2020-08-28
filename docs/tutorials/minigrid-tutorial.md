@@ -36,7 +36,7 @@ class implementing the `ExperimentConfig` abstraction. For this tutorial, we wil
 The `ExperimentConfig` abstraction is used by the
 [OnPolicyTrainer](../api/core/algorithms/onpolicy_sync/light_engine.md#onpolicytrainer) class (for training) and the
 [OnPolicyInference](../api/core/algorithms/onpolicy_sync/light_engine.md#onpolicyinference) class (for validation and testing)
-invoked through the entry script `ddmain.py` that calls an orchestrating
+invoked through the entry script `main.py` that calls an orchestrating
 [OnPolicyRunner](../api/core/algorithms/onpolicy_sync/runner.md#onpolicyrunner) class. It includes:
 
 * A `tag` method to identify the experiment.
@@ -248,7 +248,7 @@ We have a complete implementation of this experiment's configuration class in `p
 To start training from scratch, we just need to invoke
 
 ```bash
-python ddmain.py minigrid_tutorial -b projects/tutorials -m 8 -o /PATH/TO/minigrid_output -s 12345
+python main.py minigrid_tutorial -b projects/tutorials -m 8 -o /PATH/TO/minigrid_output -s 12345
 ```
 
 from the project root folder.
