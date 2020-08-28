@@ -21,7 +21,7 @@ AllenAct is built and backed by the [Allen Institute for AI (AI2)](https://allen
 
 ## Features & Highlights
 
-* _Support for multiple environments_: Support for the [i-THOR](https://ai2thor.allenai.org/ithor/), [Robo-THOR](https://ai2thor.allenai.org/robothor/) and [Habitat](https://aihabitat.org/) embodied environments as well as for grid-worlds including [MiniGrid](https://github.com/maximecb/gym-minigrid).
+* _Support for multiple environments_: Support for the [iTHOR](https://ai2thor.allenai.org/ithor/), [RoboTHOR](https://ai2thor.allenai.org/robothor/) and [Habitat](https://aihabitat.org/) embodied environments as well as for grid-worlds including [MiniGrid](https://github.com/maximecb/gym-minigrid).
 * _Task Abstraction_: Tasks and environments are decoupled in AllenAct, enabling researchers to easily implement a large variety of tasks in the same environment.
 * _Algorithms_: Support for a variety of on-policy algorithms including [PPO](https://arxiv.org/pdf/1707.06347.pdf), [DD-PPO](https://arxiv.org/pdf/1911.00357.pdf), [A2C](https://arxiv.org/pdf/1611.05763.pdf), Imitation Learning and [DAgger](https://www.ri.cmu.edu/pub_files/2011/4/Ross-AISTATS11-NoRegret.pdf) as well as offline training such as offline IL.
 * _Sequential Algorithms_: Trivial to experiment with different sequences of training routines, which are often the key to successful policies.

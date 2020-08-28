@@ -11,7 +11,7 @@ from utils.misc_utils import prepare_locals_for_super
 
 
 class RGBSensorThor(RGBSensor[IThorEnvironment, Task[IThorEnvironment]]):
-    """Sensor for RGB images in AI2-THOR.
+    """Sensor for RGB images in iTHOR.
 
     Returns from a running IThorEnvironment instance, the current RGB
     frame corresponding to the agent's egocentric view.

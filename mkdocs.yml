@@ -73,8 +73,8 @@ nav:
           - kfac: api/core/algorithms/onpolicy_sync/losses/kfac.md
           - a2cacktr: api/core/algorithms/onpolicy_sync/losses/a2cacktr.md
         - runner: api/core/algorithms/onpolicy_sync/runner.md
-        - light_engine: api/core/algorithms/onpolicy_sync/light_engine.md
         - policy: api/core/algorithms/onpolicy_sync/policy.md
+        - engine: api/core/algorithms/onpolicy_sync/engine.md
         - vector_sampled_tasks: api/core/algorithms/onpolicy_sync/vector_sampled_tasks.md
         - storage: api/core/algorithms/onpolicy_sync/storage.md
       - offpolicy_sync:
@@ -122,12 +122,24 @@ nav:
       - robothor_constants: api/plugins/robothor_plugin/robothor_constants.md
       - robothor_models: api/plugins/robothor_plugin/robothor_models.md
       - robothor_tasks: api/plugins/robothor_plugin/robothor_tasks.md
+      - configs:
+        - resnet18_objectnav: api/plugins/robothor_plugin/configs/resnet18_objectnav.md
+        - simple_pointnav: api/plugins/robothor_plugin/configs/simple_pointnav.md
+        - resnet18_pointnav: api/plugins/robothor_plugin/configs/resnet18_pointnav.md
+        - pointnav_base: api/plugins/robothor_plugin/configs/pointnav_base.md
+        - resnet18_nav_base: api/plugins/robothor_plugin/configs/resnet18_nav_base.md
+        - nav_base: api/plugins/robothor_plugin/configs/nav_base.md
+        - simple_objectnav: api/plugins/robothor_plugin/configs/simple_objectnav.md
+        - objectnav_base: api/plugins/robothor_plugin/configs/objectnav_base.md
       - robothor_sensors: api/plugins/robothor_plugin/robothor_sensors.md
       - robothor_viz: api/plugins/robothor_plugin/robothor_viz.md
     - minigrid_plugin:
       - minigrid_tasks: api/plugins/minigrid_plugin/minigrid_tasks.md
       - minigrid_environments: api/plugins/minigrid_plugin/minigrid_environments.md
+      - minigrid_offpolicy: api/plugins/minigrid_plugin/minigrid_offpolicy.md
       - minigrid_sensors: api/plugins/minigrid_plugin/minigrid_sensors.md
+      - configs:
+        - minigrid_nomemory: api/plugins/minigrid_plugin/configs/minigrid_nomemory.md
       - minigrid_models: api/plugins/minigrid_plugin/minigrid_models.md
   - projects:
     - objectnav_baselines:
@@ -149,8 +161,11 @@ nav:
       - experiments:
         - go_to_local:
           - bc: api/projects/babyai_baselines/experiments/go_to_local/bc.md
+          - distributed_bc_offpolicy: api/projects/babyai_baselines/experiments/go_to_local/distributed_bc_offpolicy.md
           - dagger: api/projects/babyai_baselines/experiments/go_to_local/dagger.md
+          - bc_offpolicy: api/projects/babyai_baselines/experiments/go_to_local/bc_offpolicy.md
           - bc_teacher_forcing: api/projects/babyai_baselines/experiments/go_to_local/bc_teacher_forcing.md
+          - distributed_bc_teacher_forcing: api/projects/babyai_baselines/experiments/go_to_local/distributed_bc_teacher_forcing.md
           - ppo: api/projects/babyai_baselines/experiments/go_to_local/ppo.md
           - a2c: api/projects/babyai_baselines/experiments/go_to_local/a2c.md
           - base: api/projects/babyai_baselines/experiments/go_to_local/base.md
