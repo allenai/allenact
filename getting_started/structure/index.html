@@ -35,7 +35,7 @@
       
         <meta name="lang:search.tokenizer" content="[\s\-]+">
       
-      <link rel="shortcut icon" href="../../img/PriorLogo_CircleOnly_Blue.svg">
+      <link rel="shortcut icon" href="../../img/AllenAct_A.svg">
       <meta name="generator" content="mkdocs-1.0.4, mkdocs-material-4.1.0">
     
     
@@ -68,31 +68,6 @@
     
     
     
-      
-        
-<script>
-  window.ga = window.ga || function() {
-    (ga.q = ga.q || []).push(arguments)
-  }
-  ga.l = +new Date
-  /* Setup integration and send page view */
-  ga("create", "UA-120916510-8", "allenai.github.io/allenact")
-  ga("set", "anonymizeIp", true)
-  ga("send", "pageview")
-  /* Register handler to log search on blur */
-  document.addEventListener("DOMContentLoaded", () => {
-    if (document.forms.search) {
-      var query = document.forms.search.query
-      query.addEventListener("blur", function() {
-        if (this.value) {
-          var path = document.location.pathname;
-          ga("send", "pageview", path + "?q=" + this.value)
-        }
-      })
-    }
-  })
-</script>
-<script async src="https://www.google-analytics.com/analytics.js"></script>
       
     
     
@@ -142,7 +117,7 @@
       <div class="md-flex__cell md-flex__cell--shrink">
         <a href="https://github.com/allenai/allenact" title="AllenAct" class="md-header-nav__button md-logo">
           
-            <img src="../../img/PriorLogo_CircleOnly.svg" width="24" height="24">
+            <img src="../../img/AI2_Avatar_White.png" width="24" height="24">
           
         </a>
       </div>
@@ -232,7 +207,7 @@
   <label class="md-nav__title md-nav__title--site" for="__drawer">
     <a href="https://github.com/allenai/allenact" title="AllenAct" class="md-nav__button md-logo">
       
-        <img src="../../img/PriorLogo_CircleOnly.svg" width="48" height="48">
+        <img src="../../img/AI2_Avatar_White.png" width="48" height="48">
       
     </a>
     AllenAct
@@ -297,8 +272,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../installation/installation-allenact/" title="Installation of AllenAct" class="md-nav__link">
-      Installation of AllenAct
+    <a href="../../installation/installation-allenact/" title="Install AllenAct" class="md-nav__link">
+      Install AllenAct
     </a>
   </li>
 
@@ -309,8 +284,20 @@
 
 
   <li class="md-nav__item">
-    <a href="../../installation/installation-framework/" title="Installation of supported frameworks" class="md-nav__link">
-      Installation of supported frameworks
+    <a href="../../installation/installation-framework/" title="Install environments" class="md-nav__link">
+      Install environments
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../installation/download-datasets/" title="Download datasets" class="md-nav__link">
+      Download datasets
     </a>
   </li>
 
@@ -386,50 +373,50 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#docs-todo" title="docs TODO" class="md-nav__link">
-    docs TODO
+  <a href="#core-directory" title="core directory" class="md-nav__link">
+    core directory
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#plugins-todo" title="plugins TODO" class="md-nav__link">
-    plugins TODO
+  <a href="#docs-directory" title="docs directory" class="md-nav__link">
+    docs directory
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#projects-todo" title="projects TODO" class="md-nav__link">
-    projects TODO
+  <a href="#plugins-directory" title="plugins directory" class="md-nav__link">
+    plugins directory
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#scripts-todo" title="scripts TODO" class="md-nav__link">
-    scripts TODO
+  <a href="#projects-directory" title="projects directory" class="md-nav__link">
+    projects directory
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#common-todo" title="common TODO" class="md-nav__link">
-    common TODO
+  <a href="#scripts-directory" title="scripts directory" class="md-nav__link">
+    scripts directory
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#tests-todo" title="tests TODO" class="md-nav__link">
-    tests TODO
+  <a href="#tests-directory" title="tests directory" class="md-nav__link">
+    tests directory
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#utils-todo" title="utils TODO" class="md-nav__link">
-    utils TODO
+  <a href="#utils-directory" title="utils directory" class="md-nav__link">
+    utils directory
   </a>
   
 </li>
@@ -541,18 +528,6 @@
   </li>
 
         
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../tutorials/training-pipelines/" title="IL to RL with pipelines" class="md-nav__link">
-      IL to RL with pipelines
-    </a>
-  </li>
-
-        
       </ul>
     </nav>
   </li>
@@ -637,30 +612,6 @@
   </li>
 
         
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../howtos/visualizing-results/" title="Visualize results" class="md-nav__link">
-      Visualize results
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../howtos/running-a-multi-agent-experiment/" title="Run a multi-agent experiment" class="md-nav__link">
-      Run a multi-agent experiment
-    </a>
-  </li>
-
-        
       </ul>
     </nav>
   </li>
@@ -717,30 +668,6 @@
   <li class="md-nav__item">
     <a href="../../projects/objectnav_baselines/" title="ObjectNav baselines" class="md-nav__link">
       ObjectNav baselines
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../projects/advisor_2020/" title="Advisor code" class="md-nav__link">
-      Advisor code
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../projects/two_body_problem_2019/" title="Two Body Problem code" class="md-nav__link">
-      Two Body Problem code
     </a>
   </li>
 
@@ -1072,8 +999,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../api/core/algorithms/onpolicy_sync/light_engine.md" title="light_engine" class="md-nav__link">
-      light_engine
+    <a href="../../api/core/algorithms/onpolicy_sync/policy.md" title="policy" class="md-nav__link">
+      policy
     </a>
   </li>
 
@@ -1084,8 +1011,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../api/core/algorithms/onpolicy_sync/policy.md" title="policy" class="md-nav__link">
-      policy
+    <a href="../../api/core/algorithms/onpolicy_sync/engine.md" title="engine" class="md-nav__link">
+      engine
     </a>
   </li>
 
@@ -1281,116 +1208,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../api/plugins/habitat_plugin/habitat_tasks.md" title="habitat_tasks" class="md-nav__link">
-      habitat_tasks
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/plugins/habitat_plugin/habitat_sensors.md" title="habitat_sensors" class="md-nav__link">
-      habitat_sensors
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/plugins/habitat_plugin/habitat_environment.md" title="habitat_environment" class="md-nav__link">
-      habitat_environment
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../api/plugins/habitat_plugin/habitat_preprocessors.md" title="habitat_preprocessors" class="md-nav__link">
       habitat_preprocessors
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/plugins/habitat_plugin/habitat_task_samplers.md" title="habitat_task_samplers" class="md-nav__link">
-      habitat_task_samplers
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item md-nav__item--nested">
-    
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-10-3-1-7" type="checkbox" id="nav-10-3-1-7">
-    
-    <label class="md-nav__link" for="nav-10-3-1-7">
-      scripts
-    </label>
-    <nav class="md-nav" data-md-component="collapsible" data-md-level="4">
-      <label class="md-nav__title" for="nav-10-3-1-7">
-        scripts
-      </label>
-      <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/plugins/habitat_plugin/scripts/agent_demo.md" title="agent_demo" class="md-nav__link">
-      agent_demo
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/plugins/habitat_plugin/scripts/make_map.md" title="make_map" class="md-nav__link">
-      make_map
-    </a>
-  </li>
-
-        
-      </ul>
-    </nav>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/plugins/habitat_plugin/habitat_utils.md" title="habitat_utils" class="md-nav__link">
-      habitat_utils
     </a>
   </li>
 
@@ -1796,6 +1615,126 @@
           
 
 
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-10-3-5-7" type="checkbox" id="nav-10-3-5-7">
+    
+    <label class="md-nav__link" for="nav-10-3-5-7">
+      configs
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-3-5-7">
+        configs
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/robothor_plugin/configs/resnet18_objectnav.md" title="resnet18_objectnav" class="md-nav__link">
+      resnet18_objectnav
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/robothor_plugin/configs/simple_pointnav.md" title="simple_pointnav" class="md-nav__link">
+      simple_pointnav
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/robothor_plugin/configs/resnet18_pointnav.md" title="resnet18_pointnav" class="md-nav__link">
+      resnet18_pointnav
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/robothor_plugin/configs/pointnav_base.md" title="pointnav_base" class="md-nav__link">
+      pointnav_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/robothor_plugin/configs/resnet18_nav_base.md" title="resnet18_nav_base" class="md-nav__link">
+      resnet18_nav_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/robothor_plugin/configs/nav_base.md" title="nav_base" class="md-nav__link">
+      nav_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/robothor_plugin/configs/simple_objectnav.md" title="simple_objectnav" class="md-nav__link">
+      simple_objectnav
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/robothor_plugin/configs/objectnav_base.md" title="objectnav_base" class="md-nav__link">
+      objectnav_base
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
   <li class="md-nav__item">
     <a href="../../api/plugins/robothor_plugin/robothor_sensors.md" title="robothor_sensors" class="md-nav__link">
       robothor_sensors
@@ -1869,9 +1808,57 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/plugins/minigrid_plugin/minigrid_offpolicy.md" title="minigrid_offpolicy" class="md-nav__link">
+      minigrid_offpolicy
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/plugins/minigrid_plugin/minigrid_sensors.md" title="minigrid_sensors" class="md-nav__link">
       minigrid_sensors
     </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-10-3-6-5" type="checkbox" id="nav-10-3-6-5">
+    
+    <label class="md-nav__link" for="nav-10-3-6-5">
+      configs
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-3-6-5">
+        configs
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/minigrid_plugin/configs/minigrid_nomemory.md" title="minigrid_nomemory" class="md-nav__link">
+      minigrid_nomemory
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
   </li>
 
         
@@ -2231,6 +2218,18 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_local/distributed_bc_offpolicy.md" title="distributed_bc_offpolicy" class="md-nav__link">
+      distributed_bc_offpolicy
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/babyai_baselines/experiments/go_to_local/dagger.md" title="dagger" class="md-nav__link">
       dagger
     </a>
@@ -2243,8 +2242,32 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_local/bc_offpolicy.md" title="bc_offpolicy" class="md-nav__link">
+      bc_offpolicy
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/babyai_baselines/experiments/go_to_local/bc_teacher_forcing.md" title="bc_teacher_forcing" class="md-nav__link">
       bc_teacher_forcing
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_local/distributed_bc_teacher_forcing.md" title="distributed_bc_teacher_forcing" class="md-nav__link">
+      distributed_bc_teacher_forcing
     </a>
   </li>
 
@@ -2523,78 +2546,6 @@
           
 
 
-  <li class="md-nav__item md-nav__item--nested">
-    
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-10-4-3-1-2" type="checkbox" id="nav-10-4-3-1-2">
-    
-    <label class="md-nav__link" for="nav-10-4-3-1-2">
-      habitat
-    </label>
-    <nav class="md-nav" data-md-component="collapsible" data-md-level="5">
-      <label class="md-nav__title" for="nav-10-4-3-1-2">
-        habitat
-      </label>
-      <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgb_simpleconvgru_ddppo.md" title="pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
-      pointnav_habitat_rgb_simpleconvgru_ddppo
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgbd_simpleconvgru_ddppo.md" title="pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
-      pointnav_habitat_rgbd_simpleconvgru_ddppo
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_base.md" title="pointnav_habitat_base" class="md-nav__link">
-      pointnav_habitat_base
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo.md" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
-      pointnav_habitat_depth_simpleconvgru_ddppo
-    </a>
-  </li>
-
-        
-      </ul>
-    </nav>
-  </li>
-
-        
-          
-          
-          
-
-
   <li class="md-nav__item">
     <a href="../../api/projects/pointnav_baselines/experiments/pointnav_base.md" title="pointnav_base" class="md-nav__link">
       pointnav_base
@@ -2609,13 +2560,13 @@
 
   <li class="md-nav__item md-nav__item--nested">
     
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-10-4-3-1-4" type="checkbox" id="nav-10-4-3-1-4">
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-10-4-3-1-3" type="checkbox" id="nav-10-4-3-1-3">
     
-    <label class="md-nav__link" for="nav-10-4-3-1-4">
+    <label class="md-nav__link" for="nav-10-4-3-1-3">
       ithor
     </label>
     <nav class="md-nav" data-md-component="collapsible" data-md-level="5">
-      <label class="md-nav__title" for="nav-10-4-3-1-4">
+      <label class="md-nav__title" for="nav-10-4-3-1-3">
         ithor
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
@@ -2738,18 +2689,6 @@
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
         
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/projects/tutorials/pointnav_habitat_rgb_ddppo.md" title="pointnav_habitat_rgb_ddppo" class="md-nav__link">
-      pointnav_habitat_rgb_ddppo
-    </a>
-  </li>
-
         
           
           
@@ -3039,50 +2978,50 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#docs-todo" title="docs TODO" class="md-nav__link">
-    docs TODO
+  <a href="#core-directory" title="core directory" class="md-nav__link">
+    core directory
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#plugins-todo" title="plugins TODO" class="md-nav__link">
-    plugins TODO
+  <a href="#docs-directory" title="docs directory" class="md-nav__link">
+    docs directory
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#projects-todo" title="projects TODO" class="md-nav__link">
-    projects TODO
+  <a href="#plugins-directory" title="plugins directory" class="md-nav__link">
+    plugins directory
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#scripts-todo" title="scripts TODO" class="md-nav__link">
-    scripts TODO
+  <a href="#projects-directory" title="projects directory" class="md-nav__link">
+    projects directory
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#common-todo" title="common TODO" class="md-nav__link">
-    common TODO
+  <a href="#scripts-directory" title="scripts directory" class="md-nav__link">
+    scripts directory
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#tests-todo" title="tests TODO" class="md-nav__link">
-    tests TODO
+  <a href="#tests-directory" title="tests directory" class="md-nav__link">
+    tests directory
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#utils-todo" title="utils TODO" class="md-nav__link">
-    utils TODO
+  <a href="#utils-directory" title="utils directory" class="md-nav__link">
+    utils directory
   </a>
   
 </li>
@@ -3107,14 +3046,54 @@
                 
                 
                 <h1 id="structure-of-the-codebase">Structure of the codebase<a class="headerlink" href="#structure-of-the-codebase" title="Permanent link">#</a></h1>
-<p>The codebase consists of the following directories: <code>docs</code>, <code>plugins</code>, <code>projects</code>, <code>scripts</code>, <code>common</code>, <code>tests</code> and <code>utils</code>. Below, we explain the overall structure and how different components of the codebase are organized. </p>
-<h2 id="docs-todo"><code>docs</code> TODO<a class="headerlink" href="#docs-todo" title="Permanent link">#</a></h2>
-<h2 id="plugins-todo"><code>plugins</code> TODO<a class="headerlink" href="#plugins-todo" title="Permanent link">#</a></h2>
-<h2 id="projects-todo"><code>projects</code> TODO<a class="headerlink" href="#projects-todo" title="Permanent link">#</a></h2>
-<h2 id="scripts-todo"><code>scripts</code> TODO<a class="headerlink" href="#scripts-todo" title="Permanent link">#</a></h2>
-<h2 id="common-todo"><code>common</code> TODO<a class="headerlink" href="#common-todo" title="Permanent link">#</a></h2>
-<h2 id="tests-todo"><code>tests</code> TODO<a class="headerlink" href="#tests-todo" title="Permanent link">#</a></h2>
-<h2 id="utils-todo"><code>utils</code> TODO<a class="headerlink" href="#utils-todo" title="Permanent link">#</a></h2>
+<p>The codebase consists of the following directories: <code>core</code>, <code>docs</code>, <code>plugins</code>, <code>projects</code>, <code>scripts</code>, <code>tests</code> and
+<code>utils</code>. Below, we explain the overall structure and how different components of the codebase are organized. </p>
+<h2 id="core-directory"><code>core</code> directory<a class="headerlink" href="#core-directory" title="Permanent link">#</a></h2>
+<p>Contains runtime algorithms for on-policy and off-policy training and inference, base abstractions used throughout
+the code base and basic models to be used as building blocks in future models.</p>
+<ul>
+<li>
+<p><code>core.algorithms</code> includes on-policy and off-policy training nd inference algorithms and abstractions for losses,
+policies, rollout storage, etc.</p>
+</li>
+<li>
+<p><code>core.base_abstractions</code> includes the base <code>ExperimentConfig</code>, distributions, base <code>Sensor</code>, <code>TaskSampler</code>, <code>Task</code>,
+etc.</p>
+</li>
+<li>
+<p><code>core.models</code> includes basic CNN, and RNN state encoders, besides basic <code>ActorCriticModel</code> implementations.</p>
+</li>
+</ul>
+<h2 id="docs-directory"><code>docs</code> directory<a class="headerlink" href="#docs-directory" title="Permanent link">#</a></h2>
+<p>Contains documentation for the framework, including guides for installation and first experiments, how-to's for
+the definition and usage of different abstractions, tutorials and per-project documentation.</p>
+<h2 id="plugins-directory"><code>plugins</code> directory<a class="headerlink" href="#plugins-directory" title="Permanent link">#</a></h2>
+<p>Contains implementations of <code>ActorCriticModel</code>s and <code>Task</code>s in different environments. Each plugin folder is 
+named as <code>{environment}_plugin</code> and contains three subfolders:
+1. <code>configs</code> to host useful configuration for the environment or tasks.
+1. <code>data</code> to store data to be consumed by the environment or tasks.
+1. <code>scripts</code> to setup the plugin or gather and process data.</p>
+<h2 id="projects-directory"><code>projects</code> directory<a class="headerlink" href="#projects-directory" title="Permanent link">#</a></h2>
+<p>Contains project-specific code like experiment configurations and scripts to process results, generate visualizations
+or prepare data.</p>
+<h2 id="scripts-directory"><code>scripts</code> directory<a class="headerlink" href="#scripts-directory" title="Permanent link">#</a></h2>
+<p>Includes framework-wide scripts to build the documentation, format code, run_tests and start an xserver. The latter can
+be used for OpenGL-based environments with super-user privileges in Linux with NVIDIA drivers and <code>xserver-xorg</code>
+installed.</p>
+<h2 id="tests-directory"><code>tests</code> directory<a class="headerlink" href="#tests-directory" title="Permanent link">#</a></h2>
+<p>Includes implementations of tests.</p>
+<h2 id="utils-directory"><code>utils</code> directory<a class="headerlink" href="#utils-directory" title="Permanent link">#</a></h2>
+<p>It includes different types of utilities, mainly divided into:</p>
+<ul>
+<li><code>utils.experiment_utils</code>, including the <code>TrainingPipeline</code>, <code>PipelineStage</code> and other utilities to configure an
+experiment.</li>
+<li><code>utils.model_utils</code>, including generic CNN creation, forward-pass helpers and other utilities.</li>
+<li><code>utils.tensor_utils</code>, including functions to batch observations, convert tensors into video, scale image tensors, etc.</li>
+<li><code>utils.viz_utils</code>, including a <code>SimpleViz</code> class that can be instantiated with different visualization plugins during
+inference.</li>
+<li><code>utils.system</code>, including logging and networking helpers.</li>
+</ul>
+<p>Other utils files, including <code>utils.misc_utils</code>, contain a number of helper functions for different purposes.</p>
                 
                   
                 

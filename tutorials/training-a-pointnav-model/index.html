@@ -35,7 +35,7 @@
       
         <meta name="lang:search.tokenizer" content="[\s\-]+">
       
-      <link rel="shortcut icon" href="../../img/PriorLogo_CircleOnly_Blue.svg">
+      <link rel="shortcut icon" href="../../img/AllenAct_A.svg">
       <meta name="generator" content="mkdocs-1.0.4, mkdocs-material-4.1.0">
     
     
@@ -68,31 +68,6 @@
     
     
     
-      
-        
-<script>
-  window.ga = window.ga || function() {
-    (ga.q = ga.q || []).push(arguments)
-  }
-  ga.l = +new Date
-  /* Setup integration and send page view */
-  ga("create", "UA-120916510-8", "allenai.github.io/allenact")
-  ga("set", "anonymizeIp", true)
-  ga("send", "pageview")
-  /* Register handler to log search on blur */
-  document.addEventListener("DOMContentLoaded", () => {
-    if (document.forms.search) {
-      var query = document.forms.search.query
-      query.addEventListener("blur", function() {
-        if (this.value) {
-          var path = document.location.pathname;
-          ga("send", "pageview", path + "?q=" + this.value)
-        }
-      })
-    }
-  })
-</script>
-<script async src="https://www.google-analytics.com/analytics.js"></script>
       
     
     
@@ -142,7 +117,7 @@
       <div class="md-flex__cell md-flex__cell--shrink">
         <a href="https://github.com/allenai/allenact" title="AllenAct" class="md-header-nav__button md-logo">
           
-            <img src="../../img/PriorLogo_CircleOnly.svg" width="24" height="24">
+            <img src="../../img/AI2_Avatar_White.png" width="24" height="24">
           
         </a>
       </div>
@@ -232,7 +207,7 @@
   <label class="md-nav__title md-nav__title--site" for="__drawer">
     <a href="https://github.com/allenai/allenact" title="AllenAct" class="md-nav__button md-logo">
       
-        <img src="../../img/PriorLogo_CircleOnly.svg" width="48" height="48">
+        <img src="../../img/AI2_Avatar_White.png" width="48" height="48">
       
     </a>
     AllenAct
@@ -297,8 +272,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../installation/installation-allenact/" title="Installation of AllenAct" class="md-nav__link">
-      Installation of AllenAct
+    <a href="../../installation/installation-allenact/" title="Install AllenAct" class="md-nav__link">
+      Install AllenAct
     </a>
   </li>
 
@@ -309,8 +284,20 @@
 
 
   <li class="md-nav__item">
-    <a href="../../installation/installation-framework/" title="Installation of supported frameworks" class="md-nav__link">
-      Installation of supported frameworks
+    <a href="../../installation/installation-framework/" title="Install environments" class="md-nav__link">
+      Install environments
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../installation/download-datasets/" title="Download datasets" class="md-nav__link">
+      Download datasets
     </a>
   </li>
 
@@ -492,6 +479,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#environemnt-setup" title="Environemnt Setup" class="md-nav__link">
+    Environemnt Setup
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#dataset-setup" title="Dataset Setup" class="md-nav__link">
     Dataset Setup
   </a>
@@ -506,15 +500,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#testing-pre-trained-model" title="Testing Pre-Trained Model" class="md-nav__link">
-    Testing Pre-Trained Model
+  <a href="#training-model-on-debug-dataset" title="Training Model On Debug Dataset" class="md-nav__link">
+    Training Model On Debug Dataset
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#training-model-from-scratch" title="Training Model From Scratch" class="md-nav__link">
-    Training Model From Scratch
+  <a href="#training-model-on-full-dataset" title="Training Model On Full Dataset" class="md-nav__link">
+    Training Model On Full Dataset
   </a>
   
 </li>
@@ -557,18 +551,6 @@
   <li class="md-nav__item">
     <a href="../running_inference_on_a_pretrained_model/" title="Using a pre-trained model" class="md-nav__link">
       Using a pre-trained model
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../training-pipelines/" title="IL to RL with pipelines" class="md-nav__link">
-      IL to RL with pipelines
     </a>
   </li>
 
@@ -657,30 +639,6 @@
   </li>
 
         
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../howtos/visualizing-results/" title="Visualize results" class="md-nav__link">
-      Visualize results
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../howtos/running-a-multi-agent-experiment/" title="Run a multi-agent experiment" class="md-nav__link">
-      Run a multi-agent experiment
-    </a>
-  </li>
-
-        
       </ul>
     </nav>
   </li>
@@ -737,30 +695,6 @@
   <li class="md-nav__item">
     <a href="../../projects/objectnav_baselines/" title="ObjectNav baselines" class="md-nav__link">
       ObjectNav baselines
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../projects/advisor_2020/" title="Advisor code" class="md-nav__link">
-      Advisor code
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../projects/two_body_problem_2019/" title="Two Body Problem code" class="md-nav__link">
-      Two Body Problem code
     </a>
   </li>
 
@@ -1092,8 +1026,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../api/core/algorithms/onpolicy_sync/light_engine.md" title="light_engine" class="md-nav__link">
-      light_engine
+    <a href="../../api/core/algorithms/onpolicy_sync/policy.md" title="policy" class="md-nav__link">
+      policy
     </a>
   </li>
 
@@ -1104,8 +1038,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../api/core/algorithms/onpolicy_sync/policy.md" title="policy" class="md-nav__link">
-      policy
+    <a href="../../api/core/algorithms/onpolicy_sync/engine.md" title="engine" class="md-nav__link">
+      engine
     </a>
   </li>
 
@@ -1301,116 +1235,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../api/plugins/habitat_plugin/habitat_tasks.md" title="habitat_tasks" class="md-nav__link">
-      habitat_tasks
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/plugins/habitat_plugin/habitat_sensors.md" title="habitat_sensors" class="md-nav__link">
-      habitat_sensors
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/plugins/habitat_plugin/habitat_environment.md" title="habitat_environment" class="md-nav__link">
-      habitat_environment
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../api/plugins/habitat_plugin/habitat_preprocessors.md" title="habitat_preprocessors" class="md-nav__link">
       habitat_preprocessors
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/plugins/habitat_plugin/habitat_task_samplers.md" title="habitat_task_samplers" class="md-nav__link">
-      habitat_task_samplers
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item md-nav__item--nested">
-    
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-10-3-1-7" type="checkbox" id="nav-10-3-1-7">
-    
-    <label class="md-nav__link" for="nav-10-3-1-7">
-      scripts
-    </label>
-    <nav class="md-nav" data-md-component="collapsible" data-md-level="4">
-      <label class="md-nav__title" for="nav-10-3-1-7">
-        scripts
-      </label>
-      <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/plugins/habitat_plugin/scripts/agent_demo.md" title="agent_demo" class="md-nav__link">
-      agent_demo
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/plugins/habitat_plugin/scripts/make_map.md" title="make_map" class="md-nav__link">
-      make_map
-    </a>
-  </li>
-
-        
-      </ul>
-    </nav>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/plugins/habitat_plugin/habitat_utils.md" title="habitat_utils" class="md-nav__link">
-      habitat_utils
     </a>
   </li>
 
@@ -1816,6 +1642,126 @@
           
 
 
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-10-3-5-7" type="checkbox" id="nav-10-3-5-7">
+    
+    <label class="md-nav__link" for="nav-10-3-5-7">
+      configs
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-3-5-7">
+        configs
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/robothor_plugin/configs/resnet18_objectnav.md" title="resnet18_objectnav" class="md-nav__link">
+      resnet18_objectnav
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/robothor_plugin/configs/simple_pointnav.md" title="simple_pointnav" class="md-nav__link">
+      simple_pointnav
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/robothor_plugin/configs/resnet18_pointnav.md" title="resnet18_pointnav" class="md-nav__link">
+      resnet18_pointnav
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/robothor_plugin/configs/pointnav_base.md" title="pointnav_base" class="md-nav__link">
+      pointnav_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/robothor_plugin/configs/resnet18_nav_base.md" title="resnet18_nav_base" class="md-nav__link">
+      resnet18_nav_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/robothor_plugin/configs/nav_base.md" title="nav_base" class="md-nav__link">
+      nav_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/robothor_plugin/configs/simple_objectnav.md" title="simple_objectnav" class="md-nav__link">
+      simple_objectnav
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/robothor_plugin/configs/objectnav_base.md" title="objectnav_base" class="md-nav__link">
+      objectnav_base
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
   <li class="md-nav__item">
     <a href="../../api/plugins/robothor_plugin/robothor_sensors.md" title="robothor_sensors" class="md-nav__link">
       robothor_sensors
@@ -1889,9 +1835,57 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/plugins/minigrid_plugin/minigrid_offpolicy.md" title="minigrid_offpolicy" class="md-nav__link">
+      minigrid_offpolicy
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/plugins/minigrid_plugin/minigrid_sensors.md" title="minigrid_sensors" class="md-nav__link">
       minigrid_sensors
     </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-10-3-6-5" type="checkbox" id="nav-10-3-6-5">
+    
+    <label class="md-nav__link" for="nav-10-3-6-5">
+      configs
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-3-6-5">
+        configs
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/minigrid_plugin/configs/minigrid_nomemory.md" title="minigrid_nomemory" class="md-nav__link">
+      minigrid_nomemory
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
   </li>
 
         
@@ -2251,6 +2245,18 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_local/distributed_bc_offpolicy.md" title="distributed_bc_offpolicy" class="md-nav__link">
+      distributed_bc_offpolicy
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/babyai_baselines/experiments/go_to_local/dagger.md" title="dagger" class="md-nav__link">
       dagger
     </a>
@@ -2263,8 +2269,32 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_local/bc_offpolicy.md" title="bc_offpolicy" class="md-nav__link">
+      bc_offpolicy
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/babyai_baselines/experiments/go_to_local/bc_teacher_forcing.md" title="bc_teacher_forcing" class="md-nav__link">
       bc_teacher_forcing
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_local/distributed_bc_teacher_forcing.md" title="distributed_bc_teacher_forcing" class="md-nav__link">
+      distributed_bc_teacher_forcing
     </a>
   </li>
 
@@ -2543,78 +2573,6 @@
           
 
 
-  <li class="md-nav__item md-nav__item--nested">
-    
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-10-4-3-1-2" type="checkbox" id="nav-10-4-3-1-2">
-    
-    <label class="md-nav__link" for="nav-10-4-3-1-2">
-      habitat
-    </label>
-    <nav class="md-nav" data-md-component="collapsible" data-md-level="5">
-      <label class="md-nav__title" for="nav-10-4-3-1-2">
-        habitat
-      </label>
-      <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgb_simpleconvgru_ddppo.md" title="pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
-      pointnav_habitat_rgb_simpleconvgru_ddppo
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgbd_simpleconvgru_ddppo.md" title="pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
-      pointnav_habitat_rgbd_simpleconvgru_ddppo
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_base.md" title="pointnav_habitat_base" class="md-nav__link">
-      pointnav_habitat_base
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo.md" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
-      pointnav_habitat_depth_simpleconvgru_ddppo
-    </a>
-  </li>
-
-        
-      </ul>
-    </nav>
-  </li>
-
-        
-          
-          
-          
-
-
   <li class="md-nav__item">
     <a href="../../api/projects/pointnav_baselines/experiments/pointnav_base.md" title="pointnav_base" class="md-nav__link">
       pointnav_base
@@ -2629,13 +2587,13 @@
 
   <li class="md-nav__item md-nav__item--nested">
     
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-10-4-3-1-4" type="checkbox" id="nav-10-4-3-1-4">
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-10-4-3-1-3" type="checkbox" id="nav-10-4-3-1-3">
     
-    <label class="md-nav__link" for="nav-10-4-3-1-4">
+    <label class="md-nav__link" for="nav-10-4-3-1-3">
       ithor
     </label>
     <nav class="md-nav" data-md-component="collapsible" data-md-level="5">
-      <label class="md-nav__title" for="nav-10-4-3-1-4">
+      <label class="md-nav__title" for="nav-10-4-3-1-3">
         ithor
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
@@ -2758,18 +2716,6 @@
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
         
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../api/projects/tutorials/pointnav_habitat_rgb_ddppo.md" title="pointnav_habitat_rgb_ddppo" class="md-nav__link">
-      pointnav_habitat_rgb_ddppo
-    </a>
-  </li>
-
         
           
           
@@ -3093,6 +3039,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#environemnt-setup" title="Environemnt Setup" class="md-nav__link">
+    Environemnt Setup
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#dataset-setup" title="Dataset Setup" class="md-nav__link">
     Dataset Setup
   </a>
@@ -3107,15 +3060,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#testing-pre-trained-model" title="Testing Pre-Trained Model" class="md-nav__link">
-    Testing Pre-Trained Model
+  <a href="#training-model-on-debug-dataset" title="Training Model On Debug Dataset" class="md-nav__link">
+    Training Model On Debug Dataset
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#training-model-from-scratch" title="Training Model From Scratch" class="md-nav__link">
-    Training Model From Scratch
+  <a href="#training-model-on-full-dataset" title="Training Model On Full Dataset" class="md-nav__link">
+    Training Model On Full Dataset
   </a>
   
 </li>
@@ -3187,32 +3140,65 @@ but rather a shallow wrapper that provides a uniform interface to the actual env
 <em>allenact</em> offers us great flexibility to train models using complex pipelines, we will be using a simple
 pure reinforcement learning approach for this tutorial. More specifically, we will be using DD-PPO,
 a decentralized and distributed variant of the ubiquitous PPO algorithm. For those unfamiliar with Reinforcement
-Learning we highly recommend this tutorial by Andrej Karpathy (http://karpathy.github.io/2016/05/31/rl/), and this book by Sutton and Barto (http://www.incompleteideas.net/book/the-book-2nd.html). Essentially what we are doing
+Learning we highly recommend <a href="http://karpathy.github.io/2016/05/31/rl/">this tutorial</a> by Andrej Karpathy, and <a href="http://www.incompleteideas.net/book/the-book-2nd.html">this
+book</a> by Sutton and Barto. Essentially what we are doing
 is letting our agent explore the environment on its own, rewarding it for taking actions that bring it closer
 to its goal and penalizing it for actions that take it away from its goal. We then optimize the agent's model
 to maximize this reward.</p>
+<h2 id="environemnt-setup">Environemnt Setup<a class="headerlink" href="#environemnt-setup" title="Permanent link">#</a></h2>
+<p>To setup the RoboTHOR environment please consult the <a href="../../installation/installation-framework/">installation guide</a>.</p>
 <h2 id="dataset-setup">Dataset Setup<a class="headerlink" href="#dataset-setup" title="Permanent link">#</a></h2>
 <p>To train the model on the PointNav task, we need to download the dataset and precomputed cache of distances to the target. The dataset contains a list of episodes with thousands of randomly generated starting positions and target locations for each of the scenes. The precomputed cache of distances is a large dictionary containing
 the shortest path from each point in a scene, to every other point in that scene. This is used to reward the agent
 for moving closer to the target in terms of geodesic distance - the actual path distance (as opposed to a 
 straight line distance).</p>
-<p>We can download and unzip the data with the following commands:</p>
-<div class="codehilite"><pre><span></span>wget &lt;REDACTED&gt;
-unzip &lt;REDACTED&gt;
+<p>We can download and extract the data by navigating to the <code>pointnav_baselines</code> project and running the 
+following script:</p>
+<div class="codehilite"><pre><span></span><span class="nb">cd</span> projects/pointnav_baselines/dataset
+sh download_pointnav_dataset.sh robothor
 </pre></div>
 
 
 <h2 id="config-file-setup">Config File Setup<a class="headerlink" href="#config-file-setup" title="Permanent link">#</a></h2>
 <p>Now comes the most important part of the tutorial, we are going to write an experiment config file.</p>
-<p>Unlike a library that can be imported into python, <strong>AllenAct</strong> is structured as a framework with a runner script called <code>ddmain.py</code> which will run the experiment specified in a config file. This design forces us to keep meticulous records of exactly which settings were used to produce a particular result,
+<p>Unlike a library that can be imported into python, <strong>AllenAct</strong> is structured as a framework with a runner script called <code>main.py</code> which will run the experiment specified in a config file. This design forces us to keep meticulous records of exactly which settings were used to produce a particular result,
 which can be very useful given how expensive RL models are to train.</p>
 <p>We will start by creating a new directory inside the <code>projects</code> directory. We can name this whatever we want but for now, we will go with <code>robothor_pointnav_tutuorial</code>. Then we can create a directory called 
  <code>experiments</code> inside the new directory we just created. This hierarchy is not necessary but it helps keep
 our experiments neatly organized. Now we create a file called <code>pointnav_robothor_rgb_ddppo</code> inside the
 <code>experiments</code> folder (again the name of this file is arbitrary).</p>
-<p>We start off by importing <code>ExperimentConfig</code> from the framework and defining a new subclass:</p>
-<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">core.base_abstractions.experiment_config</span> <span class="kn">import</span> <span class="n">ExperimentConfig</span>
-<span class="k">class</span> <span class="nc">ObjectNavRoboThorRGBPPOExperimentConfig</span><span class="p">(</span><span class="n">ExperimentConfig</span><span class="p">):</span>
+<p>We start off by importing everything we will need:</p>
+<div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">glob</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">ceil</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span> <span class="nn">gym</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="kn">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">torch.optim</span> <span class="kn">as</span> <span class="nn">optim</span>
+<span class="kn">from</span> <span class="nn">torch.optim.lr_scheduler</span> <span class="kn">import</span> <span class="n">LambdaLR</span>
+<span class="kn">from</span> <span class="nn">torchvision</span> <span class="kn">import</span> <span class="n">models</span>
+
+<span class="kn">from</span> <span class="nn">core.algorithms.onpolicy_sync.losses</span> <span class="kn">import</span> <span class="n">PPO</span>
+<span class="kn">from</span> <span class="nn">core.algorithms.onpolicy_sync.losses.ppo</span> <span class="kn">import</span> <span class="n">PPOConfig</span>
+<span class="kn">from</span> <span class="nn">projects.pointnav_baselines.models.point_nav_models</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ResnetTensorPointNavActorCritic</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">plugins.ithor_plugin.ithor_sensors</span> <span class="kn">import</span> <span class="n">RGBSensorThor</span>
+<span class="kn">from</span> <span class="nn">core.base_abstractions.experiment_config</span> <span class="kn">import</span> <span class="n">ExperimentConfig</span>
+<span class="kn">from</span> <span class="nn">core.base_abstractions.preprocessor</span> <span class="kn">import</span> <span class="n">ObservationSet</span>
+<span class="kn">from</span> <span class="nn">core.base_abstractions.task</span> <span class="kn">import</span> <span class="n">TaskSampler</span>
+<span class="kn">from</span> <span class="nn">plugins.habitat_plugin.habitat_preprocessors</span> <span class="kn">import</span> <span class="n">ResnetPreProcessorHabitat</span>
+<span class="kn">from</span> <span class="nn">plugins.robothor_plugin.robothor_sensors</span> <span class="kn">import</span> <span class="n">GPSCompassSensorRoboThor</span>
+<span class="kn">from</span> <span class="nn">plugins.robothor_plugin.robothor_task_samplers</span> <span class="kn">import</span> <span class="n">PointNavDatasetTaskSampler</span>
+<span class="kn">from</span> <span class="nn">plugins.robothor_plugin.robothor_tasks</span> <span class="kn">import</span> <span class="n">PointNavTask</span>
+<span class="kn">from</span> <span class="nn">utils.experiment_utils</span> <span class="kn">import</span> <span class="n">Builder</span><span class="p">,</span> <span class="n">PipelineStage</span><span class="p">,</span> <span class="n">TrainingPipeline</span><span class="p">,</span> <span class="n">LinearDecay</span>
+</pre></div>
+
+
+<p>Next we define a new experiment config class:</p>
+<div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">ObjectNavRoboThorRGBPPOExperimentConfig</span><span class="p">(</span><span class="n">ExperimentConfig</span><span class="p">):</span>
 </pre></div>
 
 
@@ -3266,8 +3252,8 @@ to running everything on the CPU with only 1 process.</p>
 <p>Since we are using a dataset to train our model we need to define the path to where we have stored it. If we
 download the dataset instructed above we can define the path as follows</p>
 <div class="codehilite"><pre><span></span>    <span class="c1"># Dataset Parameters</span>
-    <span class="n">TRAIN_DATASET_DIR</span> <span class="o">=</span> <span class="s2">&quot;dataset/robothor/objectnav/train&quot;</span>
-    <span class="n">VAL_DATASET_DIR</span> <span class="o">=</span> <span class="s2">&quot;dataset/robothor/objectnav/val&quot;</span>
+    <span class="n">TRAIN_DATASET_DIR</span> <span class="o">=</span> <span class="s2">&quot;projects/pointnav_baselines/dataset/robothor/train&quot;</span>
+    <span class="n">VAL_DATASET_DIR</span> <span class="o">=</span> <span class="s2">&quot;projects/pointnav_baselines/dataset/robothor/val&quot;</span>
 </pre></div>
 
 
@@ -3592,39 +3578,39 @@ set.</p>
 
 
 <p>This is it! If we copy all of the code into a file we should be able to run our experiment!</p>
-<h2 id="testing-pre-trained-model">Testing Pre-Trained Model<a class="headerlink" href="#testing-pre-trained-model" title="Permanent link">#</a></h2>
-<p>With the experiment all set up, we can try testing it with pre-trained weights.</p>
-<p>We can download and unzip these weights with the following commands:</p>
-<div class="codehilite"><pre><span></span>mkdir projects/pointnav_robothor_rgb/weights
-<span class="nb">cd</span> projects/pointnav_robothor_rgb/weights
-<span class="nb">cd</span> models
-wget &lt;REDACTED&gt;
-unzip &lt;REDACTED&gt;
+<h2 id="training-model-on-debug-dataset">Training Model On Debug Dataset<a class="headerlink" href="#training-model-on-debug-dataset" title="Permanent link">#</a></h2>
+<p>We can test if our installation worked properly by training our model on a small dataset of 4 episodes. This
+should take about 20 minutes on a computer with a NVIDIA GPU.</p>
+<p>First we need to change the dataset path to point to our small debug dataset. Modify these lines in your file</p>
+<div class="codehilite"><pre><span></span>    <span class="c1"># Dataset Parameters</span>
+    <span class="n">TRAIN_DATASET_DIR</span> <span class="o">=</span> <span class="s2">&quot;projects/pointnav_baselines/dataset/robothor/debug&quot;</span>
+    <span class="n">VAL_DATASET_DIR</span> <span class="o">=</span> <span class="s2">&quot;projects/pointnav_baselines/dataset/robothor/debug&quot;</span>
 </pre></div>
 
 
-<p>We can then test the model by running:</p>
-<div class="codehilite"><pre><span></span>python ddmain.py -o &lt;PATH_TO_OUTPUT&gt; -c &lt;PATH_TO_CHECKPOINT&gt; -t -b &lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt; &lt;EXPERIMENT_NAME&gt;
+<p>Note that we changed both the train and test dataset to debug, so the model will train and validate on the same
+4 episodes.</p>
+<p>We can not train a model by running:</p>
+<div class="codehilite"><pre><span></span>python main.py -o &lt;PATH_TO_OUTPUT&gt; -c -b &lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt; &lt;EXPERIMENT_NAME&gt;
 </pre></div>
 
 
-<p>Where <code>PATH_TO_OUTPUT</code> is the location where the results of the test will be dumped, <code>PATH_TO_CHECKPOINT</code> is the 
-location of the downloaded model weights, <code>&lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt;</code> is a path to the directory where our
-experiment definition is stored and <EXPERIMENT_NAME> is simply the name of our experiment (without the file extension).</p>
-<p>For our current setup the following command would work:</p>
-<div class="codehilite"><pre><span></span>python ddmain.py -o projects/pointnav_robothor_rgb/storage/ -c projects/pointnav_robothor_rgb/weights/NAME -t -b projects/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
+<p>If using the same configuration as we have set up, the following command should work:</p>
+<div class="codehilite"><pre><span></span>python main.py -o projects/tutorials/pointnav_robothor_rgb/storage/ -b projects/tutorials/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
 </pre></div>
 
 
-<p>The scripts should produce a json output in the specified folder containing the results of our test.</p>
-<h2 id="training-model-from-scratch">Training Model From Scratch<a class="headerlink" href="#training-model-from-scratch" title="Permanent link">#</a></h2>
-<p>We can also train the model from scratch by running:</p>
-<div class="codehilite"><pre><span></span>python ddmain.py -o &lt;PATH_TO_OUTPUT&gt; -c -b &lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt; &lt;EXPERIMENT_NAME&gt;
+<p>If we start up a tensorboard server during training and specify that <code>output_dir=storage</code> the output should look
+something like this:
+<img alt="tensorboard output" src="../../img/tb.png" /></p>
+<h2 id="training-model-on-full-dataset">Training Model On Full Dataset<a class="headerlink" href="#training-model-on-full-dataset" title="Permanent link">#</a></h2>
+<p>We can also train the model on the full dataset by changing back our dataset path and running:</p>
+<div class="codehilite"><pre><span></span>python main.py -o &lt;PATH_TO_OUTPUT&gt; -c -b &lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt; &lt;EXPERIMENT_NAME&gt;
 </pre></div>
 
 
 <p>But be aware, training this takes nearly 2 days on a machine with 8 GPU. For our current setup the following command would work:</p>
-<div class="codehilite"><pre><span></span>python ddmain.py -o projects/pointnav_robothor_rgb/storage/ -b projects/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
+<div class="codehilite"><pre><span></span>python main.py -o projects/tutorials/pointnav_robothor_rgb/storage/ -b projects/tutorials/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
 </pre></div>
 
 

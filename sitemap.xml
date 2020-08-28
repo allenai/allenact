@@ -16,6 +16,11 @@
      <changefreq>daily</changefreq>
     </url>
     <url>
+     <loc>https://github.com/allenai/allenact/installation/download-datasets/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
      <loc>https://github.com/allenai/allenact/getting_started/running-your-first-experiment/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
@@ -56,11 +61,6 @@
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>https://github.com/allenai/allenact/tutorials/training-pipelines/</loc>
-     <lastmod>2020-08-28</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
      <loc>https://github.com/allenai/allenact/howtos/defining-an-experiment/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
@@ -86,16 +86,6 @@
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>https://github.com/allenai/allenact/howtos/visualizing-results/</loc>
-     <lastmod>2020-08-28</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc>https://github.com/allenai/allenact/howtos/running-a-multi-agent-experiment/</loc>
-     <lastmod>2020-08-28</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
      <loc>https://github.com/allenai/allenact/projects/babyai_baselines/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
@@ -107,16 +97,6 @@
     </url>
     <url>
      <loc>https://github.com/allenai/allenact/projects/objectnav_baselines/</loc>
-     <lastmod>2020-08-28</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc>https://github.com/allenai/allenact/projects/advisor_2020/</loc>
-     <lastmod>2020-08-28</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc>https://github.com/allenai/allenact/projects/two_body_problem_2019/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
     </url>
@@ -133,6 +113,11 @@
     <url>
      <loc>https://github.com/allenai/allenact/LICENSE/</loc>
      <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc></loc>
+     
      <changefreq>daily</changefreq>
     </url>
     <url>
