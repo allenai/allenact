@@ -51,21 +51,13 @@ is letting our agent explore the environment on its own, rewarding it for taking
 to its goal and penalizing it for actions that take it away from its goal. We then optimize the agent's model
 to maximize this reward.
 
-## Environemnt Setup
-To setup the RoboTHOR environment please consult the [installation guide](../installation/installation-framework.md).
-
-## Dataset Setup
-To train the model on the PointNav task, we need to download the dataset and precomputed cache of distances to the target. The dataset contains a list of episodes with thousands of randomly generated starting positions and target locations for each of the scenes. The precomputed cache of distances is a large dictionary containing
-the shortest path from each point in a scene, to every other point in that scene. This is used to reward the agent
-for moving closer to the target in terms of geodesic distance - the actual path distance (as opposed to a 
+## Requirements
+To train the model on the PointNav task, we need to [install the RoboTHOR environment](../installation/installation-allenact.md) 
+and [download the RoboTHOR Objectnav dataset](../installation/download-datasets.md)
+The dataset contains a list of episodes with thousands of randomly generated starting positions and target locations for each of the scenes
+as well as a precomputed cache of distances, containing the shortest path from each point in a scene, to every other point in that scene. 
+This is used to reward the agent for moving closer to the target in terms of geodesic distance - the actual path distance (as opposed to a 
 straight line distance).
-
-We can download and extract the data by navigating to the `pointnav_baselines` project and running the 
-following script:
-```shell script
-cd projects/pointnav_baselines/dataset
-sh download_pointnav_dataset.sh robothor
-```
 
 ## Config File Setup
 Now comes the most important part of the tutorial, we are going to write an experiment config file.
@@ -166,8 +158,8 @@ Since we are using a dataset to train our model we need to define the path to wh
 download the dataset instructed above we can define the path as follows
 ```python
     # Dataset Parameters
-    TRAIN_DATASET_DIR = "projects/pointnav_baselines/dataset/robothor/train"
-    VAL_DATASET_DIR = "projects/pointnav_baselines/dataset/robothor/val"
+    TRAIN_DATASET_DIR = "datasets/robothor-pointnav/train"
+    VAL_DATASET_DIR = "datasets/robothor-pointnav/val"
 ```
 
 
@@ -507,8 +499,8 @@ should take about 20 minutes on a computer with a NVIDIA GPU.
 First we need to change the dataset path to point to our small debug dataset. Modify these lines in your file
 ```python
     # Dataset Parameters
-    TRAIN_DATASET_DIR = "projects/pointnav_baselines/dataset/robothor/debug"
-    VAL_DATASET_DIR = "projects/pointnav_baselines/dataset/robothor/debug"
+    TRAIN_DATASET_DIR = "datasets/robothor-pointnav/debug"
+    VAL_DATASET_DIR = "datasets/robothor-pointnav/debug"
 ```
 Note that we changed both the train and test dataset to debug, so the model will train and validate on the same
 4 episodes.
