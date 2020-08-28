@@ -299,8 +299,8 @@ class RNNStateEncoder(nn.Module):
     def _pack_hidden(
         self, hidden_states: Union[torch.FloatTensor, Sequence[torch.FloatTensor]]
     ) -> torch.FloatTensor:
-        """Stacks hidden states in an LSTM together (if using a GRU rather
-        than an LSTM this is just the identity).
+        """Stacks hidden states in an LSTM together (if using a GRU rather than
+        an LSTM this is just the identity).
 
         # Parameters
 

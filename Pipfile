@@ -9,7 +9,6 @@ black = "==19.10b0"
 docformatter = "==1.3.1"
 docstr-coverage = "*"
 setuptools = "==41.0.0"
-recommonmark = "*"
 ruamel-yaml = "*"
 mkdocs-material = "==5.5.3"
 mypy = "*"
@@ -19,9 +18,6 @@ gitpython = "*"
 ipython = "*"
 mkdocs = "==1.1.2"
 mathy-pydoc = "==0.7.18"
-#mkdocs = {editable = true, git="https://github.com/zhaoterryy/mkdocs-pdf-export-plugin.git", ref="master"}
-# pip install -e git://github.com/jwaschkau/mkpdfs-mkdocs-plugin.git@260643aa3297d5fb1f41f27ffd16bb0a4f5ce74c#egg=mkpdfs-mkdocs
-numba = "*"
 pytest = "*"
 coverage = "*"
 
@@ -41,12 +37,9 @@ moviepy = "*"
 filelock = "*"
 numpy-quaternion = "*"
 pandas = "*"
-seaborn = "*"
-statsmodels = "*"
 gym-minigrid = "*"
 gin-config = "*"
 babyai = {editable = true,git = "https://github.com/unnat/babyai.git",ref = "ff645fe00ea8412a29bd5e2d6f79ae1595d229a7"}
-localreg = "*"
 colour = "*"
 
 [requires]

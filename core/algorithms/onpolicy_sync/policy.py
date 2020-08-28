@@ -51,8 +51,8 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
 
     @property
     def recurrent_memory_specification(self) -> Optional[FullMemorySpecType]:
-        """The memory specification for the `ActorCriticModel`.
-        See docs for `_recurrent_memory_shape`
+        """The memory specification for the `ActorCriticModel`. See docs for
+        `_recurrent_memory_shape`
 
         # Returns
 
