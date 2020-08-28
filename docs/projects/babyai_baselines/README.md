@@ -5,7 +5,7 @@ We perform a collection of baseline experiments within the BabyAI environment
  For instance, to train a model using PPO, run
  
 ```bash
-python ddmain.py go_to_local.ppo --experiment_base projects/babyai_baselines/experiments
+python main.py go_to_local.ppo --experiment_base projects/babyai_baselines/experiments
 ```
 
 Note that these experiments will be quite slow when not using a GPU as the BabyAI model architecture is surprisingly 
