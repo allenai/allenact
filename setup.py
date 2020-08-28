@@ -7,7 +7,7 @@ if __name__ == "__main__":
         ],
         name="allenact",
         packages=find_packages(),
-        version="0.0.1",
+        version="0.1.0",
         install_requires=[
             "gym",
             "matplotlib",
@@ -24,11 +24,8 @@ if __name__ == "__main__":
             "filelock",
             "numpy-quaternion",
             "pandas",
-            "seaborn",
-            "statsmodels",
             "gym-minigrid",
             "gin-config",
-            "localreg",
             "colour",
         ],
     )

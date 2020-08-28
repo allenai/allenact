@@ -2,10 +2,10 @@
 
 ## TODO: replace the following with a simple experiment that finishes in 2-3 minutes
 
-Assuming you have [installed all of the requirements](../getting_started/installation.md), you can run your first experiment by calling 
+Assuming you have [installed all of the requirements](../installation/installation-allenact.md), you can run your first experiment by calling 
 
 ```bash
-python ddmain.py object_nav_thor_ppo -s 12345
+python main.py object_nav_thor_ppo -s 12345
 ```
 This runs the experiment defined in `experiments/object_nav_thor_ppo.py` with seed 12345.
 
@@ -18,7 +18,7 @@ a new folder `experiment_output` will be created containing
 
 To run your own custom experiment simply define a new experiment configuration in a file `
 experiments/my_custom_experiment.py` after which you may run it with
-`python ddmain.py my_custom_experiment`.
+`python main.py my_custom_experiment`.
 
 <!-- ## Experiment configuration
 

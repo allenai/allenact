@@ -269,11 +269,21 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         )
 
         if self.lang_model != "gru":
-            return self.forward_loop(
+            ac_output, hidden_states = self.forward_loop(
                 observations=observations,
                 recurrent_hidden_states=recurrent_hidden_states,
                 prev_actions=prev_actions,
                 masks=masks,
+            )
+
+            return self.adapt_result(
+                ac_output,
+                hidden_states[-1:],
+                num_steps,
+                num_samplers,
+                num_agents,
+                num_layers,
+                observations,
             )
 
         assert recurrent_hidden_states.shape[0] == 1
@@ -438,7 +448,13 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         hidden_states = memory
 
         return self.adapt_result(
-            ac_output, hidden_states, num_steps, num_samplers, num_agents, num_layers
+            ac_output,
+            hidden_states,
+            num_steps,
+            num_samplers,
+            num_agents,
+            num_layers,
+            observations,
         )
 
     @staticmethod
@@ -449,20 +465,21 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         masks: torch.FloatTensor,
     ):
         # Flatten all observation batch dims
-        def recursive_adapt_observations(obs, num_steps, num_samplers, num_agents):
+        def recursively_adapt_observations(obs, num_steps, num_samplers, num_agents):
             for entry in obs:
                 if isinstance(obs[entry], Dict):
-                    recursive_adapt_observations(
+                    recursively_adapt_observations(
                         obs[entry], num_steps, num_samplers, num_agents
                     )
                 else:
                     assert isinstance(obs[entry], torch.Tensor)
-                    final_dims = obs[entry].shape[
-                        2:
-                    ]  # assumes no agents dim in observations!
-                    obs[entry] = obs[entry].view(
-                        num_steps * num_samplers * num_agents, *final_dims
-                    )
+                    if entry in ["minigrid_ego_image", "minigrid_mission"]:
+                        final_dims = obs[entry].shape[
+                            2:
+                        ]  # assumes no agents dim in observations!
+                        obs[entry] = obs[entry].view(
+                            num_steps * num_samplers * num_agents, *final_dims
+                        )
 
         # INPUTS
         # observations are of shape [num_steps, num_samplers, (num_agents,) ...]
@@ -480,14 +497,17 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         # prev_actions [num_steps * num_samplers * num_agents, 1]
         # masks [num_steps * num_samplers * num_agents, 1]
 
-        recursive_adapt_observations(observations, num_steps, num_samplers, num_agents)
+        recursively_adapt_observations(
+            observations, num_steps, num_samplers, num_agents
+        )
         recurrent_hidden_states = cast(
             torch.FloatTensor,
             recurrent_hidden_states.view(num_layers, num_samplers * num_agents, -1),
         )
-        prev_actions = prev_actions.view(  # type:ignore
-            num_steps * num_samplers * num_agents, 1
-        )
+        if prev_actions is not None:
+            prev_actions = prev_actions.view(  # type:ignore
+                num_steps * num_samplers * num_agents, 1
+            )
         masks = masks.view(num_steps * num_samplers * num_agents, 1)  # type:ignore
 
         return (
@@ -502,7 +522,7 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         )
 
     @staticmethod
-    def adapt_result(ac_output, hidden_states, num_steps, num_samplers, num_agents, num_layers):  # type: ignore
+    def adapt_result(ac_output, hidden_states, num_steps, num_samplers, num_agents, num_layers, observations):  # type: ignore
         distributions = CategoricalDistr(
             logits=ac_output.distributions.logits.view(
                 num_steps, num_samplers, num_agents, -1
@@ -519,6 +539,27 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
             )
 
         hidden_states = hidden_states.view(num_layers, num_samplers * num_agents, -1)
+
+        # Unflatten all observation batch dims
+        def recursively_adapt_observations(obs, num_steps, num_samplers, num_agents):
+            for entry in obs:
+                if isinstance(obs[entry], Dict):
+                    recursively_adapt_observations(
+                        obs[entry], num_steps, num_samplers, num_agents
+                    )
+                else:
+                    assert isinstance(obs[entry], torch.Tensor)
+                    if entry in ["minigrid_ego_image", "minigrid_mission"]:
+                        final_dims = obs[entry].shape[
+                            1:
+                        ]  # assumes no agents dim in observations!
+                        obs[entry] = obs[entry].view(
+                            num_steps, num_samplers * num_agents, *final_dims
+                        )
+
+        recursively_adapt_observations(
+            observations, num_steps, num_samplers, num_agents
+        )
 
         return (
             ActorCriticOutput(

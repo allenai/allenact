@@ -21,7 +21,7 @@ MemoryShapeType = Tuple[MemoryDimType, ...]
 MemorySpecType = Tuple[MemoryShapeType, torch.dtype]
 FullMemorySpecType = Dict[str, MemorySpecType]
 
-ObservationType = Dict[str, Union[torch.FloatTensor, Dict[str, Any]]]
+ObservationType = Dict[str, Union[torch.Tensor, Dict[str, Any]]]
 
 
 class ActorCriticModel(Generic[DistributionType], nn.Module):
@@ -51,8 +51,8 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
 
     @property
     def recurrent_memory_specification(self) -> Optional[FullMemorySpecType]:
-        """The memory specification for the `ActorCriticModel`.
-        See docs for `_recurrent_memory_shape`
+        """The memory specification for the `ActorCriticModel`. See docs for
+        `_recurrent_memory_shape`
 
         # Returns
 

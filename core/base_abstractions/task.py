@@ -141,7 +141,8 @@ class Task(Generic[EnvType]):
 
     @abstractmethod
     def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
-        """Helper function called by `step` to take a step by each agent in the environment.
+        """Helper function called by `step` to take a step by each agent in the
+        environment.
 
         Takes the action in the environment corresponding to
         `self.class_action_names()[action]` for each action in actions and returns

@@ -14,7 +14,8 @@ class FrozenClassVariables(abc.ABCMeta):
     """Metaclass for ExperimentConfig.
 
     Ensures ExperimentConfig class-level attributes cannot be modified.
-    ExperimentConfig attributes can still be modified at the object level.
+    ExperimentConfig attributes can still be modified at the object
+    level.
     """
 
     def __setattr__(cls, attr, value):

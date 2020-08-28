@@ -6,6 +6,7 @@ from typing import List, Optional, Union, Dict, Any, cast
 
 import gym
 
+from utils.cache_utils import _str_to_pos
 from core.base_abstractions.sensor import Sensor
 from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
@@ -878,7 +879,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
             "initial_position": ["initial_position"],
             "initial_orientation": episode["initial_orientation"],
             "target": find_nearest_point_in_cache(
-                distance_cache, episode["target_position"]
+                distance_cache, _str_to_pos(episode["target_position"])
             ),
             "shortest_path": episode["shortest_path"],
             "distance_to_target": episode["shortest_path_length"],
@@ -897,7 +898,8 @@ class PointNavDatasetTaskSampler(TaskSampler):
             self.max_tasks -= 1
 
         if not self.env.teleport(
-            episode["initial_position"], episode["initial_orientation"]
+            _str_to_pos(episode["initial_position"]),
+            {"x": 0.0, "y": episode["initial_orientation"], "z": 0.0},
         ):
             return self.next_task()
 

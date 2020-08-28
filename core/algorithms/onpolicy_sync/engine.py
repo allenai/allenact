@@ -6,23 +6,26 @@ import traceback
 import typing
 from collections import defaultdict
 from multiprocessing.context import BaseContext
-from typing import Optional, Any, Dict, Union, List, Tuple, Sequence, cast
+from typing import (
+    Optional,
+    Any,
+    Dict,
+    Union,
+    List,
+    Tuple,
+    Sequence,
+    cast,
+    Iterator,
+    Callable,
+)
 
 import torch
 import torch.distributions
 import torch.multiprocessing as mp
+import torch.distributed as dist
 import torch.optim
 from torch import nn
 from torch import optim
-from torch.nn.parallel import DistributedDataParallel
-
-try:
-    from torch.nn.parallel import DistributedDataParallelCPU  # type:ignore
-except ImportError as e:
-
-    class DistributedDataParallelCPU(object):  # type:ignore
-        def __init__(self, *args, **kwargs):
-            raise e
 
 
 from torch.optim.lr_scheduler import _LRScheduler
@@ -41,7 +44,11 @@ from utils.experiment_utils import (
     PipelineStage,
 )
 from utils.system import get_logger
-from utils.tensor_utils import batch_observations
+from utils.tensor_utils import (
+    batch_observations,
+    to_device_recursively,
+    detach_recursively,
+)
 from core.base_abstractions.misc import RLStepResult
 
 
@@ -137,9 +144,7 @@ class OnPolicyRLEngine(object):
         self._vector_tasks: Optional[VectorSampledTasks] = None
 
         self.observation_set = None
-        self.actor_critic: Optional[
-            Union[DistributedDataParallel, ActorCriticModel]
-        ] = None
+        self.actor_critic: Optional[ActorCriticModel] = None
         if self.num_samplers > 0:
             if (
                 "make_preprocessors_fns" in self.machine_params
@@ -193,14 +198,6 @@ class OnPolicyRLEngine(object):
                     rank=self.worker_id,
                     world_size=self.num_workers,
                 )
-                if cpu_device:
-                    self.actor_critic = DistributedDataParallelCPU(self.actor_critic)
-                else:
-                    self.actor_critic = DistributedDataParallel(
-                        self.actor_critic,
-                        device_ids=[cast(Union[int, torch.device], self.device)],
-                        output_device=cast(Union[int, torch.device], self.device),
-                    )
 
             self.is_distributed = True  # for testing, this only means we need to synchronize after each checkpoint
 
@@ -311,12 +308,7 @@ class OnPolicyRLEngine(object):
             Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]], ckpt,
         )
 
-        target = (
-            self.actor_critic
-            if not self.mode == "train" or not self.is_distributed
-            else self.actor_critic.module
-        )
-        target.load_state_dict(ckpt["model_state_dict"])  # type:ignore
+        self.actor_critic.load_state_dict(ckpt["model_state_dict"])  # type:ignore
 
         return ckpt
 
@@ -575,7 +567,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         distributed_port: int = 0,
         deterministic_agent: bool = False,
         distributed_preemption_threshold: float = 0.7,
-        distributed_barrier: Optional[mp.Barrier] = None,
         max_sampler_processes_per_worker: Optional[int] = None,
         **kwargs,
     ):
@@ -612,7 +603,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 optimizer=self.optimizer
             )
 
-        self.distributed_barrier = distributed_barrier
         if self.is_distributed:
             # Tracks how many workers have finished their rollout
             self.num_workers_done = torch.distributed.PrefixStore(  # type:ignore
@@ -640,8 +630,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         seed = (seed ^ (self.training_pipeline.total_steps + 1)) % (
             2 ** 31 - 1
         )  # same seed for all workers
-        # TODO: fix for distributed test
-        if self.mode == "train":
+
+        if self.mode == "train" or self.mode == "test":
             return self.worker_seeds(self.num_workers, seed)[
                 self.worker_id
             ]  # doesn't modify the current rng state
@@ -668,12 +658,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             ),
         )
 
-        target = (
-            self.actor_critic if not self.is_distributed else self.actor_critic.module
-        )
-
         save_dict = {
-            "model_state_dict": target.state_dict(),  # type:ignore
+            "model_state_dict": self.actor_critic.state_dict(),  # type:ignore
             "total_steps": self.training_pipeline.total_steps,  # Total steps including current stage
             "optimizer_state_dict": self.optimizer.state_dict(),  # type: ignore
             "training_pipeline_state_dict": self.training_pipeline.state_dict(),
@@ -809,10 +795,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
     # aggregates info of specific type from PipelineProgressState list
     def aggregate_info(
-        self,
-        scalars: ScalarMeanTracker,
-        tracking_info: Dict[str, List],
-        type_str: str = "update_package",
+        self, scalars: ScalarMeanTracker, tracking_info: Dict[str, List], type_str: str,
     ) -> Tuple[str, Dict[str, float], int]:
         assert scalars.empty, "Found non-empty scalars {}".format(scalars.counts)
 
@@ -879,8 +862,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
                 info: Dict[str, float] = {}
 
-                if self.lr_scheduler is not None:
-                    info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
+                info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
 
                 total_loss: Optional[torch.Tensor] = None
                 for loss_name in self.training_pipeline.current_stage_losses:
@@ -902,56 +884,128 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     for key in current_info:
                         info[loss_name + "/" + key] = current_info[key]
 
-                assert total_loss is not None, "No losses specified?"
+                assert (
+                    total_loss is not None
+                ), "No losses specified for training in stage {}".format(
+                    self.training_pipeline.current_stage_index
+                )
 
                 info["total_loss"] = total_loss.item()
                 self.tracking_info["update"].append(("update_package", info, bsize))
 
-                if isinstance(total_loss, torch.Tensor):
-                    self.optimizer.zero_grad()  # type: ignore
-                    total_loss.backward()  # synchronize
-                    nn.utils.clip_grad_norm_(
-                        self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
-                    )
-                    self.optimizer.step()  # type: ignore
-                    self.training_pipeline.backprop_count += 1
-                else:
-                    get_logger().warning(
-                        "{} worker {}"
-                        "Total loss ({}) is not a FloatTensor, it is a {}. This can happen when using teacher"
-                        "enforcing alone if the expert does not know the optimal action".format(
-                            self.mode, self.worker_id, total_loss, type(total_loss)
-                        )
-                    )
-                    if self.is_distributed:
-                        # TODO test the hack actually works
-                        zero_loss = (
-                            (
-                                torch.zeros_like(actor_critic_output.distributions)
-                                * actor_critic_output.distributions
-                            ).sum()
-                            + (
-                                torch.zeros_like(actor_critic_output.values)
-                                * actor_critic_output.values
-                            ).sum()
-                        )
-                        self.optimizer.zero_grad()  # type: ignore
-                        zero_loss.backward()  # synchronize
-                        nn.utils.clip_grad_norm_(
-                            self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
-                        )
-                        self.optimizer.step()  # type: ignore
-                        self.training_pipeline.backprop_count += 1
+                self.backprop_step(total_loss)
 
-        # # TODO Useful for ensuring correctness of distributed infrastructure
-        # target = self.actor_critic.module if self.is_distributed else self.actor_critic
-        # state_dict = target.state_dict()
+        # # TODO Unit test to ensure correctness of distributed infrastructure
+        # state_dict = self.actor_critic.state_dict()
         # keys = sorted(list(state_dict.keys()))
-        # get_logger().debug("worker {} param 0 {} param -1 {}".format(
-        #     self.worker_id,
-        #     state_dict[keys[0]].flatten()[0],
-        #     state_dict[keys[-1]].flatten()[-1],
-        # ))
+        # get_logger().debug(
+        #     "worker {} param 0 {} param -1 {}".format(
+        #         self.worker_id,
+        #         state_dict[keys[0]].flatten()[0],
+        #         state_dict[keys[-1]].flatten()[-1],
+        #     )
+        # )
+
+    def make_offpolicy_iterator(self, data_iterator_builder: Callable[..., Iterator]):
+        stage = self.training_pipeline.current_stage
+        kwargs = stage.offpolicy_component.data_iterator_kwargs_generator()
+        assert (
+            "current_worker" not in kwargs
+        ), "current_worker is reserved for the engine to be passed to the offpolicy data iterator builder"
+        return data_iterator_builder(current_worker=self.worker_id, **kwargs)
+
+    def backprop_step(self, total_loss):
+        self.optimizer.zero_grad()  # type: ignore
+        if isinstance(total_loss, torch.Tensor):
+            total_loss.backward()
+
+        if self.is_distributed:
+            # From https://github.com/pytorch/pytorch/issues/43135
+            reductions = []
+            for p in self.actor_critic.parameters():
+                # you can also organize grads to larger buckets to make allreduce more efficient
+                if p.requires_grad:
+                    if p.grad is None:
+                        p.grad = torch.zeros_like(p.data)
+                    reductions.append(
+                        dist.all_reduce(p.grad, async_op=True,)
+                    )  # synchronize
+            for reduction in reductions:
+                reduction.wait()
+
+        nn.utils.clip_grad_norm_(
+            self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
+        )
+        self.optimizer.step()  # type: ignore
+
+    def offpolicy_update(
+        self,
+        updates: int,
+        data_iterator: Optional[Iterator],
+        data_iterator_builder: Callable[..., Iterator],
+    ) -> Iterator:
+        stage = self.training_pipeline.current_stage
+
+        for e in range(updates):
+            if data_iterator is None:
+                data_iterator = self.make_offpolicy_iterator(data_iterator_builder)
+                stage.offpolicy_memory.clear()
+                if stage.offpolicy_epochs is None:
+                    stage.offpolicy_epochs = 0
+                else:
+                    stage.offpolicy_epochs += 1
+
+            try:
+                batch = next(data_iterator)
+            except StopIteration:
+                data_iterator = self.make_offpolicy_iterator(data_iterator_builder)
+                stage.offpolicy_memory.clear()
+                stage.offpolicy_epochs += 1
+                batch = next(data_iterator)
+
+            batch = to_device_recursively(batch, device=self.device, inplace=True)
+
+            info: Dict[str, float] = dict()
+            info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
+
+            bsize: Optional[int] = None
+
+            total_loss: Optional[torch.Tensor] = None
+            for loss_name in stage.offpolicy_named_loss_weights:
+                loss, loss_weight = (
+                    self.training_pipeline.current_stage_offpolicy_losses[loss_name],
+                    stage.offpolicy_named_loss_weights[loss_name],
+                )
+
+                current_loss, current_info, stage.offpolicy_memory, bsize = loss.loss(
+                    model=self.actor_critic,
+                    batch=batch,
+                    step_count=self.step_count,
+                    memory=stage.offpolicy_memory,
+                )
+                if total_loss is None:
+                    total_loss = loss_weight * current_loss
+                else:
+                    total_loss = total_loss + loss_weight * current_loss
+
+                for key in current_info:
+                    info["offpolicy/" + loss_name + "/" + key] = current_info[key]
+
+            assert (
+                total_loss is not None
+            ), "No offline losses specified for training in stage {}".format(
+                self.training_pipeline.current_stage_index
+            )
+
+            info["offpolicy/total_loss"] = total_loss.item()
+            self.tracking_info["update"].append(("update_package", info, bsize))
+
+            self.backprop_step(total_loss)
+
+            stage.offpolicy_memory = detach_recursively(
+                input=stage.offpolicy_memory, inplace=True
+            )
+        return data_iterator
 
     def apply_teacher_forcing(
         self,
@@ -959,9 +1013,20 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         step_observation: Dict[str, torch.Tensor],
         step_count: int,
     ):
+        if len(actions.shape) == len(step_observation["expert_action"].shape) + 1:
+            # Missing agent dimension
+            step_observation["expert_action"] = step_observation[
+                "expert_action"
+            ].unsqueeze(-2)
         tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
-        expert_actions = step_observation["expert_action"][..., 0:1]
-        expert_action_exists_mask = step_observation["expert_action"][..., 1:2]
+        expert_actions = step_observation["expert_action"][..., :1]
+        expert_action_exists_mask = step_observation["expert_action"][..., 1:]
+
+        assert (
+            expert_actions.shape == actions.shape
+        ), "expert actions shape {} doesn't match the model's {}".format(
+            expert_actions.shape, actions.shape
+        )
 
         teacher_forcing_mask = (
             torch.distributions.bernoulli.Bernoulli(
@@ -974,7 +1039,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             .to(self.device)
         ) * expert_action_exists_mask
 
-        actions = torch.where(teacher_forcing_mask, expert_actions, actions)
+        actions = torch.where(teacher_forcing_mask.byte(), expert_actions, actions)
 
         return (
             actions,
@@ -1006,6 +1071,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self.last_log = self.training_pipeline.total_steps
         self.last_save = self.training_pipeline.total_steps
 
+        offpolicy_data_iterator: Optional[Iterator] = None
+
         while True:
             self.training_pipeline.before_rollout()
             if self.training_pipeline.current_stage is None:
@@ -1015,26 +1082,26 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_done.set("done", str(0))
                 self.num_workers_steps.set("steps", str(0))
                 # Ensure all workers are done before incrementing num_workers_{steps, done}
-                idx = self.distributed_barrier.wait()  # here we synchronize
-                if idx == 0:
-                    self.distributed_barrier.reset()
+                dist.barrier()
 
             self.former_steps = self.step_count
             for step in range(self.training_pipeline.num_steps):
                 self.collect_rollout_step(rollouts=rollouts)
                 if self.is_distributed:
                     # Preempt stragglers
-                    # TODO: Add a bit more description of his behavior.
+                    # Each worker will stop collecting steps for the current rollout whenever a
+                    # 100 * distributed_preemption_threshold percentage of workers are finished collecting their
+                    # rollout steps and we have collected at least 25% but less than 90% of the steps.
                     num_done = int(self.num_workers_done.get("done"))
                     if (
                         num_done
                         > self.distributed_preemption_threshold * self.num_workers
-                        and self.training_pipeline.num_steps / 4
+                        and 0.25 * self.training_pipeline.num_steps
                         <= step
-                        < 0.95 * (self.training_pipeline.num_steps - 1)
+                        < 0.9 * self.training_pipeline.num_steps
                     ):
                         get_logger().debug(
-                            "{} worker {} narrowed rollouts at step {} ({}) with {} done".format(
+                            "{} worker {} narrowed rollouts after {} steps (out of {}) with {} workers done".format(
                                 self.mode, self.worker_id, rollouts.step, step, num_done
                             )
                         )
@@ -1055,14 +1122,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_steps.add("steps", self.step_count - self.former_steps)
 
                 # Ensure all workers are done before updating step counter
-                idx = self.distributed_barrier.wait()  # here we synchronize
-                if idx == 0:
-                    self.distributed_barrier.reset()
+                dist.barrier()
 
                 ndone = int(self.num_workers_done.get("done"))
                 assert (
                     ndone == self.num_workers
-                ), "# workers done {} <> # workers {}".format(ndone, self.num_workers)
+                ), "# workers done {} != # workers {}".format(ndone, self.num_workers)
 
                 # get the actual step_count
                 self.step_count = (
@@ -1080,6 +1145,16 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.training_pipeline.rollout_count += 1
 
             rollouts.after_update()
+
+            if self.training_pipeline.current_stage.offpolicy_component is not None:
+                offpolicy_component = (
+                    self.training_pipeline.current_stage.offpolicy_component
+                )
+                offpolicy_data_iterator = self.offpolicy_update(
+                    updates=offpolicy_component.updates,
+                    data_iterator=offpolicy_data_iterator,
+                    data_iterator_builder=offpolicy_component.data_iterator_builder,
+                )
 
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step(epoch=self.training_pipeline.total_steps)
@@ -1182,7 +1257,6 @@ class OnPolicyInference(OnPolicyRLEngine):
         deterministic_agent: bool = True,
         worker_id: int = 0,
         num_workers: int = 1,
-        distributed_barrier: Optional[mp.Barrier] = None,
         **kwargs,
     ):
         super().__init__(
@@ -1205,8 +1279,6 @@ class OnPolicyInference(OnPolicyRLEngine):
         # get_logger().debug("{} worker {} using device {}".format(self.mode, self.worker_id, self.device))
 
         self.deterministic_agent = deterministic_agent
-
-        self.distributed_barrier = distributed_barrier
 
     def run_eval(
         self,
@@ -1328,12 +1400,6 @@ class OnPolicyInference(OnPolicyRLEngine):
             cond = not checkpoints_queue.empty()
         return data
 
-    def barrier(self):
-        if self.is_distributed:
-            idx = self.distributed_barrier.wait()  # here we synchronize
-            if idx == 0:
-                self.distributed_barrier.reset()
-
     def process_checkpoints(self):
         assert (
             self.mode != "train"
@@ -1393,7 +1459,8 @@ class OnPolicyInference(OnPolicyRLEngine):
 
                         self.results_queue.put(eval_package)
 
-                        self.barrier()
+                        if self.is_distributed:
+                            dist.barrier()
                     else:
                         self.results_queue.put(
                             ("{}_package".format(self.mode), None, -1)
