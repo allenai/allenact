@@ -17,10 +17,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     def training_pipeline(cls, **kwargs):
         return TrainingPipeline(
             named_losses={
-                "ppo_loss": Builder(
-                    PPO,
-                    default=PPOConfig,
-                ),
+                "ppo_loss": PPO(**PPOConfig),
             },
             optimizer_builder=Builder(
                 optim.Adam, dict(lr=2.5e-4)
@@ -69,8 +66,8 @@ class ObjectNavThorDaggerPPOExperimentConfig(ExperimentConfig):
             update_repeats=4,
             num_steps=128,
             named_losses={
-                "imitation_loss": Builder(Imitation,), # We add an imitation loss.
-                "ppo_loss": Builder(PPO, default=PPOConfig,),
+                "imitation_loss": Imitation(), # We add an imitation loss.
+                "ppo_loss": PPO(**PPOConfig),
             },
             gamma=0.99,
             use_gae=True,
