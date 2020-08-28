@@ -4,10 +4,10 @@ Let's look at an example experiment configuration for an object navigation examp
 RGB images from the environment and target object classes from the task.
 
 The interface to be implemented by the experiment specification is defined in
-[rl_base.experiment_config](/api/rl_base/experiment_config#experimentconfig). The first method to implement is `tag`,
+[core.base_abstractions.experiment_config](/api/core/base_abstractions/experiment_config#experimentconfig). The first method to implement is `tag`,
 which provides a string identifying the experiment:
 ```python
-class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfig):
+class ObjectNavThorPPOExperimentConfig(core.base_abstractions.experiment_config.ExperimentConfig):
     @classmethod
     def tag(cls):
         return "ObjectNavThorPPO"
@@ -17,9 +17,9 @@ class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfi
 ## Model creation
 
 Next, `create_model` will be used to instantiate
-[object navigation baseline actor-critic models](/api/models/object_nav_models#ObjectNavBaselineActorCritic):
+[object navigation baseline actor-critic models](/api/projects/objectnav_baselines/models/object_nav_models#ObjectNavBaselineActorCritic):
 ```python
-class ObjectNavThorExperimentConfig(rl_base.experiment_config.ExperimentConfig):
+class ObjectNavThorExperimentConfig(core.base_abstractions.experiment_config.ExperimentConfig):
     ...
     SCREEN_SIZE = 224
     ...
@@ -27,14 +27,14 @@ class ObjectNavThorExperimentConfig(rl_base.experiment_config.ExperimentConfig):
     ...
 
     SENSORS = [
-        rl_ai2thor.ai2thor_sensors.RGBSensorThor(
+        plugins.ithor_plugin.ithor_sensors.RGBSensorThor(
             {
                 "height": SCREEN_SIZE,
                 "width": SCREEN_SIZE,
                 "use_resnet_normalization": True,
             }
         ),
-        rl_ai2thor.ai2thor_sensors.GoalObjectTypeThorSensor(
+        plugins.ithor_plugin.ithor_sensors.GoalObjectTypeThorSensor(
             {"object_types": OBJECT_TYPES}
         ),
     ]
@@ -43,9 +43,9 @@ class ObjectNavThorExperimentConfig(rl_base.experiment_config.ExperimentConfig):
     def create_model(cls, **kwargs) -> torch.nn.Module:
         return models.object_nav_models.ObjectNavBaselineActorCritic(
             action_space=gym.spaces.Discrete(
-                len(rl_ai2thor.object_nav.tasks.ObjectNavTask.class_action_names())
+                len(plugins.ithor_plugin.ithor_tasks.ObjectNavTask.class_action_names())
             ),
-            observation_space=rl_base.sensor.SensorSuite(
+            observation_space=core.base_abstractions.sensor.SensorSuite(
                 cls.SENSORS
             ).observation_spaces,
             goal_sensor_uuid="goal_object_type_ind",
@@ -63,7 +63,7 @@ initializers.
 
 We can implement a training pipeline which trains with a single stage using PPO:
 ```python
-class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfig):
+class ObjectNavThorPPOExperimentConfig(core.base_abstractions.experiment_config.ExperimentConfig):
     ...
     @classmethod
     def training_pipeline(cls, **kwargs):
@@ -160,7 +160,7 @@ to import the module with the parent experiment config relative to the current l
 
 In `machine_params` we define machine configuration parameters that will be used for training, validation and test:
 ```python
-class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfig):
+class ObjectNavThorPPOExperimentConfig(core.base_abstractions.experiment_config.ExperimentConfig):
     ...
     @classmethod
     def machine_params(cls, mode="train", **kwargs):
@@ -191,11 +191,11 @@ and the machine specific parameters that should be used during training. Critica
 defined which task we wish to train our agent to complete. This is done by implementing the 
 `ExperimentConfig.make_sampler_fn` function
 ```python
-class ObjectNavThorPPOExperimentConfig(rl_base.experiment_config.ExperimentConfig):
+class ObjectNavThorPPOExperimentConfig(core.base_abstractions.experiment_config.ExperimentConfig):
     ...
     @classmethod
-    def make_sampler_fn(cls, **kwargs) -> rl_base.task.TaskSampler:
-        return rl_ai2thor.object_nav.task_samplers.ObjectNavTaskSampler(**kwargs)
+    def make_sampler_fn(cls, **kwargs) -> core.base_abstractions.task.TaskSampler:
+        return plugins.ithor_plugin.ithor_task_samplers.ObjectNavTaskSampler(**kwargs)
     ...
 ```
 Now, before training starts, our trainer will know to generate a collection of task
