@@ -13,10 +13,10 @@ AllenAct is built and backed by the [Allen Institute for AI (AI2)](https://allen
 
 ## Quick Links
 
-- [Website & Docs](https://allenact.org/)
+- [Website & Docs](https://www.allenact.org/)
 - [Github](https://github.com/allenai/allenact)
-- [Install](https://allenact.org/installation/installation-allenact/)
-- [Tutorials](https://allenact.org/tutorials/)
+- [Install](https://www.allenact.org/installation/installation-allenact/)
+- [Tutorials](https://www.allenact.org/tutorials/)
 - [Citation](#citation)
 
 ## Features & Highlights

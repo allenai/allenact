@@ -1,6 +1,6 @@
 
 <div align="center">
-    <img src="img/AllenAct.png" />
+    <img src="img/AllenAct.png" width="350" />
     <br>
     <i><h3>An open source framework for research in Embodied-AI</h3></i>
     </p>
@@ -13,10 +13,10 @@ AllenAct is built and backed by the [Allen Institute for AI (AI2)](https://allen
 
 ## Quick Links
 
-- [Website & Docs](https://allenact.org/)
+- [Website & Docs](https://www.allenact.org/)
 - [Github](https://github.com/allenai/allenact)
-- [Install](https://allenact.org/installation/installation-allenact/)
-- [Tutorials](https://allenact.org/tutorials/)
+- [Install](https://www.allenact.org/installation/installation-allenact/)
+- [Tutorials](https://www.allenact.org/tutorials/)
 - [Citation](#citation)
 
 ## Features & Highlights
@@ -49,9 +49,9 @@ AllenAct is an open-source project built by members of the PRIOR research group 
 
 <div align="left">
     <br>
-    <img src="img/PRIORLogoBlackEmbedded.png">
+    <img src="img/PRIORLogoBlackEmbedded.png" width="200">
      &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
-    <img src="img/AI2_Logo_Square_Gradients_crop.png">
+    <img src="img/AI2_Logo_Square_Gradients_crop.png" width="100">
     <br>
 </div>
 
