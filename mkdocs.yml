@@ -15,6 +15,7 @@ theme:
   - typescript
   - json
 
+google_analytics: ['UA-120916510-8', 'allenact.org']
 
 repo_name: allenai/allenact
 repo_url: https://github.com/allenai/allenact
