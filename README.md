@@ -1,6 +1,7 @@
-
 <div align="center">
-    <img src="docs/img/AllenAct.svg" width="350" />
+    <a href="https://allenact.org/" target="_blank">
+        <img src="docs/img/AllenAct.svg" width="350" />
+    </a>
     <br>
     <i><h3>An open source framework for research in Embodied-AI</h3></i>
     </p>
@@ -48,7 +49,9 @@ AllenAct is MIT licensed, as found in the [LICENSE](LICENSE.md) file.
 AllenAct is an open-source project built by members of the PRIOR research group at the Allen Institute for Artificial Intelligence (AI2). 
 
 <div align="left">
-    <img src="docs/img/ai2-prior.svg" width="400">
+    <a href="https://prior.allenai.org/" target="_blank">
+        <img src="docs/img/ai2-prior.svg" width="400">
+    </a>
     <br>
 </div>
 
