@@ -26,6 +26,7 @@ nav:
 - Installation:
   - Install AllenAct: installation/installation-allenact.md
   - Install environments: installation/installation-framework.md
+  - Download datasets: installation/download-datasets.md
 - Getting started:
   - Run your first experiment: getting_started/running-your-first-experiment.md
   - Structure of the codebase: getting_started/structure.md
