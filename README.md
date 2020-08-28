@@ -47,7 +47,7 @@ AllenAct is MIT licensed, as found in the [LICENSE](LICENSE.md) file.
 AllenAct is an open-source project built by members of the PRIOR research group at the Allen Institute for Artificial Intelligence (AI2). 
 
 <div align="left">
-    <a href="//www.prior.allenai.org/" target="_blank">
+    <a href="//prior.allenai.org/" target="_blank">
         <img src="docs/img/ai2-prior.svg" width="400">
     </a>
     <br>
