@@ -1,663 +1,523 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-    <url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url>
      <loc>https://github.com/allenai/allenact/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/installation/installation-allenact/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/installation/installation-framework/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/installation/download-datasets/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/getting_started/running-your-first-experiment/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/getting_started/structure/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/getting_started/abstractions/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/tutorials/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/tutorials/minigrid-tutorial/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/tutorials/training-a-pointnav-model/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/tutorials/transfering-to-a-different-environment-framework/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/tutorials/running_inference_on_a_pretrained_model/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/howtos/defining-an-experiment/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/howtos/changing-rewards-and-losses/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/howtos/defining-a-new-model/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/howtos/defining-a-new-task/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/howtos/defining-a-new-training-pipeline/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/projects/babyai_baselines/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/projects/pointnav_baselines/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/projects/objectnav_baselines/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/FAQ/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/CONTRIBUTING/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
+    </url><url>
      <loc>https://github.com/allenai/allenact/LICENSE/</loc>
      <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc></loc>
-     
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/constants/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/base_abstractions/experiment_config/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/base_abstractions/misc/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/base_abstractions/task/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/base_abstractions/sensor/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/base_abstractions/preprocessor/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/base_abstractions/distributions/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/algorithms/onpolicy_sync/losses/imitation/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/algorithms/onpolicy_sync/losses/abstract_loss/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/algorithms/onpolicy_sync/losses/ppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/algorithms/onpolicy_sync/losses/kfac/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/algorithms/onpolicy_sync/losses/a2cacktr/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/algorithms/onpolicy_sync/runner/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/algorithms/onpolicy_sync/policy/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/algorithms/onpolicy_sync/engine/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/algorithms/onpolicy_sync/vector_sampled_tasks/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/algorithms/onpolicy_sync/storage/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/algorithms/offpolicy_sync/losses/abstract_offpolicy_loss/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/core/models/basic_models/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/habitat_plugin/habitat_constants/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/habitat_plugin/habitat_preprocessors/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/lighthouse_plugin/lighthouse_models/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/lighthouse_plugin/lighthouse_environment/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/lighthouse_plugin/lighthouse_util/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/babyai_plugin/babyai_constants/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/babyai_plugin/babyai_models/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/babyai_plugin/scripts/truncate_expert_demos/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/babyai_plugin/scripts/get_instr_length_percentiles/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/babyai_plugin/scripts/download_babyai_expert_demos/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/babyai_plugin/babyai_tasks/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/ithor_plugin/ithor_tasks/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/ithor_plugin/ithor_environment/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/ithor_plugin/ithor_constants/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/ithor_plugin/ithor_util/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/ithor_plugin/ithor_sensors/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/ithor_plugin/ithor_task_samplers/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/robothor_plugin/robothor_preprocessors/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/robothor_plugin/robothor_task_samplers/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/robothor_plugin/robothor_environment/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/robothor_plugin/robothor_constants/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/robothor_plugin/robothor_models/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/robothor_plugin/robothor_tasks/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/robothor_plugin/configs/resnet18_objectnav/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/robothor_plugin/configs/simple_pointnav/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/robothor_plugin/configs/resnet18_pointnav/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/robothor_plugin/configs/pointnav_base/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/robothor_plugin/configs/resnet18_nav_base/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/robothor_plugin/configs/nav_base/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/robothor_plugin/configs/simple_objectnav/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/robothor_plugin/configs/objectnav_base/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/robothor_plugin/robothor_sensors/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/robothor_plugin/robothor_viz/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/minigrid_plugin/minigrid_tasks/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/minigrid_plugin/minigrid_environments/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/minigrid_plugin/minigrid_offpolicy/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/minigrid_plugin/minigrid_sensors/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/minigrid_plugin/configs/minigrid_nomemory/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/plugins/minigrid_plugin/minigrid_models/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_base/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_ddppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgbd_resnetgru_ddppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_depth_resnetgru_ddppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_rgbd_resnetgru_ddppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_depth_resnetgru_ddppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_rgb_resnetgru_ddppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_base/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/objectnav_baselines/experiments/objectnav_base/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/objectnav_baselines/models/object_nav_models/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/babyai_baselines/experiments/go_to_local/bc/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/babyai_baselines/experiments/go_to_local/distributed_bc_offpolicy/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/babyai_baselines/experiments/go_to_local/dagger/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/babyai_baselines/experiments/go_to_local/bc_offpolicy/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/babyai_baselines/experiments/go_to_local/bc_teacher_forcing/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/babyai_baselines/experiments/go_to_local/distributed_bc_teacher_forcing/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/babyai_baselines/experiments/go_to_local/ppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/babyai_baselines/experiments/go_to_local/a2c/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/babyai_baselines/experiments/go_to_local/base/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/babyai_baselines/experiments/go_to_obj/bc/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/babyai_baselines/experiments/go_to_obj/dagger/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/babyai_baselines/experiments/go_to_obj/bc_teacher_forcing/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/babyai_baselines/experiments/go_to_obj/ppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/babyai_baselines/experiments/go_to_obj/a2c/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/babyai_baselines/experiments/go_to_obj/base/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/babyai_baselines/experiments/base/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgbd_simpleconvgru_ddppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_depth_simpleconvgru_ddppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_simpleconvgru_ddppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_base/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/pointnav_baselines/experiments/pointnav_base/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_rgbd_simpleconvgru_ddppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_rgb_simpleconvgru_ddppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_base/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_depth_simpleconvgru_ddppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/pointnav_baselines/models/point_nav_models/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/tutorials/pointnav_robothor_rgb_ddppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/tutorials/pointnav_ithor_rgb_ddppo/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/projects/tutorials/minigrid_tutorial/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/tests/multiprocessing/test_frozen_attribs/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/tests/sync_algs_cpu/test_to_to_obj_trains/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/utils/model_utils/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/utils/experiment_utils/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/utils/system/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/utils/cacheless_frcnn/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/utils/misc_utils/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/utils/viz_utils/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/utils/tensor_utils/</loc>
+     <lastmod>2020-08-28</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://github.com/allenai/allenact/api/utils/cache_utils/</loc>
+     <lastmod>2020-08-28</lastmod>
      <changefreq>daily</changefreq>
     </url>
 </urlset>
