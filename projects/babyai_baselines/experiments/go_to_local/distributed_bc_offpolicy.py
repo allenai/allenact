@@ -1,4 +1,5 @@
 import os
+from typing import Sequence, Optional
 
 import torch
 
@@ -37,8 +38,10 @@ class DistributedBCOffPolicyBabyAIGoToLocalExperimentConfig(
         return res
 
     @classmethod
-    def expert_ce_loss_kwargs_generator(cls):
-        return dict(num_workers=len(cls.machine_params("train")["gpu_ids"]))
+    def expert_ce_loss_kwargs_generator(
+        cls, worker_id: int, rollouts_per_worker: Sequence[int], seed: Optional[int]
+    ):
+        return dict(num_workers=len(rollouts_per_worker), current_worker=worker_id)
 
     @classmethod
     def training_pipeline(cls, **kwargs):
@@ -52,7 +55,7 @@ class DistributedBCOffPolicyBabyAIGoToLocalExperimentConfig(
             named_losses={
                 "offpolicy_expert_ce_loss": MiniGridOffPolicyExpertCELoss(
                     total_episodes_in_epoch=int(1e6)
-                    // cls.expert_ce_loss_kwargs_generator()["num_workers"]
+                    // len(cls.machine_params("train")["gpu_ids"])
                 ),
             },
             pipeline_stages=[
