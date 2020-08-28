@@ -624,14 +624,18 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self.last_log: Optional[int] = None
         self.last_save: Optional[int] = None
 
-    def advance_seed(self, seed: Optional[int]) -> Optional[int]:
+    def advance_seed(
+        self, seed: Optional[int], return_same_seed_per_worker=False
+    ) -> Optional[int]:
         if seed is None:
             return seed
         seed = (seed ^ (self.training_pipeline.total_steps + 1)) % (
             2 ** 31 - 1
         )  # same seed for all workers
 
-        if self.mode == "train" or self.mode == "test":
+        if (not return_same_seed_per_worker) and (
+            self.mode == "train" or self.mode == "test"
+        ):
             return self.worker_seeds(self.num_workers, seed)[
                 self.worker_id
             ]  # doesn't modify the current rng state
@@ -906,13 +910,24 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         #     )
         # )
 
-    def make_offpolicy_iterator(self, data_iterator_builder: Callable[..., Iterator]):
+    def make_offpolicy_iterator(
+        self, data_iterator_builder: Callable[..., Iterator],
+    ):
         stage = self.training_pipeline.current_stage
-        kwargs = stage.offpolicy_component.data_iterator_kwargs_generator()
-        assert (
-            "current_worker" not in kwargs
-        ), "current_worker is reserved for the engine to be passed to the offpolicy data iterator builder"
-        return data_iterator_builder(current_worker=self.worker_id, **kwargs)
+
+        if self.num_workers == 1:
+            rollouts_per_worker = [self.num_samplers]
+        else:
+            rollouts_per_worker = self.num_samplers_per_worker
+
+        # common seed for all workers (in case we wish to shuffle the full dataset before iterating on one partition)
+        seed = self.advance_seed(self.seed, return_same_seed_per_worker=True)
+
+        kwargs = stage.offpolicy_component.data_iterator_kwargs_generator(
+            self.worker_id, rollouts_per_worker, seed
+        )
+
+        return data_iterator_builder(**kwargs)
 
     def backprop_step(self, total_loss):
         self.optimizer.zero_grad()  # type: ignore

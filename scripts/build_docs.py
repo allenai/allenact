@@ -244,7 +244,7 @@ if __name__ == "__main__":
         if d in git_dirs:
             git_dirs.remove(d)
 
-    threads = []
+    threads: List = []
     nav_entries = build_docs(
         parent_folder_path,
         source_path,
