@@ -1,6 +1,6 @@
 
 <div align="center">
-    <img src="docs/img/AllenAct.png" width="350" />
+    <img src="docs/img/AllenAct.svg" width="350" />
     <br>
     <i><h3>An open source framework for research in Embodied-AI</h3></i>
     </p>
