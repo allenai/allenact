@@ -6,7 +6,7 @@ In this tutorial, we will train an agent to complete the `MiniGrid-Empty-Random-
 * Use one of the supported environments with minimal user effort.
 * Train, validate and test your experiment from the command line.
 
-This tutorial assumes the [installation instructions](../getting_started/installation.md) have already been followed and, to some
+This tutorial assumes the [installation instructions](../installation/installation-allenact.md) have already been followed and, to some
 extent, this framework's [abstractions](../getting_started/abstractions.md) are known.
 
 ## The task
@@ -34,8 +34,8 @@ class implementing the `ExperimentConfig` abstraction. For this tutorial, we wil
 `projects/tutorials/minigrid_tutorial.py`. 
 
 The `ExperimentConfig` abstraction is used by the
-[OnPolicyTrainer](../api/core/algorithms/onpolicy_sync/light_engine.md#onpolicytrainer) class (for training) and the
-[OnPolicyInference](../api/core/algorithms/onpolicy_sync/light_engine.md#onpolicyinference) class (for validation and testing)
+[OnPolicyTrainer](../api/core/algorithms/onpolicy_sync/engine.md#onpolicytrainer) class (for training) and the
+[OnPolicyInference](../api/core/algorithms/onpolicy_sync/engine.md#onpolicyinference) class (for validation and testing)
 invoked through the entry script `main.py` that calls an orchestrating
 [OnPolicyRunner](../api/core/algorithms/onpolicy_sync/runner.md#onpolicyrunner) class. It includes:
 

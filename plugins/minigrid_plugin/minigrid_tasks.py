@@ -418,7 +418,7 @@ class MiniGridTaskSampler(TaskSampler):
         extra_task_kwargs: Optional[Dict] = None,
         **kwargs,
     ):
-        super(TaskSampler, self).__init__()
+        super(MiniGridTaskSampler, self).__init__()
         self.sensors = (
             SensorSuite(sensors) if not isinstance(sensors, SensorSuite) else sensors
         )

@@ -62,7 +62,8 @@ straight line distance).
 
 We can download and extract the data by navigating to the `pointnav_baselines` project and running the 
 following script:
-```shell script
+
+```bash
 cd projects/pointnav_baselines/dataset
 sh download_pointnav_dataset.sh robothor
 ```

@@ -776,7 +776,6 @@ class OnPolicyRunner(object):
                         "Exception raised when closing {} {}".format(process_type, it)
                     )
                     logif(e)
-                    pass
 
         self._is_closed = True
 
