@@ -106,8 +106,8 @@ class Memory(Dict):
     def check_append(
         self, key: str, tensor: torch.Tensor, sampler_dim: int
     ) -> "Memory":
-        """
-        Appends a new memory type given its identifier, its memory tensor and its sampler dim.
+        """Appends a new memory type given its identifier, its memory tensor
+        and its sampler dim.
 
         # Parameters
 
@@ -139,8 +139,7 @@ class Memory(Dict):
         return self
 
     def tensor(self, key: str) -> torch.Tensor:
-        """
-        Returns the memory tensor for a given memory type.
+        """Returns the memory tensor for a given memory type.
 
         # Parameters
 
@@ -154,8 +153,7 @@ class Memory(Dict):
         return self[key][0]
 
     def sampler_dim(self, key: str) -> int:
-        """
-        Returns the sampler dimension for the given memory type.
+        """Returns the sampler dimension for the given memory type.
 
         # Parameters
 
@@ -169,8 +167,8 @@ class Memory(Dict):
         return self[key][1]
 
     def sampler_select(self, keep: Sequence[int]) -> "Memory":
-        """
-        Equivalent to PyTorch index_select along the `sampler_dim` of each memory type.
+        """Equivalent to PyTorch index_select along the `sampler_dim` of each
+        memory type.
 
         # Parameters
 
@@ -204,8 +202,7 @@ class Memory(Dict):
         return self
 
     def set_tensor(self, key: str, tensor: torch.Tensor) -> "Memory":
-        """
-        Replaces tensor for given key with an updated version
+        """Replaces tensor for given key with an updated version.
 
         # Parameters
 
@@ -227,8 +224,8 @@ class Memory(Dict):
         return self
 
     def step_select(self, step: int) -> "Memory":
-        """
-        Equivalent to slicing with length 1 for the `step` (i.e first) dimension in rollouts storage.
+        """Equivalent to slicing with length 1 for the `step` (i.e first)
+        dimension in rollouts storage.
 
         # Parameters
 
@@ -257,8 +254,8 @@ class Memory(Dict):
         return res
 
     def step_squeeze(self, step: int) -> "Memory":
-        """
-        Equivalent to simple indexing for the `step` (i.e first) dimension in rollouts storage.
+        """Equivalent to simple indexing for the `step` (i.e first) dimension
+        in rollouts storage.
 
         # Parameters
 
@@ -288,8 +285,8 @@ class Memory(Dict):
         stop: Optional[int] = None,
         step: int = 1,
     ) -> "Memory":
-        """
-        Slicing for dimensions that have same extents in all memory types. It also accepts negative indices.
+        """Slicing for dimensions that have same extents in all memory types.
+        It also accepts negative indices.
 
         # Parameters
 

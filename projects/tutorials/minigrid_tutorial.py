@@ -72,8 +72,8 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
         return EmptyRandomEnv5x5()
 
     def _get_sampler_args(self, process_ind: int, mode: str) -> Dict[str, Any]:
-        """
-        Generate initialization arguments for train, valid, and test TaskSamplers.
+        """Generate initialization arguments for train, valid, and test
+        TaskSamplers.
 
         # Parameters
         process_ind : index of the current task sampler

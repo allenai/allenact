@@ -3,10 +3,23 @@ import os
 import shutil
 from pathlib import Path
 from subprocess import check_output
-from typing import Dict, Union, Optional, Set
+from typing import Dict, Union, Optional, Set, List
+from threading import Thread
 
 from git import Git
 from ruamel.yaml import YAML
+
+
+class StringColors:
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+
 
 exclude_files = [
     ".DS_Store",
@@ -41,7 +54,10 @@ def render_file(
 
     args = ["mathy_pydoc", namespace]
     try:
-        call_result = check_output(args, env=os.environ).decode("utf-8")
+        with open(os.devnull, "w") as devnull:
+            call_result = check_output(args, env=os.environ, stderr=devnull).decode(
+                "utf-8"
+            )
         # noinspection PyShadowingNames
         with open(to_file, "w") as f:
             doc_split = call_result.split("\n")
@@ -52,14 +68,19 @@ def render_file(
             mdlink = "[[source]]({})".format(path)
             call_result = "\n".join([doc_split[0] + " " + mdlink] + doc_split[1:])
             f.write(call_result)
-        print(f"Built docs for {src_file}: {to_file}")
+        print(
+            f"{StringColors.OKGREEN}[SUCCESS]{StringColors.ENDC} built docs for {src_file} -> {to_file}."
+        )
     except Exception as _:
-        print(f"Building docs for {src_file}: {to_file} failed.")
+        print(
+            f"{StringColors.WARNING}[SKIPPING]{StringColors.ENDC} could not"
+            f" build docs for {src_file} -> {to_file} (missing an import?)"
+        )
 
 
 # noinspection PyShadowingNames
 def build_docs_for_file(
-    relative_path: str, file_name: str, docs_dir: str
+    relative_path: str, file_name: str, docs_dir: str, threads: List
 ) -> Dict[str, str]:
     """Build docs for an individual python file."""
     clean_filename = file_name.replace(".py", "")
@@ -67,7 +88,10 @@ def build_docs_for_file(
 
     output_path = os.path.join(docs_dir, relative_path, markdown_filename)
     nav_path = os.path.join("api", relative_path, markdown_filename)
-    render_file(relative_path, file_name, output_path)
+
+    thread = Thread(target=render_file, args=(relative_path, file_name, output_path))
+    thread.start()
+    threads.append(thread)
 
     return {os.path.basename(clean_filename): nav_path}
 
@@ -77,6 +101,7 @@ def build_docs(
     base_dir: Union[Path, str],
     root_path: Union[Path, str],
     docs_dir: Union[Path, str],
+    threads: List,
     allowed_dirs: Optional[Set[str]] = None,
 ):
     base_dir, root_path, docs_dir = str(base_dir), str(root_path), str(docs_dir)
@@ -96,10 +121,10 @@ def build_docs(
             # or "tests" in relative_path
             # or "mypy_cache" in relative_path
         ):
-            print("\nSKIPPING {}\n".format(relative_path))
+            print("SKIPPING {}".format(relative_path))
             continue
 
-        # without_embodied_rl = str(root_path).replace("allenact/", "")
+        # without_allenact = str(root_path).replace("allenact/", "")
         new_path = os.path.relpath(root_path, base_dir).replace(".", "")
         target_dir = os.path.join(docs_dir, new_path)
         if not os.path.exists(target_dir):
@@ -107,7 +132,11 @@ def build_docs(
 
         if os.path.isdir(relative_path):
             nav_subsection = build_docs(
-                base_dir, relative_path, docs_dir, allowed_dirs=allowed_dirs
+                base_dir,
+                relative_path,
+                docs_dir,
+                threads=threads,
+                allowed_dirs=allowed_dirs,
             )
             if not nav_subsection:
                 continue
@@ -117,7 +146,7 @@ def build_docs(
             if child in exclude_files or not child.endswith(".py"):
                 continue
 
-            nav = build_docs_for_file(new_path, child, docs_dir)
+            nav = build_docs_for_file(new_path, child, docs_dir, threads=threads)
             nav_root.append(nav)
 
     return nav_root
@@ -215,8 +244,13 @@ if __name__ == "__main__":
         if d in git_dirs:
             git_dirs.remove(d)
 
+    threads = []
     nav_entries = build_docs(
-        parent_folder_path, source_path, docs_dir, allowed_dirs=git_dirs
+        parent_folder_path,
+        source_path,
+        docs_dir,
+        threads=threads,
+        allowed_dirs=git_dirs,
     )
     nav_entries.sort(key=lambda x: list(x)[0], reverse=False)
 

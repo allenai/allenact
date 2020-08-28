@@ -13,7 +13,8 @@ ModelType = typing.TypeVar("ModelType")
 
 
 class AbstractOffPolicyLoss(typing.Generic[ModelType], Loss):
-    """Abstract class representing an off-policy loss function used to train a model."""
+    """Abstract class representing an off-policy loss function used to train a
+    model."""
 
     @abc.abstractmethod
     def loss(  # type: ignore
