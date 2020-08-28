@@ -536,7 +536,6 @@ class OnPolicyRLEngine(object):
                     )
                 )
                 logif(e)
-                pass
 
         self._is_closed = True
 

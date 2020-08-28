@@ -3,11 +3,13 @@ import os
 import shutil
 from pathlib import Path
 from subprocess import check_output
-from typing import Dict, Union, Optional, Set, List
+from typing import Dict, Union, Optional, Set, List, Sequence, Mapping
 from threading import Thread
 
 from git import Git
 from ruamel.yaml import YAML
+
+from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 
 
 class StringColors:
@@ -185,7 +187,33 @@ def project_readme_paths_to_nav_structure(project_readmes):
     return recursively_create_nav_structure(nested_dict)
 
 
+def pruned_nav_entries(nav_entries):
+    if isinstance(nav_entries, str):
+        if os.path.exists(os.path.join("docs", nav_entries)):
+            return nav_entries
+        else:
+            return None
+    elif isinstance(nav_entries, Sequence):
+        new_entries = []
+        for entry in nav_entries:
+            entry = pruned_nav_entries(entry)
+            if entry:
+                new_entries.append(entry)
+        return new_entries
+    elif isinstance(nav_entries, Mapping):
+        new_entries = {}
+        for k, entry in nav_entries.items():
+            entry = pruned_nav_entries(entry)
+            if entry:
+                new_entries[k] = entry
+        return new_entries
+    else:
+        raise NotImplementedError()
+
+
 if __name__ == "__main__":
+    os.chdir(ABS_PATH_OF_TOP_LEVEL_DIR)
+
     print("Copying all README.md files to docs.")
     with open("README.md") as f:
         readme_content = f.readlines()
@@ -253,6 +281,11 @@ if __name__ == "__main__":
         allowed_dirs=git_dirs,
     )
     nav_entries.sort(key=lambda x: list(x)[0], reverse=False)
+
+    for thread in threads:
+        thread.join()
+
+    nav_entries = pruned_nav_entries(nav_entries)
 
     docs_key = "API"
 
