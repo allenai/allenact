@@ -28,6 +28,7 @@ class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(
 
     def __init__(self):
         super().__init__()
+
         self.SENSORS = [
             DepthSensorHabitat(
                 height=self.SCREEN_SIZE,

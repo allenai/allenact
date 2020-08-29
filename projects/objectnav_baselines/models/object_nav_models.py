@@ -188,7 +188,7 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         ):
             resnet_preprocessor_uuid = (
                 rgb_resnet_preprocessor_uuid
-                if rgb_resnet_preprocessor_uuid is None
+                if rgb_resnet_preprocessor_uuid is not None
                 else depth_resnet_preprocessor_uuid
             )
             self.goal_visual_encoder = ResnetTensorGoalEncoder(

@@ -25,7 +25,7 @@ experiment file is located and `<EXPERIMENT_NAME>` is the name of the python mod
 the experiment. An example usage of this command would be:
 
 ```shell script
-python main.py -o storage/pointnav-robothor-rgb -b projects/pointnav_baselines/experiments/robothor/ pointnav_robothor_depth_simpleconvgru_ddppo
+python main.py -o storage/pointnav-robothor-depth -b projects/pointnav_baselines/experiments/robothor/ pointnav_robothor_depth_simpleconvgru_ddppo
 ```
 
 This trains a simple convolutional neural network with a GRU using Depth input on the
