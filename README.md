@@ -41,7 +41,7 @@ All code in this repository is subject to formatting, documentation, and type-an
 This work builds upon the [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail) library of Ilya Kostrikov and uses some data structures from FAIR's [habitat-lab](https://github.com/facebookresearch/habitat-lab). We would like to thank Dustin Schwenk for his help for the public release of the framework.
 
 ## License
-AllenAct is MIT licensed, as found in the [LICENSE](LICENSE.md) file.
+AllenAct is MIT licensed, as found in the [LICENSE](LICENSE) file.
 
 ## Team
 AllenAct is an open-source project built by members of the PRIOR research group at the Allen Institute for Artificial Intelligence (AI2). 
