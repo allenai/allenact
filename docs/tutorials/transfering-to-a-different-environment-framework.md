@@ -19,17 +19,11 @@ the path parameter to point to an iTHOR dataset rather than the RoboTHOR one.
 
 ```python
     # Dataset Parameters
-    TRAIN_DATASET_DIR = "projects/pointnav_baselines/dataset/ithor/train"
-    VAL_DATASET_DIR = "projects/pointnav_baselines/dataset/ithor/val"
+    TRAIN_DATASET_DIR = "datasets/ithor-pointnav/train"
+    VAL_DATASET_DIR = "datasets/ithor-pointnav/val"
 ```
 
-We also have to download the `iTHOR-Pointnav` dataset, if we have not done so already:
-```bash
-cd projects/pointnav_baselines/dataset
-sh download_pointnav_dataset.sh robothor
-```
-
-That's it!
+We also have to download the `iTHOR-Pointnav` dataset, following [these instructions](../installation/download-datasets.md).
 
 We might also want to modify the `tag` method to accurately reflect our config but this will not change
 the behavior at all and is merely a bookkeeping convenience.
@@ -41,6 +35,9 @@ the behavior at all and is merely a bookkeeping convenience.
 
 ## RoboTHOR to Habitat
 ![Habitat Framework](../img/habitat_framework.jpg)
+
+To train experiments using the Habitat framework we need to install it following [these instructions](../installation/installation-framework.md).
+
 Since the roboTHOR and Habitat simulators are sufficiently different and have different parameters to configure
 this transformation takes a bit more effort, but we only need to modify the environment config and TaskSampler (we
 have to change the former because the habitat simulator accepts a different format of configuration and the latter
