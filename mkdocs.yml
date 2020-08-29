@@ -92,6 +92,8 @@ nav:
     - lighthouse_plugin:
       - lighthouse_models: api/plugins/lighthouse_plugin/lighthouse_models.md
       - lighthouse_environment: api/plugins/lighthouse_plugin/lighthouse_environment.md
+      - lighthouse_tasks: api/plugins/lighthouse_plugin/lighthouse_tasks.md
+      - lighthouse_sensors: api/plugins/lighthouse_plugin/lighthouse_sensors.md
       - lighthouse_util: api/plugins/lighthouse_plugin/lighthouse_util.md
     - babyai_plugin:
       - babyai_constants: api/plugins/babyai_plugin/babyai_constants.md
