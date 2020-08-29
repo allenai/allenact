@@ -1,6 +1,5 @@
-
 <div align="center">
-    <img src="docs/img/AllenAct.png" />
+    <img src="docs/img/AllenAct.svg" width="350" />
     <br>
     <i><h3>An open source framework for research in Embodied-AI</h3></i>
     </p>
@@ -13,10 +12,10 @@ AllenAct is built and backed by the [Allen Institute for AI (AI2)](https://allen
 
 ## Quick Links
 
-- [Website & Docs](https://allenact.org/)
+- [Website & Docs](https://www.allenact.org/)
 - [Github](https://github.com/allenai/allenact)
-- [Install](https://allenact.org/installation/installation-allenact/)
-- [Tutorials](https://allenact.org/tutorials/)
+- [Install](https://www.allenact.org/installation/installation-allenact/)
+- [Tutorials](https://www.allenact.org/tutorials/)
 - [Citation](#citation)
 
 ## Features & Highlights
@@ -39,7 +38,7 @@ We welcome contributions from the greater community. If you would like to make s
 All code in this repository is subject to formatting, documentation, and type-annotation guidelines. For more details, please see the our [contribution guidelines](CONTRIBUTING.md).
 
 ## Acknowledgments
-This work builds upon the [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail) library of Ilya Kostrikov and uses some data structures from FAIR's [habitat-lab](https://github.com/facebookresearch/habitat-lab).
+This work builds upon the [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail) library of Ilya Kostrikov and uses some data structures from FAIR's [habitat-lab](https://github.com/facebookresearch/habitat-lab). We would like to thank Dustin Schwenk for his help for the public release of the framework.
 
 ## License
 AllenAct is MIT licensed, as found in the [LICENSE](LICENSE.md) file.
@@ -48,10 +47,9 @@ AllenAct is MIT licensed, as found in the [LICENSE](LICENSE.md) file.
 AllenAct is an open-source project built by members of the PRIOR research group at the Allen Institute for Artificial Intelligence (AI2). 
 
 <div align="left">
-    <br>
-    <img src="docs/img/PRIORLogoBlackEmbedded.png">
-     &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
-    <img src="docs/img/AI2_Logo_Square_Gradients_crop.png">
+    <a href="//prior.allenai.org/" target="_blank">
+        <img src="docs/img/ai2-prior.svg" width="400">
+    </a>
     <br>
 </div>
 

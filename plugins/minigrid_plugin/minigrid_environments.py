@@ -14,7 +14,7 @@ class FastCrossing(CrossingEnv):
     def __init__(self, size=9, num_crossings=1, obstacle_type=Lava, seed=None):
         self.init_agent_pos: Optional[np.ndarray] = None
         self.init_agent_dir: Optional[int] = None
-        super().__init__(
+        super(FastCrossing, self).__init__(
             size=size,
             num_crossings=num_crossings,
             obstacle_type=obstacle_type,
@@ -70,7 +70,7 @@ class AskForHelpSimpleCrossing(CrossingEnv):
         self._was_successful = False
         self.toggle_is_permanent = toggle_is_permenant
 
-        super().__init__(
+        super(AskForHelpSimpleCrossing, self).__init__(
             size=size,
             num_crossings=num_crossings,
             obstacle_type=obstacle_type,
@@ -167,17 +167,17 @@ class AskForHelpSimpleCrossing(CrossingEnv):
 
 class LavaCrossingS25N10(CrossingEnv):
     def __init__(self):
-        super().__init__(size=25, num_crossings=10)
+        super(LavaCrossingS25N10, self).__init__(size=25, num_crossings=10)
 
 
 class LavaCrossingS15N7(CrossingEnv):
     def __init__(self):
-        super().__init__(size=15, num_crossings=7)
+        super(LavaCrossingS15N7, self).__init__(size=15, num_crossings=7)
 
 
 class LavaCrossingS11N7(CrossingEnv):
     def __init__(self):
-        super().__init__(size=9, num_crossings=4)
+        super(LavaCrossingS11N7, self).__init__(size=9, num_crossings=4)
 
 
 register(

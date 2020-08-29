@@ -16,6 +16,7 @@ from typing import (
     List,
     Tuple,
     cast,
+    Sequence,
 )
 
 import numpy as np
@@ -306,7 +307,9 @@ class OffPolicyPipelineComponent(NamedTuple):
     loss_names: List[str]
     updates: int
     loss_weights: Optional[typing.Sequence[float]] = None
-    data_iterator_kwargs_generator: Callable[[], Dict] = lambda: {}
+    data_iterator_kwargs_generator: Callable[
+        [int, Sequence[int], Optional[int]], Dict
+    ] = lambda cur_worker, rollouts_per_worker, seed: {}
 
 
 class PipelineStage(object):

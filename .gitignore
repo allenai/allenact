@@ -160,3 +160,9 @@ tmp/
 
 # MacOS
 .DS_Store
+
+# Docs
+docs/index.md
+docs/CNAME
+docs/CONTRIBUTING.md
+docs/LICENSE.md

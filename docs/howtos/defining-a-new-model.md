@@ -1,15 +1,15 @@
 # Defining a new model
 
 All actor-critic models must implement the interface described by the
-[ActorCriticModel class](/api/onpolicy_sync/policy/#actorcriticmodel). This interface includes two methods that need to be 
+[ActorCriticModel class](/api/core/algorithms/onpolicy_sync/policy/#actorcriticmodel). This interface includes two methods that need to be 
 implemented:
 
 * `recurrent_memory_specification`, returning a description of the model's recurrent memory; and 
-* `forward`, returning an [ActorCriticOutput](/api/rl_base/common/#actorcriticoutput) given the current observation,
+* `forward`, returning an [ActorCriticOutput](/api/core/base_abstractions/misc/#actorcriticoutput) given the current observation,
 hidden state and previous actions.
 
-For convenience, we provide a [recurrent network module](/api/models/basic_models/#rnnstateencoder) and
-[a simple CNN module](/api/models/basic_models/#simplecnn) from the Habitat baseline navigation
+For convenience, we provide a [recurrent network module](/api/core/models/basic_models/#rnnstateencoder) and
+[a simple CNN module](/api/core/models/basic_models/#simplecnn) from the Habitat baseline navigation
 models, that will be used in this example.
 
 ### Actor-critic model interface

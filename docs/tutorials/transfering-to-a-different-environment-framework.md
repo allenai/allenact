@@ -24,7 +24,7 @@ the path parameter to point to an iTHOR dataset rather than the RoboTHOR one.
 ```
 
 We also have to download the `iTHOR-Pointnav` dataset, if we have not done so already:
-```shell script
+```bash
 cd projects/pointnav_baselines/dataset
 sh download_pointnav_dataset.sh robothor
 ```
