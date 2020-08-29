@@ -506,11 +506,11 @@ Note that we changed both the train and test dataset to debug, so the model will
 4 episodes.
 
 We can not train a model by running:
-```
+```bash
 python main.py -o <PATH_TO_OUTPUT> -c -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
 ```
 If using the same configuration as we have set up, the following command should work:
-```
+```bash
 python main.py -o projects/tutorials/pointnav_robothor_rgb/storage/ -b projects/tutorials/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
 ```
 If we start up a tensorboard server during training and specify that `output_dir=storage` the output should look
@@ -520,11 +520,11 @@ something like this:
 
 ## Training Model On Full Dataset
 We can also train the model on the full dataset by changing back our dataset path and running:
-```
+```bash
 python main.py -o <PATH_TO_OUTPUT> -c -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
 ```
 But be aware, training this takes nearly 2 days on a machine with 8 GPU. For our current setup the following command would work:
-```
+```bash
 python main.py -o projects/tutorials/pointnav_robothor_rgb/storage/ -b projects/tutorials/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
 ```
 If we start up a tensorboard server during training and specify that `output_dir=storage` the output should look

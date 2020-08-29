@@ -15,7 +15,7 @@ Reinforcement Learning Algorithm.
 
 To train an experiment run the following command from the `allenact` root directory:
 
-```shell script
+```bash
 python main.py -o <PATH_TO_OUTPUT> -c -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
 ```
 
@@ -24,7 +24,7 @@ and logs to be stored, `<BASE_DIRECTORY_OF_YOUR_EXPERIMENT>` is the directory wh
 experiment file is located and `<EXPERIMENT_NAME>` is the name of the python module containing
 the experiment. An example usage of this command would be:
 
-```shell script
+```bash
 python main.py -o storage/pointnav-robothor-depth -b projects/pointnav_baselines/experiments/robothor/ pointnav_robothor_depth_simpleconvgru_ddppo
 ```
 

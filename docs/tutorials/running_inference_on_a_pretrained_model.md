@@ -11,7 +11,7 @@ RoboTHOR Objectnav dataset](../installation/download-datasets.md) before we get 
 
 We have to download the weights for the model that we want to run inference on.
 This can be done with a handy script in the `model_weights` directory:
-```shell script
+```bash
 cd model_weights
 sh download_model_weights.sh robothor-objectnav-rgb-resnet
 ```
@@ -21,7 +21,7 @@ trained on the ObjectNav task in RoboTHOR to `model_weights/robothor-pointnav-rg
 Next we need to run the inference, using the PointNav experiment config from the [tutorial on making a PointNav experiment](training-a-pointnav-model.md).
 We can do this with the following command:
 
-```shell script
+```bash
 python ddmain.py -o <PATH_TO_OUTPUT> -c <PATH_TO_CHECKPOINT> -t -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
 ```
 
@@ -32,7 +32,7 @@ our experiment definition is stored and `<EXPERIMENT_NAME>` is simply the name o
  
  For our current setup the following command would work:
  
- ```shell script
+ ```bash
  python ddmain.py -o storage/ -c model_weights/robothor-pointnav-rgb-resnet.pt -t -b projects/tutorials pointnav_robothor_rgb_ddppo
 ```
 
