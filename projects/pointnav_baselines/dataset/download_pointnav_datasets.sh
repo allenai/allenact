@@ -19,6 +19,6 @@ then
 
 
 else
-    echo "Failed: Usage download_data.sh json | json_feat | full"
+    echo "Failed: Usage download_pointnav_datasets.sh ithor | robothor"
     exit 1
 fi
