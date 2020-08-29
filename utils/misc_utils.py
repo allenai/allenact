@@ -117,7 +117,7 @@ def expected_max_of_subset_statistic(vals: List[float], m: int):
     count_so_far = 0
     logdenom = math.log(comb(n, m))
 
-    expected_max = 0
+    expected_max = 0.0
     for val, num_occurances_of_val in vals_and_counts:
         count_so_far += num_occurances_of_val
         if count_so_far < m:
@@ -177,3 +177,11 @@ def prepare_locals_for_super(local_vars, args_name="args", kwargs_name="kwargs")
         kwargs.update(new_locals)
         new_locals = kwargs
     return new_locals
+
+
+def partition_limits(num_items: int, num_parts: int):
+    return (
+        np.round(np.linspace(0, num_items, num_parts + 1, endpoint=True))
+        .astype(np.int32)
+        .tolist()
+    )

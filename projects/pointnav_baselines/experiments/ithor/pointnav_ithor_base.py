@@ -7,10 +7,10 @@ import numpy as np
 import torch
 
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
-from rl_base.preprocessor import ObservationSet
-from rl_base.task import TaskSampler
-from rl_robothor.robothor_task_samplers import PointNavDatasetTaskSampler
-from rl_robothor.robothor_tasks import ObjectNavTask
+from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.task import TaskSampler
+from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
+from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from utils.experiment_utils import Builder
 
 
@@ -37,11 +37,14 @@ class PointNaviThorBaseConfig(ObjectNavBaseConfig):
         self.VALID_GPU_IDS = [7]
         self.TEST_GPU_IDS = [7]
 
-        self.TRAIN_DATASET_DIR = "dataset/ithor/pointnav/train"
-        self.VAL_DATASET_DIR = "dataset/ithor/pointnav/val"
+        self.TRAIN_DATASET_DIR = "datasets/ithor-pointnav/train"
+        self.VAL_DATASET_DIR = "datasets/ithor-pointnav/val"
+
+        self.TARGET_TYPES = None
+        self.SENSORS = None
 
     def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(
+        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
             self.NUM_PROCESSES, ndevices
         )
         res = [0] * ndevices

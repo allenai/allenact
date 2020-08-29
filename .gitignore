@@ -154,3 +154,9 @@ tmp/
 
 # Zip files
 *.zip
+
+# VSCode
+.vscode/
+
+# MacOS
+.DS_Store

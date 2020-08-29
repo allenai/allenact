@@ -5,9 +5,9 @@ if __name__ == "__main__":
         dependency_links=[
             "git+https://github.com/unnat/babyai.git@ff645fe00ea8412a29bd5e2d6f79ae1595d229a7#egg=babyai"
         ],
-        name="embodied-ai",
+        name="allenact",
         packages=find_packages(),
-        version="0.0.1",
+        version="0.1.0",
         install_requires=[
             "gym",
             "matplotlib",
@@ -24,11 +24,8 @@ if __name__ == "__main__":
             "filelock",
             "numpy-quaternion",
             "pandas",
-            "seaborn",
-            "statsmodels",
             "gym-minigrid",
             "gin-config",
-            "localreg",
             "colour",
         ],
     )

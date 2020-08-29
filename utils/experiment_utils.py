@@ -5,15 +5,29 @@ import copy
 import random
 import typing
 from collections import OrderedDict
-from typing import Callable
-from typing import NamedTuple, Dict, Any, Union, Iterator, Optional, List, Tuple
+from typing import (
+    Callable,
+    NamedTuple,
+    Dict,
+    Any,
+    Union,
+    Iterator,
+    Optional,
+    List,
+    Tuple,
+    cast,
+)
 
 import numpy as np
 import torch
 from torch import optim
 
-from onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
-from rl_base.common import Loss
+from core.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
+from core.algorithms.offpolicy_sync.losses.abstract_offpolicy_loss import (
+    AbstractOffPolicyLoss,
+    Memory,
+)
+from core.base_abstractions.misc import Loss
 
 
 def recursive_update(
@@ -288,10 +302,11 @@ class NeverEarlyStoppingCriterion(EarlyStoppingCriterion):
 
 
 class OffPolicyPipelineComponent(NamedTuple):
-    data_iterator_builder: Callable[[], Iterator]
+    data_iterator_builder: Callable[..., Iterator]
     loss_names: List[str]
     updates: int
     loss_weights: Optional[typing.Sequence[float]] = None
+    data_iterator_kwargs_generator: Callable[[], Dict] = lambda: {}
 
 
 class PipelineStage(object):
@@ -339,6 +354,11 @@ class PipelineStage(object):
         self.named_losses: Optional[Dict[str, AbstractActorCriticLoss]] = None
         self._named_loss_weights: Optional[Dict[str, float]] = None
 
+        self.offpolicy_memory = Memory()
+        self.offpolicy_epochs: Optional[int] = None
+        self.offpolicy_named_losses: Optional[Dict[str, AbstractOffPolicyLoss]] = None
+        self._offpolicy_named_loss_weights: Optional[Dict[str, float]] = None
+
     @property
     def is_complete(self):
         return (
@@ -358,6 +378,22 @@ class PipelineStage(object):
                 name: weight for name, weight in zip(self.loss_names, loss_weights)
             }
         return self._named_loss_weights
+
+    @property
+    def offpolicy_named_loss_weights(self):
+        if self._offpolicy_named_loss_weights is None:
+            loss_weights = (
+                self.offpolicy_component.loss_weights
+                if self.offpolicy_component.loss_weights is not None
+                else [1.0] * len(self.offpolicy_component.loss_names)
+            )
+            self._offpolicy_named_loss_weights = {
+                name: weight
+                for name, weight in zip(
+                    self.offpolicy_component.loss_names, loss_weights
+                )
+            }
+        return self._offpolicy_named_loss_weights
 
 
 class TrainingPipeline(object):
@@ -439,7 +475,6 @@ class TrainingPipeline(object):
 
         self._current_stage: Optional[PipelineStage] = None
 
-        self.backprop_count = 0
         self.rollout_count = 0
         self.off_policy_epochs = None
 
@@ -505,7 +540,6 @@ class TrainingPipeline(object):
                 for ps in self.pipeline_stages
             ],
             rollout_count=self.rollout_count,
-            backprop_count=self.backprop_count,
             off_policy_epochs=self.off_policy_epochs,
         )
 
@@ -515,7 +549,6 @@ class TrainingPipeline(object):
             ps.steps_taken_in_stage = stage_info["steps_taken_in_stage"]
 
         self.rollout_count = state_dict["rollout_count"]
-        self.backprop_count = state_dict["backprop_count"]
         self.off_policy_epochs = state_dict["off_policy_epochs"]
 
         self._refresh_current_stage(force_stage_search_from_start=True)
@@ -531,11 +564,32 @@ class TrainingPipeline(object):
                     )()
 
             self.current_stage.named_losses = {
-                loss_name: self.named_losses[loss_name]
+                loss_name: cast(AbstractActorCriticLoss, self.named_losses[loss_name])
                 for loss_name in self.current_stage.loss_names
             }
+
         return self.current_stage.named_losses
+
+    @property
+    def current_stage_offpolicy_losses(self) -> Dict[str, AbstractOffPolicyLoss]:
+        if self.current_stage.offpolicy_named_losses is None:
+            for loss_name in self.current_stage.offpolicy_component.loss_names:
+                if isinstance(self.named_losses[loss_name], Builder):
+                    self.named_losses[loss_name] = typing.cast(
+                        Builder["AbstractOffPolicyLoss"], self.named_losses[loss_name],
+                    )()
+
+            self.current_stage.offpolicy_named_losses = {
+                loss_name: cast(AbstractOffPolicyLoss, self.named_losses[loss_name])
+                for loss_name in self.current_stage.offpolicy_component.loss_names
+            }
+
+        return self.current_stage.offpolicy_named_losses
 
     @property
     def current_stage_loss_weights(self) -> Dict[str, float]:
         return self.current_stage.named_loss_weights
+
+    @property
+    def current_stage_offpolicy_loss_weights(self) -> Dict[str, float]:
+        return self.current_stage.offpolicy_named_loss_weights

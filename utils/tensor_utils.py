@@ -21,12 +21,14 @@ from tensorboardX.x2num import make_np as tbxmake_np
 from utils.system import get_logger
 
 
-def to_device_recursively(input: Any, device: str, inplace: bool = True):
+def to_device_recursively(
+    input: Any, device: Union[str, torch.device, int], inplace: bool = True
+):
     """Recursively places tensors on the appropriate device."""
     if input is None:
         return input
     elif isinstance(input, torch.Tensor):
-        return input.to(device)
+        return input.to(device)  # type: ignore
     elif isinstance(input, tuple):
         return tuple(
             to_device_recursively(input=subinput, device=device, inplace=inplace)
@@ -162,19 +164,14 @@ def batch_observations(
 
         return batch
 
-    def fill_dict_from_observations(
-        batch: Dict[str, Union[Dict, List]], observation: Dict[str, Any]
-    ) -> None:
+    def fill_dict_from_observations(batch: Any, observation: Dict[str, Any]) -> None:
         for sensor in observation:
             if isinstance(observation[sensor], Dict):
                 fill_dict_from_observations(batch[sensor], observation[sensor])
             else:
                 batch[sensor].append(to_tensor(observation[sensor]))
 
-    def dict_to_batch(
-        batch: Dict[str, Union[Dict, List]], device: Optional[torch.device] = None
-    ) -> None:
-        batch = typing.cast(Union[Dict, List, torch.Tensor], batch)
+    def dict_to_batch(batch: Any, device: Optional[torch.device] = None) -> None:
         for sensor in batch:
             if isinstance(batch[sensor], Dict):
                 dict_to_batch(batch[sensor], device)

@@ -7,20 +7,20 @@ import torch.nn as nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from extensions.rl_babyai.babyai_models import BabyAIRecurrentACModel
-from extensions.rl_babyai.babyai_tasks import BabyAITask, BabyAITaskSampler
-from extensions.rl_minigrid.minigrid_sensors import (
+from plugins.babyai_plugin.babyai_models import BabyAIRecurrentACModel
+from plugins.babyai_plugin.babyai_tasks import BabyAITask, BabyAITaskSampler
+from plugins.minigrid_plugin.minigrid_sensors import (
     EgocentricMiniGridSensor,
     MiniGridMissionSensor,
 )
-from onpolicy_sync.losses import PPO, A2C
-from onpolicy_sync.losses.a2cacktr import A2CConfig
-from onpolicy_sync.losses.imitation import Imitation
-from onpolicy_sync.losses.ppo import PPOConfig
-from rl_base.common import Loss
-from rl_base.experiment_config import ExperimentConfig
-from rl_base.sensor import SensorSuite, Sensor, ExpertActionSensor
-from rl_base.task import TaskSampler
+from core.algorithms.onpolicy_sync.losses import PPO, A2C
+from core.algorithms.onpolicy_sync.losses.a2cacktr import A2CConfig
+from core.algorithms.onpolicy_sync.losses.imitation import Imitation
+from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from core.base_abstractions.misc import Loss
+from core.base_abstractions.experiment_config import ExperimentConfig
+from core.base_abstractions.sensor import SensorSuite, Sensor, ExpertActionSensor
+from core.base_abstractions.task import TaskSampler
 from utils.experiment_utils import Builder, LinearDecay, PipelineStage, TrainingPipeline
 
 
@@ -28,7 +28,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig):
     """Base experimental config."""
 
     LEVEL: Optional[str] = None
-    TOTAL_RL_TRAIN_STEPS = None
+    TOTAL_RL_TRAIN_STEPS: Optional[int] = None
     AGENT_VIEW_SIZE: int = 7
     ROLLOUT_STEPS: Optional[int] = None
     NUM_TRAIN_SAMPLERS: Optional[int] = None
@@ -39,7 +39,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig):
     USE_EXPERT = False
     SHOULD_LOG = True
     PPO_NUM_MINI_BATCH = 2
-    ARCH = None
+    ARCH: Optional[str] = None
     NUM_CKPTS_TO_SAVE = 50
 
     TEST_SEED_OFFSET = 0
@@ -61,7 +61,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig):
                 ),
             ]
             + (
-                [MiniGridMissionSensor(instr_len=cls.INSTR_LEN)]
+                [MiniGridMissionSensor(instr_len=cls.INSTR_LEN)]  # type:ignore
                 if cls.USE_INSTR
                 else []
             )
@@ -201,7 +201,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig):
         self,
         process_ind: int,
         total_processes: int,
-        devices: Optional[List[int]],
+        devices: Optional[List[int]] = None,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
@@ -211,7 +211,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig):
         self,
         process_ind: int,
         total_processes: int,
-        devices: Optional[List[int]],
+        devices: Optional[List[int]] = None,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
