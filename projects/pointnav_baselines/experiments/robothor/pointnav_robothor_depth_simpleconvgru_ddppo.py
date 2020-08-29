@@ -25,6 +25,9 @@ class PointNavRoboThorRGBPPOExperimentConfig(PointNavRoboThorBaseConfig):
 
     def __init__(self):
         super().__init__()
+
+        self.ENV_ARGS["renderDepthImage"] = True
+
         self.SENSORS = [
             DepthSensorRoboThor(
                 height=self.SCREEN_SIZE,

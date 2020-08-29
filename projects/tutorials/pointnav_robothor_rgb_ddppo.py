@@ -51,8 +51,8 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     TESTING_GPUS = [0]
 
     # Dataset Parameters
-    TRAIN_DATASET_DIR = "dataset/robothor/pointnav/debug"
-    VAL_DATASET_DIR = "dataset/robothor/pointnav/debug"
+    TRAIN_DATASET_DIR = "datasets/robothor-pointnav/debug"
+    VAL_DATASET_DIR = "datasets/robothor-pointnav/debug"
 
     SENSORS = [
         RGBSensorThor(

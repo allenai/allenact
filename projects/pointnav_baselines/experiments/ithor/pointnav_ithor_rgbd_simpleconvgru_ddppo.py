@@ -26,6 +26,9 @@ class PointNaviThorRGBPPOExperimentConfig(PointNaviThorBaseConfig):
 
     def __init__(self):
         super().__init__()
+
+        self.ENV_ARGS["renderDepthImage"] = True
+
         self.SENSORS = [
             RGBSensorThor(
                 height=self.SCREEN_SIZE,

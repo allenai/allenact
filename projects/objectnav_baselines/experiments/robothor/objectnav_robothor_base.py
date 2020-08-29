@@ -55,8 +55,8 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
         self.TEST_GPU_IDS = [7]
         self.ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
 
-        self.TRAIN_DATASET_DIR = "dataset/robothor/objectnav/train"
-        self.VAL_DATASET_DIR = "dataset/robothor/objectnav/val"
+        self.TRAIN_DATASET_DIR = "datasets/robothor-objectnav/train"
+        self.VAL_DATASET_DIR = "datasets/robothor-objectnav/val"
 
         self.SENSORS = None
 
