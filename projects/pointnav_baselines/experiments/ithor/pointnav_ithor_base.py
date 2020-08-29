@@ -37,8 +37,8 @@ class PointNaviThorBaseConfig(ObjectNavBaseConfig):
         self.VALID_GPU_IDS = [7]
         self.TEST_GPU_IDS = [7]
 
-        self.TRAIN_DATASET_DIR = "dataset/ithor/pointnav/train"
-        self.VAL_DATASET_DIR = "dataset/ithor/pointnav/val"
+        self.TRAIN_DATASET_DIR = "datasets/ithor-pointnav/train"
+        self.VAL_DATASET_DIR = "datasets/ithor-pointnav/val"
 
         self.TARGET_TYPES = None
         self.SENSORS = None

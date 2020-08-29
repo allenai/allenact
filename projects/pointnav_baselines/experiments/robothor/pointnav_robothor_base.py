@@ -39,8 +39,8 @@ class PointNavRoboThorBaseConfig(ObjectNavBaseConfig):
         self.VALID_GPU_IDS = [7]
         self.TEST_GPU_IDS = [7]
 
-        self.TRAIN_DATASET_DIR = "dataset/robothor/pointnav/train"
-        self.VAL_DATASET_DIR = "dataset/robothor/pointnav/val"
+        self.TRAIN_DATASET_DIR = "datasets/robothor-pointnav/train"
+        self.VAL_DATASET_DIR = "datasets/robothor-pointnav/val"
         self.TARGET_TYPES = None
         self.SENSORS = None
 

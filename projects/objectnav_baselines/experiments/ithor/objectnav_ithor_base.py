@@ -55,8 +55,8 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         self.TEST_GPU_IDS = [7]
         self.ADVANCE_SCENE_ROLLOUT_PERIOD = 10 ** 13
 
-        self.TRAIN_DATASET_DIR = "dataset/ithor/objectnav/train"
-        self.VAL_DATASET_DIR = "dataset/ithor/objectnav/val"
+        self.TRAIN_DATASET_DIR = "datasets/ithor-objectnav/train"
+        self.VAL_DATASET_DIR = "datasets/ithor-objectnav/val"
 
         self.SENSORS = None
 
