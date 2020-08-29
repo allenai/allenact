@@ -134,7 +134,7 @@ class BabyAITaskSampler(TaskSampler):
         extra_task_kwargs: Optional[Dict] = None,
         **kwargs,
     ):
-        super(TaskSampler, self).__init__()
+        super(BabyAITaskSampler, self).__init__()
         self.sensors = (
             SensorSuite(sensors) if not isinstance(sensors, SensorSuite) else sensors
         )

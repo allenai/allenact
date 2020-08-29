@@ -7,7 +7,7 @@ In order to train actor-critic agents, we need to specify
 
 ## Rewards
 
-We will use the [object navigation task in AI2-THOR](/api/rl_ai2thor/object_nav/tasks/#objectnavtask) as a 
+We will use the [object navigation task in AI2-THOR](/api/plugins/ithor_plugin/ithor_tasks/#objectnavtask) as a 
 running example. We can see how the `ObjectNavTask._step(self, action: int) -> RLStepResult` method computes the reward for the latest 
 action by invoking a function like:
 
@@ -27,7 +27,7 @@ def judge(self) -> float:
 Any reward shaping can be easily added by e.g. modifying the definition of an existing class:
 
 ```python
-class NavigationWithShaping(rl_ai2thor.object_nav.tasks.ObjectNavTask):
+class NavigationWithShaping(plugins.ithor_plugin.ithor_tasks.ObjectNavTask):
     def judge(self) -> float:
         reward = super().judge()
         
@@ -45,14 +45,14 @@ class NavigationWithShaping(rl_ai2thor.object_nav.tasks.ObjectNavTask):
 
 ## Losses
 
-Currently we support [A2C](/api/onpolicy_sync/losses/a2cacktr#a2c), [PPO](/api/onpolicy_sync/losses/ppo#ppo),
-and [imitation](/api/onpolicy_sync/losses/imitation#imitation) losses. We can easily include
+Currently we support [A2C](/api/core/algorithms/onpolicy_sync/losses/a2cacktr#a2c), [PPO](/api/core/algorithms/onpolicy_sync/losses/ppo#ppo),
+and [imitation](/api/core/algorithms/onpolicy_sync/losses/imitation#imitation) losses. We can easily include
 [DAgger](https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf) or variations thereof by assuming the
 availability of an expert providing optimal actions to agents and combining imitation and PPO losses in different ways
 through multiple stages:
 
 ```python
-class MyExperimentConfig(rl_base.experiment_config.ExperimentConfig):
+class MyExperimentConfig(core.base_abstractions.experiment_config.ExperimentConfig):
     ...
     @classmethod
     def training_pipeline(cls, **kwargs):

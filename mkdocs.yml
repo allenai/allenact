@@ -1,9 +1,10 @@
 site_name: AllenAct
-site_description: A framework for Embodied AI research
+site_description: An open source framework for research in Embodied-AI from AI2
 site_url: https://github.com/allenai/allenact
 
 theme:
   name: material
+  custom_dir: overrides
   palette:
     primary: blue
     accent: grey
@@ -15,6 +16,7 @@ theme:
   - typescript
   - json
 
+google_analytics: [UA-120916510-8, allenact.org]
 
 repo_name: allenai/allenact
 repo_url: https://github.com/allenai/allenact
@@ -37,7 +39,7 @@ nav:
   - PointNav in RoboTHOR: tutorials/training-a-pointnav-model.md
   - Swapping environments: tutorials/transfering-to-a-different-environment-framework.md
   - Using a pre-trained model: tutorials/running_inference_on_a_pretrained_model.md
-  - IL to RL with pipelines: tutorials/training-pipelines.md
+#  - IL to RL with pipelines: tutorials/training-pipelines.md
 - HowTos:
   - Define an experiment: howtos/defining-an-experiment.md
   - Change rewards and losses: howtos/changing-rewards-and-losses.md
@@ -86,20 +88,10 @@ nav:
   - plugins:
     - habitat_plugin:
       - habitat_constants: api/plugins/habitat_plugin/habitat_constants.md
-      - habitat_tasks: api/plugins/habitat_plugin/habitat_tasks.md
-      - habitat_sensors: api/plugins/habitat_plugin/habitat_sensors.md
-      - habitat_environment: api/plugins/habitat_plugin/habitat_environment.md
       - habitat_preprocessors: api/plugins/habitat_plugin/habitat_preprocessors.md
-      - habitat_task_samplers: api/plugins/habitat_plugin/habitat_task_samplers.md
-      - scripts:
-        - agent_demo: api/plugins/habitat_plugin/scripts/agent_demo.md
-        - make_map: api/plugins/habitat_plugin/scripts/make_map.md
-      - habitat_utils: api/plugins/habitat_plugin/habitat_utils.md
     - lighthouse_plugin:
       - lighthouse_models: api/plugins/lighthouse_plugin/lighthouse_models.md
       - lighthouse_environment: api/plugins/lighthouse_plugin/lighthouse_environment.md
-      - lighthouse_tasks: api/plugins/lighthouse_plugin/lighthouse_tasks.md
-      - lighthouse_sensors: api/plugins/lighthouse_plugin/lighthouse_sensors.md
       - lighthouse_util: api/plugins/lighthouse_plugin/lighthouse_util.md
     - babyai_plugin:
       - babyai_constants: api/plugins/babyai_plugin/babyai_constants.md
@@ -185,11 +177,6 @@ nav:
           - pointnav_robothor_depth_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_depth_simpleconvgru_ddppo.md
           - pointnav_robothor_rgb_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_simpleconvgru_ddppo.md
           - pointnav_robothor_base: api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_base.md
-        - habitat:
-          - pointnav_habitat_rgb_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgb_simpleconvgru_ddppo.md
-          - pointnav_habitat_rgbd_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgbd_simpleconvgru_ddppo.md
-          - pointnav_habitat_base: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_base.md
-          - pointnav_habitat_depth_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo.md
         - pointnav_base: api/projects/pointnav_baselines/experiments/pointnav_base.md
         - ithor:
           - pointnav_ithor_rgbd_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_rgbd_simpleconvgru_ddppo.md
@@ -199,7 +186,6 @@ nav:
       - models:
         - point_nav_models: api/projects/pointnav_baselines/models/point_nav_models.md
     - tutorials:
-      - pointnav_habitat_rgb_ddppo: api/projects/tutorials/pointnav_habitat_rgb_ddppo.md
       - pointnav_robothor_rgb_ddppo: api/projects/tutorials/pointnav_robothor_rgb_ddppo.md
       - pointnav_ithor_rgb_ddppo: api/projects/tutorials/pointnav_ithor_rgb_ddppo.md
       - minigrid_tutorial: api/projects/tutorials/minigrid_tutorial.md
@@ -222,6 +208,7 @@ markdown_extensions:
     permalink: '#'
 - markdown.extensions.codehilite:
     guess_lang: true
+- meta
 - admonition
 - codehilite
 - extra
