@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Move to the directory containing this file
+cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )" || exit
+
 # Download, Unzip, and Remove zip
 if [ "$1" = "robothor-pointnav" ]
 then
@@ -30,6 +33,6 @@ then
     echo "saved folder: ithor-objectnav"
 
 else
-    echo "Failed: Usage download_datasets.sh robothor-pointnav | robothor-objectnav | ithor-pointnav | ithor-objectnav"
+    echo "Failed: Usage download_navigation_datasets.sh robothor-pointnav | robothor-objectnav | ithor-pointnav | ithor-objectnav"
     exit 1
 fi
