@@ -1,9 +1,10 @@
 site_name: AllenAct
-site_description: A framework for Embodied AI research
+site_description: An open source framework for research in Embodied-AI from AI2
 site_url: https://github.com/allenai/allenact
 
 theme:
   name: material
+  custom_dir: overrides
   palette:
     primary: blue
     accent: grey
@@ -207,6 +208,7 @@ markdown_extensions:
     permalink: '#'
 - markdown.extensions.codehilite:
     guess_lang: true
+- meta
 - admonition
 - codehilite
 - extra
