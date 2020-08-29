@@ -35,5 +35,3 @@ cd datasets
 sh download_datasets.sh robothor-pointnav
 ```
 This will download the dataset into `datasets/ithor-objectnav`
-
-## TODO: ALFRED
