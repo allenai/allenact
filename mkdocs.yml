@@ -1,6 +1,6 @@
 site_name: AllenAct
 site_description: An open source framework for research in Embodied-AI from AI2
-site_url: https://github.com/allenai/allenact
+site_url: https://allenact.org
 
 theme:
   name: material
