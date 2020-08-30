@@ -17,7 +17,7 @@ This will download the dataset into `datasets/ithor-pointnav`
 ### Habitat
 To get the PointNav `habitat` dataset download and install the `allenact-habitat` docker
 container as described in [this tutorial](installation-framework.md). The dataset is
-included in the docker iage
+included in the docker image.
 
 ## ObjectNav
 ### RoboTHOR

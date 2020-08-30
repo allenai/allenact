@@ -66,7 +66,7 @@ docker pull klemenkotar/allenact-habitat:latest
 ```
 
 This container includes the 0.1.0 release of `allenact`, the 0.1.5 release of `habitat` as well
-as the `Gibson` point navigation dataset (this is a set of start and goal positions provided by habitat).
+as the `Gibson` point navigation dataset. This dataset consists of a set of start and goal positions provided by habitat.
 You then need to launch the container and attach into it:
 
 ```bash
@@ -79,5 +79,8 @@ Once inside the container activate the conda environment:
 conda activate allenact
 ```
  
-From within the container download the Gibson scene files into the `dataset` folder using the [instructions provided by the authors](https://github.com/StanfordVL/GibsonEnv/blob/master/gibson/data/README.md#download).
-Then proceed to run your experiments using `allenact` as you normally would.
+Unfortunately we cannot legally redistribute the Gibson scene by including them, by default, within the above
+container. Instead you will need to download these yourself using the
+ [instructions provided by the authors](https://github.com/StanfordVL/GibsonEnv/blob/master/gibson/data/README.md#download).
+These scene assets should placed into the the `dataset` within the above container.
+You can then proceed to run your experiments using `allenact` as you normally would.
