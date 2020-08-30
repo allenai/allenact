@@ -16,10 +16,21 @@ etc.
 
 * `core.models` includes basic CNN, and RNN state encoders, besides basic `ActorCriticModel` implementations.
 
+## `datasets` directory
+
+A directory made to store task-specific datasets. For example, the script `datasets/download_navigation_datasets.sh` can
+be used to automatically download task dataset files for Point Navigation within the RoboTHOR environment
+and it will place these files into a new `datasets/robothor-pointnav` directory. 
+
 ## `docs` directory
 
 Contains documentation for the framework, including guides for installation and first experiments, how-to's for
 the definition and usage of different abstractions, tutorials and per-project documentation.
+
+## `overrides` directory
+
+Files within this directory are used to the look and structure of the documentation generated when running `mkdocs`.
+See our [FAQ](../FAQ.md) for information on how to generate this documentation for yourself. 
 
 ## `plugins` directory
 
@@ -28,6 +39,11 @@ named as `{environment}_plugin` and contains three subfolders:
 1. `configs` to host useful configuration for the environment or tasks.
 1. `data` to store data to be consumed by the environment or tasks.
 1. `scripts` to setup the plugin or gather and process data.
+
+## `pretrained_model_ckpts` directory
+
+Directory into which pretrained model checkpoints will be saved. See also the 
+`pretrained_model_ckpts/download_navigation_model_ckpts.sh` which can be used to download such checkpoints.
 
 ## `projects` directory
 
