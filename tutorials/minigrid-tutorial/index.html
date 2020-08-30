@@ -1354,6 +1354,30 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/plugins/lighthouse_plugin/lighthouse_tasks/" title="lighthouse_tasks" class="md-nav__link">
+      lighthouse_tasks
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/lighthouse_plugin/lighthouse_sensors/" title="lighthouse_sensors" class="md-nav__link">
+      lighthouse_sensors
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/plugins/lighthouse_plugin/lighthouse_util/" title="lighthouse_util" class="md-nav__link">
       lighthouse_util
     </a>
@@ -3296,7 +3320,8 @@
                 
                 
                 <h1 id="tutorial-navigation-in-minigrid">Tutorial: Navigation in MiniGrid<a class="headerlink" href="#tutorial-navigation-in-minigrid" title="Permanent link">#</a></h1>
-<p>In this tutorial, we will train an agent to complete the <code>MiniGrid-Empty-Random-5x5-v0</code> task within the <a href="https://github.com/maximecb/gym-minigrid">MiniGrid</a> environment. We will demonstrate how to:</p>
+<p>In this tutorial, we will train an agent to complete the <code>MiniGrid-Empty-Random-5x5-v0</code> task within the
+<a href="https://github.com/maximecb/gym-minigrid">MiniGrid</a> environment. We will demonstrate how to:</p>
 <ul>
 <li>Write an experiment configuration file with a simple training pipeline from scratch.</li>
 <li>Use one of the supported environments with minimal user effort.</li>
@@ -3358,7 +3383,8 @@ allows us to extract observations in a format consumable by an <code>ActorCritic
 
 
 <p>The three <code>view_channels</code> include objects, colors and states corresponding to a partial observation of the environment
-as an image tensor, equivalent to that from <code>ImgObsWrapper</code> in https://github.com/maximecb/gym-minigrid#wrappers. The
+as an image tensor, equivalent to that from <code>ImgObsWrapper</code> in
+<a href="https://github.com/maximecb/gym-minigrid#wrappers">MiniGrid</a>. The
 relatively large <code>agent_view_size</code> means the view will only be clipped by the environment walls in the forward and
 lateral directions with respect to the agent's orientation.</p>
 <p>We define our <code>ActorCriticModel</code> agent using a lightweight implementation with recurrent memory for MiniGrid

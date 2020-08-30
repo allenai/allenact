@@ -1259,6 +1259,30 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/plugins/lighthouse_plugin/lighthouse_tasks/" title="lighthouse_tasks" class="md-nav__link">
+      lighthouse_tasks
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/plugins/lighthouse_plugin/lighthouse_sensors/" title="lighthouse_sensors" class="md-nav__link">
+      lighthouse_sensors
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/plugins/lighthouse_plugin/lighthouse_util/" title="lighthouse_util" class="md-nav__link">
       lighthouse_util
     </a>
@@ -3157,11 +3181,11 @@ The training curves should look similar to:</p>
 not-so-unlikely event of the run failing to converge to a near-optimal policy, we can just try to re-run (for example
 with a different random seed). The validation curves should look similar to:</p>
 <p><img alt="validation curves" src="../../img/minigrid_valid.png" /></p>
-<p>A detailed tutorial describing how the <code>minigrid_tutorial</code> experiment configuration was created designed can be found 
+<p>A detailed tutorial describing how the <code>minigrid_tutorial</code> experiment configuration was created can be found 
 <a href="../../tutorials/minigrid-tutorial/">here</a>. </p>
 <p>To run your own custom experiment simply define a new experiment configuration in a file 
 <code>projects/YOUR_PROJECT_NAME/experiments/my_custom_experiment.py</code> after which you may run it with
-<code>python main.py my_custom_experiment -b projects/tutorials</code>.</p>
+<code>python main.py my_custom_experiment -b projects/YOUR_PROJECT_NAME/experiments</code>.</p>
 <!-- ## Experiment configuration
 
 The main entry point for users is a configuration file that defines the experiment we
