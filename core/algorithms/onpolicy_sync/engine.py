@@ -650,8 +650,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.vector_tasks.set_seeds(seeds)
 
     def checkpoint_save(self) -> str:
-        self.deterministic_seeds()
-
         model_path = os.path.join(
             self.checkpoints_dir,
             "exp_{}__stage_{:02d}__steps_{:012d}.pt".format(
@@ -1191,6 +1189,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     or self.training_pipeline.current_stage.is_complete
                 )
             ):
+                self.deterministic_seeds()
                 if self.worker_id == 0:
                     model_path = self.checkpoint_save()
                     if self.checkpoints_queue is not None:
