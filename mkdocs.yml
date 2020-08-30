@@ -31,8 +31,8 @@ nav:
   - Download datasets: installation/download-datasets.md
 - Getting started:
   - Run your first experiment: getting_started/running-your-first-experiment.md
-  - Structure of the codebase: getting_started/structure.md
   - Primary abstractions: getting_started/abstractions.md
+  - Structure of the codebase: getting_started/structure.md
 - Tutorials:
   - AllenAct Tutorials: tutorials/index.md
   - Navigation in Minigrid: tutorials/minigrid-tutorial.md
