@@ -7,7 +7,7 @@ way to formulate "moving around" into a task is by making your agent find a beac
 This beacon transmits its location, such that at any time, the agent can get the direction and euclidian distance
 to the beacon. This particular task is often called Point Navigation, or **PointNav** for short.
 
-#### Pointnav
+#### PointNav
 At first glance, this task seems trivial. If the agent is given the direction and distance of the target at
 all times, can it not simply follow this signal directly? The answer is no, because agents are often trained
 on this task in environments that emulate real-world buildings which are not wide-open spaces, but rather
@@ -53,7 +53,7 @@ to maximize this reward.
 
 ## Requirements
 To train the model on the PointNav task, we need to [install the RoboTHOR environment](../installation/installation-allenact.md) 
-and [download the RoboTHOR Objectnav dataset](../installation/download-datasets.md)
+and [download the RoboTHOR ObjectNav dataset](../installation/download-datasets.md)
 The dataset contains a list of episodes with thousands of randomly generated starting positions and target locations for each of the scenes
 as well as a precomputed cache of distances, containing the shortest path from each point in a scene, to every other point in that scene. 
 This is used to reward the agent for moving closer to the target in terms of geodesic distance - the actual path distance (as opposed to a 

@@ -69,9 +69,8 @@ class ObjectNavThorPPOExperimentConfig(core.base_abstractions.experiment_config.
     def training_pipeline(cls, **kwargs):
         return utils.experiment_utils.TrainingPipeline(
             named_losses={
-                "ppo_loss": utils.experiment_utils.Builder(
-                    onpolicy_sync.losses.ppo.PPO,
-                    default=onpolicy_sync.losses.ppo.PPOConfig,
+                "ppo_loss": onpolicy_sync.losses.ppo.PPO(
+                    **onpolicy_sync.losses.ppo.PPOConfig,
                 ),
             },
             optimizer=utils.experiment_utils.Builder(

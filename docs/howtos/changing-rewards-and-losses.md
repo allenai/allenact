@@ -65,9 +65,8 @@ class MyExperimentConfig(core.base_abstractions.experiment_config.ExperimentConf
                 "imitation_loss": utils.experiment_utils.Builder(
                     onpolicy_sync.losses.imitation.Imitation,
                 ),
-                "ppo_loss": utils.experiment_utils.Builder(
-                    onpolicy_sync.losses.ppo.PPO,
-                    default=onpolicy_sync.losses.ppo.PPOConfig,
+                "ppo_loss": onpolicy_sync.losses.ppo.PPO(
+                    **onpolicy_sync.losses.ppo.PPOConfig,
                 ),
             },
             ...

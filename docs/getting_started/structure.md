@@ -60,7 +60,7 @@ are installed.
 
 ## `tests` directory [[source]](https://github.com/allenai/allenact/tree/master/tests)
 
-Includes implementations of tests.
+Includes unit tests for `allenact`.
 
 ## `utils` directory [[source]](https://github.com/allenai/allenact/tree/master/utils)
 
