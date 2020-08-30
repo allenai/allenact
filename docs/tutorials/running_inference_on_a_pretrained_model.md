@@ -12,7 +12,7 @@ RoboTHOR Objectnav dataset](../installation/download-datasets.md) before we get 
 We have to download the weights for the model that we want to run inference on.
 This can be done with a handy script in the `pretrained_model_ckpts` directory:
 ```bash
-sh download_navigation_model_ckpts.sh robothor-objectnav-rgb-resnet
+sh pretrained_model_ckpts/download_navigation_model_ckpts.sh robothor-objectnav-rgb-resnet
 ```
 This will download the weights for an RGB model using a Resnet that has been
 trained on the ObjectNav task in RoboTHOR to `pretrained_model_ckpts/robothor-pointnav-rgb-resnet.pt`
