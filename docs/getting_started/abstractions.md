@@ -1,9 +1,9 @@
 # Primary abstractions
 
-Our package relies on a collection of fundamental abstractions to define how, and in what task, the model should be
+Our package relies on a collection of fundamental abstractions to define how, and in what task, an agent should be
 trained and evaluated. A subset of these abstractions are described in plain language below. Each of the below sections
 end with a link to the (formal) documentation of the abstraction as well as a link to an example implementation of the
-abstract (if relevant). The following provides a high-level description of how these abstractions interact.
+abstraction (if relevant). The following provides a high-level illustration of how these abstractions interact.
 
 
 ![abstractions-overview](../img/abstractions.png)

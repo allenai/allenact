@@ -253,11 +253,12 @@ To start training from scratch, we just need to invoke
 python main.py minigrid_tutorial -b projects/tutorials -m 8 -o /PATH/TO/minigrid_output -s 12345
 ```
 
-from the project root folder.
+from the `allenact` root directory.
 
-* With `-b projects/tutorials` we set the base folder to search for the `minigrid_tutorial` experiment configuration.
+* With `-b projects/tutorials` we tell `allenact` that `minigrid_tutorial` experiment config file 
+will be found in the `projects/tutorials` directory.
 * With `-m 8` we limit the number of subprocesses to 8 (each subprocess will run 16 of the 128 training task samplers).
-* With `-o /PATH/TO/minigrid_output` we set the output folder.
+* With `-o minigrid_output` we set the output folder into which results and logs will be saved.
 * With `-s 12345` we set the random seed.
 
 If we have Tensorboard installed, we can track progress with

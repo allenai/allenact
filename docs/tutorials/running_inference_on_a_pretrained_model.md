@@ -7,7 +7,7 @@ withing  a realistic 3D environment.
 For information on how to train a PointNav Model see [this tutorial](training-a-pointnav-model.md)
 
 We will need to [install the RoboTHOR environment](../installation/installation-allenact.md) and [download the 
-RoboTHOR Objectnav dataset](../installation/download-datasets.md) before we get started.
+RoboTHOR ObjectNav dataset](../installation/download-datasets.md) before we get started.
 
 We have to download the weights for the model that we want to run inference on.
 This can be done with a handy script in the `pretrained_model_ckpts` directory:
