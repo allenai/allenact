@@ -41,12 +41,12 @@ with a different random seed). The validation curves should look similar to:
 
 ![validation curves](../img/minigrid_valid.png)
  
-A detailed tutorial describing how the `minigrid_tutorial` experiment configuration was created designed can be found 
+A detailed tutorial describing how the `minigrid_tutorial` experiment configuration was created can be found 
 [here](../tutorials/minigrid-tutorial.md). 
  
 To run your own custom experiment simply define a new experiment configuration in a file 
 `projects/YOUR_PROJECT_NAME/experiments/my_custom_experiment.py` after which you may run it with
-`python main.py my_custom_experiment -b projects/tutorials`.
+`python main.py my_custom_experiment -b projects/YOUR_PROJECT_NAME/experiments`.
 
 <!-- ## Experiment configuration
 

@@ -1,6 +1,6 @@
 # Installation of supported environments
 
-Below we provide installation instruction for a number of environments that we support.
+Below we provide installation instructions for a number of environments that we support.
 
 ## Installation of Minigrid
 
@@ -79,8 +79,8 @@ Once inside the container activate the conda environment:
 conda activate allenact
 ```
  
-Unfortunately we cannot legally redistribute the Gibson scene by including them, by default, within the above
+Unfortunately we cannot legally redistribute the Gibson scenes by including them, by default, within the above
 container. Instead you will need to download these yourself using the
  [instructions provided by the authors](https://github.com/StanfordVL/GibsonEnv/blob/master/gibson/data/README.md#download).
-These scene assets should placed into the the `dataset` within the above container.
+These scene assets should placed into the `dataset` within the above container.
 You can then proceed to run your experiments using `allenact` as you normally would.
