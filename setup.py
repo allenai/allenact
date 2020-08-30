@@ -27,5 +27,6 @@ if __name__ == "__main__":
             "gym-minigrid",
             "gin-config",
             "colour",
+            "patsy",
         ],
     )
