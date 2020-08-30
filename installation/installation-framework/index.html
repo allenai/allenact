@@ -3267,7 +3267,7 @@ long as you do not turn off your machine).</p>
 
 
 <p>This container includes the 0.1.0 release of <code>allenact</code>, the 0.1.5 release of <code>habitat</code> as well
-as the <code>Gibson</code> point navigation dataset (this is a set of start and goal positions provided by habitat).
+as the <code>Gibson</code> point navigation dataset. This dataset consists of a set of start and goal positions provided by habitat.
 You then need to launch the container and attach into it:</p>
 <div class="codehilite"><pre><span></span><code>docker run klemenkotar/allenact-habitat --runtime<span class="o">=</span>nvidia -it
 </code></pre></div>
@@ -3278,8 +3278,11 @@ You then need to launch the container and attach into it:</p>
 </code></pre></div>
 
 
-<p>From within the container download the Gibson scene files into the <code>dataset</code> folder using the <a href="https://github.com/StanfordVL/GibsonEnv/blob/master/gibson/data/README.md#download">instructions provided by the authors</a>.
-Then proceed to run your experiments using <code>allenact</code> as you normally would.</p>
+<p>Unfortunately we cannot legally redistribute the Gibson scene by including them, by default, within the above
+container. Instead you will need to download these yourself using the
+ <a href="https://github.com/StanfordVL/GibsonEnv/blob/master/gibson/data/README.md#download">instructions provided by the authors</a>.
+These scene assets should placed into the the <code>dataset</code> within the above container.
+You can then proceed to run your experiments using <code>allenact</code> as you normally would.</p>
                 
               
               

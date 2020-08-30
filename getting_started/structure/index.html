@@ -360,6 +360,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#datasets-directory" class="md-nav__link">
+    datasets directory
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#docs-directory" class="md-nav__link">
     docs directory
   </a>
@@ -367,8 +374,22 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#overrides-directory" class="md-nav__link">
+    overrides directory
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#plugins-directory" class="md-nav__link">
     plugins directory
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pretrained_model_ckpts-directory" class="md-nav__link">
+    pretrained_model_ckpts directory
   </a>
   
 </li>
@@ -3194,6 +3215,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#datasets-directory" class="md-nav__link">
+    datasets directory
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#docs-directory" class="md-nav__link">
     docs directory
   </a>
@@ -3201,8 +3229,22 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#overrides-directory" class="md-nav__link">
+    overrides directory
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#plugins-directory" class="md-nav__link">
     plugins directory
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pretrained_model_ckpts-directory" class="md-nav__link">
+    pretrained_model_ckpts directory
   </a>
   
 </li>
@@ -3274,15 +3316,25 @@ etc.</p>
 <p><code>core.models</code> includes basic CNN, and RNN state encoders, besides basic <code>ActorCriticModel</code> implementations.</p>
 </li>
 </ul>
+<h2 id="datasets-directory"><code>datasets</code> directory<a class="headerlink" href="#datasets-directory" title="Permanent link">#</a></h2>
+<p>A directory made to store task-specific datasets. For example, the script <code>datasets/download_navigation_datasets.sh</code> can
+be used to automatically download task dataset files for Point Navigation within the RoboTHOR environment
+and it will place these files into a new <code>datasets/robothor-pointnav</code> directory. </p>
 <h2 id="docs-directory"><code>docs</code> directory<a class="headerlink" href="#docs-directory" title="Permanent link">#</a></h2>
 <p>Contains documentation for the framework, including guides for installation and first experiments, how-to's for
 the definition and usage of different abstractions, tutorials and per-project documentation.</p>
+<h2 id="overrides-directory"><code>overrides</code> directory<a class="headerlink" href="#overrides-directory" title="Permanent link">#</a></h2>
+<p>Files within this directory are used to the look and structure of the documentation generated when running <code>mkdocs</code>.
+See our <a href="../../FAQ/">FAQ</a> for information on how to generate this documentation for yourself. </p>
 <h2 id="plugins-directory"><code>plugins</code> directory<a class="headerlink" href="#plugins-directory" title="Permanent link">#</a></h2>
 <p>Contains implementations of <code>ActorCriticModel</code>s and <code>Task</code>s in different environments. Each plugin folder is 
 named as <code>{environment}_plugin</code> and contains three subfolders:
 1. <code>configs</code> to host useful configuration for the environment or tasks.
 1. <code>data</code> to store data to be consumed by the environment or tasks.
 1. <code>scripts</code> to setup the plugin or gather and process data.</p>
+<h2 id="pretrained_model_ckpts-directory"><code>pretrained_model_ckpts</code> directory<a class="headerlink" href="#pretrained_model_ckpts-directory" title="Permanent link">#</a></h2>
+<p>Directory into which pretrained model checkpoints will be saved. See also the 
+<code>pretrained_model_ckpts/download_navigation_model_ckpts.sh</code> which can be used to download such checkpoints.</p>
 <h2 id="projects-directory"><code>projects</code> directory<a class="headerlink" href="#projects-directory" title="Permanent link">#</a></h2>
 <p>Contains project-specific code like experiment configurations and scripts to process results, generate visualizations
 or prepare data.</p>
