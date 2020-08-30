@@ -275,8 +275,8 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#installing-requirements-with-pipenv-recommended" class="md-nav__link">
-    Installing requirements with pipenv (recommended)
+  <a href="#installing-requirements-with-pipenv" class="md-nav__link">
+    Installing requirements with pipenv
   </a>
   
 </li>
@@ -3183,8 +3183,8 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#installing-requirements-with-pipenv-recommended" class="md-nav__link">
-    Installing requirements with pipenv (recommended)
+  <a href="#installing-requirements-with-pipenv" class="md-nav__link">
+    Installing requirements with pipenv
   </a>
   
 </li>
@@ -3230,20 +3230,31 @@
 </code></pre></div>
 
 
-<p><strong>Note:</strong> This library has been tested <em>only in python 3.6</em>. The following assumes you have a working
+<p><strong>Note 1:</strong> This library has been tested <em>only in python 3.6</em>. The following assumes you have a working
 version of <em>python 3.6</em> installed locally. </p>
-<p>In order to install requirements we recommend using <a href="https://pipenv.kennethreitz.org/en/latest/"><code>pipenv</code></a> but also include instructions if
-you would prefer to install things directly using <code>pip</code>.</p>
-<h3 id="installing-requirements-with-pipenv-recommended">Installing requirements with <code>pipenv</code> (<em>recommended</em>)<a class="headerlink" href="#installing-requirements-with-pipenv-recommended" title="Permanent link">#</a></h3>
+<p><strong>Note 2:</strong> If you are installing <code>allenact</code> intending to use a GPU for training/inference and your
+current machine uses an older version of CUDA you may need to manually install the version of 
+PyTorch that supports your CUDA version. In such a case, after installing the below requirements, you
+should follow the directions for installing PyTorch with older
+versions of CUDA available on the <a href="https://pytorch.org/">PyTorch homepage</a>.</p>
+<p>In order to install requirements we recommend creating a new
+<a href="https://docs.python.org/3/tutorial/venv.html">python virtual environment</a> and installing all
+of the below requirements into this virtual environment. Several tools exist to help manage
+virtual environments, we have had success in using <a href="https://pipenv.kennethreitz.org/en/latest/"><code>pipenv</code></a>
+and so provide instructions for installing the requirements using <code>pipenv</code>
+but also include instructions if you would prefer to install everything directly using <code>pip</code>.</p>
+<h3 id="installing-requirements-with-pipenv">Installing requirements with <code>pipenv</code><a class="headerlink" href="#installing-requirements-with-pipenv" title="Permanent link">#</a></h3>
 <p>If you have already installed <a href="https://pipenv.kennethreitz.org/en/latest/"><code>pipenv</code></a>, you may
 run the following to install all requirements.</p>
 <div class="codehilite"><pre><span></span><code>pipenv install --skip-lock --dev
 </code></pre></div>
 
 
+<p>Please see the documentation of <code>pipenv</code> to understand how to use the newly created virtual environment.</p>
 <h3 id="installing-requirements-with-pip">Installing requirements with <code>pip</code><a class="headerlink" href="#installing-requirements-with-pip" title="Permanent link">#</a></h3>
 <p>Note: <em>do not</em> run the following if you have already installed requirements with <code>pipenv</code>
-as above. If you prefer using <code>pip</code>, you may install all requirements as follows</p>
+as above. If you prefer managing your environment manually, all requirements may be installed using
+ <code>pip</code> by running the following command:</p>
 <div class="codehilite"><pre><span></span><code>pip install -r requirements.txt
 </code></pre></div>
 

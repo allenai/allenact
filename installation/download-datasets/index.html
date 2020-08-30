@@ -299,11 +299,11 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#pointnav" class="md-nav__link">
-    PointNav
+  <a href="#point-navigation-pointnav" class="md-nav__link">
+    Point Navigation (PointNav)
   </a>
   
-    <nav class="md-nav" aria-label="PointNav">
+    <nav class="md-nav" aria-label="Point Navigation (PointNav)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -333,11 +333,11 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#objectnav" class="md-nav__link">
-    ObjectNav
+  <a href="#object-navigation-objectnav" class="md-nav__link">
+    Object Navigation (ObjectNav)
   </a>
   
-    <nav class="md-nav" aria-label="ObjectNav">
+    <nav class="md-nav" aria-label="Object Navigation (ObjectNav)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -3223,11 +3223,11 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#pointnav" class="md-nav__link">
-    PointNav
+  <a href="#point-navigation-pointnav" class="md-nav__link">
+    Point Navigation (PointNav)
   </a>
   
-    <nav class="md-nav" aria-label="PointNav">
+    <nav class="md-nav" aria-label="Point Navigation (PointNav)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -3257,11 +3257,11 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#objectnav" class="md-nav__link">
-    ObjectNav
+  <a href="#object-navigation-objectnav" class="md-nav__link">
+    Object Navigation (ObjectNav)
   </a>
   
-    <nav class="md-nav" aria-label="ObjectNav">
+    <nav class="md-nav" aria-label="Object Navigation (ObjectNav)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -3304,33 +3304,41 @@
                 
                 
                 <h1 id="downloading-datasets">Downloading datasets<a class="headerlink" href="#downloading-datasets" title="Permanent link">#</a></h1>
-<h2 id="pointnav">PointNav<a class="headerlink" href="#pointnav" title="Permanent link">#</a></h2>
+<p>The below provides instructions on how to download datasets necessary for defining the train, validation, and
+test sets used within the ObjectNav/PointNav tasks in the <code>iTHOR</code>, <code>RoboTHOR</code>, and <code>habitat</code> environments.</p>
+<!--
+Note that these datasets **do not include** scene assets for the below datasets. For `iTHOR` and `RoboTHOR`
+these scene assets will be downloaded automatically, for `habitat` please following the instructions
+in [this tutorial](installation-framework.md).
+-->
+
+<h2 id="point-navigation-pointnav">Point Navigation (PointNav)<a class="headerlink" href="#point-navigation-pointnav" title="Permanent link">#</a></h2>
 <h3 id="robothor">RoboTHOR<a class="headerlink" href="#robothor" title="Permanent link">#</a></h3>
 <p>To get the PointNav dataset and precomputed distance caches for <code>RoboTHOR</code> run the following command:</p>
 <div class="codehilite"><pre><span></span><code>sh datasets/download_navigation_datasets.sh robothor-pointnav
 </code></pre></div>
 
 
-<p>This will download the dataset into <code>datasets/robothor-pointnav</code></p>
+<p>This will download the dataset into <code>datasets/robothor-pointnav</code>.</p>
 <h3 id="ithor">iTHOR<a class="headerlink" href="#ithor" title="Permanent link">#</a></h3>
 <p>To get the PointNav dataset and precomputed distance caches for <code>iTHOR</code> run the following command:</p>
 <div class="codehilite"><pre><span></span><code>sh datasets/download_navigation_datasets.sh ithor-pointnav
 </code></pre></div>
 
 
-<p>This will download the dataset into <code>datasets/ithor-pointnav</code></p>
+<p>This will download the dataset into <code>datasets/ithor-pointnav</code>.</p>
 <h3 id="habitat">Habitat<a class="headerlink" href="#habitat" title="Permanent link">#</a></h3>
 <p>To get the PointNav <code>habitat</code> dataset download and install the <code>allenact-habitat</code> docker
 container as described in <a href="../installation-framework/">this tutorial</a>. The dataset is
 included in the docker image.</p>
-<h2 id="objectnav">ObjectNav<a class="headerlink" href="#objectnav" title="Permanent link">#</a></h2>
+<h2 id="object-navigation-objectnav">Object Navigation (ObjectNav)<a class="headerlink" href="#object-navigation-objectnav" title="Permanent link">#</a></h2>
 <h3 id="robothor_1">RoboTHOR<a class="headerlink" href="#robothor_1" title="Permanent link">#</a></h3>
 <p>To get the ObjectNav dataset and precomputed distance caches for <code>RoboTHOR</code> run the following command:</p>
 <div class="codehilite"><pre><span></span><code>sh datasets/download_navigation_datasets.sh robothor-objectnav
 </code></pre></div>
 
 
-<p>This will download the dataset into <code>datasets/robothor-objectnav</code></p>
+<p>This will download the dataset into <code>datasets/robothor-objectnav</code>.</p>
 <h3 id="ithor_1">iTHOR<a class="headerlink" href="#ithor_1" title="Permanent link">#</a></h3>
 <p>To get the ObjectNav dataset and precomputed distance caches for <code>iTHOR</code> run the following command:</p>
 <div class="codehilite"><pre><span></span><code><span class="nb">cd</span> datasets
@@ -3338,7 +3346,7 @@ sh datasets/download_navigation_datasets.sh robothor-pointnav
 </code></pre></div>
 
 
-<p>This will download the dataset into <code>datasets/ithor-objectnav</code></p>
+<p>This will download the dataset into <code>datasets/ithor-objectnav</code>.</p>
                 
               
               

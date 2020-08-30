@@ -3302,9 +3302,8 @@ initializers. </p>
     <span class="k">def</span> <span class="nf">training_pipeline</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">utils</span><span class="o">.</span><span class="n">experiment_utils</span><span class="o">.</span><span class="n">TrainingPipeline</span><span class="p">(</span>
             <span class="n">named_losses</span><span class="o">=</span><span class="p">{</span>
-                <span class="s2">&quot;ppo_loss&quot;</span><span class="p">:</span> <span class="n">utils</span><span class="o">.</span><span class="n">experiment_utils</span><span class="o">.</span><span class="n">Builder</span><span class="p">(</span>
-                    <span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">ppo</span><span class="o">.</span><span class="n">PPO</span><span class="p">,</span>
-                    <span class="n">default</span><span class="o">=</span><span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">ppo</span><span class="o">.</span><span class="n">PPOConfig</span><span class="p">,</span>
+                <span class="s2">&quot;ppo_loss&quot;</span><span class="p">:</span> <span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">ppo</span><span class="o">.</span><span class="n">PPO</span><span class="p">(</span>
+                    <span class="o">**</span><span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">ppo</span><span class="o">.</span><span class="n">PPOConfig</span><span class="p">,</span>
                 <span class="p">),</span>
             <span class="p">},</span>
             <span class="n">optimizer</span><span class="o">=</span><span class="n">utils</span><span class="o">.</span><span class="n">experiment_utils</span><span class="o">.</span><span class="n">Builder</span><span class="p">(</span>

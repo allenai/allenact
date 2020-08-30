@@ -3268,9 +3268,8 @@ through multiple stages:</p>
                 <span class="s2">&quot;imitation_loss&quot;</span><span class="p">:</span> <span class="n">utils</span><span class="o">.</span><span class="n">experiment_utils</span><span class="o">.</span><span class="n">Builder</span><span class="p">(</span>
                     <span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">imitation</span><span class="o">.</span><span class="n">Imitation</span><span class="p">,</span>
                 <span class="p">),</span>
-                <span class="s2">&quot;ppo_loss&quot;</span><span class="p">:</span> <span class="n">utils</span><span class="o">.</span><span class="n">experiment_utils</span><span class="o">.</span><span class="n">Builder</span><span class="p">(</span>
-                    <span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">ppo</span><span class="o">.</span><span class="n">PPO</span><span class="p">,</span>
-                    <span class="n">default</span><span class="o">=</span><span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">ppo</span><span class="o">.</span><span class="n">PPOConfig</span><span class="p">,</span>
+                <span class="s2">&quot;ppo_loss&quot;</span><span class="p">:</span> <span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">ppo</span><span class="o">.</span><span class="n">PPO</span><span class="p">(</span>
+                    <span class="o">**</span><span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">ppo</span><span class="o">.</span><span class="n">PPOConfig</span><span class="p">,</span>
                 <span class="p">),</span>
             <span class="p">},</span>
             <span class="o">...</span>

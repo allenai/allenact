@@ -440,7 +440,7 @@
         
           <li class="md-nav__item">
   <a href="#pointnav" class="md-nav__link">
-    Pointnav
+    PointNav
   </a>
   
 </li>
@@ -3240,7 +3240,7 @@
         
           <li class="md-nav__item">
   <a href="#pointnav" class="md-nav__link">
-    Pointnav
+    PointNav
   </a>
   
 </li>
@@ -3327,7 +3327,7 @@ Before we can teach a robot to cook or clean it first needs to be able to move a
 way to formulate "moving around" into a task is by making your agent find a beacon somewhere in the environment.
 This beacon transmits its location, such that at any time, the agent can get the direction and euclidian distance
 to the beacon. This particular task is often called Point Navigation, or <strong>PointNav</strong> for short.</p>
-<h4 id="pointnav">Pointnav<a class="headerlink" href="#pointnav" title="Permanent link">#</a></h4>
+<h4 id="pointnav">PointNav<a class="headerlink" href="#pointnav" title="Permanent link">#</a></h4>
 <p>At first glance, this task seems trivial. If the agent is given the direction and distance of the target at
 all times, can it not simply follow this signal directly? The answer is no, because agents are often trained
 on this task in environments that emulate real-world buildings which are not wide-open spaces, but rather
@@ -3367,7 +3367,7 @@ to its goal and penalizing it for actions that take it away from its goal. We th
 to maximize this reward.</p>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">#</a></h2>
 <p>To train the model on the PointNav task, we need to <a href="../../installation/installation-allenact/">install the RoboTHOR environment</a> 
-and <a href="../../installation/download-datasets/">download the RoboTHOR Objectnav dataset</a>
+and <a href="../../installation/download-datasets/">download the RoboTHOR ObjectNav dataset</a>
 The dataset contains a list of episodes with thousands of randomly generated starting positions and target locations for each of the scenes
 as well as a precomputed cache of distances, containing the shortest path from each point in a scene, to every other point in that scene. 
 This is used to reward the agent for moving closer to the target in terms of geodesic distance - the actual path distance (as opposed to a 

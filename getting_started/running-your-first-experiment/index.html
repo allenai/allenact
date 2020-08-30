@@ -3146,16 +3146,17 @@
                 
                 
                 <h1 id="running-your-first-experiment">Running your first experiment<a class="headerlink" href="#running-your-first-experiment" title="Permanent link">#</a></h1>
-<p>Assuming you have <a href="../../installation/installation-allenact/">installed all of the requirements</a>, you can run your first experiment by calling</p>
+<p>Assuming you have <a href="../../installation/installation-allenact/">installed <code>allenact</code></a>, you can run your first experiment by calling</p>
 <div class="codehilite"><pre><span></span><code>python main.py minigrid_tutorial -b projects/tutorials -m <span class="m">8</span> -o minigrid_output -s <span class="m">12345</span>
 </code></pre></div>
 
 
-<p>from the project root folder.</p>
+<p>from the <code>allenact</code> root directory.</p>
 <ul>
-<li>With <code>-b projects/tutorials</code> we set the base folder to search for the <code>minigrid_tutorial</code> experiment configuration.</li>
+<li>With <code>-b projects/tutorials</code> we tell <code>allenact</code> that <code>minigrid_tutorial</code> experiment config file 
+will be found in the <code>projects/tutorials</code> directory.</li>
 <li>With <code>-m 8</code> we limit the number of subprocesses to 8 (each subprocess will run 16 of the 128 training task samplers).</li>
-<li>With <code>-o minigrid_output</code> we set the output folder.</li>
+<li>With <code>-o minigrid_output</code> we set the output folder into which results and logs will be saved.</li>
 <li>With <code>-s 12345</code> we set the random seed.</li>
 </ul>
 <p>If everything was installed correctly, a simple model will be trained (and validated) in the MiniGrid environment and

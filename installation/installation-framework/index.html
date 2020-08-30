@@ -288,7 +288,7 @@
       
         <li class="md-nav__item">
   <a href="#installation-of-minigrid" class="md-nav__link">
-    Installation of Minigrid
+    Installation of MiniGrid
   </a>
   
 </li>
@@ -3191,7 +3191,7 @@
       
         <li class="md-nav__item">
   <a href="#installation-of-minigrid" class="md-nav__link">
-    Installation of Minigrid
+    Installation of MiniGrid
   </a>
   
 </li>
@@ -3239,51 +3239,38 @@
                 
                 <h1 id="installation-of-supported-environments">Installation of supported environments<a class="headerlink" href="#installation-of-supported-environments" title="Permanent link">#</a></h1>
 <p>Below we provide installation instructions for a number of environments that we support.</p>
-<h2 id="installation-of-minigrid">Installation of Minigrid<a class="headerlink" href="#installation-of-minigrid" title="Permanent link">#</a></h2>
+<h2 id="installation-of-minigrid">Installation of MiniGrid<a class="headerlink" href="#installation-of-minigrid" title="Permanent link">#</a></h2>
+<p>MiniGrid will automatically be installed when installing <code>allenact</code> and so nothing additional needs to be done.
+ If you wish to (re)install it manually using <code>pip</code>, simply run the command:</p>
 <div class="codehilite"><pre><span></span><code>pip install gym-minigrid
 </code></pre></div>
 
 
-<p>Note that <code>gym-minigrid</code> is listed a dependency of <code>allenact</code> and it will be automatically installed
-along with the framework.</p>
 <h2 id="installation-of-ithor">Installation of iTHOR<a class="headerlink" href="#installation-of-ithor" title="Permanent link">#</a></h2>
-<p>To install <code>iTHOR</code> for use with a machine with a screen you simply need to run:</p>
+<p><code>iTHOR</code> will automatically be installed when installing <code>allenact</code> and so, if you have installed <code>allenact</code>
+ on a machine with an attached display, nothing additional needs to be done. If you wish to (re)install it manually 
+ using <code>pip</code>, simply run the command:</p>
 <div class="codehilite"><pre><span></span><code>pip install ai2thor
 </code></pre></div>
 
 
-<p>Note that <code>ai2thor</code> is listed a dependency of <code>allenact</code> and it will be automatically installed
-along with the framework. The first time you will run an experiment with <code>iTHOR</code> (or any script that uses <code>ai2thor</code>)
-the library will download all of the assets it requires to render the scenes </p>
-<p>To install <code>iTHOR</code> for use with a machine without a screen (such as a remote server) you will also need to
-run a script that launches <code>xserver</code> with the following command:</p>
-<div class="codehilite"><pre><span></span><code>sudo python scripts/startx.py
+<p>The first time you will run an experiment with <code>iTHOR</code> (or any script that uses <code>ai2thor</code>)
+the library will download all of the assets it requires to render the scenes automatically.</p>
+<p><strong>Trying to use <code>iTHOR</code> on a machine without an attached display?</strong> </p>
+<p>If you wish to run <code>iTHOR</code> on a machine without an attached display (for instance, a remote server such as an AWS
+ machine) you will also need to run a script that launches <code>xserver</code> processes on your GPUs. This can be done
+ with the following command:</p>
+<div class="codehilite"><pre><span></span><code>sudo python scripts/startx.py <span class="p">&amp;</span>
 </code></pre></div>
 
 
-<p>Notice that you need to run the command with <code>sudo</code>. If you do not have <code>sudo</code> 
+<p>Notice that you need to run the command with <code>sudo</code> (i.e. administrator privileges). If you do not have <code>sudo</code> 
 access (for example if you are running this on a shared university machine) you
 can ask your administrator to run it for you. You only need to run it once (as
 long as you do not turn off your machine).</p>
 <h2 id="installation-of-robothor">Installation of RoboTHOR<a class="headerlink" href="#installation-of-robothor" title="Permanent link">#</a></h2>
-<p>To install <code>RoboTHOR</code> for use with a machine with a screen you simply need to run:</p>
-<div class="codehilite"><pre><span></span><code>pip install ai2thor
-</code></pre></div>
-
-
-<p>Note that <code>ai2thor</code> is listed a dependency of <code>allenact</code> and it will be automatically installed
-along with the framework. The first time you will run an experiment with <code>RoboTHOR</code> (or any script that uses <code>ai2thor</code>)
-the library will download all of the assets it requires to render the scenes </p>
-<p>To install <code>RoboTHOR</code> for use with a machine without a screen (such as a remote server) you will also need to
-run a script that launches <code>xserver</code> with the following command:</p>
-<div class="codehilite"><pre><span></span><code>sudo python scripts/startx.py
-</code></pre></div>
-
-
-<p>Notice that you need to run the command with <code>sudo</code>. If you do not have <code>sudo</code> 
-access (for example if you are running this on a shared university machine) you
-can ask your administrator to run it for you. You only need to run it once (as
-long as you do not turn off your machine).</p>
+<p><code>RoboTHOR</code> is installed in tandem with <code>iTHOR</code> when installing the <code>ai2thor</code> library. For more information
+see the above section on installing <code>iTHOR</code>. </p>
 <h2 id="installation-of-habitat">Installation of Habitat<a class="headerlink" href="#installation-of-habitat" title="Permanent link">#</a></h2>
 <p>To run experiments using Habitat please use our docker image using the following command:</p>
 <div class="codehilite"><pre><span></span><code>docker pull klemenkotar/allenact-habitat:latest
