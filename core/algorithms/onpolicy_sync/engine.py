@@ -844,15 +844,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             )
 
             for bit, batch in enumerate(data_generator):
-                # TODO: check recursively within batch
-                bsize = None
-                for key in batch:
-                    if isinstance(batch[key], torch.Tensor):
-                        num_rollout_steps, num_samplers = batch[key].shape[:2]
-                        bsize = num_rollout_steps * num_samplers
-                        if bsize > 0:
-                            break
-                assert bsize is not None, "TODO check recursively for batch size"
+                # masks is always [steps, samplers, agents, 1]:
+                num_rollout_steps, num_samplers = batch["masks"].shape[:2]
+                bsize = num_rollout_steps * num_samplers
 
                 actor_critic_output, memory = self.actor_critic(
                     observations=batch["observations"],
