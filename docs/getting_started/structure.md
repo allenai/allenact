@@ -53,8 +53,8 @@ or prepare data.
 ## `scripts` directory
 
 Includes framework-wide scripts to build the documentation, format code, run_tests and start an xserver. The latter can
-be used for OpenGL-based environments with super-user privileges in Linux with NVIDIA drivers and `xserver-xorg`
-installed.
+be used for OpenGL-based environments having super-user privileges in Linux, assuming NVIDIA drivers and `xserver-xorg`
+are installed.
 
 ## `tests` directory
 
