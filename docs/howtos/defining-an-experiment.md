@@ -96,7 +96,7 @@ class ObjectNavThorPPOExperimentConfig(core.base_abstractions.experiment_config.
     ...
 ```
 
-Alternatively, we could use a more complicated pipeline that includes dataset aggregation
+Alternatively, we could use a more complex pipeline that includes dataset aggregation
 ([DAgger](https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf)). This requires the existence of an
 expert (implemented in the task definition) that provides optimal actions to agents. We have implemented such a 
 pipeline by extending the above configuration as follows

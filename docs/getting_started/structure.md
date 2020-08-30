@@ -1,7 +1,8 @@
 # Structure of the codebase
 
-The codebase consists of the following directories: `core`, `docs`, `plugins`, `projects`, `scripts`, `tests` and
-`utils`. Below, we explain the overall structure and how different components of the codebase are organized. 
+The codebase consists of the following directories: `core`, `datasets`, `docs`, `overrides`, `plugins`,
+`pretrained_model_ckpts`, `projects`, `scripts`, `tests` and `utils`. Below, we explain the overall structure and how
+different components of the codebase are organized. 
 
 ## `core` directory
 

@@ -1,6 +1,7 @@
 # Tutorial: Navigation in MiniGrid
  
-In this tutorial, we will train an agent to complete the `MiniGrid-Empty-Random-5x5-v0` task within the [MiniGrid](https://github.com/maximecb/gym-minigrid) environment. We will demonstrate how to:
+In this tutorial, we will train an agent to complete the `MiniGrid-Empty-Random-5x5-v0` task within the
+[MiniGrid](https://github.com/maximecb/gym-minigrid) environment. We will demonstrate how to:
 
 * Write an experiment configuration file with a simple training pipeline from scratch.
 * Use one of the supported environments with minimal user effort.
@@ -72,7 +73,8 @@ allows us to extract observations in a format consumable by an `ActorCriticModel
 ```
 
 The three `view_channels` include objects, colors and states corresponding to a partial observation of the environment
-as an image tensor, equivalent to that from `ImgObsWrapper` in https://github.com/maximecb/gym-minigrid#wrappers. The
+as an image tensor, equivalent to that from `ImgObsWrapper` in
+[MiniGrid](https://github.com/maximecb/gym-minigrid#wrappers). The
 relatively large `agent_view_size` means the view will only be clipped by the environment walls in the forward and
 lateral directions with respect to the agent's orientation.
 
