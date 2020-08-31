@@ -493,6 +493,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#testing-model" class="md-nav__link">
+    Testing Model
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#conclusion" class="md-nav__link">
     Conclusion
   </a>
@@ -3317,6 +3324,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#testing-model" class="md-nav__link">
+    Testing Model
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#conclusion" class="md-nav__link">
     Conclusion
   </a>
@@ -3356,7 +3370,7 @@ to the beacon. This particular task is often called Point Navigation, or <strong
 all times, can it not simply follow this signal directly? The answer is no, because agents are often trained
 on this task in environments that emulate real-world buildings which are not wide-open spaces, but rather
 contain many smaller rooms. Because of this, the agent has to learn to navigate human spaces and use doors
-and hallways to efficiently navigate from one side of the house to the other. This task becomes particularly
+and hallways to efficiently navigate from one side of the building to the other. This task becomes particularly
 difficult when the agent is tested in an environment that it is not trained in. If the agent does not know
 how the floor plan of an environment looks, it has to learn to predict the design of man-made structures,
 to efficiently navigate across them, much like how people instinctively know how to move around a building
@@ -3381,7 +3395,7 @@ has a class abstraction called Environment. This is not the actual simulator gam
 but rather a shallow wrapper that provides a uniform interface to the actual environment.</p>
 <h4 id="learning-algorithm">Learning algorithm<a class="headerlink" href="#learning-algorithm" title="Permanent link">#</a></h4>
 <p>Finally, let us briefly touch on the algorithm that we will use to train our embodied agent to navigate. While
-<em>allenact</em> offers us great flexibility to train models using complex pipelines, we will be using a simple
+<em>AllenAct</em> offers us great flexibility to train models using complex pipelines, we will be using a simple
 pure reinforcement learning approach for this tutorial. More specifically, we will be using DD-PPO,
 a decentralized and distributed variant of the ubiquitous PPO algorithm. For those unfamiliar with Reinforcement
 Learning we highly recommend <a href="http://karpathy.github.io/2016/05/31/rl/">this tutorial</a> by Andrej Karpathy, and <a href="http://www.incompleteideas.net/book/the-book-2nd.html">this
@@ -3390,9 +3404,9 @@ is letting our agent explore the environment on its own, rewarding it for taking
 to its goal and penalizing it for actions that take it away from its goal. We then optimize the agent's model
 to maximize this reward.</p>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">#</a></h2>
-<p>To train the model on the PointNav task, we need to <a href="../../installation/installation-allenact/">install the RoboTHOR environment</a> 
-and <a href="../../installation/download-datasets/">download the RoboTHOR ObjectNav dataset</a>
-The dataset contains a list of episodes with thousands of randomly generated starting positions and target locations for each of the scenes
+<p>To train the model on the PointNav task, we need to <a href="../../installation/installation-framework/">install the RoboTHOR environment</a> 
+and <a href="../../installation/download-datasets/">download the RoboTHOR PointNav dataset</a></p>
+<p>The dataset contains a list of episodes with thousands of randomly generated starting positions and target locations for each of the scenes
 as well as a precomputed cache of distances, containing the shortest path from each point in a scene, to every other point in that scene. 
 This is used to reward the agent for moving closer to the target in terms of geodesic distance - the actual path distance (as opposed to a 
 straight line distance).</p>
@@ -3403,10 +3417,11 @@ first see our how-to on <a href="../howtos/training-a-pointnav-model.md">definin
 walk you through creating a simplified experiment config file.</p>
 <p>Unlike a library that can be imported into python, <strong>AllenAct</strong> is structured as a framework with a runner script called <code>main.py</code> which will run the experiment specified in a config file. This design forces us to keep meticulous records of exactly which settings were used to produce a particular result,
 which can be very useful given how expensive RL models are to train.</p>
-<p>We will start by creating a new directory inside the <code>projects</code> directory. We can name this whatever we want but for now, we will go with <code>robothor_pointnav_tutuorial</code>. Then we can create a directory called 
- <code>experiments</code> inside the new directory we just created. This hierarchy is not necessary but it helps keep
-our experiments neatly organized. Now we create a file called <code>pointnav_robothor_rgb_ddppo</code> inside the
-<code>experiments</code> folder (again the name of this file is arbitrary).</p>
+<p>The <code>projects/</code> directory is home to different projects using <code>AllenAct</code>. Currently it is populated with baselines
+of popular tasks and tutorials.</p>
+<p>We already have all the code for this tutorial stored in <code>projects/tutorials/pointnav_robothor_rgb_ddppo.py</code>. We will
+be using this file to run our experiments, but you can create a new directory in <code>projects/</code> and start writing your
+experiment there.</p>
 <p>We start off by importing everything we will need:</p>
 <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">glob</span>
 <span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">ceil</span>
@@ -3513,7 +3528,7 @@ the point our agent needs to move to. It tells us the direction and distance to 
 </code></pre></div>
 
 
-<p>For the sake of this example, we are also going to be using a preprocessor with our model. In <em>allenact</em>
+<p>For the sake of this example, we are also going to be using a preprocessor with our model. In <em>AllenAct</em>
 the preprocessor abstraction is designed with large models with frozen weights in mind. These models often
 hail from the ResNet family and transform the raw pixels that our agent observes in the environment, into a
 complex embedding, which then gets stored and used as input to our trainable model instead of the original image.
@@ -3709,7 +3724,7 @@ each process should work with. If we have several GPUS and many scenes this proc
         <span class="n">seeds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">deterministic_cudnn</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="n">scenes_dir</span> <span class="o">+</span> <span class="s2">&quot;*.json.gz&quot;</span> <span class="k">if</span> <span class="n">scenes_dir</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;/&quot;</span> <span class="k">else</span> <span class="n">scenes_dir</span> <span class="o">+</span> <span class="s2">&quot;/*.json.gz&quot;</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">scenes_dir</span><span class="p">,</span> <span class="s2">&quot;*.json.gz&quot;</span><span class="p">)</span>
         <span class="n">scenes</span> <span class="o">=</span> <span class="p">[</span><span class="n">scene</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">scene</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">path</span><span class="p">)]</span>
         <span class="k">if</span> <span class="n">total_processes</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">scenes</span><span class="p">):</span>  <span class="c1"># oversample some scenes -&gt; bias</span>
             <span class="k">if</span> <span class="n">total_processes</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">scenes</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
@@ -3753,7 +3768,7 @@ set.</p>
         <span class="n">deterministic_cudnn</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
         <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_sampler_args_for_scene_split</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">TRAIN_DATASET_DIR</span> <span class="o">+</span> <span class="s1">&#39;/episodes/&#39;</span><span class="p">,</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">TRAIN_DATASET_DIR</span><span class="p">,</span> <span class="s2">&quot;episodes&quot;</span><span class="p">),</span>
             <span class="n">process_ind</span><span class="p">,</span>
             <span class="n">total_processes</span><span class="p">,</span>
             <span class="n">seeds</span><span class="o">=</span><span class="n">seeds</span><span class="p">,</span>
@@ -3830,33 +3845,24 @@ should take about 20 minutes on a computer with a NVIDIA GPU.</p>
 
 <p>Note that we changed both the train and test dataset to debug, so the model will train and validate on the same
 4 episodes.</p>
-<p>We can not train a model by running:</p>
+<p>We can now train a model by running:</p>
 <div class="codehilite"><pre><span></span><code>python main.py -o &lt;PATH_TO_OUTPUT&gt; -c -b &lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt; &lt;EXPERIMENT_NAME&gt;
 </code></pre></div>
 
 
 <p>If using the same configuration as we have set up, the following command should work:</p>
-<div class="codehilite"><pre><span></span><code>python main.py -o projects/tutorials/pointnav_robothor_rgb/storage/ -b projects/tutorials/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
+<div class="codehilite"><pre><span></span><code>python main.py -o storage/robothor-pointnav-rgb-resnet-resnet -b projects/tutorials pointnav_robothor_rgb_ddppo
 </code></pre></div>
 
 
 <p>If we start up a tensorboard server during training and specify that <code>output_dir=storage</code> the output should look
 something like this:
-<img alt="tensorboard output" src="../../img/tb.png" /></p>
+<img alt="tensorboard output" src="../../img/point-nav-baseline-tb.png" /></p>
 <h2 id="training-model-on-full-dataset">Training Model On Full Dataset<a class="headerlink" href="#training-model-on-full-dataset" title="Permanent link">#</a></h2>
-<p>We can also train the model on the full dataset by changing back our dataset path and running:</p>
-<div class="codehilite"><pre><span></span><code>python main.py -o &lt;PATH_TO_OUTPUT&gt; -c -b &lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt; &lt;EXPERIMENT_NAME&gt;
-</code></pre></div>
-
-
-<p>But be aware, training this takes nearly 2 days on a machine with 8 GPU. For our current setup the following command would work:</p>
-<div class="codehilite"><pre><span></span><code>python main.py -o projects/tutorials/pointnav_robothor_rgb/storage/ -b projects/tutorials/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
-</code></pre></div>
-
-
-<p>If we start up a tensorboard server during training and specify that <code>output_dir=storage</code> the output should look
-something like this:
-<img alt="tensorboard output" src="../../img/tb.png" /></p>
+<p>We can also train the model on the full dataset by changing back our dataset path and running the same command as above.
+But be aware, training this takes nearly 2 days on a machine with 8 GPU.</p>
+<h2 id="testing-model">Testing Model<a class="headerlink" href="#testing-model" title="Permanent link">#</a></h2>
+<p>To test the performance of a model please refer to <a href="../running_inference_on_a_pretrained_model/">this tutorial</a>.</p>
 <h2 id="conclusion">Conclusion<a class="headerlink" href="#conclusion" title="Permanent link">#</a></h2>
 <p>In this tutorial, we learned how to create a new PointNav experiment using <strong>AllenAct</strong>. There are many simple
 and obvious ways to modify the experiment from here - changing the model, the learning algorithm and the environment

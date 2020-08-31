@@ -3172,31 +3172,33 @@
                 <h1 id="tutorial-inference-with-a-pre-trained-model">Tutorial: Inference with a pre-trained model<a class="headerlink" href="#tutorial-inference-with-a-pre-trained-model" title="Permanent link">#</a></h1>
 <p>In this tutorial we will run inference on a pre-trained model for the PointNav task
 in the RoboTHOR environment. In this task the agent is tasked with going to a specific location
-withing  a realistic 3D environment.</p>
+within a realistic 3D environment.</p>
 <p>For information on how to train a PointNav Model see <a href="../training-a-pointnav-model/">this tutorial</a></p>
 <p>We will need to <a href="../../installation/installation-allenact/">install the RoboTHOR environment</a> and <a href="../../installation/download-datasets/">download the 
-RoboTHOR ObjectNav dataset</a> before we get started.</p>
-<p>We have to download the weights for the model that we want to run inference on.
+RoboTHOR Pointnav dataset</a> before we get started.</p>
+<p>For this tutorial we will download the weights of a model trained on the debug dataset.
 This can be done with a handy script in the <code>pretrained_model_ckpts</code> directory:</p>
-<div class="codehilite"><pre><span></span><code>sh pretrained_model_ckpts/download_navigation_model_ckpts.sh robothor-objectnav-rgb-resnet
+<div class="codehilite"><pre><span></span><code>sh pretrained_model_ckpts/download_navigation_model_ckpts.sh robothor-pointnav-rgb-resnet
 </code></pre></div>
 
 
-<p>This will download the weights for an RGB model using a Resnet that has been
-trained on the ObjectNav task in RoboTHOR to <code>pretrained_model_ckpts/robothor-pointnav-rgb-resnet.pt</code></p>
+<p>This will download the weights for an RGB model that has been
+trained on the PointNav task in RoboTHOR to <code>pretrained_model_ckpts/robothor-pointnav-rgb-resnet</code></p>
 <p>Next we need to run the inference, using the PointNav experiment config from the <a href="../training-a-pointnav-model/">tutorial on making a PointNav experiment</a>.
 We can do this with the following command:</p>
-<div class="codehilite"><pre><span></span><code>python main.py -o &lt;PATH_TO_OUTPUT&gt; -c &lt;PATH_TO_CHECKPOINT&gt; -t -b &lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt; &lt;EXPERIMENT_NAME&gt;
+<div class="codehilite"><pre><span></span><code>python main.py -o &lt;PATH_TO_OUTPUT&gt; -c &lt;PATH_TO_CHECKPOINT&gt; -b &lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt; -t &lt;TIMESTAMP&gt;
 </code></pre></div>
 
 
-<p>Where <code>PATH_TO_OUTPUT</code> is the location where the results of the test will be dumped, <code>PATH_TO_CHECKPOINT</code> is the 
+<p>Where <code>&lt;PATH_TO_OUTPUT&gt;</code> is the location where the results of the test will be dumped, <code>&lt;PATH_TO_CHECKPOINT&gt;</code> is the 
 location of the downloaded model weights, <code>&lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt;</code> is a path to the directory where 
-our experiment definition is stored and <code>&lt;EXPERIMENT_NAME&gt;</code> is simply the name of our experiment
-(without the file extension).</p>
+our experiment definition is stored, and <code>&lt;TIMESTAMP&gt;</code> is the unique timestamp associated with when the model was
+trained.</p>
 <p>For our current setup the following command would work:</p>
 <p><code>bash
- python main.py -o storage/ -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet.pt -t -b projects/tutorials pointnav_robothor_rgb_ddppo</code></p>
+ python main.py -o storage/ -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_10-20-29/exp_PointNavRobothorRGBPPO__stage_00__steps_000000100800.pt -t 2020-08-31_10-20-29 -b projects/tutorials pointnav_robothor_rgb_ddppo</code></p>
+<p>If we want to run inference on a model we trained ourselves, we simply have to point <code>&lt;PATH_TO_CHECKPOINT&gt;</code>
+to the checkpoint we want to evaluate.</p>
                 
               
               
