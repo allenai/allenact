@@ -15,29 +15,39 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     ...
     @classmethod
     def training_pipeline(cls, **kwargs):
+        ppo_steps = int(1e6)
+        lr = 2.5e-4
+        num_mini_batch = 2 if not torch.cuda.is_available() else 6
+        update_repeats = 4
+        num_steps = 128
+        metric_accumulate_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
+        save_interval = 10000
+        gamma = 0.99
+        use_gae = True
+        gae_lambda = 1.0
+        max_grad_norm = 0.5
+
         return TrainingPipeline(
+            save_interval=save_interval,
+            metric_accumulate_interval=metric_accumulate_interval,
+            optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
+            num_mini_batch=num_mini_batch,
+            update_repeats=update_repeats,
+            max_grad_norm=max_grad_norm,
+            num_steps=num_steps,
             named_losses={
-                "ppo_loss": PPO(**PPOConfig),
+                "ppo_loss": PPO(clip_decay=LinearDecay(ppo_steps), **PPOConfig),
             },
-            optimizer_builder=Builder(
-                optim.Adam, dict(lr=2.5e-4)
-            ),
-            save_interval=10000,  # Save every 10000 steps (approximately)
-            metric_accumulate_interval=1,  # Log after every step (in practice after every rollout)
-            num_mini_batch=6,
-            update_repeats=4,
-            num_steps=128,
-            gamma=0.99,
-            use_gae=True,
-            gae_lambda=1.0,
-            max_grad_norm=0.5,
-            advance_scene_rollout_period=None,
+            gamma=gamma,
+            use_gae=use_gae,
+            gae_lambda=gae_lambda,
+            advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
-                PipelineStage(
-                    loss_names=["ppo_loss"],
-                    max_stage_steps=int(1e6)
-                ),
+                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps,),
             ],
+            lr_scheduler_builder=Builder(
+                LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
+            ),
         )
     ...
 ```
@@ -47,33 +57,45 @@ Alternatively, we could use a more complex pipeline that includes dataset aggreg
 expert (implemented in the task definition) that provides optimal actions to agents. We have implemented such a 
 pipeline by extending the above configuration as follows:
 ```python
-class ObjectNavThorDaggerPPOExperimentConfig(ExperimentConfig):
+class ObjectNavThorDaggerThenPPOExperimentConfig(ExperimentConfig):
     ...
     SENSORS = [
         ...
-        ExpertActionSensor({"nactions": 6}), # Notice that we have added
-                                             # an expert action sensor.
+        ExpertActionSensor(nactions=6), # Notice that we have added
+                                        # an expert action sensor.
     ]
     ...
     @classmethod
     def training_pipeline(cls, **kwargs):
-        dagger_steps = int(3e4)
+        dagger_steps = int(1e4) # Much smaller number of steps as we're using imitation learning
+        ppo_steps = int(1e6)
+        lr = 2.5e-4
+        num_mini_batch = 1 if not torch.cuda.is_available() else 6
+        update_repeats = 4
+        num_steps = 128
+        metric_accumulate_interval = cls.MAX_STEPS * 10  # Log every 10 max length tasks
+        save_interval = 10000
+        gamma = 0.99
+        use_gae = True
+        gae_lambda = 1.0
+        max_grad_norm = 0.5
+
         return TrainingPipeline(
-            save_interval=10000,  # Save every 10000 steps (approximately)
-            metric_accumulate_interval=1,
-            optimizer_builder=Builder(optim.Adam, dict(lr=2.5e-4)),
-            num_mini_batch=6,
-            update_repeats=4,
-            num_steps=128,
+            save_interval=save_interval,
+            metric_accumulate_interval=metric_accumulate_interval,
+            optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
+            num_mini_batch=num_mini_batch,
+            update_repeats=update_repeats,
+            max_grad_norm=max_grad_norm,
+            num_steps=num_steps,
             named_losses={
+                "ppo_loss": PPO(clip_decay=LinearDecay(ppo_steps), **PPOConfig),
                 "imitation_loss": Imitation(), # We add an imitation loss.
-                "ppo_loss": PPO(**PPOConfig),
             },
-            gamma=0.99,
-            use_gae=True,
-            gae_lambda=1.0,
-            max_grad_norm=0.5,
-            advance_scene_rollout_period=None,
+            gamma=gamma,
+            use_gae=use_gae,
+            gae_lambda=gae_lambda,
+            advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[ # The pipeline now has two stages, in the first
                               # we use DAgger (imitation loss + teacher forcing).
                               # In the second stage we no longer use teacher
@@ -85,11 +107,11 @@ class ObjectNavThorDaggerPPOExperimentConfig(ExperimentConfig):
                     ),
                     max_stage_steps=dagger_steps,
                 ),
-                PipelineStage(
-                    loss_names=["ppo_loss", "imitation_loss"],
-                    max_stage_steps=int(3e5)
-                ),
+                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps,),
             ],
+            lr_scheduler_builder=Builder(
+                LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
+            ),
         )
 ``` 
 
@@ -130,7 +152,7 @@ class BCOffPolicyBabyAIGoToLocalExperimentConfig(ExperimentConfig):
                         data_iterator_builder=lambda **kwargs: create_minigrid_offpolicy_data_iterator(
                             path=DATASET_PATH,  # external dataset
                             nrollouts=128,  # per trainer batch size
-                            rollout_len=num_steps,  # For truncated-BTT
+                            rollout_len=num_steps,  # For truncated-BPTT
                             instr_len=5,
                             **kwargs,
                         ),

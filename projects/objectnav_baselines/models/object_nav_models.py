@@ -154,7 +154,6 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
             x_cat, memory.tensor("rnn"), masks
         )
 
-        # distributions, values = self.actor_and_critic(x_out)
         return (
             ActorCriticOutput(
                 distributions=self.actor(x_out), values=self.critic(x_out), extras={}
