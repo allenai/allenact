@@ -7,12 +7,12 @@ way to formulate "moving around" into a task is by making your agent find a beac
 This beacon transmits its location, such that at any time, the agent can get the direction and euclidian distance
 to the beacon. This particular task is often called Point Navigation, or **PointNav** for short.
 
-#### Pointnav
+#### PointNav
 At first glance, this task seems trivial. If the agent is given the direction and distance of the target at
 all times, can it not simply follow this signal directly? The answer is no, because agents are often trained
 on this task in environments that emulate real-world buildings which are not wide-open spaces, but rather
 contain many smaller rooms. Because of this, the agent has to learn to navigate human spaces and use doors
-and hallways to efficiently navigate from one side of the house to the other. This task becomes particularly
+and hallways to efficiently navigate from one side of the building to the other. This task becomes particularly
 difficult when the agent is tested in an environment that it is not trained in. If the agent does not know
 how the floor plan of an environment looks, it has to learn to predict the design of man-made structures,
 to efficiently navigate across them, much like how people instinctively know how to move around a building
@@ -42,7 +42,7 @@ but rather a shallow wrapper that provides a uniform interface to the actual env
 
 #### Learning algorithm
 Finally, let us briefly touch on the algorithm that we will use to train our embodied agent to navigate. While
-*allenact* offers us great flexibility to train models using complex pipelines, we will be using a simple
+*AllenAct* offers us great flexibility to train models using complex pipelines, we will be using a simple
 pure reinforcement learning approach for this tutorial. More specifically, we will be using DD-PPO,
 a decentralized and distributed variant of the ubiquitous PPO algorithm. For those unfamiliar with Reinforcement
 Learning we highly recommend [this tutorial](http://karpathy.github.io/2016/05/31/rl/) by Andrej Karpathy, and [this
@@ -52,8 +52,8 @@ to its goal and penalizing it for actions that take it away from its goal. We th
 to maximize this reward.
 
 ## Requirements
-To train the model on the PointNav task, we need to [install the RoboTHOR environment](../installation/installation-allenact.md) 
-and [download the RoboTHOR Objectnav dataset](../installation/download-datasets.md)
+To train the model on the PointNav task, we need to [install the RoboTHOR environment](../installation/installation-framework.md) 
+and [download the RoboTHOR PointNav dataset](../installation/download-datasets.md)
 The dataset contains a list of episodes with thousands of randomly generated starting positions and target locations for each of the scenes
 as well as a precomputed cache of distances, containing the shortest path from each point in a scene, to every other point in that scene. 
 This is used to reward the agent for moving closer to the target in terms of geodesic distance - the actual path distance (as opposed to a 
@@ -65,10 +65,12 @@ Now comes the most important part of the tutorial, we are going to write an expe
 Unlike a library that can be imported into python, **AllenAct** is structured as a framework with a runner script called `main.py` which will run the experiment specified in a config file. This design forces us to keep meticulous records of exactly which settings were used to produce a particular result,
 which can be very useful given how expensive RL models are to train.
 
-We will start by creating a new directory inside the `projects` directory. We can name this whatever we want but for now, we will go with `robothor_pointnav_tutuorial`. Then we can create a directory called 
- `experiments` inside the new directory we just created. This hierarchy is not necessary but it helps keep
-our experiments neatly organized. Now we create a file called `pointnav_robothor_rgb_ddppo` inside the
-`experiments` folder (again the name of this file is arbitrary).
+The `projects/` directory is home to different projects using `AllenAct`. Currently it is populated with baselines
+of popular tasks and tutorials.
+
+We already have all the code for this tutorial stored in `projects/tutorials/pointnav_robothor_rgb_ddppo.py`. We will
+be using this file to run our experiments, but you can create a new directory in `projects/` and start writing your
+experiment there.
 
 We start off by importing everything we will need:
 ```python
@@ -180,7 +182,7 @@ the point our agent needs to move to. It tells us the direction and distance to 
 
 ```
 
-For the sake of this example, we are also going to be using a preprocessor with our model. In *allenact*
+For the sake of this example, we are also going to be using a preprocessor with our model. In *AllenAct*
 the preprocessor abstraction is designed with large models with frozen weights in mind. These models often
 hail from the ResNet family and transform the raw pixels that our agent observes in the environment, into a
 complex embedding, which then gets stored and used as input to our trainable model instead of the original image.
@@ -511,7 +513,7 @@ python main.py -o <PATH_TO_OUTPUT> -c -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EX
 ```
 If using the same configuration as we have set up, the following command should work:
 ```bash
-python main.py -o projects/tutorials/pointnav_robothor_rgb/storage/ -b projects/tutorials/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
+python main.py -o storage/robothor-pointnav-rgb-resnet-resnet -b projects/tutorials pointnav_robothor_rgb_ddppo
 ```
 If we start up a tensorboard server during training and specify that `output_dir=storage` the output should look
 something like this:
@@ -519,17 +521,13 @@ something like this:
 
 
 ## Training Model On Full Dataset
-We can also train the model on the full dataset by changing back our dataset path and running:
-```bash
-python main.py -o <PATH_TO_OUTPUT> -c -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
-```
-But be aware, training this takes nearly 2 days on a machine with 8 GPU. For our current setup the following command would work:
-```bash
-python main.py -o projects/tutorials/pointnav_robothor_rgb/storage/ -b projects/tutorials/pointnav_robothor_rgb/experiments pointnav_robothor_rgb_ddppo
-```
-If we start up a tensorboard server during training and specify that `output_dir=storage` the output should look
-something like this:
-![tensorboard output](../img/tb.png)
+We can also train the model on the full dataset by changing back our dataset path and running the same command as above.
+But be aware, training this takes nearly 2 days on a machine with 8 GPU.
+
+
+## Testing Model
+To test the performance of a model please refer to [this tutorial](running_inference_on_a_pretrained_model.md).
+
 
 ## Conclusion
 In this tutorial, we learned how to create a new PointNav experiment using **AllenAct**. There are many simple
