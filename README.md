@@ -54,7 +54,7 @@ AllenAct is an open-source project built by members of the PRIOR research group 
 </div>
 
 ## Citation
-If you use this work, please cite:
+If you use this work, please cite our [paper](https://arxiv.org/abs/2008.12760):
 
 ```bibtex
 @article{AllenAct,
@@ -63,7 +63,6 @@ If you use this work, please cite:
   year = {2020},
   journal = {arXiv},
 }
-
 ```
 
 
