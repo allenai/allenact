@@ -21,11 +21,18 @@ We need to define the methods `action_space`, `render`, `_step`, `reached_termin
 ### Initialization, action space and termination
 Let's start with the definition of the action space and task initialization:
 ```python
+...
+from plugins.ithor_plugin.ithor_constants import (
+    MOVE_AHEAD,
+    ROTATE_LEFT,
+    ROTATE_RIGHT,
+    LOOK_DOWN,
+    LOOK_UP,
+    END,
+)
+...
 class ObjectNavTask(Task[IThorEnvironment]):
-    _actions = (
-        'MOVE_AHEAD', 'ROTATE_LEFT', 'ROTATE_RIGHT',
-        'LOOK_DOWN', 'LOOK_UP', 'END'
-    )
+    _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT, LOOK_DOWN, LOOK_UP, END)
 
     def __init__(
         self,
@@ -51,7 +58,8 @@ class ObjectNavTask(Task[IThorEnvironment]):
     @classmethod
     def class_action_names(cls) -> Tuple[str, ...]:
         return cls._actions
-        def reached_terminal_state(self) -> bool:
+    
+    def reached_terminal_state(self) -> bool:
         return self._took_end_action
 
     def close(self) -> None:
@@ -64,10 +72,13 @@ Next, we define the main method `_step` that will be called every time the agent
 ```python
 class ObjectNavTask(Task[IThorEnvironment]):
     ...
-    def _step(self, action: int) -> RLStepResult:
+    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        assert isinstance(action, int)
+        action = cast(int, action)
+
         action_str = self.class_action_names()[action]
 
-        if action_str == 'END':
+        if action_str == END:
             self._took_end_action = True
             self._success = self._is_goal_object_visible()
             self.last_action_success = self._success
@@ -82,6 +93,8 @@ class ObjectNavTask(Task[IThorEnvironment]):
             info={"last_action_success": self.last_action_success},
         )
         return step_result
+    
+    ...
 
     def _is_goal_object_visible(self) -> bool:
         return any(
@@ -126,7 +139,7 @@ e.g. for DAgger training.
 We also need to define the corresponding TaskSampler, which must contain implementations for methods `__len__`,
 `total_unique`, `last_sampled_task`, `next_task`, `close`, `reset`, and `set_seed`. Currently,
 an additional method `all_observation_spaces_equal` is used to ensure compatibility with the current
-[RolloutStorage](/api/onpolicy_sync/storage#rolloutstorage).
+[RolloutStorage](/api/core/algorithms/onpolicy_sync/storage#rolloutstorage).
 
 Let's define a tasks sampler able to provide an infinite number of object navigation tasks for AI2-THOR.
 
@@ -214,10 +227,6 @@ Finally, we need to define methods to determine the number of available tasks (p
             self.env.reset(scene_name=scene)
 
         self.env.randomize_agent_location()
-
-        object_types_in_scene = set(
-            [o["objectType"] for o in self.env.last_event.metadata["objects"]]
-        )
 
         task_info = {"object_type": random.sample(self.object_types, 1)}
 
