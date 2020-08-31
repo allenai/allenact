@@ -199,7 +199,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         self,
         process_ind: int,
         total_processes: int,
-        devices: Optional[List[int]],
+        devices: Optional[List[int]] = None,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
@@ -223,7 +223,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         self,
         process_ind: int,
         total_processes: int,
-        devices: Optional[List[int]],
+        devices: Optional[List[int]] = None,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
