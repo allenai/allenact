@@ -517,7 +517,12 @@ class OnPolicyRunner(object):
             )
 
             for k in metrics:
-                log_writer.add_scalar("{}/".format(self.mode) + k, metrics[k], steps)
+                if "offpolicy" not in k:
+                    log_writer.add_scalar(
+                        "{}/".format(self.mode) + k, metrics[k], steps
+                    )
+                else:
+                    log_writer.add_scalar(k, metrics[k], steps)
                 message.append(k + " {:.3g}".format(metrics[k]))
 
         if not return_metrics:
@@ -525,16 +530,21 @@ class OnPolicyRunner(object):
         else:
             return message, metrics
 
-    def process_train_packages(self, log_writer, pkgs, last_steps=0, last_time=0.0):
+    def process_train_packages(
+        self, log_writer, pkgs, last_steps=0, last_offpolicy_steps=0, last_time=0.0
+    ):
         current_time = time.time()
 
-        pkg_types, payloads, all_steps = [vals for vals in zip(*pkgs)]
+        pkg_types, payloads, all_steps, all_offpolicy_steps = [
+            vals for vals in zip(*pkgs)
+        ]
 
         steps = all_steps[0]
+        offpolicy_steps = all_offpolicy_steps[0]
 
         all_info_types = [worker_pkgs for worker_pkgs in zip(*payloads)]
 
-        message = ["train {} steps:".format(steps)]
+        message = ["train {} steps {} offpolicy:".format(steps, offpolicy_steps)]
         for info_type in all_info_types:
             message += self.aggregate_infos(log_writer, info_type, steps)
         message += ["elapsed_time {:.3g}s".format(current_time - last_time)]
@@ -543,9 +553,15 @@ class OnPolicyRunner(object):
             fps = (steps - last_steps) / (current_time - last_time)
             message += ["approx_fps {:.3g}".format(fps)]
             log_writer.add_scalar("train/approx_fps", fps, steps)
+
+        if last_offpolicy_steps > 0:
+            fps = (offpolicy_steps - last_offpolicy_steps) / (current_time - last_time)
+            message += ["offpolicy/approx_fps {:.3g}".format(fps)]
+            log_writer.add_scalar("offpolicy/approx_fps", fps, steps)
+
         get_logger().info(" ".join(message))
 
-        return steps, current_time
+        return steps, offpolicy_steps, current_time
 
     def process_test_packages(
         self, log_writer, pkgs, all_results: Optional[List[Any]] = None
@@ -605,6 +621,7 @@ class OnPolicyRunner(object):
         # To aggregate/buffer metrics from trainers/testers
         collected = []
         last_train_steps = 0
+        last_offpolicy_steps = 0
         last_train_time = time.time()
         # test_steps = sorted(test_steps, reverse=True)
         test_results: List[Dict] = []
@@ -618,18 +635,21 @@ class OnPolicyRunner(object):
                         collected.append(package)
                         if len(collected) >= nworkers:
                             collected = sorted(
-                                collected, key=lambda x: x[2]
-                            )  # sort by num_steps
+                                collected, key=lambda x: (x[2], x[3])
+                            )  # sort by num_steps, offpolicy_steps
                             if (
                                 collected[nworkers - 1][2] == collected[0][2]
+                                and collected[nworkers - 1][3] == collected[0][3]
                             ):  # ensure nworkers have provided the same num_steps
                                 (
                                     last_train_steps,
+                                    last_offpolicy_steps,
                                     last_train_time,
                                 ) = self.process_train_packages(
                                     log_writer,
                                     collected[:nworkers],
                                     last_steps=last_train_steps,
+                                    last_offpolicy_steps=last_offpolicy_steps,
                                     last_time=last_train_time,
                                 )
                                 collected = collected[nworkers:]
