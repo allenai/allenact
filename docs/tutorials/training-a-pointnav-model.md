@@ -521,7 +521,7 @@ python main.py -o storage/robothor-pointnav-rgb-resnet-resnet -b projects/tutori
 ```
 If we start up a tensorboard server during training and specify that `output_dir=storage` the output should look
 something like this:
-![tensorboard output](../img/tb.png)
+![tensorboard output](../img/point-nav-baseline-tb.png)
 
 
 ## Training Model On Full Dataset

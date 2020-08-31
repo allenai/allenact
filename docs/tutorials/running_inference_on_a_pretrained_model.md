@@ -12,9 +12,7 @@ RoboTHOR Pointnav dataset](../installation/download-datasets.md) before we get s
 For this tutorial we will download the weights of a pre trained model.
 This can be done with a handy script in the `pretrained_model_ckpts` directory:
 ```bash
-cd pretrained_model_ckpts
 sh download_navigation_model_ckpts.sh robothor-pointnav-rgb-resnet
-cd ../
 ```
 This will download the weights for an RGB model that has been
 trained on the PointNav task in RoboTHOR to `pretrained_model_ckpts/robothor-pointnav-rgb-resnet.pt`
@@ -27,7 +25,7 @@ We can do this with the following command:
 python main.py -o <PATH_TO_OUTPUT> -c <PATH_TO_CHECKPOINT> -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
 ```
 
-Where `PATH_TO_OUTPUT` is the location where the results of the test will be dumped, `<PATH_TO_CHECKPOINT>` is the 
+Where `<PATH_TO_OUTPUT>` is the location where the results of the test will be dumped, `<PATH_TO_CHECKPOINT>` is the 
 location of the downloaded model weights, `<BASE_DIRECTORY_OF_YOUR_EXPERIMENT>` is a path to the directory where 
 our experiment definition is stored and `<EXPERIMENT_NAME>` is simply the name of our experiment
 (without the file extension).
