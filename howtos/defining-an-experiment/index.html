@@ -316,8 +316,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../getting_started/structure/" title="Structure of the codebase" class="md-nav__link">
-      Structure of the codebase
+    <a href="../../getting_started/abstractions/" title="Primary abstractions" class="md-nav__link">
+      Primary abstractions
     </a>
   </li>
 
@@ -328,8 +328,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../getting_started/abstractions/" title="Primary abstractions" class="md-nav__link">
-      Primary abstractions
+    <a href="../../getting_started/structure/" title="Structure of the codebase" class="md-nav__link">
+      Structure of the codebase
     </a>
   </li>
 
@@ -520,6 +520,13 @@
         <li class="md-nav__item">
   <a href="#task-sampling" class="md-nav__link">
     Task sampling
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-the-experiment" class="md-nav__link">
+    Running the experiment
   </a>
   
 </li>
@@ -2891,8 +2898,32 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object/" title="object_nav_ithor_dagger_then_ppo_one_object" class="md-nav__link">
+      object_nav_ithor_dagger_then_ppo_one_object
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/tutorials/pointnav_ithor_rgb_ddppo/" title="pointnav_ithor_rgb_ddppo" class="md-nav__link">
       pointnav_ithor_rgb_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/object_nav_ithor_ppo_one_object/" title="object_nav_ithor_ppo_one_object" class="md-nav__link">
+      object_nav_ithor_ppo_one_object
     </a>
   </li>
 
@@ -3217,6 +3248,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#running-the-experiment" class="md-nav__link">
+    Running the experiment
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3239,11 +3277,43 @@
                 
                 <h1 id="defining-an-experiment">Defining an  experiment<a class="headerlink" href="#defining-an-experiment" title="Permanent link">#</a></h1>
 <p>Let's look at an example experiment configuration for an object navigation example with an actor-critic agent observing
-RGB images from the environment and target object classes from the task.</p>
+RGB images from the environment and target object classes from the task. This is a simplified example where the 
+agent is confined to a single <code>iTHOR</code> scene (<code>FloorPlan1</code>) and needs to find a single object (a tomato). To see how one
+might running a "full"/"hard" version of navigation within AI2-THOR, see our tutorials
+ <a href="../../tutorials/training-a-pointnav-model/">PointNav in RoboTHOR</a> and 
+ <a href="../../tutorials/transfering-to-a-different-environment-framework/">Swapping in a new environment</a>.</p>
 <p>The interface to be implemented by the experiment specification is defined in
-<a href="/api/core/base_abstractions/experiment_config#experimentconfig">core.base_abstractions.experiment_config</a>. The first method to implement is <code>tag</code>,
-which provides a string identifying the experiment:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavThorPPOExperimentConfig</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">base_abstractions</span><span class="o">.</span><span class="n">experiment_config</span><span class="o">.</span><span class="n">ExperimentConfig</span><span class="p">):</span>
+<a href="/api/core/base_abstractions/experiment_config#experimentconfig">core.base_abstractions.experiment_config</a>. If you'd
+like to skip ahead and see the finished configuration, <a href="https://github.com/allenai/allenact/blob/master/projects/tutorials/object_nav_ithor_ppo_one_object.py">see here</a>.
+We begin by making the following imports:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">ceil</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span> <span class="nn">gym</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">torch.optim</span> <span class="k">as</span> <span class="nn">optim</span>
+<span class="kn">from</span> <span class="nn">torch.optim.lr_scheduler</span> <span class="kn">import</span> <span class="n">LambdaLR</span>
+
+<span class="kn">from</span> <span class="nn">core.algorithms.onpolicy_sync.losses</span> <span class="kn">import</span> <span class="n">PPO</span>
+<span class="kn">from</span> <span class="nn">core.algorithms.onpolicy_sync.losses.ppo</span> <span class="kn">import</span> <span class="n">PPOConfig</span>
+<span class="kn">from</span> <span class="nn">core.base_abstractions.experiment_config</span> <span class="kn">import</span> <span class="n">ExperimentConfig</span>
+<span class="kn">from</span> <span class="nn">core.base_abstractions.sensor</span> <span class="kn">import</span> <span class="n">SensorSuite</span>
+<span class="kn">from</span> <span class="nn">core.base_abstractions.task</span> <span class="kn">import</span> <span class="n">TaskSampler</span>
+<span class="kn">from</span> <span class="nn">plugins.ithor_plugin.ithor_sensors</span> <span class="kn">import</span> <span class="n">RGBSensorThor</span><span class="p">,</span> <span class="n">GoalObjectTypeThorSensor</span>
+<span class="kn">from</span> <span class="nn">plugins.ithor_plugin.ithor_task_samplers</span> <span class="kn">import</span> <span class="n">ObjectNavTaskSampler</span>
+<span class="kn">from</span> <span class="nn">plugins.ithor_plugin.ithor_tasks</span> <span class="kn">import</span> <span class="n">ObjectNavTask</span>
+<span class="kn">from</span> <span class="nn">projects.objectnav_baselines.models.object_nav_models</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ObjectNavBaselineActorCritic</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">utils.experiment_utils</span> <span class="kn">import</span> <span class="n">Builder</span><span class="p">,</span> <span class="n">PipelineStage</span><span class="p">,</span> <span class="n">TrainingPipeline</span><span class="p">,</span> <span class="n">LinearDecay</span>
+</code></pre></div>
+
+
+<p>Now first method to implement is <code>tag</code>, which provides a string identifying the experiment:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavThorPPOExperimentConfig</span><span class="p">(</span><span class="n">ExperimentConfig</span><span class="p">):</span>
+    <span class="o">...</span>
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">tag</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
         <span class="k">return</span> <span class="s2">&quot;ObjectNavThorPPO&quot;</span>
@@ -3252,37 +3322,34 @@ which provides a string identifying the experiment:</p>
 
 
 <h2 id="model-creation">Model creation<a class="headerlink" href="#model-creation" title="Permanent link">#</a></h2>
-<p>Next, <code>create_model</code> will be used to instantiate
-<a href="/api/projects/objectnav_baselines/models/object_nav_models#ObjectNavBaselineActorCritic">object navigation baseline actor-critic models</a>:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavThorExperimentConfig</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">base_abstractions</span><span class="o">.</span><span class="n">experiment_config</span><span class="o">.</span><span class="n">ExperimentConfig</span><span class="p">):</span>
-    <span class="o">...</span>
-    <span class="n">SCREEN_SIZE</span> <span class="o">=</span> <span class="mi">224</span>
-    <span class="o">...</span>
-    <span class="n">OBJECT_TYPES</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([</span><span class="s2">&quot;Tomato&quot;</span><span class="p">])</span>
+<p>Next, <code>create_model</code> will be used to instantiate an
+<a href="/api/projects/objectnav_baselines/models/object_nav_models#ObjectNavBaselineActorCritic">baseline object navigation actor-critic model</a>:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavThorExperimentConfig</span><span class="p">(</span><span class="n">ExperimentConfig</span><span class="p">):</span>
     <span class="o">...</span>
 
+    <span class="c1"># A simple setting, train/valid/test are all the same single scene</span>
+    <span class="c1"># and we&#39;re looking for a single object</span>
+    <span class="n">OBJECT_TYPES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Tomato&quot;</span><span class="p">]</span>
+    <span class="n">TRAIN_SCENES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;FloorPlan1_physics&quot;</span><span class="p">]</span>
+    <span class="n">VALID_SCENES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;FloorPlan1_physics&quot;</span><span class="p">]</span>
+    <span class="n">TEST_SCENES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;FloorPlan1_physics&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Setting up sensors and basic environment details</span>
+    <span class="n">SCREEN_SIZE</span> <span class="o">=</span> <span class="mi">224</span>
     <span class="n">SENSORS</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="n">plugins</span><span class="o">.</span><span class="n">ithor_plugin</span><span class="o">.</span><span class="n">ithor_sensors</span><span class="o">.</span><span class="n">RGBSensorThor</span><span class="p">(</span>
-            <span class="p">{</span>
-                <span class="s2">&quot;height&quot;</span><span class="p">:</span> <span class="n">SCREEN_SIZE</span><span class="p">,</span>
-                <span class="s2">&quot;width&quot;</span><span class="p">:</span> <span class="n">SCREEN_SIZE</span><span class="p">,</span>
-                <span class="s2">&quot;use_resnet_normalization&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-            <span class="p">}</span>
+        <span class="n">RGBSensorThor</span><span class="p">(</span>
+            <span class="n">height</span><span class="o">=</span><span class="n">SCREEN_SIZE</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="n">SCREEN_SIZE</span><span class="p">,</span> <span class="n">use_resnet_normalization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="p">),</span>
-        <span class="n">plugins</span><span class="o">.</span><span class="n">ithor_plugin</span><span class="o">.</span><span class="n">ithor_sensors</span><span class="o">.</span><span class="n">GoalObjectTypeThorSensor</span><span class="p">(</span>
-            <span class="p">{</span><span class="s2">&quot;object_types&quot;</span><span class="p">:</span> <span class="n">OBJECT_TYPES</span><span class="p">}</span>
-        <span class="p">),</span>
+        <span class="n">GoalObjectTypeThorSensor</span><span class="p">(</span><span class="n">object_types</span><span class="o">=</span><span class="n">OBJECT_TYPES</span><span class="p">),</span>
     <span class="p">]</span>
 
+    <span class="o">...</span>
+
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">models</span><span class="o">.</span><span class="n">object_nav_models</span><span class="o">.</span><span class="n">ObjectNavBaselineActorCritic</span><span class="p">(</span>
-            <span class="n">action_space</span><span class="o">=</span><span class="n">gym</span><span class="o">.</span><span class="n">spaces</span><span class="o">.</span><span class="n">Discrete</span><span class="p">(</span>
-                <span class="nb">len</span><span class="p">(</span><span class="n">plugins</span><span class="o">.</span><span class="n">ithor_plugin</span><span class="o">.</span><span class="n">ithor_tasks</span><span class="o">.</span><span class="n">ObjectNavTask</span><span class="o">.</span><span class="n">class_action_names</span><span class="p">())</span>
-            <span class="p">),</span>
-            <span class="n">observation_space</span><span class="o">=</span><span class="n">core</span><span class="o">.</span><span class="n">base_abstractions</span><span class="o">.</span><span class="n">sensor</span><span class="o">.</span><span class="n">SensorSuite</span><span class="p">(</span>
-                <span class="bp">cls</span><span class="o">.</span><span class="n">SENSORS</span>
-            <span class="p">)</span><span class="o">.</span><span class="n">observation_spaces</span><span class="p">,</span>
+    <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ObjectNavBaselineActorCritic</span><span class="p">(</span>
+            <span class="n">action_space</span><span class="o">=</span><span class="n">gym</span><span class="o">.</span><span class="n">spaces</span><span class="o">.</span><span class="n">Discrete</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ObjectNavTask</span><span class="o">.</span><span class="n">class_action_names</span><span class="p">())),</span>
+            <span class="n">observation_space</span><span class="o">=</span><span class="n">SensorSuite</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">SENSORS</span><span class="p">)</span><span class="o">.</span><span class="n">observation_spaces</span><span class="p">,</span>
             <span class="n">goal_sensor_uuid</span><span class="o">=</span><span class="s2">&quot;goal_object_type_ind&quot;</span><span class="p">,</span>
             <span class="n">hidden_size</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span>
             <span class="n">object_type_embedding_dim</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
@@ -3292,80 +3359,99 @@ which provides a string identifying the experiment:</p>
 
 
 <h2 id="training-pipeline">Training pipeline<a class="headerlink" href="#training-pipeline" title="Permanent link">#</a></h2>
-<p>In this section we use <a href="/api/utils/experiment_utils#builder">Builder</a> objects, which allow us to defer the instantiation
+<p>We now implement a training pipeline which trains with a single stage using PPO.</p>
+<p>In the below we use <a href="/api/utils/experiment_utils#builder">Builder</a> objects, which allow us to defer the instantiation
 of objects of the class passed as their first argument while allowing passing additional keyword arguments to their
-initializers. </p>
-<p>We can implement a training pipeline which trains with a single stage using PPO:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavThorPPOExperimentConfig</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">base_abstractions</span><span class="o">.</span><span class="n">experiment_config</span><span class="o">.</span><span class="n">ExperimentConfig</span><span class="p">):</span>
+initializers. This is necessary when instantiating things like PyTorch optimizers who take as input the list of
+parameters associated with our agent's model (something we can't know until the <code>create_model</code> function has been called).</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavThorPPOExperimentConfig</span><span class="p">(</span><span class="n">ExperimentConfig</span><span class="p">):</span>
     <span class="o">...</span>
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">training_pipeline</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">utils</span><span class="o">.</span><span class="n">experiment_utils</span><span class="o">.</span><span class="n">TrainingPipeline</span><span class="p">(</span>
+        <span class="n">ppo_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">1e6</span><span class="p">)</span>
+        <span class="n">lr</span> <span class="o">=</span> <span class="mf">2.5e-4</span>
+        <span class="n">num_mini_batch</span> <span class="o">=</span> <span class="mi">2</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="mi">6</span>
+        <span class="n">update_repeats</span> <span class="o">=</span> <span class="mi">4</span>
+        <span class="n">num_steps</span> <span class="o">=</span> <span class="mi">128</span>
+        <span class="n">metric_accumulate_interval</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">MAX_STEPS</span> <span class="o">*</span> <span class="mi">10</span>  <span class="c1"># Log every 10 max length tasks</span>
+        <span class="n">save_interval</span> <span class="o">=</span> <span class="mi">10000</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="mf">0.99</span>
+        <span class="n">use_gae</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">gae_lambda</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="n">max_grad_norm</span> <span class="o">=</span> <span class="mf">0.5</span>
+
+        <span class="k">return</span> <span class="n">TrainingPipeline</span><span class="p">(</span>
+            <span class="n">save_interval</span><span class="o">=</span><span class="n">save_interval</span><span class="p">,</span>
+            <span class="n">metric_accumulate_interval</span><span class="o">=</span><span class="n">metric_accumulate_interval</span><span class="p">,</span>
+            <span class="n">optimizer_builder</span><span class="o">=</span><span class="n">Builder</span><span class="p">(</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">)),</span>
+            <span class="n">num_mini_batch</span><span class="o">=</span><span class="n">num_mini_batch</span><span class="p">,</span>
+            <span class="n">update_repeats</span><span class="o">=</span><span class="n">update_repeats</span><span class="p">,</span>
+            <span class="n">max_grad_norm</span><span class="o">=</span><span class="n">max_grad_norm</span><span class="p">,</span>
+            <span class="n">num_steps</span><span class="o">=</span><span class="n">num_steps</span><span class="p">,</span>
             <span class="n">named_losses</span><span class="o">=</span><span class="p">{</span>
-                <span class="s2">&quot;ppo_loss&quot;</span><span class="p">:</span> <span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">ppo</span><span class="o">.</span><span class="n">PPO</span><span class="p">(</span>
-                    <span class="o">**</span><span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">ppo</span><span class="o">.</span><span class="n">PPOConfig</span><span class="p">,</span>
-                <span class="p">),</span>
+                <span class="s2">&quot;ppo_loss&quot;</span><span class="p">:</span> <span class="n">PPO</span><span class="p">(</span><span class="n">clip_decay</span><span class="o">=</span><span class="n">LinearDecay</span><span class="p">(</span><span class="n">ppo_steps</span><span class="p">),</span> <span class="o">**</span><span class="n">PPOConfig</span><span class="p">),</span>
             <span class="p">},</span>
-            <span class="n">optimizer</span><span class="o">=</span><span class="n">utils</span><span class="o">.</span><span class="n">experiment_utils</span><span class="o">.</span><span class="n">Builder</span><span class="p">(</span>
-                <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="mf">2.5e-4</span><span class="p">)</span>
-            <span class="p">),</span>
-            <span class="n">save_interval</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>  <span class="c1"># Save every 10000 steps (approximately)</span>
-            <span class="n">metric_accumulate_interval</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">MAX_STEPS</span> <span class="o">*</span> <span class="mi">10</span><span class="p">,</span>  <span class="c1"># Log every 10 max length tasks</span>
-            <span class="n">num_mini_batch</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-            <span class="n">update_repeats</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
-            <span class="n">num_steps</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
-            <span class="n">gamma</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span>
-            <span class="n">use_gae</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="n">gae_lambda</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-            <span class="n">max_grad_norm</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+            <span class="n">gamma</span><span class="o">=</span><span class="n">gamma</span><span class="p">,</span>
+            <span class="n">use_gae</span><span class="o">=</span><span class="n">use_gae</span><span class="p">,</span>
+            <span class="n">gae_lambda</span><span class="o">=</span><span class="n">gae_lambda</span><span class="p">,</span>
+            <span class="n">advance_scene_rollout_period</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">ADVANCE_SCENE_ROLLOUT_PERIOD</span><span class="p">,</span>
             <span class="n">pipeline_stages</span><span class="o">=</span><span class="p">[</span>
-                <span class="n">utils</span><span class="o">.</span><span class="n">experiment_utils</span><span class="o">.</span><span class="n">PipelineStage</span><span class="p">(</span>
-                    <span class="n">loss_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ppo_loss&quot;</span><span class="p">],</span>
-                    <span class="n">max_stage_steps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mf">1e6</span><span class="p">)</span>
-                <span class="p">),</span>
+                <span class="n">PipelineStage</span><span class="p">(</span><span class="n">loss_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ppo_loss&quot;</span><span class="p">],</span> <span class="n">max_stage_steps</span><span class="o">=</span><span class="n">ppo_steps</span><span class="p">,),</span>
             <span class="p">],</span>
+            <span class="n">lr_scheduler_builder</span><span class="o">=</span><span class="n">Builder</span><span class="p">(</span>
+                <span class="n">LambdaLR</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;lr_lambda&quot;</span><span class="p">:</span> <span class="n">LinearDecay</span><span class="p">(</span><span class="n">steps</span><span class="o">=</span><span class="n">ppo_steps</span><span class="p">)}</span>
+            <span class="p">),</span>
         <span class="p">)</span>
     <span class="o">...</span>
 </code></pre></div>
 
 
-<p>Alternatively, we could use a more complex pipeline that includes dataset aggregation
-(<a href="https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf">DAgger</a>). This requires the existence of an
+<p>Alternatively, we could use a more sophisticated pipeline that begins training with dataset aggregation
+(<a href="https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf">DAgger</a>) before moving to training
+with PPO. This requires the existence of an
 expert (implemented in the task definition) that provides optimal actions to agents. We have implemented such a 
 pipeline by extending the above configuration as follows</p>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavThorPPOExperimentConfig</span><span class="p">(</span><span class="n">ObjectNavThorPPOExperimentConfig</span><span class="p">):</span>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavThorDaggerThenPPOExperimentConfig</span><span class="p">(</span><span class="n">ObjectNavThorPPOExperimentConfig</span><span class="p">):</span>
     <span class="o">...</span>
     <span class="n">SENSORS</span> <span class="o">=</span> <span class="p">[</span>
         <span class="n">RGBSensorThor</span><span class="p">(</span>
-            <span class="p">{</span>
-                <span class="s2">&quot;height&quot;</span><span class="p">:</span> <span class="n">SCREEN_SIZE</span><span class="p">,</span>
-                <span class="s2">&quot;width&quot;</span><span class="p">:</span> <span class="n">SCREEN_SIZE</span><span class="p">,</span>
-                <span class="s2">&quot;use_resnet_normalization&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-            <span class="p">}</span>
+            <span class="n">height</span><span class="o">=</span><span class="n">SCREEN_SIZE</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="n">SCREEN_SIZE</span><span class="p">,</span> <span class="n">use_resnet_normalization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="p">),</span>
-        <span class="n">GoalObjectTypeThorSensor</span><span class="p">({</span><span class="s2">&quot;object_types&quot;</span><span class="p">:</span> <span class="n">OBJECT_TYPES</span><span class="p">}),</span>
-        <span class="n">ExpertActionSensor</span><span class="p">({</span><span class="s2">&quot;nactions&quot;</span><span class="p">:</span> <span class="mi">6</span><span class="p">}),</span> <span class="c1"># Notice that we have added</span>
-                                             <span class="c1"># an expert action sensor.</span>
+        <span class="n">GoalObjectTypeThorSensor</span><span class="p">(</span><span class="n">object_types</span><span class="o">=</span><span class="n">OBJECT_TYPES</span><span class="p">),</span>
+        <span class="n">ExpertActionSensor</span><span class="p">(</span><span class="n">nactions</span><span class="o">=</span><span class="mi">6</span><span class="p">),</span> <span class="c1"># Notice that we have added an expert action sensor.</span>
     <span class="p">]</span>
     <span class="o">...</span>
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">training_pipeline</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="n">dagger_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">3e4</span><span class="p">)</span>
+        <span class="n">dagger_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">1e4</span><span class="p">)</span> <span class="c1"># Much smaller number of steps as we&#39;re using imitation learning</span>
+        <span class="n">ppo_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">1e6</span><span class="p">)</span>
+        <span class="n">lr</span> <span class="o">=</span> <span class="mf">2.5e-4</span>
+        <span class="n">num_mini_batch</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="mi">6</span>
+        <span class="n">update_repeats</span> <span class="o">=</span> <span class="mi">4</span>
+        <span class="n">num_steps</span> <span class="o">=</span> <span class="mi">128</span>
+        <span class="n">metric_accumulate_interval</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">MAX_STEPS</span> <span class="o">*</span> <span class="mi">10</span>  <span class="c1"># Log every 10 max length tasks</span>
+        <span class="n">save_interval</span> <span class="o">=</span> <span class="mi">10000</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="mf">0.99</span>
+        <span class="n">use_gae</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">gae_lambda</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="n">max_grad_norm</span> <span class="o">=</span> <span class="mf">0.5</span>
+
         <span class="k">return</span> <span class="n">TrainingPipeline</span><span class="p">(</span>
-            <span class="n">save_interval</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>  <span class="c1"># Save every 10000 steps (approximately)</span>
-            <span class="n">metric_accumulate_interval</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">MAX_STEPS</span> <span class="o">*</span> <span class="mi">10</span><span class="p">,</span>  <span class="c1"># Log every 10 max length tasks</span>
-            <span class="n">optimizer</span><span class="o">=</span><span class="n">Builder</span><span class="p">(</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="mf">2.5e-4</span><span class="p">)),</span>
-            <span class="n">num_mini_batch</span><span class="o">=</span><span class="mi">6</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="mi">30</span><span class="p">,</span>
-            <span class="n">update_repeats</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
-            <span class="n">num_steps</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+            <span class="n">save_interval</span><span class="o">=</span><span class="n">save_interval</span><span class="p">,</span>
+            <span class="n">metric_accumulate_interval</span><span class="o">=</span><span class="n">metric_accumulate_interval</span><span class="p">,</span>
+            <span class="n">optimizer_builder</span><span class="o">=</span><span class="n">Builder</span><span class="p">(</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">)),</span>
+            <span class="n">num_mini_batch</span><span class="o">=</span><span class="n">num_mini_batch</span><span class="p">,</span>
+            <span class="n">update_repeats</span><span class="o">=</span><span class="n">update_repeats</span><span class="p">,</span>
+            <span class="n">max_grad_norm</span><span class="o">=</span><span class="n">max_grad_norm</span><span class="p">,</span>
+            <span class="n">num_steps</span><span class="o">=</span><span class="n">num_steps</span><span class="p">,</span>
             <span class="n">named_losses</span><span class="o">=</span><span class="p">{</span>
-                <span class="s2">&quot;imitation_loss&quot;</span><span class="p">:</span> <span class="n">Builder</span><span class="p">(</span><span class="n">Imitation</span><span class="p">,),</span> <span class="c1"># We add an imitation loss.</span>
-                <span class="s2">&quot;ppo_loss&quot;</span><span class="p">:</span> <span class="n">Builder</span><span class="p">(</span><span class="n">PPO</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">PPOConfig</span><span class="p">,),</span>
+                <span class="s2">&quot;ppo_loss&quot;</span><span class="p">:</span> <span class="n">PPO</span><span class="p">(</span><span class="n">clip_decay</span><span class="o">=</span><span class="n">LinearDecay</span><span class="p">(</span><span class="n">ppo_steps</span><span class="p">),</span> <span class="o">**</span><span class="n">PPOConfig</span><span class="p">),</span>
+                <span class="s2">&quot;imitation_loss&quot;</span><span class="p">:</span> <span class="n">Imitation</span><span class="p">(),</span> <span class="c1"># We add an imitation loss.</span>
             <span class="p">},</span>
-            <span class="n">gamma</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span>
-            <span class="n">use_gae</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="n">gae_lambda</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-            <span class="n">max_grad_norm</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+            <span class="n">gamma</span><span class="o">=</span><span class="n">gamma</span><span class="p">,</span>
+            <span class="n">use_gae</span><span class="o">=</span><span class="n">use_gae</span><span class="p">,</span>
+            <span class="n">gae_lambda</span><span class="o">=</span><span class="n">gae_lambda</span><span class="p">,</span>
+            <span class="n">advance_scene_rollout_period</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">ADVANCE_SCENE_ROLLOUT_PERIOD</span><span class="p">,</span>
             <span class="n">pipeline_stages</span><span class="o">=</span><span class="p">[</span> <span class="c1"># The pipeline now has two stages, in the first</span>
                               <span class="c1"># we use DAgger (imitation loss + teacher forcing).</span>
                               <span class="c1"># In the second stage we no longer use teacher</span>
@@ -3377,33 +3463,39 @@ pipeline by extending the above configuration as follows</p>
                     <span class="p">),</span>
                     <span class="n">max_stage_steps</span><span class="o">=</span><span class="n">dagger_steps</span><span class="p">,</span>
                 <span class="p">),</span>
-                <span class="n">PipelineStage</span><span class="p">(</span>
-                    <span class="n">loss_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ppo_loss&quot;</span><span class="p">,</span> <span class="s2">&quot;imitation_loss&quot;</span><span class="p">],</span>
-                    <span class="n">max_stage_steps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mf">3e4</span><span class="p">)</span>
-                <span class="p">),</span>
+                <span class="n">PipelineStage</span><span class="p">(</span><span class="n">loss_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ppo_loss&quot;</span><span class="p">],</span> <span class="n">max_stage_steps</span><span class="o">=</span><span class="n">ppo_steps</span><span class="p">,),</span>
             <span class="p">],</span>
+            <span class="n">lr_scheduler_builder</span><span class="o">=</span><span class="n">Builder</span><span class="p">(</span>
+                <span class="n">LambdaLR</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;lr_lambda&quot;</span><span class="p">:</span> <span class="n">LinearDecay</span><span class="p">(</span><span class="n">steps</span><span class="o">=</span><span class="n">ppo_steps</span><span class="p">)}</span>
+            <span class="p">),</span>
         <span class="p">)</span>
 </code></pre></div>
 
 
-<p>Note that, in order for the saved configs in the experiment output folder to be fully usable, we currently need
-to import the module with the parent experiment config relative to the current location. </p>
+<p>A version of our experiment config file for which we have implemented this two-stage training
+can be found <a href="https://github.com/allenai/allenact/blob/master/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object.py">here</a>.
+This two-stage configuration <code>ObjectNavThorDaggerThenPPOExperimentConfig</code> is actually implemented <em>as a subclass of <code>ObjectNavThorPPOExperimentConfig</code></em>.
+This is a common pattern used in AllenAct and lets one skip a great deal of boilerplate when defining a new
+experiment as a slight modification of an old one. Of course one must then be careful: changes to the superclass
+configuration will propagate to all subclassed configurations. </p>
 <h2 id="machine-configuration">Machine configuration<a class="headerlink" href="#machine-configuration" title="Permanent link">#</a></h2>
 <p>In <code>machine_params</code> we define machine configuration parameters that will be used for training, validation and test:</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavThorPPOExperimentConfig</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">base_abstractions</span><span class="o">.</span><span class="n">experiment_config</span><span class="o">.</span><span class="n">ExperimentConfig</span><span class="p">):</span>
     <span class="o">...</span>
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">machine_params</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="n">on_server</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span>
+        <span class="n">num_gpus</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">device_count</span><span class="p">()</span>
+        <span class="n">has_gpu</span> <span class="o">=</span> <span class="n">num_gpus</span> <span class="o">!=</span> <span class="mi">0</span> 
+
         <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;train&quot;</span><span class="p">:</span>
-            <span class="n">nprocesses</span> <span class="o">=</span> <span class="mi">6</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">on_server</span> <span class="k">else</span> <span class="mi">20</span>
-            <span class="n">gpu_ids</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">on_server</span> <span class="k">else</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">nprocesses</span> <span class="o">=</span> <span class="mi">20</span> <span class="k">if</span> <span class="n">has_gpu</span> <span class="k">else</span> <span class="mi">4</span>
+            <span class="n">gpu_ids</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">has_gpu</span> <span class="k">else</span> <span class="p">[]</span>
         <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;valid&quot;</span><span class="p">:</span>
-            <span class="n">nprocesses</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="n">gpu_ids</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">on_server</span> <span class="k">else</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">nprocesses</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">gpu_ids</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span> <span class="o">%</span> <span class="n">num_gpus</span><span class="p">]</span> <span class="k">if</span> <span class="n">has_gpu</span> <span class="k">else</span> <span class="p">[]</span>
         <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;test&quot;</span><span class="p">:</span>
             <span class="n">nprocesses</span> <span class="o">=</span> <span class="mi">1</span>
-            <span class="n">gpu_ids</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">on_server</span> <span class="k">else</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">gpu_ids</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">has_gpu</span> <span class="k">else</span> <span class="p">[]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;mode must be &#39;train&#39;, &#39;valid&#39;, or &#39;test&#39;.&quot;</span><span class="p">)</span>
 
@@ -3412,7 +3504,7 @@ to import the module with the parent experiment config relative to the current l
 </code></pre></div>
 
 
-<p>In the above we use the availability of cuda (<code>torch.cuda.is_available()</code>) to determine whether
+<p>In the above we use the availability of cuda (<code>torch.cuda.device_count() !=  0</code>) to determine whether
 we should use parameters appropriate for local machines or for a server. We might optionally add a list of
 <code>sampler_devices</code> to assign devices (likely those not used for running our agent) to task sampling workers.</p>
 <h2 id="task-sampling">Task sampling<a class="headerlink" href="#task-sampling" title="Permanent link">#</a></h2>
@@ -3420,11 +3512,11 @@ we should use parameters appropriate for local machines or for a server. We migh
 and the machine specific parameters that should be used during training. Critically we have not yet
 defined which task we wish to train our agent to complete. This is done by implementing the 
 <code>ExperimentConfig.make_sampler_fn</code> function</p>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavThorPPOExperimentConfig</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">base_abstractions</span><span class="o">.</span><span class="n">experiment_config</span><span class="o">.</span><span class="n">ExperimentConfig</span><span class="p">):</span>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavThorPPOExperimentConfig</span><span class="p">(</span><span class="n">ExperimentConfig</span><span class="p">):</span>
     <span class="o">...</span>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">make_sampler_fn</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">core</span><span class="o">.</span><span class="n">base_abstractions</span><span class="o">.</span><span class="n">task</span><span class="o">.</span><span class="n">TaskSampler</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">plugins</span><span class="o">.</span><span class="n">ithor_plugin</span><span class="o">.</span><span class="n">ithor_task_samplers</span><span class="o">.</span><span class="n">ObjectNavTaskSampler</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">make_sampler_fn</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TaskSampler</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ObjectNavTaskSampler</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="o">...</span>
 </code></pre></div>
 
@@ -3440,10 +3532,10 @@ training process, we implement such differences using the
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">process_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">total_processes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-        <span class="n">devices</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">typing</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">seeds</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">typing</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">devices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">seeds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">deterministic_cudnn</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">typing</span><span class="o">.</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
         <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_sampler_args_for_scene_split</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">TRAIN_SCENES</span><span class="p">,</span>
             <span class="n">process_ind</span><span class="p">,</span>
@@ -3451,8 +3543,12 @@ training process, we implement such differences using the
             <span class="n">seeds</span><span class="o">=</span><span class="n">seeds</span><span class="p">,</span>
             <span class="n">deterministic_cudnn</span><span class="o">=</span><span class="n">deterministic_cudnn</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="n">res</span><span class="p">[</span><span class="s2">&quot;scene_period&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">SCENE_PERIOD</span>
-        <span class="n">res</span><span class="p">[</span><span class="s2">&quot;env_args&quot;</span><span class="p">][</span><span class="s2">&quot;x_display&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">res</span><span class="p">[</span><span class="s2">&quot;scene_period&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;manual&quot;</span>
+        <span class="n">res</span><span class="p">[</span><span class="s2">&quot;env_args&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">res</span><span class="p">[</span><span class="s2">&quot;env_args&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ENV_ARGS</span><span class="p">)</span>
+        <span class="n">res</span><span class="p">[</span><span class="s2">&quot;env_args&quot;</span><span class="p">][</span><span class="s2">&quot;x_display&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span><span class="s2">&quot;0.</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">devices</span><span class="p">[</span><span class="n">process_ind</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">devices</span><span class="p">)])</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">devices</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="p">)</span>
         <span class="k">return</span> <span class="n">res</span>
     <span class="o">...</span>
 </code></pre></div>
@@ -3463,6 +3559,10 @@ training process, we implement such differences using the
  (<code>valid_task_sampler_args</code> and <code>test_task_sampler_args</code>) exist for generating validation
  and test parameters. Note also that with this function we can assign devices to run
  our environment for each worker. See the documentation of <code>ExperimentConfig</code> for more information.</p>
+<h2 id="running-the-experiment">Running the experiment<a class="headerlink" href="#running-the-experiment" title="Permanent link">#</a></h2>
+<p>We are now in the position to run the experiment (with seed 12345) using the command</p>
+<div class="codehilite"><pre><span></span><code>python main.py object_nav_ithor_ppo_one_object -b projects/tutorials -s <span class="m">12345</span>
+</code></pre></div>
                 
               
               

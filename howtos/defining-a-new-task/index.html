@@ -316,8 +316,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../getting_started/structure/" title="Structure of the codebase" class="md-nav__link">
-      Structure of the codebase
+    <a href="../../getting_started/abstractions/" title="Primary abstractions" class="md-nav__link">
+      Primary abstractions
     </a>
   </li>
 
@@ -328,8 +328,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../getting_started/abstractions/" title="Primary abstractions" class="md-nav__link">
-      Primary abstractions
+    <a href="../../getting_started/structure/" title="Structure of the codebase" class="md-nav__link">
+      Structure of the codebase
     </a>
   </li>
 
@@ -2924,8 +2924,32 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object/" title="object_nav_ithor_dagger_then_ppo_one_object" class="md-nav__link">
+      object_nav_ithor_dagger_then_ppo_one_object
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/tutorials/pointnav_ithor_rgb_ddppo/" title="pointnav_ithor_rgb_ddppo" class="md-nav__link">
       pointnav_ithor_rgb_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/object_nav_ithor_ppo_one_object/" title="object_nav_ithor_ppo_one_object" class="md-nav__link">
+      object_nav_ithor_ppo_one_object
     </a>
   </li>
 
@@ -3320,11 +3344,18 @@ object of a specific class using a minimal amount of steps and deciding when the
 <code>metrics</code>, and <code>query_expert</code> from the base <code>Task</code> definition.</p>
 <h3 id="initialization-action-space-and-termination">Initialization, action space and termination<a class="headerlink" href="#initialization-action-space-and-termination" title="Permanent link">#</a></h3>
 <p>Let's start with the definition of the action space and task initialization:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavTask</span><span class="p">(</span><span class="n">Task</span><span class="p">[</span><span class="n">IThorEnvironment</span><span class="p">]):</span>
-    <span class="n">_actions</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="s1">&#39;MOVE_AHEAD&#39;</span><span class="p">,</span> <span class="s1">&#39;ROTATE_LEFT&#39;</span><span class="p">,</span> <span class="s1">&#39;ROTATE_RIGHT&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;LOOK_DOWN&#39;</span><span class="p">,</span> <span class="s1">&#39;LOOK_UP&#39;</span><span class="p">,</span> <span class="s1">&#39;END&#39;</span>
-    <span class="p">)</span>
+<div class="codehilite"><pre><span></span><code><span class="o">...</span>
+<span class="kn">from</span> <span class="nn">plugins.ithor_plugin.ithor_constants</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">MOVE_AHEAD</span><span class="p">,</span>
+    <span class="n">ROTATE_LEFT</span><span class="p">,</span>
+    <span class="n">ROTATE_RIGHT</span><span class="p">,</span>
+    <span class="n">LOOK_DOWN</span><span class="p">,</span>
+    <span class="n">LOOK_UP</span><span class="p">,</span>
+    <span class="n">END</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="o">...</span>
+<span class="k">class</span> <span class="nc">ObjectNavTask</span><span class="p">(</span><span class="n">Task</span><span class="p">[</span><span class="n">IThorEnvironment</span><span class="p">]):</span>
+    <span class="n">_actions</span> <span class="o">=</span> <span class="p">(</span><span class="n">MOVE_AHEAD</span><span class="p">,</span> <span class="n">ROTATE_LEFT</span><span class="p">,</span> <span class="n">ROTATE_RIGHT</span><span class="p">,</span> <span class="n">LOOK_DOWN</span><span class="p">,</span> <span class="n">LOOK_UP</span><span class="p">,</span> <span class="n">END</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -3350,7 +3381,8 @@ object of a specific class using a minimal amount of steps and deciding when the
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">class_action_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_actions</span>
-        <span class="k">def</span> <span class="nf">reached_terminal_state</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="nf">reached_terminal_state</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_took_end_action</span>
 
     <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -3363,10 +3395,13 @@ object of a specific class using a minimal amount of steps and deciding when the
 <p>Next, we define the main method <code>_step</code> that will be called every time the agent produces a new action: </p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavTask</span><span class="p">(</span><span class="n">Task</span><span class="p">[</span><span class="n">IThorEnvironment</span><span class="p">]):</span>
     <span class="o">...</span>
-    <span class="k">def</span> <span class="nf">_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RLStepResult</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">RLStepResult</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="n">action</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">action</span><span class="p">)</span>
+
         <span class="n">action_str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_action_names</span><span class="p">()[</span><span class="n">action</span><span class="p">]</span>
 
-        <span class="k">if</span> <span class="n">action_str</span> <span class="o">==</span> <span class="s1">&#39;END&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">action_str</span> <span class="o">==</span> <span class="n">END</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_took_end_action</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_success</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_goal_object_visible</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">last_action_success</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_success</span>
@@ -3381,6 +3416,8 @@ object of a specific class using a minimal amount of steps and deciding when the
             <span class="n">info</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;last_action_success&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_action_success</span><span class="p">},</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">step_result</span>
+
+    <span class="o">...</span>
 
     <span class="k">def</span> <span class="nf">_is_goal_object_visible</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="k">return</span> <span class="nb">any</span><span class="p">(</span>
@@ -3424,7 +3461,7 @@ e.g. for DAgger training.</p>
 <p>We also need to define the corresponding TaskSampler, which must contain implementations for methods <code>__len__</code>,
 <code>total_unique</code>, <code>last_sampled_task</code>, <code>next_task</code>, <code>close</code>, <code>reset</code>, and <code>set_seed</code>. Currently,
 an additional method <code>all_observation_spaces_equal</code> is used to ensure compatibility with the current
-<a href="/api/onpolicy_sync/storage#rolloutstorage">RolloutStorage</a>.</p>
+<a href="/api/core/algorithms/onpolicy_sync/storage#rolloutstorage">RolloutStorage</a>.</p>
 <p>Let's define a tasks sampler able to provide an infinite number of object navigation tasks for AI2-THOR.</p>
 <h3 id="initialization-and-termination">Initialization and termination<a class="headerlink" href="#initialization-and-termination" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavTaskSampler</span><span class="p">(</span><span class="n">TaskSampler</span><span class="p">):</span>
@@ -3506,10 +3543,6 @@ an additional method <code>all_observation_spaces_equal</code> is used to ensure
             <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">scene_name</span><span class="o">=</span><span class="n">scene</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">randomize_agent_location</span><span class="p">()</span>
-
-        <span class="n">object_types_in_scene</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
-            <span class="p">[</span><span class="n">o</span><span class="p">[</span><span class="s2">&quot;objectType&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">last_event</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;objects&quot;</span><span class="p">]]</span>
-        <span class="p">)</span>
 
         <span class="n">task_info</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;object_type&quot;</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">object_types</span><span class="p">,</span> <span class="mi">1</span><span class="p">)}</span>
 

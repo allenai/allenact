@@ -316,8 +316,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../getting_started/structure/" title="Structure of the codebase" class="md-nav__link">
-      Structure of the codebase
+    <a href="../../getting_started/abstractions/" title="Primary abstractions" class="md-nav__link">
+      Primary abstractions
     </a>
   </li>
 
@@ -328,8 +328,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../getting_started/abstractions/" title="Primary abstractions" class="md-nav__link">
-      Primary abstractions
+    <a href="../../getting_started/structure/" title="Structure of the codebase" class="md-nav__link">
+      Structure of the codebase
     </a>
   </li>
 
@@ -2877,8 +2877,32 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object/" title="object_nav_ithor_dagger_then_ppo_one_object" class="md-nav__link">
+      object_nav_ithor_dagger_then_ppo_one_object
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/tutorials/pointnav_ithor_rgb_ddppo/" title="pointnav_ithor_rgb_ddppo" class="md-nav__link">
       pointnav_ithor_rgb_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/object_nav_ithor_ppo_one_object/" title="object_nav_ithor_ppo_one_object" class="md-nav__link">
+      object_nav_ithor_ppo_one_object
     </a>
   </li>
 
@@ -3216,7 +3240,7 @@
 <li><code>losses</code> at the training pipeline level. </li>
 </ul>
 <h2 id="rewards">Rewards<a class="headerlink" href="#rewards" title="Permanent link">#</a></h2>
-<p>We will use the <a href="/api/plugins/ithor_plugin/ithor_tasks/#objectnavtask">object navigation task in AI2-THOR</a> as a 
+<p>We will use the <a href="/api/plugins/ithor_plugin/ithor_tasks/#objectnavtask">object navigation task in <code>iTHOR</code></a> as a 
 running example. We can see how the <code>ObjectNavTask._step(self, action: int) -&gt; RLStepResult</code> method computes the reward for the latest 
 action by invoking a function like:</p>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">judge</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
@@ -3250,8 +3274,8 @@ action by invoking a function like:</p>
 
 
 <h2 id="losses">Losses<a class="headerlink" href="#losses" title="Permanent link">#</a></h2>
-<p>Currently we support <a href="/api/core/algorithms/onpolicy_sync/losses/a2cacktr#a2c">A2C</a>, <a href="/api/core/algorithms/onpolicy_sync/losses/ppo#ppo">PPO</a>,
-and <a href="/api/core/algorithms/onpolicy_sync/losses/imitation#imitation">imitation</a> losses. We can easily include
+<p>We support <a href="/api/core/algorithms/onpolicy_sync/losses/a2cacktr#a2c">A2C</a>, <a href="/api/core/algorithms/onpolicy_sync/losses/ppo#ppo">PPO</a>,
+and <a href="/api/core/algorithms/onpolicy_sync/losses/imitation#imitation">imitation</a> losses amongst others. We can easily include
 <a href="https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf">DAgger</a> or variations thereof by assuming the
 availability of an expert providing optimal actions to agents and combining imitation and PPO losses in different ways
 through multiple stages:</p>

@@ -316,8 +316,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../getting_started/structure/" title="Structure of the codebase" class="md-nav__link">
-      Structure of the codebase
+    <a href="../../getting_started/abstractions/" title="Primary abstractions" class="md-nav__link">
+      Primary abstractions
     </a>
   </li>
 
@@ -328,8 +328,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../getting_started/abstractions/" title="Primary abstractions" class="md-nav__link">
-      Primary abstractions
+    <a href="../../getting_started/structure/" title="Structure of the codebase" class="md-nav__link">
+      Structure of the codebase
     </a>
   </li>
 
@@ -523,13 +523,6 @@
         <li class="md-nav__item">
   <a href="#actor-critic-model-interface" class="md-nav__link">
     Actor-critic model interface
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#on-policy-rl-engine-requirements" class="md-nav__link">
-    On-policy RL engine requirements
   </a>
   
 </li>
@@ -2877,8 +2870,32 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object/" title="object_nav_ithor_dagger_then_ppo_one_object" class="md-nav__link">
+      object_nav_ithor_dagger_then_ppo_one_object
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/tutorials/pointnav_ithor_rgb_ddppo/" title="pointnav_ithor_rgb_ddppo" class="md-nav__link">
       pointnav_ithor_rgb_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/object_nav_ithor_ppo_one_object/" title="object_nav_ithor_ppo_one_object" class="md-nav__link">
+      object_nav_ithor_ppo_one_object
     </a>
   </li>
 
@@ -3182,13 +3199,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#on-policy-rl-engine-requirements" class="md-nav__link">
-    On-policy RL engine requirements
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -3223,44 +3233,56 @@ hidden state and previous actions.</li>
 models, that will be used in this example.</p>
 <h3 id="actor-critic-model-interface">Actor-critic model interface<a class="headerlink" href="#actor-critic-model-interface" title="Permanent link">#</a></h3>
 <p>As an example, let's build an object navigation agent.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavActorCritic</span><span class="p">(</span><span class="n">ActorCriticModel</span><span class="p">[</span><span class="n">CategoricalDistr</span><span class="p">]):</span>
-        <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavBaselineActorCritic</span><span class="p">(</span><span class="n">ActorCriticModel</span><span class="p">[</span><span class="n">CategoricalDistr</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot;Baseline recurrent actor critic model for object-navigation.</span>
+
+<span class="sd">    # Attributes</span>
+<span class="sd">    action_space : The space of actions available to the agent. Currently only discrete</span>
+<span class="sd">        actions are allowed (so this space will always be of type `gym.spaces.Discrete`).</span>
+<span class="sd">    observation_space : The observation space expected by the agent. This observation space</span>
+<span class="sd">        should include (optionally) &#39;rgb&#39; images and &#39;depth&#39; images and is required to</span>
+<span class="sd">        have a component corresponding to the goal `goal_sensor_uuid`.</span>
+<span class="sd">    goal_sensor_uuid : The uuid of the sensor of the goal object. See `GoalObjectTypeThorSensor`</span>
+<span class="sd">        as an example of such a sensor.</span>
+<span class="sd">    hidden_size : The hidden size of the GRU RNN.</span>
+<span class="sd">    object_type_embedding_dim: The dimensionality of the embedding corresponding to the goal</span>
+<span class="sd">        object type.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">action_space</span><span class="p">:</span> <span class="n">gym</span><span class="o">.</span><span class="n">spaces</span><span class="o">.</span><span class="n">Discrete</span><span class="p">,</span>
         <span class="n">observation_space</span><span class="p">:</span> <span class="n">SpaceDict</span><span class="p">,</span>
         <span class="n">goal_sensor_uuid</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">hidden_size</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span>
         <span class="n">object_type_embedding_dim</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+        <span class="n">trainable_masked_hidden_state</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">num_rnn_layers</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">rnn_type</span><span class="o">=</span><span class="s2">&quot;GRU&quot;</span><span class="p">,</span>
     <span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-            <span class="n">action_space</span><span class="o">=</span><span class="n">action_space</span><span class="p">,</span>
-            <span class="n">observation_space</span><span class="o">=</span><span class="n">observation_space</span>
-        <span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;Initializer.</span>
+
+<span class="sd">        See class documentation for parameter definitions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">action_space</span><span class="o">=</span><span class="n">action_space</span><span class="p">,</span> <span class="n">observation_space</span><span class="o">=</span><span class="n">observation_space</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">goal_sensor_uuid</span> <span class="o">=</span> <span class="n">goal_sensor_uuid</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_n_object_types</span> <span class="o">=</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">observation_space</span><span class="o">.</span><span class="n">spaces</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">goal_sensor_uuid</span><span class="p">]</span><span class="o">.</span><span class="n">n</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n_object_types</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">observation_space</span><span class="o">.</span><span class="n">spaces</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">goal_sensor_uuid</span><span class="p">]</span><span class="o">.</span><span class="n">n</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_hidden_size</span> <span class="o">=</span> <span class="n">hidden_size</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">object_type_embedding_size</span> <span class="o">=</span> <span class="n">object_type_embedding_dim</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">visual_encoder</span> <span class="o">=</span> <span class="n">SimpleCNN</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">observation_space</span><span class="p">,</span>
-            <span class="n">hidden_size</span>
-        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">visual_encoder</span> <span class="o">=</span> <span class="n">SimpleCNN</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">observation_space</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hidden_size</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">state_encoder</span> <span class="o">=</span> <span class="n">RNNStateEncoder</span><span class="p">(</span>
-            <span class="p">(</span><span class="mi">0</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_blind</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">recurrent_hidden_state_size</span><span class="p">)</span>
-            <span class="o">+</span> <span class="n">object_type_embedding_dim</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">recurrent_hidden_state_size</span><span class="p">,</span>
+            <span class="p">(</span><span class="mi">0</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_blind</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hidden_size</span><span class="p">)</span> <span class="o">+</span> <span class="n">object_type_embedding_dim</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_hidden_size</span><span class="p">,</span>
+            <span class="n">trainable_masked_hidden_state</span><span class="o">=</span><span class="n">trainable_masked_hidden_state</span><span class="p">,</span>
+            <span class="n">num_layers</span><span class="o">=</span><span class="n">num_rnn_layers</span><span class="p">,</span>
+            <span class="n">rnn_type</span><span class="o">=</span><span class="n">rnn_type</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">actor</span> <span class="o">=</span> <span class="n">LinearActorHead</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">recurrent_hidden_state_size</span><span class="p">,</span>
-            <span class="n">action_space</span><span class="o">.</span><span class="n">n</span>
-        <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">critic</span> <span class="o">=</span> <span class="n">LinearCriticHead</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">recurrent_hidden_state_size</span>
-        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor</span> <span class="o">=</span> <span class="n">LinearActorHead</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_hidden_size</span><span class="p">,</span> <span class="n">action_space</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">critic</span> <span class="o">=</span> <span class="n">LinearCriticHead</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_hidden_size</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">object_type_embedding</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span>
             <span class="n">num_embeddings</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_object_types</span><span class="p">,</span>
@@ -3270,12 +3292,66 @@ models, that will be used in this example.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">recurrent_hidden_state_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">recurrent_hidden_state_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;The recurrent hidden state size of the model.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hidden_size</span>
 
-    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">observations</span><span class="p">,</span> <span class="n">rnn_hidden_states</span><span class="p">,</span> <span class="n">prev_actions</span><span class="p">,</span> <span class="n">masks</span><span class="p">):</span>
-        <span class="n">target_encoding</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">object_type_embedding</span><span class="p">(</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_blind</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;True if the model is blind (e.g. neither &#39;depth&#39; or &#39;rgb&#39; is an</span>
+<span class="sd">        input observation type).&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">visual_encoder</span><span class="o">.</span><span class="n">is_blind</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">num_recurrent_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Number of recurrent hidden layers.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_encoder</span><span class="o">.</span><span class="n">num_recurrent_layers</span>
+
+    <span class="k">def</span> <span class="nf">_recurrent_memory_specification</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">rnn</span><span class="o">=</span><span class="p">(</span>
+                <span class="p">(</span>
+                    <span class="p">(</span><span class="s2">&quot;layer&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_recurrent_layers</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;sampler&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;hidden&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">recurrent_hidden_state_size</span><span class="p">),</span>
+                <span class="p">),</span>
+                <span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_object_type_encoding</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">observations</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Get the object type encoding from input batched observations.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">object_type_embedding</span><span class="p">(</span>  <span class="c1"># type:ignore</span>
             <span class="n">observations</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">goal_sensor_uuid</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>  <span class="c1"># type:ignore</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">observations</span><span class="p">:</span> <span class="n">ObservationType</span><span class="p">,</span>
+        <span class="n">memory</span><span class="p">:</span> <span class="n">Memory</span><span class="p">,</span>
+        <span class="n">prev_actions</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">masks</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">ActorCriticOutput</span><span class="p">[</span><span class="n">DistributionType</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Memory</span><span class="p">]]:</span>
+        <span class="sd">&quot;&quot;&quot;Processes input batched observations to produce new actor and critic</span>
+<span class="sd">        values. Processes input batched observations (along with prior hidden</span>
+<span class="sd">        states, previous actions, and masks denoting which recurrent hidden</span>
+<span class="sd">        states should be masked) and returns an `ActorCriticOutput` object</span>
+<span class="sd">        containing the model&#39;s policy (distribution over actions) and</span>
+<span class="sd">        evaluation of the current state (value).</span>
+
+<span class="sd">        # Parameters</span>
+<span class="sd">        observations : Batched input observations.</span>
+<span class="sd">        memory : `Memory` containing the hidden states from initial timepoints.</span>
+<span class="sd">        prev_actions : Tensor of previous actions taken.</span>
+<span class="sd">        masks : Masks applied to hidden states. See `RNNStateEncoder`.</span>
+
+<span class="sd">        # Returns</span>
+<span class="sd">        Tuple of the `ActorCriticOutput` and recurrent hidden state.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">target_encoding</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_object_type_encoding</span><span class="p">(</span>
+            <span class="n">cast</span><span class="p">(</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">],</span> <span class="n">observations</span><span class="p">)</span>
         <span class="p">)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="n">target_encoding</span><span class="p">]</span>
 
@@ -3283,27 +3359,17 @@ models, that will be used in this example.</p>
             <span class="n">perception_embed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">visual_encoder</span><span class="p">(</span><span class="n">observations</span><span class="p">)</span>
             <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="n">perception_embed</span><span class="p">]</span> <span class="o">+</span> <span class="n">x</span>
 
-        <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">x</span><span class="p">,</span> <span class="n">rnn_hidden_states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_encoder</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">rnn_hidden_states</span><span class="p">,</span> <span class="n">masks</span><span class="p">)</span>
+        <span class="n">x_cat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+        <span class="n">x_out</span><span class="p">,</span> <span class="n">rnn_hidden_states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_encoder</span><span class="p">(</span>
+            <span class="n">x_cat</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="s2">&quot;rnn&quot;</span><span class="p">),</span> <span class="n">masks</span>
+        <span class="p">)</span>
 
         <span class="k">return</span> <span class="p">(</span>
             <span class="n">ActorCriticOutput</span><span class="p">(</span>
-                <span class="n">distributions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">values</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">critic</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">extras</span><span class="o">=</span><span class="p">{}</span>
+                <span class="n">distributions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="p">(</span><span class="n">x_out</span><span class="p">),</span> <span class="n">values</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">critic</span><span class="p">(</span><span class="n">x_out</span><span class="p">),</span> <span class="n">extras</span><span class="o">=</span><span class="p">{}</span>
             <span class="p">),</span>
-            <span class="n">rnn_hidden_states</span><span class="p">,</span>
+            <span class="n">memory</span><span class="o">.</span><span class="n">set_tensor</span><span class="p">(</span><span class="s2">&quot;rnn&quot;</span><span class="p">,</span> <span class="n">rnn_hidden_states</span><span class="p">),</span>
         <span class="p">)</span>
-     <span class="o">...</span>
-</code></pre></div>
-
-
-<h2 id="on-policy-rl-engine-requirements">On-policy RL engine requirements<a class="headerlink" href="#on-policy-rl-engine-requirements" title="Permanent link">#</a></h2>
-<p>Apart from the interface expected by all actor-critic models, we also need to provide a utility function to allow
-the on-policy RL engine to properly initalize the rollouts storage, <code>num_recurrent_layers</code>:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavActorCritic</span><span class="p">(</span><span class="n">ActorCriticModel</span><span class="p">[</span><span class="n">CategoricalDistr</span><span class="p">]):</span>
-    <span class="o">...</span>
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">num_recurrent_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_encoder</span><span class="o">.</span><span class="n">num_recurrent_layers</span>
 </code></pre></div>
                 
               

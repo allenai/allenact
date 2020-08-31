@@ -316,18 +316,6 @@
           
           
 
-
-  <li class="md-nav__item">
-    <a href="../structure/" title="Structure of the codebase" class="md-nav__link">
-      Structure of the codebase
-    </a>
-  </li>
-
-        
-          
-          
-          
-
   
 
 
@@ -417,6 +405,18 @@
   
 </nav>
     
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../structure/" title="Structure of the codebase" class="md-nav__link">
+      Structure of the codebase
+    </a>
   </li>
 
         
@@ -2912,8 +2912,32 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object/" title="object_nav_ithor_dagger_then_ppo_one_object" class="md-nav__link">
+      object_nav_ithor_dagger_then_ppo_one_object
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/tutorials/pointnav_ithor_rgb_ddppo/" title="pointnav_ithor_rgb_ddppo" class="md-nav__link">
       pointnav_ithor_rgb_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/object_nav_ithor_ppo_one_object/" title="object_nav_ithor_ppo_one_object" class="md-nav__link">
+      object_nav_ithor_ppo_one_object
     </a>
   </li>
 
@@ -3286,7 +3310,7 @@ end with a link to the (formal) documentation of the abstraction as well as a li
 abstraction (if relevant). The following provides a high-level illustration of how these abstractions interact.</p>
 <p><img alt="abstractions-overview" src="../../img/abstractions.png" /></p>
 <h2 id="experiment-configuration">Experiment configuration<a class="headerlink" href="#experiment-configuration" title="Permanent link">#</a></h2>
-<p>In <code>allenact</code>, experiments are definied by implementing the abstract <code>ExperimentConfig</code> class. The methods
+<p>In <code>allenact</code>, experiments are defined by implementing the abstract <code>ExperimentConfig</code> class. The methods
 of this implementation are then called during training/inference to properly set up the desired experiment. For example,
 the <code>ExperimentConfig.create_model</code> method will be called at the beginning of training to create the model
 to be trained.
@@ -3294,7 +3318,7 @@ See either the <a href="/tutorials/minigrid-tutorial">"designing your first mini
 <a href="/tutorials/training-a-pointnav-model">"designing an experiment for point navigation"</a>
  tutorials to get an in-depth description of how these experiment configurations are defined in practice.</p>
 <p>See also the <a href="/api/core/base_abstractions/experiment_config#experimentconfig">abstract <code>ExperimentConfig</code> class</a> 
-and an <a href="/api/projects/tutorials/minigrid_tutorial#MiniGridTutorialExperimentConfig">example implementation</a>.</p>
+and an <a href="/api/plugins/ithor_plugin/ithor_environment/#ithorenvironment">example implementation</a>.</p>
 <h2 id="task-sampler">Task sampler<a class="headerlink" href="#task-sampler" title="Permanent link">#</a></h2>
 <p>A task sampler is responsible for generating a sequence of tasks for agents to solve. The sequence of tasks can be 
 randomly generated (e.g. in training) or extracted from an ordered pool (e.g. in validation or testing).</p>
@@ -3357,7 +3381,7 @@ and an <a href="/api/plugins/minigrid_plugin/minigrid_offpolicy/#MiniGridOffPoli
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
         
-          <a href="../structure/" title="Structure of the codebase" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../running-your-first-experiment/" title="Run your first experiment" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-footer-nav__button md-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
             </div>
@@ -3366,19 +3390,19 @@ and an <a href="/api/plugins/minigrid_plugin/minigrid_offpolicy/#MiniGridOffPoli
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Structure of the codebase
+                Run your first experiment
               </div>
             </div>
           </a>
         
         
-          <a href="../../tutorials/" title="AllenAct Tutorials" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../structure/" title="Structure of the codebase" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-footer-nav__title">
               <div class="md-ellipsis">
                 <span class="md-footer-nav__direction">
                   Next
                 </span>
-                AllenAct Tutorials
+                Structure of the codebase
               </div>
             </div>
             <div class="md-footer-nav__button md-icon">

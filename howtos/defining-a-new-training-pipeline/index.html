@@ -316,8 +316,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../getting_started/structure/" title="Structure of the codebase" class="md-nav__link">
-      Structure of the codebase
+    <a href="../../getting_started/abstractions/" title="Primary abstractions" class="md-nav__link">
+      Primary abstractions
     </a>
   </li>
 
@@ -328,8 +328,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../getting_started/abstractions/" title="Primary abstractions" class="md-nav__link">
-      Primary abstractions
+    <a href="../../getting_started/structure/" title="Structure of the codebase" class="md-nav__link">
+      Structure of the codebase
     </a>
   </li>
 
@@ -2877,8 +2877,32 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object/" title="object_nav_ithor_dagger_then_ppo_one_object" class="md-nav__link">
+      object_nav_ithor_dagger_then_ppo_one_object
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/tutorials/pointnav_ithor_rgb_ddppo/" title="pointnav_ithor_rgb_ddppo" class="md-nav__link">
       pointnav_ithor_rgb_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/object_nav_ithor_ppo_one_object/" title="object_nav_ithor_ppo_one_object" class="md-nav__link">
+      object_nav_ithor_ppo_one_object
     </a>
   </li>
 
@@ -3221,29 +3245,39 @@ initializers.</p>
     <span class="o">...</span>
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">training_pipeline</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">ppo_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">1e6</span><span class="p">)</span>
+        <span class="n">lr</span> <span class="o">=</span> <span class="mf">2.5e-4</span>
+        <span class="n">num_mini_batch</span> <span class="o">=</span> <span class="mi">2</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="mi">6</span>
+        <span class="n">update_repeats</span> <span class="o">=</span> <span class="mi">4</span>
+        <span class="n">num_steps</span> <span class="o">=</span> <span class="mi">128</span>
+        <span class="n">metric_accumulate_interval</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">MAX_STEPS</span> <span class="o">*</span> <span class="mi">10</span>  <span class="c1"># Log every 10 max length tasks</span>
+        <span class="n">save_interval</span> <span class="o">=</span> <span class="mi">10000</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="mf">0.99</span>
+        <span class="n">use_gae</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">gae_lambda</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="n">max_grad_norm</span> <span class="o">=</span> <span class="mf">0.5</span>
+
         <span class="k">return</span> <span class="n">TrainingPipeline</span><span class="p">(</span>
+            <span class="n">save_interval</span><span class="o">=</span><span class="n">save_interval</span><span class="p">,</span>
+            <span class="n">metric_accumulate_interval</span><span class="o">=</span><span class="n">metric_accumulate_interval</span><span class="p">,</span>
+            <span class="n">optimizer_builder</span><span class="o">=</span><span class="n">Builder</span><span class="p">(</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">)),</span>
+            <span class="n">num_mini_batch</span><span class="o">=</span><span class="n">num_mini_batch</span><span class="p">,</span>
+            <span class="n">update_repeats</span><span class="o">=</span><span class="n">update_repeats</span><span class="p">,</span>
+            <span class="n">max_grad_norm</span><span class="o">=</span><span class="n">max_grad_norm</span><span class="p">,</span>
+            <span class="n">num_steps</span><span class="o">=</span><span class="n">num_steps</span><span class="p">,</span>
             <span class="n">named_losses</span><span class="o">=</span><span class="p">{</span>
-                <span class="s2">&quot;ppo_loss&quot;</span><span class="p">:</span> <span class="n">PPO</span><span class="p">(</span><span class="o">**</span><span class="n">PPOConfig</span><span class="p">),</span>
+                <span class="s2">&quot;ppo_loss&quot;</span><span class="p">:</span> <span class="n">PPO</span><span class="p">(</span><span class="n">clip_decay</span><span class="o">=</span><span class="n">LinearDecay</span><span class="p">(</span><span class="n">ppo_steps</span><span class="p">),</span> <span class="o">**</span><span class="n">PPOConfig</span><span class="p">),</span>
             <span class="p">},</span>
-            <span class="n">optimizer_builder</span><span class="o">=</span><span class="n">Builder</span><span class="p">(</span>
-                <span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="mf">2.5e-4</span><span class="p">)</span>
-            <span class="p">),</span>
-            <span class="n">save_interval</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>  <span class="c1"># Save every 10000 steps (approximately)</span>
-            <span class="n">metric_accumulate_interval</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># Log after every step (in practice after every rollout)</span>
-            <span class="n">num_mini_batch</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>
-            <span class="n">update_repeats</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
-            <span class="n">num_steps</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
-            <span class="n">gamma</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span>
-            <span class="n">use_gae</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="n">gae_lambda</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-            <span class="n">max_grad_norm</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-            <span class="n">advance_scene_rollout_period</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">gamma</span><span class="o">=</span><span class="n">gamma</span><span class="p">,</span>
+            <span class="n">use_gae</span><span class="o">=</span><span class="n">use_gae</span><span class="p">,</span>
+            <span class="n">gae_lambda</span><span class="o">=</span><span class="n">gae_lambda</span><span class="p">,</span>
+            <span class="n">advance_scene_rollout_period</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">ADVANCE_SCENE_ROLLOUT_PERIOD</span><span class="p">,</span>
             <span class="n">pipeline_stages</span><span class="o">=</span><span class="p">[</span>
-                <span class="n">PipelineStage</span><span class="p">(</span>
-                    <span class="n">loss_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ppo_loss&quot;</span><span class="p">],</span>
-                    <span class="n">max_stage_steps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mf">1e6</span><span class="p">)</span>
-                <span class="p">),</span>
+                <span class="n">PipelineStage</span><span class="p">(</span><span class="n">loss_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ppo_loss&quot;</span><span class="p">],</span> <span class="n">max_stage_steps</span><span class="o">=</span><span class="n">ppo_steps</span><span class="p">,),</span>
             <span class="p">],</span>
+            <span class="n">lr_scheduler_builder</span><span class="o">=</span><span class="n">Builder</span><span class="p">(</span>
+                <span class="n">LambdaLR</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;lr_lambda&quot;</span><span class="p">:</span> <span class="n">LinearDecay</span><span class="p">(</span><span class="n">steps</span><span class="o">=</span><span class="n">ppo_steps</span><span class="p">)}</span>
+            <span class="p">),</span>
         <span class="p">)</span>
     <span class="o">...</span>
 </code></pre></div>
@@ -3253,33 +3287,45 @@ initializers.</p>
 (<a href="https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf">DAgger</a>). This requires the existence of an
 expert (implemented in the task definition) that provides optimal actions to agents. We have implemented such a 
 pipeline by extending the above configuration as follows:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavThorDaggerPPOExperimentConfig</span><span class="p">(</span><span class="n">ExperimentConfig</span><span class="p">):</span>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavThorDaggerThenPPOExperimentConfig</span><span class="p">(</span><span class="n">ExperimentConfig</span><span class="p">):</span>
     <span class="o">...</span>
     <span class="n">SENSORS</span> <span class="o">=</span> <span class="p">[</span>
         <span class="o">...</span>
-        <span class="n">ExpertActionSensor</span><span class="p">({</span><span class="s2">&quot;nactions&quot;</span><span class="p">:</span> <span class="mi">6</span><span class="p">}),</span> <span class="c1"># Notice that we have added</span>
-                                             <span class="c1"># an expert action sensor.</span>
+        <span class="n">ExpertActionSensor</span><span class="p">(</span><span class="n">nactions</span><span class="o">=</span><span class="mi">6</span><span class="p">),</span> <span class="c1"># Notice that we have added</span>
+                                        <span class="c1"># an expert action sensor.</span>
     <span class="p">]</span>
     <span class="o">...</span>
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">training_pipeline</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="n">dagger_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">3e4</span><span class="p">)</span>
+        <span class="n">dagger_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">1e4</span><span class="p">)</span> <span class="c1"># Much smaller number of steps as we&#39;re using imitation learning</span>
+        <span class="n">ppo_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">1e6</span><span class="p">)</span>
+        <span class="n">lr</span> <span class="o">=</span> <span class="mf">2.5e-4</span>
+        <span class="n">num_mini_batch</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="mi">6</span>
+        <span class="n">update_repeats</span> <span class="o">=</span> <span class="mi">4</span>
+        <span class="n">num_steps</span> <span class="o">=</span> <span class="mi">128</span>
+        <span class="n">metric_accumulate_interval</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">MAX_STEPS</span> <span class="o">*</span> <span class="mi">10</span>  <span class="c1"># Log every 10 max length tasks</span>
+        <span class="n">save_interval</span> <span class="o">=</span> <span class="mi">10000</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="mf">0.99</span>
+        <span class="n">use_gae</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">gae_lambda</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="n">max_grad_norm</span> <span class="o">=</span> <span class="mf">0.5</span>
+
         <span class="k">return</span> <span class="n">TrainingPipeline</span><span class="p">(</span>
-            <span class="n">save_interval</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>  <span class="c1"># Save every 10000 steps (approximately)</span>
-            <span class="n">metric_accumulate_interval</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-            <span class="n">optimizer_builder</span><span class="o">=</span><span class="n">Builder</span><span class="p">(</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="mf">2.5e-4</span><span class="p">)),</span>
-            <span class="n">num_mini_batch</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>
-            <span class="n">update_repeats</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
-            <span class="n">num_steps</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+            <span class="n">save_interval</span><span class="o">=</span><span class="n">save_interval</span><span class="p">,</span>
+            <span class="n">metric_accumulate_interval</span><span class="o">=</span><span class="n">metric_accumulate_interval</span><span class="p">,</span>
+            <span class="n">optimizer_builder</span><span class="o">=</span><span class="n">Builder</span><span class="p">(</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">)),</span>
+            <span class="n">num_mini_batch</span><span class="o">=</span><span class="n">num_mini_batch</span><span class="p">,</span>
+            <span class="n">update_repeats</span><span class="o">=</span><span class="n">update_repeats</span><span class="p">,</span>
+            <span class="n">max_grad_norm</span><span class="o">=</span><span class="n">max_grad_norm</span><span class="p">,</span>
+            <span class="n">num_steps</span><span class="o">=</span><span class="n">num_steps</span><span class="p">,</span>
             <span class="n">named_losses</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;ppo_loss&quot;</span><span class="p">:</span> <span class="n">PPO</span><span class="p">(</span><span class="n">clip_decay</span><span class="o">=</span><span class="n">LinearDecay</span><span class="p">(</span><span class="n">ppo_steps</span><span class="p">),</span> <span class="o">**</span><span class="n">PPOConfig</span><span class="p">),</span>
                 <span class="s2">&quot;imitation_loss&quot;</span><span class="p">:</span> <span class="n">Imitation</span><span class="p">(),</span> <span class="c1"># We add an imitation loss.</span>
-                <span class="s2">&quot;ppo_loss&quot;</span><span class="p">:</span> <span class="n">PPO</span><span class="p">(</span><span class="o">**</span><span class="n">PPOConfig</span><span class="p">),</span>
             <span class="p">},</span>
-            <span class="n">gamma</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span>
-            <span class="n">use_gae</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="n">gae_lambda</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-            <span class="n">max_grad_norm</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-            <span class="n">advance_scene_rollout_period</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">gamma</span><span class="o">=</span><span class="n">gamma</span><span class="p">,</span>
+            <span class="n">use_gae</span><span class="o">=</span><span class="n">use_gae</span><span class="p">,</span>
+            <span class="n">gae_lambda</span><span class="o">=</span><span class="n">gae_lambda</span><span class="p">,</span>
+            <span class="n">advance_scene_rollout_period</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">ADVANCE_SCENE_ROLLOUT_PERIOD</span><span class="p">,</span>
             <span class="n">pipeline_stages</span><span class="o">=</span><span class="p">[</span> <span class="c1"># The pipeline now has two stages, in the first</span>
                               <span class="c1"># we use DAgger (imitation loss + teacher forcing).</span>
                               <span class="c1"># In the second stage we no longer use teacher</span>
@@ -3291,11 +3337,11 @@ pipeline by extending the above configuration as follows:</p>
                     <span class="p">),</span>
                     <span class="n">max_stage_steps</span><span class="o">=</span><span class="n">dagger_steps</span><span class="p">,</span>
                 <span class="p">),</span>
-                <span class="n">PipelineStage</span><span class="p">(</span>
-                    <span class="n">loss_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ppo_loss&quot;</span><span class="p">,</span> <span class="s2">&quot;imitation_loss&quot;</span><span class="p">],</span>
-                    <span class="n">max_stage_steps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mf">3e5</span><span class="p">)</span>
-                <span class="p">),</span>
+                <span class="n">PipelineStage</span><span class="p">(</span><span class="n">loss_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ppo_loss&quot;</span><span class="p">],</span> <span class="n">max_stage_steps</span><span class="o">=</span><span class="n">ppo_steps</span><span class="p">,),</span>
             <span class="p">],</span>
+            <span class="n">lr_scheduler_builder</span><span class="o">=</span><span class="n">Builder</span><span class="p">(</span>
+                <span class="n">LambdaLR</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;lr_lambda&quot;</span><span class="p">:</span> <span class="n">LinearDecay</span><span class="p">(</span><span class="n">steps</span><span class="o">=</span><span class="n">ppo_steps</span><span class="p">)}</span>
+            <span class="p">),</span>
         <span class="p">)</span>
 </code></pre></div>
 
@@ -3334,7 +3380,7 @@ pipeline by extending the above configuration as follows:</p>
                         <span class="n">data_iterator_builder</span><span class="o">=</span><span class="k">lambda</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">create_minigrid_offpolicy_data_iterator</span><span class="p">(</span>
                             <span class="n">path</span><span class="o">=</span><span class="n">DATASET_PATH</span><span class="p">,</span>  <span class="c1"># external dataset</span>
                             <span class="n">nrollouts</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>  <span class="c1"># per trainer batch size</span>
-                            <span class="n">rollout_len</span><span class="o">=</span><span class="n">num_steps</span><span class="p">,</span>  <span class="c1"># For truncated-BTT</span>
+                            <span class="n">rollout_len</span><span class="o">=</span><span class="n">num_steps</span><span class="p">,</span>  <span class="c1"># For truncated-BPTT</span>
                             <span class="n">instr_len</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
                             <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
                         <span class="p">),</span>
