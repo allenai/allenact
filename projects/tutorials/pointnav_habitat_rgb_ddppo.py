@@ -163,7 +163,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         )
 
     def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(
+        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
             self.NUM_PROCESSES, ndevices
         )
         res = [0] * ndevices
@@ -252,8 +252,8 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
-            "distance_to_goal": self.DISTANCE_TO_GOAL,
+            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
+            "distance_to_goal": self.DISTANCE_TO_GOAL,  # type:ignore
         }
 
     def valid_task_sampler_args(
@@ -273,8 +273,8 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
-            "distance_to_goal": self.DISTANCE_TO_GOAL,
+            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
+            "distance_to_goal": self.DISTANCE_TO_GOAL,  # type:ignore
         }
 
     def test_task_sampler_args(
@@ -285,11 +285,11 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        config = self.TEST_CONFIGS[process_ind]
+        config = self.TEST_CONFIGS[process_ind]  # type:ignore
         return {
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
-            "distance_to_goal": self.DISTANCE_TO_GOAL,
+            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
+            "distance_to_goal": self.DISTANCE_TO_GOAL,  # type:ignore
         }
