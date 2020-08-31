@@ -79,6 +79,7 @@ class OnPolicyRLEngine(object):
         num_workers: int = 1,
         device: Union[str, torch.device, int] = "cpu",
         distributed_port: int = 0,
+        deterministic_agent: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
         **kwargs,
     ):
@@ -182,26 +183,24 @@ class OnPolicyRLEngine(object):
         self.is_distributed = False
         self.store: Optional[torch.distributed.TCPStore] = None  # type:ignore
         if self.num_workers > 1:
-            if self.mode == "train":
-                self.store = torch.distributed.TCPStore(  # type:ignore
-                    "127.0.0.1",
-                    self.distributed_port,
-                    self.num_workers,
-                    self.worker_id == 0,
-                )
-                cpu_device = torch.device(self.device) == torch.device(  # type:ignore
-                    "cpu"
-                )
-                torch.distributed.init_process_group(  # type:ignore
-                    backend="gloo" if cpu_device else "nccl",
-                    store=self.store,
-                    rank=self.worker_id,
-                    world_size=self.num_workers,
-                )
+            self.store = torch.distributed.TCPStore(  # type:ignore
+                "127.0.0.1",
+                self.distributed_port,
+                self.num_workers,
+                self.worker_id == 0,
+            )
+            cpu_device = torch.device(self.device) == torch.device(  # type:ignore
+                "cpu"
+            )
+            dist.init_process_group(  # type:ignore
+                backend="gloo" if cpu_device else "nccl",
+                store=self.store,
+                rank=self.worker_id,
+                world_size=self.num_workers,
+            )
+            self.is_distributed = True
 
-            self.is_distributed = True  # for testing, this only means we need to synchronize after each checkpoint
-
-        self.deterministic_agent = False
+        self.deterministic_agent = deterministic_agent
 
         self.scalars = ScalarMeanTracker()
 
@@ -1284,6 +1283,7 @@ class OnPolicyInference(OnPolicyRLEngine):
         deterministic_agent: bool = False,
         worker_id: int = 0,
         num_workers: int = 1,
+        distributed_port: int = 0,
         **kwargs,
     ):
         super().__init__(
@@ -1300,12 +1300,11 @@ class OnPolicyInference(OnPolicyRLEngine):
             device=device,
             worker_id=worker_id,
             num_workers=num_workers,
+            distributed_port=distributed_port,
             **kwargs,
         )
 
         # get_logger().debug("{} worker {} using device {}".format(self.mode, self.worker_id, self.device))
-
-        self.deterministic_agent = deterministic_agent
 
     def run_eval(
         self,
