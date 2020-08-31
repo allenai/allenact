@@ -8,28 +8,32 @@ if [ "$1" = "robothor-pointnav" ]
 then
     echo "Downloading RoboTHOR PointNav Dataset ..."
     wget https://prior-datasets.s3.us-east-2.amazonaws.com/embodied-ai/navigation/robothor-pointnav.tar.gz
-    tar -xf robothor-pointnav.tar.gz && rm robothor-pointnav.tar.gz
+    mkdir robothor-pointnav
+    tar -xf robothor-pointnav.tar.gz -C robothor-pointnav --strip-components=1 && rm robothor-pointnav.tar.gz
     echo "saved folder: robothor-pointnav"
 
 elif [ "$1" = "robothor-objectnav" ]
 then
     echo "Downloading RoboTHOR ObjectNav Dataset ..."
     wget https://prior-datasets.s3.us-east-2.amazonaws.com/embodied-ai/navigation/robothor-objectnav.tar.gz
-    tar -xf robothor-objectnav.tar.gz && rm robothor-objectnav.tar.gz
+    mkdir robothor-pointnav
+    tar -xf robothor-objectnav.tar.gz -C robothor-objectnav --strip-components=1 && rm robothor-objectnav.tar.gz
     echo "saved folder: robothor-objectnav"
 
 elif [ "$1" = "ithor-pointnav" ]
 then
     echo "Downloading iTHOR PointNav Dataset ..."
     wget https://prior-datasets.s3.us-east-2.amazonaws.com/embodied-ai/navigation/ithor-pointnav.tar.gz
-    tar -xf ithor-pointnav.tar.gz && rm ithor-pointnav.tar.gz
+    mkdir ithor-pointnav
+    tar -xf ithor-pointnav.tar.gz -C ithor-pointnav --strip-components=1 && rm ithor-pointnav.tar.gz
     echo "saved folder: ithor-pointnav"
 
 elif [ "$1" = "ithor-objectnav" ]
 then
     echo "Downloading iTHOR ObjectNav Dataset ..."
     wget https://prior-datasets.s3.us-east-2.amazonaws.com/embodied-ai/navigation/ithor-objectnav.tar.gz
-    tar -xf ithor-objectnav.tar.gz && rm ithor-objectnav.tar.gz
+    mkdir ithor-objectnav
+    tar -xf ithor-objectnav.tar.gz -C ithor-objectnav --strip-components=1  && rm ithor-objectnav.tar.gz
     echo "saved folder: ithor-objectnav"
 
 else
