@@ -14,6 +14,7 @@ from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_task_samplers import ObjectNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from utils.experiment_utils import Builder
+from utils.system import get_logger
 
 
 class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
@@ -149,6 +150,15 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
     ) -> Dict[str, Any]:
         path = os.path.join(scenes_dir, "*.json.gz")
         scenes = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(path)]
+        if len(scenes) == 0:
+            raise RuntimeError(
+                (
+                    "Could find no scene dataset information in directory {}."
+                    " Are you sure you've downloaded them? "
+                    " If not, see https://allenact.org/installation/download-datasets/ information"
+                    " on how this can be done."
+                ).format(scenes_dir)
+            )
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
                 print(

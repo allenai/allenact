@@ -133,6 +133,15 @@ class PointNavRoboThorBaseConfig(ObjectNavBaseConfig):
     ) -> Dict[str, Any]:
         path = os.path.join(scenes_dir, "*.json.gz")
         scenes = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(path)]
+        if len(scenes) == 0:
+            raise RuntimeError(
+                (
+                    "Could find no scene dataset information in directory {}."
+                    " Are you sure you've downloaded them? "
+                    " If not, see https://allenact.org/installation/download-datasets/ information"
+                    " on how this can be done."
+                ).format(scenes_dir)
+            )
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
                 print(
