@@ -301,7 +301,7 @@ class OnPolicyRunner(object):
     def start_test(
         self,
         experiment_date: str,
-        cp: Optional[str] = None,
+        checkpoint: Optional[str] = None,
         skip_checkpoints: int = 0,
         max_sampler_processes_per_worker: Optional[int] = None,
     ):
@@ -333,15 +333,17 @@ class OnPolicyRunner(object):
             "Started {} test processes".format(len(self.processes["test"]))
         )
 
-        checkpoints = self.get_checkpoint_files(experiment_date, cp, skip_checkpoints)
+        checkpoints = self.get_checkpoint_files(
+            experiment_date, checkpoint, skip_checkpoints
+        )
         steps = [self.step_from_checkpoint(cp) for cp in checkpoints]
 
         get_logger().info("Running test on {} steps {}".format(len(steps), steps))
 
-        for cp in checkpoints:
+        for checkpoint in checkpoints:
             # Make all testers work on each checkpoint
             for tester_it in range(num_testers):
-                self.queues["checkpoints"].put(("eval", cp))
+                self.queues["checkpoints"].put(("eval", checkpoint))
         # Signal all testers to terminate cleanly
         for _ in range(num_testers):
             self.queues["checkpoints"].put(("quit", None))

@@ -2,36 +2,39 @@
 
 In this tutorial we will run inference on a pre-trained model for the PointNav task
 in the RoboTHOR environment. In this task the agent is tasked with going to a specific location
-withing  a realistic 3D environment.
+within a realistic 3D environment.
 
 For information on how to train a PointNav Model see [this tutorial](training-a-pointnav-model.md)
 
 We will need to [install the RoboTHOR environment](../installation/installation-allenact.md) and [download the 
-RoboTHOR ObjectNav dataset](../installation/download-datasets.md) before we get started.
+RoboTHOR Pointnav dataset](../installation/download-datasets.md) before we get started.
 
-We have to download the weights for the model that we want to run inference on.
+For this tutorial we will download the weights of a model trained on the debug dataset.
 This can be done with a handy script in the `pretrained_model_ckpts` directory:
 ```bash
-sh pretrained_model_ckpts/download_navigation_model_ckpts.sh robothor-objectnav-rgb-resnet
+sh pretrained_model_ckpts/download_navigation_model_ckpts.sh robothor-pointnav-rgb-resnet
 ```
-This will download the weights for an RGB model using a Resnet that has been
-trained on the ObjectNav task in RoboTHOR to `pretrained_model_ckpts/robothor-pointnav-rgb-resnet.pt`
+This will download the weights for an RGB model that has been
+trained on the PointNav task in RoboTHOR to `pretrained_model_ckpts/robothor-pointnav-rgb-resnet`
+
 
 Next we need to run the inference, using the PointNav experiment config from the [tutorial on making a PointNav experiment](training-a-pointnav-model.md).
 We can do this with the following command:
 
 ```bash
-python main.py -o <PATH_TO_OUTPUT> -c <PATH_TO_CHECKPOINT> -t -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
+python main.py -o <PATH_TO_OUTPUT> -c <PATH_TO_CHECKPOINT> -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> -t <TIMESTAMP>
 ```
 
-Where `PATH_TO_OUTPUT` is the location where the results of the test will be dumped, `PATH_TO_CHECKPOINT` is the 
+Where `<PATH_TO_OUTPUT>` is the location where the results of the test will be dumped, `<PATH_TO_CHECKPOINT>` is the 
 location of the downloaded model weights, `<BASE_DIRECTORY_OF_YOUR_EXPERIMENT>` is a path to the directory where 
-our experiment definition is stored and `<EXPERIMENT_NAME>` is simply the name of our experiment
-(without the file extension).
+our experiment definition is stored, and `<TIMESTAMP>` is the unique timestamp associated with when the model was
+trained.
  
- For our current setup the following command would work:
+For our current setup the following command would work:
  
  ```bash
- python main.py -o storage/ -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet.pt -t -b projects/tutorials pointnav_robothor_rgb_ddppo
+ python main.py -o storage/ -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_10-20-29/exp_PointNavRobothorRGBPPO__stage_00__steps_000000100800.pt -t 2020-08-31_10-20-29 -b projects/tutorials pointnav_robothor_rgb_ddppo
 ```
 
+If we want to run inference on a model we trained ourselves, we simply have to point `<PATH_TO_CHECKPOINT>`
+to the checkpoint we want to evaluate.

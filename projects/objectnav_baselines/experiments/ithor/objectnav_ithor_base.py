@@ -1,4 +1,5 @@
 import glob
+import os
 from math import ceil
 from typing import Dict, Any, List, Optional
 
@@ -6,12 +7,14 @@ import gym
 import numpy as np
 import torch
 
+from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_task_samplers import ObjectNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from utils.experiment_utils import Builder
+from utils.system import get_logger
 
 
 class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
@@ -55,8 +58,12 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         self.TEST_GPU_IDS = [7]
         self.ADVANCE_SCENE_ROLLOUT_PERIOD = 10 ** 13
 
-        self.TRAIN_DATASET_DIR = "datasets/ithor-objectnav/train"
-        self.VAL_DATASET_DIR = "datasets/ithor-objectnav/val"
+        self.TRAIN_DATASET_DIR = os.path.join(
+            ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/ithor-objectnav/train"
+        )
+        self.VAL_DATASET_DIR = os.path.join(
+            ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/ithor-objectnav/val"
+        )
 
         self.SENSORS = None
 
@@ -141,12 +148,17 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        path = (
-            scenes_dir + "*.json.gz"
-            if scenes_dir[-1] == "/"
-            else scenes_dir + "/*.json.gz"
-        )
+        path = os.path.join(scenes_dir, "*.json.gz")
         scenes = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(path)]
+        if len(scenes) == 0:
+            raise RuntimeError(
+                (
+                    "Could find no scene dataset information in directory {}."
+                    " Are you sure you've downloaded them? "
+                    " If not, see https://allenact.org/installation/download-datasets/ information"
+                    " on how this can be done."
+                ).format(scenes_dir)
+            )
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
                 print(
@@ -185,7 +197,7 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.TRAIN_DATASET_DIR + "/episodes/",
+            os.path.join(self.TRAIN_DATASET_DIR, "episodes"),
             process_ind,
             total_processes,
             seeds=seeds,
@@ -212,7 +224,7 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.VAL_DATASET_DIR + "/episodes/",
+            os.path.join(self.VAL_DATASET_DIR, "episodes"),
             process_ind,
             total_processes,
             seeds=seeds,
@@ -238,7 +250,7 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.VAL_DATASET_DIR + "/episodes/",
+            os.path.join(self.VAL_DATASET_DIR, "episodes"),
             process_ind,
             total_processes,
             seeds=seeds,
