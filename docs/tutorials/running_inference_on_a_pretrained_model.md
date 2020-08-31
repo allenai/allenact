@@ -12,7 +12,7 @@ RoboTHOR Pointnav dataset](../installation/download-datasets.md) before we get s
 For this tutorial we will download the weights of a pre trained model.
 This can be done with a handy script in the `pretrained_model_ckpts` directory:
 ```bash
-sh download_navigation_model_ckpts.sh robothor-pointnav-rgb-resnet
+sh pretrained_model_ckpts/download_navigation_model_ckpts.sh robothor-pointnav-rgb-resnet
 ```
 This will download the weights for an RGB model that has been
 trained on the PointNav task in RoboTHOR to `pretrained_model_ckpts/robothor-pointnav-rgb-resnet.pt`

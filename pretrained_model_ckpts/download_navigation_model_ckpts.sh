@@ -8,7 +8,6 @@ if [ "$1" = "robothor-pointnav-rgb-resnet" ]
 then
     echo "Downloading RoboTHOR PointNav Dataset ..."
     wget https://prior-model-weights.s3.us-east-2.amazonaws.com/embodied-ai/navigation/robothor-pointnav-rgb-resnet.pt
-    tar -xf robothor-pointnav-rgb-resnet-weights.tar.gz && rm robothor-pointnav-rgb-resnet-weights.tar.gz
     echo "saved folder: robothor-pointnav-rgb-resnet"
 
 else
