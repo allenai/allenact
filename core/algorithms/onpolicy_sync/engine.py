@@ -612,10 +612,15 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 "num_workers_steps", self.store
             )
             self.distributed_preemption_threshold = distributed_preemption_threshold
+            # Flag for finished worker in current epoch
+            self.offpolicy_epoch_done = torch.distributed.PrefixStore(  # type:ignore
+                "offpolicy_epoch_done", self.store
+            )
         else:
             self.num_workers_done = None
             self.num_workers_steps = None
             self.distributed_preemption_threshold = 1.0
+            self.offpolicy_epoch_done = None
 
         # Keeping track of training state
         self.tracking_info: Dict[str, List] = defaultdict(lambda: [])
@@ -918,7 +923,19 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.worker_id, rollouts_per_worker, seed
         )
 
-        return data_iterator_builder(**kwargs)
+        offpolicy_iterator = data_iterator_builder(**kwargs)
+
+        stage.offpolicy_memory.clear()
+        if stage.offpolicy_epochs is None:
+            stage.offpolicy_epochs = 0
+        else:
+            stage.offpolicy_epochs += 1
+
+        if self.is_distributed:
+            self.offpolicy_epoch_done.set("offpolicy_epoch_done", str(0))
+            dist.barrier()  # sync
+
+        return offpolicy_iterator
 
     def backprop_step(self, total_loss):
         self.optimizer.zero_grad()  # type: ignore
@@ -955,18 +972,21 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         for e in range(updates):
             if data_iterator is None:
                 data_iterator = self.make_offpolicy_iterator(data_iterator_builder)
-                stage.offpolicy_memory.clear()
-                if stage.offpolicy_epochs is None:
-                    stage.offpolicy_epochs = 0
-                else:
-                    stage.offpolicy_epochs += 1
 
             try:
                 batch = next(data_iterator)
             except StopIteration:
+                batch = None
+                if self.is_distributed:
+                    self.offpolicy_epoch_done.add("offpolicy_epoch_done", 1)
+
+            if self.is_distributed:
+                dist.barrier()  # sync after every batch!
+                if int(self.offpolicy_epoch_done.get("offpolicy_epoch_done")) != 0:
+                    batch = None
+
+            if batch is None:
                 data_iterator = self.make_offpolicy_iterator(data_iterator_builder)
-                stage.offpolicy_memory.clear()
-                stage.offpolicy_epochs += 1
                 batch = next(data_iterator)
 
             batch = to_device_recursively(batch, device=self.device, inplace=True)
