@@ -35,7 +35,7 @@ For our current setup the following command would work:
 ```bash
  python main.py \
     -o storage/ \
-    -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_10-20-29/exp_PointNavRobothorRGBPPO__stage_00__steps_000000100800.pt \
+    -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_10-20-29/exp_PointNavRobothorRGBPPO__stage_00__steps_000000756000.pt \
     -b projects/tutorials pointnav_robothor_rgb_ddppo \
     -t 2020-08-31_10-20-29
 ```
