@@ -1,5 +1,9 @@
 # FAQ
 
+## How do I file a bug regarding the code or documentation?
+
+Please file bugs by submitting an [issue](https://github.com/allenai/allenact/issues). We also welcome contributions from the community, including new features and bugfixes on existing functionality. Please refer to our [contribution guidelines](CONTRIBUTING.md).
+
 ## How do I generate documentation?
 
 Documentation is generated using [mkdoc](https://www.mkdocs.org/) and
