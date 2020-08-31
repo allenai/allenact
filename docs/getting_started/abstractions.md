@@ -1,16 +1,16 @@
 # Primary abstractions
 
-Our package relies on a collection of fundamental abstractions to define how, and in what task, the model should be
+Our package relies on a collection of fundamental abstractions to define how, and in what task, an agent should be
 trained and evaluated. A subset of these abstractions are described in plain language below. Each of the below sections
 end with a link to the (formal) documentation of the abstraction as well as a link to an example implementation of the
-abstract (if relevant). The following provides a high-level description of how these abstractions interact.
+abstraction (if relevant). The following provides a high-level illustration of how these abstractions interact.
 
 
 ![abstractions-overview](../img/abstractions.png)
 
 ## Experiment configuration
 
-In `allenact`, experiments are definied by implementing the abstract `ExperimentConfig` class. The methods
+In `allenact`, experiments are defined by implementing the abstract `ExperimentConfig` class. The methods
 of this implementation are then called during training/inference to properly set up the desired experiment. For example,
 the `ExperimentConfig.create_model` method will be called at the beginning of training to create the model
 to be trained.
@@ -19,7 +19,7 @@ See either the ["designing your first minigrid experiment"](/tutorials/minigrid-
  tutorials to get an in-depth description of how these experiment configurations are defined in practice.
 
 See also the [abstract `ExperimentConfig` class](/api/core/base_abstractions/experiment_config#experimentconfig) 
-and an [example implementation](/api/projects/tutorials/minigrid_tutorial#MiniGridTutorialExperimentConfig).
+and an [example implementation](/api/plugins/ithor_plugin/ithor_environment/#ithorenvironment).
 
 ## Task sampler
 

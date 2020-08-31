@@ -54,13 +54,17 @@ to maximize this reward.
 ## Requirements
 To train the model on the PointNav task, we need to [install the RoboTHOR environment](../installation/installation-framework.md) 
 and [download the RoboTHOR PointNav dataset](../installation/download-datasets.md)
+
 The dataset contains a list of episodes with thousands of randomly generated starting positions and target locations for each of the scenes
 as well as a precomputed cache of distances, containing the shortest path from each point in a scene, to every other point in that scene. 
 This is used to reward the agent for moving closer to the target in terms of geodesic distance - the actual path distance (as opposed to a 
 straight line distance).
 
 ## Config File Setup
-Now comes the most important part of the tutorial, we are going to write an experiment config file.
+Now comes the most important part of the tutorial, we are going to write an experiment config file. 
+If this is your first experience with experiment config files in AllenAct, we suggest that you
+first see our how-to on [defining an experiment](../howtos/training-a-pointnav-model.md) which will
+walk you through creating a simplified experiment config file.
 
 Unlike a library that can be imported into python, **AllenAct** is structured as a framework with a runner script called `main.py` which will run the experiment specified in a config file. This design forces us to keep meticulous records of exactly which settings were used to produce a particular result,
 which can be very useful given how expensive RL models are to train.

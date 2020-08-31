@@ -1,6 +1,6 @@
 site_name: AllenAct
 site_description: An open source framework for research in Embodied-AI from AI2
-site_url: https://github.com/allenai/allenact
+site_url: https://allenact.org
 
 theme:
   name: material
@@ -31,8 +31,8 @@ nav:
   - Download datasets: installation/download-datasets.md
 - Getting started:
   - Run your first experiment: getting_started/running-your-first-experiment.md
-  - Structure of the codebase: getting_started/structure.md
   - Primary abstractions: getting_started/abstractions.md
+  - Structure of the codebase: getting_started/structure.md
 - Tutorials:
   - AllenAct Tutorials: tutorials/index.md
   - Navigation in Minigrid: tutorials/minigrid-tutorial.md
@@ -189,7 +189,9 @@ nav:
         - point_nav_models: api/projects/pointnav_baselines/models/point_nav_models.md
     - tutorials:
       - pointnav_robothor_rgb_ddppo: api/projects/tutorials/pointnav_robothor_rgb_ddppo.md
+      - object_nav_ithor_dagger_then_ppo_one_object: api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object.md
       - pointnav_ithor_rgb_ddppo: api/projects/tutorials/pointnav_ithor_rgb_ddppo.md
+      - object_nav_ithor_ppo_one_object: api/projects/tutorials/object_nav_ithor_ppo_one_object.md
       - minigrid_tutorial: api/projects/tutorials/minigrid_tutorial.md
   - tests:
     - multiprocessing:

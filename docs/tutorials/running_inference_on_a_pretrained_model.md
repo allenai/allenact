@@ -10,20 +10,21 @@ We will need to [install the RoboTHOR environment](../installation/installation-
 RoboTHOR Pointnav dataset](../installation/download-datasets.md) before we get started.
 
 For this tutorial we will download the weights of a pre trained model.
-This can be done with a handy script in the `model_weights` directory:
+This can be done with a handy script in the `pretrained_model_ckpts` directory:
 ```bash
-cd model_weights
-sh download_model_weights.sh robothor-pointnav-rgb-resnet
+cd pretrained_model_ckpts
+sh download_navigation_model_ckpts.sh robothor-pointnav-rgb-resnet
 cd ../
 ```
 This will download the weights for an RGB model that has been
-trained on the PointNav task in RoboTHOR to `model_weights/robothor-pointnav-rgb-resnet.pt`
+trained on the PointNav task in RoboTHOR to `pretrained_model_ckpts/robothor-pointnav-rgb-resnet.pt`
+
 
 Next we need to run the inference, using the PointNav experiment config from the [tutorial on making a PointNav experiment](training-a-pointnav-model.md).
 We can do this with the following command:
 
 ```bash
-python ddmain.py -o <PATH_TO_OUTPUT> -c <PATH_TO_CHECKPOINT> -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
+python main.py -o <PATH_TO_OUTPUT> -c <PATH_TO_CHECKPOINT> -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
 ```
 
 Where `PATH_TO_OUTPUT` is the location where the results of the test will be dumped, `<PATH_TO_CHECKPOINT>` is the 
@@ -34,7 +35,7 @@ our experiment definition is stored and `<EXPERIMENT_NAME>` is simply the name o
  For our current setup the following command would work:
  
  ```bash
- python ddmain.py -o storage/ -c model_weights/robothor-pointnav-rgb-resnet.pt -b projects/tutorials pointnav_robothor_rgb_ddppo
+ python main.py -o storage/ -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet.pt -b projects/tutorials pointnav_robothor_rgb_ddppo
 ```
 
 If we want to run inference on a model we trained ourselves, we simply have to point `<PATH_TO_CHECKPOINT>`

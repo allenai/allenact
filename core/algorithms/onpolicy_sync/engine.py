@@ -650,8 +650,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.vector_tasks.set_seeds(seeds)
 
     def checkpoint_save(self) -> str:
-        self.deterministic_seeds()
-
         model_path = os.path.join(
             self.checkpoints_dir,
             "exp_{}__stage_{:02d}__steps_{:012d}.pt".format(
@@ -846,15 +844,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             )
 
             for bit, batch in enumerate(data_generator):
-                # TODO: check recursively within batch
-                bsize = None
-                for key in batch:
-                    if isinstance(batch[key], torch.Tensor):
-                        num_rollout_steps, num_samplers = batch[key].shape[:2]
-                        bsize = num_rollout_steps * num_samplers
-                        if bsize > 0:
-                            break
-                assert bsize is not None, "TODO check recursively for batch size"
+                # masks is always [steps, samplers, agents, 1]:
+                num_rollout_steps, num_samplers = batch["masks"].shape[:2]
+                bsize = num_rollout_steps * num_samplers
 
                 actor_critic_output, memory = self.actor_critic(
                     observations=batch["observations"],
@@ -1191,6 +1183,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     or self.training_pipeline.current_stage.is_complete
                 )
             ):
+                self.deterministic_seeds()
                 if self.worker_id == 0:
                     model_path = self.checkpoint_save()
                     if self.checkpoints_queue is not None:

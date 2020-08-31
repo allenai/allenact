@@ -1,7 +1,7 @@
 <div align="center">
     <img src="docs/img/AllenAct.svg" width="350" />
     <br>
-    <i><h3>An open source framework for research in Embodied-AI</h3></i>
+    <i><h3>An open source framework for research in Embodied AI</h3></i>
     </p>
     <hr/>
 </div>
@@ -16,6 +16,7 @@ AllenAct is built and backed by the [Allen Institute for AI (AI2)](https://allen
 - [Github](https://github.com/allenai/allenact)
 - [Install](https://www.allenact.org/installation/installation-allenact/)
 - [Tutorials](https://www.allenact.org/tutorials/)
+- [AllenAct Paper](https://arxiv.org/abs/2008.12760)
 - [Citation](#citation)
 
 ## Features & Highlights
@@ -23,7 +24,7 @@ AllenAct is built and backed by the [Allen Institute for AI (AI2)](https://allen
 * _Support for multiple environments_: Support for the [iTHOR](https://ai2thor.allenai.org/ithor/), [RoboTHOR](https://ai2thor.allenai.org/robothor/) and [Habitat](https://aihabitat.org/) embodied environments as well as for grid-worlds including [MiniGrid](https://github.com/maximecb/gym-minigrid).
 * _Task Abstraction_: Tasks and environments are decoupled in AllenAct, enabling researchers to easily implement a large variety of tasks in the same environment.
 * _Algorithms_: Support for a variety of on-policy algorithms including [PPO](https://arxiv.org/pdf/1707.06347.pdf), [DD-PPO](https://arxiv.org/pdf/1911.00357.pdf), [A2C](https://arxiv.org/pdf/1611.05763.pdf), Imitation Learning and [DAgger](https://www.ri.cmu.edu/pub_files/2011/4/Ross-AISTATS11-NoRegret.pdf) as well as offline training such as offline IL.
-* _Sequential Algorithms_: Trivial to experiment with different sequences of training routines, which are often the key to successful policies.
+* _Sequential Algorithms_: It is trivial to experiment with different sequences of training routines, which are often the key to successful policies.
 * _Simultaneous Losses_: Easily combine various losses while training models (e.g. use an external self-supervised loss while optimizing a PPO loss).
 * _Multi-agent support_: Support for multi-agent algorithms and tasks.
 * _Visualizations_: Out of the box support to easily visualize first and third person views for agents as well as intermediate model tensors, integrated into Tensorboard.
@@ -41,7 +42,7 @@ All code in this repository is subject to formatting, documentation, and type-an
 This work builds upon the [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail) library of Ilya Kostrikov and uses some data structures from FAIR's [habitat-lab](https://github.com/facebookresearch/habitat-lab). We would like to thank Dustin Schwenk for his help for the public release of the framework.
 
 ## License
-AllenAct is MIT licensed, as found in the [LICENSE](LICENSE.md) file.
+AllenAct is MIT licensed, as found in the [LICENSE](LICENSE) file.
 
 ## Team
 AllenAct is an open-source project built by members of the PRIOR research group at the Allen Institute for Artificial Intelligence (AI2). 
@@ -54,7 +55,7 @@ AllenAct is an open-source project built by members of the PRIOR research group 
 </div>
 
 ## Citation
-If you use this work, please cite:
+If you use this work, please cite our [paper](https://arxiv.org/abs/2008.12760):
 
 ```bibtex
 @article{AllenAct,
@@ -63,7 +64,6 @@ If you use this work, please cite:
   year = {2020},
   journal = {arXiv},
 }
-
 ```
 
 
