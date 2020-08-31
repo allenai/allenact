@@ -7,11 +7,11 @@ it has reached the end it executes the `END` action which terminates the episode
 distance to the target (in our case 0.2 meters) the agent succeeded, else it failed.
 
 Provided are experiment configs for training a simple convolutional model with
-a GRU using `RGB`, `Depth` or `RGBD` as inputs in [Habitat](https://github.com/facebookresearch/habitat-sim), 
+an GRU using `RGB`, `Depth` or `RGBD` as inputs in [Habitat](https://github.com/facebookresearch/habitat-sim), 
 [RoboTHOR](https://ai2thor.allenai.org/robothor/) and [iTHOR](https://ai2thor.allenai.org/ithor/).
 
 The experiments are set up to train models using the [DD-PPO](https://arxiv.org/pdf/1911.00357.pdf)
-Reinforcement Learning algorithm.
+Reinforcement Learning Algorithm.
 
 To train an experiment run the following command from the `allenact` root directory:
 
