@@ -9,13 +9,13 @@ For information on how to train a PointNav Model see [this tutorial](training-a-
 We will need to [install the RoboTHOR environment](../installation/installation-allenact.md) and [download the 
 RoboTHOR Pointnav dataset](../installation/download-datasets.md) before we get started.
 
-For this tutorial we will download the weights of a pre trained model.
+For this tutorial we will download the weights of a model trained on the debug dataset.
 This can be done with a handy script in the `pretrained_model_ckpts` directory:
 ```bash
 sh pretrained_model_ckpts/download_navigation_model_ckpts.sh robothor-pointnav-rgb-resnet
 ```
 This will download the weights for an RGB model that has been
-trained on the PointNav task in RoboTHOR to `pretrained_model_ckpts/robothor-pointnav-rgb-resnet.pt`
+trained on the PointNav task in RoboTHOR to `pretrained_model_ckpts/robothor-pointnav-rgb-resnet`
 
 
 Next we need to run the inference, using the PointNav experiment config from the [tutorial on making a PointNav experiment](training-a-pointnav-model.md).
@@ -33,7 +33,7 @@ our experiment definition is stored and `<EXPERIMENT_NAME>` is simply the name o
  For our current setup the following command would work:
  
  ```bash
- python main.py -o storage/ -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet.pt -b projects/tutorials pointnav_robothor_rgb_ddppo
+ python main.py -o storage/ -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_10-20-29/exp_PointNavRobothorRGBPPO__stage_00__steps_000000100800.pt -t 2020-08-31_10-20-29 -b projects/tutorials pointnav_robothor_rgb_ddppo
 ```
 
 If we want to run inference on a model we trained ourselves, we simply have to point `<PATH_TO_CHECKPOINT>`

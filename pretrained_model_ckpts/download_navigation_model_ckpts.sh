@@ -7,7 +7,8 @@ cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )" || exit
 if [ "$1" = "robothor-pointnav-rgb-resnet" ]
 then
     echo "Downloading RoboTHOR PointNav Dataset ..."
-    wget https://prior-model-weights.s3.us-east-2.amazonaws.com/embodied-ai/navigation/robothor-pointnav-rgb-resnet.pt
+    wget https://prior-model-weights.s3.us-east-2.amazonaws.com/embodied-ai/navigation/robothor-pointnav-rgb-resnet.tar.gz
+    tar -xf robothor-pointnav-rgb-resnet.tar.gz && rm robothor-pointnav-rgb-resnet.tar.gz
     echo "saved folder: robothor-pointnav-rgb-resnet"
 
 else
