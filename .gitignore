@@ -165,3 +165,6 @@ tmp/
 docs/index.md
 docs/CONTRIBUTING.md
 docs/LICENSE.md
+
+# Metrics
+metrics__*.json
