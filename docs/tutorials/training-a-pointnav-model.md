@@ -388,7 +388,7 @@ each process should work with. If we have several GPUS and many scenes this proc
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        path = scenes_dir + "*.json.gz" if scenes_dir[-1] == "/" else scenes_dir + "/*.json.gz"
+        path = os.path.join(scenes_dir, "*.json.gz")
         scenes = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(path)]
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
@@ -432,7 +432,7 @@ set.
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.TRAIN_DATASET_DIR + '/episodes/',
+            os.path.join(self.TRAIN_DATASET_DIR, "episodes"),
             process_ind,
             total_processes,
             seeds=seeds,

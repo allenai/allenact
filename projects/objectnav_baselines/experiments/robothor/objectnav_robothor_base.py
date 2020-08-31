@@ -1,4 +1,5 @@
 import glob
+import os
 from math import ceil
 from typing import Dict, Any, List, Optional
 
@@ -6,6 +7,7 @@ import gym
 import numpy as np
 import torch
 
+from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
@@ -53,10 +55,14 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
         self.TRAIN_GPU_IDS = [0, 1, 2, 3, 4, 5, 6]
         self.VALID_GPU_IDS = [7]
         self.TEST_GPU_IDS = [7]
-        self.ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
+        self.ADVANCE_SCENE_ROLLOUT_PERIOD = None
 
-        self.TRAIN_DATASET_DIR = "datasets/robothor-objectnav/train"
-        self.VAL_DATASET_DIR = "datasets/robothor-objectnav/val"
+        self.TRAIN_DATASET_DIR = os.path.join(
+            ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-objectnav/train"
+        )
+        self.VAL_DATASET_DIR = os.path.join(
+            ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-objectnav/val"
+        )
 
         self.SENSORS = None
 
@@ -141,11 +147,7 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        path = (
-            scenes_dir + "*.json.gz"
-            if scenes_dir[-1] == "/"
-            else scenes_dir + "/*.json.gz"
-        )
+        path = os.path.join(scenes_dir, "*.json.gz")
         scenes = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(path)]
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
@@ -185,7 +187,7 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.TRAIN_DATASET_DIR + "/episodes/",
+            os.path.join(self.TRAIN_DATASET_DIR, "episodes"),
             process_ind,
             total_processes,
             seeds=seeds,
@@ -212,7 +214,7 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.VAL_DATASET_DIR + "/episodes/",
+            os.path.join(self.VAL_DATASET_DIR, "episodes"),
             process_ind,
             total_processes,
             seeds=seeds,
@@ -238,7 +240,7 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.VAL_DATASET_DIR + "/episodes/",
+            os.path.join(self.VAL_DATASET_DIR, "episodes"),
             process_ind,
             total_processes,
             seeds=seeds,

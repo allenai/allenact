@@ -1,4 +1,5 @@
 import glob
+import os
 from math import ceil
 from typing import Dict, Any, List, Optional
 
@@ -10,6 +11,7 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 
+from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from projects.pointnav_baselines.models.point_nav_models import (
@@ -51,8 +53,12 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     TESTING_GPUS = [7]
 
     # Dataset Parameters
-    TRAIN_DATASET_DIR = "datasets/ithor-objectnav/train"
-    VAL_DATASET_DIR = "datasets/ithor-objectnav/val"
+    TRAIN_DATASET_DIR = os.path.join(
+        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/ithor-objectnav/train"
+    )
+    VAL_DATASET_DIR = os.path.join(
+        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/ithor-objectnav/val"
+    )
 
     SENSORS = [
         RGBSensorThor(
@@ -226,11 +232,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        path = (
-            scenes_dir + "*.json.gz"
-            if scenes_dir[-1] == "/"
-            else scenes_dir + "/*.json.gz"
-        )
+        path = os.path.join(scenes_dir, "*.json.gz")
         scenes = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(path)]
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
@@ -267,7 +269,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.TRAIN_DATASET_DIR + "/episodes/",
+            os.path.join(self.TRAIN_DATASET_DIR, "episodes"),
             process_ind,
             total_processes,
             seeds=seeds,
@@ -294,7 +296,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.VAL_DATASET_DIR + "/episodes/",
+            os.path.join(self.VAL_DATASET_DIR, "episodes"),
             process_ind,
             total_processes,
             seeds=seeds,
@@ -320,7 +322,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            self.VAL_DATASET_DIR + "/episodes/",
+            os.path.join(self.VAL_DATASET_DIR, "episodes"),
             process_ind,
             total_processes,
             seeds=seeds,

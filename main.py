@@ -187,9 +187,9 @@ def main():
             deterministic_cudnn=args.deterministic_cudnn,
             extra_tag=args.extra_tag,
         ).start_train(
-            args.checkpoint,
-            args.restart_pipeline,
-            args.max_sampler_processes_per_worker,
+            checkpoint=args.checkpoint,
+            restart_pipeline=args.restart_pipeline,
+            max_sampler_processes_per_worker=args.max_sampler_processes_per_worker,
         )
     else:
         OnPolicyRunner(
@@ -201,9 +201,9 @@ def main():
             deterministic_cudnn=args.deterministic_cudnn,
             extra_tag=args.extra_tag,
         ).start_test(
-            args.test_date,
-            args.checkpoint,
-            args.skip_checkpoints,
+            experiment_date=args.test_date,
+            checkpoint=args.checkpoint,
+            skip_checkpoints=args.skip_checkpoints,
             max_sampler_processes_per_worker=args.max_sampler_processes_per_worker,
         )
 

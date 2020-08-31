@@ -9,7 +9,7 @@ class PointNavBaseConfig(ExperimentConfig):
         self.CAMERA_HEIGHT = 480
         self.SCREEN_SIZE = 224
         self.MAX_STEPS = 500
-        self.ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
+        self.ADVANCE_SCENE_ROLLOUT_PERIOD = None
         self.STEP_SIZE = 0.25
         self.ROTATION_DEGREES = 30.0
         self.DISTANCE_TO_GOAL = 0.2
