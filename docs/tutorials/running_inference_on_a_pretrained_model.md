@@ -22,15 +22,15 @@ Next we need to run the inference, using the PointNav experiment config from the
 We can do this with the following command:
 
 ```bash
-python main.py -o <PATH_TO_OUTPUT> -c <PATH_TO_CHECKPOINT> -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
+python main.py -o <PATH_TO_OUTPUT> -c <PATH_TO_CHECKPOINT> -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> -t <TIMESTAMP>
 ```
 
 Where `<PATH_TO_OUTPUT>` is the location where the results of the test will be dumped, `<PATH_TO_CHECKPOINT>` is the 
 location of the downloaded model weights, `<BASE_DIRECTORY_OF_YOUR_EXPERIMENT>` is a path to the directory where 
-our experiment definition is stored and `<EXPERIMENT_NAME>` is simply the name of our experiment
-(without the file extension).
+our experiment definition is stored, and `<TIMESTAMP>` is the unique timestamp associated with when the model was
+trained.
  
- For our current setup the following command would work:
+For our current setup the following command would work:
  
  ```bash
  python main.py -o storage/ -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_10-20-29/exp_PointNavRobothorRGBPPO__stage_00__steps_000000100800.pt -t 2020-08-31_10-20-29 -b projects/tutorials pointnav_robothor_rgb_ddppo

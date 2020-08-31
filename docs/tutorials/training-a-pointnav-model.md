@@ -511,7 +511,7 @@ First we need to change the dataset path to point to our small debug dataset. Mo
 Note that we changed both the train and test dataset to debug, so the model will train and validate on the same
 4 episodes.
 
-We can not train a model by running:
+We can now train a model by running:
 ```bash
 python main.py -o <PATH_TO_OUTPUT> -c -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
 ```
