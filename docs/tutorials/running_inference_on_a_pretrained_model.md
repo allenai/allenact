@@ -23,7 +23,7 @@ Next we need to run the inference, using the PointNav experiment config from the
 We can do this with the following command:
 
 ```bash
-python ddmain.py -o <PATH_TO_OUTPUT> -c <PATH_TO_CHECKPOINT> -t -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
+python ddmain.py -o <PATH_TO_OUTPUT> -c <PATH_TO_CHECKPOINT> -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
 ```
 
 Where `PATH_TO_OUTPUT` is the location where the results of the test will be dumped, `<PATH_TO_CHECKPOINT>` is the 
@@ -34,7 +34,7 @@ our experiment definition is stored and `<EXPERIMENT_NAME>` is simply the name o
  For our current setup the following command would work:
  
  ```bash
- python ddmain.py -o storage/ -c model_weights/robothor-pointnav-rgb-resnet.pt -t -b projects/tutorials pointnav_robothor_rgb_ddppo
+ python ddmain.py -o storage/ -c model_weights/robothor-pointnav-rgb-resnet.pt -b projects/tutorials pointnav_robothor_rgb_ddppo
 ```
 
 If we want to run inference on a model we trained ourselves, we simply have to point `<PATH_TO_CHECKPOINT>`
