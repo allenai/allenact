@@ -309,6 +309,10 @@ class OnPolicyRunner(object):
         self.get_visualizer("test")
         num_testers = len(devices)
 
+        distributed_port = 0
+        if num_testers > 1:
+            distributed_port = find_free_port()
+
         for tester_it in range(num_testers):
             test: mp.process.BaseProcess = self.mp_ctx.Process(
                 target=self.test_loop,
@@ -323,6 +327,7 @@ class OnPolicyRunner(object):
                     num_workers=num_testers,
                     device=devices[tester_it],
                     max_sampler_processes_per_worker=max_sampler_processes_per_worker,
+                    distributed_port=distributed_port,
                 ),
             )
 
