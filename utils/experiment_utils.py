@@ -556,12 +556,12 @@ class TrainingPipeline(object):
         for ps, stage_info in zip(self.pipeline_stages, state_dict["stage_info_list"]):
             ps.early_stopping_criterion_met = stage_info["early_stopping_criterion_met"]
             ps.steps_taken_in_stage = stage_info["steps_taken_in_stage"]
-            ps.offpolicy_steps_taken_in_stage = stage_info[
-                "offpolicy_steps_taken_in_stage"
-            ]
+            ps.offpolicy_steps_taken_in_stage = stage_info.get(
+                "offpolicy_steps_taken_in_stage", 0
+            )
 
         self.rollout_count = state_dict["rollout_count"]
-        self.off_policy_epochs = state_dict["off_policy_epochs"]
+        self.off_policy_epochs = state_dict.get("off_policy_epochs", 0)
 
         self._refresh_current_stage(force_stage_search_from_start=True)
 
