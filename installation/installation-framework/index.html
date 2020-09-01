@@ -3297,14 +3297,14 @@ long as you do not turn off your machine).</p>
 see the above section on installing <code>iTHOR</code>. </p>
 <h2 id="installation-of-habitat">Installation of Habitat<a class="headerlink" href="#installation-of-habitat" title="Permanent link">#</a></h2>
 <p>To run experiments using Habitat please use our docker image using the following command:</p>
-<div class="codehilite"><pre><span></span><code>docker pull klemenkotar/allenact-habitat:latest
+<div class="codehilite"><pre><span></span><code>docker pull klemenkotar/allenact:latest
 </code></pre></div>
 
 
 <p>This container includes the 0.1.0 release of <code>allenact</code>, the 0.1.5 release of <code>habitat</code> as well
 as the <code>Gibson</code> point navigation dataset. This dataset consists of a set of start and goal positions provided by habitat.
 You then need to launch the container and attach into it:</p>
-<div class="codehilite"><pre><span></span><code>docker run klemenkotar/allenact-habitat --runtime<span class="o">=</span>nvidia -it
+<div class="codehilite"><pre><span></span><code>docker run --runtime<span class="o">=</span>nvidia -it klemenkotar/allenact
 </code></pre></div>
 
 

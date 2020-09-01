@@ -3195,8 +3195,14 @@ location of the downloaded model weights, <code>&lt;BASE_DIRECTORY_OF_YOUR_EXPER
 our experiment definition is stored, and <code>&lt;TIMESTAMP&gt;</code> is the unique timestamp associated with when the model was
 trained.</p>
 <p>For our current setup the following command would work:</p>
-<p><code>bash
- python main.py -o storage/ -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_10-20-29/exp_PointNavRobothorRGBPPO__stage_00__steps_000000100800.pt -t 2020-08-31_10-20-29 -b projects/tutorials pointnav_robothor_rgb_ddppo</code></p>
+<div class="codehilite"><pre><span></span><code> python main.py <span class="se">\</span>
+    -o storage/ <span class="se">\</span>
+    -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_10-20-29/exp_PointNavRobothorRGBPPO__stage_00__steps_000000756000.pt <span class="se">\</span>
+    -b projects/tutorials pointnav_robothor_rgb_ddppo <span class="se">\</span>
+    -t <span class="m">2020</span>-08-31_10-20-29
+</code></pre></div>
+
+
 <p>If we want to run inference on a model we trained ourselves, we simply have to point <code>&lt;PATH_TO_CHECKPOINT&gt;</code>
 to the checkpoint we want to evaluate.</p>
                 
