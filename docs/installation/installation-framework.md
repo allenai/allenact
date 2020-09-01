@@ -57,7 +57,7 @@ as the `Gibson` point navigation dataset. This dataset consists of a set of star
 You then need to launch the container and attach into it:
 
 ```bash
-docker run klemenkotar/allenact-habitat --runtime=nvidia -it
+docker run --runtime=nvidia -it klemenkotar/allenact
 ```
 
 Once inside the container activate the conda environment:
