@@ -58,7 +58,7 @@ is sufficient for pointnav in RoboThor.
 
 Following up on the example above, we can make a specialized pontnav `ExperimentConfig` where we instantiate
 the base visualization class, `SimpleViz`, defined in
-[`utils.viz_utils`]((https://github.com/allenai/allenact/tree/master/utils/viz_utils.py)), when in `test` mode.
+[`utils.viz_utils`](https://github.com/allenai/allenact/tree/master/utils/viz_utils.py), when in `test` mode.
 
 Each visualization type can be thought of as a plugin to the base `SimpleViz`. For example, all `episode_ids` passed to
 `SimpleViz` will be processed with each of the instantiated visualization types (possibly with the exception of the
