@@ -9,15 +9,6 @@ from core.base_abstractions.experiment_config import ExperimentConfig
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from utils.viz_utils import (
-    SimpleViz,
-    TrajectoryViz,
-    ActorViz,
-    AgentViewViz,
-    TensorViz1D,
-    TensorViz2D,
-)
-from plugins.robothor_plugin.robothor_viz import ThorViz
 
 
 class NavBaseConfig(ExperimentConfig, abc.ABC):
@@ -90,7 +81,6 @@ class NavBaseConfig(ExperimentConfig, abc.ABC):
         return res
 
     def machine_params(self, mode="train", **kwargs):
-        visualizer = None
         if mode == "train":
             gpu_ids = (
                 ["cpu"]
@@ -112,33 +102,12 @@ class NavBaseConfig(ExperimentConfig, abc.ABC):
                 else list(range(torch.cuda.device_count()))
             )
             nprocesses = self.split_num_processes(len(gpu_ids))
-
-            # visualizer = Builder(
-            #     SimpleViz,
-            #     dict(
-            #         episode_ids=self.ep_ids,
-            #         mode="test",
-            #         # v1=Builder(TrajectoryViz, dict()),
-            #         v3=Builder(ActorViz, dict(figsize=(3.25, 10), fontsize=(18))),
-            #         # v4=Builder(TensorViz1D, dict()),
-            #         # v5=Builder(TensorViz1D, dict(rollout_source=("masks"))),
-            #         # v6=Builder(TensorViz2D, dict()),
-            #         v7=Builder(
-            #             ThorViz, dict(figsize=(16, 8), viz_rows_cols=(448, 448))
-            #         ),
-            #         v2=Builder(
-            #             AgentViewViz,
-            #             dict(max_video_length=100, episode_ids=self.video_ids),
-            #         ),
-            #     ),
-            # )
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
         return {
             "nprocesses": nprocesses,
             "gpu_ids": gpu_ids,
-            "visualizer": visualizer,
         }
 
     @abc.abstractmethod

@@ -168,3 +168,6 @@ docs/LICENSE.md
 
 # Metrics
 metrics__*.json
+
+# Robothor
+plugins/robothor_plugin/data/*
