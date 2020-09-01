@@ -56,7 +56,7 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig):
         self.TRAIN_GPU_IDS = [0, 1, 2, 3, 4, 5, 6]
         self.VALID_GPU_IDS = [7]
         self.TEST_GPU_IDS = [7]
-        self.ADVANCE_SCENE_ROLLOUT_PERIOD = 10 ** 13
+        self.ADVANCE_SCENE_ROLLOUT_PERIOD = None
 
         self.TRAIN_DATASET_DIR = os.path.join(
             ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/ithor-objectnav/train"
