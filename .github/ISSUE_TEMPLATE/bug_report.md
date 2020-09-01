@@ -7,32 +7,32 @@ assignees: ''
 
 ---
 
-**Describe the bug**
+## Problem
+
 A clear and concise description of what the bug is.
 
-**To Reproduce**
+## Steps to reproduce
+
 Steps to reproduce the behavior:
 1. Go to '...'
 2. Click on '....'
 3. Scroll down to '....'
 4. See error
 
-**Expected behavior**
+## Expected behavior
+
 A clear and concise description of what you expected to happen.
 
-**Screenshots**
+## Screenshots
+
 If applicable, add screenshots to help explain your problem.
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+## Desktop
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+Please add the following information:
+ - OS: [e.g. Ubuntu 16.04.5]
+ - AllenAct Version: [e.g. current HEAD of master or v0.1.0]
 
-**Additional context**
+## Additional context
+
 Add any other context about the problem here.
