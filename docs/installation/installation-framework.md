@@ -49,7 +49,7 @@ see the above section on installing `iTHOR`.
 To run experiments using Habitat please use our docker image using the following command:
 
 ```bash
-docker pull klemenkotar/allenact-habitat:latest
+docker pull klemenkotar/allenact:latest
 ```
 
 This container includes the 0.1.0 release of `allenact`, the 0.1.5 release of `habitat` as well
