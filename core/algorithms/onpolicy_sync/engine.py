@@ -968,6 +968,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
     ) -> Iterator:
         stage = self.training_pipeline.current_stage
 
+        current_steps = 0
+        if self.is_distributed:
+            self.num_workers_steps.set("steps", str(0))
+            dist.barrier()
+
         for e in range(updates):
             if data_iterator is None:
                 data_iterator = self.make_offpolicy_iterator(data_iterator_builder)
@@ -986,6 +991,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
             if batch is None:
                 data_iterator = self.make_offpolicy_iterator(data_iterator_builder)
+                # TODO: (batch, bsize) from iterator instead of waiting for the loss?
                 batch = next(data_iterator)
 
             batch = to_device_recursively(batch, device=self.device, inplace=True)
@@ -1023,13 +1029,31 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             )
 
             info["offpolicy/total_loss"] = total_loss.item()
-            self.tracking_info["update"].append(("update_package", info, bsize))
+            info["offpolicy/epoch"] = stage.offpolicy_epochs
+            self.tracking_info["offpolicy_update"].append(
+                ("offpolicy_update_package", info, bsize)
+            )
 
             self.backprop_step(total_loss)
 
             stage.offpolicy_memory = detach_recursively(
                 input=stage.offpolicy_memory, inplace=True
             )
+
+            if self.is_distributed:
+                self.num_workers_steps.add("steps", bsize)  # counts samplers x steps
+            else:
+                current_steps += bsize
+
+        if self.is_distributed:
+            dist.barrier()
+            stage.offpolicy_steps_taken_in_stage += int(
+                self.num_workers_steps.get("steps")
+            )
+            dist.barrier()
+        else:
+            stage.offpolicy_steps_taken_in_stage += current_steps
+
         return data_iterator
 
     def apply_teacher_forcing(
@@ -1085,9 +1109,16 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         # get_logger().debug("{}".format(payload))
 
-        nsteps = self.training_pipeline.total_steps
+        nsteps = self.training_pipeline.total_steps  # onpolicy steps
 
-        self.results_queue.put((package_type, payload, nsteps))
+        self.results_queue.put(
+            (
+                package_type,
+                payload,
+                nsteps,
+                self.training_pipeline.total_offpolicy_steps,
+            )
+        )
 
     def run_pipeline(self, rollouts: RolloutStorage):
         self.initialize_rollouts(rollouts)
