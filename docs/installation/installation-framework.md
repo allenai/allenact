@@ -49,7 +49,7 @@ see the above section on installing `iTHOR`.
 To run experiments using Habitat please use our docker image using the following command:
 
 ```bash
-docker pull klemenkotar/allenact-habitat:latest
+docker pull klemenkotar/allenact:latest
 ```
 
 This container includes the 0.1.0 release of `allenact`, the 0.1.5 release of `habitat` as well
@@ -57,7 +57,7 @@ as the `Gibson` point navigation dataset. This dataset consists of a set of star
 You then need to launch the container and attach into it:
 
 ```bash
-docker run klemenkotar/allenact-habitat --runtime=nvidia -it
+docker run --runtime=nvidia -it klemenkotar/allenact
 ```
 
 Once inside the container activate the conda environment:
