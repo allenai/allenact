@@ -6,6 +6,13 @@
     <hr/>
 </div>
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Documentation Status](https://img.shields.io/badge/docs-up%20to%20date-Green.svg)](https://allenact.org)
+[![Latest Release](https://img.shields.io/github/v/release/allenai/allenact)](https://github.com/allenai/allenact/releases/latest)
+[![Python 3.6](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/release/python-360/)
+[![LGTM Grade: Python](https://img.shields.io/lgtm/grade/python/g/allenai/allenact.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/allenai/allenact/context:python)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 **AllenAct** is a modular and flexible learning framework designed with a focus on the unique requirements of Embodied-AI research. It provides first-class support for a growing collection of embodied environments, tasks and algorithms, provides reproductions of state-of-the-art models and includes extensive documentation, tutorials, start-up code, and pre-trained models.
 
 AllenAct is built and backed by the [Allen Institute for AI (AI2)](https://allenai.org/). AI2 is a non-profit institute with the mission to contribute to humanity through high-impact AI research and engineering.
