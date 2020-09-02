@@ -6,7 +6,6 @@ cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )" || exit
 install_dataset() {
     dataset_name="$1"
     wget https://prior-datasets.s3.us-east-2.amazonaws.com/embodied-ai/navigation/"$dataset_name".tar.gz
-    pwd
     mkdir "$dataset_name"
     tar -xf "$dataset_name".tar.gz -C "$dataset_name" --strip-components=1 && rm "$dataset_name".tar.gz
     echo "saved folder: "$dataset_name""

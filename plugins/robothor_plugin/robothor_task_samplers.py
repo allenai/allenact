@@ -261,9 +261,6 @@ class ObjectNavTaskSampler(TaskSampler):
         else:
             task_info["mirrored"] = False
 
-        # if self.reset_tasks is not None:
-        #     get_logger().debug("eval task_info {}".format(task_info))
-
         self._last_sampled_task = ObjectNavTask(
             env=self.env,
             sensors=self.sensors,
@@ -468,8 +465,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             task_info["mirrored"] = True
         else:
             task_info["mirrored"] = False
-        # if self.reset_tasks is not None:
-        #     get_logger().debug("valid task_info {}".format(task_info))
+
         self.episode_index += 1
         if self.max_tasks is not None:
             self.max_tasks -= 1
@@ -890,9 +886,6 @@ class PointNavDatasetTaskSampler(TaskSampler):
             task_info["mirrored"] = True
         else:
             task_info["mirrored"] = False
-
-        # if self.reset_tasks is not None:
-        #     get_logger().debug("valid task_info {}".format(task_info))
 
         self.episode_index += 1
         if self.max_tasks is not None:

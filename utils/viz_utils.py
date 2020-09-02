@@ -87,8 +87,8 @@ class TrajectoryViz(AbstractViz):
         path_to_rot_degrees: Optional[Sequence[str]] = ("rotation", "y"),
         adapt_rotation: Optional[Callable[[float], float]] = None,
         label: str = "trajectory",
-        figsize: Tuple[int, int] = (2, 2),
-        fontsize: int = 5,
+        figsize: Tuple[float, float] = (2, 2),
+        fontsize: float = 5,
         start_marker_shape: str = "$\spadesuit$",
         start_marker_scale: int = 100,
     ):
@@ -331,7 +331,7 @@ class AbstractTensorViz(AbstractViz):
         self,
         rollout_source: Union[str, Sequence[str]],
         label: Optional[str] = None,
-        figsize: Tuple[int, int] = (3, 3),
+        figsize: Tuple[float, float] = (3, 3),
     ):
         if label is None:
             if isinstance(rollout_source, str):
@@ -394,7 +394,7 @@ class TensorViz1D(AbstractTensorViz):
         self,
         rollout_source: Union[str, Sequence[str]] = "action_log_probs",
         label: Optional[str] = None,
-        figsize: Tuple[int, int] = (3, 3),
+        figsize: Tuple[float, float] = (3, 3),
     ):
         super().__init__(rollout_source, label, figsize)
 
@@ -419,8 +419,8 @@ class TensorViz2D(AbstractTensorViz):
         self,
         rollout_source: Union[str, Sequence[str]] = ("memory", "rnn"),
         label: Optional[str] = None,
-        figsize: Tuple[int, int] = (10, 10),
-        fontsize: int = 5,
+        figsize: Tuple[float, float] = (10, 10),
+        fontsize: float = 5,
     ):
         super().__init__(rollout_source, label, figsize)
         self.fontsize = fontsize
@@ -453,8 +453,8 @@ class ActorViz(AbstractViz):
         self,
         label: str = "action_probs",
         action_names_path: Optional[Sequence[str]] = ("task_info", "action_names"),
-        figsize: Tuple[int, int] = (1, 5),
-        fontsize: int = 5,
+        figsize: Tuple[float, float] = (1, 5),
+        fontsize: float = 5,
     ):
         super().__init__(label, actor_critic_source=True)
         self.action_names_path: Optional[Sequence[str]] = (
@@ -540,7 +540,7 @@ class ActorViz(AbstractViz):
         return fig
 
 
-class SimpleViz(AbstractViz):
+class VizSuite(AbstractViz):
     def __init__(
         self,
         episode_ids: Sequence[Union[Sequence[str], str]],

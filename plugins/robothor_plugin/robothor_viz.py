@@ -53,8 +53,8 @@ class ThorViz(TrajectoryViz):
         self,
         path_to_trajectory: Sequence[str] = ("task_info", "followed_path"),
         label: str = "thor_trajectory",
-        figsize: Tuple[int, int] = (8, 4),  # width, height
-        fontsize: int = 10,
+        figsize: Tuple[float, float] = (8, 4),  # width, height
+        fontsize: float = 10,
         scenes: Union[
             Tuple[str, int, int, int, int], Sequence[Tuple[str, int, int, int, int]]
         ] = ("FloorPlan_Val{}_{}", 1, 3, 1, 5),
@@ -96,6 +96,7 @@ class ThorViz(TrajectoryViz):
         self.map_data = self.get_translator()
         self.thor_top_downs = self.make_top_down_views()
 
+        # No controller needed after this point
         if self.controller is not None:
             self.controller.stop()
             self.controller = None
@@ -117,8 +118,7 @@ class ThorViz(TrajectoryViz):
         roomname = list(ThorViz.iterate_scenes(self.scenes))[0]
         json_file = self.cached_map_data_path(roomname)
         if not os.path.exists(json_file):
-            if self.controller is None:
-                self.controller = Controller()
+            self.make_controller()
             self.controller.reset(roomname)
             map_data = self.get_agent_map_data()
             get_logger().info("Dumping {}".format(json_file))
@@ -148,31 +148,34 @@ class ThorViz(TrajectoryViz):
         for roomname in self.iterate_scenes(self.scenes):
             fname = self.cached_image_path(roomname)
             if not os.path.exists(fname):
-                if self.controller is None:
-                    self.controller = Controller()
-                self.controller.step(
-                    {"action": "ChangeQuality", "quality": "Very High"}
-                )
-                self.controller.step(
-                    {
-                        "action": "ChangeResolution",
-                        "x": self.viz_rows_cols[1],
-                        "y": self.viz_rows_cols[0],
-                    }
-                )
-
+                self.make_controller()
                 self.dump_top_down_view(roomname, fname)
             top_downs[roomname] = cv2.imread(fname)
 
         return top_downs
 
     def crop_viz_image(self, viz_image: np.ndarray) -> np.ndarray:
-        y_min = int(self.viz_rows_cols[0] * 0.27)
-        y_max = int(self.viz_rows_cols[0] * 0.77)
+        # Top-down view of room spans vertically near the center of the frame in RoboTHOR:
+        y_min = int(self.viz_rows_cols[0] * 0.3)
+        y_max = int(self.viz_rows_cols[0] * 0.8)
+        # But it covers approximately the entire width:
         x_min = 0
         x_max = self.viz_rows_cols[1]
         cropped_viz_image = viz_image[y_min:y_max, x_min:x_max, :]
         return cropped_viz_image
+
+    def make_controller(self):
+        if self.controller is None:
+            self.controller = Controller()
+
+            self.controller.step({"action": "ChangeQuality", "quality": "Very High"})
+            self.controller.step(
+                {
+                    "action": "ChangeResolution",
+                    "x": self.viz_rows_cols[1],
+                    "y": self.viz_rows_cols[0],
+                }
+            )
 
     def get_agent_map_data(self):
         self.controller.step({"action": "ToggleMapView"})

@@ -70,7 +70,7 @@ It includes different types of utilities, mainly divided into:
 experiment.
 * `utils.model_utils`, including generic CNN creation, forward-pass helpers and other utilities.
 * `utils.tensor_utils`, including functions to batch observations, convert tensors into video, scale image tensors, etc.
-* `utils.viz_utils`, including a `SimpleViz` class that can be instantiated with different visualization plugins during
+* `utils.viz_utils`, including a `VizSuite` class that can be instantiated with different visualization plugins during
 inference.
 * `utils.system`, including logging and networking helpers.
 
