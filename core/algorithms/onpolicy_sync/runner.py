@@ -24,7 +24,12 @@ from core.algorithms.onpolicy_sync.engine import (
     OnPolicyInference,
 )
 from core.base_abstractions.experiment_config import ExperimentConfig
-from utils.experiment_utils import ScalarMeanTracker, set_deterministic_cudnn, set_seed
+from utils.experiment_utils import (
+    ScalarMeanTracker,
+    set_deterministic_cudnn,
+    set_seed,
+    Builder,
+)
 from utils.misc_utils import all_equal, get_git_diff_of_project
 from utils.system import get_logger, find_free_port
 from utils.tensor_utils import SummaryWriter
@@ -33,7 +38,7 @@ from utils.tensor_utils import SummaryWriter
 # Instantiates train, validate, and test workers
 # Logging
 # Saves configs, makes folder for trainer models
-from utils.viz_utils import SimpleViz
+from utils.viz_utils import VizSuite
 
 
 class OnPolicyRunner(object):
@@ -57,7 +62,7 @@ class OnPolicyRunner(object):
         self.mp_ctx = self.init_context(mp_ctx, multiprocessing_start_method)
         self.extra_tag = extra_tag
         self.mode = mode
-        self.visualizer: Optional[SimpleViz] = None
+        self.visualizer: Optional[VizSuite] = None
 
         assert self.mode in [
             "train",
@@ -140,10 +145,13 @@ class OnPolicyRunner(object):
         return devices
 
     def get_visualizer(self, mode: str):
-        # Note: Avoid instantiating preprocessors in machine_params (use Builder if needed)
+        # Note: Avoid instantiating anything in machine_params (use Builder if needed)
         params = self.config.machine_params(mode)
         if "visualizer" in params and params["visualizer"] is not None:
-            self.visualizer = params["visualizer"]()  # it's a Builder!
+            if isinstance(params["visualizer"], Builder):
+                self.visualizer = params["visualizer"]()
+            else:
+                self.visualizer = params["visualizer"]
 
     @staticmethod
     def init_process(mode, id):

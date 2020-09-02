@@ -341,5 +341,4 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         res["loop_dataset"] = False
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = "10.0"
         return res

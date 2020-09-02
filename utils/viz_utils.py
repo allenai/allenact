@@ -82,13 +82,13 @@ class TrajectoryViz(AbstractViz):
             "task_info",
             "target_position",
         ),
-        x: str = "x",
-        y: str = "z",
+        path_to_x: Sequence[str] = ("x",),
+        path_to_y: Sequence[str] = ("z",),
         path_to_rot_degrees: Optional[Sequence[str]] = ("rotation", "y"),
         adapt_rotation: Optional[Callable[[float], float]] = None,
         label: str = "trajectory",
-        figsize: Tuple[int, int] = (2, 2),
-        fontsize: int = 5,
+        figsize: Tuple[float, float] = (2, 2),
+        fontsize: float = 5,
         start_marker_shape: str = "$\spadesuit$",
         start_marker_scale: int = 100,
     ):
@@ -100,8 +100,8 @@ class TrajectoryViz(AbstractViz):
             else None
         )
         self.adapt_rotation = adapt_rotation
-        self.x = x
-        self.y = y
+        self.x = list(path_to_x)
+        self.y = list(path_to_y)
         self.path_to_rot_degrees = (
             list(path_to_rot_degrees) if path_to_rot_degrees is not None else None
         )
@@ -207,8 +207,8 @@ class TrajectoryViz(AbstractViz):
 
         x, y = [], []
         for xy in trajectory:
-            x.append(xy[self.x])
-            y.append(xy[self.y])
+            x.append(float(self._access(xy, self.x)))
+            y.append(float(self._access(xy, self.y)))
 
         fig, ax = plt.subplots(figsize=self.figsize)
         colorline(x, y, zorder=1)
@@ -229,7 +229,11 @@ class TrajectoryViz(AbstractViz):
 
         if self.path_to_target_location is not None:
             target = self._access(episode, self.path_to_target_location)
-            ax.scatter([target[self.x]], [target[self.y]], marker="*")
+            ax.scatter(
+                [float(self._access(target, self.x))],
+                [float(self._access(target, self.y))],
+                marker="*",
+            )
 
         ax.set_title(episode_id, fontsize=self.fontsize)
         ax.tick_params(axis="x", labelsize=self.fontsize)
@@ -327,7 +331,7 @@ class AbstractTensorViz(AbstractViz):
         self,
         rollout_source: Union[str, Sequence[str]],
         label: Optional[str] = None,
-        figsize: Tuple[int, int] = (3, 3),
+        figsize: Tuple[float, float] = (3, 3),
     ):
         if label is None:
             if isinstance(rollout_source, str):
@@ -390,7 +394,7 @@ class TensorViz1D(AbstractTensorViz):
         self,
         rollout_source: Union[str, Sequence[str]] = "action_log_probs",
         label: Optional[str] = None,
-        figsize: Tuple[int, int] = (3, 3),
+        figsize: Tuple[float, float] = (3, 3),
     ):
         super().__init__(rollout_source, label, figsize)
 
@@ -398,11 +402,15 @@ class TensorViz1D(AbstractTensorViz):
         assert episode_src[0].size == 1
 
         # Concatenate along step axis (0)
-        seq = np.concatenate(episode_src, axis=0)
+        seq = np.concatenate(episode_src, axis=0).squeeze()  # remove all singleton dims
 
         fig, ax = plt.subplots(figsize=self.figsize)
         ax.plot(seq)
         ax.set_title(episode_id)
+
+        ax.set_aspect("auto")
+        plt.tight_layout()
+
         return fig
 
 
@@ -411,8 +419,8 @@ class TensorViz2D(AbstractTensorViz):
         self,
         rollout_source: Union[str, Sequence[str]] = ("memory", "rnn"),
         label: Optional[str] = None,
-        figsize: Tuple[int, int] = (10, 10),
-        fontsize: int = 5,
+        figsize: Tuple[float, float] = (10, 10),
+        fontsize: float = 5,
     ):
         super().__init__(rollout_source, label, figsize)
         self.fontsize = fontsize
@@ -445,8 +453,8 @@ class ActorViz(AbstractViz):
         self,
         label: str = "action_probs",
         action_names_path: Optional[Sequence[str]] = ("task_info", "action_names"),
-        figsize: Tuple[int, int] = (1, 5),
-        fontsize: int = 5,
+        figsize: Tuple[float, float] = (1, 5),
+        fontsize: float = 5,
     ):
         super().__init__(label, actor_critic_source=True)
         self.action_names_path: Optional[Sequence[str]] = (
@@ -505,13 +513,13 @@ class ActorViz(AbstractViz):
 
     def make_fig(self, episode_src, episode_id):
         # Concatenate along step axis (0, reused from kept sampler axis)
-        mat = np.concatenate(episode_src, axis=0)
+        mat = np.concatenate(episode_src, axis=0).squeeze(-2)  # also removes agent axis
 
         fig, ax = plt.subplots(figsize=self.figsize)
         ax.matshow(mat)
 
         if self.action_names is not None:
-            assert len(self.action_names) == mat.shape[1]
+            assert len(self.action_names) == mat.shape[-1]
             ax.set_xticklabels([""] + self.action_names, rotation="vertical")
 
         ax.set_xlabel(episode_id, fontsize=self.fontsize)
@@ -532,7 +540,7 @@ class ActorViz(AbstractViz):
         return fig
 
 
-class SimpleViz(AbstractViz):
+class VizSuite(AbstractViz):
     def __init__(
         self,
         episode_ids: Sequence[Union[Sequence[str], str]],
@@ -642,13 +650,22 @@ class SimpleViz(AbstractViz):
         }
         if len(actor_critic_data) > 0 and actor_critic is not None:
             if self.actor_critic_source:
-                probs = actor_critic.distributions.probs
-                values = actor_critic.values
+                probs = (
+                    actor_critic.distributions.probs
+                )  # step (=1) x sampler x agent (=1) x action
+                values = actor_critic.values  # step x sampler x agent x 1
                 for it, epid in enumerate(self.last_it2epid):
                     if epid in actor_critic_data:
                         # Select current episode (sampler axis will be reused as step axis)
                         prob = (
-                            probs.narrow(dim=0, start=it, length=1)
+                            # probs.narrow(dim=0, start=it, length=1)  # works for sampler x action
+                            probs.narrow(
+                                dim=1, start=it, length=1
+                            )  # step x sampler x agent x action -> step x 1 x agent x action
+                            .squeeze(
+                                0
+                            )  # step x 1 x agent x action -> 1 x agent x action
+                            # .squeeze(-2)  # 1 x agent x action -> 1 x action
                             .to("cpu")
                             .detach()
                             .numpy()
@@ -656,7 +673,12 @@ class SimpleViz(AbstractViz):
                         assert "actor_probs" not in actor_critic_data[epid]
                         actor_critic_data[epid]["actor_probs"] = prob
                         val = (
-                            values.narrow(dim=0, start=it, length=1)
+                            # values.narrow(dim=0, start=it, length=1)  # works for sampler x 1
+                            values.narrow(
+                                dim=1, start=it, length=1
+                            )  # step x sampler x agent x 1 -> step x 1 x agent x 1
+                            .squeeze(0)  # step x 1 x agent x 1 -> 1 x agent x 1
+                            # .squeeze(-2)  # 1 x agent x 1 -> 1 x 1
                             .to("cpu")
                             .detach()
                             .numpy()
@@ -702,7 +724,7 @@ class SimpleViz(AbstractViz):
                     if rollout.step > 0
                     else rollout.num_steps - 1,
                     length=1,
-                )
+                )  # 1 x ... x sampler x ...
 
                 # get_logger().debug("basic collect h {}".format(res[..., 0]))
 
@@ -715,7 +737,7 @@ class SimpleViz(AbstractViz):
                             .to("cpu")
                             .detach()
                             .numpy()
-                        )
+                        )  # 1 x ... (no sampler dim)
                         # get_logger().debug("basic collect ep {} h {}".format(epid, res[..., 0]))
                         assert datum_id not in rollout_data[epid]
                         rollout_data[epid][

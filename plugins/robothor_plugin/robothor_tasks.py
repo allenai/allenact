@@ -74,6 +74,9 @@ class PointNavTask(Task[RoboThorEnvironment]):
         self.path: List[Any] = (
             []
         )  # the initial coordinate will be directly taken from the optimal path
+
+        self.task_info["followed_path"] = [self.env.agent_state()]
+        self.task_info["action_names"] = self.action_names()
         self.num_moves_made = 0
 
     @property
@@ -105,6 +108,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
             self.last_action_success = self.env.last_action_success
             pose = self.env.agent_state()
             self.path.append({k: pose[k] for k in ["x", "y", "z"]})
+            self.task_info["followed_path"].append(pose)
         if len(self.path) > 1 and self.path[-1] != self.path[-2]:
             self.num_moves_made += 1
         step_result = RLStepResult(

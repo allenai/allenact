@@ -3,6 +3,7 @@ import json
 import math
 import os
 from typing import Tuple, Sequence, Union, Dict, Optional, Any, cast, Generator, List
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -13,6 +14,11 @@ from matplotlib.figure import Figure
 
 from utils.system import get_logger
 from utils.viz_utils import TrajectoryViz
+
+
+ROBOTHOR_VIZ_CACHED_TOPDOWN_VIEWS_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(Path(__file__)), "data", "topdown")
+)
 
 
 class ThorPositionTo2DFrameTranslator(object):
@@ -47,12 +53,11 @@ class ThorViz(TrajectoryViz):
         self,
         path_to_trajectory: Sequence[str] = ("task_info", "followed_path"),
         label: str = "thor_trajectory",
-        figsize: Tuple[int, int] = (8, 4),  # width, height
-        fontsize: int = 10,
+        figsize: Tuple[float, float] = (8, 4),  # width, height
+        fontsize: float = 10,
         scenes: Union[
             Tuple[str, int, int, int, int], Sequence[Tuple[str, int, int, int, int]]
         ] = ("FloorPlan_Val{}_{}", 1, 3, 1, 5),
-        room_path: Sequence[str] = ("plugins", "robothor_plugin", "data", "topdown"),
         viz_rows_cols: Tuple[int, int] = (448, 448),
         single_color: bool = False,
         view_triangle_only_on_last: bool = True,
@@ -72,7 +77,7 @@ class ThorViz(TrajectoryViz):
             ]  # make it list of tuples
         self.scenes = cast(List[Tuple[str, int, int, int, int]], scenes)
 
-        self.room_path = os.path.join(*room_path)
+        self.room_path = ROBOTHOR_VIZ_CACHED_TOPDOWN_VIEWS_DIR
         os.makedirs(self.room_path, exist_ok=True)
 
         self.viz_rows_cols = viz_rows_cols
@@ -91,6 +96,7 @@ class ThorViz(TrajectoryViz):
         self.map_data = self.get_translator()
         self.thor_top_downs = self.make_top_down_views()
 
+        # No controller needed after this point
         if self.controller is not None:
             self.controller.stop()
             self.controller = None
@@ -112,8 +118,7 @@ class ThorViz(TrajectoryViz):
         roomname = list(ThorViz.iterate_scenes(self.scenes))[0]
         json_file = self.cached_map_data_path(roomname)
         if not os.path.exists(json_file):
-            if self.controller is None:
-                self.controller = Controller()
+            self.make_controller()
             self.controller.reset(roomname)
             map_data = self.get_agent_map_data()
             get_logger().info("Dumping {}".format(json_file))
@@ -143,31 +148,34 @@ class ThorViz(TrajectoryViz):
         for roomname in self.iterate_scenes(self.scenes):
             fname = self.cached_image_path(roomname)
             if not os.path.exists(fname):
-                if self.controller is None:
-                    self.controller = Controller()
-                    self.controller.step(
-                        {"action": "ChangeQuality", "quality": "Very High"}
-                    )
-                    self.controller.step(
-                        {
-                            "action": "ChangeResolution",
-                            "x": self.viz_rows_cols[1],
-                            "y": self.viz_rows_cols[0],
-                        }
-                    )
-
+                self.make_controller()
                 self.dump_top_down_view(roomname, fname)
             top_downs[roomname] = cv2.imread(fname)
 
         return top_downs
 
     def crop_viz_image(self, viz_image: np.ndarray) -> np.ndarray:
-        y_min = 0
-        y_max = int(self.viz_rows_cols[0] * 0.5)
+        # Top-down view of room spans vertically near the center of the frame in RoboTHOR:
+        y_min = int(self.viz_rows_cols[0] * 0.3)
+        y_max = int(self.viz_rows_cols[0] * 0.8)
+        # But it covers approximately the entire width:
         x_min = 0
         x_max = self.viz_rows_cols[1]
         cropped_viz_image = viz_image[y_min:y_max, x_min:x_max, :]
         return cropped_viz_image
+
+    def make_controller(self):
+        if self.controller is None:
+            self.controller = Controller()
+
+            self.controller.step({"action": "ChangeQuality", "quality": "Very High"})
+            self.controller.step(
+                {
+                    "action": "ChangeResolution",
+                    "x": self.viz_rows_cols[1],
+                    "y": self.viz_rows_cols[0],
+                }
+            )
 
     def get_agent_map_data(self):
         self.controller.step({"action": "ToggleMapView"})
@@ -343,10 +351,7 @@ class ThorViz(TrajectoryViz):
         if self.thor_top_downs is None:
             self.init_top_down_render()
 
-        roomname = "FloorPlan_Val{}_{}".format(
-            *episode_id.split("_")[1:3]
-        )  # TODO HACK due to current episode id not including the full room name
-        # get_logger().debug("episode {} rommname {}".format(episode_id, roomname))
+        roomname = "_".join(episode_id.split("_")[:3])
 
         im = self.visualize_agent_path(
             trajectory,

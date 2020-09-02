@@ -1500,9 +1500,10 @@ class OnPolicyInference(OnPolicyRLEngine):
                             and "visualizer" in self.machine_params
                             and self.machine_params["visualizer"] is not None
                         ):
-                            visualizer = self.machine_params[
-                                "visualizer"
-                            ]()  # builder object
+                            if isinstance(visualizer, Builder):
+                                visualizer = self.machine_params["visualizer"]()
+                            else:
+                                visualizer = self.machine_params["visualizer"]
 
                         eval_package = self.run_eval(
                             checkpoint_file_name=data, visualizer=visualizer
