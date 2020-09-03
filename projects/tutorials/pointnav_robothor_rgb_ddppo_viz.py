@@ -18,6 +18,14 @@ from plugins.robothor_plugin.robothor_viz import ThorViz
 class ObjectNavRoboThorRGBPPOVizExperimentConfig(
     ObjectNavRoboThorRGBPPOExperimentConfig
 ):
+    """ExperimentConfig used to demonstrate how to set up visualization code.
+
+    # Attributes
+
+    viz_ep_ids : Scene names that will be visualized.
+    viz_video_ids : Scene names that will have videos visualizations associated with them.
+    """
+
     viz_ep_ids = [
         "FloorPlan_Train1_1_0",
         "FloorPlan_Train1_1_7",

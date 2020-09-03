@@ -17,7 +17,7 @@ pre-commit = "*"
 gitpython = "*"
 ipython = "*"
 mkdocs = "==1.1.2"
-mathy-pydoc = "==0.7.18"
+pydoc-markdown = "==3.4.0"
 pytest = "*"
 coverage = "*"
 
