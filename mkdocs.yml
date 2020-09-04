@@ -16,11 +16,13 @@ theme:
   - typescript
   - json
 
+extra_css:
+- css/extra.css
+
 google_analytics: [UA-120916510-8, allenact.org]
 
 repo_name: allenai/allenact
 repo_url: https://github.com/allenai/allenact
-edit_uri: edit/master/docs/
 docs_dir: docs
 
 nav:
@@ -88,7 +90,15 @@ nav:
   - plugins:
     - habitat_plugin:
       - habitat_constants: api/plugins/habitat_plugin/habitat_constants.md
+      - habitat_tasks: api/plugins/habitat_plugin/habitat_tasks.md
+      - habitat_sensors: api/plugins/habitat_plugin/habitat_sensors.md
+      - habitat_environment: api/plugins/habitat_plugin/habitat_environment.md
       - habitat_preprocessors: api/plugins/habitat_plugin/habitat_preprocessors.md
+      - habitat_task_samplers: api/plugins/habitat_plugin/habitat_task_samplers.md
+      - scripts:
+        - agent_demo: api/plugins/habitat_plugin/scripts/agent_demo.md
+        - make_map: api/plugins/habitat_plugin/scripts/make_map.md
+      - habitat_utils: api/plugins/habitat_plugin/habitat_utils.md
     - lighthouse_plugin:
       - lighthouse_models: api/plugins/lighthouse_plugin/lighthouse_models.md
       - lighthouse_environment: api/plugins/lighthouse_plugin/lighthouse_environment.md
@@ -179,6 +189,11 @@ nav:
           - pointnav_robothor_depth_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_depth_simpleconvgru_ddppo.md
           - pointnav_robothor_rgb_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_simpleconvgru_ddppo.md
           - pointnav_robothor_base: api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_base.md
+        - habitat:
+          - pointnav_habitat_rgb_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgb_simpleconvgru_ddppo.md
+          - pointnav_habitat_rgbd_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgbd_simpleconvgru_ddppo.md
+          - pointnav_habitat_base: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_base.md
+          - pointnav_habitat_depth_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo.md
         - pointnav_base: api/projects/pointnav_baselines/experiments/pointnav_base.md
         - ithor:
           - pointnav_ithor_rgbd_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_rgbd_simpleconvgru_ddppo.md
@@ -188,9 +203,11 @@ nav:
       - models:
         - point_nav_models: api/projects/pointnav_baselines/models/point_nav_models.md
     - tutorials:
+      - pointnav_habitat_rgb_ddppo: api/projects/tutorials/pointnav_habitat_rgb_ddppo.md
       - pointnav_robothor_rgb_ddppo: api/projects/tutorials/pointnav_robothor_rgb_ddppo.md
       - object_nav_ithor_dagger_then_ppo_one_object: api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object.md
       - pointnav_ithor_rgb_ddppo: api/projects/tutorials/pointnav_ithor_rgb_ddppo.md
+      - pointnav_robothor_rgb_ddppo_viz: api/projects/tutorials/pointnav_robothor_rgb_ddppo_viz.md
       - object_nav_ithor_ppo_one_object: api/projects/tutorials/object_nav_ithor_ppo_one_object.md
       - minigrid_tutorial: api/projects/tutorials/minigrid_tutorial.md
   - tests:
@@ -215,7 +232,6 @@ markdown_extensions:
 - meta
 - admonition
 - codehilite
-- extra
 
 # extra_javascript:
 #  - javascripts/extra.js

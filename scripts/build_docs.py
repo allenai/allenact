@@ -37,7 +37,7 @@ exclude_files = [
 
 
 def render_file(
-    relative_src_path: str, src_file: str, to_file: str, modifier="++"
+    relative_src_path: str, src_file: str, to_file: str, modifier=""
 ) -> None:
     """Shells out to pydocmd, which creates a .md file from the docstrings of
     python functions and classes in the file we specify.
@@ -54,29 +54,49 @@ def render_file(
     else:
         namespace = f"{relative_src_namespace}.{src_base}{modifier}"
 
-    args = ["mathy_pydoc", namespace]
+    pydoc_config = """'{
+        renderer: {
+            type: markdown,
+            code_headers: true,
+            descriptive_class_title: false,
+            add_method_class_prefix: true,
+            source_linker: {type: github, repo: allenai/allenact},
+            header_level_by_type: {
+                Module: 1,
+                Class: 2,
+                Method: 3,
+                Function: 3,
+                Data: 3,
+            }
+        }
+    }'""".replace(
+        "\n", " "
+    )
+    args = ["pydoc-markdown", "-m", namespace, pydoc_config]
     try:
         with open(os.devnull, "w") as devnull:
-            call_result = check_output(args, env=os.environ, stderr=devnull).decode(
-                "utf-8"
-            )
+            call_result = check_output(
+                [" ".join(args)], shell=True, env=os.environ, stderr=devnull
+            ).decode("utf-8")
         # noinspection PyShadowingNames
         with open(to_file, "w") as f:
             doc_split = call_result.split("\n")
-            github_path = "https://github.com/allenai/allenact/tree/master/"
-            path = (
-                github_path + doc_split[0].replace("# ", "").replace(".", "/") + ".py"
-            )
-            mdlink = "[[source]]({})".format(path)
+            # github_path = "https://github.com/allenai/allenact/tree/master/"
+            # path = (
+            #     github_path + namespace.replace(".", "/") + ".py"
+            # )
+            # mdlink = "[[source]]({})".format(path)
+            mdlink = ""  # Removing the above source link for now.
             call_result = "\n".join([doc_split[0] + " " + mdlink] + doc_split[1:])
             f.write(call_result)
         print(
             f"{StringColors.OKGREEN}[SUCCESS]{StringColors.ENDC} built docs for {src_file} -> {to_file}."
         )
     except Exception as _:
+        cmd = " ".join(args)
         print(
             f"{StringColors.WARNING}[SKIPPING]{StringColors.ENDC} could not"
-            f" build docs for {src_file} -> {to_file} (missing an import?)"
+            f" build docs for {src_file} (missing an import?). CMD: '{cmd}'"
         )
 
 
