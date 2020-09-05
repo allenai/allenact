@@ -250,7 +250,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         task_info: Dict[str, Any],
         max_steps: int,
         reward_configs: Dict[str, Any],
-        distance_cache: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> None:
         super().__init__(
@@ -261,17 +260,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self._success: Optional[bool] = False
         self.mirror = task_info["mirrored"]
         # self.last_geodesic_distance = task_info["distance_to_target"] if task_info["distance_to_target"] else None
-        self.distance_cache = distance_cache
-        if self.distance_cache:
-            self.last_geodesic_distance = get_distance_to_object(
-                self.distance_cache,
-                self.env.agent_state(),
-                self.task_info["object_type"],
-            )
-        else:
-            self.last_geodesic_distance = self.env.dist_to_object(
-                self.task_info["object_type"]
-            )
+        self.last_geodesic_distance = self.env.distance_to_object_type(self.task_info["object_type"])
         self._rewards: List[float] = []
         self._distance_to_goal: List[float] = []
         self._metrics = None
@@ -282,12 +271,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self.task_info["taken_actions"] = []
         self.task_info["action_names"] = self.action_names()
 
-        if "distance_to_target" not in task_info or not task_info["distance_to_target"]:
-            self.episode_optimal_corners = self.env.path_corners(
-                task_info["target"]
-                if "target" in task_info
-                else task_info["object_type"]
-            )  # assume it's valid (sampler must take care)!
         self.num_moves_made = 0
         self.optimal_distance = self.last_geodesic_distance
 
@@ -362,14 +345,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         if self.reward_configs["shaping_weight"] == 0.0:
             return rew
 
-        if self.distance_cache:
-            geodesic_distance = get_distance_to_object(
-                self.distance_cache,
-                self.env.agent_state(),
-                self.task_info["object_type"],
-            )
-        else:
-            geodesic_distance = self.env.dist_to_object(self.task_info["object_type"])
+        geodesic_distance = self.env.distance_to_object_type(self.task_info["object_type"])
         if (
             self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5
         ):  # (robothor limits)
@@ -397,14 +373,9 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
     def spl(self):
         if not self._success:
             return 0.0
-        if self.distance_cache:
-            li = self.optimal_distance
-            pi = self.num_moves_made * self.env.config["gridSize"]
-            res = li / (max(pi, li))
-        else:
-            res = compute_single_spl(
-                self.path, self.episode_optimal_corners, self._success
-            )
+        li = self.optimal_distance
+        pi = self.num_moves_made * self.env.config["gridSize"]
+        res = li / (max(pi, li))
         return res
 
     def get_observations(self, **kwargs) -> Any:
@@ -421,17 +392,8 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         return obs
 
     def metrics(self) -> Dict[str, Any]:
-        if self.distance_cache:
-            dist2tget = get_distance_to_object(
-                self.distance_cache,
-                self.env.agent_state(),
-                self.task_info["object_type"],
-            )
-            spl = self.spl()
-        else:
-            # TODO
-            dist2tget = -1  # self._get_distance_to_target()
-            spl = self.spl() if len(self.episode_optimal_corners) > 1 else 0.0
+        dist2tget = self.env.distance_to_object_type(self.task_info["object_type"])
+        spl = self.spl()
         if not self.is_done():
             return {}
         else:

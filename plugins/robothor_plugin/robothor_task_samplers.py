@@ -313,12 +313,6 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         get_logger().warning(
             "Assuming the first entry in the cached list of dicts is the correct cache!!!"
         )
-        self.distance_caches = {
-            scene: self._load_distance_cache(
-                scene, scene_directory + "/distance_caches"
-            )
-            for scene in scenes
-        }
         self.env_class = env_class
         self.object_types = [
             ep["object_type"] for scene in self.episodes for ep in self.episodes[scene]
@@ -438,7 +432,6 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             self.episode_index = 0
         scene = self.scenes[self.scene_index]
         episode = self.episodes[scene][self.episode_index]
-        distance_cache = self.distance_caches[scene] if self.distance_caches else None
         if self.env is not None:
             if scene.replace("_physics", "") != self.env.scene_name.replace(
                 "_physics", ""
@@ -480,7 +473,6 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             max_steps=self.max_steps,
             action_space=self._action_space,
             reward_configs=self.rewards_config,
-            distance_cache=distance_cache,
         )
         return self._last_sampled_task
 
@@ -796,20 +788,6 @@ class PointNavDatasetTaskSampler(TaskSampler):
         json_str = json_bytes.decode("utf-8")
         data = json.loads(json_str)
         random.shuffle(data)
-        return data
-
-    def _load_distance_cache(self, scene: str, base_directory: str) -> Dict:
-        filename = (
-            "/".join([base_directory, scene])
-            if base_directory[-1] != "/"
-            else "".join([base_directory, scene])
-        )
-        filename += ".json.gz"
-        fin = gzip.GzipFile(filename, "r")
-        json_bytes = fin.read()
-        fin.close()
-        json_str = json_bytes.decode("utf-8")
-        data = json.loads(json_str)
         return data
 
     @property
