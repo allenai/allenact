@@ -119,6 +119,17 @@ def get_args():
     parser.add_argument(
         "--gp", default=None, action="append", help="values to be used by gin-config.",
     )
+
+    parser.add_argument(
+        "-e",
+        "--deterministic_agents",
+        dest="deterministic_agents",
+        action="store_true",
+        required=False,
+        help="enable deterministic agents (i.e. always taking the mode action) during validation/testing",
+    )
+    parser.set_defaults(deterministic_agents=False)
+
     return parser.parse_args()
 
 
@@ -185,6 +196,7 @@ def main():
             seed=args.seed,
             mode="train",
             deterministic_cudnn=args.deterministic_cudnn,
+            deterministic_agents=args.deterministic_agents,
             extra_tag=args.extra_tag,
         ).start_train(
             checkpoint=args.checkpoint,
@@ -199,6 +211,7 @@ def main():
             seed=args.seed,
             mode="test",
             deterministic_cudnn=args.deterministic_cudnn,
+            deterministic_agents=args.deterministic_agents,
             extra_tag=args.extra_tag,
         ).start_test(
             experiment_date=args.test_date,
