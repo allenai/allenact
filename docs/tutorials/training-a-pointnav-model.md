@@ -108,7 +108,7 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 
 Next we define a new experiment config class:
 ```python
-class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
+class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 ```
 We then define the task parameters. For PointNav, these include the maximum number of steps our agent
 can take before being reset (this prevents the agent from wandering on forever), and a configuration

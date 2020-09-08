@@ -86,8 +86,8 @@ Note that we need to explicitly set the `episode_ids` that we wish to visualize.
 of using a different (typically shorter) list of episodes or enforce the ones used for the rest of visualizations.
 
 ```python
-class ObjectNavRoboThorRGBPPOVizExperimentConfig(
-    ObjectNavRoboThorRGBPPOExperimentConfig
+class PointNavRoboThorRGBPPOVizExperimentConfig(
+    PointNavRoboThorRGBPPOExperimentConfig
 ):
     ...
 

@@ -28,7 +28,7 @@ from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
+class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     """A Point Navigation experiment configuration in RoboThor."""
 
     # Task Parameters
