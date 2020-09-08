@@ -50,6 +50,7 @@ class OnPolicyRunner(object):
         seed: Optional[int] = None,
         mode: str = "train",
         deterministic_cudnn: bool = False,
+        deterministic_agents: bool = False,
         mp_ctx: Optional[BaseContext] = None,
         multiprocessing_start_method: str = "forkserver",
         extra_tag: str = "",
@@ -63,6 +64,7 @@ class OnPolicyRunner(object):
         self.extra_tag = extra_tag
         self.mode = mode
         self.visualizer: Optional[VizSuite] = None
+        self.deterministic_agents = deterministic_agents
 
         assert self.mode in [
             "train",
@@ -286,6 +288,7 @@ class OnPolicyRunner(object):
                     checkpoints_queue=self.queues["checkpoints"],
                     seed=12345,  # TODO allow same order for randomly sampled tasks? Is this any useful anyway?
                     deterministic_cudnn=self.deterministic_cudnn,
+                    deterministic_agents=self.deterministic_agents,
                     mp_ctx=self.mp_ctx,
                     device=device,
                     max_sampler_processes_per_worker=max_sampler_processes_per_worker,
@@ -331,6 +334,7 @@ class OnPolicyRunner(object):
                     checkpoints_queue=self.queues["checkpoints"],
                     seed=12345,  # TODO allow same order for randomly sampled tasks? Is this any useful anyway?
                     deterministic_cudnn=self.deterministic_cudnn,
+                    deterministic_agents=self.deterministic_agents,
                     mp_ctx=self.mp_ctx,
                     num_workers=num_testers,
                     device=devices[tester_it],
