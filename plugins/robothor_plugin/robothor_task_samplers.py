@@ -310,9 +310,6 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             scene: self._load_dataset(scene, scene_directory + "/episodes")
             for scene in scenes
         }
-        get_logger().warning(
-            "Assuming the first entry in the cached list of dicts is the correct cache!!!"
-        )
         self.distance_caches = {
             scene: self._load_distance_cache(
                 scene, scene_directory + "/distance_caches"
@@ -335,9 +332,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         if loop_dataset:
             self.max_tasks = None
         else:
-            self.max_tasks = sum(
-                len(scene_episodes) for scene_episodes in self.episodes
-            )
+            self.max_tasks = sum(len(self.episodes[scene]) for scene in self.episodes)
         self.reset_tasks = self.max_tasks
         self.scene_index = 0
         self.episode_index = 0
@@ -356,7 +351,8 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         env = self.env_class(**self.env_args)
         return env
 
-    def _load_dataset(self, scene: str, base_directory: str) -> List[Dict]:
+    @staticmethod
+    def _load_dataset(scene: str, base_directory: str) -> List[Dict]:
         filename = (
             "/".join([base_directory, scene])
             if base_directory[-1] != "/"
@@ -371,7 +367,8 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         random.shuffle(data)
         return data
 
-    def _load_distance_cache(self, scene: str, base_directory: str) -> Dict:
+    @staticmethod
+    def _load_distance_cache(scene: str, base_directory: str) -> Dict:
         filename = (
             "/".join([base_directory, scene])
             if base_directory[-1] != "/"
@@ -453,9 +450,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
                 "Scene {} does not contain any"
                 " objects of any of the types {}.".format(scene, self.object_types)
             )
-        task_info["initial_position"] = episode[
-            "initial_position"
-        ]  # TODO check this is an x,y,z-dict
+        task_info["initial_position"] = episode["initial_position"]
         task_info["initial_orientation"] = episode["initial_orientation"]
         task_info["distance_to_target"] = episode["shortest_path_length"]
         task_info["path_to_target"] = episode["shortest_path"]
