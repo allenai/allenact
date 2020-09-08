@@ -335,9 +335,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         if loop_dataset:
             self.max_tasks = None
         else:
-            self.max_tasks = sum(
-                len(scene_episodes) for scene_episodes in self.episodes
-            )
+            self.max_tasks = sum(len(self.episodes[scene]) for scene in self.episodes)
         self.reset_tasks = self.max_tasks
         self.scene_index = 0
         self.episode_index = 0
