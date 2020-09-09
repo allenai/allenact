@@ -49,7 +49,7 @@ see the above section on installing `iTHOR`.
 To run experiments using Habitat please use our docker image using the following command:
 
 ```bash
-docker pull klemenkotar/allenact:latest
+docker pull allenact/allenact:latest
 ```
 
 This container includes the 0.1.0 release of `allenact`, the 0.1.5 release of `habitat` as well
@@ -57,17 +57,13 @@ as the `Gibson` point navigation dataset. This dataset consists of a set of star
 You then need to launch the container and attach into it:
 
 ```bash
-docker run --runtime=nvidia -it klemenkotar/allenact
+docker run --runtime=nvidia -it allenact/allenact
 ```
 
-Once inside the container activate the conda environment:
-
-```bash
-conda activate allenact
-```
+Once inside the container simply cd into the `allenact` directory where all the allenact and habitat code should be stored:
  
-Unfortunately we cannot legally redistribute the Gibson scenes by including them, by default, within the above
-container. Instead you will need to download these yourself using the
- [instructions provided by the authors](https://github.com/StanfordVL/GibsonEnv/blob/master/gibson/data/README.md#download).
-These scene assets should placed into the `dataset` within the above container.
-You can then proceed to run your experiments using `allenact` as you normally would.
+Unfortunately we cannot legally redistribute the Gibson scenes by including them in the above container.
+Instead you will need to download these yourself by filling out 
+[this form](https://docs.google.com/forms/d/e/1FAIpQLScWlx5Z1DM1M-wTSXaa6zV8lTFkPmTHW1LqMsoCBDWsTDjBkQ/viewform)
+and downloading the `gibson_habitat_trainval` data. Extract the scene assets (`.glb` files) into `habitat-lab/data/scene_datasets/` 
+within the above container. You can then proceed to run your experiments using `allenact` as you normally would.
