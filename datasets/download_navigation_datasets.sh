@@ -35,6 +35,9 @@ elif [ "$1" = "ithor-objectnav" ]
 then
     echo "Downloading iTHOR ObjectNav Dataset ..."
     install_dataset "$1"
+    cd "$(pwd)"/..
+    echo "Generating iTHOR ObjectNav Debug Dataset ..."
+    PYTHONPATH=. python ./plugins/ithor_plugin/scripts/make_objectnav_debug_dataset.py
 
 else
     echo "Failed: Usage download_navigation_datasets.sh robothor-pointnav | robothor-objectnav | ithor-pointnav | ithor-objectnav"
