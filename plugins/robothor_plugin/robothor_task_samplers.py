@@ -307,11 +307,13 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         self.env_args = env_args
         self.scenes = scenes
         self.episodes = {
-            scene: self._load_dataset(scene, scene_directory + "/episodes")
+            scene: ObjectNavDatasetTaskSampler.load_dataset(
+                scene, scene_directory + "/episodes"
+            )
             for scene in scenes
         }
         self.distance_caches = {
-            scene: self._load_distance_cache(
+            scene: ObjectNavDatasetTaskSampler.load_distance_cache(
                 scene, scene_directory + "/distance_caches"
             )
             for scene in scenes
@@ -352,7 +354,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         return env
 
     @staticmethod
-    def _load_dataset(scene: str, base_directory: str) -> List[Dict]:
+    def load_dataset(scene: str, base_directory: str) -> List[Dict]:
         filename = (
             "/".join([base_directory, scene])
             if base_directory[-1] != "/"
@@ -368,7 +370,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         return data
 
     @staticmethod
-    def _load_distance_cache(scene: str, base_directory: str) -> Dict:
+    def load_distance_cache(scene: str, base_directory: str) -> Dict:
         filename = (
             "/".join([base_directory, scene])
             if base_directory[-1] != "/"
@@ -737,11 +739,13 @@ class PointNavDatasetTaskSampler(TaskSampler):
         self.scenes = scenes
         self.shuffle_dataset: bool = shuffle_dataset
         self.episodes = {
-            scene: self._load_dataset(scene, scene_directory + "/episodes")
+            scene: ObjectNavDatasetTaskSampler.load_dataset(
+                scene, scene_directory + "/episodes"
+            )
             for scene in scenes
         }
         self.distance_caches = {
-            scene: self._load_distance_cache(
+            scene: ObjectNavDatasetTaskSampler.load_distance_cache(
                 scene, scene_directory + "/distance_caches"
             )
             for scene in scenes
@@ -777,35 +781,6 @@ class PointNavDatasetTaskSampler(TaskSampler):
     def _create_environment(self) -> RoboThorEnvironment:
         env = self.env_class(**self.env_args)
         return env
-
-    def _load_dataset(self, scene: str, base_directory: str) -> List[Dict]:
-        filename = (
-            "/".join([base_directory, scene])
-            if base_directory[-1] != "/"
-            else "".join([base_directory, scene])
-        )
-        filename += ".json.gz"
-        fin = gzip.GzipFile(filename, "r")
-        json_bytes = fin.read()
-        fin.close()
-        json_str = json_bytes.decode("utf-8")
-        data = json.loads(json_str)
-        random.shuffle(data)
-        return data
-
-    def _load_distance_cache(self, scene: str, base_directory: str) -> Dict:
-        filename = (
-            "/".join([base_directory, scene])
-            if base_directory[-1] != "/"
-            else "".join([base_directory, scene])
-        )
-        filename += ".json.gz"
-        fin = gzip.GzipFile(filename, "r")
-        json_bytes = fin.read()
-        fin.close()
-        json_str = json_bytes.decode("utf-8")
-        data = json.loads(json_str)
-        return data
 
     @property
     def __len__(self) -> Union[int, float]:

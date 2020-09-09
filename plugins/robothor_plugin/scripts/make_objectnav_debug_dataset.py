@@ -41,7 +41,7 @@ def create_debug_dataset_from_train_dataset(
     assert os.path.exists(caches_file)
 
     # episodes
-    episodes = ObjectNavDatasetTaskSampler._load_dataset(
+    episodes = ObjectNavDatasetTaskSampler.load_dataset(
         scene=scene, base_directory=os.path.join(train_dataset_path, "episodes")
     )
 
@@ -70,7 +70,7 @@ def create_debug_dataset_from_train_dataset(
         fout.write(json_bytes)
     assert os.path.exists(episodes_file)
 
-    read = ObjectNavDatasetTaskSampler._load_distance_cache(scene, episodes_dir)
+    read = ObjectNavDatasetTaskSampler.load_distance_cache(scene, episodes_dir)
 
     assert sorted([ep["id"] for ep in read]) == sorted(
         [ep["id"] for ep in debug_episodes]
