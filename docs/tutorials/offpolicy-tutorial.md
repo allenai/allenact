@@ -12,33 +12,35 @@ followed and, to some extent, this framework's [abstractions](../getting_started
 
 In a `GoToLocal` task, the agent immersed in a grid world has to navigate to a specific object in the presence of
 multiple distractors, requiring the agent to understand `go to` instructions like "go to the red ball". For further
-details, please cosult the [original paper](https://arxiv.org/abs/1810.08272).  
+details, please consult the [original paper](https://arxiv.org/abs/1810.08272).  
 
 ## Getting the dataset
 
-We will use a large dataset (**more than 10 GB**) including expert demonstrations for `GoToLocal` tasks. To download
+We will use a large dataset (**more than 4 GB**) including expert demonstrations for `GoToLocal` tasks. To download
 the data we'll run
 
 ```bash
-PYTHONPATH=. python plugins/babyai_plugin/scripts/download_babyai_expert_demos.py
+PYTHONPATH=. python plugins/babyai_plugin/scripts/download_babyai_expert_demos.py GoToLocal
 ```
 
-from the project's root folder, which will download `BabyAI-BossLevel-v0.pkl`, `BabyAI-BossLevel-v0_valid.pkl`,
-`BabyAI-GoToObjMaze-v0.pkl`, `BabyAI-GoToObjMaze-v0_valid.pkl`, `BabyAI-GoTo-v0.pkl`, `BabyAI-GoTo-v0_valid.pkl`,
-`BabyAI-GoToLocal-v0.pkl`, and `BabyAI-GoToLocal-v0_valid.pkl` to the `plugins/babyai_plugin/data/demos` directory.
+from the project's root directory, which will download `BabyAI-GoToLocal-v0.pkl` and `BabyAI-GoToLocal-v0_valid.pkl` to
+the `plugins/babyai_plugin/data/demos` directory.
 
 We will also generate small versions of the datasets, which will be useful if running on CPU, by calling
 
 ```bash
 PYTHONPATH=. python plugins/babyai_plugin/scripts/truncate_expert_demos.py
 ```
-from the project's root folder, which will generate `BabyAI-BossLevel-v0-small.pkl`, `BabyAI-GoToObjMaze-v0-small.pkl`,
-`BabyAI-GoTo-v0-small.pkl`, and `BabyAI-GoToLocal-v0-small.pkl` under the same `plugins/babyai_plugin/data/demos`
-directory.
+from the project's root directory, which will generate `BabyAI-GoToLocal-v0-small.pkl` under the same
+`plugins/babyai_plugin/data/demos` directory.
 
 ## Data iterator
 
-In order to train with an off-policy dataset, we need to define a data `Iterator`:
+In order to train with an off-policy dataset, we need to define a data `Iterator`.
+The `Data Iterator` merges the functionality of the `Dataset` and `Dataloader` in PyTorch,
+in that it defines the way to both sample data from the dataset and convert them into batches to be
+used for training. 
+An example of a `Data Iterator` for BabyAI expert demos might look as follows:
  
 ```python
 class ExpertTrajectoryIterator(Iterator):
@@ -149,10 +151,10 @@ For the experiment configuration, we'll build on top of an existing
 [base BabyAI GoToLocal Experiment Config](/api/projects/babyai_baselines/experiments/go_to_local/base/#basebabyaigotolocalexperimentconfig).
 The complete `ExperimentConfig` file for off-policy training is
 [here](/api/projects/tutorials/babyai_go_to_local_bc_offpolicy/#bcoffpolicybabyaigotolocalexperimentconfig), but let's
-focus on the most relevant aspects to enable off-policy training. 
-Off-policy training involves instantiating
-[OffPolicyPipelineComponents](/api/utils/experiment_utils/#offpolicypipelinecomponent)
-and passing them to the current pipeline stage.
+focus on the most relevant aspect to enable this type of training: 
+We just need to instantiate a `TrainingPipeline` with an
+[OffPolicyPipelineComponent](/api/utils/experiment_utils/#offpolicypipelinecomponent)
+where required in our `PipelineStage` defined in the `training_pipeline` method.
 
 ```python
 class BCOffPolicyBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentConfig):
@@ -172,40 +174,50 @@ class BCOffPolicyBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentCo
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        total_train_steps = cls.TOTAL_IL_TRAIN_STEPS
-        ppo_info = cls.rl_loss_default("ppo", steps=-1)
-
-        num_mini_batch = ppo_info["num_mini_batch"]
-        update_repeats = ppo_info["update_repeats"]
-
-        return cls._training_pipeline(
-            # Instantiate the MiniGridOffPolicyExpertCELoss
+        total_train_steps = int(1e7)
+        num_steps=128
+        return TrainingPipeline(
+            save_interval=10000,  # Save every 10000 steps (approximately)
+            metric_accumulate_interval=1,
+            optimizer_builder=Builder(optim.Adam, dict(lr=2.5e-4)),
+            # As we don't have any on-policy losses, we set the next
+            # two values to zero to ensure we don't attempt to
+            # compute gradients for on-policy rollouts:
+            num_mini_batch=0,
+            update_repeats=0,
+            num_steps=num_steps // 4,  # rollout length for tasks sampled from env.
+            # Instantiate the off-policy loss
             named_losses={
                 "offpolicy_expert_ce_loss": MiniGridOffPolicyExpertCELoss(),
             },
+            gamma=0.99,
+            use_gae=True,
+            gae_lambda=1.0,
+            max_grad_norm=0.5,
+            advance_scene_rollout_period=None,
             pipeline_stages=[
+                # Single stage, only with off-policy training
                 PipelineStage(
-                    loss_names=[],  # no on-policy losses
-                    max_stage_steps=total_train_steps,  # keep sampling episodes in the stage
-                    # Enable an on-policy component!!!
+                    loss_names=[],                                # no on-policy losses
+                    max_stage_steps=total_train_steps,            # keep sampling episodes in the stage
+                    # Enable off-policy training:
                     offpolicy_component=OffPolicyPipelineComponent(
                         # Pass a method to instantiate data iterators
                         data_iterator_builder=lambda **kwargs: ExpertTrajectoryIterator(
                             data=cls.DATA,
-                            nrollouts=cls.NUM_TRAIN_SAMPLERS // num_mini_batch,
-                            rollout_len=cls.ROLLOUT_STEPS,
+                            nrollouts=128,                        # per trainer batch size
+                            rollout_len=num_steps,                # For truncated-BPTT
                             **kwargs,
                         ),
-                        loss_names=["offpolicy_expert_ce_loss"],
-                        updates=num_mini_batch * update_repeats,
+                        loss_names=["offpolicy_expert_ce_loss"],  # off-policy losses
+                        updates=16,                               # 16 batches per rollout
                     ),
                 ),
             ],
-            num_mini_batch=0,
-            update_repeats=0,
-            total_train_steps=total_train_steps,
         )
 ```
+You'll have noted that it is possible to combine on-policy and off-policy training in the same stage, even though here
+we apply pure off-policy training.
 
 ## Training
 
@@ -215,6 +227,7 @@ invoke
 ```bash
 python main.py -b projects/tutorials babyai_go_to_local_bc_offpolicy -m 8 -o <OUTPUT_PATH>
 ```
+
 Note that with the `-m 8` option we limit to 8 the number of on-policy task sampling processes used between off-policy
 updates.
 
