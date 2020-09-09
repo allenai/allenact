@@ -152,9 +152,8 @@ For the experiment configuration, we'll build on top of an existing
 The complete `ExperimentConfig` file for off-policy training is
 [here](/api/projects/tutorials/babyai_go_to_local_bc_offpolicy/#bcoffpolicybabyaigotolocalexperimentconfig), but let's
 focus on the most relevant aspect to enable this type of training: 
-We just need to instantiate a `TrainingPipeline` with an
-[OffPolicyPipelineComponent](/api/utils/experiment_utils/#offpolicypipelinecomponent)
-where required in our `PipelineStage` defined in the `training_pipeline` method.
+providing an [OffPolicyPipelineComponent](/api/utils/experiment_utils/#offpolicypipelinecomponent) object as input to a
+`PipelineStage` when instantiating the `TrainingPipeline` in the `training_pipeline` method.
 
 ```python
 class BCOffPolicyBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentConfig):
@@ -175,7 +174,7 @@ class BCOffPolicyBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentCo
     @classmethod
     def training_pipeline(cls, **kwargs):
         total_train_steps = int(1e7)
-        num_steps=128
+        num_steps = 128
         return TrainingPipeline(
             save_interval=10000,  # Save every 10000 steps (approximately)
             metric_accumulate_interval=1,
