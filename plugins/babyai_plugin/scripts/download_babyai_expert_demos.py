@@ -1,5 +1,6 @@
 import os
 import platform
+import argparse
 
 from plugins.babyai_plugin.babyai_constants import BABYAI_EXPERT_TRAJECTORIES_DIR
 
@@ -19,7 +20,30 @@ LEVEL_TO_TRAIN_VALID_IDS = {
     ),
 }
 
+
+def get_args():
+    """Creates the argument parser and parses input arguments."""
+
+    parser = argparse.ArgumentParser(
+        description="download_babyai_expert_demos",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+
+    parser.add_argument(
+        "dataset",
+        nargs="?",
+        default="all",
+        help="dataset name (one of {}, or all)".format(
+            ", ".join(LEVEL_TO_TRAIN_VALID_IDS.keys())
+        ),
+    )
+
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = get_args()
+
     if platform.system() == "Linux":
         download_template = """wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id={}' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\\1\\n/p')&id={}" -O {}"""
     elif platform.system() == "Darwin":
@@ -29,7 +53,18 @@ if __name__ == "__main__":
 
     try:
         os.makedirs(BABYAI_EXPERT_TRAJECTORIES_DIR, exist_ok=True)
-        for level_name, (train_id, valid_id) in LEVEL_TO_TRAIN_VALID_IDS.items():
+
+        if args.dataset == "all":
+            id_items = LEVEL_TO_TRAIN_VALID_IDS
+        else:
+            assert (
+                args.dataset in LEVEL_TO_TRAIN_VALID_IDS
+            ), "Only {} are valid datasets".format(
+                ", ".join(LEVEL_TO_TRAIN_VALID_IDS.keys())
+            )
+            id_items = {args.dataset: LEVEL_TO_TRAIN_VALID_IDS[args.dataset]}
+
+        for level_name, (train_id, valid_id) in id_items.items():
             train_path = os.path.join(
                 BABYAI_EXPERT_TRAJECTORIES_DIR, "BabyAI-{}-v0.pkl".format(level_name)
             )

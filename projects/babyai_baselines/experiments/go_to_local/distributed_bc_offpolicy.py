@@ -3,7 +3,9 @@ from typing import Sequence, Optional
 
 import torch
 
-from .bc_offpolicy import BCOffPolicyBabyAIGoToLocalExperimentConfig
+from projects.tutorials.babyai_go_to_local_bc_offpolicy import (
+    BCOffPolicyBabyAIGoToLocalExperimentConfig,
+)
 from plugins.babyai_plugin.babyai_constants import BABYAI_EXPERT_TRAJECTORIES_DIR
 from plugins.minigrid_plugin.minigrid_offpolicy import (
     MiniGridOffPolicyExpertCELoss,

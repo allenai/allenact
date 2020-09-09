@@ -22,9 +22,6 @@ class BCOffPolicyBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentCo
 
     GPU_ID = 0 if torch.cuda.is_available() else None
 
-    def __init__(self):
-        super().__init__()
-
     @classmethod
     def tag(cls):
         return "BabyAIGoToLocalBCOffPolicy"

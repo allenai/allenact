@@ -41,6 +41,7 @@ nav:
   - PointNav in RoboTHOR: tutorials/training-a-pointnav-model.md
   - Swapping environments: tutorials/transfering-to-a-different-environment-framework.md
   - Using a pre-trained model: tutorials/running_inference_on_a_pretrained_model.md
+  - Off-policy training: tutorials/offpolicy-tutorial.md
 #  - IL to RL with pipelines: tutorials/training-pipelines.md
 - HowTos:
   - Define an experiment: howtos/defining-an-experiment.md
@@ -129,6 +130,7 @@ nav:
       - robothor_tasks: api/plugins/robothor_plugin/robothor_tasks.md
       - configs:
         - resnet18_objectnav: api/plugins/robothor_plugin/configs/resnet18_objectnav.md
+        - debug_objectnav_robothor_rgb_ddppo: api/plugins/robothor_plugin/configs/debug_objectnav_robothor_rgb_ddppo.md
         - simple_pointnav: api/plugins/robothor_plugin/configs/simple_pointnav.md
         - resnet18_pointnav: api/plugins/robothor_plugin/configs/resnet18_pointnav.md
         - pointnav_base: api/plugins/robothor_plugin/configs/pointnav_base.md
@@ -136,6 +138,8 @@ nav:
         - nav_base: api/plugins/robothor_plugin/configs/nav_base.md
         - simple_objectnav: api/plugins/robothor_plugin/configs/simple_objectnav.md
         - objectnav_base: api/plugins/robothor_plugin/configs/objectnav_base.md
+      - scripts:
+        - make_objectnav_debug_dataset: api/plugins/robothor_plugin/scripts/make_objectnav_debug_dataset.md
       - robothor_sensors: api/plugins/robothor_plugin/robothor_sensors.md
       - robothor_viz: api/plugins/robothor_plugin/robothor_viz.md
     - minigrid_plugin:
@@ -168,7 +172,6 @@ nav:
           - bc: api/projects/babyai_baselines/experiments/go_to_local/bc.md
           - distributed_bc_offpolicy: api/projects/babyai_baselines/experiments/go_to_local/distributed_bc_offpolicy.md
           - dagger: api/projects/babyai_baselines/experiments/go_to_local/dagger.md
-          - bc_offpolicy: api/projects/babyai_baselines/experiments/go_to_local/bc_offpolicy.md
           - bc_teacher_forcing: api/projects/babyai_baselines/experiments/go_to_local/bc_teacher_forcing.md
           - distributed_bc_teacher_forcing: api/projects/babyai_baselines/experiments/go_to_local/distributed_bc_teacher_forcing.md
           - ppo: api/projects/babyai_baselines/experiments/go_to_local/ppo.md
@@ -206,6 +209,7 @@ nav:
       - pointnav_habitat_rgb_ddppo: api/projects/tutorials/pointnav_habitat_rgb_ddppo.md
       - pointnav_robothor_rgb_ddppo: api/projects/tutorials/pointnav_robothor_rgb_ddppo.md
       - object_nav_ithor_dagger_then_ppo_one_object: api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object.md
+      - babyai_go_to_local_bc_offpolicy: api/projects/tutorials/babyai_go_to_local_bc_offpolicy.md
       - pointnav_ithor_rgb_ddppo: api/projects/tutorials/pointnav_ithor_rgb_ddppo.md
       - pointnav_robothor_rgb_ddppo_viz: api/projects/tutorials/pointnav_robothor_rgb_ddppo_viz.md
       - object_nav_ithor_ppo_one_object: api/projects/tutorials/object_nav_ithor_ppo_one_object.md
