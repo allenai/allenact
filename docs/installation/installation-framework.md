@@ -59,8 +59,9 @@ You then need to launch the container and attach into it:
 ```bash
 docker run --runtime=nvidia -it allenact/allenact
 ```
+If you are running the container on a machine without an Nvidia GPU, omit the `--runtime=nvidia` flag.
 
-Once inside the container simply cd into the `allenact` directory where all the allenact and habitat code should be stored:
+Once inside the container simply `cd` into the `allenact` directory where all the allenact and habitat code should be stored:
  
 Unfortunately we cannot legally redistribute the Gibson scenes by including them in the above container.
 Instead you will need to download these yourself by filling out 
