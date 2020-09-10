@@ -120,6 +120,8 @@ nav:
       - ithor_constants: api/plugins/ithor_plugin/ithor_constants.md
       - ithor_util: api/plugins/ithor_plugin/ithor_util.md
       - ithor_sensors: api/plugins/ithor_plugin/ithor_sensors.md
+      - scripts:
+        - make_objectnav_debug_dataset: api/plugins/ithor_plugin/scripts/make_objectnav_debug_dataset.md
       - ithor_task_samplers: api/plugins/ithor_plugin/ithor_task_samplers.md
     - robothor_plugin:
       - robothor_preprocessors: api/plugins/robothor_plugin/robothor_preprocessors.md

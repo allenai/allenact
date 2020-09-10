@@ -46,7 +46,7 @@ class OnPolicyRunner(object):
         self,
         config: ExperimentConfig,
         output_dir: str,
-        loaded_config_src_files: Optional[Dict[str, Tuple[str, str]]],
+        loaded_config_src_files: Optional[Dict[str, str]],
         seed: Optional[int] = None,
         mode: str = "train",
         deterministic_cudnn: bool = False,
@@ -448,16 +448,12 @@ class OnPolicyRunner(object):
 
         # Recursively saving configs
         if self.loaded_config_src_files is not None:
-            for file in self.loaded_config_src_files:
-                base, module = self.loaded_config_src_files[file]
-                parts = module.split(".")
-
-                src_file = os.path.sep.join([base] + parts) + ".py"
+            for src_file in self.loaded_config_src_files:
                 assert os.path.isfile(src_file), "Config file {} not found".format(
                     src_file
                 )
 
-                dst_file = os.path.join(base_dir, os.path.join(*parts[1:]),) + ".py"
+                dst_file = os.path.join(base_dir, os.path.basename(src_file))
                 os.makedirs(os.path.dirname(dst_file), exist_ok=True)
                 shutil.copy(src_file, dst_file)
 
