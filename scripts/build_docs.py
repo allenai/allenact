@@ -3,8 +3,8 @@ import os
 import shutil
 from pathlib import Path
 from subprocess import check_output
-from typing import Dict, Union, Optional, Set, List, Sequence, Mapping
 from threading import Thread
+from typing import Dict, Union, Optional, Set, List, Sequence, Mapping
 
 from git import Git
 from ruamel.yaml import YAML
@@ -69,15 +69,14 @@ def render_file(
                 Data: 3,
             }
         }
-    }'""".replace(
-        "\n", " "
-    )
+    }'"""
+    pydoc_config = " ".join(pydoc_config.split())
     args = ["pydoc-markdown", "-m", namespace, pydoc_config]
     try:
-        with open(os.devnull, "w") as devnull:
-            call_result = check_output(
-                [" ".join(args)], shell=True, env=os.environ, stderr=devnull
-            ).decode("utf-8")
+        call_result = check_output([" ".join(args)], shell=True, env=os.environ).decode(
+            "utf-8"
+        )
+
         # noinspection PyShadowingNames
         with open(to_file, "w") as f:
             doc_split = call_result.split("\n")
