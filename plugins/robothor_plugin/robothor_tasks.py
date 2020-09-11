@@ -1,3 +1,4 @@
+import math
 from typing import Tuple, List, Dict, Any, Optional, Union, Sequence, cast
 
 import gym
@@ -260,14 +261,19 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self.mirror = task_info["mirrored"]
-        # self.last_geodesic_distance = task_info["distance_to_target"] if task_info["distance_to_target"] else None
+
         self.distance_cache = distance_cache
         if self.distance_cache:
-            self.last_geodesic_distance = get_distance_to_object(
-                self.distance_cache,
-                self.env.agent_state(),
-                self.task_info["object_type"],
-            )
+            try:
+                self.last_geodesic_distance = get_distance_to_object(
+                    self.distance_cache,
+                    self.env.agent_state(),
+                    self.task_info["object_type"],
+                )
+            except RuntimeError:
+                self.last_geodesic_distance = self.env.dist_to_object(
+                    self.task_info["object_type"]
+                )
         else:
             self.last_geodesic_distance = self.env.dist_to_object(
                 self.task_info["object_type"]
@@ -290,6 +296,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             )  # assume it's valid (sampler must take care)!
         self.num_moves_made = 0
         self.optimal_distance = self.last_geodesic_distance
+        self.closest_geo_distance = self.last_geodesic_distance
 
     @property
     def action_space(self):
@@ -363,20 +370,43 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             return rew
 
         if self.distance_cache:
-            geodesic_distance = get_distance_to_object(
-                self.distance_cache,
-                self.env.agent_state(),
-                self.task_info["object_type"],
-            )
+            try:
+                geodesic_distance = get_distance_to_object(
+                    self.distance_cache,
+                    self.env.agent_state(),
+                    self.task_info["object_type"],
+                )
+            except RuntimeError:
+                geodesic_distance = self.env.dist_to_object(
+                    self.task_info["object_type"]
+                )
         else:
             geodesic_distance = self.env.dist_to_object(self.task_info["object_type"])
-        if (
-            self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5
-        ):  # (robothor limits)
-            rew += self.last_geodesic_distance - geodesic_distance
-        self.last_geodesic_distance = geodesic_distance
 
-        return rew * self.reward_configs["shaping_weight"]
+        # Ensuring the reward magnitude is not greater than the total distance moved
+        max_reward_mag = 0
+        if len(self.path) >= 2:
+            p0, p1 = self.path[-2:]
+            max_reward_mag = math.sqrt(
+                (p0["x"] - p1["x"]) ** 2 + (p0["z"] - p1["z"]) ** 2
+            )
+
+        if self.reward_configs.get("positive_only_reward", False):
+            if geodesic_distance > 0.5:
+                rew = max(self.closest_geo_distance - geodesic_distance, 0)
+        else:
+            if (
+                self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5
+            ):  # (robothor limits)
+                rew += self.last_geodesic_distance - geodesic_distance
+
+        self.last_geodesic_distance = geodesic_distance
+        self.closest_geo_distance = min(self.closest_geo_distance, geodesic_distance)
+
+        return (
+            max(min(rew, max_reward_mag), -max_reward_mag,)
+            * self.reward_configs["shaping_weight"]
+        )
 
     def judge(self) -> float:
         """Judge the last event."""
@@ -422,11 +452,14 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
 
     def metrics(self) -> Dict[str, Any]:
         if self.distance_cache:
-            dist2tget = get_distance_to_object(
-                self.distance_cache,
-                self.env.agent_state(),
-                self.task_info["object_type"],
-            )
+            try:
+                dist2tget = get_distance_to_object(
+                    self.distance_cache,
+                    self.env.agent_state(),
+                    self.task_info["object_type"],
+                )
+            except RuntimeError:
+                dist2tget = self.env.dist_to_object(self.task_info["object_type"])
             spl = self.spl()
         else:
             # TODO
@@ -445,3 +478,12 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             }
             self._rewards = []
             return metrics
+
+    def query_expert(self, end_action_only: bool = False, **kwargs) -> Tuple[int, bool]:
+        if end_action_only:
+            if self._is_goal_in_range():
+                return self.class_action_names().index(END), True
+            else:
+                return 0, False
+        else:
+            raise NotImplementedError

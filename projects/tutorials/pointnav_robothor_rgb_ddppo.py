@@ -46,7 +46,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     SCREEN_SIZE = 224
 
     # Training Engine Parameters
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10 ** 13
+    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
     NUM_PROCESSES = 20
     TRAINING_GPUS = [0]
     VALIDATION_GPUS = [0]
