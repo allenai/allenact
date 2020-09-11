@@ -175,13 +175,19 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, str]]:
         os.path.abspath(args.experiment_base), os.getcwd()
     )
     rel_base_dot_path = rel_base_dir.replace("/", ".")
+    if rel_base_dot_path == ".":
+        rel_base_dot_path = ""
 
     exp_dot_path = args.experiment
     if exp_dot_path[-3:] == ".py":
         exp_dot_path = exp_dot_path[:-3]
     exp_dot_path = exp_dot_path.replace("/", ".")
 
-    module_path = f"{rel_base_dot_path}.{exp_dot_path}"
+    module_path = (
+        f"{rel_base_dot_path}.{exp_dot_path}"
+        if len(rel_base_dot_path) != 0
+        else exp_dot_path
+    )
 
     try:
         importlib.invalidate_caches()
