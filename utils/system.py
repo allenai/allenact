@@ -1,4 +1,5 @@
-from typing import cast
+from typing import cast, Optional, Tuple
+from torch import multiprocessing as mp
 
 import logging
 import socket
@@ -6,40 +7,41 @@ import sys
 import io
 from contextlib import closing
 
-_LOGGER = logging.getLogger("embodiedai")
+from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 
+HUMAN_LOG_LEVELS: Tuple[str, ...] = ("debug", "info", "warning", "error", "none")
+"""
+Available log levels: "debug", "info", "warning", "error", "none"
+"""
 
-class StreamToLogger:
-    def __init__(self):
-        self.linebuf = ""
-
-    def write(self, buf):
-        temp_linebuf = self.linebuf + buf
-        self.linebuf = ""
-        for line in temp_linebuf.splitlines(True):
-            if line[-1] == "\n":
-                _LOGGER.info(line.rstrip())
-            else:
-                self.linebuf += line
-
-    def flush(self):
-        if self.linebuf != "":
-            _LOGGER.info(self.linebuf.rstrip())
-        self.linebuf = ""
-
-
-def excepthook(*args):
-    get_logger().error("Uncaught exception:", exc_info=args)
+_LOGGER: Optional[logging.Logger] = None
 
 
 def get_logger() -> logging.Logger:
-    log_format = "default"
-    human_log_level = "debug"
+    """
+    Get a `logging.Logger` to stderr. It can be called whenever we wish to log some message.
+    Messages can get mixed-up (https://docs.python.org/3.6/library/multiprocessing.html#logging),
+    but it works well in most cases.
 
-    if len(_LOGGER.handlers) > 0:
-        return _LOGGER
+    # Returns
 
-    log_level = -1
+    logger: the `logging.Logger` object
+    """
+    if _new_logger():
+        _set_log_formatter()
+    return _LOGGER
+
+
+def init_logging(human_log_level: str = "info") -> None:
+    """
+    Init the `logging.Logger`. It should be called only once in the app (e.g. in `main`).
+    It sets the log_level to one of `HUMAN_LOG_LEVELS`. And sets up a handler for stderr.
+    The logging level is propagated to all supproceeses.
+    """
+    assert human_log_level in HUMAN_LOG_LEVELS, "unknown human_log_level {}".format(
+        human_log_level
+    )
+
     if human_log_level == "debug":
         log_level = logging.DEBUG
     elif human_log_level == "info":
@@ -48,40 +50,95 @@ def get_logger() -> logging.Logger:
         log_level = logging.WARNING
     elif human_log_level == "error":
         log_level = logging.ERROR
-    assert log_level in [
-        logging.DEBUG,
-        logging.INFO,
-        logging.WARNING,
-        logging.ERROR,
-    ], "unknown human_log_level {}".format(human_log_level)
+    elif human_log_level == "none":
+        log_level = logging.CRITICAL + 1
 
-    ch = logging.StreamHandler()
-    ch.setLevel(log_level)
+    _new_logger(log_level)
+    _set_log_formatter()
 
-    if log_format == "default":
-        formatter = logging.Formatter(
-            fmt="%(asctime)s: %(levelname)s: %(message)s\t[%(filename)s: %(lineno)d]",
-            datefmt="%m/%d %H:%M:%S",
+
+def find_free_port(address: str = "127.0.0.1") -> int:
+    """
+    Finds a free port for distributed training.
+
+    # Returns
+
+    port: port number that can be used to listen
+
+    """
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind((address, 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        port = s.getsockname()[1]
+    return port
+
+
+def _new_logger(log_level: Optional[int] = None):
+    global _LOGGER
+    if _LOGGER is None:
+        _LOGGER = mp.get_logger()
+        if log_level is not None:
+            get_logger().setLevel(log_level)
+        return True
+    return False
+
+
+def _set_log_formatter():
+    assert _LOGGER is not None
+
+    if _LOGGER.getEffectiveLevel() <= logging.CRITICAL:
+        default_format = (
+            "%(asctime)s %(levelname)s: %(message)s\t[%(filename)s: %(lineno)d]"
         )
-    elif log_format == "defaultMilliseconds":
-        formatter = logging.Formatter(
-            fmt="%(asctime)s: %(levelname)s: %(message)s\t[%(filename)s: %(lineno)d]"
-        )
-    else:
-        formatter = logging.Formatter(fmt=log_format, datefmt="%m/%d %H:%M:%S")
-    ch.setFormatter(formatter)
+        short_date_format = "%m/%d %H:%M:%S"
+        log_format = "default"
 
-    _LOGGER.setLevel(log_level)
-    _LOGGER.addHandler(ch)
+        ch = logging.StreamHandler()
 
-    sys.excepthook = excepthook
-    sys.stdout = cast(io.TextIOWrapper, StreamToLogger())
+        if log_format == "default":
+            formatter = logging.Formatter(
+                fmt=default_format, datefmt=short_date_format,
+            )
+        elif log_format == "defaultMilliseconds":
+            formatter = logging.Formatter(fmt=default_format)
+        else:
+            formatter = logging.Formatter(fmt=log_format, datefmt=short_date_format)
+
+        ch.setFormatter(formatter)
+        ch.addFilter(cast(logging.Filter, _AllenActMessageFilter()))
+        _LOGGER.addHandler(ch)
+
+        sys.excepthook = _excepthook
+        sys.stdout = cast(io.TextIOWrapper, _StreamToLogger())
 
     return _LOGGER
 
 
-def find_free_port(address="127.0.0.1"):
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind((address, 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return s.getsockname()[1]
+class _StreamToLogger:
+    def __init__(self):
+        self.linebuf = ""
+
+    def write(self, buf):
+        temp_linebuf = self.linebuf + buf
+        self.linebuf = ""
+        for line in temp_linebuf.splitlines(True):
+            if line[-1] == "\n":
+                cast(logging.Logger, _LOGGER).info(line.rstrip())
+            else:
+                self.linebuf += line
+
+    def flush(self):
+        if self.linebuf != "":
+            cast(logging.Logger, _LOGGER).info(self.linebuf.rstrip())
+        self.linebuf = ""
+
+
+def _excepthook(*args):
+    get_logger().error("Uncaught exception:", exc_info=args)
+
+
+class _AllenActMessageFilter:
+    def filter(self, record):
+        return int(
+            ABS_PATH_OF_TOP_LEVEL_DIR in record.pathname or "main" in record.pathname
+        )

@@ -13,7 +13,7 @@ from setproctitle import setproctitle as ptitle
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from core.algorithms.onpolicy_sync.runner import OnPolicyRunner
 from core.base_abstractions.experiment_config import ExperimentConfig
-from utils.system import get_logger
+from utils.system import get_logger, init_logging, HUMAN_LOG_LEVELS
 
 
 def get_args():
@@ -130,6 +130,17 @@ def get_args():
     )
     parser.set_defaults(deterministic_agents=False)
 
+    parser.add_argument(
+        "-l",
+        "--log_level",
+        default="info",
+        type=str,
+        required=False,
+        help="sets the log_level. it must be one of {}.".format(
+            ", ".join(HUMAN_LOG_LEVELS)
+        ),
+    )
+
     return parser.parse_args()
 
 
@@ -225,6 +236,8 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, str]]:
 
 def main():
     args = get_args()
+
+    init_logging(args.log_level)
 
     get_logger().info("Running with args {}".format(args))
 
