@@ -136,7 +136,7 @@ def get_args():
         default="info",
         type=str,
         required=False,
-        help="sets the log_level. it must be one of {{{}}}.".format(
+        help="sets the log_level. it must be one of {}.".format(
             ", ".join(HUMAN_LOG_LEVELS)
         ),
     )

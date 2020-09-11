@@ -20,7 +20,7 @@ def get_logger() -> logging.Logger:
     return _LOGGER
 
 
-def init_logging(human_log_level: str = "debug"):
+def init_logging(human_log_level: str = "info"):
     assert human_log_level in HUMAN_LOG_LEVELS, "unknown human_log_level {}".format(
         human_log_level
     )
