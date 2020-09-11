@@ -89,7 +89,6 @@ class OnPolicyRLEngine(object):
 
         config : The ExperimentConfig defining the experiment to run.
         output_dir : Root directory at which checkpoints and logs should be saved.
-        loaded_config_src_files : Paths to source config files used to create the experiment.
         seed : Seed used to encourage deterministic behavior (it is difficult to ensure
             completely deterministic behavior due to CUDA issues and nondeterminism
             in environments).

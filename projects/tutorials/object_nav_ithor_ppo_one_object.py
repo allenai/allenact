@@ -51,7 +51,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     }
 
     MAX_STEPS = 128
-    ADVANCE_SCENE_ROLLOUT_PERIOD = None
+    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
     VALID_SAMPLES_IN_SCENE = 10
     TEST_SAMPLES_IN_SCENE = 100
 
