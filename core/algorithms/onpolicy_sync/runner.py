@@ -5,7 +5,6 @@ import itertools
 import json
 import os
 import queue
-import shutil
 import signal
 import time
 import traceback
@@ -446,16 +445,35 @@ class OnPolicyRunner(object):
 
         get_logger().info("Git diff saved to {}".format(base_dir))
 
-        # Recursively saving configs
+        # Saving configs
         if self.loaded_config_src_files is not None:
-            for src_file in self.loaded_config_src_files:
-                assert os.path.isfile(src_file), "Config file {} not found".format(
-                    src_file
+            for src_path in self.loaded_config_src_files:
+                assert os.path.isfile(src_path), "Config file {} not found".format(
+                    src_path
                 )
+                src_path = os.path.abspath(src_path)
 
-                dst_file = os.path.join(base_dir, os.path.basename(src_file))
-                os.makedirs(os.path.dirname(dst_file), exist_ok=True)
-                shutil.copy(src_file, dst_file)
+                # To prevent overwriting files with the same name, we loop
+                # here until we find a prefix (if necessary) to prevent
+                # name collisions.
+                k = -1
+                while True:
+                    prefix = "" if k == -1 else "namecollision{}__".format(k)
+                    k += 1
+                    dst_path = os.path.join(
+                        base_dir, "{}{}".format(prefix, os.path.basename(src_path),),
+                    )
+                    if not os.path.exists(dst_path):
+                        os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+                        with open(src_path, "r") as f:
+                            file_contents = f.read()
+                        with open(dst_path, "w") as f:
+                            f.write(
+                                "### THIS FILE ORIGINALLY LOCATED AT '{}'\n\n{}".format(
+                                    src_path, file_contents
+                                )
+                            )
+                        break
 
         get_logger().info("Config files saved to {}".format(base_dir))
 

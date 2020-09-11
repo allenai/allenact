@@ -303,7 +303,7 @@ class NeverEarlyStoppingCriterion(EarlyStoppingCriterion):
 
 
 class OffPolicyPipelineComponent(NamedTuple):
-    """An off-policy component for a PipeLineStage
+    """An off-policy component for a PipeLineStage.
 
     # Attributes
 
