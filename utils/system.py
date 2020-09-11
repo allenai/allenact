@@ -10,6 +10,9 @@ from contextlib import closing
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 
 HUMAN_LOG_LEVELS: Tuple[str, ...] = ("debug", "info", "warning", "error", "none")
+"""
+Available log levels: "debug", "info", "warning", "error", "none"
+"""
 
 _LOGGER: Optional[logging.Logger] = None
 
@@ -57,6 +60,11 @@ def init_logging(human_log_level: str = "info") -> None:
 def find_free_port(address: str = "127.0.0.1") -> int:
     """
     Finds a free port for distributed training.
+
+    # Returns
+
+    port: port number that can be used to listen
+
     """
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
         s.bind((address, 0))
