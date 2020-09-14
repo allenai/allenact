@@ -9,7 +9,7 @@ For information on how to train a PointNav Model see [this tutorial](training-a-
 We will need to [install the RoboTHOR environment](../installation/installation-allenact.md) and [download the 
 RoboTHOR Pointnav dataset](../installation/download-datasets.md) before we get started.
 
-For this tutorial we will download the weights of a model trained on the debug dataset.
+We will also need to download the weights of a pretrained model.
 This can be done with a handy script in the `pretrained_model_ckpts` directory:
 ```bash
 bash pretrained_model_ckpts/download_navigation_model_ckpts.sh robothor-pointnav-rgb-resnet
@@ -36,9 +36,9 @@ For our current setup the following command would work:
 ```bash
 python main.py \
     -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ \
-    -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_10-20-29/exp_PointNavRobothorRGBPPO__stage_00__steps_000000756000.pt \
+    -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30/exp_PointNavRobothorRGBPPO__stage_00__steps_000039031200.pt \
     -b projects/tutorials pointnav_robothor_rgb_ddppo \
-    -t 2020-08-31_10-20-29
+    -t 2020-08-31_12-13-30
 ```
 
 For testing on all saved checkpoints we just need to omit `<PATH_TO_CHECKPOINT>`:
@@ -47,7 +47,7 @@ For testing on all saved checkpoints we just need to omit `<PATH_TO_CHECKPOINT>`
 python main.py \
     -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ \
     -b projects/tutorials pointnav_robothor_rgb_ddppo \
-    -t 2020-08-31_10-20-29
+    -t 2020-08-31_12-13-30
 ```
 
 ## Visualization

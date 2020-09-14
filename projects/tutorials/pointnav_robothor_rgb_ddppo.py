@@ -54,10 +54,10 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     # Dataset Parameters
     TRAIN_DATASET_DIR = os.path.join(
-        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/debug"
+        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/train"
     )
     VAL_DATASET_DIR = os.path.join(
-        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/debug"
+        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/val"
     )
 
     SENSORS = [
