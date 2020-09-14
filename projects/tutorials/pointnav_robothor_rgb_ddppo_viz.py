@@ -2,7 +2,7 @@ from typing import Optional
 
 from utils.experiment_utils import Builder
 from projects.tutorials.pointnav_robothor_rgb_ddppo import (
-    ObjectNavRoboThorRGBPPOExperimentConfig,
+    PointNavRoboThorRGBPPOExperimentConfig,
 )
 from utils.viz_utils import (
     VizSuite,
@@ -15,9 +15,7 @@ from utils.viz_utils import (
 from plugins.robothor_plugin.robothor_viz import ThorViz
 
 
-class ObjectNavRoboThorRGBPPOVizExperimentConfig(
-    ObjectNavRoboThorRGBPPOExperimentConfig
-):
+class PointNavRoboThorRGBPPOVizExperimentConfig(PointNavRoboThorRGBPPOExperimentConfig):
     """ExperimentConfig used to demonstrate how to set up visualization code.
 
     # Attributes

@@ -43,3 +43,19 @@ This tutorial demonstrates how easy it is modify the experiment config created i
 
 [Follow the tutorial here.](../tutorials/transfering-to-a-different-environment-framework.md)
 
+
+## [Using a pretrained model](../tutorials/running_inference_on_a_pretrained_model.md)
+
+![Pretrained inference](../img/viz_pretrained_2videos.jpg)
+
+This tutorial shows how to run inference on one or more checkpoints of a pretrained model and generate
+visualizations of different types.
+
+[Follow the tutorial here.](../tutorials/running_inference_on_a_pretrained_model.md)
+
+
+## [Off-policy training](../tutorials/offpolicy-tutorial.md)
+
+This tutorial shows how to train an Actor using an off-policy dataset with expert actions.
+
+[Follow the tutorial here.](../tutorials/offpolicy-tutorial.md)

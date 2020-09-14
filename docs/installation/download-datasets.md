@@ -42,6 +42,6 @@ This will download the dataset into `datasets/robothor-objectnav`.
 ### iTHOR
 To get the ObjectNav dataset and precomputed distance caches for `iTHOR` run the following command:
 ```bash
-lucaw$ bash datasets/download_navigation_datasets.sh ithor-objectnav
+bash datasets/download_navigation_datasets.sh ithor-objectnav
 ```
 This will download the dataset into `datasets/ithor-objectnav`.

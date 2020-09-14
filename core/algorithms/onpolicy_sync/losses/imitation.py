@@ -44,6 +44,7 @@ class Imitation(AbstractActorCriticLoss):
         tensor in order to compute a gradient update to the ActorCriticModel's parameters.
         """
         observations = typing.cast(Dict[str, torch.Tensor], batch["observations"])
+
         if "expert_action" in observations:
             expert_actions_and_mask = observations["expert_action"]
             if len(expert_actions_and_mask.shape) == 3:
@@ -63,8 +64,7 @@ class Imitation(AbstractActorCriticLoss):
             )
 
             expert_successes = expert_actions_masks.sum()
-            if expert_successes.item() == 0:
-                return 0, {}
+            log_loss = expert_successes.item() != 0
 
             total_loss = -(
                 expert_actions_masks
@@ -114,5 +114,5 @@ class Imitation(AbstractActorCriticLoss):
 
         return (
             total_loss,
-            {"expert_cross_entropy": total_loss.item(),},
+            {"expert_cross_entropy": total_loss.item(),} if log_loss else {},
         )

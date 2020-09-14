@@ -12,8 +12,8 @@ if __name__ == "__main__":
             "gym",
             "matplotlib",
             "torchvision~=0.5.0",
-            "tensorflow",
             "tensorboardx",
+            "tensorboard",
             "torch~=1.4.0",
             "ai2thor==2.3.9",
             "networkx",
@@ -28,5 +28,6 @@ if __name__ == "__main__":
             "gin-config",
             "colour",
             "patsy",
+            "pyquaternion",
         ],
     )

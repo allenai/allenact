@@ -79,7 +79,7 @@ class OnPolicyRLEngine(object):
         num_workers: int = 1,
         device: Union[str, torch.device, int] = "cpu",
         distributed_port: int = 0,
-        deterministic_agent: bool = False,
+        deterministic_agents: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
         **kwargs,
     ):
@@ -89,7 +89,6 @@ class OnPolicyRLEngine(object):
 
         config : The ExperimentConfig defining the experiment to run.
         output_dir : Root directory at which checkpoints and logs should be saved.
-        loaded_config_src_files : Paths to source config files used to create the experiment.
         seed : Seed used to encourage deterministic behavior (it is difficult to ensure
             completely deterministic behavior due to CUDA issues and nondeterminism
             in environments).
@@ -200,7 +199,7 @@ class OnPolicyRLEngine(object):
             )
             self.is_distributed = True
 
-        self.deterministic_agent = deterministic_agent
+        self.deterministic_agents = deterministic_agents
 
         self.scalars = ScalarMeanTracker()
 
@@ -426,7 +425,7 @@ class OnPolicyRLEngine(object):
 
         actions = (
             actor_critic_output.distributions.sample()
-            if not self.deterministic_agent
+            if not self.deterministic_agents
             else actor_critic_output.distributions.mode()
         )
 
@@ -563,7 +562,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         num_workers: int = 1,
         device: Union[str, torch.device, int] = "cpu",
         distributed_port: int = 0,
-        deterministic_agent: bool = False,
+        deterministic_agents: bool = False,
         distributed_preemption_threshold: float = 0.7,
         max_sampler_processes_per_worker: Optional[int] = None,
         **kwargs,
@@ -582,7 +581,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             num_workers=num_workers,
             device=device,
             distributed_port=distributed_port,
-            deterministic_agent=deterministic_agent,
+            deterministic_agents=deterministic_agents,
             max_sampler_processes_per_worker=max_sampler_processes_per_worker,
             **kwargs,
         )
@@ -1311,7 +1310,7 @@ class OnPolicyInference(OnPolicyRLEngine):
         deterministic_cudnn: bool = False,
         mp_ctx: Optional[BaseContext] = None,
         device: Union[str, torch.device, int] = "cpu",
-        deterministic_agent: bool = False,
+        deterministic_agents: bool = False,
         worker_id: int = 0,
         num_workers: int = 1,
         distributed_port: int = 0,
@@ -1327,7 +1326,7 @@ class OnPolicyInference(OnPolicyRLEngine):
             seed=seed,
             deterministic_cudnn=deterministic_cudnn,
             mp_ctx=mp_ctx,
-            deterministic_agent=deterministic_agent,
+            deterministic_agents=deterministic_agents,
             device=device,
             worker_id=worker_id,
             num_workers=num_workers,

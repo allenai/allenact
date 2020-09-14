@@ -63,7 +63,7 @@ straight line distance).
 ## Config File Setup
 Now comes the most important part of the tutorial, we are going to write an experiment config file. 
 If this is your first experience with experiment config files in AllenAct, we suggest that you
-first see our how-to on [defining an experiment](../howtos/training-a-pointnav-model.md) which will
+first see our how-to on [defining an experiment](../howtos/defining-an-experiment.md) which will
 walk you through creating a simplified experiment config file.
 
 Unlike a library that can be imported into python, **AllenAct** is structured as a framework with a runner script called `main.py` which will run the experiment specified in a config file. This design forces us to keep meticulous records of exactly which settings were used to produce a particular result,
@@ -108,7 +108,7 @@ from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, Lin
 
 Next we define a new experiment config class:
 ```python
-class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
+class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 ```
 We then define the task parameters. For PointNav, these include the maximum number of steps our agent
 can take before being reset (this prevents the agent from wandering on forever), and a configuration

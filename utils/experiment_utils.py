@@ -303,6 +303,23 @@ class NeverEarlyStoppingCriterion(EarlyStoppingCriterion):
 
 
 class OffPolicyPipelineComponent(NamedTuple):
+    """An off-policy component for a PipeLineStage.
+
+    # Attributes
+
+    data_iterator_builder: A function to instantiate a Data Iterator (with a __next__(self) method)
+    loss_names: list of unique names assigned to off-policy losses
+    updates: number of off-policy updates between on-policy rollout collections
+    loss_weights : A list of floating point numbers describing the relative weights
+        applied to the losses referenced by `loss_names`. Should be the same length
+        as `loss_names`. If this is `None`, all weights will be assumed to be one.
+    data_iterator_kwargs_generator: Optional generator of keyword arguments for data_iterator_builder (useful for
+        distributed training. It takes
+        a `cur_worker` int value,
+        a `rollouts_per_worker` list of number of samplers per training worker,
+        and an optional random `seed` shared by all workers, which can be None.
+    """
+
     data_iterator_builder: Callable[..., Iterator]
     loss_names: List[str]
     updates: int

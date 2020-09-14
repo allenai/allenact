@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 import queue
 import time
+import traceback
 import typing
 from multiprocessing.connection import Connection
 from multiprocessing.context import BaseContext
@@ -312,6 +313,9 @@ class VectorSampledTasks(object):
         except KeyboardInterrupt:
             if should_log:
                 get_logger().info("Worker {} KeyboardInterrupt".format(worker_id))
+        except Exception as e:
+            get_logger().error(traceback.format_exc())
+            raise e
         finally:
             if should_log:
                 get_logger().info("""Worker {} closing.""".format(worker_id))
@@ -946,6 +950,9 @@ class SingleProcessVectorSampledTasks(object):
                         worker_id
                     )
                 )
+        except Exception as e:
+            get_logger().error(traceback.format_exc())
+            raise e
         finally:
             if should_log:
                 get_logger().info(

@@ -5,15 +5,15 @@ import argparse
 import importlib
 import inspect
 import os
-import sys
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List, Optional, Type
 
 import gin
 from setproctitle import setproctitle as ptitle
 
+from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from core.algorithms.onpolicy_sync.runner import OnPolicyRunner
 from core.base_abstractions.experiment_config import ExperimentConfig
-from utils.system import get_logger
+from utils.system import get_logger, init_logging, HUMAN_LOG_LEVELS
 
 
 def get_args():
@@ -119,38 +119,104 @@ def get_args():
     parser.add_argument(
         "--gp", default=None, action="append", help="values to be used by gin-config.",
     )
+
+    parser.add_argument(
+        "-e",
+        "--deterministic_agents",
+        dest="deterministic_agents",
+        action="store_true",
+        required=False,
+        help="enable deterministic agents (i.e. always taking the mode action) during validation/testing",
+    )
+    parser.set_defaults(deterministic_agents=False)
+
+    parser.add_argument(
+        "-l",
+        "--log_level",
+        default="info",
+        type=str,
+        required=False,
+        help="sets the log_level. it must be one of {}.".format(
+            ", ".join(HUMAN_LOG_LEVELS)
+        ),
+    )
+
     return parser.parse_args()
 
 
-def _config_source(args) -> Dict[str, Tuple[str, str]]:
-    path = os.path.abspath(os.path.normpath(args.experiment_base))
-    package = os.path.basename(path)
+def _config_source(config_type: Type) -> Dict[str, str]:
+    if config_type is ExperimentConfig:
+        return {}
 
-    module_path = "{}.{}".format(os.path.basename(path), args.experiment)
-    modules = [module_path]
-    res: Dict[str, Tuple[str, str]] = {}
-    while len(modules) > 0:
-        new_modules = []
-        for module_path in modules:
-            if module_path not in res:
-                res[module_path] = (os.path.dirname(path), module_path)
-                module = importlib.import_module(module_path, package=package)
-                for m in inspect.getmembers(module, inspect.isclass):
-                    new_module_path = m[1].__module__
-                    if new_module_path.split(".")[0] == package:
-                        new_modules.append(new_module_path)
-        modules = new_modules
-    return res
+    try:
+        module_file_path = inspect.getfile(config_type)
+        module_dot_path = config_type.__module__
+        sources_dict = {module_file_path: module_dot_path}
+        for super_type in config_type.__bases__:
+            sources_dict.update(_config_source(super_type))
+
+        return sources_dict
+    except TypeError as _:
+        return {}
 
 
-def load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
-    path = os.path.abspath(os.path.normpath(args.experiment_base))
-    sys.path.insert(0, os.path.dirname(path))
-    importlib.invalidate_caches()
-    module_path = ".{}".format(args.experiment)
+def find_sub_modules(path: str, module_list: Optional[List] = None):
+    if module_list is None:
+        module_list = []
 
-    importlib.import_module(os.path.basename(path))
-    module = importlib.import_module(module_path, package=os.path.basename(path))
+    path = os.path.abspath(path)
+    if path[-3:] == ".py":
+        module_list.append(path)
+    elif os.path.isdir(path):
+        contents = os.listdir(path)
+        if any(key in contents for key in ["__init__.py", "setup.py"]):
+            new_paths = [os.path.join(path, f) for f in os.listdir(path)]
+            for new_path in new_paths:
+                find_sub_modules(new_path, module_list)
+    return module_list
+
+
+def load_config(args) -> Tuple[ExperimentConfig, Dict[str, str]]:
+    assert os.path.exists(
+        args.experiment_base
+    ), "The path '{}' does not seem to exist (your current working directory is '{}').".format(
+        args.experiment_base, os.getcwd()
+    )
+    rel_base_dir = os.path.relpath(  # Normalizing string representation of path
+        os.path.abspath(args.experiment_base), os.getcwd()
+    )
+    rel_base_dot_path = rel_base_dir.replace("/", ".")
+    if rel_base_dot_path == ".":
+        rel_base_dot_path = ""
+
+    exp_dot_path = args.experiment
+    if exp_dot_path[-3:] == ".py":
+        exp_dot_path = exp_dot_path[:-3]
+    exp_dot_path = exp_dot_path.replace("/", ".")
+
+    module_path = (
+        f"{rel_base_dot_path}.{exp_dot_path}"
+        if len(rel_base_dot_path) != 0
+        else exp_dot_path
+    )
+
+    try:
+        importlib.invalidate_caches()
+        module = importlib.import_module(module_path)
+    except ModuleNotFoundError as e:
+        all_sub_modules = set(find_sub_modules(os.getcwd())) | set(
+            find_sub_modules(ABS_PATH_OF_TOP_LEVEL_DIR)
+        )
+        desired_config_name = module_path.split(".")[-1]
+        relevant_submodules = [
+            sm for sm in all_sub_modules if desired_config_name in os.path.basename(sm)
+        ]
+        raise ModuleNotFoundError(
+            "Could not import experiment '{}', are you sure this is the right path?"
+            " Possibly relevant files include {}.".format(
+                module_path, relevant_submodules
+            ),
+        ) from e
 
     experiments = [
         m[1]
@@ -164,12 +230,14 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, Tuple[str, str]]]:
     gin.parse_config_files_and_bindings(None, args.gp)
 
     config = experiments[0]()
-    sources = _config_source(args)
+    sources = _config_source(config_type=experiments[0])
     return config, sources
 
 
 def main():
     args = get_args()
+
+    init_logging(args.log_level)
 
     get_logger().info("Running with args {}".format(args))
 
@@ -185,6 +253,7 @@ def main():
             seed=args.seed,
             mode="train",
             deterministic_cudnn=args.deterministic_cudnn,
+            deterministic_agents=args.deterministic_agents,
             extra_tag=args.extra_tag,
         ).start_train(
             checkpoint=args.checkpoint,
@@ -199,6 +268,7 @@ def main():
             seed=args.seed,
             mode="test",
             deterministic_cudnn=args.deterministic_cudnn,
+            deterministic_agents=args.deterministic_agents,
             extra_tag=args.extra_tag,
         ).start_test(
             experiment_date=args.test_date,
