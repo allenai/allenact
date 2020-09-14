@@ -108,7 +108,7 @@ class RoboThorEnvironment:
                 self.controller.last_event.metadata["agent"]["position"]
             )
         except:
-            print("Failed to find path for", self.controller.last_event.metadata["agent"]["position"], "in scene", self.controller.last_event.metadata["sceneName"])
+            print("Failed to find path for", object_type, "in scene", self.controller.last_event.metadata["sceneName"])
             return None
 
     def distance_to_object_type(self, object_type: str) -> float:
