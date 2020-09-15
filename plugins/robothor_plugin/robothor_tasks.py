@@ -346,8 +346,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             return rew
 
         geodesic_distance = self.env.distance_to_object_type(self.task_info["object_type"])
-        if geodesic_distance == -1.0:
-            self._took_end_action = True
         if (
             self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5
         ):  # (robothor limits)
