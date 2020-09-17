@@ -373,9 +373,9 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
     def spl(self):
         if not self._success:
             return 0.0
-        li = self.optimal_distance + 1e-8  # to avoid division by 0
+        li = self.optimal_distance
         pi = self.num_moves_made * self.env.config["gridSize"]
-        res = li / (max(pi, li))
+        res = li / (max(pi, li) + 1e-8 )
         return res
 
     def get_observations(self, **kwargs) -> Any:
