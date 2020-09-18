@@ -10,7 +10,7 @@ import numpy as np
 from ai2thor.controller import Controller
 from ai2thor.util import metrics
 
-from utils.cache_utils import _str_to_pos, _pos_to_str
+from utils.cache_utils import _str_to_pos, _pos_to_str, DynamicDistanceCache
 from utils.experiment_utils import recursive_update
 from utils.system import get_logger
 
@@ -45,6 +45,7 @@ class RoboThorEnvironment:
         self.known_good_locations: Dict[str, Any] = {
             self.scene_name: copy.deepcopy(self.currently_reachable_points)
         }
+        self.distance_cache = DynamicDistanceCache(self.distance_from_point_to_object_type, rounding=2)
         assert len(self.known_good_locations[self.scene_name]) > 10
 
     def initialize_grid_dimensions(
@@ -100,16 +101,26 @@ class RoboThorEnvironment:
 
         return (x - xmin) // xz_subsampling, (z - zmin) // xz_subsampling, r
 
-    def path_to_object_type(self, object_type: str) -> List[Dict[str, float]]:
+    def path_from_point_to_object_type(self, point: Dict[str, float], object_type: str) -> List[Dict[str, float]]:
         try:
             return metrics.get_shortest_path_to_object_type(
                 self.controller,
                 object_type,
-                self.controller.last_event.metadata["agent"]["position"]
+                point
             )
         except:
             print("Failed to find path for", object_type, "in", self.controller.last_event.metadata["sceneName"])
             return None
+
+    def distance_from_point_to_object_type(self, point: Dict[str, float], object_type: str) -> float:
+        """Minimal geodesic distance from a point to an object of the given type
+
+        It might return -1.0 for unreachable targets.
+        """
+        path = self.path_from_point_to_object_type(point, object_type)
+        if path:
+            return metrics.path_distance(path)
+        return -1.0
 
     def distance_to_object_type(self, object_type: str) -> float:
         """Minimal geodesic distance to object of given type from agent's
@@ -117,10 +128,10 @@ class RoboThorEnvironment:
 
         It might return -1.0 for unreachable targets.
         """
-        path = self.path_to_object_type(object_type)
-        if path:
-            return metrics.path_distance(path)
-        return -1.0
+        return self.distance_cache.find_distance(
+            self.controller.last_event.metadata["agent"]["position"],
+            object_type
+        )
 
     def dist_to_point(self, xyz: Dict[str, float]) -> float:
         """Minimal geodesic distance to end point from agent's current
