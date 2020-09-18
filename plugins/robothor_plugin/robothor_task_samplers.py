@@ -435,10 +435,16 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             if scene.replace("_physics", "") != self.env.scene_name.replace(
                 "_physics", ""
             ):
-                self.env.reset(scene)
+                self.env.reset(
+                    scene_name=scene,
+                    filtered_objects=list(set([e["object_id"] for e in self.episodes[scene]]))
+                )
         else:
             self.env = self._create_environment()
-            self.env.reset(scene_name=scene)
+            self.env.reset(
+                scene_name=scene,
+                filtered_objects=list(set([e["object_id"] for e in self.episodes[scene]]))
+            )
         task_info = {"scene": scene, "object_type": episode["object_type"]}
         if len(task_info) == 0:
             get_logger().warning(

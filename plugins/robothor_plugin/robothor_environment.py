@@ -68,6 +68,12 @@ class RoboThorEnvironment:
 
         return xmin, xmax, zmin, zmax
 
+    def set_object_filter(self, object_ids: List[str]):
+        self.controller.step('SetObjectFilter', objectIds=object_ids, renderImage=False)
+
+    def reset_object_filter(self):
+        self.controller.step('ResetObjectFilter', renderImage=False)
+
     def object_reachable(self, object_type: str) -> bool:
         """Determines whether a path can be computed from the discretized
         current agent location to the target object of given type."""
@@ -164,7 +170,7 @@ class RoboThorEnvironment:
         )
         return e.metadata["lastActionSuccess"]
 
-    def reset(self, scene_name: str = None) -> None:
+    def reset(self, scene_name: str = None, filtered_objects: Optional[List[str]] = None) -> None:
         """Resets scene to a known initial state."""
         if scene_name is not None and scene_name != self.scene_name:
             self.controller.reset(scene_name)
@@ -174,6 +180,10 @@ class RoboThorEnvironment:
                     self.currently_reachable_points
                 )
                 assert len(self.known_good_locations[scene_name]) > 10
+        if filtered_objects:
+            self.set_object_filter(filtered_objects)
+        else:
+            self.reset_object_filter()
 
 
     def random_reachable_state(
