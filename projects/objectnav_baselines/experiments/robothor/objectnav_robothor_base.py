@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional
 import gym
 import numpy as np
 import torch
+import ai2thor
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
@@ -49,10 +50,11 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
             snapToGrid=False,
             agentMode="bot",
             include_private_scenes=False,
+            server_class=ai2thor.fifo_server.FifoServer
         )
 
         self.NUM_PROCESSES = 60
-        self.TRAIN_GPU_IDS = [0, 1, 2, 3, 4, 5, 6]
+        self.TRAIN_GPU_IDS = [0, 1, 2, 3, 4, 5, 6, 7]
         self.VALID_GPU_IDS = [7]
         self.TEST_GPU_IDS = [7]
         self.ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
