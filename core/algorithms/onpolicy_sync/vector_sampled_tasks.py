@@ -310,9 +310,10 @@ class VectorSampledTasks(object):
 
             if child_pipe is not None:
                 child_pipe.close()
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as e:
             if should_log:
                 get_logger().info("Worker {} KeyboardInterrupt".format(worker_id))
+            raise e
         except Exception as e:
             get_logger().error(traceback.format_exc())
             raise e
@@ -550,7 +551,7 @@ class VectorSampledTasks(object):
 
         for process in self._workers:
             try:
-                process.join()
+                process.join(timeout=0.1)
             except:
                 pass
 

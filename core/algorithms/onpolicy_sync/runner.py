@@ -32,7 +32,6 @@ from utils.experiment_utils import (
 from utils.misc_utils import all_equal, get_git_diff_of_project
 from utils.system import get_logger, find_free_port
 from utils.tensor_utils import SummaryWriter
-
 # Has results queue (aggregated per trainer), checkpoints queue and mp context
 # Instantiates train, validate, and test workers
 # Logging
@@ -407,8 +406,8 @@ class OnPolicyRunner(object):
         os.makedirs(folder, exist_ok=True)
         return folder
 
-    def log_writer_path(self, start_time_str) -> str:
-        return os.path.join(
+    def log_writer_path(self, start_time_str: str) -> str:
+        path = os.path.join(
             self.output_dir,
             "tb",
             self.config.tag()
@@ -416,8 +415,11 @@ class OnPolicyRunner(object):
             else os.path.join(self.config.tag(), self.extra_tag),
             start_time_str,
         )
+        if self.mode == "test":
+            path = os.path.join(path, "test", self.local_start_time_str)
+        return path
 
-    def metric_path(self, start_time_str) -> str:
+    def metric_path(self, start_time_str: str) -> str:
         return os.path.join(
             self.output_dir,
             "metrics",
@@ -744,7 +746,7 @@ class OnPolicyRunner(object):
                                 finalized = True
                                 break
                         else:
-                            raise Exception(
+                            raise RuntimeError(
                                 "Test worker {} abnormally terminated".format(
                                     package[1] - 1
                                 )
@@ -760,9 +762,9 @@ class OnPolicyRunner(object):
                     ):
                         break
         except KeyboardInterrupt:
-            get_logger().info("KeyboardInterrupt. Terminating runner")
+            get_logger().info("KeyboardInterrupt. Terminating runner.")
         except Exception:
-            get_logger().error("Encountered Exception. Terminating runner")
+            get_logger().error("Encountered Exception. Terminating runner.")
             get_logger().exception(traceback.format_exc())
         finally:
             if finalized:
