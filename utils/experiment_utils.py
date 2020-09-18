@@ -148,7 +148,7 @@ class ScalarMeanTracker(object):
         scalars : A dictionary of `scalar key -> value` pairs.
         """
         ndict = typing.cast(
-            Dict[str, int], (n if isinstance(n, Dict) else defaultdict(lambda: n)) # type: ignore
+            Dict[str, int], (n if isinstance(n, Dict) else defaultdict(lambda: n))  # type: ignore
         )
 
         for k in scalars:

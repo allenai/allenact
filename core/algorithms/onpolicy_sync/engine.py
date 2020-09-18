@@ -1463,7 +1463,9 @@ class OnPolicyInference(OnPolicyRLEngine):
                     last_time = cur_time
 
         get_logger().info(
-            "worker {}: {} complete, all task samplers paused".format(self.mode, self.worker_id)
+            "worker {}: {} complete, all task samplers paused".format(
+                self.mode, self.worker_id
+            )
         )
 
         self.vector_tasks.resume_all()
