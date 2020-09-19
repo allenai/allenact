@@ -30,7 +30,6 @@ class PointNavTask(Task[RoboThorEnvironment]):
         task_info: Dict[str, Any],
         max_steps: int,
         reward_configs: Dict[str, Any],
-        distance_cache: Optional[Dict[str, Any]] = None,
         episode_info: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> None:
@@ -40,32 +39,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         self.reward_configs = reward_configs
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
-        self.distance_cache = distance_cache
-
-        if episode_info:
-            self.episode_optimal_corners = episode_info["shortest_path"]
-            dist = episode_info["shortest_path_length"]
-        else:
-            self.episode_optimal_corners = self.env.path_corners(
-                task_info["target"]
-            )  # assume it's valid (sampler must take care)!
-            dist = self.env.path_corners_to_dist(self.episode_optimal_corners)
-        if dist == float("inf"):
-            dist = -1.0  # -1.0 for unreachable
-            get_logger().warning(
-                "No path for {} from {} to {}".format(
-                    self.env.scene_name, self.env.agent_state(), task_info["target"]
-                )
-            )
-
-        if self.distance_cache:
-            self.last_geodesic_distance = get_distance(
-                self.distance_cache, self.env.agent_state(), self.task_info["target"]
-            )
-        else:
-            self.last_geodesic_distance = self.env.dist_to_point(
-                self.task_info["target"]
-            )
+        self.last_geodesic_distance = self.env.distance_to_point(self.task_info["target"])
 
         self.optimal_distance = self.last_geodesic_distance
         self._rewards: List[float] = []
@@ -128,12 +102,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
 
     def _is_goal_in_range(self) -> Optional[bool]:
         tget = self.task_info["target"]
-        if self.distance_cache:
-            dist = get_distance(
-                self.distance_cache, self.env.agent_state(), self.task_info["target"]
-            )
-        else:
-            dist = self.dist_to_target()
+        dist = self.dist_to_target()
 
         if -0.5 < dist <= 0.2:
             return True
@@ -153,12 +122,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         if self.reward_configs["shaping_weight"] == 0.0:
             return rew
 
-        if self.distance_cache:
-            geodesic_distance = get_distance(
-                self.distance_cache, self.env.agent_state(), self.task_info["target"]
-            )
-        else:
-            geodesic_distance = self.dist_to_target()
+        geodesic_distance = self.dist_to_target()
 
         if geodesic_distance == -1.0:
             geodesic_distance = self.last_geodesic_distance
@@ -190,19 +154,13 @@ class PointNavTask(Task[RoboThorEnvironment]):
     def spl(self):
         if not self._success:
             return 0.0
-        if self.distance_cache:
-            li = self.optimal_distance
-            pi = self.num_moves_made * self.env.config["gridSize"]
-            res = li / (max(pi, li))
-        else:
-            res = compute_single_spl(
-                self.path, self.episode_optimal_corners, self._success
-            )
+        li = self.optimal_distance
+        pi = self.dist_to_target()
+        res = li / (max(pi, li) + 1e-8)
         return res
 
     def dist_to_target(self):
-        res = self.env.dist_to_point(self.task_info["target"])
-        return res if res > -0.5 else None
+        return self.env.distance_to_point(self.task_info["target"])
 
     def metrics(self) -> Dict[str, Any]:
         if not self.is_done():
@@ -214,21 +172,8 @@ class PointNavTask(Task[RoboThorEnvironment]):
             if self._success is None:
                 return {}
 
-            if self.distance_cache:
-                dist2tget = get_distance(
-                    self.distance_cache,
-                    self.env.agent_state(),
-                    self.task_info["target"],
-                )
-                spl = self.spl()
-                if spl is None:
-                    return {}
-            else:
-                # TODO
-                dist2tget = -1  # self._get_distance_to_target()
-                spl = self.spl() if len(self.episode_optimal_corners) > 1 else 0.0
-            if dist2tget is None:
-                return {}
+            dist2tget = self.dist_to_target()
+            spl = self.spl()
 
             return {
                 "success": self._success,  # False also if no path to target

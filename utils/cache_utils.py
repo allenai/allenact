@@ -132,17 +132,16 @@ class DynamicDistanceCache:
 
     def __init__(
             self,
-            native_distance_function: Callable[[Dict[str, any], Union[Dict[str, any], str]], float],
             rounding: Optional[int] = None
     ):
         self.cache = {}
-        self.native_distance_function = native_distance_function
         self.rounding = rounding
 
     def find_distance(
             self,
             position: Dict[str, any],
-            target: Union[Dict[str, any], str]
+            target: Union[Dict[str, any], str],
+            native_distance_function: Callable[[Dict[str, any], Union[Dict[str, any], str]], float]
     ) -> float:
         # Convert the position to its rounded string representation
         position_str = self._pos_to_str(position)
@@ -155,7 +154,7 @@ class DynamicDistanceCache:
         if position_str not in self.cache:
             self.cache[position_str] = {}
         if target_str not in self.cache[position_str]:
-            self.cache[position_str][target_str] = self.native_distance_function(position, target)
+            self.cache[position_str][target_str] = native_distance_function(position, target)
         return self.cache[position_str][target_str]
 
     def invalidate(self):

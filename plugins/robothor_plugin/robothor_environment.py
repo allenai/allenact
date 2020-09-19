@@ -10,7 +10,7 @@ import numpy as np
 from ai2thor.controller import Controller
 from ai2thor.util import metrics
 
-from utils.cache_utils import _str_to_pos, _pos_to_str, DynamicDistanceCache
+from utils.cache_utils import DynamicDistanceCache
 from utils.experiment_utils import recursive_update
 from utils.system import get_logger
 
@@ -45,7 +45,7 @@ class RoboThorEnvironment:
         self.known_good_locations: Dict[str, Any] = {
             self.scene_name: copy.deepcopy(self.currently_reachable_points)
         }
-        self.distance_cache = DynamicDistanceCache(self.distance_from_point_to_object_type, rounding=2)
+        self.distance_cache = DynamicDistanceCache(rounding=2)
         assert len(self.known_good_locations[self.scene_name]) > 10
 
     def initialize_grid_dimensions(
@@ -136,17 +136,49 @@ class RoboThorEnvironment:
         """
         return self.distance_cache.find_distance(
             self.controller.last_event.metadata["agent"]["position"],
-            object_type
+            object_type,
+            self.distance_from_point_to_object_type
         )
 
-    def dist_to_point(self, xyz: Dict[str, float]) -> float:
+    def path_from_point_to_point(
+            self,
+            position: Dict[str, float],
+            target: Dict[str, float]
+    ) -> List[Dict[str, float]]:
+        try:
+            return self.controller.step(
+                action="GetShortestPathToPoint",
+                position=position,
+                x=target["x"],
+                y=target["y"],
+                z=target["z"],
+                # renderImage=False
+            ).metadata['actionReturn']['corners']
+        except:
+            print("Failed to find path for", target, "in", self.controller.last_event.metadata["sceneName"])
+            return None
+
+    def distance_from_point_to_point(
+            self,
+            position: Dict[str, float],
+            target: Dict[str, float]
+    ) -> float:
+        path = self.path_from_point_to_point(position, target)
+        if path:
+            return metrics.path_distance(path)
+        return -1.0
+
+    def distance_to_point(self, target: Dict[str, float]) -> float:
         """Minimal geodesic distance to end point from agent's current
         location.
 
         It might return -1.0 for unreachable targets.
         """
-        # TODO: MAke sure this method gets implemented in thor
-        raise NotImplementedError
+        return self.distance_cache.find_distance(
+            self.controller.last_event.metadata["agent"]["position"],
+            target,
+            self.distance_from_point_to_point
+        )
 
     def agent_state(self) -> Dict:
         """Return agent position, rotation and horizon."""

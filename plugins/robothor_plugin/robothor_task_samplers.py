@@ -11,7 +11,6 @@ from core.base_abstractions.sensor import Sensor
 from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask, PointNavTask
-from utils.cache_utils import find_nearest_point_in_cache
 from utils.experiment_utils import set_seed, set_deterministic_cudnn
 from utils.system import get_logger
 
@@ -742,12 +741,6 @@ class PointNavDatasetTaskSampler(TaskSampler):
             )
             for scene in scenes
         }
-        self.distance_caches = {
-            scene: ObjectNavDatasetTaskSampler.load_distance_cache(
-                scene, scene_directory + "/distance_caches"
-            )
-            for scene in scenes
-        }
         self.env_class = env_class
         self.env: Optional[RoboThorEnvironment] = None
         self.sensors = sensors
@@ -826,25 +819,20 @@ class PointNavDatasetTaskSampler(TaskSampler):
 
         scene = self.scenes[self.scene_index]
         episode = self.episodes[scene][self.episode_index]
-        distance_cache = self.distance_caches[scene] if self.distance_caches else None
         if self.env is not None:
             if scene.replace("_physics", "") != self.env.scene_name.replace(
                 "_physics", ""
             ):
-                self.env.reset(scene)
+                self.env.reset(scene_name=scene, filtered_objects=[])
         else:
             self.env = self._create_environment()
-            self.env.reset(scene_name=scene)
+            self.env.reset(scene_name=scene, filtered_objects=[])
 
         task_info = {
             "scene": scene,
-            "initial_position": find_nearest_point_in_cache(
-                distance_cache, _str_to_pos(episode["initial_position"])
-            ),
+            "initial_position": episode["initial_position"],
             "initial_orientation": episode["initial_orientation"],
-            "target": find_nearest_point_in_cache(
-                distance_cache, _str_to_pos(episode["target_position"])
-            ),
+            "target": episode["target_position"],
             "shortest_path": episode["shortest_path"],
             "distance_to_target": episode["shortest_path_length"],
             "id": episode["id"],
@@ -860,8 +848,8 @@ class PointNavDatasetTaskSampler(TaskSampler):
             self.max_tasks -= 1
 
         if not self.env.teleport(
-            _str_to_pos(episode["initial_position"]),
-            {"x": 0.0, "y": episode["initial_orientation"], "z": 0.0},
+            episode["initial_position"],
+            episode["initial_orientation"]
         ):
             return self.next_task()
 
@@ -872,7 +860,6 @@ class PointNavDatasetTaskSampler(TaskSampler):
             max_steps=self.max_steps,
             action_space=self._action_space,
             reward_configs=self.rewards_config,
-            distance_cache=distance_cache,
             episode_info=episode,
         )
 
