@@ -825,7 +825,7 @@ class OnPolicyRunner(object):
                         logif("Closing {} {}".format(process_type, it))
                         process.terminate()
                     logif("Joining {} {}".format(process_type, it))
-                    process.join(10)
+                    process.join(1)
                     logif("Closed {} {}".format(process_type, it))
                 except Exception as e:
                     logif(

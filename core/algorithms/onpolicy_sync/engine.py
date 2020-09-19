@@ -389,7 +389,7 @@ class OnPolicyRLEngine(object):
             )
 
         pkg_type = "task_metrics_package"
-        nsamples = min(0, *self.scalars.counts().values())
+        nsamples = min(self.scalars.counts().values(), default=0)
         payload = self.scalars.pop_and_reset() if len(task_outputs) > 0 else None
 
         return (pkg_type, payload, nsamples), task_outputs
