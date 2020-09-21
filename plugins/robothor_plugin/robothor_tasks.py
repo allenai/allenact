@@ -208,37 +208,34 @@ class PointNavTask(Task[RoboThorEnvironment]):
     def metrics(self) -> Dict[str, Any]:
         if not self.is_done():
             return {}
+
+        total_reward = float(np.sum(self._rewards))
+        self._rewards = []
+
+        if self._success is None:
+            return {}
+
+        if self.distance_cache:
+            dist2tget = get_distance(
+                self.distance_cache, self.env.agent_state(), self.task_info["target"],
+            )
+            spl = self.spl()
+            if spl is None:
+                return {}
         else:
-            total_reward = float(np.sum(self._rewards))
-            self._rewards = []
+            # TODO
+            dist2tget = -1  # self._get_distance_to_target()
+            spl = self.spl() if len(self.episode_optimal_corners) > 1 else 0.0
+        if dist2tget is None:
+            return {}
 
-            if self._success is None:
-                return {}
-
-            if self.distance_cache:
-                dist2tget = get_distance(
-                    self.distance_cache,
-                    self.env.agent_state(),
-                    self.task_info["target"],
-                )
-                spl = self.spl()
-                if spl is None:
-                    return {}
-            else:
-                # TODO
-                dist2tget = -1  # self._get_distance_to_target()
-                spl = self.spl() if len(self.episode_optimal_corners) > 1 else 0.0
-            if dist2tget is None:
-                return {}
-
-            return {
-                "success": self._success,  # False also if no path to target
-                "ep_length": self.num_steps_taken(),
-                "total_reward": total_reward,
-                "dist_to_target": dist2tget,
-                "spl": spl,
-                "task_info": self.task_info,
-            }
+        return {
+            **super(PointNavTask, self).metrics(),
+            "success": self._success,  # False also if no path to target
+            "total_reward": total_reward,
+            "dist_to_target": dist2tget,
+            "spl": spl,
+        }
 
 
 class ObjectNavTask(Task[RoboThorEnvironment]):
@@ -384,7 +381,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             geodesic_distance = self.env.dist_to_object(self.task_info["object_type"])
 
         # Ensuring the reward magnitude is not greater than the total distance moved
-        max_reward_mag = 0
+        max_reward_mag = 0.0
         if len(self.path) >= 2:
             p0, p1 = self.path[-2:]
             max_reward_mag = math.sqrt(
@@ -451,6 +448,9 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         return obs
 
     def metrics(self) -> Dict[str, Any]:
+        if not self.is_done():
+            return {}
+
         if self.distance_cache:
             try:
                 dist2tget = get_distance_to_object(
@@ -462,28 +462,56 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 dist2tget = self.env.dist_to_object(self.task_info["object_type"])
             spl = self.spl()
         else:
-            # TODO
-            dist2tget = -1  # self._get_distance_to_target()
-            spl = self.spl() if len(self.episode_optimal_corners) > 1 else 0.0
-        if not self.is_done():
-            return {}
-        else:
-            metrics = {
-                "success": self._success,
-                "ep_length": self.num_steps_taken(),
-                "total_reward": np.sum(self._rewards),
-                "dist_to_target": dist2tget,
-                "spl": spl,
-                "task_info": self.task_info,
-            }
-            self._rewards = []
-            return metrics
+            dist2tget = self.env.dist_to_object(self.task_info["object_type"])
+            if self._success:
+                li = self.optimal_distance
+                pi = self.num_moves_made * self.env.config["gridSize"]
+                if min(pi, li) < 0:
+                    spl = -1
+                elif li == pi:
+                    spl = 1.0
+                else:
+                    spl = li / (max(pi, li))
+            else:
+                spl = 0.0
+
+        metrics = {
+            **super(ObjectNavTask, self).metrics(),
+            "success": self._success,
+            "total_reward": np.sum(self._rewards),
+            "dist_to_target": dist2tget,
+        }
+        if spl >= 0:
+            metrics["spl"] = spl
+        return metrics
 
     def query_expert(self, end_action_only: bool = False, **kwargs) -> Tuple[int, bool]:
+        if self._is_goal_in_range():
+            return self.class_action_names().index(END), True
+
         if end_action_only:
-            if self._is_goal_in_range():
-                return self.class_action_names().index(END), True
+            return 0, False
+        else:
+            self.env.step(
+                {
+                    "action": "ObjectNavExpertAction",
+                    "objectType": self.task_info["object_type"],
+                }
+            )
+            if self.env.last_action_success:
+                expert_action: Optional[str] = self.env.last_event.metadata[
+                    "actionReturn"
+                ]
+                if isinstance(expert_action, str):
+                    if self.mirror:
+                        if expert_action == "RotateLeft":
+                            expert_action = "RotateRight"
+                        elif expert_action == "RotateRight":
+                            expert_action = "RotateLeft"
+
+                    return self.action_names().index(expert_action), True
+                else:
+                    # This should have been caught by self._is_goal_in_range()...
+                    return 0, False
             else:
                 return 0, False
-        else:
-            raise NotImplementedError

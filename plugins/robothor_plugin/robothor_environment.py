@@ -6,6 +6,7 @@ import random
 from typing import Any, Optional, Dict, List, Union, Tuple, Collection, Sequence
 
 import ai2thor.server
+import ai2thor.fifo_server
 import numpy as np
 from ai2thor.controller import Controller
 from ai2thor.util import metrics
@@ -41,7 +42,9 @@ class RoboThorEnvironment:
             height=480,
         )
         recursive_update(self.config, {**kwargs, "agentMode": "bot"})
-        self.controller = Controller(**self.config)
+        self.controller = Controller(
+            **self.config, server_class=ai2thor.fifo_server.FifoServer
+        )
         self.known_good_locations: Dict[str, Any] = {
             self.scene_name: copy.deepcopy(self.currently_reachable_points)
         }

@@ -1416,8 +1416,9 @@ class OnPolicyInference(OnPolicyRLEngine):
                 ) = self.aggregate_task_metrics(
                     task_outputs=task_outputs, scalars=inprogress_scalars
                 )
-                inprogress_scalars.pop_and_reset()
-                inprogress_scalars.add_scalars(scalars=metrics_to_now, n=ncomplete)
+                if metrics_to_now is not None:
+                    inprogress_scalars.pop_and_reset()
+                    inprogress_scalars.add_scalars(scalars=metrics_to_now, n=ncomplete)
 
                 if self.mode == "test":
                     lengths = self.vector_tasks.command(
