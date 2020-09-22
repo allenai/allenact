@@ -112,17 +112,19 @@ class RoboThorEnvironment:
 
     def path_from_point_to_object_type(
         self, point: Dict[str, float], object_type: str
-    ) -> List[Dict[str, float]]:
+    ) -> Optional[List[Dict[str, float]]]:
         try:
             return metrics.get_shortest_path_to_object_type(
                 self.controller, object_type, point
             )
         except:
-            print(
-                "Failed to find path for",
-                object_type,
-                "in",
-                self.controller.last_event.metadata["sceneName"],
+            get_logger().warning(
+                "Failed to find path for {} in {}. Start point {}, agent state {}.".format(
+                    object_type,
+                    self.controller.last_event.metadata["sceneName"],
+                    point,
+                    self.agent_state(),
+                )
             )
             return None
 
@@ -153,7 +155,7 @@ class RoboThorEnvironment:
 
     def path_from_point_to_point(
         self, position: Dict[str, float], target: Dict[str, float]
-    ) -> List[Dict[str, float]]:
+    ) -> Optional[List[Dict[str, float]]]:
         try:
             return self.controller.step(
                 action="GetShortestPathToPoint",
@@ -164,11 +166,13 @@ class RoboThorEnvironment:
                 # renderImage=False
             ).metadata["actionReturn"]["corners"]
         except:
-            print(
-                "Failed to find path for",
-                target,
-                "in",
-                self.controller.last_event.metadata["sceneName"],
+            get_logger().warning(
+                "Failed to find path for {} in {}. Start point {}, agent state {}.".format(
+                    target,
+                    self.controller.last_event.metadata["sceneName"],
+                    position,
+                    self.agent_state(),
+                )
             )
             return None
 
