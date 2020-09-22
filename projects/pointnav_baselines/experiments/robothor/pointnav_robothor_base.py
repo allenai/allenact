@@ -8,11 +8,11 @@ import numpy as np
 import torch
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
-from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
+from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from utils.experiment_utils import Builder
 
 
@@ -36,7 +36,7 @@ class PointNavRoboThorBaseConfig(ObjectNavBaseConfig):
             include_private_scenes=False,
         )
 
-        self.NUM_PROCESSES = 80
+        self.NUM_PROCESSES = 60
         self.TRAIN_GPU_IDS = [0, 1, 2, 3, 4, 5, 6]
         self.VALID_GPU_IDS = [7]
         self.TEST_GPU_IDS = [7]

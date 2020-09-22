@@ -1,5 +1,5 @@
 import math
-from typing import Dict, Any, Union
+from typing import Dict, Any, Union, Callable, Optional
 
 
 def _pos_to_str(pos: Dict[str, float]) -> str:
@@ -125,3 +125,41 @@ def find_nearest_point_in_cache(
             best_delta = delta
             closest_point = pos
     return closest_point
+
+
+class DynamicDistanceCache:
+    def __init__(self, rounding: Optional[int] = None):
+        self.cache = {}
+        self.rounding = rounding
+
+    def find_distance(
+        self,
+        position: Dict[str, any],
+        target: Union[Dict[str, any], str],
+        native_distance_function: Callable[
+            [Dict[str, any], Union[Dict[str, any], str]], float
+        ],
+    ) -> float:
+        # Convert the position to its rounded string representation
+        position_str = self._pos_to_str(position)
+        # If the target is also a position, convert it to its rounded string representation
+        if isinstance(target, str):
+            target_str = target
+        else:
+            target_str = self._pos_to_str(target)
+
+        if position_str not in self.cache:
+            self.cache[position_str] = {}
+        if target_str not in self.cache[position_str]:
+            self.cache[position_str][target_str] = native_distance_function(
+                position, target
+            )
+        return self.cache[position_str][target_str]
+
+    def invalidate(self):
+        self.cache = []
+
+    def _pos_to_str(self, pos: Dict[str, any]) -> str:
+        if self.rounding:
+            pos = {k: round(v, self.rounding) for k, v in pos.items()}
+        return str(pos)
