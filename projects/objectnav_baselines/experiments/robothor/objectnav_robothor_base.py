@@ -1,7 +1,7 @@
 import glob
 import os
 from math import ceil
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Sequence
 
 import gym
 import numpy as np
@@ -96,15 +96,11 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
             sampler_devices = self.SAMPLER_GPU_IDS
             render_video = False
         elif mode == "valid":
-            nprocesses = 15
+            nprocesses = 15 if torch.cuda.is_available() else 0
             gpu_ids = [] if not torch.cuda.is_available() else self.VALID_GPU_IDS
             render_video = False
         elif mode == "test":
-            nprocesses = (
-                1
-                if not torch.cuda.is_available()
-                else 15
-            )
+            nprocesses = 1 if not torch.cuda.is_available() else 15
             gpu_ids = [] if not torch.cuda.is_available() else self.TEST_GPU_IDS
             render_video = False
         else:
@@ -131,7 +127,10 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
                 ),
             )
             if mode == "train"
-            or ((isinstance(nprocesses, int) and nprocesses > 0) or sum(nprocesses) > 0)
+            or (
+                (isinstance(nprocesses, int) and nprocesses > 0)
+                or (isinstance(nprocesses, Sequence) and sum(nprocesses) > 0)
+            )
             else None
         )
 

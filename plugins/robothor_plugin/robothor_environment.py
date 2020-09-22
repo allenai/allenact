@@ -11,7 +11,7 @@ import numpy as np
 from ai2thor.controller import Controller
 from ai2thor.util import metrics
 
-from utils.cache_utils import DynamicDistanceCache
+from utils.cache_utils import DynamicDistanceCache, _pos_to_str, _str_to_pos
 from utils.experiment_utils import recursive_update
 from utils.system import get_logger
 
@@ -76,39 +76,6 @@ class RoboThorEnvironment:
 
     def reset_object_filter(self):
         self.controller.step("ResetObjectFilter", renderImage=False)
-
-    def object_reachable(self, object_type: str) -> bool:
-        """Determines whether a path can be computed from the discretized
-        current agent location to the target object of given type."""
-        return (
-            self.access_grid(object_type) > -0.5
-        )  # -1.0 for unreachable, 0.0 for end point
-
-    def point_reachable(self, xyz: Dict[str, float]) -> bool:
-        """Determines whether a path can be computed from the current agent
-        location to the target point."""
-        return self.dist_to_point(xyz) > -0.5  # -1.0 for unreachable, 0.0 for end point
-
-    def quantized_agent_state(
-        self, xz_subsampling: int = 1, rot_subsampling: int = 1
-    ) -> Tuple[int, int, int]:
-        """Quantizes agent location (x, z) to a (subsampled) position in a
-        fixed size grid derived from the initial set of reachable points; and
-        rotation (around y axis) as a (subsampled) discretized angle given the
-        current `rotateStepDegrees`."""
-        pose = self.agent_state()
-        p = {k: float(pose[k]) for k in ["x", "y", "z"]}
-
-        xmin, xmax, zmin, zmax = self.grids[self.scene_name][1:5]
-        x = int(np.clip(round(p["x"] / self.config["gridSize"]), xmin, xmax))
-        z = int(np.clip(round(p["z"] / self.config["gridSize"]), zmin, zmax))
-
-        rs = self.config["rotateStepDegrees"] * rot_subsampling
-        shifted = pose["rotation"]["y"] + rs / 2
-        normalized = shifted % 360.0
-        r = int(round(normalized / rs))
-
-        return (x - xmin) // xz_subsampling, (z - zmin) // xz_subsampling, r
 
     def path_from_point_to_object_type(
         self, point: Dict[str, float], object_type: str
@@ -253,6 +220,39 @@ class RoboThorEnvironment:
             "rotation": {"x": 0.0, "y": float(rotation), "z": 0.0},
             "horizon": float(horizon),
         }
+
+    def randomize_agent_location(
+        self, seed: int = None, partial_position: Optional[Dict[str, float]] = None
+    ) -> Dict[str, Union[Dict[str, float], float]]:
+        """Teleports the agent to a random reachable location in the scene."""
+        if partial_position is None:
+            partial_position = {}
+        k = 0
+        state: Optional[Dict] = None
+
+        while k == 0 or (not self.last_action_success and k < 10):
+            # self.reset()
+            state = {**self.random_reachable_state(seed=seed), **partial_position}
+            # get_logger().debug("picked target location {}".format(state))
+            self.controller.step("TeleportFull", **state)
+            k += 1
+
+        if not self.last_action_success:
+            get_logger().warning(
+                (
+                    "Randomize agent location in scene {} and current random state {}"
+                    " with seed {} and partial position {} failed in "
+                    "10 attempts. Forcing the action."
+                ).format(self.scene_name, state, seed, partial_position)
+            )
+            self.controller.step("TeleportFull", **state, force_action=True)  # type: ignore
+            assert self.last_action_success, "Force action failed with {}".format(state)
+
+        # get_logger().debug("location after teleport full {}".format(self.agent_state()))
+        # self.controller.step("TeleportFull", **self.agent_state())  # TODO only for debug
+        # get_logger().debug("location after re-teleport full {}".format(self.agent_state()))
+
+        return self.agent_state()
 
     def known_good_locations_list(self):
         return self.known_good_locations[self.scene_name]

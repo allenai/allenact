@@ -370,7 +370,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             li = self.optimal_distance
             pi = self.num_moves_made * self.env.config["gridSize"]
             if min(pi, li) < 0:
-                spl = -1
+                spl = -1.0
             elif li == pi:
                 spl = 1.0
             else:

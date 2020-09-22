@@ -1,5 +1,6 @@
 """Defines the reinforcement learning `OnPolicyRLEngine`."""
 import os
+import queue
 import random
 import time
 import traceback
@@ -32,7 +33,10 @@ from torch.optim.lr_scheduler import _LRScheduler
 from core.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from core.algorithms.onpolicy_sync.policy import ActorCriticModel
 from core.algorithms.onpolicy_sync.storage import RolloutStorage
-from core.algorithms.onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
+from core.algorithms.onpolicy_sync.vector_sampled_tasks import (
+    VectorSampledTasks,
+    COMPLETE_TASK_METRICS_KEY,
+)
 from core.base_abstractions.experiment_config import ExperimentConfig
 from core.base_abstractions.misc import RLStepResult
 from utils.experiment_utils import (
@@ -201,14 +205,15 @@ class OnPolicyRLEngine(object):
 
         self.deterministic_agents = deterministic_agents
 
-        self.scalars = ScalarMeanTracker()
-
         self._is_closed: bool = False
 
         self.training_pipeline: Optional[TrainingPipeline] = None
 
+        # Keeping track of metrics during training/inference
+        self.single_process_metrics_queue: queue.Queue = queue.Queue()
+
     @property
-    def vector_tasks(self):
+    def vector_tasks(self) -> VectorSampledTasks:
         if self._vector_tasks is None and self.num_samplers > 0:
             if self.is_distributed:
                 total_processes = sum(
@@ -222,8 +227,7 @@ class OnPolicyRLEngine(object):
                 initial_seed=self.seed,  # do not update the RNG state (creation might happen after seed resetting)
             )
 
-            vector_class = VectorSampledTasks
-            self._vector_tasks = vector_class(
+            self._vector_tasks = VectorSampledTasks(
                 make_sampler_fn=self.config.make_sampler_fn,
                 sampler_fn_args=self.get_sampler_fn_args(seeds),
                 multiprocessing_start_method="forkserver"
@@ -315,61 +319,53 @@ class OnPolicyRLEngine(object):
         self,
         num_tasks: int = -1,
         task_outputs: Optional[List] = None,
-        scalars: Optional[ScalarMeanTracker] = None,
+        pretracked_scalars: Optional[ScalarMeanTracker] = None,
     ) -> Tuple[Tuple[str, Dict[str, float], int], List[Dict[str, Any]]]:
-        assert self.scalars.empty, "found non-empty scalars {}".format(
-            self.scalars.counts()
-        )
-
         if task_outputs is None:
             task_outputs = []
 
-        if scalars is not None:
-            self.scalars.add_scalars(scalars=scalars.means(), n=scalars.counts())
-
-        if num_tasks < 0:
-            sentinel = ("aggregate.AUTO.sentinel", time.time())
-            # below valid since a single training/testing process is the only consumer
-            self.vector_tasks.metrics_out_queue.put(sentinel)
+        scalars = ScalarMeanTracker()
+        if pretracked_scalars is not None:
+            scalars.add_scalars(
+                scalars=pretracked_scalars.means(), n=pretracked_scalars.counts()
+            )
 
         done = num_tasks == 0
         num_non_empty_tasks_dequeued = 0
         num_empty_tasks_dequeued = 0
         while not done:
             try:
-                # at least, there'll be a sentinel
-                item = self.vector_tasks.metrics_out_queue.get(timeout=2)
+                # This queue is on this process so we should be able to let the timeout be small
+                # TODO: This should be refactored so that single_process_metrics_queue is a list
+                item = self.single_process_metrics_queue.get(timeout=0.01)
 
-                if isinstance(item, tuple) and item[0] == "aggregate.AUTO.sentinel":
-                    assert (
-                        item[1] == sentinel[1]
-                    ), "wrong sentinel found: {} vs {}".format(item[1], sentinel[1])
+                task_outputs.append(item)
+                if num_tasks > 0:
+                    num_tasks -= 1
+                done = num_tasks == 0
+
+                if (
+                    len(item) == 0
+                    or (len(item) == 1 and "task_info" in item)
+                    or ("success" in item and item["success"] is None)
+                ):
+                    num_empty_tasks_dequeued += 1
+                else:
+                    scalars.add_scalars(
+                        {k: v for k, v in item.items() if k != "task_info"}
+                    )
+                    num_non_empty_tasks_dequeued += 1
+            except Empty:
+                if num_tasks <= 0:
                     break
                 else:
-                    task_outputs.append(item)
-                    if num_tasks > 0:
-                        num_tasks -= 1
-                    done = num_tasks == 0
-
-                    if (
-                        len(item) == 0
-                        or (len(item) == 1 and "task_info" in item)
-                        or ("success" in item and item["success"] is None)
-                    ):
-                        num_empty_tasks_dequeued += 1
-                    else:
-                        self.scalars.add_scalars(
-                            {k: v for k, v in item.items() if k != "task_info"}
-                        )
-                        num_non_empty_tasks_dequeued += 1
-            except Empty:
-                get_logger().error(
-                    "Metrics out queue is empty after a 10 second wait."
-                    " This should only be possible if a positive number of `num_tasks` were"
-                    " set during testing but the queue did not contain this number of entries."
-                    " Please file an issue at https://github.com/allenai/allenact/issues."
-                )
-                break
+                    get_logger().error(
+                        "Metrics out queue is empty after a short second wait."
+                        " This should only happen if a positive number of `num_tasks` were"
+                        " set during testing but the queue did not contain this number of entries."
+                        " Please file an issue at https://github.com/allenai/allenact/issues."
+                    )
+                    break
 
         # get_logger().debug(
         #     "worker {} got {} tasks".format(self.worker_id, len(task_outputs))
@@ -377,11 +373,6 @@ class OnPolicyRLEngine(object):
         #
         # get_logger().debug("worker {} sleeping for 10 s".format(self.worker_id))
         # time.sleep(10)
-        # get_logger().debug(
-        #     "worker {} empty {}".format(
-        #         self.worker_id, self.vector_tasks.metrics_out_queue.empty()
-        #     )
-        # )
 
         if num_empty_tasks_dequeued != 0:
             get_logger().warning(
@@ -389,8 +380,8 @@ class OnPolicyRLEngine(object):
             )
 
         pkg_type = "task_metrics_package"
-        nsamples = min(self.scalars.counts().values(), default=0)
-        payload = self.scalars.pop_and_reset() if len(task_outputs) > 0 else None
+        nsamples = min(scalars.counts().values(), default=0)
+        payload = scalars.pop_and_reset() if len(task_outputs) > 0 else None
 
         return (pkg_type, payload, nsamples), task_outputs
 
@@ -460,6 +451,14 @@ class OnPolicyRLEngine(object):
         outputs: List[RLStepResult] = self.vector_tasks.step(
             [[a.item() for a in ac] for ac in actions.squeeze(0).squeeze(-1)]
         )
+
+        # Save after task completion metrics
+        for step_result in outputs:
+            if COMPLETE_TASK_METRICS_KEY in step_result.info:
+                self.single_process_metrics_queue.put(
+                    step_result.info[COMPLETE_TASK_METRICS_KEY]
+                )
+                del step_result.info[COMPLETE_TASK_METRICS_KEY]
 
         rewards: Union[List, torch.Tensor]
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
@@ -817,11 +816,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
     # aggregates info of specific type from PipelineProgressState list
     def aggregate_info(
-        self, scalars: ScalarMeanTracker, tracking_info: Dict[str, List], type_str: str,
+        self, tracking_info: Dict[str, List], type_str: str,
     ) -> Tuple[str, Dict[str, float], int]:
-        assert scalars.empty, "Found non-empty scalars {}".format(scalars.counts)
+        scalars = ScalarMeanTracker()
 
-        infos = tracking_info[type_str]
+        infos = cast(Tuple[str, Any, int], tracking_info[type_str])
         tracking_info[type_str] = []  # reset tracking info for current type
 
         nsamples = sum(info[2] for info in infos)
@@ -1118,13 +1117,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         task_pkg, task_outputs = self.aggregate_task_metrics()
 
         payload = (task_pkg,) + tuple(
-            self.aggregate_info(
-                scalars=self.scalars, tracking_info=tracking_info, type_str=type_str
-            )
+            self.aggregate_info(tracking_info=tracking_info, type_str=type_str,)
             for type_str in tracking_info
         )
-
-        # get_logger().debug("{}".format(payload))
 
         nsteps = self.training_pipeline.total_steps  # onpolicy steps
 
@@ -1414,7 +1409,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                     (_, metrics_to_now, ncomplete),
                     task_outputs,
                 ) = self.aggregate_task_metrics(
-                    task_outputs=task_outputs, scalars=inprogress_scalars
+                    task_outputs=task_outputs, pretracked_scalars=inprogress_scalars
                 )
                 if metrics_to_now is not None:
                     inprogress_scalars.pop_and_reset()

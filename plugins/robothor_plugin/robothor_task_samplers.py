@@ -422,6 +422,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
     def next_task(self, force_advance_scene: bool = False) -> Optional[ObjectNavTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
+
         if self.episode_index >= len(self.episodes[self.scenes[self.scene_index]]):
             self.scene_index = (self.scene_index + 1) % len(self.scenes)
             # shuffle the new list of episodes to train on
@@ -665,7 +666,7 @@ class PointNavTaskSampler(TaskSampler):
         while cond and attempt < 10:
             self.env.randomize_agent_location()
             target = copy.copy(random.choice(locs))
-            cond = self.env.dist_to_point(target) <= 0
+            cond = self.env.distance_to_point(target) <= 0
             attempt += 1
 
         pose = self.env.agent_state()

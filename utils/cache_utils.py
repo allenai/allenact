@@ -127,17 +127,17 @@ def find_nearest_point_in_cache(
     return closest_point
 
 
-class DynamicDistanceCache:
+class DynamicDistanceCache(object):
     def __init__(self, rounding: Optional[int] = None):
-        self.cache = {}
+        self.cache: Dict[str, Any] = {}
         self.rounding = rounding
 
     def find_distance(
         self,
-        position: Dict[str, any],
-        target: Union[Dict[str, any], str],
+        position: Dict[str, Any],
+        target: Union[Dict[str, Any], str],
         native_distance_function: Callable[
-            [Dict[str, any], Union[Dict[str, any], str]], float
+            [Dict[str, Any], Union[Dict[str, Any], str]], float
         ],
     ) -> float:
         # Convert the position to its rounded string representation
@@ -159,7 +159,7 @@ class DynamicDistanceCache:
     def invalidate(self):
         self.cache = []
 
-    def _pos_to_str(self, pos: Dict[str, any]) -> str:
+    def _pos_to_str(self, pos: Dict[str, Any]) -> str:
         if self.rounding:
             pos = {k: round(v, self.rounding) for k, v in pos.items()}
         return str(pos)
