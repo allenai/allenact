@@ -35,7 +35,7 @@ class PointNavRoboThorBaseConfig(ObjectNavBaseConfig):
             snapToGrid=False,
             agentMode="bot",
             include_private_scenes=False,
-            server_class=ai2thor.fifo_server.FifoServer
+            server_class=ai2thor.fifo_server.FifoServer,
         )
 
         self.NUM_PROCESSES = 60
