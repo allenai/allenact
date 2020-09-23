@@ -28,7 +28,7 @@ torchvision = "~=0.5.0"
 tensorboardx = "*"
 tensorboard = "*"
 torch = "~=1.4.0"
-ai2thor = "==2.3.9"
+ai2thor = {editable = true,git = "https://github.com/allenai/ai2thor.git",ref = "ExpRoom"}
 networkx = "*"
 Pillow = "==7.2.0"
 setuptools = "*"

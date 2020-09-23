@@ -45,7 +45,9 @@ class A2CACKTR(AbstractActorCriticLoss):
         values = actor_critic_output.values
         action_log_probs = actor_critic_output.distributions.log_probs(actions)
 
-        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy()
+        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy().unsqueeze(
+            -1
+        )
         value_loss = 0.5 * (
             typing.cast(torch.FloatTensor, batch["returns"]) - values
         ).pow(2)

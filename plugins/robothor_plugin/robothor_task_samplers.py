@@ -6,7 +6,6 @@ from typing import List, Optional, Union, Dict, Any, cast
 
 import gym
 
-from utils.cache_utils import _str_to_pos
 from core.base_abstractions.sensor import Sensor
 from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
@@ -423,6 +422,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
     def next_task(self, force_advance_scene: bool = False) -> Optional[ObjectNavTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
+
         if self.episode_index >= len(self.episodes[self.scenes[self.scene_index]]):
             self.scene_index = (self.scene_index + 1) % len(self.scenes)
             # shuffle the new list of episodes to train on
@@ -436,13 +436,17 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             ):
                 self.env.reset(
                     scene_name=scene,
-                    filtered_objects=list(set([e["object_id"] for e in self.episodes[scene]]))
+                    filtered_objects=list(
+                        set([e["object_id"] for e in self.episodes[scene]])
+                    ),
                 )
         else:
             self.env = self._create_environment()
             self.env.reset(
                 scene_name=scene,
-                filtered_objects=list(set([e["object_id"] for e in self.episodes[scene]]))
+                filtered_objects=list(
+                    set([e["object_id"] for e in self.episodes[scene]])
+                ),
             )
         task_info = {"scene": scene, "object_type": episode["object_type"]}
         if len(task_info) == 0:
@@ -662,7 +666,7 @@ class PointNavTaskSampler(TaskSampler):
         while cond and attempt < 10:
             self.env.randomize_agent_location()
             target = copy.copy(random.choice(locs))
-            cond = self.env.dist_to_point(target) <= 0
+            cond = self.env.distance_to_point(target) <= 0
             attempt += 1
 
         pose = self.env.agent_state()
@@ -848,8 +852,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
             self.max_tasks -= 1
 
         if not self.env.teleport(
-            episode["initial_position"],
-            episode["initial_orientation"]
+            episode["initial_position"], episode["initial_orientation"]
         ):
             return self.next_task()
 

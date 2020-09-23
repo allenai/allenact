@@ -1,7 +1,7 @@
 import glob
 import os
 from math import ceil
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Sequence
 
 import gym
 import numpy as np
@@ -14,17 +14,17 @@ from torchvision import models
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from projects.pointnav_baselines.models.point_nav_models import (
-    ResnetTensorPointNavActorCritic,
-)
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from core.base_abstractions.experiment_config import ExperimentConfig
 from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
 from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
+from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
+from projects.pointnav_baselines.models.point_nav_models import (
+    ResnetTensorPointNavActorCritic,
+)
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -46,11 +46,11 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     SCREEN_SIZE = 224
 
     # Training Engine Parameters
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10 ** 13
+    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
     NUM_PROCESSES = 20
-    TRAINING_GPUS = [0]
-    VALIDATION_GPUS = [0]
-    TESTING_GPUS = [0]
+    TRAINING_GPUS: Sequence[int] = [0]
+    VALIDATION_GPUS: Sequence[int] = [0]
+    TESTING_GPUS: Sequence[int] = [0]
 
     # Dataset Parameters
     TRAIN_DATASET_DIR = os.path.join(

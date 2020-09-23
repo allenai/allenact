@@ -64,7 +64,7 @@ class Imitation(AbstractActorCriticLoss):
             )
 
             expert_successes = expert_actions_masks.sum()
-            log_loss = expert_successes.item() != 0
+            should_report_loss = expert_successes.item() != 0
 
             total_loss = -(
                 expert_actions_masks
@@ -114,5 +114,5 @@ class Imitation(AbstractActorCriticLoss):
 
         return (
             total_loss,
-            {"expert_cross_entropy": total_loss.item(),} if log_loss else {},
+            {"expert_cross_entropy": total_loss.item(),} if should_report_loss else {},
         )

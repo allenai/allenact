@@ -174,6 +174,7 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         goal_dims: int = 32,
         resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
         combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
+        include_auxiliary_head: bool = False,
     ):
 
         super().__init__(
@@ -181,6 +182,7 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         )
 
         self._hidden_size = hidden_size
+        self.include_auxiliary_head = include_auxiliary_head
         if (
             rgb_resnet_preprocessor_uuid is None
             or depth_resnet_preprocessor_uuid is None
@@ -213,6 +215,9 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         )
         self.actor = LinearActorHead(self._hidden_size, action_space.n)
         self.critic = LinearCriticHead(self._hidden_size)
+        if self.include_auxiliary_head:
+            self.auxiliary_actor = LinearActorHead(self._hidden_size, action_space.n)
+
         self.train()
 
     @property
@@ -260,7 +265,11 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         x, rnn_hidden_states = self.state_encoder(x, memory.tensor("rnn"), masks)
         return (
             ActorCriticOutput(
-                distributions=self.actor(x), values=self.critic(x), extras={}
+                distributions=self.actor(x),
+                values=self.critic(x),
+                extras={"auxiliary_distributions": self.auxiliary_actor(x)}
+                if self.include_auxiliary_head
+                else {},
             ),
             memory.set_tensor("rnn", rnn_hidden_states),
         )

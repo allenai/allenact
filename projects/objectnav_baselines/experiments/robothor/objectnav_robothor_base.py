@@ -1,19 +1,19 @@
 import glob
 import os
 from math import ceil
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Sequence
 
 import gym
 import numpy as np
 import torch
-import ai2thor
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
-from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.sensor import ExpertActionSensor
 from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_task_samplers import ObjectNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
+from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from utils.experiment_utils import Builder
 
 
@@ -54,9 +54,13 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
         )
 
         self.NUM_PROCESSES = 60
-        self.TRAIN_GPU_IDS = [0, 1, 2, 3, 4, 5, 6, 7]
-        self.VALID_GPU_IDS = [7]
-        self.TEST_GPU_IDS = [7]
+        self.TRAIN_GPU_IDS = list(range(min(torch.cuda.device_count(), 8)))
+        self.SAMPLER_GPU_IDS = self.TRAIN_GPU_IDS
+        self.VALID_GPU_IDS = (
+            [torch.cuda.device_count() - 1] if torch.cuda.is_available() else []
+        )
+        self.TEST_GPU_IDS = [0]
+
         self.ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
 
         self.TRAIN_DATASET_DIR = os.path.join(
@@ -68,12 +72,12 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
 
         self.SENSORS = None
 
-    def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
-            self.NUM_PROCESSES, ndevices
+    def split_num_processes(self, nprocesses: int, ndevices: int):
+        assert nprocesses >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
+            nprocesses, ndevices
         )
         res = [0] * ndevices
-        for it in range(self.NUM_PROCESSES):
+        for it in range(nprocesses):
             res[it % ndevices] += 1
         return res
 
@@ -88,20 +92,26 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
             nprocesses = (
                 1
                 if not torch.cuda.is_available()
-                else self.split_num_processes(len(gpu_ids))
+                else self.split_num_processes(self.NUM_PROCESSES, ndevices=len(gpu_ids))
             )
-            sampler_devices = self.TRAIN_GPU_IDS
+            sampler_devices = self.SAMPLER_GPU_IDS
             render_video = False
         elif mode == "valid":
-            nprocesses = 15
+            nprocesses = 5 if torch.cuda.is_available() else 0
             gpu_ids = [] if not torch.cuda.is_available() else self.VALID_GPU_IDS
             render_video = False
         elif mode == "test":
-            nprocesses = 15
+            nprocesses = 1 if not torch.cuda.is_available() else 15
             gpu_ids = [] if not torch.cuda.is_available() else self.TEST_GPU_IDS
             render_video = False
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
+
+        sensors = [*self.SENSORS]
+        observations = [*self.OBSERVATIONS]
+        if mode != "train":
+            sensors = [s for s in sensors if not isinstance(s, ExpertActionSensor)]
+            observations = [o for o in observations if "expert_action" not in o]
 
         # Disable parallelization for validation process
         if mode == "valid":
@@ -112,12 +122,16 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
             Builder(
                 ObservationSet,
                 kwargs=dict(
-                    source_ids=self.OBSERVATIONS,
+                    source_ids=observations,
                     all_preprocessors=self.PREPROCESSORS,
-                    all_sensors=self.SENSORS,
+                    all_sensors=sensors,
                 ),
             )
-            if mode == "train" or nprocesses > 0
+            if mode == "train"
+            or (
+                (isinstance(nprocesses, int) and nprocesses > 0)
+                or (isinstance(nprocesses, Sequence) and sum(nprocesses) > 0)
+            )
             else None
         )
 
@@ -148,6 +162,7 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
         total_processes: int,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
+        include_expert_sensor: bool = True,
     ) -> Dict[str, Any]:
         path = os.path.join(scenes_dir, "*.json.gz")
         scenes = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(path)]
@@ -180,7 +195,11 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
             "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
             "object_types": self.TARGET_TYPES,
             "max_steps": self.MAX_STEPS,
-            "sensors": self.SENSORS,
+            "sensors": [
+                s
+                for s in self.SENSORS
+                if (include_expert_sensor or not isinstance(s, ExpertActionSensor))
+            ],
             "action_space": gym.spaces.Discrete(
                 len(ObjectNavTask.class_action_names())
             ),
@@ -230,6 +249,7 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
+            include_expert_sensor=False,
         )
         res["scene_directory"] = self.VAL_DATASET_DIR
         res["loop_dataset"] = False
@@ -256,10 +276,15 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
+            include_expert_sensor=False,
         )
         res["scene_directory"] = self.VAL_DATASET_DIR
         res["loop_dataset"] = False
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = "10.0"
+        res["env_args"]["x_display"] = (
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
+        )
         return res

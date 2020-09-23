@@ -9,11 +9,11 @@ import torch
 import ai2thor
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
-from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
+from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from utils.experiment_utils import Builder
 
 

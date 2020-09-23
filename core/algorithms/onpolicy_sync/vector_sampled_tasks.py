@@ -2,7 +2,6 @@
 # Modified work Copyright (c) Allen Institute for AI
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-import queue
 import time
 import traceback
 import typing
@@ -42,6 +41,7 @@ except ImportError:
     import multiprocessing as mp  # type: ignore
 
 DEFAULT_MP_CONTEXT_TYPE = "forkserver"
+COMPLETE_TASK_METRICS_KEY = "__AFTER_TASK_METRICS__"
 
 STEP_COMMAND = "step"
 NEXT_TASK_COMMAND = "next_task"
@@ -85,7 +85,6 @@ class VectorSampledTasks(object):
     """
 
     observation_space: SpaceDict
-    metrics_out_queue: mp.Queue
     _workers: List[Union[mp.Process, Thread]]
     _is_waiting: bool
     _num_task_samplers: int
@@ -101,7 +100,6 @@ class VectorSampledTasks(object):
         auto_resample_when_done: bool = True,
         multiprocessing_start_method: Optional[str] = "forkserver",
         mp_ctx: Optional[BaseContext] = None,
-        metrics_out_queue: mp.Queue = None,
         should_log: bool = True,
         max_processes: Optional[int] = None,
     ) -> None:
@@ -134,8 +132,6 @@ class VectorSampledTasks(object):
             self._mp_ctx = mp.get_context(multiprocessing_start_method)
         else:
             self._mp_ctx = typing.cast(BaseContext, mp_ctx)
-
-        self.metrics_out_queue = metrics_out_queue or self._mp_ctx.Queue()
 
         self.npaused_per_process = [0] * self._num_processes
         self.sampler_index_to_process_ind_and_subprocess_ind: Optional[
@@ -242,7 +238,6 @@ class VectorSampledTasks(object):
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args_list: List[Dict[str, Any]],
         auto_resample_when_done: bool,
-        metrics_out_queue: mp.Queue,
         should_log: bool,
         child_pipe: Optional[Connection] = None,
         parent_pipe: Optional[Connection] = None,
@@ -257,7 +252,6 @@ class VectorSampledTasks(object):
             sampler_fn_args_list=sampler_fn_args_list,
             auto_resample_when_done=auto_resample_when_done,
             should_log=should_log,
-            metrics_out_queue=metrics_out_queue,
         )
 
         if parent_pipe is not None:
@@ -310,9 +304,10 @@ class VectorSampledTasks(object):
 
             if child_pipe is not None:
                 child_pipe.close()
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as e:
             if should_log:
                 get_logger().info("Worker {} KeyboardInterrupt".format(worker_id))
+            raise e
         except Exception as e:
             get_logger().error(traceback.format_exc())
             raise e
@@ -357,7 +352,6 @@ class VectorSampledTasks(object):
                     make_sampler_fn,
                     current_sampler_fn_args_list,
                     self._auto_resample_when_done,
-                    self.metrics_out_queue,
                     self.should_log,
                     worker_conn,
                     parent_conn,
@@ -550,7 +544,7 @@ class VectorSampledTasks(object):
 
         for process in self._workers:
             try:
-                process.join()
+                process.join(timeout=0.1)
             except:
                 pass
 
@@ -762,7 +756,6 @@ class SingleProcessVectorSampledTasks(object):
     """
 
     observation_space: SpaceDict
-    metrics_out_queue: queue.Queue
     _vector_task_generators: List[Generator]
     _num_task_samplers: int
     _auto_resample_when_done: bool
@@ -773,7 +766,6 @@ class SingleProcessVectorSampledTasks(object):
         sampler_fn_args_list: Sequence[Dict[str, Any]] = None,
         auto_resample_when_done: bool = True,
         should_log: bool = True,
-        metrics_out_queue: Optional[queue.Queue] = None,
     ) -> None:
 
         self._is_closed = True
@@ -786,10 +778,6 @@ class SingleProcessVectorSampledTasks(object):
         self._auto_resample_when_done = auto_resample_when_done
 
         self.should_log = should_log
-        if metrics_out_queue is None:
-            self.metrics_out_queue = queue.Queue()
-        else:
-            self.metrics_out_queue = metrics_out_queue
 
         self._vector_task_generators: List[Generator] = self._create_generators(
             make_sampler_fn=make_sampler_fn,
@@ -849,7 +837,6 @@ class SingleProcessVectorSampledTasks(object):
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args: Dict[str, Any],
         auto_resample_when_done: bool,
-        metrics_out_queue: queue.Queue,
         should_log: bool,
     ) -> Generator:
         """Generator for working with Tasks/TaskSampler."""
@@ -865,12 +852,11 @@ class SingleProcessVectorSampledTasks(object):
                     # TODO Adding this for backward compatibility with existing tasks. Would be best to just send data.
                     if len(data) == 1:
                         data = data[0]
-                    step_result = current_task.step(data)
+                    step_result: RLStepResult = current_task.step(data)
                     if current_task.is_done():
                         metrics = current_task.metrics()
                         if metrics is not None and len(metrics) != 0:
-                            # get_logger().debug("sampler putting metrics")
-                            metrics_out_queue.put(metrics)
+                            step_result.info[COMPLETE_TASK_METRICS_KEY] = metrics
 
                         if auto_resample_when_done:
                             current_task = task_sampler.next_task()
@@ -980,7 +966,6 @@ class SingleProcessVectorSampledTasks(object):
                     make_sampler_fn=make_sampler_fn,
                     sampler_fn_args=current_sampler_fn_args,
                     auto_resample_when_done=self._auto_resample_when_done,
-                    metrics_out_queue=self.metrics_out_queue,
                     should_log=self.should_log,
                 )
             )

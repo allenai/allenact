@@ -89,8 +89,6 @@ class OnPolicyRunner(object):
             "%Y-%m-%d_%H-%M-%S", time.localtime(time.time())
         )
 
-        self.scalars = ScalarMeanTracker()
-
         self._is_closed: bool = False
 
     @property
@@ -407,8 +405,8 @@ class OnPolicyRunner(object):
         os.makedirs(folder, exist_ok=True)
         return folder
 
-    def log_writer_path(self, start_time_str) -> str:
-        return os.path.join(
+    def log_writer_path(self, start_time_str: str) -> str:
+        path = os.path.join(
             self.output_dir,
             "tb",
             self.config.tag()
@@ -416,8 +414,11 @@ class OnPolicyRunner(object):
             else os.path.join(self.config.tag(), self.extra_tag),
             start_time_str,
         )
+        if self.mode == "test":
+            path = os.path.join(path, "test", self.local_start_time_str)
+        return path
 
-    def metric_path(self, start_time_str) -> str:
+    def metric_path(self, start_time_str: str) -> str:
         return os.path.join(
             self.output_dir,
             "metrics",
@@ -512,28 +513,26 @@ class OnPolicyRunner(object):
         if self.visualizer is not None:
             self.visualizer.log(log_writer, task_outputs, render, steps)
 
-    def aggregate_infos(self, log_writer, infos, steps, return_metrics=False):
+    def aggregate_infos(
+        self, log_writer: SummaryWriter, infos, steps: int, return_metrics=False
+    ):
+        infos = [info for info in infos if info[2] != 0]
+
+        assert all(
+            info[2] > 0 for info in infos
+        ), "negative num samples in `infos = {}`".format(infos)
+
         nsamples = sum(info[2] for info in infos)
-        valid_infos = sum(info[2] > 0 for info in infos)
 
-        # assert nsamples != 0, "Attempting to aggregate infos with 0 samples".format(type)
-        assert (
-            self.scalars.empty
-        ), "Attempting to aggregate with non-empty ScalarMeanTracker"
-
+        scalars = ScalarMeanTracker()
         for name, payload, nsamps in infos:
-            assert nsamps >= 0, "negative ({}) samples in info".format(nsamps)
-            if nsamps > 0:
-                self.scalars.add_scalars(
-                    {
-                        k: valid_infos * payload[k] * nsamps / nsamples for k in payload
-                    }  # pop divides by valid_infos
-                )
+            scalars.add_scalars({k: payload[k] * nsamps / nsamples for k in payload})
 
         message = []
         metrics = None
         if nsamples > 0:
-            summary = self.scalars.pop_and_reset()
+            # Important to use sums here as we're already weighing above.
+            summary = scalars.sums()
 
             metrics = OrderedDict(
                 sorted(
@@ -744,7 +743,7 @@ class OnPolicyRunner(object):
                                 finalized = True
                                 break
                         else:
-                            raise Exception(
+                            raise RuntimeError(
                                 "Test worker {} abnormally terminated".format(
                                     package[1] - 1
                                 )
@@ -760,9 +759,9 @@ class OnPolicyRunner(object):
                     ):
                         break
         except KeyboardInterrupt:
-            get_logger().info("KeyboardInterrupt. Terminating runner")
+            get_logger().info("KeyboardInterrupt. Terminating runner.")
         except Exception:
-            get_logger().error("Encountered Exception. Terminating runner")
+            get_logger().error("Encountered Exception. Terminating runner.")
             get_logger().exception(traceback.format_exc())
         finally:
             if finalized:
@@ -822,7 +821,7 @@ class OnPolicyRunner(object):
                         logif("Closing {} {}".format(process_type, it))
                         process.terminate()
                     logif("Joining {} {}".format(process_type, it))
-                    process.join(10)
+                    process.join(1)
                     logif("Closed {} {}".format(process_type, it))
                 except Exception as e:
                     logif(

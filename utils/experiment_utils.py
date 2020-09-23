@@ -4,7 +4,7 @@ import collections.abc
 import copy
 import random
 import typing
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from typing import (
     Callable,
     NamedTuple,
@@ -23,11 +23,11 @@ import numpy as np
 import torch
 from torch import optim
 
-from core.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from core.algorithms.offpolicy_sync.losses.abstract_offpolicy_loss import (
     AbstractOffPolicyLoss,
     Memory,
 )
+from core.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from core.base_abstractions.misc import Loss
 
 
@@ -138,20 +138,26 @@ class ScalarMeanTracker(object):
         self._sums: Dict[str, float] = OrderedDict()
         self._counts: Dict[str, int] = OrderedDict()
 
-    def add_scalars(self, scalars: Dict[str, Union[float, int]], n: int = 1) -> None:
+    def add_scalars(
+        self, scalars: Dict[str, Union[float, int]], n: Union[int, Dict[str, int]] = 1
+    ) -> None:
         """Add additional scalars to track.
 
         # Parameters
 
         scalars : A dictionary of `scalar key -> value` pairs.
         """
+        ndict = typing.cast(
+            Dict[str, int], (n if isinstance(n, Dict) else defaultdict(lambda: n))  # type: ignore
+        )
+
         for k in scalars:
             if k not in self._sums:
-                self._sums[k] = n * scalars[k]
-                self._counts[k] = n
+                self._sums[k] = ndict[k] * scalars[k]
+                self._counts[k] = ndict[k]
             else:
-                self._sums[k] += n * scalars[k]
-                self._counts[k] += n
+                self._sums[k] += ndict[k] * scalars[k]
+                self._counts[k] += ndict[k]
 
     def pop_and_reset(self) -> Dict[str, float]:
         """Return tracked means and reset.

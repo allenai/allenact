@@ -18,10 +18,10 @@ _LOGGER: Optional[logging.Logger] = None
 
 
 def get_logger() -> logging.Logger:
-    """
-    Get a `logging.Logger` to stderr. It can be called whenever we wish to log some message.
-    Messages can get mixed-up (https://docs.python.org/3.6/library/multiprocessing.html#logging),
-    but it works well in most cases.
+    """Get a `logging.Logger` to stderr. It can be called whenever we wish to
+    log some message. Messages can get mixed-up
+    (https://docs.python.org/3.6/library/multiprocessing.html#logging), but it
+    works well in most cases.
 
     # Returns
 
@@ -33,10 +33,11 @@ def get_logger() -> logging.Logger:
 
 
 def init_logging(human_log_level: str = "info") -> None:
-    """
-    Init the `logging.Logger`. It should be called only once in the app (e.g. in `main`).
-    It sets the log_level to one of `HUMAN_LOG_LEVELS`. And sets up a handler for stderr.
-    The logging level is propagated to all supproceeses.
+    """Init the `logging.Logger`.
+
+    It should be called only once in the app (e.g. in `main`). It sets
+    the log_level to one of `HUMAN_LOG_LEVELS`. And sets up a handler
+    for stderr. The logging level is propagated to all supproceeses.
     """
     assert human_log_level in HUMAN_LOG_LEVELS, "unknown human_log_level {}".format(
         human_log_level
@@ -58,13 +59,11 @@ def init_logging(human_log_level: str = "info") -> None:
 
 
 def find_free_port(address: str = "127.0.0.1") -> int:
-    """
-    Finds a free port for distributed training.
+    """Finds a free port for distributed training.
 
     # Returns
 
     port: port number that can be used to listen
-
     """
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
         s.bind((address, 0))
