@@ -50,8 +50,7 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
             gridSize=self.STEP_SIZE,
             snapToGrid=False,
             agentMode="bot",
-            include_private_scenes=False,
-            server_class=ai2thor.fifo_server.FifoServer
+            include_private_scenes=False
         )
 
         self.NUM_PROCESSES = 60
