@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional, Sequence
 import gym
 import numpy as np
 import torch
+import ai2thor
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from core.base_abstractions.preprocessor import ObservationSet
