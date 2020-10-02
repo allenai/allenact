@@ -48,7 +48,7 @@ class RoboThorEnvironment:
         self.known_good_locations: Dict[str, Any] = {
             self.scene_name: copy.deepcopy(self.currently_reachable_points)
         }
-        self.distance_cache = DynamicDistanceCache(rounding=2)
+        self.distance_cache = DynamicDistanceCache(rounding=1)
         assert len(self.known_good_locations[self.scene_name]) > 10
 
     def initialize_grid_dimensions(
