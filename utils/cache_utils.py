@@ -131,6 +131,9 @@ class DynamicDistanceCache(object):
     def __init__(self, rounding: Optional[int] = None):
         self.cache: Dict[str, Any] = {}
         self.rounding = rounding
+        self.hits = 0
+        self.misses = 0
+        self.num_accesses = 0
 
     def find_distance(
         self,
@@ -154,6 +157,12 @@ class DynamicDistanceCache(object):
             self.cache[position_str][target_str] = native_distance_function(
                 position, target
             )
+            self.misses += 1
+        else:
+            self.hits += 1
+        self.num_accesses += 1
+        if self.num_accesses % 1000 == 0:
+            print("Cache Miss-Hit Ratio: %.4f" % (self.misses/self.hits))
         return self.cache[position_str][target_str]
 
     def invalidate(self):

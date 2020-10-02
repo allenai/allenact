@@ -1469,7 +1469,8 @@ class OnPolicyInference(OnPolicyRLEngine):
         self.vector_tasks.reset_all()
 
         metrics_pkg, task_outputs = self.aggregate_task_metrics(
-            task_outputs=task_outputs
+            task_outputs=task_outputs,
+            pretracked_scalars=inprogress_scalars
         )
         # get_logger().debug(
         #     "Aggregated {} tasks ({} non-empty).".format(

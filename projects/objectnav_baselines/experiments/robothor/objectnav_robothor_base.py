@@ -97,11 +97,11 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
             sampler_devices = self.SAMPLER_GPU_IDS
             render_video = False
         elif mode == "valid":
-            nprocesses = 5 if torch.cuda.is_available() else 0
+            nprocesses = 15 if torch.cuda.is_available() else 1
             gpu_ids = [] if not torch.cuda.is_available() else self.VALID_GPU_IDS
             render_video = False
         elif mode == "test":
-            nprocesses = 1 if not torch.cuda.is_available() else 15
+            nprocesses = 15 if torch.cuda.is_available() else 1
             gpu_ids = [] if not torch.cuda.is_available() else self.TEST_GPU_IDS
             render_video = False
         else:

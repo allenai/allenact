@@ -39,7 +39,7 @@ class PointNavRoboThorBaseConfig(ObjectNavBaseConfig):
         )
 
         self.NUM_PROCESSES = 60
-        self.TRAIN_GPU_IDS = [0, 1, 2, 3, 4, 5, 6]
+        self.TRAIN_GPU_IDS = [0, 1, 2, 3, 4, 5, 6, 7]
         self.VALID_GPU_IDS = [7]
         self.TEST_GPU_IDS = [7]
 

@@ -7,8 +7,8 @@ class PointNavBaseConfig(ExperimentConfig):
     """An Object Navigation experiment configuration in iThor."""
 
     def __init__(self):
-        self.CAMERA_WIDTH = 640
-        self.CAMERA_HEIGHT = 480
+        self.CAMERA_WIDTH = 400
+        self.CAMERA_HEIGHT = 300
         self.SCREEN_SIZE = 224
         self.MAX_STEPS = 500
         self.ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
