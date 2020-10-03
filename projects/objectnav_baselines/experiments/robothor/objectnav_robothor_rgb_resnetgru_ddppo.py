@@ -66,7 +66,7 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig):
         lr = 3e-4
         num_mini_batch = 1
         update_repeats = 4
-        num_steps = 128
+        num_steps = 500
         save_interval = 5000000
         log_interval = 10000
         gamma = 0.99
