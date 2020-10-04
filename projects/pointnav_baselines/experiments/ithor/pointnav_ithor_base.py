@@ -74,7 +74,7 @@ class PointNaviThorBaseConfig(ObjectNavBaseConfig):
             sampler_devices = self.TRAIN_GPU_IDS
             render_video = False
         elif mode == "valid":
-            nprocesses = 15
+            nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.VALID_GPU_IDS
             render_video = False
         elif mode == "test":
