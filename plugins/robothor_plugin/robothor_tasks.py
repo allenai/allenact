@@ -156,7 +156,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         if not self._success:
             return 0.0
         li = self.optimal_distance
-        pi = self.dist_to_target()
+        pi = self.num_moves_made * self.env.config["gridSize"]
         res = li / (max(pi, li) + 1e-8)
         return res
 
