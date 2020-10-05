@@ -19,6 +19,8 @@ from utils.experiment_utils import Builder
 class PointNaviThorBaseConfig(ObjectNavBaseConfig):
     """The base config for all iTHOR PointNav experiments."""
 
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 10 ** 13
+
     def __init__(self):
         super().__init__()
         self.ENV_ARGS = dict(

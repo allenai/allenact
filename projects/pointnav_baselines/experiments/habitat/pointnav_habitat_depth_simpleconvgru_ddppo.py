@@ -79,6 +79,7 @@ class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
+            advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
                 PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps)
             ],

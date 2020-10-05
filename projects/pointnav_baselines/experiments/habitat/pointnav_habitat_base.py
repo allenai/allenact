@@ -15,6 +15,8 @@ from utils.experiment_utils import Builder
 class PointNavHabitatBaseConfig(PointNavBaseConfig):
     """The base config for all Habitat PointNav experiments."""
 
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 10 ** 13
+
     def __init__(self):
         super().__init__()
         self.TRAIN_SCENES = (
