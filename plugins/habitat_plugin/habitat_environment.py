@@ -8,6 +8,8 @@ from habitat.config import Config
 from habitat.core.dataset import Episode, Dataset
 from habitat.core.simulator import Observations, AgentState, ShortestPathPoint
 
+from utils.cache_utils import DynamicDistanceCache
+
 
 class HabitatEnvironment(object):
     def __init__(self, config: Config, dataset: Dataset, x_display: str = None) -> None:
@@ -17,6 +19,7 @@ class HabitatEnvironment(object):
         # Set the target to a random goal from the provided list for this episode
         self.goal_index = 0
         self.last_geodesic_distance = None
+        self.distance_cache = DynamicDistanceCache(rounding=1)
 
     @property
     def scene_name(self) -> str:

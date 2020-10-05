@@ -242,5 +242,9 @@ class PointNaviThorBaseConfig(ObjectNavBaseConfig):
         res["loop_dataset"] = False
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = "10.0"
+        res["env_args"]["x_display"] = (
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
+        )
         return res
