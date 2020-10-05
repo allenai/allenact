@@ -262,7 +262,7 @@ class RoboThorEnvironment:
         """List of {"x": x, "y": y, "z": z} locations in the scene that are
         currently reachable."""
         self.controller.step(action="GetReachablePositions")
-        return self.last_action_return
+        return self.controller.last_event.metadata["reachablePositions"]
 
     @property
     def scene_name(self) -> str:
