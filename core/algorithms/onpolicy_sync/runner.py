@@ -8,7 +8,7 @@ import queue
 import signal
 import time
 import traceback
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from multiprocessing.context import BaseContext
 from typing import Optional, Dict, Union, Tuple, Sequence, List, Any
 
@@ -28,6 +28,7 @@ from utils.experiment_utils import (
     set_deterministic_cudnn,
     set_seed,
     Builder,
+    LoggingPackage,
 )
 from utils.misc_utils import all_equal, get_git_diff_of_project
 from utils.system import get_logger, find_free_port
@@ -184,7 +185,7 @@ class OnPolicyRunner(object):
         checkpoint: Optional[str] = None,
         restart_pipeline: bool = False,
         *engine_args,
-        **engine_kwargs
+        **engine_kwargs,
     ):
         OnPolicyRunner.init_process("Train", id)
         engine_kwargs["mode"] = "train"
@@ -478,156 +479,145 @@ class OnPolicyRunner(object):
 
         get_logger().info("Config files saved to {}".format(base_dir))
 
-    def process_eval_package(
-        self, log_writer, pkg, all_results: Optional[List[Any]] = None
-    ):
-        pkg_type, payload, steps = pkg
-        metrics_pkg, task_outputs, render, checkpoint_file_name = payload
+    def process_eval_package(self, log_writer: SummaryWriter, pkg: LoggingPackage):
+        training_steps = pkg.training_steps
+        checkpoint_file_name = pkg.checkpoint_file_name
+        render = pkg.viz_data
+        task_outputs = pkg.metric_dicts
 
-        metrics_type, metrics_payload, num_tasks = metrics_pkg
+        num_tasks = pkg.num_non_empty_metrics_dicts_added
+        metric_means = pkg.metrics_tracker.means()
 
-        mode = pkg_type.split("_")[0]
+        mode = pkg.mode
 
-        metrics = OrderedDict(
-            sorted(
-                [(k, v) for k, v in metrics_payload.items() if k != "task_info"],
-                key=lambda x: x[0],
-            )
-        )
+        log_writer.add_scalar(f"{mode}/num_tasks_evaled", num_tasks, training_steps)
 
-        if all_results is not None:
-            results = copy.deepcopy(metrics)
-            results.update({"training_steps": steps, "tasks": task_outputs})
-            all_results.append(results)
-
-        message = ["{} {} steps:".format(mode, steps)]
-        for k in metrics:
-            log_writer.add_scalar("{}/".format(mode) + k, metrics[k], steps)
-            message.append(k + " {}".format(metrics[k]))
-        message.append("tasks {} checkpoint {}".format(num_tasks, checkpoint_file_name))
+        message = [f"{mode} {training_steps} steps:"]
+        for k in sorted(metric_means.keys()):
+            log_writer.add_scalar(f"{mode}/{k}", metric_means[k], training_steps)
+            message.append(f"{k} {metric_means[k]}")
+        message.append(f"tasks {num_tasks} checkpoint {checkpoint_file_name}")
         get_logger().info(" ".join(message))
 
-        # if render is not None:
-        #     log_writer.add_vid("{}/agent_view".format(mode), render, steps)
-
         if self.visualizer is not None:
-            self.visualizer.log(log_writer, task_outputs, render, steps)
-
-    def aggregate_infos(
-        self, log_writer: SummaryWriter, infos, steps: int, return_metrics=False
-    ):
-        infos = [info for info in infos if info[2] != 0]
-
-        assert all(
-            info[2] > 0 for info in infos
-        ), "negative num samples in `infos = {}`".format(infos)
-
-        nsamples = sum(info[2] for info in infos)
-
-        scalars = ScalarMeanTracker()
-        for name, payload, nsamps in infos:
-            scalars.add_scalars({k: payload[k] * nsamps / nsamples for k in payload})
-
-        message = []
-        metrics = None
-        if nsamples > 0:
-            # Important to use sums here as we're already weighing above.
-            summary = scalars.sums()
-
-            metrics = OrderedDict(
-                sorted(
-                    [(k, v) for k, v in summary.items() if k != "task_info"],
-                    key=lambda x: x[0],
-                )
+            self.visualizer.log(
+                log_writer=log_writer,
+                task_outputs=task_outputs,
+                render=render,
+                num_steps=training_steps,
             )
 
-            for k in metrics:
-                if "offpolicy" not in k:
-                    log_writer.add_scalar(
-                        "{}/".format(self.mode) + k, metrics[k], steps
-                    )
-                else:
-                    log_writer.add_scalar(k, metrics[k], steps)
-                message.append(k + " {:.3g}".format(metrics[k]))
-
-        if not return_metrics:
-            return message
-        else:
-            return message, metrics
-
     def process_train_packages(
-        self, log_writer, pkgs, last_steps=0, last_offpolicy_steps=0, last_time=0.0
+        self,
+        log_writer: SummaryWriter,
+        pkgs: List[LoggingPackage],
+        last_steps=0,
+        last_offpolicy_steps=0,
+        last_time=0.0,
     ):
+        assert self.mode == "train"
+
         current_time = time.time()
 
-        pkg_types, payloads, all_steps, all_offpolicy_steps = [
-            vals for vals in zip(*pkgs)
+        training_steps = pkgs[0].training_steps
+        offpolicy_steps = pkgs[0].off_policy_steps
+        log_writer.add_scalar(
+            tag="train/pipeline_stage",
+            scalar_value=pkgs[0].pipeline_stage,
+            global_step=training_steps,
+        )
+
+        metrics_and_train_info_tracker = ScalarMeanTracker()
+        for pkg in pkgs:
+            metrics_and_train_info_tracker.add_scalars(
+                scalars=pkg.metrics_tracker.means(), n=pkg.metrics_tracker.counts()
+            )
+            metrics_and_train_info_tracker.add_scalars(
+                scalars=pkg.train_info_tracker.means(),
+                n=pkg.train_info_tracker.counts(),
+            )
+
+        message = [
+            "train {} steps {} offpolicy:".format(training_steps, offpolicy_steps)
         ]
-
-        steps = all_steps[0]
-        offpolicy_steps = all_offpolicy_steps[0]
-
-        all_info_types = [worker_pkgs for worker_pkgs in zip(*payloads)]
-
-        message = ["train {} steps {} offpolicy:".format(steps, offpolicy_steps)]
-        for info_type in all_info_types:
-            message += self.aggregate_infos(log_writer, info_type, steps)
+        means = metrics_and_train_info_tracker.means()
+        for k in sorted(means.keys()):
+            if "offpolicy" not in k:
+                log_writer.add_scalar(
+                    "{}/".format(self.mode) + k, means[k], training_steps
+                )
+            else:
+                log_writer.add_scalar(k, means[k], training_steps)
+            message.append(k + " {:.3g}".format(means[k]))
         message += ["elapsed_time {:.3g}s".format(current_time - last_time)]
 
         if last_steps > 0:
-            fps = (steps - last_steps) / (current_time - last_time)
+            fps = (training_steps - last_steps) / (current_time - last_time)
             message += ["approx_fps {:.3g}".format(fps)]
-            log_writer.add_scalar("train/approx_fps", fps, steps)
+            log_writer.add_scalar("train/approx_fps", fps, training_steps)
 
         if last_offpolicy_steps > 0:
             fps = (offpolicy_steps - last_offpolicy_steps) / (current_time - last_time)
             message += ["offpolicy/approx_fps {:.3g}".format(fps)]
-            log_writer.add_scalar("offpolicy/approx_fps", fps, steps)
+            log_writer.add_scalar("offpolicy/approx_fps", fps, training_steps)
 
         get_logger().info(" ".join(message))
 
-        return steps, offpolicy_steps, current_time
+        return training_steps, offpolicy_steps, current_time
 
     def process_test_packages(
-        self, log_writer, pkgs, all_results: Optional[List[Any]] = None
+        self,
+        log_writer: SummaryWriter,
+        pkgs: List[LoggingPackage],
+        all_results: Optional[List[Any]] = None,
     ):
-        pkg_types, payloads, all_steps = [vals for vals in zip(*pkgs)]
-        steps = all_steps[0]
-        metrics_pkg, task_outputs, render, checkpoint_file_name = [], [], {}, []
-        for payload in payloads:
-            mpkg, touts, rndr, cpfname = payload
-            metrics_pkg.append(mpkg)
-            task_outputs.extend(touts)
-            if rndr is not None:
-                render.update(rndr)
-            checkpoint_file_name.append(cpfname)
+        mode = pkgs[0].mode
+        assert mode == "test"
 
-        mode = pkg_types[0].split("_")[0]
+        training_steps = pkgs[0].training_steps
 
-        message = ["{} {} steps:".format(mode, steps)]
-        # for k in metrics:
-        #     log_writer.add_scalar("{}/".format(mode) + k, metrics[k], steps)
-        #     message.append(k + " {}".format(metrics[k]))
-        msg, mets = self.aggregate_infos(
-            log_writer, metrics_pkg, steps, return_metrics=all_results is not None
-        )
-        message += msg
+        all_metrics_tracker = ScalarMeanTracker()
+        metric_dicts_list, render, checkpoint_file_name = [], {}, []
+        for pkg in pkgs:
+            all_metrics_tracker.add_scalars(
+                scalars=pkg.metrics_tracker.means(), n=pkg.metrics_tracker.counts()
+            )
+            metric_dicts_list.extend(pkg.metric_dicts)
+            if pkg.viz_data is not None:
+                render.update(pkg.viz_data)
+            checkpoint_file_name.append(pkg.checkpoint_file_name)
+
+        assert all_equal(checkpoint_file_name)
+
+        message = [f"{mode} {training_steps} steps:"]
+
+        metric_means = all_metrics_tracker.means()
+        for k in sorted(metric_means.keys()):
+            log_writer.add_scalar(f"{mode}/{k}", metric_means[k], training_steps)
+            message.append(k + " {:.3g}".format(metric_means[k]))
+
         if all_results is not None:
-            results = copy.deepcopy(mets)
-            results.update({"training_steps": steps, "tasks": task_outputs})
+            results = copy.deepcopy(metric_means)
+            results.update(
+                {"training_steps": training_steps, "tasks": metric_dicts_list}
+            )
             all_results.append(results)
 
-        num_tasks = sum([mpkg[2] for mpkg in metrics_pkg])
+        num_tasks = sum([pkg.num_non_empty_metrics_dicts_added for pkg in pkgs])
+        log_writer.add_scalar(f"{mode}/num_tasks_evaled", num_tasks, training_steps)
+
         message.append(
             "tasks {} checkpoint {}".format(num_tasks, checkpoint_file_name[0])
         )
         get_logger().info(" ".join(message))
 
-        # if render is not None:
-        #     log_writer.add_vid("{}/agent_view".format(mode), render, steps)
-
         if self.visualizer is not None:
-            self.visualizer.log(log_writer, task_outputs, render, steps)
+            self.visualizer.log(
+                log_writer=log_writer,
+                task_outputs=metric_dicts_list,
+                render=render,
+                num_steps=training_steps,
+            )
 
     def log(
         self,
@@ -644,7 +634,7 @@ class OnPolicyRunner(object):
         )
 
         # To aggregate/buffer metrics from trainers/testers
-        collected = []
+        collected: List[LoggingPackage] = []
         last_train_steps = 0
         last_offpolicy_steps = 0
         last_train_time = time.time()
@@ -655,103 +645,133 @@ class OnPolicyRunner(object):
         try:
             while True:
                 try:
-                    package = self.queues["results"].get(timeout=1)
-                    if package[0] == "train_package":
-                        collected.append(package)
-                        if len(collected) >= nworkers:
-                            collected = sorted(
-                                collected, key=lambda x: (x[2], x[3])
-                            )  # sort by num_steps, offpolicy_steps
-                            if (
-                                collected[nworkers - 1][2] == collected[0][2]
-                                and collected[nworkers - 1][3] == collected[0][3]
-                            ):  # ensure nworkers have provided the same num_steps
-                                (
-                                    last_train_steps,
-                                    last_offpolicy_steps,
-                                    last_train_time,
-                                ) = self.process_train_packages(
-                                    log_writer,
-                                    collected[:nworkers],
-                                    last_steps=last_train_steps,
-                                    last_offpolicy_steps=last_offpolicy_steps,
-                                    last_time=last_train_time,
+                    package: Union[
+                        LoggingPackage, Union[Tuple[str, Any], Tuple[str, Any, Any]]
+                    ] = self.queues["results"].get(timeout=1)
+
+                    if isinstance(package, LoggingPackage):
+                        pkg_mode = package.mode
+
+                        if pkg_mode == "train":
+                            collected.append(package)
+                            if len(collected) >= nworkers:
+
+                                collected = sorted(
+                                    collected,
+                                    key=lambda pkg: (
+                                        pkg.training_steps,
+                                        pkg.off_policy_steps,
+                                    ),
                                 )
-                                collected = collected[nworkers:]
-                            elif len(collected) > 2 * nworkers:
-                                get_logger().warning(
-                                    "Unable to aggregate train packages from all {} workers"
-                                    "after {} packages collected".format(
-                                        nworkers, len(collected)
+
+                                if (
+                                    collected[nworkers - 1].training_steps
+                                    == collected[0].training_steps
+                                    and collected[nworkers - 1].off_policy_steps
+                                    == collected[0].off_policy_steps
+                                ):  # ensure nworkers have provided the same num_steps
+                                    (
+                                        last_train_steps,
+                                        last_offpolicy_steps,
+                                        last_train_time,
+                                    ) = self.process_train_packages(
+                                        log_writer=log_writer,
+                                        pkgs=collected[:nworkers],
+                                        last_steps=last_train_steps,
+                                        last_offpolicy_steps=last_offpolicy_steps,
+                                        last_time=last_train_time,
                                     )
-                                )
-                    elif (
-                        package[0] == "valid_package"
-                    ):  # they all come from a single worker
-                        if package[1] is not None:  # no validation samplers
-                            self.process_eval_package(log_writer, package)
-                        if (
-                            finalized and self.queues["checkpoints"].empty()
-                        ):  # assume queue is actually empty after trainer finished and no checkpoints in queue
-                            break
-                    elif package[0] == "test_package":
-                        collected.append(package)
-                        if len(collected) >= nworkers:
-                            collected = sorted(
-                                collected, key=lambda x: x[2]
-                            )  # sort by num_steps
-                            if (
-                                collected[nworkers - 1][2] == collected[0][2]
-                            ):  # ensure nworkers have provided the same num_steps
-                                self.process_test_packages(
-                                    log_writer, collected[:nworkers], test_results
-                                )
-                                collected = collected[nworkers:]
-                                with open(metrics_file, "w") as f:
-                                    json.dump(test_results, f, indent=4, sort_keys=True)
-                                    get_logger().debug(
-                                        "Updated {} up to checkpoint {}".format(
-                                            metrics_file,
-                                            test_steps[len(test_results) - 1],
+                                    collected = collected[nworkers:]
+                                elif len(collected) > 2 * nworkers:
+                                    get_logger().warning(
+                                        "Unable to aggregate train packages from all {} workers"
+                                        "after {} packages collected".format(
+                                            nworkers, len(collected)
                                         )
                                     )
-                    elif package[0] == "train_stopped":
-                        if package[1] == 0:
-                            finalized = True
-                            if not self.running_validation:
-                                get_logger().info(
-                                    "Terminating runner after trainer done (no validation)"
+                        elif pkg_mode == "valid":  # they all come from a single worker
+                            if (
+                                package.training_steps is not None
+                            ):  # no validation samplers
+                                self.process_eval_package(
+                                    log_writer=log_writer, pkg=package
                                 )
+                            if (
+                                finalized and self.queues["checkpoints"].empty()
+                            ):  # assume queue is actually empty after trainer finished and no checkpoints in queue
                                 break
+                        elif pkg_mode == "test":
+                            collected.append(package)
+                            if len(collected) >= nworkers:
+                                collected = sorted(
+                                    collected, key=lambda x: x.training_steps
+                                )  # sort by num_steps
+                                if (
+                                    collected[nworkers - 1].training_steps
+                                    == collected[0].training_steps
+                                ):  # ensure nworkers have provided the same num_steps
+                                    self.process_test_packages(
+                                        log_writer=log_writer,
+                                        pkgs=collected[:nworkers],
+                                        all_results=test_results,
+                                    )
+                                    collected = collected[nworkers:]
+                                    with open(metrics_file, "w") as f:
+                                        json.dump(
+                                            test_results, f, indent=4, sort_keys=True
+                                        )
+                                        get_logger().debug(
+                                            "Updated {} up to checkpoint {}".format(
+                                                metrics_file,
+                                                test_steps[len(test_results) - 1],
+                                            )
+                                        )
                         else:
-                            raise Exception(
-                                "Train worker {} abnormally terminated".format(
-                                    package[1] - 1
-                                )
-                            )
-                    elif package[0] == "valid_stopped":
-                        raise Exception(
-                            "Valid worker {} abnormally terminated".format(
-                                package[1] - 1
-                            )
-                        )
-                    elif package[0] == "test_stopped":
-                        if package[1] == 0:
-                            unfinished_workers -= 1
-                            if unfinished_workers == 0:
-                                get_logger().info("Last tester finished. Terminating")
-                                finalized = True
-                                break
-                        else:
-                            raise RuntimeError(
-                                "Test worker {} abnormally terminated".format(
-                                    package[1] - 1
-                                )
+                            get_logger().error(
+                                f"Runner received unknown package of type {pkg_mode}"
                             )
                     else:
-                        get_logger().error(
-                            "Runner received unknown package type {}".format(package[0])
-                        )
+                        pkg_mode = package[0]
+
+                        if pkg_mode == "train_stopped":
+                            if package[1] == 0:
+                                finalized = True
+                                if not self.running_validation:
+                                    get_logger().info(
+                                        "Terminating runner after trainer done (no validation)"
+                                    )
+                                    break
+                            else:
+                                raise Exception(
+                                    "Train worker {} abnormally terminated".format(
+                                        package[1] - 1
+                                    )
+                                )
+                        elif pkg_mode == "valid_stopped":
+                            raise Exception(
+                                "Valid worker {} abnormally terminated".format(
+                                    package[1] - 1
+                                )
+                            )
+                        elif pkg_mode == "test_stopped":
+                            if package[1] == 0:
+                                unfinished_workers -= 1
+                                if unfinished_workers == 0:
+                                    get_logger().info(
+                                        "Last tester finished. Terminating"
+                                    )
+                                    finalized = True
+                                    break
+                            else:
+                                raise RuntimeError(
+                                    "Test worker {} abnormally terminated".format(
+                                        package[1] - 1
+                                    )
+                                )
+                        else:
+                            get_logger().error(
+                                f"Runner received invalid package tuple {package}"
+                            )
                 except queue.Empty as _:
                     if all(
                         p.exitcode is not None

@@ -7,7 +7,7 @@ from threading import Thread
 from typing import Dict, Union, Optional, Set, List, Sequence, Mapping
 
 from git import Git
-from ruamel.yaml import YAML
+from ruamel.yaml import YAML  # type: ignore
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 

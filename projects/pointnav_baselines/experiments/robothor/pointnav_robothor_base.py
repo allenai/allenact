@@ -6,7 +6,6 @@ from typing import Dict, Any, List, Optional
 import gym
 import numpy as np
 import torch
-import ai2thor
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from core.base_abstractions.preprocessor import ObservationSet
@@ -34,7 +33,7 @@ class PointNavRoboThorBaseConfig(ObjectNavBaseConfig):
             gridSize=self.STEP_SIZE,
             snapToGrid=False,
             agentMode="bot",
-            include_private_scenes=False
+            include_private_scenes=False,
         )
 
         self.NUM_PROCESSES = 60

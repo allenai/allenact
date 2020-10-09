@@ -289,9 +289,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         )
 
     def _is_goal_in_range(self) -> bool:
-        return self.env.distance_to_object_type(
-            self.task_info["object_type"]
-        ) == 0.0
+        return self.env.distance_to_object_type(self.task_info["object_type"]) == 0.0
 
     def shaping(self) -> float:
         rew = 0.0
@@ -341,13 +339,12 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 reward += self.reward_configs["failed_stop_reward"]
                 if self._is_goal_visible():
                     reward += max(
-                        self.reward_configs["goal_visible_max_reward"] - \
-                        self.env.distance_to_object_type(
+                        self.reward_configs["goal_visible_max_reward"]
+                        - self.env.distance_to_object_type(
                             self.task_info["object_type"]
                         ),
-                        0
+                        0,
                     )
-
 
         self._rewards.append(float(reward))
         return float(reward)

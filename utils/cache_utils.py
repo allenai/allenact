@@ -162,7 +162,7 @@ class DynamicDistanceCache(object):
             self.hits += 1
         self.num_accesses += 1
         if self.num_accesses % 1000 == 0:
-            print("Cache Miss-Hit Ratio: %.4f" % (self.misses/self.hits))
+            print("Cache Miss-Hit Ratio: %.4f" % (self.misses / self.hits))
         return self.cache[position_str][target_str]
 
     def invalidate(self):

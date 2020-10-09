@@ -573,7 +573,7 @@ class VizSuite(AbstractViz):
         ) = self._setup_sources()
 
         self.data: Dict[
-            int, List[Dict]
+            str, List[Dict]
         ] = {}  # dict of episode id to list of dicts with collected data
         self.last_it2epid: List[str] = []
 
@@ -788,8 +788,9 @@ class VizSuite(AbstractViz):
             # in phase with identifiers of current episodes from vector_task
             self.last_it2epid = self._collect_vector_task(vector_task)
 
-    def read_and_reset(self):
-        res, self.data = self.data, {}
+    def read_and_reset(self) -> Dict[str, List[Dict[str, Any]]]:
+        res = self.data
+        self.data = {}
         # get_logger().debug("Returning episodes {}".format(list(res.keys())))
         return res
 

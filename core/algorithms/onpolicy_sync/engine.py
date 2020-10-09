@@ -1,4 +1,5 @@
 """Defines the reinforcement learning `OnPolicyRLEngine`."""
+import itertools
 import os
 import queue
 import random
@@ -14,7 +15,6 @@ from typing import (
     Dict,
     Union,
     List,
-    Tuple,
     Sequence,
     cast,
     Iterator,
@@ -40,12 +40,12 @@ from core.algorithms.onpolicy_sync.vector_sampled_tasks import (
 from core.base_abstractions.experiment_config import ExperimentConfig
 from core.base_abstractions.misc import RLStepResult
 from utils.experiment_utils import (
-    ScalarMeanTracker,
     set_deterministic_cudnn,
     set_seed,
     Builder,
     TrainingPipeline,
     PipelineStage,
+    LoggingPackage,
 )
 from utils.system import get_logger
 from utils.tensor_utils import (
@@ -316,45 +316,24 @@ class OnPolicyRLEngine(object):
 
     # aggregates task metrics currently in queue
     def aggregate_task_metrics(
-        self,
-        num_tasks: int = -1,
-        task_outputs: Optional[List] = None,
-        pretracked_scalars: Optional[ScalarMeanTracker] = None,
-    ) -> Tuple[Tuple[str, Dict[str, float], int], List[Dict[str, Any]]]:
-        if task_outputs is None:
-            task_outputs = []
-
-        scalars = ScalarMeanTracker()
-        if pretracked_scalars is not None:
-            scalars.add_scalars(
-                scalars=pretracked_scalars.means(), n=pretracked_scalars.counts()
-            )
-
+        self, logging_pkg: LoggingPackage, num_tasks: int = -1,
+    ) -> LoggingPackage:
         done = num_tasks == 0
-        num_non_empty_tasks_dequeued = 0
         num_empty_tasks_dequeued = 0
         while not done:
             try:
                 # This queue is on this process so we should be able to let the timeout be small
                 # TODO: This should be refactored so that single_process_metrics_queue is a list
-                item = self.single_process_metrics_queue.get(timeout=0.01)
+                metrics_dict = self.single_process_metrics_queue.get(timeout=0.01)
 
-                task_outputs.append(item)
+                num_empty_tasks_dequeued += not logging_pkg.add_metrics_dict(
+                    single_task_metrics_dict=metrics_dict
+                )
+
                 if num_tasks > 0:
                     num_tasks -= 1
                 done = num_tasks == 0
 
-                if (
-                    len(item) == 0
-                    or (len(item) == 1 and "task_info" in item)
-                    or ("success" in item and item["success"] is None)
-                ):
-                    num_empty_tasks_dequeued += 1
-                else:
-                    scalars.add_scalars(
-                        {k: v for k, v in item.items() if k != "task_info"}
-                    )
-                    num_non_empty_tasks_dequeued += 1
             except Empty:
                 if num_tasks <= 0:
                     break
@@ -367,23 +346,12 @@ class OnPolicyRLEngine(object):
                     )
                     break
 
-        # get_logger().debug(
-        #     "worker {} got {} tasks".format(self.worker_id, len(task_outputs))
-        # )
-        #
-        # get_logger().debug("worker {} sleeping for 10 s".format(self.worker_id))
-        # time.sleep(10)
-
         if num_empty_tasks_dequeued != 0:
             get_logger().warning(
                 "Discarded {} empty task metrics".format(num_empty_tasks_dequeued)
             )
 
-        pkg_type = "task_metrics_package"
-        nsamples = min(scalars.counts().values(), default=0)
-        payload = scalars.pop_and_reset() if len(task_outputs) > 0 else None
-
-        return (pkg_type, payload, nsamples), task_outputs
+        return logging_pkg
 
     def _preprocess_observations(self, batched_observations):
         if self.observation_set is None:
@@ -814,47 +782,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         return actions, actor_critic_output, memory, step_observation
 
-    # aggregates info of specific type from PipelineProgressState list
-    def aggregate_info(
-        self, tracking_info: Dict[str, List], type_str: str,
-    ) -> Tuple[str, Dict[str, float], int]:
-        scalars = ScalarMeanTracker()
-
-        infos = cast(Tuple[str, Any, int], tracking_info[type_str])
-        tracking_info[type_str] = []  # reset tracking info for current type
-
-        nsamples = sum(info[2] for info in infos)
-        valid_infos = sum(
-            info[2] > 0 for info in infos
-        )  # used to cancel the averaging in self.scalars
-
-        # assert nsamples != 0, "Attempting to aggregate type {} with 0 samples".format(type)
-
-        # get_logger().debug(infos)
-
-        last_name: Optional[str] = None
-        for name, payload, nsamps in infos:
-            if last_name is not None:
-                assert (
-                    last_name == name
-                ), "All names in infos must be the same {} != {}".format(
-                    last_name, name
-                )
-            last_name = name
-
-            if nsamps > 0:
-                scalars.add_scalars(
-                    {k: valid_infos * payload[k] * nsamps / nsamples for k in payload}
-                )
-
-        assert last_name is not None, "infos was empty."
-        pkg_type = last_name
-        payload = scalars.pop_and_reset() if nsamples > 0 else None
-        if payload is not None:
-            payload["pipeline_stage"] = self.training_pipeline.current_stage_index
-
-        return pkg_type, payload, nsamples
-
     def update(self, rollouts: RolloutStorage):
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
 
@@ -1112,25 +1039,25 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         )
 
     def send_package(self, tracking_info: Dict[str, List]):
-        package_type = "train_package"
-
-        task_pkg, task_outputs = self.aggregate_task_metrics()
-
-        payload = (task_pkg,) + tuple(
-            self.aggregate_info(tracking_info=tracking_info, type_str=type_str,)
-            for type_str in tracking_info
+        logging_pkg = LoggingPackage(
+            mode=self.mode,
+            training_steps=self.training_pipeline.total_steps,
+            off_policy_steps=self.training_pipeline.total_offpolicy_steps,
+            pipeline_stage=self.training_pipeline.current_stage_index,
         )
 
-        nsteps = self.training_pipeline.total_steps  # onpolicy steps
+        self.aggregate_task_metrics(logging_pkg=logging_pkg)
 
-        self.results_queue.put(
-            (
-                package_type,
-                payload,
-                nsteps,
-                self.training_pipeline.total_offpolicy_steps,
-            )
-        )
+        for (info_type, train_info_dict, n) in itertools.chain(*tracking_info.values()):
+            if n < 0:
+                get_logger().warning(
+                    f"Obtained a train_info_dict with {n} elements."
+                    f" Full info: ({info_type}, {train_info_dict}, {n})."
+                )
+            else:
+                logging_pkg.add_train_info_dict(train_info_dict=train_info_dict, n=n)
+
+        self.results_queue.put(logging_pkg)
 
     def run_pipeline(self, rollouts: RolloutStorage):
         self.initialize_rollouts(rollouts)
@@ -1347,19 +1274,17 @@ class OnPolicyInference(OnPolicyRLEngine):
             **kwargs,
         )
 
-        # get_logger().debug("{} worker {} using device {}".format(self.mode, self.worker_id, self.device))
-
     def run_eval(
         self,
         checkpoint_file_name: str,
         rollout_steps=100,
         visualizer: Optional[VizSuite] = None,
         update_secs=20,
-    ):
+    ) -> LoggingPackage:
         assert self.actor_critic is not None, "called run_eval with no actor_critic"
 
         ckpt = self.checkpoint_load(checkpoint_file_name)
-        total_steps = ckpt["total_steps"]
+        total_steps = typing.cast(int, ckpt["total_steps"])
 
         rollouts = RolloutStorage(
             num_steps=rollout_steps,
@@ -1393,8 +1318,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                 )
             )
 
-        task_outputs: List = []
-        inprogress_scalars = ScalarMeanTracker()
+        logging_pkg = LoggingPackage(mode=self.mode, training_steps=total_steps)
         while num_paused < self.num_samplers:
             frames += self.num_samplers - num_paused
             num_paused += self.collect_rollout_step(rollouts, visualizer=visualizer)
@@ -1405,15 +1329,7 @@ class OnPolicyInference(OnPolicyRLEngine):
 
             cur_time = time.time()
             if num_paused >= self.num_samplers or cur_time - last_time >= update_secs:
-                (
-                    (_, metrics_to_now, ncomplete),
-                    task_outputs,
-                ) = self.aggregate_task_metrics(
-                    task_outputs=task_outputs, pretracked_scalars=inprogress_scalars
-                )
-                if metrics_to_now is not None:
-                    inprogress_scalars.pop_and_reset()
-                    inprogress_scalars.add_scalars(scalars=metrics_to_now, n=ncomplete)
+                self.aggregate_task_metrics(logging_pkg=logging_pkg)
 
                 if self.mode == "test":
                     lengths = self.vector_tasks.command(
@@ -1441,16 +1357,17 @@ class OnPolicyInference(OnPolicyRLEngine):
                             time_to_complete,
                         )
                     )
-                    if sum(inprogress_scalars.counts().values()) != 0:
+                    if logging_pkg.num_non_empty_metrics_dicts_added != 0:
                         get_logger().info(
                             ", ".join(
                                 [
                                     "worker {}: num_test_tasks_complete {}".format(
-                                        self.worker_id, ncomplete
+                                        self.worker_id,
+                                        logging_pkg.num_non_empty_metrics_dicts_added,
                                     ),
                                     *[
                                         "{} {:.3g}".format(k, v)
-                                        for k, v in inprogress_scalars.means().items()
+                                        for k, v in logging_pkg.metrics_tracker.means().items()
                                     ],
                                 ]
                             )
@@ -1468,21 +1385,14 @@ class OnPolicyInference(OnPolicyRLEngine):
         self.vector_tasks.set_seeds(self.worker_seeds(self.num_samplers, self.seed))
         self.vector_tasks.reset_all()
 
-        metrics_pkg, task_outputs = self.aggregate_task_metrics(
-            task_outputs=task_outputs,
-            pretracked_scalars=inprogress_scalars
+        self.aggregate_task_metrics(logging_pkg=logging_pkg)
+
+        logging_pkg.viz_data = (
+            visualizer.read_and_reset() if visualizer is not None else None
         )
-        # get_logger().debug(
-        #     "Aggregated {} tasks ({} non-empty).".format(
-        #         len(task_outputs), metrics_pkg[-1]
-        #     )
-        # )
+        logging_pkg.checkpoint_file_name = checkpoint_file_name
 
-        pkg_type = "{}_package".format(self.mode)
-        viz_package = visualizer.read_and_reset() if visualizer is not None else None
-        payload = (metrics_pkg, task_outputs, viz_package, checkpoint_file_name)
-
-        return pkg_type, payload, total_steps
+        return logging_pkg
 
     @staticmethod
     def skip_to_latest(checkpoints_queue: mp.Queue, command: Optional[str], data):
@@ -1575,19 +1485,13 @@ class OnPolicyInference(OnPolicyRLEngine):
                             checkpoint_file_name=data, visualizer=visualizer
                         )
 
-                        # get_logger().debug(
-                        #     "queueing eval_package {} with {} tasks".format(
-                        #         self.worker_id, eval_package[1][0][2]
-                        #     )
-                        # )
-
                         self.results_queue.put(eval_package)
 
                         if self.is_distributed:
                             dist.barrier()
                     else:
                         self.results_queue.put(
-                            ("{}_package".format(self.mode), None, -1)
+                            LoggingPackage(mode=self.mode, training_steps=None,)
                         )
                 elif command in ["quit", "exit", "close"]:
                     finalized = True
