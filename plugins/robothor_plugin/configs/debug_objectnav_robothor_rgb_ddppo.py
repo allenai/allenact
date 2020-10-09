@@ -109,15 +109,12 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(PointNavRoboThorRGBPPOExperimentCo
                 else self.split_num_processes(len(gpu_ids))
             )
             sampler_devices = self.TRAINING_GPUS
-            render_video = False
         elif mode == "valid":
             nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.VALIDATION_GPUS
-            render_video = False
         elif mode == "test":
             nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.TESTING_GPUS
-            render_video = False
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -144,7 +141,6 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(PointNavRoboThorRGBPPOExperimentCo
             "gpu_ids": gpu_ids,
             "sampler_devices": sampler_devices if mode == "train" else gpu_ids,
             "observation_set": observation_set,
-            "render_video": render_video,
         }
 
     # Define Task Sampler

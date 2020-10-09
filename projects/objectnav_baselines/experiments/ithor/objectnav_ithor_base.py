@@ -91,15 +91,12 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig, ABC):
                 else self.split_num_processes(len(gpu_ids))
             )
             sampler_devices = self.TRAIN_GPU_IDS
-            render_video = False
         elif mode == "valid":
             nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.VALID_GPU_IDS
-            render_video = False
         elif mode == "test":
             nprocesses = 15
             gpu_ids = [] if not torch.cuda.is_available() else self.TEST_GPU_IDS
-            render_video = False
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -128,7 +125,6 @@ class ObjectNaviThorBaseConfig(ObjectNavBaseConfig, ABC):
             if mode == "train"
             else gpu_ids,  # ignored with > 1 gpu_ids
             "observation_set": observation_set,
-            "render_video": render_video,
         }
 
     @classmethod

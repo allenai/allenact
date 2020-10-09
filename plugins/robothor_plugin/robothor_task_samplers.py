@@ -2,7 +2,7 @@ import copy
 import gzip
 import json
 import random
-from typing import List, Optional, Union, Dict, Any, cast
+from typing import List, Optional, Union, Dict, Any, cast, Tuple
 
 import gym
 
@@ -10,6 +10,7 @@ from core.base_abstractions.sensor import Sensor
 from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask, PointNavTask
+from utils.cache_utils import str_to_pos_for_cache
 from utils.experiment_utils import set_seed, set_deterministic_cudnn
 from utils.system import get_logger
 
@@ -831,6 +832,16 @@ class PointNavDatasetTaskSampler(TaskSampler):
             self.env = self._create_environment()
             self.env.reset(scene_name=scene, filtered_objects=[])
 
+        def to_pos(s):
+            if isinstance(s, (Dict, Tuple)):
+                return s
+            if isinstance(s, float):
+                return {"x": 0, "y": s, "z": 0}
+            return str_to_pos_for_cache(s)
+
+        for k in ["initial_position", "initial_orientation", "target_position"]:
+            episode[k] = to_pos(episode[k])
+
         task_info = {
             "scene": scene,
             "initial_position": episode["initial_position"],
@@ -851,7 +862,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
             self.max_tasks -= 1
 
         if not self.env.teleport(
-            episode["initial_position"], episode["initial_orientation"]
+            pose=episode["initial_position"], rotation=episode["initial_orientation"]
         ):
             return self.next_task()
 

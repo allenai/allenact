@@ -179,15 +179,12 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 if not torch.cuda.is_available()
                 else self.split_num_processes(len(gpu_ids))
             )
-            render_video = False
         elif mode == "valid":
             nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.VALIDATION_GPUS
-            render_video = False
         elif mode == "test":
             nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.TESTING_GPUS
-            render_video = False
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -213,7 +210,6 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             "nprocesses": nprocesses,
             "gpu_ids": gpu_ids,
             "observation_set": observation_set,
-            "render_video": render_video,
         }
 
     # Define Model

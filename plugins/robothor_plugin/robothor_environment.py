@@ -180,7 +180,7 @@ class RoboThorEnvironment:
         self, pose: Dict[str, float], rotation: Dict[str, float], horizon: float = 0.0
     ):
         e = self.controller.step(
-            "TeleportFull",
+            action="TeleportFull",
             x=pose["x"],
             y=pose["y"],
             z=pose["z"],
