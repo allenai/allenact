@@ -253,7 +253,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
 
         if action_str == END:
             self._took_end_action = True
-            self._success = self._is_goal_in_range() and self._is_goal_visible()
+            self._success = self._is_goal_in_range()
             self.last_action_success = self._success
         else:
             self.env.step({"action": action_str})
@@ -282,16 +282,11 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             # print("mirrored render")
         return frame
 
-    def _is_goal_visible(self) -> bool:
+    def _is_goal_in_range(self) -> bool:
         return any(
             o["objectType"] == self.task_info["object_type"]
             for o in self.env.visible_objects()
         )
-
-    def _is_goal_in_range(self) -> bool:
-        return self.env.distance_to_object_type(
-            self.task_info["object_type"]
-        ) == 0.0
 
     def shaping(self) -> float:
         rew = 0.0
@@ -339,15 +334,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 reward += self.reward_configs["goal_success_reward"]
             else:
                 reward += self.reward_configs["failed_stop_reward"]
-                if self._is_goal_visible():
-                    reward += max(
-                        self.reward_configs["goal_visible_max_reward"] - \
-                        self.env.distance_to_object_type(
-                            self.task_info["object_type"]
-                        ),
-                        0
-                    )
-
 
         self._rewards.append(float(reward))
         return float(reward)
@@ -402,7 +388,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         return metrics
 
     def query_expert(self, end_action_only: bool = False, **kwargs) -> Tuple[int, bool]:
-        if self._is_goal_in_range() and self._is_goal_visible():
+        if self._is_goal_in_range():
             return self.class_action_names().index(END), True
 
         if end_action_only:

@@ -11,12 +11,11 @@ class ObjectNavBaseConfig(ExperimentConfig):
         self.MAX_STEPS = 500
         self.STEP_SIZE = 0.25
         self.ROTATION_DEGREES = 30.0
-        self.VISIBILITY_DISTANCE = 5.0 # this enable extra reward shaping, true visibility is 1m
+        self.VISIBILITY_DISTANCE = 1.0
         self.STOCHASTIC = True
         self.REWARD_CONFIG = {
             "step_penalty": -0.01,
             "goal_success_reward": 10.0,
             "failed_stop_reward": 0.0,
-            "shaping_weight": 1.0,
-            "goal_visible_max_reward": 5.0,
+            "shaping_weight": 1.0
         }
