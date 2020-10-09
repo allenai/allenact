@@ -37,7 +37,7 @@ from core.algorithms.onpolicy_sync.vector_sampled_tasks import (
     VectorSampledTasks,
     COMPLETE_TASK_METRICS_KEY,
 )
-from core.base_abstractions.experiment_config import ExperimentConfig
+from core.base_abstractions.experiment_config import ExperimentConfig, MachineParams
 from core.base_abstractions.misc import RLStepResult
 from utils.experiment_utils import (
     set_deterministic_cudnn,
@@ -109,7 +109,7 @@ class OnPolicyRLEngine(object):
         self.checkpoints_dir = checkpoints_dir
         self.worker_id = worker_id
         self.num_workers = num_workers
-        self.device = device
+        self.device = torch.device("cpu") if device == -1 else torch.device(device)  # type: ignore
         self.distributed_port = distributed_port
 
         self.mode = mode.lower()
@@ -134,41 +134,24 @@ class OnPolicyRLEngine(object):
         ), "`max_sampler_processes_per_worker` must be either `None` or a positive integer."
         self.max_sampler_processes_per_worker = max_sampler_processes_per_worker
 
-        self.machine_params = config.machine_params(self.mode)
-        if self.num_workers > 1:
-            self.num_samplers_per_worker = self.machine_params["nprocesses"]
-            self.num_samplers = self.num_samplers_per_worker[self.worker_id]
+        machine_params = config.machine_params(self.mode)
+        self.machine_params: MachineParams
+        if isinstance(machine_params, MachineParams):
+            self.machine_params = machine_params
         else:
-            if isinstance(self.machine_params["nprocesses"], Sequence):
-                self.num_samplers = self.machine_params["nprocesses"][self.worker_id]
-            elif isinstance(self.machine_params["nprocesses"], int):
-                self.num_samplers = self.machine_params["nprocesses"]
-            else:
-                raise Exception("Only list and int are valid nprocesses")
+            self.machine_params = MachineParams(**machine_params)
+
+        self.num_samplers_per_worker = self.machine_params.nprocesses
+        self.num_samplers = self.num_samplers_per_worker[self.worker_id]
+
         self._vector_tasks: Optional[VectorSampledTasks] = None
 
         self.observation_set = None
         self.actor_critic: Optional[ActorCriticModel] = None
         if self.num_samplers > 0:
-            if (
-                "make_preprocessors_fns" in self.machine_params
-                and self.machine_params["make_preprocessors_fns"] is not None
-                and len(self.machine_params["make_preprocessors_fns"]) > 0
-            ):
-                # distributed observation sets, here we just need the observation space
-                observation_set = self.machine_params["make_preprocessors_fns"][0]()
-                set_seed(self.seed)
-                self.actor_critic = typing.cast(
-                    ActorCriticModel,
-                    self.config.create_model(observation_set=observation_set),
-                ).to(self.device)
-                del observation_set
-            elif (
-                "observation_set" in self.machine_params
-                and self.machine_params["observation_set"] is not None
-            ):
+            if self.machine_params.observation_set is not None:
                 # centralized observation set,
-                self.observation_set = self.machine_params["observation_set"]().to(
+                self.observation_set = self.machine_params.observation_set.to(
                     self.device
                 )
                 set_seed(self.seed)
@@ -192,9 +175,8 @@ class OnPolicyRLEngine(object):
                 self.num_workers,
                 self.worker_id == 0,
             )
-            cpu_device = torch.device(self.device) == torch.device(  # type:ignore
-                "cpu"
-            )
+            cpu_device = self.device == torch.device("cpu")  # type:ignore
+
             dist.init_process_group(  # type:ignore
                 backend="gloo" if cpu_device else "nccl",
                 store=self.store,
@@ -252,11 +234,7 @@ class OnPolicyRLEngine(object):
         return seeds
 
     def get_sampler_fn_args(self, seeds: Optional[List[int]] = None):
-        devices = (
-            self.machine_params["sampler_devices"]
-            if "sampler_devices" in self.machine_params
-            else self.machine_params["gpu_ids"]
-        )
+        sampler_devices = self.machine_params.sampler_devices
 
         if self.mode == "train":
             fn = self.config.train_task_sampler_args
@@ -276,19 +254,21 @@ class OnPolicyRLEngine(object):
             total_processes = self.num_samplers
             process_offset = 0
 
-        devices_list: Optional[List[int]] = None
-        if (self.is_distributed or self.mode == "test") and isinstance(
-            self.device, int
-        ):
-            devices_list = [cast(int, self.device)]
-        elif all([isinstance(dev, int) for dev in devices]):
-            devices_list = devices[:]
+        sampler_devices_as_ints: Optional[List[int]] = None
+        if (
+            self.is_distributed or self.mode == "test"
+        ) and self.device.index is not None:
+            sampler_devices_as_ints = [self.device.index]
+        elif sampler_devices is not None:
+            sampler_devices_as_ints = [
+                -1 if sd.index is None else sd.index for sd in sampler_devices
+            ]
 
         return [
             fn(
                 process_ind=process_offset + it,
                 total_processes=total_processes,
-                devices=devices_list,
+                devices=sampler_devices_as_ints,
                 seeds=seeds,
             )
             for it in range(self.num_samplers)
@@ -723,8 +703,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         ):
             return getattr(self.training_pipeline, field)
 
-        if field in self.machine_params:
-            return self.machine_params[field]
+        if (
+            hasattr(self.machine_params, field)
+            and getattr(self.machine_params, field) is not None
+        ):
+            return getattr(self.machine_params, field)
 
         if allow_none:
             return None
@@ -854,7 +837,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         stage = self.training_pipeline.current_stage
 
         if self.num_workers == 1:
-            rollouts_per_worker = [self.num_samplers]
+            rollouts_per_worker: Sequence[int] = [self.num_samplers]
         else:
             rollouts_per_worker = self.num_samplers_per_worker
 
@@ -1470,16 +1453,9 @@ class OnPolicyInference(OnPolicyRLEngine):
 
                         if (
                             visualizer is None
-                            and self.machine_params.get("visualizer") is not None
+                            and self.machine_params.visualizer is not None
                         ):
-                            if isinstance(visualizer, Builder):
-                                visualizer = cast(
-                                    VizSuite, self.machine_params["visualizer"]()
-                                )
-                            else:
-                                visualizer = cast(
-                                    VizSuite, self.machine_params["visualizer"]
-                                )
+                            visualizer = self.machine_params.visualizer
 
                         eval_package = self.run_eval(
                             checkpoint_file_name=data, visualizer=visualizer

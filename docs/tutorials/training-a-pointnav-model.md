@@ -153,11 +153,11 @@ If our hardware setup does not include a GPU, these fields can be set to empty l
 to running everything on the CPU with only 1 process.
 ```python
     # Training Engine Parameters
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10**13
+    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
     NUM_PROCESSES = 60
-    TRAINING_GPUS = [0, 1, 2, 3, 4, 5, 6]
-    VALIDATION_GPUS = [7]
-    TESTING_GPUS = [7]
+    TRAINING_GPUS = list(range(torch.cuda.device_count()))
+    VALIDATION_GPUS = [torch.cuda.device_count() - 1]
+    TESTING_GPUS = [torch.cuda.device_count() - 1]
 ```
 
 Since we are using a dataset to train our model we need to define the path to where we have stored it. If we

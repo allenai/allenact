@@ -19,7 +19,7 @@ from utils.experiment_utils import Builder
 class PointNavRoboThorBaseConfig(ObjectNavBaseConfig):
     """The base config for all iTHOR PointNav experiments."""
 
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10 ** 13
+    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
 
     def __init__(self):
         super().__init__()
@@ -37,9 +37,9 @@ class PointNavRoboThorBaseConfig(ObjectNavBaseConfig):
         )
 
         self.NUM_PROCESSES = 60
-        self.TRAIN_GPU_IDS = [0, 1, 2, 3, 4, 5, 6, 7]
-        self.VALID_GPU_IDS = [7]
-        self.TEST_GPU_IDS = [7]
+        self.TRAIN_GPU_IDS = list(range(torch.cuda.device_count()))
+        self.VALID_GPU_IDS = [torch.cuda.device_count() - 1]
+        self.TEST_GPU_IDS = [torch.cuda.device_count() - 1]
 
         self.TRAIN_DATASET_DIR = os.path.join(
             ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/train"

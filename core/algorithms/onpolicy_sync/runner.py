@@ -22,7 +22,7 @@ from core.algorithms.onpolicy_sync.engine import (
     OnPolicyTrainer,
     OnPolicyInference,
 )
-from core.base_abstractions.experiment_config import ExperimentConfig
+from core.base_abstractions.experiment_config import ExperimentConfig, MachineParams
 from utils.experiment_utils import (
     ScalarMeanTracker,
     set_deterministic_cudnn,
@@ -119,26 +119,17 @@ class OnPolicyRunner(object):
 
     def worker_devices(self, mode: str):
         # Note: Avoid instantiating preprocessors in machine_params (use Builder if needed)
-        devices = self.config.machine_params(mode)["gpu_ids"]
-        if len(devices) > 0:
-            if torch.device(devices[0]) == torch.device("cpu"):
-                assert all_equal(
-                    devices
-                ), "Specified devices {} must be all non-negative integers or all equal to 'cpu'".format(
-                    devices
-                )
-                devices = [torch.device(d) for d in devices]
-            else:
-                assert all(
-                    [gpu_id >= 0 for gpu_id in devices]
-                ), "all gpu_ids must be >= 0"
-                assert torch.cuda.device_count() > max(
-                    set(devices)
-                ), "{} CUDA devices available for requested {} gpu ids {}".format(
-                    torch.cuda.device_count(), mode, devices
-                )
-        else:
-            devices = [torch.device("cpu")]
+        machine_params: Union[
+            Dict[str, Any], MachineParams
+        ] = self.config.machine_params(mode)
+        if not isinstance(machine_params, MachineParams):
+            machine_params = MachineParams(**machine_params)
+        devices = machine_params.devices
+
+        assert all_equal(devices) or all(
+            d.index >= 0 for d in devices
+        ), f"Cannot have a mix of CPU and GPU devices (`devices == {devices}`)"
+
         get_logger().info(
             "Using {} {} workers on devices {}".format(len(devices), mode, devices)
         )

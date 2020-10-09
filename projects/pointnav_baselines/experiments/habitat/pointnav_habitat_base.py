@@ -15,7 +15,7 @@ from utils.experiment_utils import Builder
 class PointNavHabitatBaseConfig(PointNavBaseConfig):
     """The base config for all Habitat PointNav experiments."""
 
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10 ** 13
+    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
 
     def __init__(self):
         super().__init__()
@@ -33,7 +33,7 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig):
         self.CONFIG = habitat.get_config("configs/gibson.yaml")
         self.CONFIG.defrost()
         self.CONFIG.NUM_PROCESSES = self.NUM_PROCESSES
-        self.CONFIG.SIMULATOR_GPU_IDS = [0, 1, 2, 3, 4, 5, 6, 7]
+        self.CONFIG.SIMULATOR_GPU_IDS = list(range(torch.cuda.device_count()))
         self.CONFIG.DATASET.SCENES_DIR = "habitat/habitat-api/data/scene_datasets/"
         self.CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
         self.CONFIG.DATASET.DATA_PATH = self.TRAIN_SCENES
@@ -58,9 +58,9 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig):
 
         self.CONFIG.MODE = "train"
 
-        self.TRAIN_GPUS = [0, 1, 2, 3, 4, 5, 6, 7]
-        self.VALIDATION_GPUS = [7]
-        self.TESTING_GPUS = [7]
+        self.TRAIN_GPUS = list(range(torch.cuda.device_count()))
+        self.VALIDATION_GPUS = [torch.cuda.device_count() - 1]
+        self.TESTING_GPUS = [torch.cuda.device_count() - 1]
 
         self.TRAIN_CONFIGS = None
         self.TEST_CONFIGS = None

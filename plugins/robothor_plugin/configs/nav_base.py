@@ -34,7 +34,9 @@ class NavBaseConfig(ExperimentConfig, abc.ABC):
     # ]
 
     MAX_STEPS: int
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000  # if more than 1 scene per worker
+    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[
+        int
+    ] = None  # if more than 1 scene per worker
 
     VALIDATION_SAMPLES_PER_SCENE = 16
 

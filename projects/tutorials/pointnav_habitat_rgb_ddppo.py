@@ -45,11 +45,11 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     SCREEN_SIZE = 224
 
     # Training Engine Parameters
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
+    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
     NUM_PROCESSES = 60
-    TRAINING_GPUS = [0, 1, 2, 3, 4, 5, 6]
-    VALIDATION_GPUS = [7]
-    TESTING_GPUS = [7]
+    TRAINING_GPUS = list(range(torch.cuda.device_count()))
+    VALIDATION_GPUS = [torch.cuda.device_count() - 1]
+    TESTING_GPUS = [torch.cuda.device_count() - 1]
 
     TRAIN_SCENES = (
         "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
@@ -61,9 +61,9 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         "habitat/habitat-api/data/datasets/pointnav/gibson/v1/test/test.json.gz"
     )
 
-    TRAIN_GPUS = [0, 1, 2, 3, 4, 5, 6, 7]
-    VALIDATION_GPUS = [7]
-    TESTING_GPUS = [7]
+    TRAIN_GPUS = list(range(torch.cuda.device_count()))
+    VALIDATION_GPUS = [torch.cuda.device_count() - 1]
+    TESTING_GPUS = [torch.cuda.device_count() - 1]
 
     NUM_PROCESSES = 80
     CONFIG = habitat.get_config("configs/gibson.yaml")

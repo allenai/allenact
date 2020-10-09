@@ -2,12 +2,119 @@
 experiments."""
 
 import abc
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Union, Sequence, Tuple
 
+import torch
 import torch.nn as nn
+import typing
 
+from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
-from utils.experiment_utils import TrainingPipeline
+from utils.experiment_utils import TrainingPipeline, Builder
+from utils.system import get_logger
+from utils.viz_utils import VizSuite
+
+
+class MachineParams(object):
+    def __init__(
+        self,
+        nprocesses: Union[int, Sequence[int]],
+        devices: Union[
+            None, int, str, torch.device, Sequence[Union[int, str, torch.device]]
+        ] = None,
+        observation_set: Optional[
+            Union[ObservationSet, Builder[ObservationSet]]
+        ] = None,
+        sampler_devices: Union[
+            None, int, str, torch.device, Sequence[Union[int, str, torch.device]]
+        ] = None,
+        visualizer: Optional[Union[VizSuite, Builder[VizSuite]]] = None,
+        gpu_ids: Union[int, Sequence[int]] = None,
+    ):
+        assert (
+            gpu_ids is None or devices is None
+        ), "only one of `gpu_ids` or `devices` should be set."
+        if gpu_ids is not None:
+            get_logger().warning(
+                "The `gpu_ids` parameter will be deprecated, use `devices` instead."
+            )
+            devices = gpu_ids
+
+        self.nprocesses = (
+            nprocesses if isinstance(nprocesses, Sequence) else (nprocesses,)
+        )
+
+        self.devices: Tuple[torch.device, ...] = self._standardize_devices(
+            devices=devices, nworkers=len(self.nprocesses)
+        )
+
+        self._observation_set_maybe_builder = observation_set
+        self.sampler_devices: Tuple[
+            torch.device, ...
+        ] = None if sampler_devices is None else self._standardize_devices(
+            devices=sampler_devices, nworkers=len(self.nprocesses)
+        )
+        self._visualizer_maybe_builder = visualizer
+
+        self._observation_set_cached: Optional[ObservationSet] = None
+        self._visualizer_cached: Optional[VizSuite] = None
+
+    def _standardize_devices(
+        self,
+        devices: Optional[
+            Union[int, str, torch.device, Sequence[Union[int, str, torch.device]]]
+        ],
+        nworkers: int,
+    ) -> Tuple[torch.device, ...]:
+        if devices is None or (isinstance(devices, Sequence) and len(devices) == 0):
+            devices = torch.device("cpu")
+
+        if not isinstance(devices, Sequence):
+            devices = (devices,) * nworkers
+
+        assert (
+            len(devices) == nworkers
+        ), f"The number of devices ({len(devices)}) must equal the number of workers ({nworkers})"
+
+        devices = tuple(
+            torch.device("cpu") if d == -1 else torch.device(d) for d in devices  # type: ignore
+        )
+        for d in devices:
+            if d != torch.device("cpu"):
+                try:
+                    torch.cuda.get_device_capability(d)  # type: ignore
+                except Exception:
+                    raise RuntimeError(
+                        f"It appears the cuda device {d} is not available on your system."
+                    )
+
+        return typing.cast(Tuple[torch.device, ...], devices)
+
+    @property
+    def observation_set(self) -> Optional[ObservationSet]:
+        if self._observation_set_maybe_builder is None:
+            return None
+
+        if self._observation_set_cached is None:
+            if isinstance(self._observation_set_maybe_builder, Builder):
+                self._observation_set_cached = self._observation_set_maybe_builder()
+            else:
+                self._observation_set_cached = self._observation_set_maybe_builder
+
+        return self._observation_set_cached
+
+    @property
+    def visualizer(self) -> Optional[VizSuite]:
+        if self._visualizer_maybe_builder is None:
+            return None
+
+        if self._visualizer_cached is None:
+            if isinstance(self._visualizer_maybe_builder, Builder):
+                self._visualizer_cached = self._visualizer_maybe_builder()
+            else:
+                self._visualizer_cached = self._visualizer_maybe_builder
+
+        return self._visualizer_cached
 
 
 class FrozenClassVariables(abc.ABCMeta):
@@ -68,7 +175,9 @@ class ExperimentConfig(metaclass=FrozenClassVariables):
 
     @classmethod
     @abc.abstractmethod
-    def machine_params(cls, mode="train", **kwargs) -> Dict[str, Any]:
+    def machine_params(
+        cls, mode="train", **kwargs
+    ) -> Union[MachineParams, Dict[str, Any]]:
         """Parameters used to specify machine information.
 
         Machine information includes at least (1) the number of processes

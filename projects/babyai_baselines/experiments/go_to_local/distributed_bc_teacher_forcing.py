@@ -27,12 +27,9 @@ class DistributedBCTeacherForcingBabyAIGoToLocalExperimentConfig(
     ):
         res = super().machine_params(mode, gpu_id, n_train_processes, **kwargs)
 
-        if (
-            res["nprocesses"] > 0
-            and isinstance(res["gpu_ids"][0], int)
-            and res["gpu_ids"][0] >= 0
-        ):
-            res["nprocesses"] = [res["nprocesses"] // 2] * 2
-            res["gpu_ids"] = [0, 1]
+        if res["nprocesses"] > 0 and torch.cuda.is_available():
+            ngpu_to_use = min(torch.cuda.device_count(), 2)
+            res["nprocesses"] = [res["nprocesses"] // ngpu_to_use] * ngpu_to_use
+            res["gpu_ids"] = list(range(ngpu_to_use))
 
         return res
