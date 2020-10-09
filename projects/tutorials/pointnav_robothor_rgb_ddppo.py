@@ -149,12 +149,13 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         return res
 
     def machine_params(self, mode="train", **kwargs):
+        sampler_devices: List[int] = []
         if mode == "train":
             workers_per_device = 1
             gpu_ids = (
                 []
                 if not torch.cuda.is_available()
-                else self.TRAINING_GPUS * workers_per_device
+                else list(self.TRAINING_GPUS) * workers_per_device
             )
             nprocesses = (
                 8

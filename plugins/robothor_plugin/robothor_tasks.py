@@ -29,8 +29,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         task_info: Dict[str, Any],
         max_steps: int,
         reward_configs: Dict[str, Any],
-        episode_info: Optional[Dict[str, Any]] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
@@ -195,7 +194,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         task_info: Dict[str, Any],
         max_steps: int,
         reward_configs: Dict[str, Any],
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
@@ -277,6 +276,9 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             frame = self.env.current_frame.copy()
         elif mode == "depth":
             frame = self.env.current_depth.copy()
+        else:
+            raise NotImplementedError(f"Mode '{mode}' is not supported.")
+
         if self.mirror:
             frame = frame[:, ::-1, :].copy()  # horizontal flip
             # print("mirrored render")

@@ -1,4 +1,5 @@
-from typing import Dict, List, Optional, Union
+from abc import ABC
+from typing import Dict, List, Optional, Union, Any
 
 import gym
 import torch
@@ -6,15 +7,15 @@ import torch.nn as nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
+from core.base_abstractions.misc import Loss
+from core.base_abstractions.sensor import SensorSuite
 from plugins.babyai_plugin.babyai_models import BabyAIRecurrentACModel
 from plugins.babyai_plugin.babyai_tasks import BabyAITask
 from projects.babyai_baselines.experiments.base import BaseBabyAIExperimentConfig
-from core.base_abstractions.misc import Loss
-from core.base_abstractions.sensor import SensorSuite
 from utils.experiment_utils import Builder, LinearDecay, PipelineStage, TrainingPipeline
 
 
-class BaseBabyAIGoToLocalExperimentConfig(BaseBabyAIExperimentConfig):
+class BaseBabyAIGoToLocalExperimentConfig(BaseBabyAIExperimentConfig, ABC):
     """Base experimental config."""
 
     LEVEL: Optional[str] = "BabyAI-GoToLocal-v0"
@@ -99,3 +100,13 @@ class BaseBabyAIGoToLocalExperimentConfig(BaseBabyAIExperimentConfig):
             memory_dim=2048,
             include_auxiliary_head=cls.INCLUDE_AUXILIARY_HEAD,
         )
+
+    def valid_task_sampler_args(
+        self,
+        process_ind: int,
+        total_processes: int,
+        devices: Optional[List[int]] = None,
+        seeds: Optional[List[int]] = None,
+        deterministic_cudnn: bool = False,
+    ) -> Dict[str, Any]:
+        raise RuntimeError("No validation processes for these tasks")

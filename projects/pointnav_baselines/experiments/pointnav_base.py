@@ -1,9 +1,10 @@
+from abc import ABC
 from typing import Optional
 
 from core.base_abstractions.experiment_config import ExperimentConfig
 
 
-class PointNavBaseConfig(ExperimentConfig):
+class PointNavBaseConfig(ExperimentConfig, ABC):
     """An Object Navigation experiment configuration in iThor."""
 
     def __init__(self):

@@ -10,12 +10,10 @@ import time
 import traceback
 from collections import defaultdict
 from multiprocessing.context import BaseContext
+from multiprocessing.process import BaseProcess
 from typing import Optional, Dict, Union, Tuple, Sequence, List, Any
 
-import torch
-import torch.distributions
 import torch.multiprocessing as mp
-import torch.optim
 from setproctitle import setproctitle as ptitle
 
 from core.algorithms.onpolicy_sync.engine import (
@@ -27,7 +25,6 @@ from utils.experiment_utils import (
     ScalarMeanTracker,
     set_deterministic_cudnn,
     set_seed,
-    Builder,
     LoggingPackage,
 )
 from utils.misc_utils import all_equal, get_git_diff_of_project
@@ -82,7 +79,9 @@ class OnPolicyRunner(object):
             "checkpoints": self.mp_ctx.Queue(),
         }
 
-        self.processes: Dict[str, List[mp.Process]] = defaultdict(list)
+        self.processes: Dict[str, List[Union[BaseProcess, mp.Process]]] = defaultdict(
+            list
+        )
 
         self.current_checkpoint = None
 
@@ -118,12 +117,9 @@ class OnPolicyRunner(object):
         return mp_ctx
 
     def worker_devices(self, mode: str):
-        # Note: Avoid instantiating preprocessors in machine_params (use Builder if needed)
-        machine_params: Union[
-            Dict[str, Any], MachineParams
-        ] = self.config.machine_params(mode)
-        if not isinstance(machine_params, MachineParams):
-            machine_params = MachineParams(**machine_params)
+        machine_params: MachineParams = MachineParams.instance_from(
+            self.config.machine_params(mode)
+        )
         devices = machine_params.devices
 
         assert all_equal(devices) or all(
@@ -135,17 +131,13 @@ class OnPolicyRunner(object):
         )
         return devices
 
-    def get_visualizer(self, mode: str):
+    def init_visualizer(self, mode: str):
         # Note: Avoid instantiating anything in machine_params (use Builder if needed)
-        params = self.config.machine_params(mode)
-        if "visualizer" in params and params["visualizer"] is not None:
-            if isinstance(params["visualizer"], Builder):
-                self.visualizer = params["visualizer"]()
-            else:
-                self.visualizer = params["visualizer"]
+        machine_params = MachineParams.instance_from(self.config.machine_params(mode))
+        self.visualizer = machine_params.visualizer
 
     @staticmethod
-    def init_process(mode, id):
+    def init_process(mode: str, id: int):
         ptitle("{}-{}".format(mode, id))
 
         def sigterm_handler(_signo, _stack_frame):
@@ -235,7 +227,7 @@ class OnPolicyRunner(object):
             distributed_port = find_free_port()
 
         for trainer_it in range(num_workers):
-            train: mp.process.BaseProcess = self.mp_ctx.Process(
+            train: BaseProcess = self.mp_ctx.Process(
                 target=self.train_loop,
                 kwargs=dict(
                     id=trainer_it,
@@ -267,8 +259,8 @@ class OnPolicyRunner(object):
         # Validation
         if self.running_validation:
             device = self.worker_devices("valid")[0]
-            self.get_visualizer("valid")
-            valid: mp.process.BaseProcess = self.mp_ctx.Process(
+            self.init_visualizer("valid")
+            valid: BaseProcess = self.mp_ctx.Process(
                 target=self.valid_loop,
                 args=(0,),
                 kwargs=dict(
@@ -306,7 +298,7 @@ class OnPolicyRunner(object):
         max_sampler_processes_per_worker: Optional[int] = None,
     ):
         devices = self.worker_devices("test")
-        self.get_visualizer("test")
+        self.init_visualizer("test")
         num_testers = len(devices)
 
         distributed_port = 0
@@ -314,7 +306,7 @@ class OnPolicyRunner(object):
             distributed_port = find_free_port()
 
         for tester_it in range(num_testers):
-            test: mp.process.BaseProcess = self.mp_ctx.Process(
+            test: BaseProcess = self.mp_ctx.Process(
                 target=self.test_loop,
                 args=(tester_it,),
                 kwargs=dict(
@@ -805,7 +797,8 @@ class OnPolicyRunner(object):
             else files
         )
 
-    def step_from_checkpoint(self, name):
+    @staticmethod
+    def step_from_checkpoint(name: str):
         parts = name.split("__")
         for part in parts:
             if "steps_" in part:

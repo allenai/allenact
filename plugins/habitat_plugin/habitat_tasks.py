@@ -1,9 +1,10 @@
 # TODO: @klemenkotar please fix all type errors
-
+from abc import ABC
 from typing import Tuple, List, Dict, Any, Optional, Union, Sequence, cast
 
 import gym
 import numpy as np
+from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 
 from core.base_abstractions.misc import RLStepResult
@@ -20,7 +21,7 @@ from plugins.habitat_plugin.habitat_constants import (
 from plugins.habitat_plugin.habitat_environment import HabitatEnvironment
 
 
-class HabitatTask(Task[HabitatEnvironment]):
+class HabitatTask(Task[HabitatEnvironment], ABC):
     def __init__(
         self,
         env: HabitatEnvironment,
@@ -100,8 +101,9 @@ class PointNavTask(Task[HabitatEnvironment]):
         ):
             self.last_geodesic_distance = 0.0
 
+        # noinspection PyProtectedMember
         self._shortest_path_follower = ShortestPathFollower(
-            env.env.sim, env.env._config.TASK.SUCCESS_DISTANCE, False
+            cast(HabitatSim, env.env.sim), env.env._config.TASK.SUCCESS_DISTANCE, False
         )
         self._shortest_path_follower.mode = "geodesic_path"
 
@@ -227,6 +229,7 @@ class ObjectNavTask(HabitatTask):
         self._min_distance_to_goal = self.last_geodesic_distance
         self._num_invalid_actions = 0
 
+        # noinspection PyProtectedMember
         self._shortest_path_follower = ShortestPathFollower(
             env.env.sim, env.env._config.TASK.SUCCESS_DISTANCE, False
         )

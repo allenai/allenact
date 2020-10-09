@@ -49,7 +49,7 @@ class BCOffPolicyBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentCo
                     loss_names=[],
                     max_stage_steps=total_train_steps,
                     offpolicy_component=OffPolicyPipelineComponent(
-                        data_iterator_builder=lambda **kwargs: create_minigrid_offpolicy_data_iterator(
+                        data_iterator_builder=lambda **extra_kwargs: create_minigrid_offpolicy_data_iterator(
                             path=os.path.join(
                                 BABYAI_EXPERT_TRAJECTORIES_DIR,
                                 "BabyAI-GoToLocal-v0{}.pkl".format(
@@ -59,7 +59,7 @@ class BCOffPolicyBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentCo
                             nrollouts=cls.NUM_TRAIN_SAMPLERS // num_mini_batch,
                             rollout_len=cls.ROLLOUT_STEPS,
                             instr_len=cls.INSTR_LEN,
-                            **kwargs,
+                            **extra_kwargs,
                         ),
                         loss_names=["offpolicy_expert_ce_loss"],
                         updates=num_mini_batch * update_repeats,

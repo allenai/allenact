@@ -7,7 +7,6 @@ import torch
 from gym.spaces.dict import Dict as SpaceDict
 from torch import nn
 
-from core.models.basic_models import LinearActorCritic, RNNActorCritic
 from core.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     Memory,
@@ -16,6 +15,7 @@ from core.algorithms.onpolicy_sync.policy import (
     ObservationType,
 )
 from core.base_abstractions.distributions import CategoricalDistr
+from core.models.basic_models import LinearActorCritic, RNNActorCritic
 from utils.misc_utils import prepare_locals_for_super
 
 
@@ -254,5 +254,6 @@ class MiniGridSimpleConv(MiniGridSimpleConvBase):
     def recurrent_hidden_state_size(self):
         return 0
 
+    # noinspection PyMethodMayBeStatic
     def _recurrent_memory_specification(self):
         return None

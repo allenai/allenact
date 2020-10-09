@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
-from core.models.basic_models import SimpleCNN, RNNStateEncoder
 from core.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     LinearCriticHead,
@@ -14,8 +13,9 @@ from core.algorithms.onpolicy_sync.policy import (
     ObservationType,
     DistributionType,
 )
-from core.base_abstractions.misc import ActorCriticOutput, Memory
 from core.base_abstractions.distributions import CategoricalDistr
+from core.base_abstractions.misc import ActorCriticOutput, Memory
+from core.models.basic_models import SimpleCNN, RNNStateEncoder
 
 
 class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
@@ -316,7 +316,8 @@ class ResnetTensorGoalEncoder(nn.Module):
 
         return observations, use_agent, nstep, nsampler, nagent
 
-    def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
+    @staticmethod
+    def adapt_output(x, use_agent, nstep, nsampler, nagent):
         if use_agent:
             return x.view(nstep, nsampler, nagent, -1)
         return x.view(nstep, nsampler * nagent, -1)
@@ -452,7 +453,8 @@ class ResnetDualTensorGoalEncoder(nn.Module):
 
         return observations, use_agent, nstep, nsampler, nagent
 
-    def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
+    @staticmethod
+    def adapt_output(x, use_agent, nstep, nsampler, nagent):
         if use_agent:
             return x.view(nstep, nsampler, nagent, -1)
         return x.view(nstep, nsampler, -1)

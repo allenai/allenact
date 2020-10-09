@@ -215,6 +215,7 @@ class ObjectNavTaskSampler(TaskSampler):
                 "y"
             ]
         else:
+            assert self.max_tasks is not None
             next_task_id = self.dataset_first + self.max_tasks - 1
             # get_logger().debug("task {}".format(next_task_id))
             assert (
@@ -508,9 +509,6 @@ class PointNavTaskSampler(TaskSampler):
         max_tasks: Optional[int] = None,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
-        fixed_tasks: Optional[List[Dict[str, Any]]] = None,
-        *args,
-        **kwargs
     ) -> None:
         self.rewards_config = rewards_config
         self.env_args = env_args
@@ -661,13 +659,14 @@ class PointNavTaskSampler(TaskSampler):
             miny, maxy, scene
         )
 
-        cond = True
-        attempt = 0
-        while cond and attempt < 10:
+        too_close_to_target = True
+        target: Optional[Dict[str, float]] = None
+        for _ in range(10):
             self.env.randomize_agent_location()
             target = copy.copy(random.choice(locs))
-            cond = self.env.distance_to_point(target) <= 0
-            attempt += 1
+            too_close_to_target = self.env.distance_to_point(target) <= 0
+            if not too_close_to_target:
+                break
 
         pose = self.env.agent_state()
 
@@ -679,7 +678,7 @@ class PointNavTaskSampler(TaskSampler):
             "actions": [],
         }
 
-        if cond:
+        if too_close_to_target:
             get_logger().warning("No path for sampled episode {}".format(task_info))
         # else:
         #     get_logger().debug("Path found for sampled episode {}".format(task_info))
@@ -863,7 +862,6 @@ class PointNavDatasetTaskSampler(TaskSampler):
             max_steps=self.max_steps,
             action_space=self._action_space,
             reward_configs=self.rewards_config,
-            episode_info=episode,
         )
 
         return self._last_sampled_task

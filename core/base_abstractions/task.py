@@ -252,7 +252,7 @@ class Task(Generic[EnvType]):
             possible values (e.g. if x is the expert policy then x should be the correct length, \
             sum to 1, and have non-negative entries).
         """
-        raise NotImplementedError
+        return None, False
 
     @property
     def cumulative_reward(self) -> float:

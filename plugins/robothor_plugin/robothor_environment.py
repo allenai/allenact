@@ -11,7 +11,11 @@ import numpy as np
 from ai2thor.controller import Controller
 from ai2thor.util import metrics
 
-from utils.cache_utils import DynamicDistanceCache, _pos_to_str, _str_to_pos
+from utils.cache_utils import (
+    DynamicDistanceCache,
+    pos_to_str_for_cache,
+    str_to_pos_for_cache,
+)
 from utils.experiment_utils import recursive_update
 from utils.system import get_logger
 
@@ -382,7 +386,7 @@ class RoboThorCachedEnvironment:
     def agent_state(self) -> Dict[str, Union[Dict[str, float], float]]:
         """Return agent position, rotation and horizon."""
         return {
-            **_str_to_pos(self.agent_position),
+            **str_to_pos_for_cache(self.agent_position),
             "rotation": {"x": 0.0, "y": self.agent_rotation, "z": 0.0},
             "horizon": 1.0,
         }
@@ -390,7 +394,7 @@ class RoboThorCachedEnvironment:
     def teleport(
         self, pose: Dict[str, float], rotation: Dict[str, float], horizon: float = 0.0
     ):
-        self.agent_position = _pos_to_str(pose)
+        self.agent_position = pos_to_str_for_cache(pose)
         self.agent_rotation = (
             math.floor(rotation["y"] / 90.0) * 90
         )  # round to nearest 90 degree angle
@@ -409,8 +413,8 @@ class RoboThorCachedEnvironment:
             )
             self._last_action = "None"
             assert len(self.known_good_locations[self.scene_name]) > 10
-        except:
-            print("Could not load scene:", scene_name)
+        except Exception as _:
+            raise RuntimeError("Could not load scene:", scene_name)
 
     def known_good_locations_list(self):
         return self.known_good_locations[self.scene_name]
@@ -419,7 +423,7 @@ class RoboThorCachedEnvironment:
     def currently_reachable_points(self) -> List[Dict[str, float]]:
         """List of {"x": x, "y": y, "z": z} locations in the scene that are
         currently reachable."""
-        return [_str_to_pos(pos) for pos in self.view_cache]
+        return [str_to_pos_for_cache(pos) for pos in self.view_cache]
 
     @property
     def scene_name(self) -> str:
@@ -474,7 +478,7 @@ class RoboThorCachedEnvironment:
         elif action_dict["action"] == "RotateRight":
             self.agent_rotation = (self.agent_rotation + 90.0) % 360.0
         elif action_dict["action"] == "MoveAhead":
-            pos = _str_to_pos(self.agent_position)
+            pos = str_to_pos_for_cache(self.agent_position)
             if self.agent_rotation == 0.0:
                 pos["x"] += 0.25
             elif self.agent_rotation == 90.0:
@@ -483,11 +487,12 @@ class RoboThorCachedEnvironment:
                 pos["x"] -= 0.25
             elif self.agent_rotation == 270.0:
                 pos["z"] -= 0.25
-            pos_string = _pos_to_str(pos)
+            pos_string = pos_to_str_for_cache(pos)
             if pos_string in self.view_cache:
-                self.agent_position = _pos_to_str(pos)
-        return True
+                self.agent_position = pos_to_str_for_cache(pos)
+        return self.last_event
 
+    # noinspection PyMethodMayBeStatic
     def stop(self):
         """Stops the ai2thor controller."""
         print("No need to stop cached environment")

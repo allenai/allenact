@@ -7,6 +7,7 @@ import traceback
 import typing
 from multiprocessing.connection import Connection
 from multiprocessing.context import BaseContext
+from multiprocessing.process import BaseProcess
 from threading import Thread
 from typing import (
     Any,
@@ -85,7 +86,7 @@ class VectorSampledTasks(object):
     """
 
     observation_space: SpaceDict
-    _workers: List[Union[mp.Process, Thread]]
+    _workers: List[Union[mp.Process, Thread, BaseProcess]]
     _is_waiting: bool
     _num_task_samplers: int
     _auto_resample_when_done: bool
@@ -191,17 +192,17 @@ class VectorSampledTasks(object):
             for j in range(len(part))
         ]
 
-    def _partition_to_processes(self, input: Union[typing.Iterator, typing.Sequence]):
+    def _partition_to_processes(self, seq: Union[typing.Iterator, typing.Sequence]):
         subparts_list: List[List] = [[] for _ in range(self._num_processes)]
 
-        input = list(input)
-        assert len(input) == len(self.sampler_index_to_process_ind_and_subprocess_ind)
+        seq = list(seq)
+        assert len(seq) == len(self.sampler_index_to_process_ind_and_subprocess_ind)
 
         for sampler_index, (process_ind, subprocess_ind) in enumerate(
             self.sampler_index_to_process_ind_and_subprocess_ind
         ):
             assert len(subparts_list[process_ind]) == subprocess_ind
-            subparts_list[process_ind].append(input[sampler_index])
+            subparts_list[process_ind].append(seq[sampler_index])
 
         return subparts_list
 

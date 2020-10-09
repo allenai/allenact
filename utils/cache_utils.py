@@ -1,12 +1,14 @@
 import math
 from typing import Dict, Any, Union, Callable, Optional
 
+from utils.system import get_logger
 
-def _pos_to_str(pos: Dict[str, float]) -> str:
+
+def pos_to_str_for_cache(pos: Dict[str, float]) -> str:
     return "_".join([str(pos["x"]), str(pos["y"]), str(pos["z"])])
 
 
-def _str_to_pos(s: str) -> Dict[str, float]:
+def str_to_pos_for_cache(s: str) -> Dict[str, float]:
     split = s.split("_")
     return {"x": float(split[0]), "y": float(split[1]), "z": float(split[2])}
 
@@ -95,7 +97,9 @@ def _get_shortest_path_distance_from_cache(
     cache: Dict[str, Any], position: Dict[str, float], target: Dict[str, float]
 ) -> float:
     try:
-        return cache[_pos_to_str(position)][_pos_to_str(target)]["distance"]
+        return cache[pos_to_str_for_cache(position)][pos_to_str_for_cache(target)][
+            "distance"
+        ]
     except:
         return -1.0
 
@@ -104,7 +108,7 @@ def _get_shortest_path_distance_to_object_from_cache(
     cache: Dict[str, Any], position: Dict[str, float], target_class: str
 ) -> float:
     try:
-        return cache[_pos_to_str(position)][target_class]["distance"]
+        return cache[pos_to_str_for_cache(position)][target_class]["distance"]
     except:
         return -1.0
 
@@ -115,7 +119,7 @@ def find_nearest_point_in_cache(
     best_delta = float("inf")
     closest_point: Dict[str, float] = {}
     for p in cache:
-        pos = _str_to_pos(p)
+        pos = str_to_pos_for_cache(p)
         delta = (
             abs(point["x"] - pos["x"])
             + abs(point["y"] - pos["y"])
@@ -162,7 +166,7 @@ class DynamicDistanceCache(object):
             self.hits += 1
         self.num_accesses += 1
         if self.num_accesses % 1000 == 0:
-            print("Cache Miss-Hit Ratio: %.4f" % (self.misses / self.hits))
+            get_logger().debug("Cache Miss-Hit Ratio: %.4f" % (self.misses / self.hits))
         return self.cache[position_str][target_str]
 
     def invalidate(self):

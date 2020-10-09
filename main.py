@@ -19,6 +19,7 @@ from utils.system import get_logger, init_logging, HUMAN_LOG_LEVELS
 def get_args():
     """Creates the argument parser and parses any input arguments."""
 
+    # noinspection PyTypeChecker
     parser = argparse.ArgumentParser(
         description="allenact", formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )

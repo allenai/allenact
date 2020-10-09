@@ -75,29 +75,25 @@ class HashableDict(dict):
         )
 
 
-def partition_sequence(input: Sequence, parts: int) -> List:
-    assert 0 < parts <= len(input)
-    n = len(input)
+def partition_sequence(seq: Sequence, parts: int) -> List:
+    assert 0 < parts <= len(seq)
+    n = len(seq)
 
     quotient = n // parts
     remainder = n % parts
     counts = [quotient + (i < remainder) for i in range(parts)]
     inds = np.cumsum([0] + counts)
-    return [input[ind0:ind1] for ind0, ind1 in zip(inds[:-1], inds[1:])]
+    return [seq[ind0:ind1] for ind0, ind1 in zip(inds[:-1], inds[1:])]
 
 
-def uninterleave(input: Sequence, parts: int) -> List:
-    assert 0 < parts <= len(input)
-    n = len(input)
+def uninterleave(seq: Sequence, parts: int) -> List:
+    assert 0 < parts <= len(seq)
+    n = len(seq)
 
     quotient = n // parts
 
     return [
-        [
-            input[i + j * parts]
-            for j in range(quotient + 1)
-            if i + j * parts < len(input)
-        ]
+        [seq[i + j * parts] for j in range(quotient + 1) if i + j * parts < len(seq)]
         for i in range(parts)
     ]
 

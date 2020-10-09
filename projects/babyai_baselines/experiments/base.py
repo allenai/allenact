@@ -1,3 +1,4 @@
+from abc import ABC
 from typing import Dict, Any, List, Optional, Union, Sequence
 
 import gin
@@ -7,24 +8,24 @@ import torch.nn as nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
+from core.algorithms.onpolicy_sync.losses import PPO, A2C
+from core.algorithms.onpolicy_sync.losses.a2cacktr import A2CConfig
+from core.algorithms.onpolicy_sync.losses.imitation import Imitation
+from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from core.base_abstractions.experiment_config import ExperimentConfig
+from core.base_abstractions.misc import Loss
+from core.base_abstractions.sensor import SensorSuite, Sensor, ExpertActionSensor
+from core.base_abstractions.task import TaskSampler
 from plugins.babyai_plugin.babyai_models import BabyAIRecurrentACModel
 from plugins.babyai_plugin.babyai_tasks import BabyAITask, BabyAITaskSampler
 from plugins.minigrid_plugin.minigrid_sensors import (
     EgocentricMiniGridSensor,
     MiniGridMissionSensor,
 )
-from core.algorithms.onpolicy_sync.losses import PPO, A2C
-from core.algorithms.onpolicy_sync.losses.a2cacktr import A2CConfig
-from core.algorithms.onpolicy_sync.losses.imitation import Imitation
-from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from core.base_abstractions.misc import Loss
-from core.base_abstractions.experiment_config import ExperimentConfig
-from core.base_abstractions.sensor import SensorSuite, Sensor, ExpertActionSensor
-from core.base_abstractions.task import TaskSampler
 from utils.experiment_utils import Builder, LinearDecay, PipelineStage, TrainingPipeline
 
 
-class BaseBabyAIExperimentConfig(ExperimentConfig):
+class BaseBabyAIExperimentConfig(ExperimentConfig, ABC):
     """Base experimental config."""
 
     LEVEL: Optional[str] = None
@@ -109,6 +110,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig):
         pipeline_stages: List[PipelineStage],
         num_mini_batch: int,
         update_repeats: int,
+        total_train_steps: int,
         lr: Optional[float] = None,
     ):
         lr = cls.DEFAULT_LR if lr is None else lr
@@ -205,7 +207,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        raise NotImplementedError
+        raise RuntimeError
 
     def test_task_sampler_args(
         self,

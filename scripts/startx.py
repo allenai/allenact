@@ -1,12 +1,10 @@
-import subprocess
-import shlex
-import re
 import atexit
-import platform
-import tempfile
-import threading
 import os
-import sys
+import platform
+import re
+import shlex
+import subprocess
+import tempfile
 
 
 def pci_records():
@@ -87,8 +85,8 @@ def startx(display=0):
     if not devices:
         raise Exception("no nvidia cards found")
 
+    fd, path = tempfile.mkstemp()
     try:
-        fd, path = tempfile.mkstemp()
         with open(path, "w") as f:
             f.write(generate_xorg_conf(devices))
         command = shlex.split(

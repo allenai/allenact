@@ -1,29 +1,29 @@
 from typing import Dict, Any, List, Optional
 
 import gym
+import habitat
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
-import habitat
 from torchvision import models
 
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from projects.pointnav_baselines.models.point_nav_models import (
-    ResnetTensorPointNavActorCritic,
-)
-from plugins.habitat_plugin.habitat_sensors import (
-    RGBSensorHabitat,
-    TargetCoordinatesSensorHabitat,
-)
 from core.base_abstractions.experiment_config import ExperimentConfig
 from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
 from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
+from plugins.habitat_plugin.habitat_sensors import (
+    RGBSensorHabitat,
+    TargetCoordinatesSensorHabitat,
+)
 from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
 from plugins.habitat_plugin.habitat_utils import construct_env_configs
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
+from projects.pointnav_baselines.models.point_nav_models import (
+    ResnetTensorPointNavActorCritic,
+)
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -46,7 +46,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     # Training Engine Parameters
     ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
-    NUM_PROCESSES = 60
+    NUM_PROCESSES = 80
     TRAINING_GPUS = list(range(torch.cuda.device_count()))
     VALIDATION_GPUS = [torch.cuda.device_count() - 1]
     TESTING_GPUS = [torch.cuda.device_count() - 1]
@@ -61,15 +61,10 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         "habitat/habitat-api/data/datasets/pointnav/gibson/v1/test/test.json.gz"
     )
 
-    TRAIN_GPUS = list(range(torch.cuda.device_count()))
-    VALIDATION_GPUS = [torch.cuda.device_count() - 1]
-    TESTING_GPUS = [torch.cuda.device_count() - 1]
-
-    NUM_PROCESSES = 80
     CONFIG = habitat.get_config("configs/gibson.yaml")
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
-    CONFIG.SIMULATOR_GPU_IDS = TRAIN_GPUS
+    CONFIG.SIMULATOR_GPU_IDS = TRAINING_GPUS
     CONFIG.DATASET.SCENES_DIR = "habitat/habitat-api/data/scene_datasets/"
     CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
@@ -184,7 +179,6 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 if not torch.cuda.is_available()
                 else self.split_num_processes(len(gpu_ids))
             )
-            sampler_devices = self.TRAINING_GPUS
             render_video = False
         elif mode == "valid":
             nprocesses = 1

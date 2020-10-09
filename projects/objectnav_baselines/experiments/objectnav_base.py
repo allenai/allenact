@@ -1,7 +1,9 @@
+from abc import ABC
+
 from core.base_abstractions.experiment_config import ExperimentConfig
 
 
-class ObjectNavBaseConfig(ExperimentConfig):
+class ObjectNavBaseConfig(ExperimentConfig, ABC):
     """The base object navigation configuration file."""
 
     def __init__(self):

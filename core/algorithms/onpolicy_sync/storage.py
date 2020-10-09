@@ -3,7 +3,7 @@
 # LICENSE file in the root directory of this source tree.
 import random
 from collections import defaultdict
-from typing import Union, List, Dict, Tuple, DefaultDict, Sequence, cast, Any, Optional
+from typing import Union, List, Dict, Tuple, DefaultDict, Sequence, cast, Optional
 
 import numpy as np
 import torch
@@ -17,18 +17,13 @@ from core.base_abstractions.misc import Memory
 from utils.system import get_logger
 
 
-class RolloutStorage:
+class RolloutStorage(object):
     """Class for storing rollout information for RL trainers."""
 
     FLATTEN_SEPARATOR: str = "._AUTOFLATTEN_."
 
     def __init__(
-        self,
-        num_steps: int,
-        num_samplers: int,
-        actor_critic: ActorCriticModel,
-        *args,
-        **kwargs,
+        self, num_steps: int, num_samplers: int, actor_critic: ActorCriticModel,
     ):
         self.num_steps = num_steps
 

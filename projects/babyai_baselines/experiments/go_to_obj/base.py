@@ -1,3 +1,4 @@
+from abc import ABC
 from typing import Dict, List, Optional, Union
 
 import gym
@@ -5,15 +6,15 @@ import torch.nn as nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
+from core.base_abstractions.misc import Loss
+from core.base_abstractions.sensor import SensorSuite
 from plugins.babyai_plugin.babyai_models import BabyAIRecurrentACModel
 from plugins.babyai_plugin.babyai_tasks import BabyAITask
 from projects.babyai_baselines.experiments.base import BaseBabyAIExperimentConfig
-from core.base_abstractions.misc import Loss
-from core.base_abstractions.sensor import SensorSuite
 from utils.experiment_utils import Builder, LinearDecay, PipelineStage, TrainingPipeline
 
 
-class BaseBabyAIGoToObjExperimentConfig(BaseBabyAIExperimentConfig):
+class BaseBabyAIGoToObjExperimentConfig(BaseBabyAIExperimentConfig, ABC):
     """Base experimental config."""
 
     LEVEL: Optional[str] = "BabyAI-GoToObj-v0"

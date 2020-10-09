@@ -19,9 +19,9 @@ from gym.spaces.dict import Dict as SpaceDict
 from torch import nn
 
 from core.algorithms.onpolicy_sync.policy import ActorCriticModel, DistributionType
-from core.base_abstractions.misc import ActorCriticOutput, Memory
 from core.base_abstractions.distributions import CategoricalDistr
-from utils.model_utils import make_cnn, compute_cnn_output, Flatten
+from core.base_abstractions.misc import ActorCriticOutput, Memory
+from utils.model_utils import make_cnn, compute_cnn_output
 
 
 class SimpleCNN(nn.Module):
@@ -455,6 +455,7 @@ class RNNStateEncoder(nn.Module):
             self.num_recurrent_layers, nsamplers * nagents, -1
         )
 
+        # noinspection PyTypeChecker
         return x, hidden_states, masks, mem_agent, obs_agent, nsteps, nsamplers, nagents
 
     def adapt_result(
@@ -592,6 +593,7 @@ class LinearActorCritic(ActorCriticModel[CategoricalDistr]):
         nn.init.orthogonal_(self.linear.weight)
         nn.init.constant_(self.linear.bias, 0)
 
+    # noinspection PyMethodMayBeStatic
     def _recurrent_memory_specification(self):
         return None
 
@@ -705,6 +707,7 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
             masks=masks,
         )
 
+        # noinspection PyCallingNonCallable
         out, _ = self.ac_nonrecurrent_head(
             observations={self.head_uuid: rnn_out},
             memory=None,

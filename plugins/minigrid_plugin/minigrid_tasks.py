@@ -12,17 +12,16 @@ from gym_minigrid.minigrid import (
     IDX_TO_OBJECT,
     MiniGridEnv,
     OBJECT_TO_IDX,
-    WorldObj,
 )
 
-from plugins.minigrid_plugin.minigrid_environments import AskForHelpSimpleCrossing
 from core.base_abstractions.misc import RLStepResult
 from core.base_abstractions.sensor import Sensor, SensorSuite
 from core.base_abstractions.task import Task, TaskSampler
+from plugins.minigrid_plugin.minigrid_environments import AskForHelpSimpleCrossing
 from utils.system import get_logger
 
 
-class MiniGridTask(Task[Union[CrossingEnv]]):
+class MiniGridTask(Task[CrossingEnv]):
     _ACTION_NAMES: Tuple[str, ...] = ("left", "right", "forward")
     _ACTION_IND_TO_MINIGRID_IND = tuple(
         MiniGridEnv.Actions.__members__[name].value for name in _ACTION_NAMES
@@ -93,39 +92,11 @@ class MiniGridTask(Task[Union[CrossingEnv]]):
     def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
         return cls._ACTION_NAMES
 
-    def cells_of_object_type(
-        self, object_type: Union[str, WorldObj], image: np.ndarray = None,
-    ) -> List[Tuple[int, int, int]]:
-        object_positions = self.positions_of_object_type(object_type)
-        if not image:
-            image = self.env.grid.encode()
-        return [image[pos[0], pos[1], :] for pos in object_positions]
-
-    def positions_of_object_type(self, object_type: Union[str, WorldObj]):
-        if type(object_type) == str:
-            object_indices = [
-                x
-                for x, y in enumerate(self.env.grid.grid)
-                if (y is not None and y.type == object_type)
-            ]
-        else:
-            object_indices = [
-                x
-                for x, y in enumerate(self.env.grid.grid)
-                if (
-                    y is not None and isinstance(y, object_type)  # type:ignore
-                )  # TODO: bug?!
-            ]
-        object_tuples = [
-            (o % self.env.width, o // self.env.width) for o in object_indices
-        ]
-        return object_tuples
-
     def close(self) -> None:
         pass
 
     def metrics(self) -> Dict[str, Any]:
-        # noinspection PyUnresolvedReferences
+        # noinspection PyUnresolvedReferences,PyCallingNonCallable
         env_metrics = self.env.metrics() if hasattr(self.env, "metrics") else {}
         return {
             **super(MiniGridTask, self).metrics(),
@@ -225,7 +196,9 @@ class MiniGridTask(Task[Union[CrossingEnv]]):
         if sum(x != 0 for x in [x_diff, y_diff, angle_diff]) != 1 or angle_diff == 2:
             return
 
-        xy_diff_to_agent_dir = {tuple(vec): dir for dir, vec in enumerate(DIR_TO_VEC)}
+        xy_diff_to_agent_dir = {
+            tuple(vec): dir_ind for dir_ind, vec in enumerate(DIR_TO_VEC)
+        }
 
         action = None
         if angle_diff == 1:

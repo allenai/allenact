@@ -1,7 +1,8 @@
 import glob
 import os
+from abc import ABC
 from math import ceil
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Sequence
 
 import gym
 import numpy as np
@@ -16,7 +17,7 @@ from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBas
 from utils.experiment_utils import Builder
 
 
-class PointNavRoboThorBaseConfig(ObjectNavBaseConfig):
+class PointNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
     """The base config for all iTHOR PointNav experiments."""
 
     ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
@@ -60,6 +61,7 @@ class PointNavRoboThorBaseConfig(ObjectNavBaseConfig):
         return res
 
     def machine_params(self, mode="train", **kwargs):
+        sampler_devices: Sequence[int] = []
         if mode == "train":
             workers_per_device = 1
             gpu_ids = (

@@ -230,7 +230,7 @@ def pruned_nav_entries(nav_entries):
         raise NotImplementedError()
 
 
-if __name__ == "__main__":
+def main():
     os.chdir(ABS_PATH_OF_TOP_LEVEL_DIR)
 
     print("Copying all README.md files to docs.")
@@ -322,3 +322,7 @@ if __name__ == "__main__":
 
     with open(yaml_path, "w") as f:
         yaml.dump(mkdocs_yaml, f)
+
+
+if __name__ == "__main__":
+    main()

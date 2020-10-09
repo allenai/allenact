@@ -1,11 +1,11 @@
-from typing import cast, Optional, Tuple
-from torch import multiprocessing as mp
-
+import io
 import logging
 import socket
 import sys
-import io
 from contextlib import closing
+from typing import cast, Optional, Tuple
+
+from torch import multiprocessing as mp
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 
@@ -53,6 +53,8 @@ def init_logging(human_log_level: str = "info") -> None:
         log_level = logging.ERROR
     elif human_log_level == "none":
         log_level = logging.CRITICAL + 1
+    else:
+        raise NotImplementedError(f"Unknown log level {human_log_level}.")
 
     _new_logger(log_level)
     _set_log_formatter()
@@ -133,10 +135,12 @@ class _StreamToLogger:
 
 
 def _excepthook(*args):
-    get_logger().error("Uncaught exception:", exc_info=args)
+    # noinspection PyTypeChecker
+    get_logger().error(msg="Uncaught exception:", exc_info=args)
 
 
 class _AllenActMessageFilter:
+    # noinspection PyMethodMayBeStatic
     def filter(self, record):
         return int(
             ABS_PATH_OF_TOP_LEVEL_DIR in record.pathname or "main" in record.pathname

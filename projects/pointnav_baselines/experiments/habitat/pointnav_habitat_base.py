@@ -1,18 +1,19 @@
+from abc import ABC
 from typing import Dict, Any, List, Optional
 
 import gym
 import habitat
 import torch
 
-from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
 from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
 from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
 from plugins.habitat_plugin.habitat_tasks import PointNavTask
+from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
 from utils.experiment_utils import Builder
 
 
-class PointNavHabitatBaseConfig(PointNavBaseConfig):
+class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
     """The base config for all Habitat PointNav experiments."""
 
     ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None

@@ -1,22 +1,23 @@
 import glob
 import os
+from abc import ABC
 from math import ceil
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Sequence
 
 import gym
 import numpy as np
 import torch
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
-from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
+from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from utils.experiment_utils import Builder
 
 
-class PointNaviThorBaseConfig(ObjectNavBaseConfig):
+class PointNaviThorBaseConfig(ObjectNavBaseConfig, ABC):
     """The base config for all iTHOR PointNav experiments."""
 
     ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
@@ -61,6 +62,7 @@ class PointNaviThorBaseConfig(ObjectNavBaseConfig):
         return res
 
     def machine_params(self, mode="train", **kwargs):
+        sampler_devices: Sequence[int] = []
         if mode == "train":
             workers_per_device = 1
             gpu_ids = (

@@ -63,4 +63,6 @@ class TestGoToObjTrains(object):
 
 
 if __name__ == "__main__":
-    TestGoToObjTrains().test_ppo_trains()  # type:ignore
+    import pathlib
+
+    TestGoToObjTrains().test_ppo_trains(pathlib.Path("testing"))  # type:ignore

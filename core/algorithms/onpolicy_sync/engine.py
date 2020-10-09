@@ -28,6 +28,8 @@ import torch.multiprocessing as mp  # type: ignore
 import torch.optim
 from torch import nn
 from torch import optim
+
+# noinspection PyProtectedMember
 from torch.optim.lr_scheduler import _LRScheduler
 
 from core.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
@@ -559,6 +561,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             params=[p for p in self.actor_critic.parameters() if p.requires_grad]
         )
 
+        # noinspection PyProtectedMember
         self.lr_scheduler: Optional[optim.lr_scheduler._LRScheduler] = None
         if self.training_pipeline.lr_scheduler_builder is not None:
             self.lr_scheduler = self.training_pipeline.lr_scheduler_builder(
@@ -785,9 +788,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     masks=batch["masks"],
                 )
 
-                info: Dict[str, float] = {}
-
-                info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
+                info: Dict[str, float] = {
+                    "lr": self.optimizer.param_groups[0]["lr"]  # type: ignore
+                }
 
                 total_loss: Optional[torch.Tensor] = None
                 for loss_name in self.training_pipeline.current_stage_losses:

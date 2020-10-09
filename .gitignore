@@ -171,3 +171,10 @@ metrics__*.json
 
 # Robothor
 plugins/robothor_plugin/data/*
+
+# Habitat
+habitat
+
+# Files created when running training
+**/used_configs
+*.patch

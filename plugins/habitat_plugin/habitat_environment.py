@@ -1,6 +1,6 @@
 """A wrapper for interacting with the Habitat environment."""
 
-from typing import Dict, Union, List
+from typing import Dict, Union, List, Optional
 
 import habitat
 import numpy as np
@@ -9,6 +9,7 @@ from habitat.core.dataset import Episode, Dataset
 from habitat.core.simulator import Observations, AgentState, ShortestPathPoint
 
 from utils.cache_utils import DynamicDistanceCache
+from utils.system import get_logger
 
 
 class HabitatEnvironment(object):
@@ -20,6 +21,7 @@ class HabitatEnvironment(object):
         self.goal_index = 0
         self.last_geodesic_distance = None
         self.distance_cache = DynamicDistanceCache(rounding=1)
+        self._current_frame: Optional[np.ndarray] = None
 
     @property
     def scene_name(self) -> str:
@@ -27,9 +29,10 @@ class HabitatEnvironment(object):
 
     @property
     def current_frame(self) -> np.ndarray:
+        assert self._current_frame is not None
         return self._current_frame
 
-    def step(self, action_dict: Dict[str, Union[str, int, float]]) -> Observations:
+    def step(self, action_dict: Dict[str, Union[str, int]]) -> Observations:
         obs = self.env.step(action_dict["action"])
         self._current_frame = obs
         return obs
@@ -39,10 +42,10 @@ class HabitatEnvironment(object):
         goal = self.get_current_episode().goals[0].view_points[0].agent_state.position
         return self.env.sim.geodesic_distance(curr, goal)
 
-    def get_location(self) -> AgentState:
+    def get_location(self) -> List[float]:
         return self.env.sim.get_agent_state().position
 
-    def get_rotation(self) -> AgentState:
+    def get_rotation(self) -> Optional[List[float]]:
         return self.env.sim.get_agent_state().rotation
 
     def get_shortest_path(
@@ -53,8 +56,9 @@ class HabitatEnvironment(object):
     def get_current_episode(self) -> Episode:
         return self.env.current_episode
 
+    # noinspection PyMethodMayBeStatic
     def start(self):
-        print("No need to start a habitat_plugin env")
+        get_logger().debug("No need to start a habitat_plugin env")
 
     def stop(self):
         self.env.close()
@@ -69,4 +73,6 @@ class HabitatEnvironment(object):
 
     @property
     def num_episodes(self) -> int:
-        return len(self.env.episode_iterator.episodes)
+        ep_iterator = self.env.episode_iterator
+        assert isinstance(ep_iterator, habitat.core.dataset.EpisodeIterator)
+        return len(ep_iterator.episodes)

@@ -2,11 +2,11 @@
 experiments."""
 
 import abc
+import typing
 from typing import Dict, Any, Optional, List, Union, Sequence, Tuple
 
 import torch
 import torch.nn as nn
-import typing
 
 from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
@@ -59,8 +59,17 @@ class MachineParams(object):
         self._observation_set_cached: Optional[ObservationSet] = None
         self._visualizer_cached: Optional[VizSuite] = None
 
+    @classmethod
+    def instance_from(
+        cls, machine_params: Union["MachineParams", Dict[str, Any]]
+    ) -> "MachineParams":
+        if isinstance(machine_params, cls):
+            return machine_params
+        assert isinstance(machine_params, Dict)
+        return cls(**machine_params)
+
+    @staticmethod
     def _standardize_devices(
-        self,
         devices: Optional[
             Union[int, str, torch.device, Sequence[Union[int, str, torch.device]]]
         ],

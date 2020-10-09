@@ -14,6 +14,7 @@ class FastCrossing(CrossingEnv):
     def __init__(self, size=9, num_crossings=1, obstacle_type=Lava, seed=None):
         self.init_agent_pos: Optional[np.ndarray] = None
         self.init_agent_dir: Optional[int] = None
+        self.step_count: Optional[int] = None
         super(FastCrossing, self).__init__(
             size=size,
             num_crossings=num_crossings,
@@ -69,6 +70,8 @@ class AskForHelpSimpleCrossing(CrossingEnv):
         self.explored_points: Set = set()
         self._was_successful = False
         self.toggle_is_permanent = toggle_is_permenant
+
+        self.step_count: Optional[int] = None
 
         super(AskForHelpSimpleCrossing, self).__init__(
             size=size,

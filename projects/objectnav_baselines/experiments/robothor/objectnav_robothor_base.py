@@ -1,5 +1,6 @@
 import glob
 import os
+from abc import ABC
 from math import ceil
 from typing import Dict, Any, List, Optional, Sequence
 
@@ -17,7 +18,7 @@ from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBas
 from utils.experiment_utils import Builder
 
 
-class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
+class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
     """The base config for all RoboTHOR ObjectNav experiments."""
 
     def __init__(self):
@@ -71,7 +72,8 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig):
 
         self.SENSORS = None
 
-    def split_num_processes(self, nprocesses: int, ndevices: int):
+    @staticmethod
+    def split_num_processes(nprocesses: int, ndevices: int):
         assert nprocesses >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
             nprocesses, ndevices
         )

@@ -1,7 +1,7 @@
 import glob
 import os
 from math import ceil
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Sequence
 
 import gym
 import numpy as np
@@ -14,17 +14,17 @@ from torchvision import models
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from projects.pointnav_baselines.models.point_nav_models import (
-    ResnetTensorPointNavActorCritic,
-)
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from core.base_abstractions.experiment_config import ExperimentConfig
 from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
 from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
+from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
+from projects.pointnav_baselines.models.point_nav_models import (
+    ResnetTensorPointNavActorCritic,
+)
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -149,6 +149,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         return res
 
     def machine_params(self, mode="train", **kwargs):
+        sampler_devices: Sequence[int] = []
         if mode == "train":
             workers_per_device = 1
             gpu_ids = (

@@ -1,4 +1,5 @@
 import os
+from typing import Sequence
 
 import gym
 import torch
@@ -6,17 +7,17 @@ import torch.nn as nn
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from core.base_abstractions.preprocessor import ObservationSet
-from projects.tutorials.pointnav_robothor_rgb_ddppo import (
-    PointNavRoboThorRGBPPOExperimentConfig,
-)
+from core.base_abstractions.task import TaskSampler
+from plugins.ithor_plugin.ithor_sensors import GoalObjectTypeThorSensor
+from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
+from plugins.robothor_plugin.robothor_task_samplers import ObjectNavDatasetTaskSampler
+from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from projects.objectnav_baselines.models.object_nav_models import (
     ResnetTensorObjectNavActorCritic,
 )
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
-from core.base_abstractions.task import TaskSampler
-from plugins.ithor_plugin.ithor_sensors import GoalObjectTypeThorSensor
-from plugins.robothor_plugin.robothor_task_samplers import ObjectNavDatasetTaskSampler
-from plugins.robothor_plugin.robothor_tasks import PointNavTask
+from projects.tutorials.pointnav_robothor_rgb_ddppo import (
+    PointNavRoboThorRGBPPOExperimentConfig,
+)
 from utils.experiment_utils import Builder
 
 
@@ -94,6 +95,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(PointNavRoboThorRGBPPOExperimentCo
         )
 
     def machine_params(self, mode="train", **kwargs):
+        sampler_devices: Sequence[int] = []
         if mode == "train":
             workers_per_device = 1
             gpu_ids = (

@@ -26,8 +26,8 @@ from torchvision import transforms, models
 
 from core.base_abstractions.misc import EnvType
 from utils.misc_utils import prepare_locals_for_super
+from utils.model_utils import Flatten
 from utils.tensor_utils import ScaleBothSides
-from core.models.basic_models import Flatten
 
 if TYPE_CHECKING:
     from core.base_abstractions.task import SubTaskType

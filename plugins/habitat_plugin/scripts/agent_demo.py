@@ -31,6 +31,7 @@ def agent_demo():
     print("Agent stepping around inside environment.")
 
     count_steps = 0
+    action = None
     while not env.episode_over:
         keystroke = cv2.waitKey(0)
 

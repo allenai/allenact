@@ -6,12 +6,11 @@ import gym
 import numpy as np
 from gym.utils import seeding
 
-from plugins.lighthouse_plugin.lighthouse_environment import LightHouseEnvironment
-from plugins.lighthouse_plugin.lighthouse_sensors import get_corner_observation
-
 from core.base_abstractions.misc import RLStepResult
 from core.base_abstractions.sensor import Sensor, SensorSuite
 from core.base_abstractions.task import Task, TaskSampler
+from plugins.lighthouse_plugin.lighthouse_environment import LightHouseEnvironment
+from plugins.lighthouse_plugin.lighthouse_sensors import get_corner_observation
 from utils.experiment_utils import set_seed
 from utils.system import get_logger
 
@@ -67,9 +66,9 @@ class LightHouseTask(Task[LightHouseEnvironment], abc.ABC):
 
     def render(self, mode: str = "array", *args, **kwargs) -> np.ndarray:
         if mode == "array":
-            return self.env.render(mode, *args, **kwargs)
+            return self.env.render(mode, **kwargs)
         elif mode in ["rgb", "rgb_array", "human"]:
-            arr = self.env.render("array", *args, **kwargs)
+            arr = self.env.render("array", **kwargs)
             colors = np.array(
                 [
                     (31, 119, 180),
@@ -113,7 +112,7 @@ class FindGoalLightHouseTask(LightHouseTask):
         assert isinstance(action, int)
         action = cast(int, action)
 
-        success = self.env.step(action)
+        self.env.step(action)
         reward = STEP_PENALTY
 
         if np.all(self.env.current_position == self.env.goal_position):
@@ -302,7 +301,6 @@ class FindGoalLightHouseTaskSampler(TaskSampler):
         task_seeds_list: Optional[List[int]] = None,
         deterministic_sampling: bool = False,
         seed: Optional[int] = None,
-        **kwargs
     ):
         self.env = LightHouseEnvironment(world_dim=world_dim, world_radius=world_radius)
 
