@@ -83,7 +83,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
+            named_losses={"ppo_loss": PPO(**PPOConfig)},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,

@@ -1,6 +1,6 @@
 import copy
 import random
-from typing import List, Dict, Optional, Any, Union
+from typing import List, Dict, Optional, Any, Union, cast
 
 import gym
 
@@ -113,7 +113,7 @@ class ObjectNavTaskSampler(TaskSampler):
             self.scene_id = random.randint(0, len(self.scenes) - 1)
         elif self.scene_period == "manual":
             pass
-        elif self.scene_counter >= self.scene_period:
+        elif self.scene_counter >= cast(int, self.scene_period):
             if self.scene_id == len(self.scene_order) - 1:
                 # Randomize scene order for next iteration
                 random.shuffle(self.scene_order)

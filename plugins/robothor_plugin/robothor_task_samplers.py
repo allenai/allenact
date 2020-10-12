@@ -146,7 +146,7 @@ class ObjectNavTaskSampler(TaskSampler):
             self.scene_id = random.randint(0, len(self.scenes) - 1)
         elif self.scene_period == "manual":
             pass
-        elif self.scene_counter >= self.scene_period:
+        elif self.scene_counter >= cast(int, self.scene_period):
             if self.scene_id == len(self.scene_order) - 1:
                 # Randomize scene order for next iteration
                 random.shuffle(self.scene_order)
@@ -364,7 +364,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         return data
 
     @staticmethod
-    def load_distance_cache(scene: str, base_directory: str) -> Dict:
+    def load_distance_cache_from_file(scene: str, base_directory: str) -> Dict:
         filename = (
             "/".join([base_directory, scene])
             if base_directory[-1] != "/"
@@ -601,7 +601,7 @@ class PointNavTaskSampler(TaskSampler):
             self.scene_id = random.randint(0, len(self.scenes) - 1)
         elif self.scene_period == "manual":
             pass
-        elif self.scene_counter >= self.scene_period:
+        elif self.scene_counter >= cast(int, self.scene_period):
             if self.scene_id == len(self.scene_order) - 1:
                 # Randomize scene order for next iteration
                 random.shuffle(self.scene_order)

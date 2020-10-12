@@ -22,9 +22,7 @@ def create_debug_dataset_from_train_dataset(
     assert os.path.exists(downloaded_episodes), (
         "'{}' doesn't seem to exist or is empty. Make sure you've downloaded to download the appropriate"
         " training dataset with"
-        " datasets/download_navigation_datasets.sh".format(
-            downloaded_episodes
-        )
+        " datasets/download_navigation_datasets.sh".format(downloaded_episodes)
     )
 
     # episodes

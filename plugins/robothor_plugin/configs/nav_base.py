@@ -58,7 +58,7 @@ class NavBaseConfig(ExperimentConfig, abc.ABC):
             update_repeats=3,
             max_grad_norm=0.5,
             num_steps=30,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
+            named_losses={"ppo_loss": PPO(**PPOConfig)},
             gamma=0.99,
             use_gae=True,
             gae_lambda=0.95,

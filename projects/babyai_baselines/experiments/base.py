@@ -90,13 +90,13 @@ class BaseBabyAIExperimentConfig(ExperimentConfig, ABC):
             }
         elif alg == "a2c":
             return {
-                "loss": Builder(A2C, default=A2CConfig,),
+                "loss": A2C(**A2CConfig),
                 "num_mini_batch": 1,
                 "update_repeats": 1,
             }
         elif alg == "imitation":
             return {
-                "loss": Builder(Imitation),
+                "loss": Imitation(),
                 "num_mini_batch": cls.PPO_NUM_MINI_BATCH,
                 "update_repeats": 4,
             }

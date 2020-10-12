@@ -47,7 +47,7 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig):
                     "torchvision_resnet_model": models.resnet18,
                     "input_uuids": ["rgb_lowres"],
                     "output_uuid": "rgb_resnet",
-                    "parallel": False,  # TODO False for debugging
+                    "parallel": False,
                 },
             ),
         ]
@@ -81,7 +81,7 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
+            named_losses={"ppo_loss": PPO(**PPOConfig)},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,

@@ -62,11 +62,9 @@ class MyExperimentConfig(core.base_abstractions.experiment_config.ExperimentConf
         ...
         return utils.experiment_utils.TrainingPipeline(
             named_losses={
-                "imitation_loss": utils.experiment_utils.Builder(
-                    onpolicy_sync.losses.imitation.Imitation,
-                ),
-                "ppo_loss": onpolicy_sync.losses.ppo.PPO(
-                    **onpolicy_sync.losses.ppo.PPOConfig,
+                "imitation_loss": core.algorithms.onpolicy_sync.losses.imitation.Imitation(),
+                "ppo_loss": core.algorithms.onpolicy_sync.losses.ppo.PPO(
+                    **core.algorithms.onpolicy_sync.losses.ppo.PPOConfig,
                 ),
             },
             ...
