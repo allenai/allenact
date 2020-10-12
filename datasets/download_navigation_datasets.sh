@@ -40,6 +40,6 @@ then
     PYTHONPATH=. python ./plugins/ithor_plugin/scripts/make_objectnav_debug_dataset.py
 
 else
-    echo "Failed: Usage download_navigation_datasets.sh robothor-pointnav | robothor-objectnav | ithor-pointnav | ithor-objectnav"
+    echo "\nFailed: Usage download_navigation_datasets.sh robothor-pointnav | robothor-objectnav | ithor-pointnav | ithor-objectnav"
     exit 1
 fi

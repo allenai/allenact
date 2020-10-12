@@ -35,9 +35,10 @@ For our current setup the following command would work:
 
 ```bash
 python main.py \
+    pointnav_robothor_rgb_ddppo \
     -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ \
     -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30/exp_PointNavRobothorRGBPPO__stage_00__steps_000039031200.pt \
-    -b projects/tutorials pointnav_robothor_rgb_ddppo \
+    -b projects/tutorials \
     -t 2020-08-31_12-13-30
 ```
 
@@ -45,8 +46,9 @@ For testing on all saved checkpoints we just need to omit `<PATH_TO_CHECKPOINT>`
 
 ```bash
 python main.py \
+    pointnav_robothor_rgb_ddppo \
     -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ \
-    -b projects/tutorials pointnav_robothor_rgb_ddppo \
+    -b projects/tutorials  \
     -t 2020-08-31_12-13-30
 ```
 
@@ -147,9 +149,10 @@ Running test on the same downloaded models, but using the visualization-enabled 
  
 ```bash
 python main.py \
+    pointnav_robothor_rgb_ddppo_viz
     -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ \
     -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30/exp_PointNavRobothorRGBPPO__stage_00__steps_000039031200.pt \
-    -b projects/tutorials pointnav_robothor_rgb_ddppo_viz \
+    -b projects/tutorials \
     -t 2020-08-31_12-13-30
 ```
 
