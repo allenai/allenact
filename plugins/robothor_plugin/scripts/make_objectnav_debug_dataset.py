@@ -15,30 +15,17 @@ def create_debug_dataset_from_train_dataset(
     train_dataset_path: str,
     base_debug_output_path: str,
 ):
-    downloaded_caches = os.path.join(
-        train_dataset_path, "distance_caches", scene + ".json.gz"
-    )
     downloaded_episodes = os.path.join(
         train_dataset_path, "episodes", scene + ".json.gz"
     )
 
-    assert os.path.exists(downloaded_caches) and os.path.exists(downloaded_episodes), (
-        "'{}' or '{}' doesn't seem to exist or is empty. Make sure you've downloaded to download the appropriate"
+    assert os.path.exists(downloaded_episodes), (
+        "'{}' doesn't seem to exist or is empty. Make sure you've downloaded to download the appropriate"
         " training dataset with"
         " datasets/download_navigation_datasets.sh".format(
-            downloaded_caches, downloaded_episodes
+            downloaded_episodes
         )
     )
-
-    # caches
-    caches_dir = os.path.join(base_debug_output_path, "distance_caches")
-    os.makedirs(caches_dir, exist_ok=True)
-    caches_file = os.path.join(caches_dir, scene + ".json.gz")
-    if os.path.exists(caches_file):
-        print("Overwriting previous {}".format(caches_file))
-        os.remove(caches_file)
-    shutil.copy(downloaded_caches, caches_file)
-    assert os.path.exists(caches_file)
 
     # episodes
     episodes = ObjectNavDatasetTaskSampler.load_dataset(
@@ -69,12 +56,6 @@ def create_debug_dataset_from_train_dataset(
     with gzip.GzipFile(episodes_file, "w") as fout:
         fout.write(json_bytes)
     assert os.path.exists(episodes_file)
-
-    read = ObjectNavDatasetTaskSampler.load_distance_cache(scene, episodes_dir)
-
-    assert sorted([ep["id"] for ep in read]) == sorted(
-        [ep["id"] for ep in debug_episodes]
-    )
 
 
 if __name__ == "__main__":
