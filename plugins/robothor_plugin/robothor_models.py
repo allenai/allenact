@@ -135,7 +135,7 @@ class ResnetTensorGoalEncoder(nn.Module):
         ]
 
         x = self.target_obs_combiner(torch.cat(embs, dim=-3,))
-        x = x.view(x.size(0), -1)  # flatten
+        x = x.reshape(x.size(0), -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
 
@@ -414,7 +414,7 @@ class ResnetFasterRCNNTensorsGoalEncoder(nn.Module):
 
         x = self.target_obs_combiner(torch.cat(embs, dim=-3,))
 
-        x = x.view(x.size(0), -1)  # flatten
+        x = x.reshape(x.size(0), -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
 

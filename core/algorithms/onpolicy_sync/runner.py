@@ -30,7 +30,6 @@ from utils.experiment_utils import (
 from utils.misc_utils import all_equal, get_git_diff_of_project
 from utils.system import get_logger, find_free_port
 from utils.tensor_utils import SummaryWriter
-
 # Has results queue (aggregated per trainer), checkpoints queue and mp context
 # Instantiates train, validate, and test workers
 # Logging
@@ -93,7 +92,14 @@ class OnPolicyRunner(object):
 
     @property
     def running_validation(self):
-        return self.config.machine_params("valid")["nprocesses"] > 0
+        return (
+            sum(
+                MachineParams.instance_from(
+                    self.config.machine_params("valid")
+                ).nprocesses
+            )
+            > 0
+        )
 
     @staticmethod
     def init_context(
@@ -524,7 +530,7 @@ class OnPolicyRunner(object):
             "train {} steps {} offpolicy:".format(training_steps, offpolicy_steps)
         ]
         means = metrics_and_train_info_tracker.means()
-        for k in sorted(means.keys()):
+        for k in sorted(means.keys(), key=lambda mean_key: ("/" in mean_key, mean_key)):
             if "offpolicy" not in k:
                 log_writer.add_scalar(
                     "{}/".format(self.mode) + k, means[k], training_steps

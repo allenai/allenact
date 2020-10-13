@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Callable
 
 import gym
 import habitat
@@ -18,6 +18,10 @@ class PointNavTaskSampler(TaskSampler):
         max_steps: int,
         action_space: gym.Space,
         distance_to_goal: float,
+        filter_dataset_func: Optional[
+            Callable[[habitat.Dataset], habitat.Dataset]
+        ] = None,
+        **kwargs,
     ) -> None:
         self.grid_size = 0.25
         self.env: Optional[HabitatEnvironment] = None
@@ -29,6 +33,7 @@ class PointNavTaskSampler(TaskSampler):
         self.env_config = env_config
         self.distance_to_goal = distance_to_goal
         self.seed: Optional[int] = None
+        self.filter_dataset_func = filter_dataset_func
 
         self._last_sampled_task: Optional[PointNavTask] = None
 
@@ -36,6 +41,9 @@ class PointNavTaskSampler(TaskSampler):
         dataset = habitat.make_dataset(
             self.env_config.DATASET.TYPE, config=self.env_config.DATASET
         )
+        if self.filter_dataset_func is not None:
+            dataset = self.filter_dataset_func(dataset)
+
         env = HabitatEnvironment(config=self.env_config, dataset=dataset)
         self.max_tasks = (
             None if self.env_config.MODE == "train" else env.num_episodes

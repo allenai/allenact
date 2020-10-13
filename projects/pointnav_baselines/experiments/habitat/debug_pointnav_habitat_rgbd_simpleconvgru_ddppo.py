@@ -1,61 +1,62 @@
 import gym
+import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
-from plugins.robothor_plugin.robothor_sensors import (
-    DepthSensorRoboThor,
-    GPSCompassSensorRoboThor,
+from plugins.habitat_plugin.habitat_sensors import (
+    RGBSensorHabitat,
+    TargetCoordinatesSensorHabitat, DepthSensorHabitat,
 )
-from plugins.robothor_plugin.robothor_tasks import PointNavTask
-from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base import (
-    PointNaviThorBaseConfig,
-)
+from plugins.habitat_plugin.habitat_tasks import PointNavTask
+from plugins.habitat_plugin.habitat_utils import construct_env_configs
+from projects.pointnav_baselines.experiments.habitat.debug_pointnav_habitat_base import DebugPointNavHabitatBaseConfig
 from projects.pointnav_baselines.models.point_nav_models import (
     PointNavActorCriticSimpleConvRNN,
 )
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class PointNaviThorRGBPPOExperimentConfig(PointNaviThorBaseConfig):
-    """An Point Navigation experiment configuration in iThor with RGBD
+class PointNavHabitatRGBDDeterministiSimpleConvGRUDDPPOExperimentConfig(
+    DebugPointNavHabitatBaseConfig
+):
+    """An Point Navigation experiment configuration in Habitat with Depth
     input."""
 
     def __init__(self):
         super().__init__()
-
-        self.ENV_ARGS["renderDepthImage"] = True
-
         self.SENSORS = [
-            RGBSensorThor(
+            RGBSensorHabitat(
                 height=self.SCREEN_SIZE,
                 width=self.SCREEN_SIZE,
                 use_resnet_normalization=True,
-                uuid="rgb_lowres",
             ),
-            DepthSensorRoboThor(
+            DepthSensorHabitat(
                 height=self.SCREEN_SIZE,
                 width=self.SCREEN_SIZE,
                 use_normalization=True,
-                uuid="depth_lowres",
             ),
-            GPSCompassSensorRoboThor(),
+            TargetCoordinatesSensorHabitat(coordinate_dims=2),
         ]
 
         self.PREPROCESSORS = []
 
         self.OBSERVATIONS = [
-            "rgb_lowres",
-            "depth_lowres",
+            "rgb",
+            "depth",
             "target_coordinates_ind",
         ]
 
+        self.CONFIG = self.CONFIG.clone()
+        self.CONFIG.SIMULATOR.AGENT_0.SENSORS = ["DEPTH_SENSOR", "RGB_SENSOR"]
+
+        self.TRAIN_CONFIGS = construct_env_configs(self.CONFIG)
+
     @classmethod
     def tag(cls):
-        return "Pointnav-iTHOR-RGBD-SimpleConv-DDPPO"
+        return "Debug-Pointnav-Habitat-RGBD-SimpleConv-DDPPO"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
@@ -65,7 +66,7 @@ class PointNaviThorRGBPPOExperimentConfig(PointNaviThorBaseConfig):
         update_repeats = 3
         num_steps = 30
         save_interval = 5000000
-        log_interval = 10000
+        log_interval = 10000 if torch.cuda.is_available() else 1
         gamma = 0.99
         use_gae = True
         gae_lambda = 0.95
@@ -99,6 +100,7 @@ class PointNaviThorRGBPPOExperimentConfig(PointNaviThorBaseConfig):
             goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
             embed_coordinates=False,
+            coordinate_embedding_dim=2,
             coordinate_dims=2,
             num_rnn_layers=1,
             rnn_type="GRU",

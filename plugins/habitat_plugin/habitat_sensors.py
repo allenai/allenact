@@ -35,7 +35,7 @@ class RGBSensorHabitat(RGBSensor[HabitatEnvironment, Task[HabitatEnvironment]]):
         output_channels: int = 3,
         unnormalized_infimum: float = 0.0,
         unnormalized_supremum: float = 1.0,
-        scale_first: bool = False,
+        scale_first: bool = True,
         **kwargs: Any
     ):
         super().__init__(**prepare_locals_for_super(locals()))

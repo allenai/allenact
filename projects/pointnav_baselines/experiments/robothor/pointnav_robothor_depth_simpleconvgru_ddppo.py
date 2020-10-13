@@ -5,17 +5,17 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from plugins.robothor_plugin.robothor_sensors import (
+    DepthSensorRoboThor,
+    GPSCompassSensorRoboThor,
+)
+from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from projects.pointnav_baselines.experiments.robothor.pointnav_robothor_base import (
     PointNavRoboThorBaseConfig,
 )
 from projects.pointnav_baselines.models.point_nav_models import (
     PointNavActorCriticSimpleConvRNN,
 )
-from plugins.robothor_plugin.robothor_sensors import (
-    DepthSensorRoboThor,
-    GPSCompassSensorRoboThor,
-)
-from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -32,7 +32,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(PointNavRoboThorBaseConfig):
             DepthSensorRoboThor(
                 height=self.SCREEN_SIZE,
                 width=self.SCREEN_SIZE,
-                use_resnet_normalization=True,
+                use_normalization=True,
                 uuid="depth_lowres",
             ),
             GPSCompassSensorRoboThor(),

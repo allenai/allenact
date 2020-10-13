@@ -51,7 +51,7 @@ to swap out our sensor classes:
         DepthSensorHabitat(
             height=SCREEN_SIZE,
             width=SCREEN_SIZE,
-            use_resnet_normalization=True,
+            use_normalization=True,
         ),
         TargetCoordinatesSensorHabitat(coordinate_dims=2),
     ]

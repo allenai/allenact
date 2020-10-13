@@ -383,7 +383,7 @@ class ResnetTensorGoalEncoder(nn.Module):
             self.distribute_target(observations),
         ]
         x = self.target_obs_combiner(torch.cat(embs, dim=1,))
-        x = x.view(x.size(0), -1)  # flatten
+        x = x.reshape(x.size(0), -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
 
@@ -529,6 +529,6 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         ]
         depth_x = self.depth_target_obs_combiner(torch.cat(depth_embs, dim=1,))
         x = torch.cat([rgb_x, depth_x], dim=1)
-        x = x.view(x.size(0), -1)  # flatten
+        x = x.reshape(x.size(0), -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)

@@ -1,18 +1,19 @@
 import gym
+import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from core.algorithms.onpolicy_sync.losses import PPO
-from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
-from plugins.robothor_plugin.robothor_sensors import (
-    DepthSensorRoboThor,
-    GPSCompassSensorRoboThor,
+from core.algorithms.onpolicy_sync.losses.imitation import Imitation
+from core.base_abstractions.sensor import ExpertActionSensor
+from plugins.habitat_plugin.habitat_sensors import (
+    RGBSensorHabitat,
+    TargetCoordinatesSensorHabitat,
 )
-from plugins.robothor_plugin.robothor_tasks import PointNavTask
-from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base import (
-    PointNaviThorBaseConfig,
+from plugins.habitat_plugin.habitat_tasks import PointNavTask
+from plugins.habitat_plugin.habitat_utils import construct_env_configs
+from projects.pointnav_baselines.experiments.habitat.debug_pointnav_habitat_base import (
+    DebugPointNavHabitatBaseConfig,
 )
 from projects.pointnav_baselines.models.point_nav_models import (
     PointNavActorCriticSimpleConvRNN,
@@ -20,52 +21,46 @@ from projects.pointnav_baselines.models.point_nav_models import (
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class PointNaviThorRGBPPOExperimentConfig(PointNaviThorBaseConfig):
-    """An Point Navigation experiment configuration in iThor with RGBD
+class PointNavHabitatRGBDeterministiSimpleConvGRUImitationExperimentConfig(
+    DebugPointNavHabitatBaseConfig
+):
+    """An Point Navigation experiment configuration in Habitat with Depth
     input."""
 
     def __init__(self):
         super().__init__()
-
-        self.ENV_ARGS["renderDepthImage"] = True
-
         self.SENSORS = [
-            RGBSensorThor(
+            RGBSensorHabitat(
                 height=self.SCREEN_SIZE,
                 width=self.SCREEN_SIZE,
                 use_resnet_normalization=True,
-                uuid="rgb_lowres",
             ),
-            DepthSensorRoboThor(
-                height=self.SCREEN_SIZE,
-                width=self.SCREEN_SIZE,
-                use_normalization=True,
-                uuid="depth_lowres",
-            ),
-            GPSCompassSensorRoboThor(),
+            TargetCoordinatesSensorHabitat(coordinate_dims=2),
+            ExpertActionSensor(nactions=len(PointNavTask.class_action_names())),
         ]
 
         self.PREPROCESSORS = []
 
-        self.OBSERVATIONS = [
-            "rgb_lowres",
-            "depth_lowres",
-            "target_coordinates_ind",
-        ]
+        self.OBSERVATIONS = ["rgb", "target_coordinates_ind", "expert_action"]
+
+        self.CONFIG = self.CONFIG.clone()
+        self.CONFIG.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
+
+        self.TRAIN_CONFIGS = construct_env_configs(self.CONFIG)
 
     @classmethod
     def tag(cls):
-        return "Pointnav-iTHOR-RGBD-SimpleConv-DDPPO"
+        return "Debug-Pointnav-Habitat-RGB-SimpleConv-DDPPO"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        ppo_steps = int(75000000)
+        imitate_steps = int(75000000)
         lr = 3e-4
         num_mini_batch = 1
         update_repeats = 3
         num_steps = 30
         save_interval = 5000000
-        log_interval = 10000
+        log_interval = 10000 if torch.cuda.is_available() else 1
         gamma = 0.99
         use_gae = True
         gae_lambda = 0.95
@@ -78,16 +73,20 @@ class PointNaviThorRGBPPOExperimentConfig(PointNaviThorBaseConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": PPO(**PPOConfig)},
+            named_losses={"imitation_loss": Imitation()},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
             advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
-                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps)
+                PipelineStage(
+                    loss_names=["imitation_loss"],
+                    max_stage_steps=imitate_steps,
+                    # teacher_forcing=LinearDecay(steps=int(1e5), startp=1.0, endp=0.0,),
+                ),
             ],
             lr_scheduler_builder=Builder(
-                LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
+                LambdaLR, {"lr_lambda": LinearDecay(steps=imitate_steps)}
             ),
         )
 
@@ -99,6 +98,7 @@ class PointNaviThorRGBPPOExperimentConfig(PointNaviThorBaseConfig):
             goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
             embed_coordinates=False,
+            coordinate_embedding_dim=2,
             coordinate_dims=2,
             num_rnn_layers=1,
             rnn_type="GRU",
