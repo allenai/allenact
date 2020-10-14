@@ -1,4 +1,3 @@
-# TODO: @klemenkotar please fix all type errors
 from abc import ABC
 from typing import Tuple, List, Dict, Any, Optional, Union, Sequence, cast
 
@@ -187,8 +186,7 @@ class PointNavTask(Task[HabitatEnvironment]):
             self.last_geodesic_distance = new_geodesic_distance
 
             if self.is_done():
-                reward += 10.0 if self._success else -1.0
-                reward -= 2 * (self.reached_max_steps() and not self._took_end_action)
+                reward += 10.0 if self._success else 0.0
         else:
             get_logger().warning("Could not get geodesic distance from habitat env.")
 
