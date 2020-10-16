@@ -60,7 +60,7 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
 
         self.CONFIG.MODE = "train"
 
-        self.TRAIN_GPUS = list(range(torch.cuda.device_count()))
+        self.TRAINING_GPUS = list(range(torch.cuda.device_count()))
         self.VALIDATION_GPUS = [torch.cuda.device_count() - 1]
         self.TESTING_GPUS = [torch.cuda.device_count() - 1]
 
