@@ -30,7 +30,7 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
             "habitat/habitat-lab/data/datasets/pointnav/gibson/v1/test/test.json.gz"
         )
 
-        self.NUM_PROCESSES = 80
+        self.NUM_PROCESSES = 72
         self.CONFIG = habitat.get_config("habitat/habitat-lab/configs/tasks/pointnav_gibson.yaml")
         self.CONFIG.defrost()
         self.CONFIG.NUM_PROCESSES = self.NUM_PROCESSES
