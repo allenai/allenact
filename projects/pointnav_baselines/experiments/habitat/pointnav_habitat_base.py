@@ -21,22 +21,22 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
     def __init__(self):
         super().__init__()
         self.TRAIN_SCENES = (
-            "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
+            "habitat/habitat-lab/data/datasets/pointnav/gibson/v1/train/train.json.gz"
         )
         self.VALID_SCENES = (
-            "habitat/habitat-api/data/datasets/pointnav/gibson/v1/val/val.json.gz"
+            "habitat/habitat-lab/data/datasets/pointnav/gibson/v1/val/val.json.gz"
         )
         self.TEST_SCENES = (
-            "habitat/habitat-api/data/datasets/pointnav/gibson/v1/test/test.json.gz"
+            "habitat/habitat-lab/data/datasets/pointnav/gibson/v1/test/test.json.gz"
         )
 
         self.NUM_PROCESSES = 80
-        self.CONFIG = habitat.get_config("configs/gibson.yaml")
+        self.CONFIG = habitat.get_config("habitat/habitat-lab/configs/tasks/pointnav_gibson.yaml")
         self.CONFIG.defrost()
         self.CONFIG.NUM_PROCESSES = self.NUM_PROCESSES
         self.CONFIG.SIMULATOR_GPU_IDS = list(range(torch.cuda.device_count()))
         self.CONFIG.DATASET.SCENES_DIR = "habitat/habitat-api/data/scene_datasets/"
-        self.CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
+        # self.CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
         self.CONFIG.DATASET.DATA_PATH = self.TRAIN_SCENES
         self.CONFIG.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
         self.CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = self.CAMERA_WIDTH
