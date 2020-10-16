@@ -35,6 +35,7 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
         self.CONFIG.defrost()
         self.CONFIG.NUM_PROCESSES = self.NUM_PROCESSES
         self.CONFIG.SIMULATOR_GPU_IDS = list(range(torch.cuda.device_count()))
+        print("GPU IDS", self.CONFIG.SIMULATOR_GPU_IDS)
         self.CONFIG.DATASET.SCENES_DIR = "habitat/habitat-lab/data/scene_datasets/"
         # self.CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
         self.CONFIG.DATASET.DATA_PATH = self.TRAIN_SCENES
