@@ -132,6 +132,7 @@ class BabyAITaskSampler(TaskSampler):
         task_seeds_list: Optional[List[int]] = None,
         deterministic_sampling: bool = False,
         extra_task_kwargs: Optional[Dict] = None,
+        **kwargs,
     ):
         super(BabyAITaskSampler, self).__init__()
         self.sensors = (

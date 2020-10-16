@@ -285,7 +285,7 @@ def main():
     git_dirs = set(
         os.path.abspath(os.path.split(p)[0]) for p in Git(".").ls_files().split("\n")
     )
-    ignore_rel_dirs = ["docs", "scripts", "experiments", "src"]
+    ignore_rel_dirs = ["docs", "scripts", "experiments", "src", ".pip_src"]
     ignore_abs_dirs = set(
         os.path.abspath(os.path.join(str(parent_folder_path), rel_dir))
         for rel_dir in ignore_rel_dirs

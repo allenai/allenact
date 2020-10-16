@@ -204,7 +204,7 @@ class PointNavTask(Task[HabitatEnvironment]):
                 "ep_length": self.num_steps_taken(),
                 "reward": np.sum(self._rewards),
                 "spl": _metrics["spl"] if _metrics["spl"] is not None else 0.0,
-                "dist_to_target": self.current_geodesic_dist_to_target()
+                "dist_to_target": self.current_geodesic_dist_to_target(),
             }
             self._rewards = []
             return metrics

@@ -37,7 +37,7 @@ class LightHouseTask(Task[LightHouseEnvironment], abc.ABC):
         sensors: Union[SensorSuite, List[Sensor]],
         task_info: Dict[str, Any],
         max_steps: int,
-        **kwargs
+        **kwargs,
     ) -> None:
         """Initializer.
 
@@ -98,7 +98,7 @@ class FindGoalLightHouseTask(LightHouseTask):
         sensors: Union[SensorSuite, List[Sensor]],
         task_info: Dict[str, Any],
         max_steps: int,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(env, sensors, task_info, max_steps, **kwargs)
 
@@ -301,6 +301,7 @@ class FindGoalLightHouseTaskSampler(TaskSampler):
         task_seeds_list: Optional[List[int]] = None,
         deterministic_sampling: bool = False,
         seed: Optional[int] = None,
+        **kwargs,
     ):
         self.env = LightHouseEnvironment(world_dim=world_dim, world_radius=world_radius)
 

@@ -25,6 +25,7 @@ class ObjectNavTaskSampler(TaskSampler):
         max_tasks: Optional[int] = None,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
+        **kwargs,
     ) -> None:
         self.env_args = env_args
         self.scenes = scenes

@@ -5,7 +5,7 @@ from torch import nn
 from core.base_abstractions.experiment_config import ExperimentConfig
 from core.base_abstractions.task import TaskSampler
 from utils.experiment_utils import TrainingPipeline
-
+import torch.multiprocessing as mp
 
 # noinspection PyAbstractClass,PyTypeChecker
 class MyConfig(ExperimentConfig):
@@ -83,8 +83,6 @@ class TestFrozenAttribs(object):
         config.my_var_is(val)
 
     def test_frozen_experiment_config(self):
-        import torch.multiprocessing as mp
-
         val = 5
 
         failed = False

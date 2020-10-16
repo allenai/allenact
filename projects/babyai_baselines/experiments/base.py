@@ -12,7 +12,7 @@ from core.algorithms.onpolicy_sync.losses import PPO, A2C
 from core.algorithms.onpolicy_sync.losses.a2cacktr import A2CConfig
 from core.algorithms.onpolicy_sync.losses.imitation import Imitation
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from core.base_abstractions.experiment_config import ExperimentConfig
+from core.base_abstractions.experiment_config import ExperimentConfig, MachineParams
 from core.base_abstractions.misc import Loss
 from core.base_abstractions.sensor import SensorSuite, Sensor, ExpertActionSensor
 from core.base_abstractions.task import TaskSampler
@@ -159,16 +159,18 @@ class BaseBabyAIExperimentConfig(ExperimentConfig, ABC):
         elif mode == "valid":
             nprocesses = 0
         elif mode == "test":
-            nprocesses = 100 if torch.cuda.is_available() else 8
+            nprocesses = min(
+                100 if torch.cuda.is_available() else 8, cls.NUM_TEST_TASKS
+            )
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
         if gpu_id == "default":
-            gpu_ids = [] if cls.GPU_ID is None else [cls.GPU_ID]
+            devices = [] if cls.GPU_ID is None else [cls.GPU_ID]
         else:
-            gpu_ids = [gpu_id]
+            devices = [gpu_id]
 
-        return {"nprocesses": nprocesses, "gpu_ids": gpu_ids}
+        return MachineParams(nprocesses=nprocesses, devices=devices)
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
@@ -226,7 +228,9 @@ class BaseBabyAIExperimentConfig(ExperimentConfig, ABC):
         ]
         print(max_tasks, process_ind, total_processes, task_seeds_list)
 
-        assert min(task_seeds_list) >= 0 and max(task_seeds_list) <= 2 ** 32 - 1
+        assert len(task_seeds_list) == 0 or (
+            min(task_seeds_list) >= 0 and max(task_seeds_list) <= 2 ** 32 - 1
+        )
 
         train_sampler_args = self.train_task_sampler_args(
             process_ind=process_ind,

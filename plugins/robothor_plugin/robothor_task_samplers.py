@@ -32,8 +32,7 @@ class ObjectNavTaskSampler(TaskSampler):
         allow_flipping: bool = False,
         dataset_first: int = -1,
         dataset_last: int = -1,
-        *args,
-        **kwargs
+        **kwargs,
     ) -> None:
         self.rewards_config = rewards_config
         self.env_args = env_args
@@ -300,8 +299,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         loop_dataset: bool = True,
         allow_flipping=False,
         env_class=RoboThorEnvironment,
-        *args,
-        **kwargs
+        **kwargs,
     ) -> None:
         self.rewards_config = rewards_config
         self.env_args = env_args
@@ -510,6 +508,7 @@ class PointNavTaskSampler(TaskSampler):
         max_tasks: Optional[int] = None,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
+        **kwargs,
     ) -> None:
         self.rewards_config = rewards_config
         self.env_args = env_args
@@ -732,8 +731,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
         shuffle_dataset: bool = True,
         allow_flipping=False,
         env_class=RoboThorEnvironment,
-        *args,
-        **kwargs
+        **kwargs,
     ) -> None:
         self.rewards_config = rewards_config
         self.env_args = env_args

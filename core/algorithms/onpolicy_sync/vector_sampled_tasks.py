@@ -845,6 +845,14 @@ class SingleProcessVectorSampledTasks(object):
         task_sampler = make_sampler_fn(**sampler_fn_args)
         current_task = task_sampler.next_task()
 
+        if current_task is None:
+            raise RuntimeError(
+                "Newly created task sampler had `None` as it's first task. This likely means that"
+                " it was not provided with any tasks to generate. This can happen if, e.g., during testing"
+                " you have started more processes than you had tasks to test. Currently this is not supported:"
+                " every task sampler must be able to generate at least one task."
+            )
+
         try:
             command, data = yield "started"
 

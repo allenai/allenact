@@ -37,7 +37,9 @@ class TestGoToObjTrains(object):
             max_sampler_processes_per_worker=1,
         )
 
-        assert len(test_results) == 1, "Too many test results"
+        assert (
+            len(test_results) == 1
+        ), f"Too many or too few test results ({test_results})"
 
         tr = test_results[0]
         assert (

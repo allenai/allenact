@@ -125,6 +125,7 @@ class ObjectNavTaskSampler(TaskSampler):
         max_steps: int,
         action_space: gym.Space,
         distance_to_goal: float,
+        **kwargs,
     ) -> None:
         self.grid_size = 0.25
         self.env: Optional[HabitatEnvironment] = None
