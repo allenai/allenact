@@ -86,11 +86,11 @@ section [here](installation-allenact.md). After installing this environment, you
 
 If you are on a machine with an attached display:
 ```bash
-conda install habitat-sim -c conda-forge -c aihabitat --name allenact
+conda install habitat-sim -c conda-forge -c aihabitat-nightly --name allenact
 ```
 
 If you are on a machine without an attached display (e.g. a server):
 ```bash
-conda install habitat-sim headless -c conda-forge -c aihabitat --name allenact
+conda install habitat-sim headless -c conda-forge -c aihabitat-nightly --name allenact
 ```
 

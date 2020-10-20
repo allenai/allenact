@@ -82,7 +82,7 @@ class PointNavHabitatRGBDeterministiSimpleConvGRUImitationExperimentConfig(
                 PipelineStage(
                     loss_names=["imitation_loss"],
                     max_stage_steps=imitate_steps,
-                    # teacher_forcing=LinearDecay(steps=int(1e5), startp=1.0, endp=0.0,),
+                    # teacher_forcing=LinearDecay(steps=int(1e5), startp=1.0, endp=1.0,),
                 ),
             ],
             lr_scheduler_builder=Builder(

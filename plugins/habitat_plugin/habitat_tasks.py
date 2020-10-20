@@ -109,17 +109,14 @@ class PointNavTask(Task[HabitatEnvironment]):
 
     def current_geodesic_dist_to_target(self) -> Optional[float]:
         metrics = self.env.env.get_metrics()
-        if metrics["distance_to_goal"] is None or len(metrics["distance_to_goal"]) == 0:
+        if metrics["distance_to_goal"] is None:
             habitat_env = self.env.env
             habitat_env.task.measurements.update_measures(
                 episode=habitat_env.current_episode, action=None, task=habitat_env.task
             )
             metrics = self.env.env.get_metrics()
 
-        dist_to_goal_dict = metrics["distance_to_goal"]
-        if dist_to_goal_dict is not None:
-            return dist_to_goal_dict["distance_to_target"]
-        return None
+        return metrics["distance_to_goal"]
 
     @property
     def action_space(self):
@@ -287,17 +284,15 @@ class ObjectNavTask(HabitatTask):
 
     def current_geodesic_dist_to_target(self) -> Optional[float]:
         metrics = self.env.env.get_metrics()
-        if metrics["distance_to_goal"] is None or len(metrics["distance_to_goal"]) == 0:
+        if metrics["distance_to_goal"] is None:
             habitat_env = self.env.env
             habitat_env.task.measurements.update_measures(
                 episode=habitat_env.current_episode, action=None, task=habitat_env.task
             )
             metrics = self.env.env.get_metrics()
 
-        dist_to_goal_dict = metrics["distance_to_goal"]
-        if dist_to_goal_dict is not None:
-            return dist_to_goal_dict["distance_to_target"]
-        return None
+        return metrics["distance_to_goal"]
+
 
     def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
         assert isinstance(action, int)
