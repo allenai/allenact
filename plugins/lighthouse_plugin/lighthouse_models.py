@@ -84,7 +84,9 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
             ActorCriticOutput(
                 distributions=CategoricalDistr(logits=main_logits),
                 values=typing.cast(torch.FloatTensor, values),
-                extras={"auxiliary_distributions": CategoricalDistr(logits=aux_logits)},
+                extras={
+                    "auxiliary_distributions": CategoricalDistr(logits=aux_logits),
+                },
             ),
             None,
         )

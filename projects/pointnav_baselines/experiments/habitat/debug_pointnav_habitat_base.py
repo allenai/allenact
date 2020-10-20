@@ -37,7 +37,7 @@ class DebugPointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
 
         self.NUM_PROCESSES = 8 if torch.cuda.is_available() else 1
         self.CONFIG = habitat.get_config(
-            os.path.join(config_data_dir, "habitat_test.yaml")
+            os.path.join(config_data_dir, "debug_habitat_pointnav.yaml")
         )
         self.CONFIG.defrost()
         self.CONFIG.NUM_PROCESSES = self.NUM_PROCESSES
