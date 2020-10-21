@@ -3003,8 +3003,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3642,7 +3690,6 @@ To use <code>black</code> auto-formatting across all files, simply run</p>
 <div class="codehilite"><pre><span></span><code>bash scripts/auto_format.sh
 </code></pre></div>
 
-
 <p>which will run <code>black</code> auto-formatting as well as <a href="https://pypi.org/project/docformatter/">docformatter</a> (used
 to auto-format documentation strings).</p>
 <h3 id="type-checking">Type-checking<a class="headerlink" href="#type-checking" title="Permanent link">#</a></h3>
@@ -3654,7 +3701,6 @@ basic static type checking. Before making a pull request, there should be no war
 <div class="codehilite"><pre><span></span><code>dmypy run -- --follow-imports<span class="o">=</span>skip .
 </code></pre></div>
 
-
 <p>Explicitly ignoring type checking (for instance using <code># type: ignore</code>) should be only be done when it would otherwise
 be an extensive burden.</p>
 <h3 id="updating-adding-or-removing-packages">Updating, adding, or removing packages?<a class="headerlink" href="#updating-adding-or-removing-packages" title="Permanent link">#</a></h3>
@@ -3664,7 +3710,6 @@ doing so and have modified any installed packages please run:</p>
 <div class="codehilite"><pre><span></span><code>pipenv-setup sync --pipfile <span class="c1"># Syncs packages to setup.py</span>
 pip freeze &gt; requirements.txt <span class="c1"># Syncs packages to requirements.py</span>
 </code></pre></div>
-
 
 <p>before submitting a pull request. If you are not using <code>pipenv</code>, you are still
 required to update the file <code>Pipfile</code> with newly installed or modified packages. Moreover
@@ -3677,7 +3722,6 @@ installed all of the project requirements, you can install our recommended
 pre-commit hooks by running (from this project's root directory)</p>
 <div class="codehilite"><pre><span></span><code>pre-commit install
 </code></pre></div>
-
 
 <p>After running the above, each time you run <code>git commit ...</code> a set of pre-commit checks will
 be run.</p>

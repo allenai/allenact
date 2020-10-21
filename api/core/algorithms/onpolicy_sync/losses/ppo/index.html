@@ -3005,8 +3005,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../../../../projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3621,15 +3669,14 @@
                 
                 <p><a name="core.algorithms.onpolicy_sync.losses.ppo"></a> </p>
 <h1 id="corealgorithmsonpolicy_synclossesppo"><code>core.algorithms.onpolicy_sync.losses.ppo</code><a class="headerlink" href="#corealgorithmsonpolicy_synclossesppo" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/algorithms/onpolicy_sync/losses/ppo.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/algorithms/onpolicy_sync/losses/ppo.py#L1">[view_source]</a></p>
 <p>Defining the PPO loss for actor critic type models.</p>
 <p><a name="core.algorithms.onpolicy_sync.losses.ppo.PPO"></a></p>
 <h2 id="ppo"><code>PPO</code><a class="headerlink" href="#ppo" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">PPO</span><span class="p">(</span><span class="n">AbstractActorCriticLoss</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/algorithms/onpolicy_sync/losses/ppo.py#L17">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/algorithms/onpolicy_sync/losses/ppo.py#L17">[view_source]</a></p>
 <p>Implementation of the Proximal Policy Optimization loss.</p>
 <p><strong>Attributes</strong></p>
 <ul>
@@ -3643,8 +3690,7 @@
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">clip_param</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">value_loss_coef</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">entropy_coef</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">use_clipped_value_loss</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">clip_decay</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/algorithms/onpolicy_sync/losses/ppo.py#L28">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/algorithms/onpolicy_sync/losses/ppo.py#L28">[view_source]</a></p>
 <p>Initializer.</p>
 <p>See the class documentation for parameter definitions.</p>
 <p><a name="core.algorithms.onpolicy_sync.losses.ppo.PPOValue"></a></p>
@@ -3652,8 +3698,7 @@
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">PPOValue</span><span class="p">(</span><span class="n">AbstractActorCriticLoss</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/algorithms/onpolicy_sync/losses/ppo.py#L120">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/algorithms/onpolicy_sync/losses/ppo.py#L122">[view_source]</a></p>
 <p>Implementation of the Proximal Policy Optimization loss.</p>
 <p><strong>Attributes</strong></p>
 <ul>
@@ -3665,8 +3710,7 @@
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">clip_param</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">use_clipped_value_loss</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">clip_decay</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/algorithms/onpolicy_sync/losses/ppo.py#L129">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/algorithms/onpolicy_sync/losses/ppo.py#L131">[view_source]</a></p>
 <p>Initializer.</p>
 <p>See the class documentation for parameter definitions.</p>
                 

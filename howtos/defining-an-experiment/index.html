@@ -2992,8 +2992,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3636,7 +3684,6 @@ We begin by making the following imports:</p>
 <span class="kn">from</span> <span class="nn">utils.experiment_utils</span> <span class="kn">import</span> <span class="n">Builder</span><span class="p">,</span> <span class="n">PipelineStage</span><span class="p">,</span> <span class="n">TrainingPipeline</span><span class="p">,</span> <span class="n">LinearDecay</span>
 </code></pre></div>
 
-
 <p>Now first method to implement is <code>tag</code>, which provides a string identifying the experiment:</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavThorPPOExperimentConfig</span><span class="p">(</span><span class="n">ExperimentConfig</span><span class="p">):</span>
     <span class="o">...</span>
@@ -3645,7 +3692,6 @@ We begin by making the following imports:</p>
         <span class="k">return</span> <span class="s2">&quot;ObjectNavThorPPO&quot;</span>
     <span class="o">...</span>
 </code></pre></div>
-
 
 <h2 id="model-creation">Model creation<a class="headerlink" href="#model-creation" title="Permanent link">#</a></h2>
 <p>Next, <code>create_model</code> will be used to instantiate an
@@ -3682,7 +3728,6 @@ We begin by making the following imports:</p>
         <span class="p">)</span>
     <span class="o">...</span>
 </code></pre></div>
-
 
 <h2 id="training-pipeline">Training pipeline<a class="headerlink" href="#training-pipeline" title="Permanent link">#</a></h2>
 <p>We now implement a training pipeline which trains with a single stage using PPO.</p>
@@ -3730,7 +3775,6 @@ parameters associated with our agent's model (something we can't know until the 
         <span class="p">)</span>
     <span class="o">...</span>
 </code></pre></div>
-
 
 <p>Alternatively, we could use a more sophisticated pipeline that begins training with dataset aggregation
 (<a href="https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf">DAgger</a>) before moving to training
@@ -3797,7 +3841,6 @@ pipeline by extending the above configuration as follows</p>
         <span class="p">)</span>
 </code></pre></div>
 
-
 <p>A version of our experiment config file for which we have implemented this two-stage training
 can be found <a href="https://github.com/allenai/allenact/blob/master/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object.py">here</a>.
 This two-stage configuration <code>ObjectNavThorDaggerThenPPOExperimentConfig</code> is actually implemented <em>as a subclass of <code>ObjectNavThorPPOExperimentConfig</code></em>.
@@ -3829,7 +3872,6 @@ configuration will propagate to all subclassed configurations. </p>
     <span class="o">...</span>
 </code></pre></div>
 
-
 <p>In the above we use the availability of cuda (<code>torch.cuda.device_count() !=  0</code>) to determine whether
 we should use parameters appropriate for local machines or for a server. We might optionally add a list of
 <code>sampler_devices</code> to assign devices (likely those not used for running our agent) to task sampling workers.</p>
@@ -3845,7 +3887,6 @@ defined which task we wish to train our agent to complete. This is done by imple
         <span class="k">return</span> <span class="n">ObjectNavTaskSampler</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="o">...</span>
 </code></pre></div>
-
 
 <p>Now, before training starts, our trainer will know to generate a collection of task
 samplers using <code>make_sampler_fn</code> for training (and possibly validation or testing).
@@ -3878,7 +3919,6 @@ training process, we implement such differences using the
         <span class="k">return</span> <span class="n">res</span>
     <span class="o">...</span>
 </code></pre></div>
-
 
 <p>Now training process <code>i</code> out of <code>n</code> total processes will be instantiated with the parameters
 <code>ObjectNavThorPPOExperimentConfig.train_task_sampler_args(i, n, ...)</code>. Similar functions

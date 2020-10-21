@@ -2971,8 +2971,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3581,7 +3629,6 @@ action by invoking a function like:</p>
     <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">reward</span><span class="p">)</span>
 </code></pre></div>
 
-
 <p>Any reward shaping can be easily added by e.g. modifying the definition of an existing class:</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">NavigationWithShaping</span><span class="p">(</span><span class="n">plugins</span><span class="o">.</span><span class="n">ithor_plugin</span><span class="o">.</span><span class="n">ithor_tasks</span><span class="o">.</span><span class="n">ObjectNavTask</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">judge</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
@@ -3597,7 +3644,6 @@ action by invoking a function like:</p>
 
         <span class="k">return</span> <span class="n">reward</span>
 </code></pre></div>
-
 
 <h2 id="losses">Losses<a class="headerlink" href="#losses" title="Permanent link">#</a></h2>
 <p>We support <a href="/api/core/algorithms/onpolicy_sync/losses/a2cacktr#a2c">A2C</a>, <a href="/api/core/algorithms/onpolicy_sync/losses/ppo#ppo">PPO</a>,
@@ -3615,11 +3661,9 @@ through multiple stages:</p>
         <span class="o">...</span>
         <span class="k">return</span> <span class="n">utils</span><span class="o">.</span><span class="n">experiment_utils</span><span class="o">.</span><span class="n">TrainingPipeline</span><span class="p">(</span>
             <span class="n">named_losses</span><span class="o">=</span><span class="p">{</span>
-                <span class="s2">&quot;imitation_loss&quot;</span><span class="p">:</span> <span class="n">utils</span><span class="o">.</span><span class="n">experiment_utils</span><span class="o">.</span><span class="n">Builder</span><span class="p">(</span>
-                    <span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">imitation</span><span class="o">.</span><span class="n">Imitation</span><span class="p">,</span>
-                <span class="p">),</span>
-                <span class="s2">&quot;ppo_loss&quot;</span><span class="p">:</span> <span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">ppo</span><span class="o">.</span><span class="n">PPO</span><span class="p">(</span>
-                    <span class="o">**</span><span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">ppo</span><span class="o">.</span><span class="n">PPOConfig</span><span class="p">,</span>
+                <span class="s2">&quot;imitation_loss&quot;</span><span class="p">:</span> <span class="n">core</span><span class="o">.</span><span class="n">algorithms</span><span class="o">.</span><span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">imitation</span><span class="o">.</span><span class="n">Imitation</span><span class="p">(),</span>
+                <span class="s2">&quot;ppo_loss&quot;</span><span class="p">:</span> <span class="n">core</span><span class="o">.</span><span class="n">algorithms</span><span class="o">.</span><span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">ppo</span><span class="o">.</span><span class="n">PPO</span><span class="p">(</span>
+                    <span class="o">**</span><span class="n">core</span><span class="o">.</span><span class="n">algorithms</span><span class="o">.</span><span class="n">onpolicy_sync</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">ppo</span><span class="o">.</span><span class="n">PPOConfig</span><span class="p">,</span>
                 <span class="p">),</span>
             <span class="p">},</span>
             <span class="o">...</span>

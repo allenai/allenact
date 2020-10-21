@@ -2922,8 +2922,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3603,23 +3651,21 @@
                 
                 <p><a name="utils.model_utils"></a> </p>
 <h1 id="utilsmodel_utils"><code>utils.model_utils</code><a class="headerlink" href="#utilsmodel_utils" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/utils/model_utils.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/utils/model_utils.py#L1">[view_source]</a></p>
 <p>Functions used to initialize and manipulate pytorch models.</p>
 <p><a name="utils.model_utils.Flatten"></a></p>
 <h2 id="flatten"><code>Flatten</code><a class="headerlink" href="#flatten" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Flatten</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/utils/model_utils.py#L9">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/utils/model_utils.py#L9">[view_source]</a></p>
 <p>Flatten input tensor so that it is of shape (FLATTENED_BATCH x -1).</p>
 <p><a name="utils.model_utils.Flatten.forward"></a></p>
 <h3 id="flattenforward"><code>Flatten.forward</code><a class="headerlink" href="#flattenforward" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">forward</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/utils/model_utils.py#L12">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/utils/model_utils.py#L12">[view_source]</a></p>
 <p>Flatten input tensor.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -3632,8 +3678,7 @@
 <div class="codehilite"><pre><span></span><code><span class="n">init_linear_layer</span><span class="p">(</span><span class="n">module</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">,</span> <span class="n">weight_init</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">bias_init</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">gain</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/utils/model_utils.py#L23">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/utils/model_utils.py#L23">[view_source]</a></p>
 <p>Initialize a torch.nn.Linear layer.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -3656,8 +3701,7 @@
     <span class="p">))</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/utils/model_utils.py#L118">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/utils/model_utils.py#L118">[view_source]</a></p>
 <p>Computes CNN outputs for given inputs.</p>
 <p><strong>Parameters</strong></p>
 <ul>

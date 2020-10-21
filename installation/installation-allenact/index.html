@@ -291,6 +291,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#installing-requirements-with-conda-experimental" class="md-nav__link">
+    Installing requirements with conda (experimental)
+  </a>
+  
+    <nav class="md-nav" aria-label="Installing requirements with conda (experimental)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#installing-a-conda-environment-experimental" class="md-nav__link">
+    Installing a Conda environment (experimental)
+  </a>
+  
+    <nav class="md-nav" aria-label="Installing a Conda environment (experimental)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-the-conda-environment" class="md-nav__link">
+    Using the Conda environment
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#installing-supported-environments" class="md-nav__link">
     Installing supported environments
   </a>
@@ -2978,8 +3011,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3547,6 +3628,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#installing-requirements-with-conda-experimental" class="md-nav__link">
+    Installing requirements with conda (experimental)
+  </a>
+  
+    <nav class="md-nav" aria-label="Installing requirements with conda (experimental)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#installing-a-conda-environment-experimental" class="md-nav__link">
+    Installing a Conda environment (experimental)
+  </a>
+  
+    <nav class="md-nav" aria-label="Installing a Conda environment (experimental)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-the-conda-environment" class="md-nav__link">
+    Using the Conda environment
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#installing-supported-environments" class="md-nav__link">
     Installing supported environments
   </a>
@@ -3579,7 +3693,6 @@
 <span class="nb">cd</span> allenact
 </code></pre></div>
 
-
 <p><strong>Note 1:</strong> This library has been tested <em>only in python 3.6</em>. The following assumes you have a working
 version of <em>python 3.6</em> installed locally. </p>
 <p><strong>Note 2:</strong> If you are installing <code>allenact</code> intending to use a GPU for training/inference and your
@@ -3599,7 +3712,6 @@ run the following to install all requirements.</p>
 <div class="codehilite"><pre><span></span><code>pipenv install --skip-lock --dev
 </code></pre></div>
 
-
 <p>Please see the documentation of <code>pipenv</code> to understand how to use the newly created virtual environment.</p>
 <h3 id="installing-requirements-with-pip">Installing requirements with <code>pip</code><a class="headerlink" href="#installing-requirements-with-pip" title="Permanent link">#</a></h3>
 <p>Note: <em>do not</em> run the following if you have already installed requirements with <code>pipenv</code>
@@ -3608,9 +3720,43 @@ as above. If you prefer managing your environment manually, all requirements may
 <div class="codehilite"><pre><span></span><code>pip install -r requirements.txt
 </code></pre></div>
 
-
 <p>Depending on your machine configuration, you may need to use <code>pip3</code> instead of <code>pip</code> in the
 above.</p>
+<h3 id="installing-requirements-with-conda-experimental">Installing requirements with <code>conda</code> (experimental)<a class="headerlink" href="#installing-requirements-with-conda-experimental" title="Permanent link">#</a></h3>
+<p>This below is currently experimental and is provided without a guarantee of continued support.</p>
+<p>This folder contains YAML files specifying <a href="https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file">Conda environments</a>
+compatible with AllenAct. These environment files include: </p>
+<ul>
+<li><code>environment-base.yml</code> - A base environment file to be used on machines where GPU support is not needed (everything
+ will be run on the CPU).</li>
+<li><code>environment-&lt;CUDA_VERSION&gt;.yml</code> - where <code>&lt;CUDA_VERSION&gt;</code> is the CUDA version used on your machine (if you are using linux, you can generally find this version by running <code>/usr/local/cuda/bin/nvcc --version</code>).</li>
+</ul>
+<h4 id="installing-a-conda-environment-experimental">Installing a Conda environment (experimental)<a class="headerlink" href="#installing-a-conda-environment-experimental" title="Permanent link">#</a></h4>
+<p>If you are unfamiliar with Conda, please familiarize yourself with their <a href="https://docs.conda.io/projects/conda/en/latest/">introductory documentation</a>.
+If you have not already, you will need to first <a href="https://docs.conda.io/projects/conda/en/latest/user-guide/install/">install Conda (i.e. Anaconda or Miniconda)</a>
+on your machine. We suggest installing <a href="https://docs.conda.io/projects/conda/en/latest/glossary.html#miniconda-glossary">Miniconda</a>
+as it's relatively lightweight.</p>
+<p>For the moment let's assume you're using <code>environment-base.yml</code> above. To install a conda environment with name <code>allenact</code>
+ using this file you can simply run the following (<em>this will take a few minutes</em>):</p>
+<div class="codehilite"><pre><span></span><code>conda env create --file ./conda/environment-base.yml --name allenact
+</code></pre></div>
+
+<p>The above is very simple but has the side effect of creating a new <code>src</code> directory where it will
+place some of AllenAct's dependencies. To get around this, instead of running the above you can instead
+run the commands:</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">export</span> <span class="nv">MY_ENV_NAME</span><span class="o">=</span>allenact
+<span class="nb">export</span> <span class="nv">CONDA_BASE</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>dirname <span class="k">$(</span>dirname <span class="s2">&quot;</span><span class="si">${</span><span class="nv">CONDA_EXE</span><span class="si">}</span><span class="s2">&quot;</span><span class="k">))</span><span class="s2">&quot;</span>
+<span class="nv">PIP_SRC</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">CONDA_BASE</span><span class="si">}</span><span class="s2">/envs/</span><span class="si">${</span><span class="nv">MY_ENV_NAME</span><span class="si">}</span><span class="s2">/pipsrc&quot;</span> conda env create --file ./conda/environment-base.yml --name <span class="nv">$MY_ENV_NAME</span>
+</code></pre></div>
+
+<p>These additional commands tell conda to place these dependencies under the <code>${CONDA_BASE}/envs/${MY_ENV_NAME}/pipsrc</code> directory rather
+than under <code>src</code>, this is more in line with where we'd expect dependencies to be placed when running <code>pip install ...</code>.</p>
+<h5 id="using-the-conda-environment">Using the Conda environment<a class="headerlink" href="#using-the-conda-environment" title="Permanent link">#</a></h5>
+<p>Now that you've installed the conda environment as above, you can activate it by running:</p>
+<div class="codehilite"><pre><span></span><code>conda activate allenact
+</code></pre></div>
+
+<p>after which you can run everything as you would normally.</p>
 <h3 id="installing-supported-environments">Installing supported environments<a class="headerlink" href="#installing-supported-environments" title="Permanent link">#</a></h3>
 <p>We also provide installation instructions for the environments supported in AllenAct <a href="../installation-framework/">here</a>.</p>
                 

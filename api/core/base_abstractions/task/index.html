@@ -3148,8 +3148,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../../projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3911,7 +3959,7 @@
                 
                 <p><a name="core.base_abstractions.task"></a> </p>
 <h1 id="corebase_abstractionstask"><code>core.base_abstractions.task</code><a class="headerlink" href="#corebase_abstractionstask" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L6">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L6">[view_source]</a></p>
 <p>Defines the primary data structures by which agents interact with their
 environment.</p>
 <p><a name="core.base_abstractions.task.Task"></a></p>
@@ -3919,8 +3967,7 @@ environment.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Task</span><span class="p">(</span><span class="n">Generic</span><span class="p">[</span><span class="n">EnvType</span><span class="p">])</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L23">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L23">[view_source]</a></p>
 <p>An abstract class defining a, goal directed, 'task.' Agents interact
 with their environment through a task by taking a <code>step</code> after which they
 receive new observations, rewards, and (potentially) other useful
@@ -3943,8 +3990,7 @@ be defined on a single environment (e.g. AI2-THOR).</p>
  <span class="o">|</span> <span class="n">action_space</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">gym</span><span class="o">.</span><span class="n">Space</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L71">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L71">[view_source]</a></p>
 <p>Task's action space.</p>
 <p><strong>Returns</strong></p>
 <p>The action space for the task.</p>
@@ -3954,8 +4000,7 @@ be defined on a single environment (e.g. AI2-THOR).</p>
  <span class="o">|</span> <span class="n">render</span><span class="p">(</span><span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;rgb&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L81">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L81">[view_source]</a></p>
 <p>Render the current task state.</p>
 <p>Rendered task state can come in any supported modes.</p>
 <p><strong>Parameters</strong></p>
@@ -3973,8 +4018,7 @@ be defined on a single environment (e.g. AI2-THOR).</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">RLStepResult</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L105">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L105">[view_source]</a></p>
 <p>Take an action in the environment (one per agent).</p>
 <p>Takes the action in the environment corresponding to
 <code>self.class_action_names()[action]</code> for each action if it's a Sequence and returns
@@ -3994,8 +4038,7 @@ implement the <code>_step</code> function).</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">reached_max_steps</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L168">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L168">[view_source]</a></p>
 <p>Has the agent reached the maximum number of steps.</p>
 <p><a name="core.base_abstractions.task.Task.reached_terminal_state"></a></p>
 <h3 id="taskreached_terminal_state"><code>Task.reached_terminal_state</code><a class="headerlink" href="#taskreached_terminal_state" title="Permanent link">#</a></h3>
@@ -4003,8 +4046,7 @@ implement the <code>_step</code> function).</p>
  <span class="o">|</span> <span class="n">reached_terminal_state</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L173">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L173">[view_source]</a></p>
 <p>Has the agent reached a terminal state (excluding reaching the
 maximum number of steps).</p>
 <p><a name="core.base_abstractions.task.Task.is_done"></a></p>
@@ -4012,8 +4054,7 @@ maximum number of steps).</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">is_done</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L178">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L178">[view_source]</a></p>
 <p>Did the agent reach a terminal state or performed the maximum number
 of steps.</p>
 <p><a name="core.base_abstractions.task.Task.num_steps_taken"></a></p>
@@ -4021,8 +4062,7 @@ of steps.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">num_steps_taken</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L183">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L183">[view_source]</a></p>
 <p>Number of steps taken by the agent in the task so far.</p>
 <p><a name="core.base_abstractions.task.Task.class_action_names"></a></p>
 <h3 id="taskclass_action_names"><code>Task.class_action_names</code><a class="headerlink" href="#taskclass_action_names" title="Permanent link">#</a></h3>
@@ -4031,8 +4071,7 @@ of steps.</p>
  <span class="o">|</span> <span class="n">class_action_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L189">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L189">[view_source]</a></p>
 <p>A tuple of action names.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -4046,8 +4085,7 @@ of steps.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">action_names</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L203">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L203">[view_source]</a></p>
 <p>Action names of the Task instance.</p>
 <p>This method should be overwritten if <code>class_action_names</code>
 requires key word arguments to determine the number of actions.</p>
@@ -4057,16 +4095,14 @@ requires key word arguments to determine the number of actions.</p>
  <span class="o">|</span> <span class="n">total_actions</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L212">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L212">[view_source]</a></p>
 <p>Total number of actions available to an agent in this Task.</p>
 <p><a name="core.base_abstractions.task.Task.index_to_action"></a></p>
 <h3 id="taskindex_to_action"><code>Task.index_to_action</code><a class="headerlink" href="#taskindex_to_action" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">index_to_action</span><span class="p">(</span><span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L216">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L216">[view_source]</a></p>
 <p>Returns the action name correspond to <code>index</code>.</p>
 <p><a name="core.base_abstractions.task.Task.close"></a></p>
 <h3 id="taskclose"><code>Task.close</code><a class="headerlink" href="#taskclose" title="Permanent link">#</a></h3>
@@ -4074,8 +4110,7 @@ requires key word arguments to determine the number of actions.</p>
  <span class="o">|</span> <span class="n">close</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L222">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L222">[view_source]</a></p>
 <p>Closes the environment and any other files opened by the Task (if
 applicable).</p>
 <p><a name="core.base_abstractions.task.Task.metrics"></a></p>
@@ -4083,8 +4118,7 @@ applicable).</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">metrics</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L227">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L227">[view_source]</a></p>
 <p>Computes metrics related to the task after the task's completion.</p>
 <p>By default this function is automatically called during training
 and the reported metrics logged to tensorboard.</p>
@@ -4096,8 +4130,7 @@ and the reported metrics logged to tensorboard.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">query_expert</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L244">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L244">[view_source]</a></p>
 <p>Query the expert policy for this task.</p>
 <p><strong>Returns</strong></p>
 <p>A tuple (x, y) where x is the expert action (or policy) and y is False \
@@ -4111,8 +4144,7 @@ and the reported metrics logged to tensorboard.</p>
  <span class="o">|</span> <span class="n">cumulative_reward</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L258">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L258">[view_source]</a></p>
 <p>Mean per-agent total cumulative in the task so far.</p>
 <p><strong>Returns</strong></p>
 <p>Mean per-agent cumulative reward as a float.</p>
@@ -4121,8 +4153,7 @@ and the reported metrics logged to tensorboard.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">TaskSampler</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L275">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L275">[view_source]</a></p>
 <p>Abstract class defining a how new tasks are sampled.</p>
 <p><a name="core.base_abstractions.task.TaskSampler.length"></a></p>
 <h3 id="tasksamplerlength"><code>TaskSampler.length</code><a class="headerlink" href="#tasksamplerlength" title="Permanent link">#</a></h3>
@@ -4131,8 +4162,7 @@ and the reported metrics logged to tensorboard.</p>
  <span class="o">|</span> <span class="n">length</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L280">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L280">[view_source]</a></p>
 <p>Length.</p>
 <p><strong>Returns</strong></p>
 <p>Number of total tasks remaining that can be sampled. Can be
@@ -4144,8 +4174,7 @@ and the reported metrics logged to tensorboard.</p>
  <span class="o">|</span> <span class="n">total_unique</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L292">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L292">[view_source]</a></p>
 <p>Total unique tasks.</p>
 <p><strong>Returns</strong></p>
 <p>Total number of <em>unique</em> tasks that can be sampled. Can be
@@ -4157,8 +4186,7 @@ and the reported metrics logged to tensorboard.</p>
  <span class="o">|</span> <span class="n">last_sampled_task</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Task</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L304">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L304">[view_source]</a></p>
 <p>Get the most recently sampled Task.</p>
 <p><strong>Returns</strong></p>
 <p>The most recently sampled Task.</p>
@@ -4168,8 +4196,7 @@ and the reported metrics logged to tensorboard.</p>
  <span class="o">|</span> <span class="n">next_task</span><span class="p">(</span><span class="n">force_advance_scene</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Task</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L314">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L314">[view_source]</a></p>
 <p>Get the next task in the sampler's stream.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -4186,8 +4213,7 @@ and the reported metrics logged to tensorboard.</p>
  <span class="o">|</span> <span class="n">close</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L331">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L331">[view_source]</a></p>
 <p>Closes any open environments or streams.</p>
 <p>Should be run when done sampling.</p>
 <p><a name="core.base_abstractions.task.TaskSampler.all_observation_spaces_equal"></a></p>
@@ -4197,8 +4223,7 @@ and the reported metrics logged to tensorboard.</p>
  <span class="o">|</span> <span class="n">all_observation_spaces_equal</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L340">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L340">[view_source]</a></p>
 <p>Checks if all observation spaces of tasks that can be sampled are
 equal.</p>
 <p>This will almost always simply return <code>True</code>. A case in which it should
@@ -4215,8 +4240,7 @@ different tasks may output different types of observations.</p>
  <span class="o">|</span> <span class="n">reset</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L358">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L358">[view_source]</a></p>
 <p>Resets task sampler to its original state (except for any seed).</p>
 <p><a name="core.base_abstractions.task.TaskSampler.set_seed"></a></p>
 <h3 id="tasksamplerset_seed"><code>TaskSampler.set_seed</code><a class="headerlink" href="#tasksamplerset_seed" title="Permanent link">#</a></h3>
@@ -4224,8 +4248,7 @@ different tasks may output different types of observations.</p>
  <span class="o">|</span> <span class="n">set_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/task.py#L363">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/task.py#L363">[view_source]</a></p>
 <p>Sets new RNG seed.</p>
 <p><strong>Parameters</strong></p>
 <ul>

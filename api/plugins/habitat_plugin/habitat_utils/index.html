@@ -2968,8 +2968,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../../projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3551,14 +3599,13 @@
                 
                 <p><a name="plugins.habitat_plugin.habitat_utils"></a> </p>
 <h1 id="pluginshabitat_pluginhabitat_utils"><code>plugins.habitat_plugin.habitat_utils</code><a class="headerlink" href="#pluginshabitat_pluginhabitat_utils" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/habitat_plugin/habitat_utils.py#L3">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/habitat_plugin/habitat_utils.py#L2">[view_source]</a></p>
 <p><a name="plugins.habitat_plugin.habitat_utils.construct_env_configs"></a></p>
 <h3 id="construct_env_configs"><code>construct_env_configs</code><a class="headerlink" href="#construct_env_configs" title="Permanent link">#</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="n">construct_env_configs</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Config</span><span class="p">]</span>
+<div class="codehilite"><pre><span></span><code><span class="n">construct_env_configs</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">,</span> <span class="n">allow_scene_repeat</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Config</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/habitat_plugin/habitat_utils.py#L9">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/habitat_plugin/habitat_utils.py#L17">[view_source]</a></p>
 <p>Create list of Habitat Configs for training on multiple processes To
 allow better performance, dataset are split into small ones for each
 individual env, grouped by scenes.</p>
@@ -3566,6 +3613,11 @@ individual env, grouped by scenes.</p>
 <ul>
 <li><strong>config </strong>: configs that contain num_processes as well as information
          necessary to create individual environments.</li>
+<li><strong>allow_scene_repeat</strong>: if <code>True</code> and the number of distinct scenes
+    in the dataset is less than the total number of processes this will
+    result in scenes being repeated across processes. If <code>False</code>, then
+    if the total number of processes is greater than the number of scenes,
+    this will result in a RuntimeError exception being raised.</li>
 </ul>
 <p><strong>Returns</strong></p>
 <p>List of Configs, one for each process.</p>

@@ -836,34 +836,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#fixednormal" class="md-nav__link">
-    FixedNormal
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#fixedbernoulli" class="md-nav__link">
-    FixedBernoulli
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#diaggaussian" class="md-nav__link">
-    DiagGaussian
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#bernoulli" class="md-nav__link">
-    Bernoulli
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#addbias" class="md-nav__link">
     AddBias
   </a>
@@ -3023,8 +2995,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../../projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3585,34 +3605,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#fixednormal" class="md-nav__link">
-    FixedNormal
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#fixedbernoulli" class="md-nav__link">
-    FixedBernoulli
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#diaggaussian" class="md-nav__link">
-    DiagGaussian
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#bernoulli" class="md-nav__link">
-    Bernoulli
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#addbias" class="md-nav__link">
     AddBias
   </a>
@@ -3661,62 +3653,27 @@
                 
                 <p><a name="core.base_abstractions.distributions"></a> </p>
 <h1 id="corebase_abstractionsdistributions"><code>core.base_abstractions.distributions</code><a class="headerlink" href="#corebase_abstractionsdistributions" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/distributions.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/distributions.py#L1">[view_source]</a></p>
 <p><a name="core.base_abstractions.distributions.CategoricalDistr"></a></p>
 <h2 id="categoricaldistr"><code>CategoricalDistr</code><a class="headerlink" href="#categoricaldistr" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">CategoricalDistr</span><span class="p">(</span><span class="n">Distr</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/distributions.py#L20">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/distributions.py#L18">[view_source]</a></p>
 <p>A categorical distribution extending PyTorch's Categorical.</p>
-<p><a name="core.base_abstractions.distributions.FixedNormal"></a></p>
-<h2 id="fixednormal"><code>FixedNormal</code><a class="headerlink" href="#fixednormal" title="Permanent link">#</a></h2>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">FixedNormal</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">distributions</span><span class="o">.</span><span class="n">Normal</span><span class="p">)</span>
-</code></pre></div>
-
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/distributions.py#L46">[view_source]</a></p>
-<p>A fixed normal distribution extending PyTorch's Normal.</p>
-<p><a name="core.base_abstractions.distributions.FixedBernoulli"></a></p>
-<h2 id="fixedbernoulli"><code>FixedBernoulli</code><a class="headerlink" href="#fixedbernoulli" title="Permanent link">#</a></h2>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">FixedBernoulli</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">distributions</span><span class="o">.</span><span class="n">Bernoulli</span><span class="p">)</span>
-</code></pre></div>
-
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/distributions.py#L59">[view_source]</a></p>
-<p>A fixed Bernoulli distribution extending PyTorch's Bernoulli.</p>
-<p><a name="core.base_abstractions.distributions.DiagGaussian"></a></p>
-<h2 id="diaggaussian"><code>DiagGaussian</code><a class="headerlink" href="#diaggaussian" title="Permanent link">#</a></h2>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">DiagGaussian</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">)</span>
-</code></pre></div>
-
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/distributions.py#L72">[view_source]</a></p>
-<p>A learned diagonal Gaussian distribution.</p>
-<p><a name="core.base_abstractions.distributions.Bernoulli"></a></p>
-<h2 id="bernoulli"><code>Bernoulli</code><a class="headerlink" href="#bernoulli" title="Permanent link">#</a></h2>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Bernoulli</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">)</span>
-</code></pre></div>
-
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/distributions.py#L98">[view_source]</a></p>
-<p>A learned Bernoulli distribution.</p>
 <p><a name="core.base_abstractions.distributions.AddBias"></a></p>
 <h2 id="addbias"><code>AddBias</code><a class="headerlink" href="#addbias" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">AddBias</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/distributions.py#L116">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/distributions.py#L49">[view_source]</a></p>
 <p>Adding bias parameters to input values.</p>
 <p><a name="core.base_abstractions.distributions.AddBias.__init__"></a></p>
 <h3 id="addbias__init__"><code>AddBias.__init__</code><a class="headerlink" href="#addbias__init__" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">bias</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/distributions.py#L119">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/distributions.py#L52">[view_source]</a></p>
 <p>Initializer.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -3727,8 +3684,7 @@
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">forward</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/distributions.py#L129">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/distributions.py#L62">[view_source]</a></p>
 <p>Adds the stored bias parameters to <code>x</code>.</p>
                 
               

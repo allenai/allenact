@@ -3083,8 +3083,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../../projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3781,22 +3829,20 @@
                 
                 <p><a name="plugins.robothor_plugin.robothor_task_samplers"></a> </p>
 <h1 id="pluginsrobothor_pluginrobothor_task_samplers"><code>plugins.robothor_plugin.robothor_task_samplers</code><a class="headerlink" href="#pluginsrobothor_pluginrobothor_task_samplers" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/robothor_plugin/robothor_task_samplers.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/robothor_plugin/robothor_task_samplers.py#L1">[view_source]</a></p>
 <p><a name="plugins.robothor_plugin.robothor_task_samplers.ObjectNavTaskSampler"></a></p>
 <h2 id="objectnavtasksampler"><code>ObjectNavTaskSampler</code><a class="headerlink" href="#objectnavtasksampler" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavTaskSampler</span><span class="p">(</span><span class="n">TaskSampler</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/robothor_plugin/robothor_task_samplers.py#L19">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/robothor_plugin/robothor_task_samplers.py#L18">[view_source]</a></p>
 <p><a name="plugins.robothor_plugin.robothor_task_samplers.ObjectNavTaskSampler.length"></a></p>
 <h3 id="objectnavtasksamplerlength"><code>ObjectNavTaskSampler.length</code><a class="headerlink" href="#objectnavtasksamplerlength" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="nd">@property</span>
  <span class="o">|</span> <span class="n">length</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/robothor_plugin/robothor_task_samplers.py#L101">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/robothor_plugin/robothor_task_samplers.py#L99">[view_source]</a></p>
 <p>Length.</p>
 <p><strong>Returns</strong></p>
 <p>Number of total tasks remaining that can be sampled. Can be float('inf').</p>
@@ -3806,8 +3852,7 @@
  <span class="o">|</span> <span class="n">all_observation_spaces_equal</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/robothor_plugin/robothor_task_samplers.py#L123">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/robothor_plugin/robothor_task_samplers.py#L121">[view_source]</a></p>
 <p>Check if observation spaces equal.</p>
 <p><strong>Returns</strong></p>
 <p>True if all Tasks that can be sampled by this sampler have the
@@ -3817,16 +3862,14 @@ same observation space. Otherwise False.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavDatasetTaskSampler</span><span class="p">(</span><span class="n">TaskSampler</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/robothor_plugin/robothor_task_samplers.py#L288">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/robothor_plugin/robothor_task_samplers.py#L287">[view_source]</a></p>
 <p><a name="plugins.robothor_plugin.robothor_task_samplers.ObjectNavDatasetTaskSampler.__len__"></a></p>
 <h3 id="objectnavdatasettasksampler__len__"><code>ObjectNavDatasetTaskSampler.__len__</code><a class="headerlink" href="#objectnavdatasettasksampler__len__" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="nd">@property</span>
  <span class="o">|</span> <span class="fm">__len__</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/robothor_plugin/robothor_task_samplers.py#L388">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/robothor_plugin/robothor_task_samplers.py#L380">[view_source]</a></p>
 <p>Length.</p>
 <p><strong>Returns</strong></p>
 <p>Number of total tasks remaining that can be sampled. Can be float('inf').</p>
@@ -3836,8 +3879,7 @@ same observation space. Otherwise False.</p>
  <span class="o">|</span> <span class="n">all_observation_spaces_equal</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/robothor_plugin/robothor_task_samplers.py#L410">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/robothor_plugin/robothor_task_samplers.py#L402">[view_source]</a></p>
 <p>Check if observation spaces equal.</p>
 <p><strong>Returns</strong></p>
 <p>True if all Tasks that can be sampled by this sampler have the
@@ -3848,8 +3890,7 @@ same observation space. Otherwise False.</p>
  <span class="o">|</span> <span class="n">length</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/robothor_plugin/robothor_task_samplers.py#L421">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/robothor_plugin/robothor_task_samplers.py#L413">[view_source]</a></p>
 <p>Length.</p>
 <p><strong>Returns</strong></p>
 <p>Number of total tasks remaining that can be sampled. Can be float('inf').</p>
@@ -3858,16 +3899,14 @@ same observation space. Otherwise False.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">PointNavTaskSampler</span><span class="p">(</span><span class="n">TaskSampler</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/robothor_plugin/robothor_task_samplers.py#L495">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/robothor_plugin/robothor_task_samplers.py#L496">[view_source]</a></p>
 <p><a name="plugins.robothor_plugin.robothor_task_samplers.PointNavTaskSampler.length"></a></p>
 <h3 id="pointnavtasksamplerlength"><code>PointNavTaskSampler.length</code><a class="headerlink" href="#pointnavtasksamplerlength" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="nd">@property</span>
  <span class="o">|</span> <span class="n">length</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/robothor_plugin/robothor_task_samplers.py#L550">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/robothor_plugin/robothor_task_samplers.py#L549">[view_source]</a></p>
 <p>Length.</p>
 <p><strong>Returns</strong></p>
 <p>Number of total tasks remaining that can be sampled.
@@ -3878,8 +3917,7 @@ Can be float('inf').</p>
  <span class="o">|</span> <span class="n">all_observation_spaces_equal</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/robothor_plugin/robothor_task_samplers.py#L577">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/robothor_plugin/robothor_task_samplers.py#L576">[view_source]</a></p>
 <p>Check if observation spaces equal.</p>
 <p><strong>Returns</strong></p>
 <p>True if all Tasks that can be sampled by this sampler
@@ -3889,16 +3927,14 @@ have the     same observation space. Otherwise False.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">PointNavDatasetTaskSampler</span><span class="p">(</span><span class="n">TaskSampler</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/robothor_plugin/robothor_task_samplers.py#L718">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/robothor_plugin/robothor_task_samplers.py#L718">[view_source]</a></p>
 <p><a name="plugins.robothor_plugin.robothor_task_samplers.PointNavDatasetTaskSampler.__len__"></a></p>
 <h3 id="pointnavdatasettasksampler__len__"><code>PointNavDatasetTaskSampler.__len__</code><a class="headerlink" href="#pointnavdatasettasksampler__len__" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="nd">@property</span>
  <span class="o">|</span> <span class="fm">__len__</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/robothor_plugin/robothor_task_samplers.py#L786">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/robothor_plugin/robothor_task_samplers.py#L779">[view_source]</a></p>
 <p>Length.</p>
 <p><strong>Returns</strong></p>
 <p>Number of total tasks remaining that can be sampled. Can be float('inf').</p>
@@ -3908,8 +3944,7 @@ have the     same observation space. Otherwise False.</p>
  <span class="o">|</span> <span class="n">all_observation_spaces_equal</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/robothor_plugin/robothor_task_samplers.py#L808">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/robothor_plugin/robothor_task_samplers.py#L801">[view_source]</a></p>
 <p>Check if observation spaces equal.</p>
 <p><strong>Returns</strong></p>
 <p>True if all Tasks that can be sampled by this sampler have the
@@ -3920,8 +3955,7 @@ have the     same observation space. Otherwise False.</p>
  <span class="o">|</span> <span class="n">length</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/plugins/robothor_plugin/robothor_task_samplers.py#L894">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/plugins/robothor_plugin/robothor_task_samplers.py#L889">[view_source]</a></p>
 <p>Length.</p>
 <p><strong>Returns</strong></p>
 <p>Number of total tasks remaining that can be sampled.

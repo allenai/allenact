@@ -3026,8 +3026,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3721,7 +3769,6 @@ an optimizer, and other parameters like learning rates, batch sizes, etc.</li>
         <span class="k">return</span> <span class="s2">&quot;MiniGridTutorial&quot;</span>
 </code></pre></div>
 
-
 <h3 id="sensors-and-model">Sensors and Model<a class="headerlink" href="#sensors-and-model" title="Permanent link">#</a></h3>
 <p>A readily available Sensor type for MiniGrid,
 <a href="../../api/plugins/minigrid_plugin/minigrid_sensors/#egocentricminigridsensor">EgocentricMiniGridSensor</a>,
@@ -3730,7 +3777,6 @@ allows us to extract observations in a format consumable by an <code>ActorCritic
         <span class="n">EgocentricMiniGridSensor</span><span class="p">(</span><span class="n">agent_view_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">view_channels</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
     <span class="p">]</span>
 </code></pre></div>
-
 
 <p>The three <code>view_channels</code> include objects, colors and states corresponding to a partial observation of the environment
 as an image tensor, equivalent to that from <code>ImgObsWrapper</code> in
@@ -3750,7 +3796,6 @@ environments, <a href="../../api/plugins/minigrid_plugin/minigrid_models/#minigr
         <span class="p">)</span>
 </code></pre></div>
 
-
 <h3 id="task-samplers">Task samplers<a class="headerlink" href="#task-samplers" title="Permanent link">#</a></h3>
 <p>We use an available TaskSampler implementation for MiniGrid environments that allows to sample both random and
 deterministic <code>MiniGridTasks</code>,
@@ -3759,7 +3804,6 @@ deterministic <code>MiniGridTasks</code>,
     <span class="k">def</span> <span class="nf">make_sampler_fn</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TaskSampler</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">MiniGridTaskSampler</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div>
-
 
 <p>This task sampler will during training (or validation/testing), randomly initialize new tasks for the agent to complete.
 While it is not quite as important for this task type (as we test our agent in the same setting it is trained on) there
@@ -3798,7 +3842,6 @@ testing!). In <code>allenact</code> this is made possible by defining different 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_sampler_args</span><span class="p">(</span><span class="n">process_ind</span><span class="o">=</span><span class="n">process_ind</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
 </code></pre></div>
 
-
 <p>where, for convenience, we have defined a <code>_get_sampler_args</code> method:</p>
 <div class="codehilite"><pre><span></span><code>    <span class="k">def</span> <span class="nf">_get_sampler_args</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">process_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -3836,7 +3879,6 @@ testing!). In <code>allenact</code> this is made possible by defining different 
         <span class="k">return</span> <span class="n">EmptyRandomEnv5x5</span><span class="p">()</span>
 </code></pre></div>
 
-
 <p>Note that the <code>env_class</code> argument to the Task Sampler is the one determining which task type we are going to train the
 model for (in this case, <code>MiniGrid-Empty-Random-5x5-v0</code> from
 <a href="https://github.com/maximecb/gym-minigrid#empty-environment">gym-minigrid</a>)
@@ -3856,7 +3898,6 @@ or 640 for testing, so we can be fairly sure that all possible tasks are visited
         <span class="p">}</span>
 </code></pre></div>
 
-
 <p>We allocate a larger number of samplers for training (128) than for validation or testing (16), and we default to CPU
 usage by returning an empty list of <code>gpu_ids</code>.</p>
 <h3 id="training-pipeline">Training pipeline<a class="headerlink" href="#training-pipeline" title="Permanent link">#</a></h3>
@@ -3866,7 +3907,7 @@ stage with linearly decaying learning rate:</p>
     <span class="k">def</span> <span class="nf">training_pipeline</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TrainingPipeline</span><span class="p">:</span>
         <span class="n">ppo_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">150000</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">TrainingPipeline</span><span class="p">(</span>
-            <span class="n">named_losses</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">ppo_loss</span><span class="o">=</span><span class="n">Builder</span><span class="p">(</span><span class="n">PPO</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">=</span><span class="p">{},</span> <span class="n">default</span><span class="o">=</span><span class="n">PPOConfig</span><span class="p">,)),</span>
+            <span class="n">named_losses</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">ppo_loss</span><span class="o">=</span><span class="n">PPO</span><span class="p">(</span><span class="o">**</span><span class="n">PPOConfig</span><span class="p">)),</span>
             <span class="n">pipeline_stages</span><span class="o">=</span><span class="p">[</span>
                 <span class="n">PipelineStage</span><span class="p">(</span><span class="n">loss_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ppo_loss&quot;</span><span class="p">],</span> <span class="n">max_stage_steps</span><span class="o">=</span><span class="n">ppo_steps</span><span class="p">)</span>
             <span class="p">],</span>
@@ -3887,7 +3928,6 @@ stage with linearly decaying learning rate:</p>
         <span class="p">)</span>
 </code></pre></div>
 
-
 <p>You can see that we use a <code>Builder</code> class to postpone the construction of some of the elements, like the optimizer,
 for which the model weights need to be known.</p>
 <h2 id="training-and-validation">Training and validation<a class="headerlink" href="#training-and-validation" title="Permanent link">#</a></h2>
@@ -3895,7 +3935,6 @@ for which the model weights need to be known.</p>
 To start training from scratch, we just need to invoke</p>
 <div class="codehilite"><pre><span></span><code>python main.py minigrid_tutorial -b projects/tutorials -m <span class="m">8</span> -o /PATH/TO/minigrid_output -s <span class="m">12345</span>
 </code></pre></div>
-
 
 <p>from the <code>allenact</code> root directory.</p>
 <ul>
@@ -3908,7 +3947,6 @@ will be found in the <code>projects/tutorials</code> directory.</li>
 <p>If we have Tensorboard installed, we can track progress with</p>
 <div class="codehilite"><pre><span></span><code>tensorboard --logdir /PATH/TO/minigrid_output
 </code></pre></div>
-
 
 <p>which will default to the URL <a href="http://localhost:6006/">http://localhost:6006/</a>.</p>
 <p>After 150,000 steps, the script will terminate and several checkpoints will be saved in the output folder.
@@ -3926,7 +3964,6 @@ In order to test for a specific experiment, we need to pass its training start d
 <code>-t EXPERIMENT_DATE</code>:</p>
 <div class="codehilite"><pre><span></span><code>python main.py minigrid_tutorial -b projects/tutorials -m <span class="m">1</span> -o /PATH/TO/minigrid_output -s <span class="m">12345</span> -t EXPERIMENT_DATE
 </code></pre></div>
-
 
 <p>Again, if everything went well, the <code>test</code> success rate should converge to 1 and the mean episode length to a value
 below 4. Detailed results are saved under a <code>metrics</code> subfolder in the output folder.

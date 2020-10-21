@@ -2985,8 +2985,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3607,7 +3655,6 @@ the path parameter to point to an iTHOR dataset rather than the RoboTHOR one.</p
     <span class="n">VAL_DATASET_DIR</span> <span class="o">=</span> <span class="s2">&quot;datasets/ithor-pointnav/val&quot;</span>
 </code></pre></div>
 
-
 <p>We also have to download the <code>iTHOR-PointNav</code> dataset, following <a href="../../installation/download-datasets/">these instructions</a>.</p>
 <p>We might also want to modify the <code>tag</code> method to accurately reflect our config but this will not change
 the behavior at all and is merely a bookkeeping convenience.</p>
@@ -3615,7 +3662,6 @@ the behavior at all and is merely a bookkeeping convenience.</p>
     <span class="k">def</span> <span class="nf">tag</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
         <span class="k">return</span> <span class="s2">&quot;PointNavRobothorRGBPPO&quot;</span>
 </code></pre></div>
-
 
 <h2 id="robothor-to-habitat">RoboTHOR to Habitat<a class="headerlink" href="#robothor-to-habitat" title="Permanent link">#</a></h2>
 <p><img alt="Habitat Framework" src="../../img/habitat_framework.jpg" /></p>
@@ -3631,19 +3677,18 @@ to swap out our sensor classes:</p>
         <span class="n">DepthSensorHabitat</span><span class="p">(</span>
             <span class="n">height</span><span class="o">=</span><span class="n">SCREEN_SIZE</span><span class="p">,</span>
             <span class="n">width</span><span class="o">=</span><span class="n">SCREEN_SIZE</span><span class="p">,</span>
-            <span class="n">use_resnet_normalization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">use_normalization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="p">),</span>
         <span class="n">TargetCoordinatesSensorHabitat</span><span class="p">(</span><span class="n">coordinate_dims</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span>
     <span class="p">]</span>
 </code></pre></div>
 
-
 <p>Next we need to define the simulator config:</p>
-<div class="codehilite"><pre><span></span><code>    <span class="n">CONFIG</span> <span class="o">=</span> <span class="n">habitat</span><span class="o">.</span><span class="n">get_config</span><span class="p">(</span><span class="s2">&quot;configs/gibson.yaml&quot;</span><span class="p">)</span>
+<div class="codehilite"><pre><span></span><code>    <span class="n">CONFIG</span> <span class="o">=</span> <span class="n">get_habitat_config</span><span class="p">(</span><span class="s2">&quot;configs/gibson.yaml&quot;</span><span class="p">)</span>
     <span class="n">CONFIG</span><span class="o">.</span><span class="n">defrost</span><span class="p">()</span>
     <span class="n">CONFIG</span><span class="o">.</span><span class="n">NUM_PROCESSES</span> <span class="o">=</span> <span class="n">NUM_PROCESSES</span>
     <span class="n">CONFIG</span><span class="o">.</span><span class="n">SIMULATOR_GPU_IDS</span> <span class="o">=</span> <span class="n">TRAIN_GPUS</span>
-    <span class="n">CONFIG</span><span class="o">.</span><span class="n">DATASET</span><span class="o">.</span><span class="n">SCENES_DIR</span> <span class="o">=</span> <span class="s2">&quot;habitat/habitat-api/data/scene_datasets/&quot;</span>
+    <span class="n">CONFIG</span><span class="o">.</span><span class="n">DATASET</span><span class="o">.</span><span class="n">SCENES_DIR</span> <span class="o">=</span> <span class="n">HABITAT_SCENE_DATASETS_DIR</span>
     <span class="n">CONFIG</span><span class="o">.</span><span class="n">DATASET</span><span class="o">.</span><span class="n">POINTNAVV1</span><span class="o">.</span><span class="n">CONTENT_SCENES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;*&quot;</span><span class="p">]</span>
     <span class="n">CONFIG</span><span class="o">.</span><span class="n">DATASET</span><span class="o">.</span><span class="n">DATA_PATH</span> <span class="o">=</span> <span class="n">TRAIN_SCENES</span>
     <span class="n">CONFIG</span><span class="o">.</span><span class="n">SIMULATOR</span><span class="o">.</span><span class="n">AGENT_0</span><span class="o">.</span><span class="n">SENSORS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;RGB_SENSOR&quot;</span><span class="p">]</span>
@@ -3659,13 +3704,13 @@ to swap out our sensor classes:</p>
     <span class="n">CONFIG</span><span class="o">.</span><span class="n">TASK</span><span class="o">.</span><span class="n">POINTGOAL_WITH_GPS_COMPASS_SENSOR</span><span class="o">.</span><span class="n">GOAL_FORMAT</span> <span class="o">=</span> <span class="s2">&quot;POLAR&quot;</span>
     <span class="n">CONFIG</span><span class="o">.</span><span class="n">TASK</span><span class="o">.</span><span class="n">POINTGOAL_WITH_GPS_COMPASS_SENSOR</span><span class="o">.</span><span class="n">DIMENSIONALITY</span> <span class="o">=</span> <span class="mi">2</span>
     <span class="n">CONFIG</span><span class="o">.</span><span class="n">TASK</span><span class="o">.</span><span class="n">GOAL_SENSOR_UUID</span> <span class="o">=</span> <span class="s2">&quot;pointgoal_with_gps_compass&quot;</span>
-    <span class="n">CONFIG</span><span class="o">.</span><span class="n">TASK</span><span class="o">.</span><span class="n">MEASUREMENTS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;DISTANCE_TO_GOAL&quot;</span><span class="p">,</span> <span class="s2">&quot;SPL&quot;</span><span class="p">]</span>
+    <span class="n">CONFIG</span><span class="o">.</span><span class="n">TASK</span><span class="o">.</span><span class="n">MEASUREMENTS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;DISTANCE_TO_GOAL&quot;</span><span class="p">,</span> <span class="s2">&quot;SUCCESS&quot;</span><span class="p">,</span> <span class="s2">&quot;SPL&quot;</span><span class="p">]</span>
     <span class="n">CONFIG</span><span class="o">.</span><span class="n">TASK</span><span class="o">.</span><span class="n">SPL</span><span class="o">.</span><span class="n">TYPE</span> <span class="o">=</span> <span class="s2">&quot;SPL&quot;</span>
     <span class="n">CONFIG</span><span class="o">.</span><span class="n">TASK</span><span class="o">.</span><span class="n">SPL</span><span class="o">.</span><span class="n">SUCCESS_DISTANCE</span> <span class="o">=</span> <span class="mf">0.2</span>
+    <span class="n">CONFIG</span><span class="o">.</span><span class="n">TASK</span><span class="o">.</span><span class="n">SUCCESS</span><span class="o">.</span><span class="n">SUCCESS_DISTANCE</span> <span class="o">=</span> <span class="mf">0.2</span>
 
     <span class="n">CONFIG</span><span class="o">.</span><span class="n">MODE</span> <span class="o">=</span> <span class="s2">&quot;train&quot;</span>
 </code></pre></div>
-
 
 <p>This <code>CONFIG</code> object holds very similar values to the ones <code>ENV_ARGS</code> held in the RoboTHOR example. We
 decided to leave this way of passing in configurations exposed to the user to offer maximum customization
@@ -3732,7 +3777,6 @@ of the underlying environment.</p>
             <span class="s2">&quot;distance_to_goal&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">DISTANCE_TO_GOAL</span><span class="p">,</span>
         <span class="p">}</span>
 </code></pre></div>
-
 
 <p>As we can see this code looks very similar as well, we simply need to pass slightly different parameters.</p>
 <h2 id="conclusion">Conclusion<a class="headerlink" href="#conclusion" title="Permanent link">#</a></h2>

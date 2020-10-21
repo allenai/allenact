@@ -2931,8 +2931,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3510,14 +3558,12 @@ Reinforcement Learning Algorithm.</p>
 <div class="codehilite"><pre><span></span><code>python main.py -o &lt;PATH_TO_OUTPUT&gt; -c -b &lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt; &lt;EXPERIMENT_NAME&gt;
 </code></pre></div>
 
-
 <p>Where <code>&lt;PATH_TO_OUTPUT&gt;</code> is the path of the directory where we want the model weights
 and logs to be stored, <code>&lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt;</code> is the directory where our
 experiment file is located and <code>&lt;EXPERIMENT_NAME&gt;</code> is the name of the python module containing
 the experiment. An example usage of this command would be:</p>
 <div class="codehilite"><pre><span></span><code>python main.py -o storage/pointnav-robothor-depth -b projects/pointnav_baselines/experiments/robothor/ pointnav_robothor_depth_simpleconvgru_ddppo
 </code></pre></div>
-
 
 <p>This trains a simple convolutional neural network with a GRU using Depth input on the
 PointNav task in the RoboTHOR environment and stores the model weights and logs

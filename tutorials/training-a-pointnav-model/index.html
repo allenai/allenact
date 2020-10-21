@@ -3033,8 +3033,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3777,11 +3825,9 @@ experiment there.</p>
 <span class="kn">from</span> <span class="nn">utils.experiment_utils</span> <span class="kn">import</span> <span class="n">Builder</span><span class="p">,</span> <span class="n">PipelineStage</span><span class="p">,</span> <span class="n">TrainingPipeline</span><span class="p">,</span> <span class="n">LinearDecay</span>
 </code></pre></div>
 
-
 <p>Next we define a new experiment config class:</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">PointNavRoboThorRGBPPOExperimentConfig</span><span class="p">(</span><span class="n">ExperimentConfig</span><span class="p">):</span>
 </code></pre></div>
-
 
 <p>We then define the task parameters. For PointNav, these include the maximum number of steps our agent
 can take before being reset (this prevents the agent from wandering on forever), and a configuration
@@ -3795,7 +3841,6 @@ for the reward function that we will be using. </p>
         <span class="s2">&quot;shaping_weight&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
     <span class="p">}</span>
 </code></pre></div>
-
 
 <p>In this case, we set the maximum number of steps to 500.
 We give the agent a reward of -0.01 for each action that it takes (this is to encourage it to reach the goal
@@ -3814,7 +3859,6 @@ to a 224 by 224 box).</p>
     <span class="n">SCREEN_SIZE</span> <span class="o">=</span> <span class="mi">224</span>
 </code></pre></div>
 
-
 <p>Next, we set the hardware parameters for the training engine. <code>NUM_PROCESSES</code> sets the total number of parallel processes that will be used to train the model. In general, more processes result in faster training, but since each process is a unique instance of the environment in which we are training they can take up a lot of memory. Depending on the size of the model, the environment, and the hardware we are using, we may need to adjust this number, but for a setup with 8 GTX Titans, 60 processes work fine. 60 also happens to be the number of training scenes in RoboTHOR, which allows each process to load only a single scene into memory, saving time and space.</p>
 <p><code>TRAINING_GPUS</code> takes the ids of the GPUS on which
 the model should be trained. Similarly <code>VALIDATION_GPUS</code> and <code>TESTING_GPUS</code> hold the ids of the GPUS on which the validation and testing will occur. During training, a validation process is constantly running and evaluating
@@ -3822,13 +3866,12 @@ the current model, to show the progress on the validation set, so reserving a GP
 If our hardware setup does not include a GPU, these fields can be set to empty lists, as the codebase will default
 to running everything on the CPU with only 1 process.</p>
 <div class="codehilite"><pre><span></span><code>    <span class="c1"># Training Engine Parameters</span>
-    <span class="n">ADVANCE_SCENE_ROLLOUT_PERIOD</span> <span class="o">=</span> <span class="mi">10</span><span class="o">**</span><span class="mi">13</span>
+    <span class="n">ADVANCE_SCENE_ROLLOUT_PERIOD</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">NUM_PROCESSES</span> <span class="o">=</span> <span class="mi">60</span>
-    <span class="n">TRAINING_GPUS</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]</span>
-    <span class="n">VALIDATION_GPUS</span> <span class="o">=</span> <span class="p">[</span><span class="mi">7</span><span class="p">]</span>
-    <span class="n">TESTING_GPUS</span> <span class="o">=</span> <span class="p">[</span><span class="mi">7</span><span class="p">]</span>
+    <span class="n">TRAINING_GPUS</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">device_count</span><span class="p">()))</span>
+    <span class="n">VALIDATION_GPUS</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">device_count</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">TESTING_GPUS</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">device_count</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
 </code></pre></div>
-
 
 <p>Since we are using a dataset to train our model we need to define the path to where we have stored it. If we
 download the dataset instructed above we can define the path as follows</p>
@@ -3836,7 +3879,6 @@ download the dataset instructed above we can define the path as follows</p>
     <span class="n">TRAIN_DATASET_DIR</span> <span class="o">=</span> <span class="s2">&quot;datasets/robothor-pointnav/train&quot;</span>
     <span class="n">VAL_DATASET_DIR</span> <span class="o">=</span> <span class="s2">&quot;datasets/robothor-pointnav/val&quot;</span>
 </code></pre></div>
-
 
 <p>Next, we define the sensors. <code>RGBSensorThor</code> is the environment's implementation of an RGB sensor. It takes the
 raw image outputted by the simulator and resizes it, to the input dimensions for our neural network that we
@@ -3852,7 +3894,6 @@ the point our agent needs to move to. It tells us the direction and distance to 
             <span class="n">GPSCompassSensorRoboThor</span><span class="p">(),</span>
     <span class="p">]</span>
 </code></pre></div>
-
 
 <p>For the sake of this example, we are also going to be using a preprocessor with our model. In <em>AllenAct</em>
 the preprocessor abstraction is designed with large models with frozen weights in mind. These models often
@@ -3879,7 +3920,6 @@ use this abstraction.</p>
     <span class="p">]</span>
 </code></pre></div>
 
-
 <p>Next, we must define all of the observation inputs that our model will use. These are just
 the hardcoded ids of the sensors we are using in the experiment.</p>
 <div class="codehilite"><pre><span></span><code>    <span class="n">OBSERVATIONS</span> <span class="o">=</span> <span class="p">[</span>
@@ -3887,7 +3927,6 @@ the hardcoded ids of the sensors we are using in the experiment.</p>
         <span class="s2">&quot;target_coordinates_ind&quot;</span><span class="p">,</span>
     <span class="p">]</span>
 </code></pre></div>
-
 
 <p>Finally, we must define the settings of our simulator. We set the camera dimensions to the values
 we defined earlier. We set rotateStepDegrees to 30 degrees, which means that every time the agent takes a
@@ -3901,14 +3940,12 @@ agent moves forward, it will do so by 0.25 meters. </p>
     <span class="p">)</span>
 </code></pre></div>
 
-
 <p>Now we move on to the methods that we must define to finish implementing an experiment config. Firstly we
 have a simple method that just returns the name of the experiment.</p>
 <div class="codehilite"><pre><span></span><code>   <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">tag</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
         <span class="k">return</span> <span class="s2">&quot;PointNavRobothorRGBPPO&quot;</span>
 </code></pre></div>
-
 
 <p>Next, we define the training pipeline. In this function, we specify exactly which algorithm or algorithms
 we will use to train our model. In this simple example, we are using the PPO loss with a learning rate of 3e-4.
@@ -3951,7 +3988,6 @@ often we save the model weights and run validation on them.</p>
         <span class="p">)</span>
 </code></pre></div>
 
-
 <p>We define the helper method <code>split_num_processes</code> to split the different scenes that we want to train with
 amongst the different available devices. "machine_params" returns the hardware parameters of each
 process, based on the list of devices we defined above.</p>
@@ -3968,15 +4004,12 @@ process, based on the list of devices we defined above.</p>
             <span class="n">gpu_ids</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">TRAINING_GPUS</span> <span class="o">*</span> <span class="n">workers_per_device</span>
             <span class="n">nprocesses</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_num_processes</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">gpu_ids</span><span class="p">))</span>
             <span class="n">sampler_devices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TRAINING_GPUS</span>
-            <span class="n">render_video</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;valid&quot;</span><span class="p">:</span>
             <span class="n">nprocesses</span> <span class="o">=</span> <span class="mi">1</span>
             <span class="n">gpu_ids</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">VALIDATION_GPUS</span>
-            <span class="n">render_video</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;test&quot;</span><span class="p">:</span>
             <span class="n">nprocesses</span> <span class="o">=</span> <span class="mi">1</span>
             <span class="n">gpu_ids</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">TESTING_GPUS</span>
-            <span class="n">render_video</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;mode must be &#39;train&#39;, &#39;valid&#39;, or &#39;test&#39;.&quot;</span><span class="p">)</span>
 
@@ -3994,10 +4027,8 @@ process, based on the list of devices we defined above.</p>
             <span class="s2">&quot;gpu_ids&quot;</span><span class="p">:</span> <span class="n">gpu_ids</span><span class="p">,</span>
             <span class="s2">&quot;sampler_devices&quot;</span><span class="p">:</span> <span class="n">sampler_devices</span> <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;train&quot;</span> <span class="k">else</span> <span class="n">gpu_ids</span><span class="p">,</span>
             <span class="s2">&quot;observation_set&quot;</span><span class="p">:</span> <span class="n">observation_set</span><span class="p">,</span>
-            <span class="s2">&quot;render_video&quot;</span><span class="p">:</span> <span class="n">render_video</span><span class="p">,</span>
         <span class="p">}</span>
 </code></pre></div>
-
 
 <p>Now we define the actual model that we will be using. <strong>AllenAct</strong> offers first-class support for PyTorch,
 so any PyTorch model that implements the provided <code>ActorCriticModel</code> class will work here. Here we borrow a model from the <code>pointnav_baselines</code> project (which
@@ -4019,7 +4050,6 @@ distance to the target) with <code>goal_dims</code>.</p>
         <span class="p">)</span>
 </code></pre></div>
 
-
 <p>We also need to define the task sampler that we will be using. This is a piece of code that generates instances
 of tasks for our agent to perform (essentially starting locations and targets for PointNav). Since we are getting
 our tasks from a dataset, the task sampler is a very simple code that just reads the specified file and sets
@@ -4030,7 +4060,6 @@ the agent to the next starting locations whenever the agent exceeds the maximum 
     <span class="k">def</span> <span class="nf">make_sampler_fn</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TaskSampler</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">PointNavDatasetTaskSampler</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div>
-
 
 <p>You might notice that we did not specify the task sampler's arguments, but are rather passing them in. The
 reason for this is that each process will have its own task sampler, and we need to specify exactly which scenes
@@ -4078,7 +4107,6 @@ each process should work with. If we have several GPUS and many scenes this proc
             <span class="s2">&quot;rewards_config&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">REWARD_CONFIG</span>
         <span class="p">}</span>
 </code></pre></div>
-
 
 <p>The very last things we need to define are the sampler arguments themselves. We define them separately for a train,
 validation, and test sampler, but in this case, they are almost the same. The arguments need to include the location
@@ -4157,7 +4185,6 @@ set.</p>
         <span class="k">return</span> <span class="n">res</span>
 </code></pre></div>
 
-
 <p>This is it! If we copy all of the code into a file we should be able to run our experiment!</p>
 <h2 id="training-model-on-debug-dataset">Training Model On Debug Dataset<a class="headerlink" href="#training-model-on-debug-dataset" title="Permanent link">#</a></h2>
 <p>We can test if our installation worked properly by training our model on a small dataset of 4 episodes. This
@@ -4168,18 +4195,15 @@ should take about 20 minutes on a computer with a NVIDIA GPU.</p>
     <span class="n">VAL_DATASET_DIR</span> <span class="o">=</span> <span class="s2">&quot;datasets/robothor-pointnav/debug&quot;</span>
 </code></pre></div>
 
-
 <p>Note that we changed both the train and test dataset to debug, so the model will train and validate on the same
 4 episodes.</p>
 <p>We can now train a model by running:</p>
 <div class="codehilite"><pre><span></span><code>python main.py -o &lt;PATH_TO_OUTPUT&gt; -c -b &lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt; &lt;EXPERIMENT_NAME&gt;
 </code></pre></div>
 
-
 <p>If using the same configuration as we have set up, the following command should work:</p>
 <div class="codehilite"><pre><span></span><code>python main.py -o storage/robothor-pointnav-rgb-resnet-resnet -b projects/tutorials pointnav_robothor_rgb_ddppo
 </code></pre></div>
-
 
 <p>If we start up a tensorboard server during training and specify that <code>output_dir=storage</code> the output should look
 something like this:

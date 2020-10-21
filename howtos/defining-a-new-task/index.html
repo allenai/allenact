@@ -3018,8 +3018,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3716,7 +3764,6 @@ object of a specific class using a minimal amount of steps and deciding when the
     <span class="o">...</span>
 </code></pre></div>
 
-
 <h3 id="step-method">Step method<a class="headerlink" href="#step-method" title="Permanent link">#</a></h3>
 <p>Next, we define the main method <code>_step</code> that will be called every time the agent produces a new action: </p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavTask</span><span class="p">(</span><span class="n">Task</span><span class="p">[</span><span class="n">IThorEnvironment</span><span class="p">]):</span>
@@ -3763,7 +3810,6 @@ object of a specific class using a minimal amount of steps and deciding when the
         <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">reward</span><span class="p">)</span>
 </code></pre></div>
 
-
 <h3 id="metrics-rendering-and-expert-actions">Metrics, rendering and expert actions<a class="headerlink" href="#metrics-rendering-and-expert-actions" title="Permanent link">#</a></h3>
 <p>Finally, we define methods to render and evaluate the current task, and optionally generate expert actions to be used
 e.g. for DAgger training.</p>
@@ -3781,7 +3827,6 @@ e.g. for DAgger training.</p>
     <span class="k">def</span> <span class="nf">query_expert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
         <span class="k">return</span> <span class="n">my_objnav_expert_implementation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 </code></pre></div>
-
 
 <h2 id="tasksampler">TaskSampler<a class="headerlink" href="#tasksampler" title="Permanent link">#</a></h2>
 <p>We also need to define the corresponding TaskSampler, which must contain implementations for methods <code>__len__</code>,
@@ -3837,7 +3882,6 @@ an additional method <code>all_observation_spaces_equal</code> is used to ensure
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">env</span>
 </code></pre></div>
-
 
 <h3 id="task-sampling">Task sampling<a class="headerlink" href="#task-sampling" title="Permanent link">#</a></h3>
 <p>Finally, we need to define methods to determine the number of available tasks (possibly infinite) and sample tasks:</p>

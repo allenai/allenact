@@ -2999,8 +2999,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3632,13 +3680,11 @@ the data we'll run</p>
 <div class="codehilite"><pre><span></span><code><span class="nv">PYTHONPATH</span><span class="o">=</span>. python plugins/babyai_plugin/scripts/download_babyai_expert_demos.py GoToLocal
 </code></pre></div>
 
-
 <p>from the project's root directory, which will download <code>BabyAI-GoToLocal-v0.pkl</code> and <code>BabyAI-GoToLocal-v0_valid.pkl</code> to
 the <code>plugins/babyai_plugin/data/demos</code> directory.</p>
 <p>We will also generate small versions of the datasets, which will be useful if running on CPU, by calling</p>
 <div class="codehilite"><pre><span></span><code><span class="nv">PYTHONPATH</span><span class="o">=</span>. python plugins/babyai_plugin/scripts/truncate_expert_demos.py
 </code></pre></div>
-
 
 <p>from the project's root directory, which will generate <code>BabyAI-GoToLocal-v0-small.pkl</code> under the same
 <code>plugins/babyai_plugin/data/demos</code> directory.</p>
@@ -3694,7 +3740,6 @@ An example of a <code>Data Iterator</code> for BabyAI expert demos might look as
         <span class="p">}</span>
 </code></pre></div>
 
-
 <p>A complete example can be found in
 <a href="/api/plugins/minigrid_plugin/minigrid_offpolicy#ExpertTrajectoryIterator">ExpertTrajectoryIterator</a>.</p>
 <h2 id="loss-function">Loss function<a class="headerlink" href="#loss-function" title="Permanent link">#</a></h2>
@@ -3741,7 +3786,6 @@ interface. In this case, we minimize the cross-entropy between the actor's polic
 
         <span class="k">return</span> <span class="n">expert_ce_loss</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="n">memory</span><span class="p">,</span> <span class="n">rollout_len</span> <span class="o">*</span> <span class="n">nrollouts</span>
 </code></pre></div>
-
 
 <p>A complete example can be found in
 <a href="/api/plugins/minigrid_plugin/minigrid_offpolicy#MiniGridOffPolicyExpertCELoss">MiniGridOffPolicyExpertCELoss</a>.
@@ -3815,7 +3859,6 @@ providing an <a href="/api/utils/experiment_utils/#offpolicypipelinecomponent">O
         <span class="p">)</span>
 </code></pre></div>
 
-
 <p>You'll have noted that it is possible to combine on-policy and off-policy training in the same stage, even though here
 we apply pure off-policy training.</p>
 <h2 id="training">Training<a class="headerlink" href="#training" title="Permanent link">#</a></h2>
@@ -3823,7 +3866,6 @@ we apply pure off-policy training.</p>
 invoke</p>
 <div class="codehilite"><pre><span></span><code>python main.py -b projects/tutorials babyai_go_to_local_bc_offpolicy -m <span class="m">8</span> -o &lt;OUTPUT_PATH&gt;
 </code></pre></div>
-
 
 <p>Note that with the <code>-m 8</code> option we limit to 8 the number of on-policy task sampling processes used between off-policy
 updates.</p>

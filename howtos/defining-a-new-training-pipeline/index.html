@@ -2971,8 +2971,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3608,7 +3656,6 @@ initializers.</p>
     <span class="o">...</span>
 </code></pre></div>
 
-
 <p>Alternatively, we could use a more complex pipeline that includes dataset aggregation
 (<a href="https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf">DAgger</a>). This requires the existence of an
 expert (implemented in the task definition) that provides optimal actions to agents. We have implemented such a 
@@ -3671,7 +3718,6 @@ pipeline by extending the above configuration as follows:</p>
         <span class="p">)</span>
 </code></pre></div>
 
-
 <h2 id="off-policy">Off-policy<a class="headerlink" href="#off-policy" title="Permanent link">#</a></h2>
 <p>We can also define off-policy stages where an external dataset is used, in this case, for Behavior Cloning: </p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">BCOffPolicyBabyAIGoToLocalExperimentConfig</span><span class="p">(</span><span class="n">ExperimentConfig</span><span class="p">):</span>
@@ -3717,7 +3763,6 @@ pipeline by extending the above configuration as follows:</p>
             <span class="p">],</span>
         <span class="p">)</span>
 </code></pre></div>
-
 
 <p>Note that, in this example, <code>128 / 4 = 32</code> steps will be sampled from tasks in a MiniGrid environment (which can be
 useful to track the agent's performance), while a subgraph of the model (in this case the entire Actor) is

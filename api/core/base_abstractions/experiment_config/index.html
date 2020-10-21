@@ -3037,8 +3037,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../../projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3689,7 +3737,7 @@
                 
                 <p><a name="core.base_abstractions.experiment_config"></a> </p>
 <h1 id="corebase_abstractionsexperiment_config"><code>core.base_abstractions.experiment_config</code><a class="headerlink" href="#corebase_abstractionsexperiment_config" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/experiment_config.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/experiment_config.py#L1">[view_source]</a></p>
 <p>Defines the <code>ExperimentConfig</code> abstract class used as the basis of all
 experiments.</p>
 <p><a name="core.base_abstractions.experiment_config.FrozenClassVariables"></a></p>
@@ -3697,8 +3745,7 @@ experiments.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">FrozenClassVariables</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABCMeta</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/experiment_config.py#L13">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/experiment_config.py#L129">[view_source]</a></p>
 <p>Metaclass for ExperimentConfig.</p>
 <p>Ensures ExperimentConfig class-level attributes cannot be modified.
 ExperimentConfig attributes can still be modified at the object
@@ -3708,8 +3755,7 @@ level.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ExperimentConfig</span><span class="p">(,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">FrozenClassVariables</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/experiment_config.py#L38">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/experiment_config.py#L154">[view_source]</a></p>
 <p>Abstract class used to define experiments.</p>
 <p>Instead of using yaml or text files, experiments in our framework
 are defined as a class. In particular, to define an experiment one
@@ -3723,8 +3769,7 @@ running the experiment.</p>
  <span class="o">|</span> <span class="n">tag</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/experiment_config.py#L50">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/experiment_config.py#L166">[view_source]</a></p>
 <p>A string describing the experiment.</p>
 <p><a name="core.base_abstractions.experiment_config.ExperimentConfig.training_pipeline"></a></p>
 <h3 id="experimentconfigtraining_pipeline"><code>ExperimentConfig.training_pipeline</code><a class="headerlink" href="#experimentconfigtraining_pipeline" title="Permanent link">#</a></h3>
@@ -3733,8 +3778,7 @@ running the experiment.</p>
  <span class="o">|</span> <span class="n">training_pipeline</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TrainingPipeline</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/experiment_config.py#L56">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/experiment_config.py#L172">[view_source]</a></p>
 <p>Creates the training pipeline.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -3746,11 +3790,10 @@ running the experiment.</p>
 <h3 id="experimentconfigmachine_params"><code>ExperimentConfig.machine_params</code><a class="headerlink" href="#experimentconfigmachine_params" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="nd">@classmethod</span>
  <span class="o">|</span> <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
- <span class="o">|</span> <span class="n">machine_params</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+ <span class="o">|</span> <span class="n">machine_params</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">MachineParams</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/experiment_config.py#L71">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/experiment_config.py#L187">[view_source]</a></p>
 <p>Parameters used to specify machine information.</p>
 <p>Machine information includes at least (1) the number of processes
 to train with and (2) the gpu devices indices to use.</p>
@@ -3769,8 +3812,7 @@ will be run on the cpu).</p>
  <span class="o">|</span> <span class="n">create_model</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/experiment_config.py#L92">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/experiment_config.py#L210">[view_source]</a></p>
 <p>Create the neural model.</p>
 <p><a name="core.base_abstractions.experiment_config.ExperimentConfig.make_sampler_fn"></a></p>
 <h3 id="experimentconfigmake_sampler_fn"><code>ExperimentConfig.make_sampler_fn</code><a class="headerlink" href="#experimentconfigmake_sampler_fn" title="Permanent link">#</a></h3>
@@ -3779,8 +3821,7 @@ will be run on the cpu).</p>
  <span class="o">|</span> <span class="n">make_sampler_fn</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TaskSampler</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/experiment_config.py#L98">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/experiment_config.py#L216">[view_source]</a></p>
 <p>Create the TaskSampler given keyword arguments.</p>
 <p>These <code>kwargs</code> will be generated by one of
 <code>ExperimentConfig.train_task_sampler_args</code>,
@@ -3792,8 +3833,7 @@ the user has chosen to train, validate, or test.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">train_task_sampler_args</span><span class="p">(</span><span class="n">process_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">total_processes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">devices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">seeds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">deterministic_cudnn</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/experiment_config.py#L109">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/experiment_config.py#L227">[view_source]</a></p>
 <p>Specifies the training parameters for the <code>process_ind</code>th training
 process.</p>
 <p>These parameters are meant be passed as keyword arguments to <code>ExperimentConfig.make_sampler_fn</code>
@@ -3813,8 +3853,7 @@ to generate a task sampler.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">valid_task_sampler_args</span><span class="p">(</span><span class="n">process_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">total_processes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">devices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">seeds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">deterministic_cudnn</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/experiment_config.py#L137">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/experiment_config.py#L255">[view_source]</a></p>
 <p>Specifies the validation parameters for the <code>process_ind</code>th
 validation process.</p>
 <p>See <code>ExperimentConfig.train_task_sampler_args</code> for parameter
@@ -3824,8 +3863,7 @@ definitions.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">test_task_sampler_args</span><span class="p">(</span><span class="n">process_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">total_processes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">devices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">seeds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">deterministic_cudnn</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/experiment_config.py#L153">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/experiment_config.py#L271">[view_source]</a></p>
 <p>Specifies the test parameters for the <code>process_ind</code>th test process.</p>
 <p>See <code>ExperimentConfig.train_task_sampler_args</code> for parameter
 definitions.</p>

@@ -2968,8 +2968,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../../projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3551,14 +3599,13 @@
                 
                 <p><a name="core.base_abstractions.preprocessor"></a> </p>
 <h1 id="corebase_abstractionspreprocessor"><code>core.base_abstractions.preprocessor</code><a class="headerlink" href="#corebase_abstractionspreprocessor" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/preprocessor.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/preprocessor.py#L1">[view_source]</a></p>
 <p><a name="core.base_abstractions.preprocessor.Preprocessor"></a></p>
 <h2 id="preprocessor"><code>Preprocessor</code><a class="headerlink" href="#preprocessor" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Preprocessor</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">)</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/preprocessor.py#L14">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/preprocessor.py#L14">[view_source]</a></p>
 <p>Represents a preprocessor that transforms data from a sensor or another
 preprocessor to the input of agents or other preprocessors. The user of
 this class needs to implement the process method and the user is also
@@ -3573,8 +3620,7 @@ observation_space : <code>gym.Space</code> object corresponding to processed obs
  <span class="o">|</span> <span class="n">process</span><span class="p">(</span><span class="n">obs</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/preprocessor.py#L42">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/preprocessor.py#L42">[view_source]</a></p>
 <p>Returns processed observations from sensors or other preprocessors.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -3587,8 +3633,7 @@ observation_space : <code>gym.Space</code> object corresponding to processed obs
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">PreprocessorGraph</span><span class="p">()</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/preprocessor.py#L60">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/preprocessor.py#L60">[view_source]</a></p>
 <p>Represents a graph of preprocessors, with each preprocessor being
 identified through a universally unique id.</p>
 <p><strong>Attributes</strong></p>
@@ -3601,8 +3646,7 @@ identified through a universally unique id.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">preprocessors</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Preprocessor</span><span class="p">,</span> <span class="n">Builder</span><span class="p">[</span><span class="n">Preprocessor</span><span class="p">]]])</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/preprocessor.py#L73">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/preprocessor.py#L73">[view_source]</a></p>
 <p>Initializer.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -3613,8 +3657,7 @@ identified through a universally unique id.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">get</span><span class="p">(</span><span class="n">uuid</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Preprocessor</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/preprocessor.py#L110">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/preprocessor.py#L110">[view_source]</a></p>
 <p>Return preprocessor with the given <code>uuid</code>.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -3627,8 +3670,7 @@ identified through a universally unique id.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">get_observations</span><span class="p">(</span><span class="n">obs</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/preprocessor.py#L128">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/preprocessor.py#L128">[view_source]</a></p>
 <p>Get processed observations.</p>
 <p><strong>Returns</strong></p>
 <p>Collect observations processed from all sensors and return them packaged inside a Dict.</p>
@@ -3637,8 +3679,7 @@ identified through a universally unique id.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObservationSet</span><span class="p">()</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/preprocessor.py#L145">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/preprocessor.py#L145">[view_source]</a></p>
 <p>Represents a list of source_ids, corresponding to sensors and
 preprocessors, with each source being identified through a unique id.</p>
 <p><strong>Attributes</strong></p>
@@ -3653,8 +3694,7 @@ preprocessors, with each source being identified through a unique id.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">source_ids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">all_preprocessors</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Preprocessor</span><span class="p">,</span> <span class="n">Builder</span><span class="p">[</span><span class="n">Preprocessor</span><span class="p">]]],</span> <span class="n">all_sensors</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Sensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/preprocessor.py#L162">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/preprocessor.py#L162">[view_source]</a></p>
 <p>Initializer.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -3667,8 +3707,7 @@ preprocessors, with each source being identified through a unique id.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">get</span><span class="p">(</span><span class="n">uuid</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Preprocessor</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/preprocessor.py#L197">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/preprocessor.py#L197">[view_source]</a></p>
 <p>Return preprocessor with the given <code>uuid</code>.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -3681,8 +3720,7 @@ preprocessors, with each source being identified through a unique id.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">get_observations</span><span class="p">(</span><span class="n">obs</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
 </code></pre></div>
 
-
-<p><a href="https://github.com/allenai/allenact/blob/100dc2d7552f5820950db24327159cac126d74f5/core/base_abstractions/preprocessor.py#L215">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/63e43c4beebaabd1c5a374d9bbf8103964e461cd/core/base_abstractions/preprocessor.py#L215">[view_source]</a></p>
 <p>Get all observations within a dictionary.</p>
 <p><strong>Returns</strong></p>
 <p>Collect observations from all sources and return them packaged inside a Dict.</p>

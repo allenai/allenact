@@ -314,6 +314,26 @@
     Installation of Habitat
   </a>
   
+    <nav class="md-nav" aria-label="Installation of Habitat">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-docker" class="md-nav__link">
+    Using Docker
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-conda-experimental" class="md-nav__link">
+    Using conda (experimental)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -2985,8 +3005,56 @@
 
 
   <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
     <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
       pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
     </a>
   </li>
 
@@ -3565,6 +3633,26 @@
     Installation of Habitat
   </a>
   
+    <nav class="md-nav" aria-label="Installation of Habitat">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-docker" class="md-nav__link">
+    Using Docker
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-conda-experimental" class="md-nav__link">
+    Using conda (experimental)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -3595,14 +3683,12 @@
 <div class="codehilite"><pre><span></span><code>pip install gym-minigrid
 </code></pre></div>
 
-
 <h2 id="installation-of-ithor">Installation of iTHOR<a class="headerlink" href="#installation-of-ithor" title="Permanent link">#</a></h2>
 <p><code>iTHOR</code> will automatically be installed when installing <code>allenact</code> and so, if you have installed <code>allenact</code>
  on a machine with an attached display, nothing additional needs to be done. If you wish to (re)install it manually 
  using <code>pip</code>, simply run the command:</p>
 <div class="codehilite"><pre><span></span><code>pip install ai2thor
 </code></pre></div>
-
 
 <p>The first time you will run an experiment with <code>iTHOR</code> (or any script that uses <code>ai2thor</code>)
 the library will download all of the assets it requires to render the scenes automatically.</p>
@@ -3613,7 +3699,6 @@ the library will download all of the assets it requires to render the scenes aut
 <div class="codehilite"><pre><span></span><code>sudo python scripts/startx.py <span class="p">&amp;</span>
 </code></pre></div>
 
-
 <p>Notice that you need to run the command with <code>sudo</code> (i.e. administrator privileges). If you do not have <code>sudo</code> 
 access (for example if you are running this on a shared university machine) you
 can ask your administrator to run it for you. You only need to run it once (as
@@ -3622,17 +3707,16 @@ long as you do not turn off your machine).</p>
 <p><code>RoboTHOR</code> is installed in tandem with <code>iTHOR</code> when installing the <code>ai2thor</code> library. For more information
 see the above section on installing <code>iTHOR</code>. </p>
 <h2 id="installation-of-habitat">Installation of Habitat<a class="headerlink" href="#installation-of-habitat" title="Permanent link">#</a></h2>
+<h3 id="using-docker">Using Docker<a class="headerlink" href="#using-docker" title="Permanent link">#</a></h3>
 <p>To run experiments using Habitat please use our docker image using the following command:</p>
 <div class="codehilite"><pre><span></span><code>docker pull allenact/allenact:latest
 </code></pre></div>
-
 
 <p>This container includes the 0.1.0 release of <code>allenact</code>, the 0.1.5 release of <code>habitat</code> as well
 as the <code>Gibson</code> point navigation dataset. This dataset consists of a set of start and goal positions provided by habitat.
 You then need to launch the container and attach into it:</p>
 <div class="codehilite"><pre><span></span><code>docker run --runtime<span class="o">=</span>nvidia -it allenact/allenact
 </code></pre></div>
-
 
 <p>If you are running the container on a machine without an Nvidia GPU, omit the <code>--runtime=nvidia</code> flag.</p>
 <p>Once inside the container simply <code>cd</code> into the <code>allenact</code> directory where all the allenact and habitat code should be stored:</p>
@@ -3641,6 +3725,23 @@ Instead you will need to download these yourself by filling out
 <a href="https://docs.google.com/forms/d/e/1FAIpQLScWlx5Z1DM1M-wTSXaa6zV8lTFkPmTHW1LqMsoCBDWsTDjBkQ/viewform">this form</a>
 and downloading the <code>gibson_habitat_trainval</code> data. Extract the scene assets (<code>.glb</code> files) into <code>habitat-lab/data/scene_datasets/</code> 
 within the above container. You can then proceed to run your experiments using <code>allenact</code> as you normally would.</p>
+<h3 id="using-conda-experimental">Using <code>conda</code> (experimental)<a class="headerlink" href="#using-conda-experimental" title="Permanent link">#</a></h3>
+<p>The following is experimental, we do not guarantee that AllenAct will continue to support this
+installation procedure in future releases.</p>
+<p>Habitat has recently released the option to install their simulator using <code>conda</code> which avoids having
+to manually build dependencies or use Docker. This does not guarantee that the installation process
+is completely painless (it is difficult to avoid all possible build issues) but we've found it
+to be a nice alternative to using Docker. To use this installation option please first
+install an AllenAct <code>conda</code> environment using the instructions available under the <em>Installing a Conda environment (experimental)</em>
+section <a href="../installation-allenact/">here</a>. After installing this environment, you can then install
+<code>habitat-sim</code> by running:</p>
+<p>If you are on a machine with an attached display:</p>
+<div class="codehilite"><pre><span></span><code>conda install habitat-sim<span class="o">=</span><span class="m">0</span>.1.5 -c conda-forge -c aihabitat --name allenact
+</code></pre></div>
+
+<p>If you are on a machine without an attached display (e.g. a server):</p>
+<div class="codehilite"><pre><span></span><code>conda install habitat-sim<span class="o">=</span><span class="m">0</span>.1.5 headless -c conda-forge -c aihabitat --name allenact
+</code></pre></div>
                 
               
               
