@@ -11,8 +11,8 @@ from core.algorithms.onpolicy_sync.policy import (
     Memory,
     ObservationType,
 )
-from core.base_abstractions.misc import ActorCriticOutput, DistributionType
 from core.base_abstractions.distributions import CategoricalDistr
+from core.base_abstractions.misc import ActorCriticOutput, DistributionType
 
 
 class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
@@ -53,6 +53,7 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
     def recurrent_hidden_state_size(self) -> int:
         return 0
 
+    # noinspection PyMethodMayBeStatic
     def _recurrent_memory_specification(self):
         return None
 
@@ -83,7 +84,9 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
             ActorCriticOutput(
                 distributions=CategoricalDistr(logits=main_logits),
                 values=typing.cast(torch.FloatTensor, values),
-                extras={"auxiliary_distributions": CategoricalDistr(logits=aux_logits)},
+                extras={
+                    "auxiliary_distributions": CategoricalDistr(logits=aux_logits),
+                },
             ),
             None,
         )

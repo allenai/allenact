@@ -153,11 +153,11 @@ If our hardware setup does not include a GPU, these fields can be set to empty l
 to running everything on the CPU with only 1 process.
 ```python
     # Training Engine Parameters
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10**13
+    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
     NUM_PROCESSES = 60
-    TRAINING_GPUS = [0, 1, 2, 3, 4, 5, 6]
-    VALIDATION_GPUS = [7]
-    TESTING_GPUS = [7]
+    TRAINING_GPUS = list(range(torch.cuda.device_count()))
+    VALIDATION_GPUS = [torch.cuda.device_count() - 1]
+    TESTING_GPUS = [torch.cuda.device_count() - 1]
 ```
 
 Since we are using a dataset to train our model we need to define the path to where we have stored it. If we
@@ -307,15 +307,12 @@ process, based on the list of devices we defined above.
             gpu_ids = [] if not torch.cuda.is_available() else self.TRAINING_GPUS * workers_per_device
             nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
             sampler_devices = self.TRAINING_GPUS
-            render_video = False
         elif mode == "valid":
             nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.VALIDATION_GPUS
-            render_video = False
         elif mode == "test":
             nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.TESTING_GPUS
-            render_video = False
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -333,7 +330,6 @@ process, based on the list of devices we defined above.
             "gpu_ids": gpu_ids,
             "sampler_devices": sampler_devices if mode == "train" else gpu_ids,
             "observation_set": observation_set,
-            "render_video": render_video,
         }
 ```
 

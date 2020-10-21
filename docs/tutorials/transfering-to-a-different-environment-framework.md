@@ -51,7 +51,7 @@ to swap out our sensor classes:
         DepthSensorHabitat(
             height=SCREEN_SIZE,
             width=SCREEN_SIZE,
-            use_resnet_normalization=True,
+            use_normalization=True,
         ),
         TargetCoordinatesSensorHabitat(coordinate_dims=2),
     ]
@@ -60,11 +60,11 @@ to swap out our sensor classes:
 Next we need to define the simulator config:
 
 ```python
-    CONFIG = habitat.get_config("configs/gibson.yaml")
+    CONFIG = get_habitat_config("configs/gibson.yaml")
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
     CONFIG.SIMULATOR_GPU_IDS = TRAIN_GPUS
-    CONFIG.DATASET.SCENES_DIR = "habitat/habitat-api/data/scene_datasets/"
+    CONFIG.DATASET.SCENES_DIR = HABITAT_SCENE_DATASETS_DIR
     CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
     CONFIG.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
@@ -80,9 +80,10 @@ Next we need to define the simulator config:
     CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.GOAL_FORMAT = "POLAR"
     CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.DIMENSIONALITY = 2
     CONFIG.TASK.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
-    CONFIG.TASK.MEASUREMENTS = ["DISTANCE_TO_GOAL", "SPL"]
+    CONFIG.TASK.MEASUREMENTS = ["DISTANCE_TO_GOAL", "SUCCESS", "SPL"]
     CONFIG.TASK.SPL.TYPE = "SPL"
     CONFIG.TASK.SPL.SUCCESS_DISTANCE = 0.2
+    CONFIG.TASK.SUCCESS.SUCCESS_DISTANCE = 0.2
 
     CONFIG.MODE = "train"
 ```

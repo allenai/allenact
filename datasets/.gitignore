@@ -1,3 +1,6 @@
 *
 !.gitignore
 !*.sh
+!.habitat_datasets_download_info.json
+!.habitat_downloader_helper.py
+!habitat/configs/debug_habitat_pointnav.yaml

@@ -6,16 +6,16 @@ from torchvision import models
 
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
+from plugins.ithor_plugin.ithor_sensors import GoalObjectTypeThorSensor
+from plugins.robothor_plugin.robothor_sensors import DepthSensorRoboThor
+from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.objectnav_baselines.experiments.ithor.objectnav_ithor_base import (
     ObjectNaviThorBaseConfig,
 )
 from projects.objectnav_baselines.models.object_nav_models import (
     ResnetTensorObjectNavActorCritic,
 )
-from plugins.ithor_plugin.ithor_sensors import GoalObjectTypeThorSensor
-from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
-from plugins.robothor_plugin.robothor_sensors import DepthSensorRoboThor
-from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -31,7 +31,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
         DepthSensorRoboThor(
             height=self.SCREEN_SIZE,
             width=self.SCREEN_SIZE,
-            use_resnet_normalization=True,
+            use_normalization=True,
             uuid="depth_lowres",
         ),
         GoalObjectTypeThorSensor(object_types=self.TARGET_TYPES,),
@@ -67,8 +67,8 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
         ppo_steps = int(300000000)
         lr = 3e-4
         num_mini_batch = 1
-        update_repeats = 3
-        num_steps = 30
+        update_repeats = 4
+        num_steps = 128
         save_interval = 5000000
         log_interval = 10000
         gamma = 0.99
@@ -83,7 +83,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
+            named_losses={"ppo_loss": PPO(**PPOConfig)},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,

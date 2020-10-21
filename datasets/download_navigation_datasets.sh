@@ -5,9 +5,14 @@ cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )" || exit
 
 install_dataset() {
     dataset_name="$1"
-    wget https://prior-datasets.s3.us-east-2.amazonaws.com/embodied-ai/navigation/"$dataset_name".tar.gz
-    mkdir "$dataset_name"
-    tar -xf "$dataset_name".tar.gz -C "$dataset_name" --strip-components=1 && rm "$dataset_name".tar.gz
+    if ! mkdir "$dataset_name" ; then
+      echo "Could not create directory " $(pwd)/$dataset_name "Does it already exist? If so, delete it."
+      exit 1
+    fi
+    url_archive_name=$dataset_name-v0.tar.gz
+    output_archive_name=__TO_OVERWRITE__.tar.gz
+    wget https://prior-datasets.s3.us-east-2.amazonaws.com/embodied-ai/navigation/$url_archive_name -O $output_archive_name
+    tar -xf "$output_archive_name" -C "$dataset_name" --strip-components=1 && rm $output_archive_name
     echo "saved folder: "$dataset_name""
 }
 
@@ -39,7 +44,14 @@ then
     echo "Generating iTHOR ObjectNav Debug Dataset ..."
     PYTHONPATH=. python ./plugins/ithor_plugin/scripts/make_objectnav_debug_dataset.py
 
+elif [ "$1" = "all-thor" ]
+then
+    bash download_navigation_datasets.sh "robothor-pointnav"
+    bash download_navigation_datasets.sh "robothor-objectnav"
+    bash download_navigation_datasets.sh "ithor-pointnav"
+    bash download_navigation_datasets.sh "ithor-objectnav"
+
 else
-    echo "Failed: Usage download_navigation_datasets.sh robothor-pointnav | robothor-objectnav | ithor-pointnav | ithor-objectnav"
+    echo "\nFailed: Usage download_navigation_datasets.sh robothor-pointnav | robothor-objectnav | ithor-pointnav | ithor-objectnav | all-thor"
     exit 1
 fi

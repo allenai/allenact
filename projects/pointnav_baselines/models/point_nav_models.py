@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
-from core.models.basic_models import SimpleCNN, RNNStateEncoder
 from core.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     LinearCriticHead,
@@ -14,8 +13,9 @@ from core.algorithms.onpolicy_sync.policy import (
     ObservationType,
     DistributionType,
 )
-from core.base_abstractions.misc import ActorCriticOutput, Memory
 from core.base_abstractions.distributions import CategoricalDistr
+from core.base_abstractions.misc import ActorCriticOutput, Memory
+from core.models.basic_models import SimpleCNN, RNNStateEncoder
 
 
 class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
@@ -112,6 +112,11 @@ class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
         target_encoding = self.get_target_coordinates_encoding(observations)
         x: Union[torch.Tensor, List[torch.Tensor]]
         x = [target_encoding]
+
+        # if observations["rgb"].shape[0] != 1:
+        #     print("rgb", (observations["rgb"][...,0,0,:].unsqueeze(-2).unsqueeze(-2) == observations["rgb"][...,0,0,:]).float().mean())
+        #     if "depth" in observations:
+        #         print("depth", (observations["depth"][...,0,0,:].unsqueeze(-2).unsqueeze(-2) == observations["depth"][...,0,0,:]).float().mean())
 
         if not self.is_blind:
             perception_embed = self.visual_encoder(observations)
@@ -316,7 +321,8 @@ class ResnetTensorGoalEncoder(nn.Module):
 
         return observations, use_agent, nstep, nsampler, nagent
 
-    def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
+    @staticmethod
+    def adapt_output(x, use_agent, nstep, nsampler, nagent):
         if use_agent:
             return x.view(nstep, nsampler, nagent, -1)
         return x.view(nstep, nsampler * nagent, -1)
@@ -333,7 +339,7 @@ class ResnetTensorGoalEncoder(nn.Module):
             self.distribute_target(observations),
         ]
         x = self.target_obs_combiner(torch.cat(embs, dim=1,))
-        x = x.view(x.size(0), -1)  # flatten
+        x = x.reshape(x.size(0), -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
 
@@ -452,7 +458,8 @@ class ResnetDualTensorGoalEncoder(nn.Module):
 
         return observations, use_agent, nstep, nsampler, nagent
 
-    def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
+    @staticmethod
+    def adapt_output(x, use_agent, nstep, nsampler, nagent):
         if use_agent:
             return x.view(nstep, nsampler, nagent, -1)
         return x.view(nstep, nsampler, -1)
@@ -475,6 +482,6 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         ]
         depth_x = self.depth_target_obs_combiner(torch.cat(depth_embs, dim=1,))
         x = torch.cat([rgb_x, depth_x], dim=1)
-        x = x.view(x.size(0), -1)  # flatten
+        x = x.reshape(x.size(0), -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)

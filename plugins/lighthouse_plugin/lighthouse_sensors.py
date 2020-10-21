@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 import patsy
 
-from plugins.lighthouse_plugin.lighthouse_environment import LightHouseEnvironment
 from core.base_abstractions.sensor import Sensor, prepare_locals_for_super
 from core.base_abstractions.task import Task
+from plugins.lighthouse_plugin.lighthouse_environment import LightHouseEnvironment
 
 
 def get_corner_observation(
@@ -226,8 +226,8 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
             )
         return cls._DESIGN_MAT_CACHE[key]
 
-    @classmethod
-    def _get_variables_and_levels(self, world_dim: int):
+    @staticmethod
+    def _get_variables_and_levels(world_dim: int):
         return (
             [
                 ("s{}".format(i), list(range(3 if world_dim == 1 else 4)))

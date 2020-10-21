@@ -2,16 +2,15 @@ import copy
 import gzip
 import json
 import random
-from typing import List, Optional, Union, Dict, Any, cast
+from typing import List, Optional, Union, Dict, Any, cast, Tuple
 
 import gym
 
-from utils.cache_utils import _str_to_pos
 from core.base_abstractions.sensor import Sensor
 from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask, PointNavTask
-from utils.cache_utils import find_nearest_point_in_cache
+from utils.cache_utils import str_to_pos_for_cache
 from utils.experiment_utils import set_seed, set_deterministic_cudnn
 from utils.system import get_logger
 
@@ -33,8 +32,7 @@ class ObjectNavTaskSampler(TaskSampler):
         allow_flipping: bool = False,
         dataset_first: int = -1,
         dataset_last: int = -1,
-        *args,
-        **kwargs
+        **kwargs,
     ) -> None:
         self.rewards_config = rewards_config
         self.env_args = env_args
@@ -147,7 +145,7 @@ class ObjectNavTaskSampler(TaskSampler):
             self.scene_id = random.randint(0, len(self.scenes) - 1)
         elif self.scene_period == "manual":
             pass
-        elif self.scene_counter == self.scene_period:
+        elif self.scene_counter >= cast(int, self.scene_period):
             if self.scene_id == len(self.scene_order) - 1:
                 # Randomize scene order for next iteration
                 random.shuffle(self.scene_order)
@@ -217,6 +215,7 @@ class ObjectNavTaskSampler(TaskSampler):
                 "y"
             ]
         else:
+            assert self.max_tasks is not None
             next_task_id = self.dataset_first + self.max_tasks - 1
             # get_logger().debug("task {}".format(next_task_id))
             assert (
@@ -300,8 +299,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         loop_dataset: bool = True,
         allow_flipping=False,
         env_class=RoboThorEnvironment,
-        *args,
-        **kwargs
+        **kwargs,
     ) -> None:
         self.rewards_config = rewards_config
         self.env_args = env_args
@@ -309,12 +307,6 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         self.episodes = {
             scene: ObjectNavDatasetTaskSampler.load_dataset(
                 scene, scene_directory + "/episodes"
-            )
-            for scene in scenes
-        }
-        self.distance_caches = {
-            scene: ObjectNavDatasetTaskSampler.load_distance_cache(
-                scene, scene_directory + "/distance_caches"
             )
             for scene in scenes
         }
@@ -370,7 +362,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         return data
 
     @staticmethod
-    def load_distance_cache(scene: str, base_directory: str) -> Dict:
+    def load_distance_cache_from_file(scene: str, base_directory: str) -> Dict:
         filename = (
             "/".join([base_directory, scene])
             if base_directory[-1] != "/"
@@ -430,6 +422,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
     def next_task(self, force_advance_scene: bool = False) -> Optional[ObjectNavTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
+
         if self.episode_index >= len(self.episodes[self.scenes[self.scene_index]]):
             self.scene_index = (self.scene_index + 1) % len(self.scenes)
             # shuffle the new list of episodes to train on
@@ -437,15 +430,24 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             self.episode_index = 0
         scene = self.scenes[self.scene_index]
         episode = self.episodes[scene][self.episode_index]
-        distance_cache = self.distance_caches[scene] if self.distance_caches else None
         if self.env is not None:
             if scene.replace("_physics", "") != self.env.scene_name.replace(
                 "_physics", ""
             ):
-                self.env.reset(scene)
+                self.env.reset(
+                    scene_name=scene,
+                    filtered_objects=list(
+                        set([e["object_id"] for e in self.episodes[scene]])
+                    ),
+                )
         else:
             self.env = self._create_environment()
-            self.env.reset(scene_name=scene)
+            self.env.reset(
+                scene_name=scene,
+                filtered_objects=list(
+                    set([e["object_id"] for e in self.episodes[scene]])
+                ),
+            )
         task_info = {"scene": scene, "object_type": episode["object_type"]}
         if len(task_info) == 0:
             get_logger().warning(
@@ -477,7 +479,6 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             max_steps=self.max_steps,
             action_space=self._action_space,
             reward_configs=self.rewards_config,
-            distance_cache=distance_cache,
         )
         return self._last_sampled_task
 
@@ -507,9 +508,7 @@ class PointNavTaskSampler(TaskSampler):
         max_tasks: Optional[int] = None,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
-        fixed_tasks: Optional[List[Dict[str, Any]]] = None,
-        *args,
-        **kwargs
+        **kwargs,
     ) -> None:
         self.rewards_config = rewards_config
         self.env_args = env_args
@@ -601,7 +600,7 @@ class PointNavTaskSampler(TaskSampler):
             self.scene_id = random.randint(0, len(self.scenes) - 1)
         elif self.scene_period == "manual":
             pass
-        elif self.scene_counter == self.scene_period:
+        elif self.scene_counter >= cast(int, self.scene_period):
             if self.scene_id == len(self.scene_order) - 1:
                 # Randomize scene order for next iteration
                 random.shuffle(self.scene_order)
@@ -660,13 +659,14 @@ class PointNavTaskSampler(TaskSampler):
             miny, maxy, scene
         )
 
-        cond = True
-        attempt = 0
-        while cond and attempt < 10:
+        too_close_to_target = True
+        target: Optional[Dict[str, float]] = None
+        for _ in range(10):
             self.env.randomize_agent_location()
             target = copy.copy(random.choice(locs))
-            cond = self.env.dist_to_point(target) <= 0
-            attempt += 1
+            too_close_to_target = self.env.distance_to_point(target) <= 0
+            if not too_close_to_target:
+                break
 
         pose = self.env.agent_state()
 
@@ -678,7 +678,7 @@ class PointNavTaskSampler(TaskSampler):
             "actions": [],
         }
 
-        if cond:
+        if too_close_to_target:
             get_logger().warning("No path for sampled episode {}".format(task_info))
         # else:
         #     get_logger().debug("Path found for sampled episode {}".format(task_info))
@@ -731,8 +731,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
         shuffle_dataset: bool = True,
         allow_flipping=False,
         env_class=RoboThorEnvironment,
-        *args,
-        **kwargs
+        **kwargs,
     ) -> None:
         self.rewards_config = rewards_config
         self.env_args = env_args
@@ -741,12 +740,6 @@ class PointNavDatasetTaskSampler(TaskSampler):
         self.episodes = {
             scene: ObjectNavDatasetTaskSampler.load_dataset(
                 scene, scene_directory + "/episodes"
-            )
-            for scene in scenes
-        }
-        self.distance_caches = {
-            scene: ObjectNavDatasetTaskSampler.load_distance_cache(
-                scene, scene_directory + "/distance_caches"
             )
             for scene in scenes
         }
@@ -828,25 +821,30 @@ class PointNavDatasetTaskSampler(TaskSampler):
 
         scene = self.scenes[self.scene_index]
         episode = self.episodes[scene][self.episode_index]
-        distance_cache = self.distance_caches[scene] if self.distance_caches else None
         if self.env is not None:
             if scene.replace("_physics", "") != self.env.scene_name.replace(
                 "_physics", ""
             ):
-                self.env.reset(scene)
+                self.env.reset(scene_name=scene, filtered_objects=[])
         else:
             self.env = self._create_environment()
-            self.env.reset(scene_name=scene)
+            self.env.reset(scene_name=scene, filtered_objects=[])
+
+        def to_pos(s):
+            if isinstance(s, (Dict, Tuple)):
+                return s
+            if isinstance(s, float):
+                return {"x": 0, "y": s, "z": 0}
+            return str_to_pos_for_cache(s)
+
+        for k in ["initial_position", "initial_orientation", "target_position"]:
+            episode[k] = to_pos(episode[k])
 
         task_info = {
             "scene": scene,
-            "initial_position": find_nearest_point_in_cache(
-                distance_cache, _str_to_pos(episode["initial_position"])
-            ),
+            "initial_position": episode["initial_position"],
             "initial_orientation": episode["initial_orientation"],
-            "target": find_nearest_point_in_cache(
-                distance_cache, _str_to_pos(episode["target_position"])
-            ),
+            "target": episode["target_position"],
             "shortest_path": episode["shortest_path"],
             "distance_to_target": episode["shortest_path_length"],
             "id": episode["id"],
@@ -862,8 +860,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
             self.max_tasks -= 1
 
         if not self.env.teleport(
-            _str_to_pos(episode["initial_position"]),
-            {"x": 0.0, "y": episode["initial_orientation"], "z": 0.0},
+            pose=episode["initial_position"], rotation=episode["initial_orientation"]
         ):
             return self.next_task()
 
@@ -874,8 +871,6 @@ class PointNavDatasetTaskSampler(TaskSampler):
             max_steps=self.max_steps,
             action_space=self._action_space,
             reward_configs=self.rewards_config,
-            distance_cache=distance_cache,
-            episode_info=episode,
         )
 
         return self._last_sampled_task

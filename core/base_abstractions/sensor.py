@@ -2,7 +2,6 @@
 # Modified work Copyright (c) Allen Institute for AI
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
 from abc import abstractmethod, ABC
 from collections import OrderedDict
 from typing import (
@@ -17,6 +16,7 @@ from typing import (
     Tuple,
 )
 
+import PIL
 import gym
 import numpy as np
 import torch
@@ -26,8 +26,8 @@ from torchvision import transforms, models
 
 from core.base_abstractions.misc import EnvType
 from utils.misc_utils import prepare_locals_for_super
+from utils.model_utils import Flatten
 from utils.tensor_utils import ScaleBothSides
-from core.models.basic_models import Flatten
 
 if TYPE_CHECKING:
     from core.base_abstractions.task import SubTaskType
@@ -284,6 +284,10 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             unnormalized_supremum=unnormalized_supremum,
         )
 
+        assert int(PIL.__version__.split(".")[0]) < 7, (
+            "Pillow version >=7.0.0 is very broken, please downgrade" "to version 6.2.1"
+        )
+
         super().__init__(**prepare_locals_for_super(locals()))
 
     def _get_observation_space(
@@ -356,10 +360,16 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
     ) -> Any:
         im = self.frame_from_env(env)
+        assert (im.shape[-1] == 1 and im.dtype == np.float32) or (
+            im.shape[-1] == 3 and im.dtype == np.uint8
+        ), (
+            "Input frame must either have 3 channels and be of"
+            " type np.uint8 or have one channel and be of type np.float32"
+        )
 
         if self._scale_first:
             if self.scaler is not None and im.shape[:2] != (self._height, self._width):
-                im = np.array(self.scaler(self.to_pil(im)), dtype=np.uint8)  # hwc
+                im = np.array(self.scaler(self.to_pil(im)), dtype=im.dtype)  # hwc
 
         assert im.dtype in [np.uint8, np.float32]
 

@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 from gym.spaces import Dict as SpaceDict
 
-from core.models.basic_models import RNNStateEncoder
 from core.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     LinearActorCriticHead,
@@ -14,8 +13,9 @@ from core.algorithms.onpolicy_sync.policy import (
     Memory,
     ObservationType,
 )
-from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
+from core.base_abstractions.misc import ActorCriticOutput
+from core.models.basic_models import RNNStateEncoder
 
 
 class ResnetTensorGoalEncoder(nn.Module):
@@ -115,7 +115,8 @@ class ResnetTensorGoalEncoder(nn.Module):
 
         return observations, use_agent, nstep, nsampler, nagent
 
-    def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
+    @staticmethod
+    def adapt_output(x, use_agent, nstep, nsampler, nagent):
         if use_agent:
             return x.view(nstep, nsampler, nagent, -1)
         return x.view(nstep, nsampler * nagent, -1)
@@ -134,7 +135,7 @@ class ResnetTensorGoalEncoder(nn.Module):
         ]
 
         x = self.target_obs_combiner(torch.cat(embs, dim=-3,))
-        x = x.view(x.size(0), -1)  # flatten
+        x = x.reshape(x.size(0), -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
 
@@ -390,7 +391,8 @@ class ResnetFasterRCNNTensorsGoalEncoder(nn.Module):
 
         return observations, use_agent, nstep, nsampler, nagent
 
-    def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
+    @staticmethod
+    def adapt_output(x, use_agent, nstep, nsampler, nagent):
         if use_agent:
             return x.view(nstep, nsampler, nagent, -1)
         return x.view(nstep, nsampler * nagent, -1)
@@ -412,7 +414,7 @@ class ResnetFasterRCNNTensorsGoalEncoder(nn.Module):
 
         x = self.target_obs_combiner(torch.cat(embs, dim=-3,))
 
-        x = x.view(x.size(0), -1)  # flatten
+        x = x.reshape(x.size(0), -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
 

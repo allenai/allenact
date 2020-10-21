@@ -5,18 +5,18 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base import (
-    PointNaviThorBaseConfig,
-)
-from projects.pointnav_baselines.models.point_nav_models import (
-    PointNavActorCriticSimpleConvRNN,
-)
 from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from plugins.robothor_plugin.robothor_sensors import (
     DepthSensorRoboThor,
     GPSCompassSensorRoboThor,
 )
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
+from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base import (
+    PointNaviThorBaseConfig,
+)
+from projects.pointnav_baselines.models.point_nav_models import (
+    PointNavActorCriticSimpleConvRNN,
+)
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -39,7 +39,7 @@ class PointNaviThorRGBPPOExperimentConfig(PointNaviThorBaseConfig):
             DepthSensorRoboThor(
                 height=self.SCREEN_SIZE,
                 width=self.SCREEN_SIZE,
-                use_resnet_normalization=True,
+                use_normalization=True,
                 uuid="depth_lowres",
             ),
             GPSCompassSensorRoboThor(),
@@ -78,7 +78,7 @@ class PointNaviThorRGBPPOExperimentConfig(PointNaviThorBaseConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
+            named_losses={"ppo_loss": PPO(**PPOConfig)},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,

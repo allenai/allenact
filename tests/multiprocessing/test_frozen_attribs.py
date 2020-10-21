@@ -1,12 +1,13 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 
 from torch import nn
 
 from core.base_abstractions.experiment_config import ExperimentConfig
-from utils.experiment_utils import TrainingPipeline
 from core.base_abstractions.task import TaskSampler
+from utils.experiment_utils import TrainingPipeline
+import torch.multiprocessing as mp
 
-
+# noinspection PyAbstractClass,PyTypeChecker
 class MyConfig(ExperimentConfig):
     MY_VAR: int = 3
 
@@ -30,6 +31,7 @@ class MyConfig(ExperimentConfig):
         assert self.MY_VAR == val
 
 
+# noinspection PyAbstractClass
 class MySpecConfig(MyConfig):
     MY_VAR = 6
 
@@ -46,7 +48,7 @@ scfg = MySpecConfig()
 
 
 class TestFrozenAttribs(object):
-    def test_frozen_inheritance(self, tmpdir):
+    def test_frozen_inheritance(self):
         from abc import abstractmethod
         from core.base_abstractions.experiment_config import FrozenClassVariables
 
@@ -54,14 +56,14 @@ class TestFrozenAttribs(object):
             yar = 3
 
             @abstractmethod
-            def use(cls):
+            def use(self):
                 raise NotImplementedError()
 
         class SomeDerived(SomeBase):
             yar = 33
 
-            def use(cls):
-                return cls.yar
+            def use(self):
+                return self.yar
 
         failed = False
         try:
@@ -80,9 +82,7 @@ class TestFrozenAttribs(object):
     def my_func(config, val):
         config.my_var_is(val)
 
-    def test_frozen_experiment_config(self, tmpdir):
-        import torch.multiprocessing as mp
-
+    def test_frozen_experiment_config(self):
         val = 5
 
         failed = False

@@ -19,6 +19,7 @@ from utils.system import get_logger, init_logging, HUMAN_LOG_LEVELS
 def get_args():
     """Creates the argument parser and parses any input arguments."""
 
+    # noinspection PyTypeChecker
     parser = argparse.ArgumentParser(
         description="allenact", formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
@@ -204,6 +205,8 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, str]]:
         importlib.invalidate_caches()
         module = importlib.import_module(module_path)
     except ModuleNotFoundError as e:
+        if not any(isinstance(arg, str) and module_path in arg for arg in e.args):
+            raise e
         all_sub_modules = set(find_sub_modules(os.getcwd())) | set(
             find_sub_modules(ABS_PATH_OF_TOP_LEVEL_DIR)
         )

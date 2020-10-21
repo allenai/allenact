@@ -261,10 +261,8 @@ class LightHouseEnvironment(object):
             curses.echo()
             curses.endwin()
 
-    @classmethod
-    def optimal_ave_ep_length(
-        self, world_dim: int, world_radius: int, view_radius: int
-    ):
+    @staticmethod
+    def optimal_ave_ep_length(world_dim: int, world_radius: int, view_radius: int):
         if world_dim == 1:
             max_steps_wrong_dir = max(world_radius - view_radius, 0)
 

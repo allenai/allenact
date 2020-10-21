@@ -1,13 +1,13 @@
 import copy
 import random
-from typing import List, Dict, Optional, Any, Union
+from typing import List, Dict, Optional, Any, Union, cast
 
 import gym
 
-from plugins.ithor_plugin.ithor_environment import IThorEnvironment
-from plugins.ithor_plugin.ithor_tasks import ObjectNavTask
 from core.base_abstractions.sensor import Sensor
 from core.base_abstractions.task import TaskSampler
+from plugins.ithor_plugin.ithor_environment import IThorEnvironment
+from plugins.ithor_plugin.ithor_tasks import ObjectNavTask
 from utils.experiment_utils import set_deterministic_cudnn, set_seed
 from utils.system import get_logger
 
@@ -25,9 +25,7 @@ class ObjectNavTaskSampler(TaskSampler):
         max_tasks: Optional[int] = None,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
-        fixed_tasks: Optional[List[Dict[str, Any]]] = None,
-        *args,
-        **kwargs
+        **kwargs,
     ) -> None:
         self.env_args = env_args
         self.scenes = scenes
@@ -116,7 +114,7 @@ class ObjectNavTaskSampler(TaskSampler):
             self.scene_id = random.randint(0, len(self.scenes) - 1)
         elif self.scene_period == "manual":
             pass
-        elif self.scene_counter == self.scene_period:
+        elif self.scene_counter >= cast(int, self.scene_period):
             if self.scene_id == len(self.scene_order) - 1:
                 # Randomize scene order for next iteration
                 random.shuffle(self.scene_order)

@@ -1,6 +1,6 @@
+import argparse
 import os
 import platform
-import argparse
 
 from plugins.babyai_plugin.babyai_constants import BABYAI_EXPERT_TRAJECTORIES_DIR
 
@@ -24,6 +24,7 @@ LEVEL_TO_TRAIN_VALID_IDS = {
 def get_args():
     """Creates the argument parser and parses input arguments."""
 
+    # noinspection PyTypeChecker
     parser = argparse.ArgumentParser(
         description="download_babyai_expert_demos",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

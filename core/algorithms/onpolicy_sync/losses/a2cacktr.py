@@ -1,6 +1,6 @@
 """Implementation of A2C and ACKTR losses."""
 import typing
-from typing import Tuple, Dict, Union, Optional
+from typing import Tuple, Dict, Optional
 
 import torch
 
@@ -8,8 +8,8 @@ from core.algorithms.onpolicy_sync.losses.abstract_loss import (
     AbstractActorCriticLoss,
     ObservationType,
 )
-from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
+from core.base_abstractions.misc import ActorCriticOutput
 from utils.system import get_logger
 
 
@@ -45,7 +45,9 @@ class A2CACKTR(AbstractActorCriticLoss):
         values = actor_critic_output.values
         action_log_probs = actor_critic_output.distributions.log_probs(actions)
 
-        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy()
+        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy().unsqueeze(
+            -1
+        )
         value_loss = 0.5 * (
             typing.cast(torch.FloatTensor, batch["returns"]) - values
         ).pow(2)
@@ -106,7 +108,11 @@ class A2C(A2CACKTR):
 
     def __init__(self, value_loss_coef, entropy_coef, *args, **kwargs):
         super().__init__(
-            value_loss_coef=value_loss_coef, entropy_coef=entropy_coef, acktr=False,
+            value_loss_coef=value_loss_coef,
+            entropy_coef=entropy_coef,
+            acktr=False,
+            *args,
+            **kwargs,
         )
 
 
@@ -119,7 +125,11 @@ class ACKTR(A2CACKTR):
 
     def __init__(self, value_loss_coef, entropy_coef, *args, **kwargs):
         super().__init__(
-            value_loss_coef=value_loss_coef, entropy_coef=entropy_coef, acktr=True,
+            value_loss_coef=value_loss_coef,
+            entropy_coef=entropy_coef,
+            acktr=True,
+            *args,
+            **kwargs,
         )
 
 

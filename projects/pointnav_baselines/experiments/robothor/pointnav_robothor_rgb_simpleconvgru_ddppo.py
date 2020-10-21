@@ -49,8 +49,8 @@ class PointNavRoboThorRGBPPOExperimentConfig(PointNavRoboThorBaseConfig):
         ppo_steps = int(75000000)
         lr = 3e-4
         num_mini_batch = 1
-        update_repeats = 3
-        num_steps = 30
+        update_repeats = 4
+        num_steps = 128
         save_interval = 5000000
         log_interval = 10000
         gamma = 0.99
@@ -65,7 +65,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(PointNavRoboThorBaseConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
+            named_losses={"ppo_loss": PPO(**PPOConfig)},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,

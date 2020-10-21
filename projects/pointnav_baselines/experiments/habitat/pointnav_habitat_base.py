@@ -1,39 +1,54 @@
+import os
+from abc import ABC
 from typing import Dict, Any, List, Optional
 
 import gym
-import habitat
 import torch
 
-from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
+from core.base_abstractions.experiment_config import MachineParams
 from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
+from plugins.habitat_plugin.habitat_constants import (
+    HABITAT_DATASETS_DIR,
+    HABITAT_CONFIGS_DIR,
+    HABITAT_SCENE_DATASETS_DIR,
+)
 from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
 from plugins.habitat_plugin.habitat_tasks import PointNavTask
+from plugins.habitat_plugin.habitat_utils import get_habitat_config
+from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
 from utils.experiment_utils import Builder
 
 
-class PointNavHabitatBaseConfig(PointNavBaseConfig):
+class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
     """The base config for all Habitat PointNav experiments."""
+
+    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
+    NUM_STEPS = 128
+    LR = 2.5e-4
+    FAILED_END_REWARD = -1.0
 
     def __init__(self):
         super().__init__()
-        self.TRAIN_SCENES = (
-            "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
-        )
-        self.VALID_SCENES = (
-            "habitat/habitat-api/data/datasets/pointnav/gibson/v1/val/val.json.gz"
-        )
-        self.TEST_SCENES = (
-            "habitat/habitat-api/data/datasets/pointnav/gibson/v1/test/test.json.gz"
-        )
+        self.CAMERA_WIDTH = 300
+        self.CAMERA_HEIGHT = 225
 
-        self.NUM_PROCESSES = 80
-        self.CONFIG = habitat.get_config("configs/gibson.yaml")
+        task_data_dir_template = os.path.join(
+            HABITAT_DATASETS_DIR, "pointnav/gibson/v1/{}/{}.json.gz"
+        )
+        self.TRAIN_SCENES = task_data_dir_template.format(*(["train"] * 2))
+        self.VALID_SCENES = task_data_dir_template.format(*(["val"] * 2))
+        self.TEST_SCENES = task_data_dir_template.format(*(["test"] * 2))
+
+        self.NUM_PROCESSES = max(5 * torch.cuda.device_count() - 1, 4)
+        self.CONFIG = get_habitat_config(
+            os.path.join(HABITAT_CONFIGS_DIR, "tasks/pointnav_gibson.yaml")
+        )
         self.CONFIG.defrost()
         self.CONFIG.NUM_PROCESSES = self.NUM_PROCESSES
-        self.CONFIG.SIMULATOR_GPU_IDS = [0, 1, 2, 3, 4, 5, 6, 7]
-        self.CONFIG.DATASET.SCENES_DIR = "habitat/habitat-api/data/scene_datasets/"
-        self.CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
+        self.CONFIG.SIMULATOR_GPU_IDS = list(range(torch.cuda.device_count()))
+        self.CONFIG.DATASET.SCENES_DIR = HABITAT_SCENE_DATASETS_DIR
+
         self.CONFIG.DATASET.DATA_PATH = self.TRAIN_SCENES
         self.CONFIG.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
         self.CONFIG.SIMULATOR.RGB_SENSOR.WIDTH = self.CAMERA_WIDTH
@@ -50,15 +65,16 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig):
         self.CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.GOAL_FORMAT = "POLAR"
         self.CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.DIMENSIONALITY = 2
         self.CONFIG.TASK.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
-        self.CONFIG.TASK.MEASUREMENTS = ["DISTANCE_TO_GOAL", "SPL"]
+        self.CONFIG.TASK.MEASUREMENTS = ["DISTANCE_TO_GOAL", "SUCCESS", "SPL"]
         self.CONFIG.TASK.SPL.TYPE = "SPL"
         self.CONFIG.TASK.SPL.SUCCESS_DISTANCE = self.DISTANCE_TO_GOAL
+        self.CONFIG.TASK.SUCCESS.SUCCESS_DISTANCE = self.DISTANCE_TO_GOAL
 
         self.CONFIG.MODE = "train"
 
-        self.TRAIN_GPUS = [0, 1, 2, 3, 4, 5, 6, 7]
-        self.VALIDATION_GPUS = [7]
-        self.TESTING_GPUS = [7]
+        self.TRAINING_GPUS = list(range(torch.cuda.device_count()))
+        self.VALIDATION_GPUS = [torch.cuda.device_count() - 1]
+        self.TESTING_GPUS = [torch.cuda.device_count() - 1]
 
         self.TRAIN_CONFIGS = None
         self.TEST_CONFIGS = None
@@ -90,21 +106,18 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig):
                 if not torch.cuda.is_available()
                 else self.split_num_processes(len(gpu_ids))
             )
-            render_video = False
         elif mode == "valid":
             nprocesses = 1
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
                 gpu_ids = self.VALIDATION_GPUS
-            render_video = False
         elif mode == "test":
             nprocesses = 1
             if not torch.cuda.is_available():
                 gpu_ids = []
             else:
                 gpu_ids = self.TESTING_GPUS
-            render_video = True
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -121,16 +134,15 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig):
             else None
         )
 
-        return {
-            "nprocesses": nprocesses,
-            "gpu_ids": gpu_ids,
-            "observation_set": observation_set,
-            "render_video": render_video,
-        }
+        return MachineParams(
+            nprocesses=nprocesses, devices=gpu_ids, observation_set=observation_set,
+        )
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return PointNavTaskSampler(**kwargs)
+        return PointNavTaskSampler(
+            **{"failed_end_reward": cls.FAILED_END_REWARD, **kwargs} # type: ignore
+        )
 
     def train_task_sampler_args(
         self,
@@ -157,6 +169,10 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
+        if total_processes != 1:
+            raise NotImplementedError(
+                "In validation, `total_processes` must equal 1 for habitat tasks"
+            )
         config = self.CONFIG.clone()
         config.defrost()
         config.DATASET.DATA_PATH = self.VALID_SCENES

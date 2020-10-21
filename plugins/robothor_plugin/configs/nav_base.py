@@ -34,7 +34,9 @@ class NavBaseConfig(ExperimentConfig, abc.ABC):
     # ]
 
     MAX_STEPS: int
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000  # if more than 1 scene per worker
+    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[
+        int
+    ] = None  # if more than 1 scene per worker
 
     VALIDATION_SAMPLES_PER_SCENE = 16
 
@@ -56,7 +58,7 @@ class NavBaseConfig(ExperimentConfig, abc.ABC):
             update_repeats=3,
             max_grad_norm=0.5,
             num_steps=30,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
+            named_losses={"ppo_loss": PPO(**PPOConfig)},
             gamma=0.99,
             use_gae=True,
             gae_lambda=0.95,

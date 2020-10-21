@@ -1,3 +1,4 @@
+import os
 from typing import Dict, Any, List, Optional
 
 import gym
@@ -5,30 +6,36 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
-import habitat
 from torchvision import models
 
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from projects.pointnav_baselines.models.point_nav_models import (
-    ResnetTensorPointNavActorCritic,
+from core.base_abstractions.experiment_config import ExperimentConfig
+from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.task import TaskSampler
+from plugins.habitat_plugin.habitat_constants import (
+    HABITAT_DATASETS_DIR,
+    HABITAT_CONFIGS_DIR,
 )
+from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.habitat_plugin.habitat_sensors import (
     RGBSensorHabitat,
     TargetCoordinatesSensorHabitat,
 )
-from core.base_abstractions.experiment_config import ExperimentConfig
-from core.base_abstractions.preprocessor import ObservationSet
-from core.base_abstractions.task import TaskSampler
-from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
-from plugins.habitat_plugin.habitat_utils import construct_env_configs
+from plugins.habitat_plugin.habitat_utils import (
+    construct_env_configs,
+    get_habitat_config,
+)
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
+from projects.pointnav_baselines.models.point_nav_models import (
+    ResnetTensorPointNavActorCritic,
+)
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
-    """A Point Navigation experiment configuration in RoboThor."""
+class PointNavHabitatRGBPPOTutorialExperimentConfig(ExperimentConfig):
+    """A Point Navigation experiment configuration in Habitat."""
 
     # Task Parameters
     MAX_STEPS = 500
@@ -38,6 +45,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         "failed_stop_reward": 0.0,
         "shaping_weight": 1.0,
     }
+    DISTANCE_TO_GOAL = 0.2
 
     # Simulator Parameters
     CAMERA_WIDTH = 640
@@ -45,31 +53,25 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     SCREEN_SIZE = 224
 
     # Training Engine Parameters
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
-    NUM_PROCESSES = 60
-    TRAINING_GPUS = [0, 1, 2, 3, 4, 5, 6]
-    VALIDATION_GPUS = [7]
-    TESTING_GPUS = [7]
+    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
+    NUM_PROCESSES = max(5 * torch.cuda.device_count() - 1, 4)
+    TRAINING_GPUS = list(range(torch.cuda.device_count()))
+    VALIDATION_GPUS = [torch.cuda.device_count() - 1]
+    TESTING_GPUS = [torch.cuda.device_count() - 1]
 
-    TRAIN_SCENES = (
-        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
+    task_data_dir_template = os.path.join(
+        HABITAT_DATASETS_DIR, "pointnav/gibson/v1/{}/{}.json.gz"
     )
-    VALID_SCENES = (
-        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/val/val.json.gz"
-    )
-    TEST_SCENES = (
-        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/test/test.json.gz"
-    )
+    TRAIN_SCENES = task_data_dir_template.format(*(["train"] * 2))
+    VALID_SCENES = task_data_dir_template.format(*(["val"] * 2))
+    TEST_SCENES = task_data_dir_template.format(*(["test"] * 2))
 
-    TRAIN_GPUS = [0, 1, 2, 3, 4, 5, 6, 7]
-    VALIDATION_GPUS = [7]
-    TESTING_GPUS = [7]
-
-    NUM_PROCESSES = 80
-    CONFIG = habitat.get_config("configs/gibson.yaml")
+    CONFIG = get_habitat_config(
+        os.path.join(HABITAT_CONFIGS_DIR, "tasks/pointnav_gibson.yaml")
+    )
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
-    CONFIG.SIMULATOR_GPU_IDS = TRAIN_GPUS
+    CONFIG.SIMULATOR_GPU_IDS = TRAINING_GPUS
     CONFIG.DATASET.SCENES_DIR = "habitat/habitat-api/data/scene_datasets/"
     CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
@@ -81,14 +83,15 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS = MAX_STEPS
 
     CONFIG.TASK.TYPE = "Nav-v0"
-    CONFIG.TASK.SUCCESS_DISTANCE = 0.2
+    CONFIG.TASK.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
     CONFIG.TASK.SENSORS = ["POINTGOAL_WITH_GPS_COMPASS_SENSOR"]
     CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.GOAL_FORMAT = "POLAR"
     CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.DIMENSIONALITY = 2
     CONFIG.TASK.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
-    CONFIG.TASK.MEASUREMENTS = ["DISTANCE_TO_GOAL", "SPL"]
+    CONFIG.TASK.MEASUREMENTS = ["DISTANCE_TO_GOAL", "SUCCESS", "SPL"]
     CONFIG.TASK.SPL.TYPE = "SPL"
-    CONFIG.TASK.SPL.SUCCESS_DISTANCE = 0.2
+    CONFIG.TASK.SPL.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
+    CONFIG.TASK.SUCCESS.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
 
     CONFIG.MODE = "train"
 
@@ -149,7 +152,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
+            named_losses={"ppo_loss": PPO(**PPOConfig)},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
@@ -184,16 +187,12 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 if not torch.cuda.is_available()
                 else self.split_num_processes(len(gpu_ids))
             )
-            sampler_devices = self.TRAINING_GPUS
-            render_video = False
         elif mode == "valid":
             nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.VALIDATION_GPUS
-            render_video = False
         elif mode == "test":
             nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.TESTING_GPUS
-            render_video = False
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -219,7 +218,6 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             "nprocesses": nprocesses,
             "gpu_ids": gpu_ids,
             "observation_set": observation_set,
-            "render_video": render_video,
         }
 
     # Define Model
@@ -285,11 +283,4 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        config = self.TEST_CONFIGS[process_ind]  # type:ignore
-        return {
-            "env_config": config,
-            "max_steps": self.MAX_STEPS,
-            "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
-            "distance_to_goal": self.DISTANCE_TO_GOAL,  # type:ignore
-        }
+        raise NotImplementedError("Testing not implemented for this tutorial.")

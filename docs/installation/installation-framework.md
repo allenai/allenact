@@ -46,6 +46,8 @@ see the above section on installing `iTHOR`.
 
 ## Installation of Habitat
 
+### Using Docker
+
 To run experiments using Habitat please use our docker image using the following command:
 
 ```bash
@@ -68,3 +70,27 @@ Instead you will need to download these yourself by filling out
 [this form](https://docs.google.com/forms/d/e/1FAIpQLScWlx5Z1DM1M-wTSXaa6zV8lTFkPmTHW1LqMsoCBDWsTDjBkQ/viewform)
 and downloading the `gibson_habitat_trainval` data. Extract the scene assets (`.glb` files) into `habitat-lab/data/scene_datasets/` 
 within the above container. You can then proceed to run your experiments using `allenact` as you normally would.
+
+### Using `conda` (experimental)
+
+The following is experimental, we do not guarantee that AllenAct will continue to support this
+installation procedure in future releases.
+
+Habitat has recently released the option to install their simulator using `conda` which avoids having
+to manually build dependencies or use Docker. This does not guarantee that the installation process
+is completely painless (it is difficult to avoid all possible build issues) but we've found it
+to be a nice alternative to using Docker. To use this installation option please first
+install an AllenAct `conda` environment using the instructions available under the _Installing a Conda environment (experimental)_
+section [here](installation-allenact.md). After installing this environment, you can then install
+`habitat-sim` by running:
+
+If you are on a machine with an attached display:
+```bash
+conda install habitat-sim=0.1.5 -c conda-forge -c aihabitat --name allenact
+```
+
+If you are on a machine without an attached display (e.g. a server):
+```bash
+conda install habitat-sim=0.1.5 headless -c conda-forge -c aihabitat --name allenact
+```
+

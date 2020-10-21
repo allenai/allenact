@@ -20,7 +20,6 @@ class ResNetEmbedder(nn.Module):
 
     def forward(self, x):
         with torch.no_grad():
-
             x = self.model.conv1(x)
             x = self.model.bn1(x)
             x = self.model.relu(x)
@@ -53,7 +52,7 @@ class ResnetPreProcessorHabitat(Preprocessor):
         output_dims: int,
         pool: bool,
         torchvision_resnet_model: Callable[..., models.ResNet] = models.resnet18,
-        parallel: bool = True,
+        parallel: bool = False,
         device: Optional[torch.device] = None,
         device_ids: Optional[List[torch.device]] = None,
         **kwargs: Any
@@ -73,6 +72,12 @@ class ResnetPreProcessorHabitat(Preprocessor):
         self.pool = pool
         self.make_model = torchvision_resnet_model
         self.parallel = parallel
+
+        if parallel:
+            # TODO: Does parallel being true make sense? It seems to do
+            #  something pretty surprising to me.
+            raise NotImplementedError("`parallel == True` is not currently supported.")
+
         self.device = (
             device
             if device is not None
@@ -82,9 +87,7 @@ class ResnetPreProcessorHabitat(Preprocessor):
             List[torch.device], list(range(torch.cuda.device_count()))
         )
 
-        self.resnet: Union[
-            ResNetEmbedder, torch.nn.DataParallel[ResNetEmbedder]
-        ] = ResNetEmbedder(
+        self.resnet: Union[ResNetEmbedder, torch.nn.DataParallel] = ResNetEmbedder(
             self.make_model(pretrained=True).to(self.device), pool=self.pool
         )
 

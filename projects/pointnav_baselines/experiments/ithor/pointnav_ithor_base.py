@@ -1,23 +1,26 @@
 import glob
 import os
+from abc import ABC
 from math import ceil
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Sequence
 
 import gym
 import numpy as np
 import torch
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
-from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
+from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from utils.experiment_utils import Builder
 
 
-class PointNaviThorBaseConfig(ObjectNavBaseConfig):
+class PointNaviThorBaseConfig(ObjectNavBaseConfig, ABC):
     """The base config for all iTHOR PointNav experiments."""
+
+    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
 
     def __init__(self):
         super().__init__()
@@ -34,10 +37,10 @@ class PointNaviThorBaseConfig(ObjectNavBaseConfig):
             include_private_scenes=False,
         )
 
-        self.NUM_PROCESSES = 80
-        self.TRAIN_GPU_IDS = [0, 1, 2, 3, 4, 5, 6]
-        self.VALID_GPU_IDS = [7]
-        self.TEST_GPU_IDS = [7]
+        self.NUM_PROCESSES = 40
+        self.TRAIN_GPU_IDS = list(range(torch.cuda.device_count()))
+        self.VALID_GPU_IDS = [torch.cuda.device_count() - 1]
+        self.TEST_GPU_IDS = [torch.cuda.device_count() - 1]
 
         self.TRAIN_DATASET_DIR = os.path.join(
             ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/ithor-pointnav/train"
@@ -59,6 +62,7 @@ class PointNaviThorBaseConfig(ObjectNavBaseConfig):
         return res
 
     def machine_params(self, mode="train", **kwargs):
+        sampler_devices: Sequence[int] = []
         if mode == "train":
             workers_per_device = 1
             gpu_ids = (
@@ -72,15 +76,12 @@ class PointNaviThorBaseConfig(ObjectNavBaseConfig):
                 else self.split_num_processes(len(gpu_ids))
             )
             sampler_devices = self.TRAIN_GPU_IDS
-            render_video = False
         elif mode == "valid":
-            nprocesses = 15
+            nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.VALID_GPU_IDS
-            render_video = False
         elif mode == "test":
             nprocesses = 15
             gpu_ids = [] if not torch.cuda.is_available() else self.TEST_GPU_IDS
-            render_video = False
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -109,7 +110,6 @@ class PointNaviThorBaseConfig(ObjectNavBaseConfig):
             if mode == "train"
             else gpu_ids,  # ignored with > 1 gpu_ids
             "observation_set": observation_set,
-            "render_video": render_video,
         }
 
     @classmethod
@@ -242,5 +242,9 @@ class PointNaviThorBaseConfig(ObjectNavBaseConfig):
         res["loop_dataset"] = False
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = "10.0"
+        res["env_args"]["x_display"] = (
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
+        )
         return res

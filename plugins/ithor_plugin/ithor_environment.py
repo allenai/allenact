@@ -13,8 +13,8 @@ import networkx as nx
 import numpy as np
 from ai2thor.controller import Controller
 
-from plugins.ithor_plugin.ithor_util import round_to_factor
 from plugins.ithor_plugin.ithor_constants import VISIBILITY_DISTANCE, FOV
+from plugins.ithor_plugin.ithor_util import round_to_factor
 
 
 class IThorEnvironment(object):
@@ -540,7 +540,7 @@ class IThorEnvironment(object):
 
     @staticmethod
     def _agent_location_to_tuple(p: Dict[str, float]) -> Tuple[float, float]:
-        return (round(p["x"], 2), round(p["z"], 2))
+        return round(p["x"], 2), round(p["z"], 2)
 
     def _snap_agent_to_initially_reachable(self, verbose=True):
         agent_location = self.get_agent_location()

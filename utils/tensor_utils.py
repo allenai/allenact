@@ -15,6 +15,8 @@ from moviepy import editor as mpy
 from moviepy.editor import concatenate_videoclips
 from tensorboardX import SummaryWriter as TBXSummaryWriter, summary as tbxsummary
 from tensorboardX.proto.summary_pb2 import Summary as TBXSummary
+
+# noinspection PyProtectedMember
 from tensorboardX.utils import _prepare_video as tbx_prepare_video
 from tensorboardX.x2num import make_np as tbxmake_np
 
@@ -142,41 +144,37 @@ def batch_observations(
 
     Transposed dict of lists of observations.
     """
-    # batch: DefaultDict = defaultdict(list)
-    #
-    # for obs in observations:
-    #     for sensor in obs:
-    #         batch[sensor].append(to_tensor(obs[sensor]))
-    #
-    # for sensor in batch:
-    #     batch[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)
 
     def dict_from_observation(
         observation: Dict[str, Any]
     ) -> Dict[str, Union[Dict, List]]:
-        batch: DefaultDict = defaultdict(list)
+        batch_dict: DefaultDict = defaultdict(list)
 
         for sensor in observation:
             if isinstance(observation[sensor], Dict):
-                batch[sensor] = dict_from_observation(observation[sensor])
+                batch_dict[sensor] = dict_from_observation(observation[sensor])
             else:
-                batch[sensor].append(to_tensor(observation[sensor]))
+                batch_dict[sensor].append(to_tensor(observation[sensor]))
 
-        return batch
+        return batch_dict
 
-    def fill_dict_from_observations(batch: Any, observation: Dict[str, Any]) -> None:
+    def fill_dict_from_observations(
+        input_batch: Any, observation: Dict[str, Any]
+    ) -> None:
         for sensor in observation:
             if isinstance(observation[sensor], Dict):
-                fill_dict_from_observations(batch[sensor], observation[sensor])
+                fill_dict_from_observations(input_batch[sensor], observation[sensor])
             else:
-                batch[sensor].append(to_tensor(observation[sensor]))
+                input_batch[sensor].append(to_tensor(observation[sensor]))
 
-    def dict_to_batch(batch: Any, device: Optional[torch.device] = None) -> None:
-        for sensor in batch:
-            if isinstance(batch[sensor], Dict):
-                dict_to_batch(batch[sensor], device)
+    def dict_to_batch(input_batch: Any) -> None:
+        for sensor in input_batch:
+            if isinstance(input_batch[sensor], Dict):
+                dict_to_batch(input_batch[sensor])
             else:
-                batch[sensor] = torch.stack(batch[sensor], dim=0).to(device=device)
+                input_batch[sensor] = torch.stack(input_batch[sensor], dim=0).to(
+                    device=device
+                )
 
     if len(observations) == 0:
         return typing.cast(Dict[str, Union[Dict, torch.Tensor]], observations)
@@ -186,7 +184,7 @@ def batch_observations(
     for obs in observations[1:]:
         fill_dict_from_observations(batch, obs)
 
-    dict_to_batch(batch, device)
+    dict_to_batch(batch)
 
     return typing.cast(Dict[str, Union[Dict, torch.Tensor]], batch)
 
@@ -243,7 +241,9 @@ def tile_images(images: List[np.ndarray]) -> np.ndarray:
 
 
 class SummaryWriter(TBXSummaryWriter):
-    def _video(self, tag, vid):
+    @staticmethod
+    def _video(tag, vid):
+        # noinspection PyProtectedMember
         tag = tbxsummary._clean_tag(tag)
         return TBXSummary(value=[TBXSummary.Value(tag=tag, image=vid)])
 
@@ -270,18 +270,23 @@ def image(tag, tensor, rescale=1, dataformats="CHW"):
     *  3: `tensor` is interpreted as RGB.
     *  4: `tensor` is interpreted as RGBA.
 
-    Args:
-      tag: A name for the generated node. Will also serve as a series name in
+    # Parameters
+    tag: A name for the generated node. Will also serve as a series name in
         TensorBoard.
-      tensor: A 3-D `uint8` or `float32` `Tensor` of shape `[height, width,
+    tensor: A 3-D `uint8` or `float32` `Tensor` of shape `[height, width,
         channels]` where `channels` is 1, 3, or 4.
         'tensor' can either have values in [0, 1] (float32) or [0, 255] (uint8).
         The image() function will scale the image values to [0, 255] by applying
         a scale factor of either 1 (uint8) or 255 (float32).
-    Returns:
+    rescale: The scale.
+    dataformats: Input image shape format.
+
+
+    # Returns
       A scalar `Tensor` of type `string`. The serialized `Summary` protocol
       buffer.
     """
+    # noinspection PyProtectedMember
     tag = tbxsummary._clean_tag(tag)
     tensor = tbxmake_np(tensor)
     tensor = convert_to_HWC(tensor, dataformats)
@@ -294,8 +299,6 @@ def image(tag, tensor, rescale=1, dataformats="CHW"):
 
 
 def convert_to_HWC(tensor, input_format):  # tensor: numpy array
-    import numpy as np
-
     assert len(set(input_format)) == len(
         input_format
     ), "You can not use the same dimension shordhand twice. \
@@ -314,6 +317,7 @@ def convert_to_HWC(tensor, input_format):  # tensor: numpy array
         index = [input_format.find(c) for c in "NCHW"]
         tensor_NCHW = tensor.transpose(index)
         tensor_CHW = make_grid(tensor_NCHW)
+        # noinspection PyTypeChecker
         return tensor_CHW.transpose(1, 2, 0)
 
     if len(input_format) == 3:
@@ -332,7 +336,6 @@ def convert_to_HWC(tensor, input_format):  # tensor: numpy array
 
 def make_grid(I, ncols=8):
     # I: N1HW or N3HW
-    import numpy as np
 
     assert isinstance(I, np.ndarray), "plugin error, should pass numpy array here"
     if I.shape[1] == 1:

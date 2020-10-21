@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Callable
 
 import gym
 import habitat
@@ -18,8 +18,10 @@ class PointNavTaskSampler(TaskSampler):
         max_steps: int,
         action_space: gym.Space,
         distance_to_goal: float,
-        *args,
-        **kwargs
+        filter_dataset_func: Optional[
+            Callable[[habitat.Dataset], habitat.Dataset]
+        ] = None,
+        **task_init_kwargs,
     ) -> None:
         self.grid_size = 0.25
         self.env: Optional[HabitatEnvironment] = None
@@ -30,13 +32,25 @@ class PointNavTaskSampler(TaskSampler):
         self._action_space = action_space
         self.env_config = env_config
         self.distance_to_goal = distance_to_goal
+        self.seed: Optional[int] = None
+        self.filter_dataset_func = filter_dataset_func
 
         self._last_sampled_task: Optional[PointNavTask] = None
+
+        self.task_init_kwargs = task_init_kwargs
 
     def _create_environment(self) -> HabitatEnvironment:
         dataset = habitat.make_dataset(
             self.env_config.DATASET.TYPE, config=self.env_config.DATASET
         )
+        if len(dataset.episodes) == 0:
+            raise RuntimeError("Empty input dataset.")
+
+        if self.filter_dataset_func is not None:
+            dataset = self.filter_dataset_func(dataset)
+            if len(dataset.episodes) == 0:
+                raise RuntimeError("Empty dataset after filtering.")
+
         env = HabitatEnvironment(config=self.env_config, dataset=dataset)
         self.max_tasks = (
             None if self.env_config.MODE == "train" else env.num_episodes
@@ -71,7 +85,7 @@ class PointNavTaskSampler(TaskSampler):
         """
         return True
 
-    def next_task(self, force_advance_scene=False) -> PointNavTask:
+    def next_task(self, force_advance_scene=False) -> Optional[PointNavTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
 
@@ -94,6 +108,7 @@ class PointNavTaskSampler(TaskSampler):
             task_info=task_info,
             max_steps=self.max_steps,
             action_space=self._action_space,
+            **self.task_init_kwargs,
         )
 
         if self.max_tasks is not None:
@@ -118,8 +133,7 @@ class ObjectNavTaskSampler(TaskSampler):
         max_steps: int,
         action_space: gym.Space,
         distance_to_goal: float,
-        *args,
-        **kwargs
+        **kwargs,
     ) -> None:
         self.grid_size = 0.25
         self.env: Optional[HabitatEnvironment] = None
@@ -130,6 +144,7 @@ class ObjectNavTaskSampler(TaskSampler):
         self._action_space = action_space
         self.env_config = env_config
         self.distance_to_goal = distance_to_goal
+        self.seed: Optional[int] = None
 
         self._last_sampled_task: Optional[ObjectNavTask] = None
 
@@ -171,7 +186,7 @@ class ObjectNavTaskSampler(TaskSampler):
         """
         return True
 
-    def next_task(self, force_advance_scene=False) -> ObjectNavTask:
+    def next_task(self, force_advance_scene=False) -> Optional[ObjectNavTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
 

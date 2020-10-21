@@ -1,7 +1,7 @@
 import glob
 import os
 from math import ceil
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Sequence
 
 import gym
 import numpy as np
@@ -14,17 +14,17 @@ from torchvision import models
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from projects.pointnav_baselines.models.point_nav_models import (
-    ResnetTensorPointNavActorCritic,
-)
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from core.base_abstractions.experiment_config import ExperimentConfig
 from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
 from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
+from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
+from projects.pointnav_baselines.models.point_nav_models import (
+    ResnetTensorPointNavActorCritic,
+)
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -46,11 +46,11 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     SCREEN_SIZE = 224
 
     # Training Engine Parameters
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
+    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
     NUM_PROCESSES = 60
-    TRAINING_GPUS = [0, 1, 2, 3, 4, 5, 6]
-    VALIDATION_GPUS = [7]
-    TESTING_GPUS = [7]
+    TRAINING_GPUS = list(range(torch.cuda.device_count()))
+    VALIDATION_GPUS = [torch.cuda.device_count() - 1]
+    TESTING_GPUS = [torch.cuda.device_count() - 1]
 
     # Dataset Parameters
     TRAIN_DATASET_DIR = os.path.join(
@@ -126,7 +126,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"ppo_loss": Builder(PPO, kwargs={}, default=PPOConfig,)},
+            named_losses={"ppo_loss": PPO(**PPOConfig)},
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
@@ -149,6 +149,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         return res
 
     def machine_params(self, mode="train", **kwargs):
+        sampler_devices: Sequence[int] = []
         if mode == "train":
             workers_per_device = 1
             gpu_ids = (
@@ -162,15 +163,12 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 else self.split_num_processes(len(gpu_ids))
             )
             sampler_devices = self.TRAINING_GPUS
-            render_video = False
         elif mode == "valid":
             nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.VALIDATION_GPUS
-            render_video = False
         elif mode == "test":
             nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.TESTING_GPUS
-            render_video = False
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -197,7 +195,6 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             "gpu_ids": gpu_ids,
             "sampler_devices": sampler_devices if mode == "train" else gpu_ids,
             "observation_set": observation_set,
-            "render_video": render_video,
         }
 
     # Define Model

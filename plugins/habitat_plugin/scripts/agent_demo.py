@@ -1,6 +1,15 @@
+import os
+
 import cv2
 import habitat
 from pyquaternion import Quaternion
+
+from plugins.habitat_plugin.habitat_constants import (
+    HABITAT_CONFIGS_DIR,
+    HABITAT_DATASETS_DIR,
+    HABITAT_SCENE_DATASETS_DIR,
+)
+from plugins.habitat_plugin.habitat_utils import get_habitat_config
 
 FORWARD_KEY = "w"
 LEFT_KEY = "a"
@@ -13,12 +22,14 @@ def transform_rgb_bgr(image):
 
 
 def agent_demo():
-    config = habitat.get_config("habitat/habitat-api/configs/tasks/pointnav.yaml")
-    config.defrost()
-    config.DATASET.DATA_PATH = (
-        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
+    config = get_habitat_config(
+        os.path.join(HABITAT_CONFIGS_DIR, "tasks/pointnav.yaml")
     )
-    config.DATASET.SCENES_DIR = "habitat/habitat-api/data/scene_datasets/"
+    config.defrost()
+    config.DATASET.DATA_PATH = os.path.join(
+        HABITAT_DATASETS_DIR, "pointnav/gibson/v1/train/train.json.gz"
+    )
+    config.DATASET.SCENES_DIR = HABITAT_SCENE_DATASETS_DIR
     config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = 0
     config.SIMULATOR.TURN_ANGLE = 45
     config.freeze()
@@ -31,6 +42,7 @@ def agent_demo():
     print("Agent stepping around inside environment.")
 
     count_steps = 0
+    action = None
     while not env.episode_over:
         keystroke = cv2.waitKey(0)
 

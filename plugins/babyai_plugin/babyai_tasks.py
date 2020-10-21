@@ -87,7 +87,7 @@ class BabyAITask(Task[MiniGridEnv]):
         pass
 
     def _expert_timeout_hander(self, signum, frame):
-        raise TimeoutError()
+        raise TimeoutError
 
     def query_expert(self, **kwargs) -> Tuple[Any, bool]:
         see_through_walls = self.env.see_through_walls
@@ -106,7 +106,7 @@ class BabyAITask(Task[MiniGridEnv]):
             signal.signal(signal.SIGALRM, self._expert_timeout_hander)
             signal.alarm(kwargs.get("timeout", 4 if self.num_steps_taken() == 0 else 2))
             return self.bot.replan(self._last_action), True
-        except Exception as _:
+        except TimeoutError as _:
             self._bot_died = True
             return 0, False
         finally:

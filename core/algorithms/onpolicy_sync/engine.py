@@ -1,18 +1,20 @@
 """Defines the reinforcement learning `OnPolicyRLEngine`."""
+import itertools
 import os
+import queue
 import random
 import time
 import traceback
 import typing
 from collections import defaultdict
 from multiprocessing.context import BaseContext
+from queue import Empty
 from typing import (
     Optional,
     Any,
     Dict,
     Union,
     List,
-    Tuple,
     Sequence,
     cast,
     Iterator,
@@ -20,28 +22,32 @@ from typing import (
 )
 
 import torch
-import torch.distributions
-import torch.multiprocessing as mp
-import torch.distributed as dist
+import torch.distributed as dist  # type: ignore
+import torch.distributions  # type: ignore
+import torch.multiprocessing as mp  # type: ignore
 import torch.optim
 from torch import nn
 from torch import optim
 
-
+# noinspection PyProtectedMember
 from torch.optim.lr_scheduler import _LRScheduler
 
 from core.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from core.algorithms.onpolicy_sync.policy import ActorCriticModel
 from core.algorithms.onpolicy_sync.storage import RolloutStorage
-from core.algorithms.onpolicy_sync.vector_sampled_tasks import VectorSampledTasks
-from core.base_abstractions.experiment_config import ExperimentConfig
+from core.algorithms.onpolicy_sync.vector_sampled_tasks import (
+    VectorSampledTasks,
+    COMPLETE_TASK_METRICS_KEY,
+)
+from core.base_abstractions.experiment_config import ExperimentConfig, MachineParams
+from core.base_abstractions.misc import RLStepResult
 from utils.experiment_utils import (
-    ScalarMeanTracker,
     set_deterministic_cudnn,
     set_seed,
     Builder,
     TrainingPipeline,
     PipelineStage,
+    LoggingPackage,
 )
 from utils.system import get_logger
 from utils.tensor_utils import (
@@ -49,7 +55,7 @@ from utils.tensor_utils import (
     to_device_recursively,
     detach_recursively,
 )
-from core.base_abstractions.misc import RLStepResult
+from utils.viz_utils import VizSuite
 
 
 class OnPolicyRLEngine(object):
@@ -105,7 +111,7 @@ class OnPolicyRLEngine(object):
         self.checkpoints_dir = checkpoints_dir
         self.worker_id = worker_id
         self.num_workers = num_workers
-        self.device = device
+        self.device = torch.device("cpu") if device == -1 else torch.device(device)  # type: ignore
         self.distributed_port = distributed_port
 
         self.mode = mode.lower()
@@ -130,41 +136,24 @@ class OnPolicyRLEngine(object):
         ), "`max_sampler_processes_per_worker` must be either `None` or a positive integer."
         self.max_sampler_processes_per_worker = max_sampler_processes_per_worker
 
-        self.machine_params = config.machine_params(self.mode)
-        if self.num_workers > 1:
-            self.num_samplers_per_worker = self.machine_params["nprocesses"]
-            self.num_samplers = self.num_samplers_per_worker[self.worker_id]
+        machine_params = config.machine_params(self.mode)
+        self.machine_params: MachineParams
+        if isinstance(machine_params, MachineParams):
+            self.machine_params = machine_params
         else:
-            if isinstance(self.machine_params["nprocesses"], Sequence):
-                self.num_samplers = self.machine_params["nprocesses"][self.worker_id]
-            elif isinstance(self.machine_params["nprocesses"], int):
-                self.num_samplers = self.machine_params["nprocesses"]
-            else:
-                raise Exception("Only list and int are valid nprocesses")
+            self.machine_params = MachineParams(**machine_params)
+
+        self.num_samplers_per_worker = self.machine_params.nprocesses
+        self.num_samplers = self.num_samplers_per_worker[self.worker_id]
+
         self._vector_tasks: Optional[VectorSampledTasks] = None
 
         self.observation_set = None
         self.actor_critic: Optional[ActorCriticModel] = None
         if self.num_samplers > 0:
-            if (
-                "make_preprocessors_fns" in self.machine_params
-                and self.machine_params["make_preprocessors_fns"] is not None
-                and len(self.machine_params["make_preprocessors_fns"]) > 0
-            ):
-                # distributed observation sets, here we just need the observation space
-                observation_set = self.machine_params["make_preprocessors_fns"][0]()
-                set_seed(self.seed)
-                self.actor_critic = typing.cast(
-                    ActorCriticModel,
-                    self.config.create_model(observation_set=observation_set),
-                ).to(self.device)
-                del observation_set
-            elif (
-                "observation_set" in self.machine_params
-                and self.machine_params["observation_set"] is not None
-            ):
+            if self.machine_params.observation_set is not None:
                 # centralized observation set,
-                self.observation_set = self.machine_params["observation_set"]().to(
+                self.observation_set = self.machine_params.observation_set.to(
                     self.device
                 )
                 set_seed(self.seed)
@@ -188,9 +177,8 @@ class OnPolicyRLEngine(object):
                 self.num_workers,
                 self.worker_id == 0,
             )
-            cpu_device = torch.device(self.device) == torch.device(  # type:ignore
-                "cpu"
-            )
+            cpu_device = self.device == torch.device("cpu")  # type:ignore
+
             dist.init_process_group(  # type:ignore
                 backend="gloo" if cpu_device else "nccl",
                 store=self.store,
@@ -201,14 +189,15 @@ class OnPolicyRLEngine(object):
 
         self.deterministic_agents = deterministic_agents
 
-        self.scalars = ScalarMeanTracker()
-
         self._is_closed: bool = False
 
         self.training_pipeline: Optional[TrainingPipeline] = None
 
+        # Keeping track of metrics during training/inference
+        self.single_process_metrics_queue: queue.Queue = queue.Queue()
+
     @property
-    def vector_tasks(self):
+    def vector_tasks(self) -> VectorSampledTasks:
         if self._vector_tasks is None and self.num_samplers > 0:
             if self.is_distributed:
                 total_processes = sum(
@@ -222,8 +211,7 @@ class OnPolicyRLEngine(object):
                 initial_seed=self.seed,  # do not update the RNG state (creation might happen after seed resetting)
             )
 
-            vector_class = VectorSampledTasks
-            self._vector_tasks = vector_class(
+            self._vector_tasks = VectorSampledTasks(
                 make_sampler_fn=self.config.make_sampler_fn,
                 sampler_fn_args=self.get_sampler_fn_args(seeds),
                 multiprocessing_start_method="forkserver"
@@ -248,11 +236,7 @@ class OnPolicyRLEngine(object):
         return seeds
 
     def get_sampler_fn_args(self, seeds: Optional[List[int]] = None):
-        devices = (
-            self.machine_params["sampler_devices"]
-            if "sampler_devices" in self.machine_params
-            else self.machine_params["gpu_ids"]
-        )
+        sampler_devices = self.machine_params.sampler_devices
 
         if self.mode == "train":
             fn = self.config.train_task_sampler_args
@@ -272,19 +256,21 @@ class OnPolicyRLEngine(object):
             total_processes = self.num_samplers
             process_offset = 0
 
-        devices_list: Optional[List[int]] = None
-        if (self.is_distributed or self.mode == "test") and isinstance(
-            self.device, int
-        ):
-            devices_list = [cast(int, self.device)]
-        elif all([isinstance(dev, int) for dev in devices]):
-            devices_list = devices[:]
+        sampler_devices_as_ints: Optional[List[int]] = None
+        if (
+            self.is_distributed or self.mode == "test"
+        ) and self.device.index is not None:
+            sampler_devices_as_ints = [self.device.index]
+        elif sampler_devices is not None:
+            sampler_devices_as_ints = [
+                -1 if sd.index is None else sd.index for sd in sampler_devices
+            ]
 
         return [
             fn(
                 process_ind=process_offset + it,
                 total_processes=total_processes,
-                devices=devices_list,
+                devices=sampler_devices_as_ints,
                 seeds=seeds,
             )
             for it in range(self.num_samplers)
@@ -312,69 +298,42 @@ class OnPolicyRLEngine(object):
 
     # aggregates task metrics currently in queue
     def aggregate_task_metrics(
-        self, num_tasks: int = -1
-    ) -> Tuple[Tuple[str, Dict[str, float], int], List[Dict[str, Any]]]:
-        assert self.scalars.empty, "found non-empty scalars {}".format(
-            self.scalars.counts()
-        )
-
-        if num_tasks < 0:
-            sentinel = ("aggregate.AUTO.sentinel", time.time())
-            self.vector_tasks.metrics_out_queue.put(
-                sentinel
-            )  # valid since a single training/testing process is the only consumer
-
-        task_outputs = []
+        self, logging_pkg: LoggingPackage, num_tasks: int = -1,
+    ) -> LoggingPackage:
         done = num_tasks == 0
+        num_empty_tasks_dequeued = 0
         while not done:
-            item = (
-                self.vector_tasks.metrics_out_queue.get()
-            )  # at least, there'll be a sentinel
-            if isinstance(item, tuple) and item[0] == "aggregate.AUTO.sentinel":
-                assert item[1] == sentinel[1], "wrong sentinel found: {} vs {}".format(
-                    item[1], sentinel[1]
+            try:
+                # This queue is on this process so we should be able to let the timeout be small
+                # TODO: This should be refactored so that single_process_metrics_queue is a list
+                metrics_dict = self.single_process_metrics_queue.get(timeout=0.01)
+
+                num_empty_tasks_dequeued += not logging_pkg.add_metrics_dict(
+                    single_task_metrics_dict=metrics_dict
                 )
-                done = True
-            else:
-                task_outputs.append(item)
+
                 if num_tasks > 0:
                     num_tasks -= 1
                 done = num_tasks == 0
 
-        # get_logger().debug(
-        #     "worker {} got {} tasks".format(self.worker_id, len(task_outputs))
-        # )
-        #
-        # get_logger().debug("worker {} sleeping for 10 s".format(self.worker_id))
-        # time.sleep(10)
-        # get_logger().debug(
-        #     "worker {} empty {}".format(
-        #         self.worker_id, self.vector_tasks.metrics_out_queue.empty()
-        #     )
-        # )
+            except Empty:
+                if num_tasks <= 0:
+                    break
+                else:
+                    get_logger().error(
+                        "Metrics out queue is empty after a short second wait."
+                        " This should only happen if a positive number of `num_tasks` were"
+                        " set during testing but the queue did not contain this number of entries."
+                        " Please file an issue at https://github.com/allenai/allenact/issues."
+                    )
+                    break
 
-        nsamples = 0
-        for task_output in task_outputs:
-            if (
-                len(task_output) == 0
-                or (len(task_output) == 1 and "task_info" in task_output)
-                or ("success" in task_output and task_output["success"] is None)
-            ):
-                continue
-            self.scalars.add_scalars(
-                {k: v for k, v in task_output.items() if k != "task_info"}
-            )
-            nsamples += 1
-
-        if nsamples < len(task_outputs):
+        if num_empty_tasks_dequeued != 0:
             get_logger().warning(
-                "Discarded {} empty task metrics".format(len(task_outputs) - nsamples)
+                "Discarded {} empty task metrics".format(num_empty_tasks_dequeued)
             )
 
-        pkg_type = "task_metrics_package"
-        payload = self.scalars.pop_and_reset() if len(task_outputs) > 0 else None
-
-        return (pkg_type, payload, nsamples), task_outputs
+        return logging_pkg
 
     def _preprocess_observations(self, batched_observations):
         if self.observation_set is None:
@@ -398,7 +357,7 @@ class OnPolicyRLEngine(object):
 
         return len(paused), keep, batch
 
-    def initialize_rollouts(self, rollouts, visualizer=None):
+    def initialize_rollouts(self, rollouts, visualizer: Optional[VizSuite] = None):
         observations = self.vector_tasks.get_observations()
 
         npaused, keep, batch = self.remove_paused(observations)
@@ -435,13 +394,21 @@ class OnPolicyRLEngine(object):
     def _active_memory(memory, keep):
         return memory.sampler_select(keep) if memory is not None else memory
 
-    def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None):
+    def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None) -> int:
         actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
 
         # Squeeze step and action dimensions and send a list for each sampler's agents
         outputs: List[RLStepResult] = self.vector_tasks.step(
             [[a.item() for a in ac] for ac in actions.squeeze(0).squeeze(-1)]
         )
+
+        # Save after task completion metrics
+        for step_result in outputs:
+            if COMPLETE_TASK_METRICS_KEY in step_result.info:
+                self.single_process_metrics_queue.put(
+                    step_result.info[COMPLETE_TASK_METRICS_KEY]
+                )
+                del step_result.info[COMPLETE_TASK_METRICS_KEY]
 
         rewards: Union[List, torch.Tensor]
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
@@ -514,7 +481,7 @@ class OnPolicyRLEngine(object):
                 if isinstance(s, str):
                     get_logger().info(s)
                 elif isinstance(s, Exception):
-                    get_logger().exception(traceback.format_exc())
+                    get_logger().error(traceback.format_exc())
                 else:
                     raise NotImplementedError()
 
@@ -594,6 +561,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             params=[p for p in self.actor_critic.parameters() if p.requires_grad]
         )
 
+        # noinspection PyProtectedMember
         self.lr_scheduler: Optional[optim.lr_scheduler._LRScheduler] = None
         if self.training_pipeline.lr_scheduler_builder is not None:
             self.lr_scheduler = self.training_pipeline.lr_scheduler_builder(
@@ -738,8 +706,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         ):
             return getattr(self.training_pipeline, field)
 
-        if field in self.machine_params:
-            return self.machine_params[field]
+        if (
+            hasattr(self.machine_params, field)
+            and getattr(self.machine_params, field) is not None
+        ):
+            return getattr(self.machine_params, field)
 
         if allow_none:
             return None
@@ -797,47 +768,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         return actions, actor_critic_output, memory, step_observation
 
-    # aggregates info of specific type from PipelineProgressState list
-    def aggregate_info(
-        self, scalars: ScalarMeanTracker, tracking_info: Dict[str, List], type_str: str,
-    ) -> Tuple[str, Dict[str, float], int]:
-        assert scalars.empty, "Found non-empty scalars {}".format(scalars.counts)
-
-        infos = tracking_info[type_str]
-        tracking_info[type_str] = []  # reset tracking info for current type
-
-        nsamples = sum(info[2] for info in infos)
-        valid_infos = sum(
-            info[2] > 0 for info in infos
-        )  # used to cancel the averaging in self.scalars
-
-        # assert nsamples != 0, "Attempting to aggregate type {} with 0 samples".format(type)
-
-        # get_logger().debug(infos)
-
-        last_name: Optional[str] = None
-        for name, payload, nsamps in infos:
-            if last_name is not None:
-                assert (
-                    last_name == name
-                ), "All names in infos must be the same {} != {}".format(
-                    last_name, name
-                )
-            last_name = name
-
-            if nsamps > 0:
-                scalars.add_scalars(
-                    {k: valid_infos * payload[k] * nsamps / nsamples for k in payload}
-                )
-
-        assert last_name is not None, "infos was empty."
-        pkg_type = last_name
-        payload = scalars.pop_and_reset() if nsamples > 0 else None
-        if payload is not None:
-            payload["pipeline_stage"] = self.training_pipeline.current_stage_index
-
-        return pkg_type, payload, nsamples
-
     def update(self, rollouts: RolloutStorage):
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
 
@@ -858,9 +788,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     masks=batch["masks"],
                 )
 
-                info: Dict[str, float] = {}
-
-                info["lr"] = self.optimizer.param_groups[0]["lr"]  # type: ignore
+                info: Dict[str, float] = {
+                    "lr": self.optimizer.param_groups[0]["lr"]  # type: ignore
+                }
 
                 total_loss: Optional[torch.Tensor] = None
                 for loss_name in self.training_pipeline.current_stage_losses:
@@ -910,7 +840,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         stage = self.training_pipeline.current_stage
 
         if self.num_workers == 1:
-            rollouts_per_worker = [self.num_samplers]
+            rollouts_per_worker: Sequence[int] = [self.num_samplers]
         else:
             rollouts_per_worker = self.num_samplers_per_worker
 
@@ -1095,29 +1025,25 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         )
 
     def send_package(self, tracking_info: Dict[str, List]):
-        package_type = "train_package"
-
-        task_pkg, task_outputs = self.aggregate_task_metrics()
-
-        payload = (task_pkg,) + tuple(
-            self.aggregate_info(
-                scalars=self.scalars, tracking_info=tracking_info, type_str=type_str
-            )
-            for type_str in tracking_info
+        logging_pkg = LoggingPackage(
+            mode=self.mode,
+            training_steps=self.training_pipeline.total_steps,
+            off_policy_steps=self.training_pipeline.total_offpolicy_steps,
+            pipeline_stage=self.training_pipeline.current_stage_index,
         )
 
-        # get_logger().debug("{}".format(payload))
+        self.aggregate_task_metrics(logging_pkg=logging_pkg)
 
-        nsteps = self.training_pipeline.total_steps  # onpolicy steps
+        for (info_type, train_info_dict, n) in itertools.chain(*tracking_info.values()):
+            if n < 0:
+                get_logger().warning(
+                    f"Obtained a train_info_dict with {n} elements."
+                    f" Full info: ({info_type}, {train_info_dict}, {n})."
+                )
+            else:
+                logging_pkg.add_train_info_dict(train_info_dict=train_info_dict, n=n)
 
-        self.results_queue.put(
-            (
-                package_type,
-                payload,
-                nsteps,
-                self.training_pipeline.total_offpolicy_steps,
-            )
-        )
+        self.results_queue.put(logging_pkg)
 
     def run_pipeline(self, rollouts: RolloutStorage):
         self.initialize_rollouts(rollouts)
@@ -1334,19 +1260,17 @@ class OnPolicyInference(OnPolicyRLEngine):
             **kwargs,
         )
 
-        # get_logger().debug("{} worker {} using device {}".format(self.mode, self.worker_id, self.device))
-
     def run_eval(
         self,
         checkpoint_file_name: str,
         rollout_steps=100,
-        visualizer=None,
+        visualizer: Optional[VizSuite] = None,
         update_secs=20,
-    ):
+    ) -> LoggingPackage:
         assert self.actor_critic is not None, "called run_eval with no actor_critic"
 
         ckpt = self.checkpoint_load(checkpoint_file_name)
-        total_steps = ckpt["total_steps"]
+        total_steps = typing.cast(int, ckpt["total_steps"])
 
         rollouts = RolloutStorage(
             num_steps=rollout_steps,
@@ -1370,55 +1294,91 @@ class OnPolicyInference(OnPolicyRLEngine):
 
         self.actor_critic.eval()
 
-        last_time: float = 0.0
-        init_time: float = 0.0
+        last_time: float = time.time()
+        init_time: float = last_time
         frames: int = 0
         if self.mode == "test":
-            lengths = self.vector_tasks.command(
-                "sampler_attr", ["length"] * (self.num_samplers - num_paused)
-            )
             get_logger().info(
-                "worker {}: {} tasks pending ({})".format(
-                    self.worker_id, sum(lengths), lengths
+                "worker {}: running evaluation on {} tasks".format(
+                    self.worker_id, num_tasks,
                 )
             )
-            last_time = time.time()
-            init_time = last_time
-            frames = self.num_samplers - num_paused
 
+        logging_pkg = LoggingPackage(mode=self.mode, training_steps=total_steps)
         while num_paused < self.num_samplers:
+            frames += self.num_samplers - num_paused
             num_paused += self.collect_rollout_step(rollouts, visualizer=visualizer)
             steps += 1
+
             if steps % rollout_steps == 0:
                 rollouts.after_update()
-            if self.mode == "test":
-                new_time = time.time()
-                if new_time - last_time >= update_secs:
+
+            cur_time = time.time()
+            if num_paused >= self.num_samplers or cur_time - last_time >= update_secs:
+                self.aggregate_task_metrics(logging_pkg=logging_pkg)
+
+                if self.mode == "test":
                     lengths = self.vector_tasks.command(
                         "sampler_attr", ["length"] * (self.num_samplers - num_paused)
                     )
+                    npending = sum(lengths)
+                    time_to_complete = (
+                        "{:.2f}".format(
+                            (
+                                (cur_time - init_time)
+                                * (npending / (num_tasks - npending))
+                                / 60
+                            )
+                        )
+                        if npending != num_tasks
+                        else "???"
+                    )
                     get_logger().info(
-                        "worker {}: {:.1f} fps, {} tasks pending ({})".format(
+                        "worker {}: {:.1f} fps, {}/{} tasks pending ({}). ~{} min. to complete.".format(
                             self.worker_id,
-                            frames / (new_time - init_time),
-                            sum(lengths),
+                            frames / (cur_time - init_time),
+                            npending,
+                            num_tasks,
                             lengths,
+                            time_to_complete,
                         )
                     )
-                    last_time = new_time
-                frames += self.num_samplers - num_paused
+                    if logging_pkg.num_non_empty_metrics_dicts_added != 0:
+                        get_logger().info(
+                            ", ".join(
+                                [
+                                    "worker {}: num_test_tasks_complete {}".format(
+                                        self.worker_id,
+                                        logging_pkg.num_non_empty_metrics_dicts_added,
+                                    ),
+                                    *[
+                                        "{} {:.3g}".format(k, v)
+                                        for k, v in logging_pkg.metrics_tracker.means().items()
+                                    ],
+                                ]
+                            )
+                        )
+
+                    last_time = cur_time
+
+        get_logger().info(
+            "worker {}: {} complete, all task samplers paused".format(
+                self.mode, self.worker_id
+            )
+        )
 
         self.vector_tasks.resume_all()
         self.vector_tasks.set_seeds(self.worker_seeds(self.num_samplers, self.seed))
         self.vector_tasks.reset_all()
 
-        metrics_pkg, task_outputs = self.aggregate_task_metrics(num_tasks)
+        self.aggregate_task_metrics(logging_pkg=logging_pkg)
 
-        pkg_type = "{}_package".format(self.mode)
-        viz_package = visualizer.read_and_reset() if visualizer is not None else None
-        payload = (metrics_pkg, task_outputs, viz_package, checkpoint_file_name)
+        logging_pkg.viz_data = (
+            visualizer.read_and_reset() if visualizer is not None else None
+        )
+        logging_pkg.checkpoint_file_name = checkpoint_file_name
 
-        return pkg_type, payload, total_steps
+        return logging_pkg
 
     @staticmethod
     def skip_to_latest(checkpoints_queue: mp.Queue, command: Optional[str], data):
@@ -1465,7 +1425,7 @@ class OnPolicyInference(OnPolicyRLEngine):
             self.checkpoints_queue is not None
         ), "Attempting to process checkpoints queue but this queue is `None`."
 
-        visualizer = None
+        visualizer: Optional[VizSuite] = None
 
         finalized = False
         try:
@@ -1496,23 +1456,13 @@ class OnPolicyInference(OnPolicyRLEngine):
 
                         if (
                             visualizer is None
-                            and "visualizer" in self.machine_params
-                            and self.machine_params["visualizer"] is not None
+                            and self.machine_params.visualizer is not None
                         ):
-                            if isinstance(visualizer, Builder):
-                                visualizer = self.machine_params["visualizer"]()
-                            else:
-                                visualizer = self.machine_params["visualizer"]
+                            visualizer = self.machine_params.visualizer
 
                         eval_package = self.run_eval(
                             checkpoint_file_name=data, visualizer=visualizer
                         )
-
-                        # get_logger().debug(
-                        #     "queueing eval_package {} with {} tasks".format(
-                        #         self.worker_id, eval_package[1][0][2]
-                        #     )
-                        # )
 
                         self.results_queue.put(eval_package)
 
@@ -1520,7 +1470,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                             dist.barrier()
                     else:
                         self.results_queue.put(
-                            ("{}_package".format(self.mode), None, -1)
+                            LoggingPackage(mode=self.mode, training_steps=None,)
                         )
                 elif command in ["quit", "exit", "close"]:
                     finalized = True
@@ -1539,7 +1489,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                     self.mode, self.worker_id
                 )
             )
-            get_logger().exception(traceback.format_exc())
+            get_logger().error(traceback.format_exc())
         finally:
             if finalized:
                 if self.mode == "test":
@@ -1550,4 +1500,4 @@ class OnPolicyInference(OnPolicyRLEngine):
             else:
                 if self.mode == "test":
                     self.results_queue.put(("test_stopped", self.worker_id + 1))
-            self.close(verbose=False)
+            self.close(verbose=self.mode == "test")

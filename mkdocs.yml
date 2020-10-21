@@ -198,7 +198,11 @@ nav:
           - pointnav_habitat_rgb_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgb_simpleconvgru_ddppo.md
           - pointnav_habitat_rgbd_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgbd_simpleconvgru_ddppo.md
           - pointnav_habitat_base: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_base.md
+          - debug_pointnav_habitat_rgbd_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo.md
+          - debug_pointnav_habitat_rgb_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo.md
+          - debug_pointnav_habitat_rgb_simpleconvgru_bc: api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc.md
           - pointnav_habitat_depth_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo.md
+          - debug_pointnav_habitat_base: api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base.md
         - pointnav_base: api/projects/pointnav_baselines/experiments/pointnav_base.md
         - ithor:
           - pointnav_ithor_rgbd_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_rgbd_simpleconvgru_ddppo.md

@@ -3,13 +3,13 @@ from typing import Sequence, Optional
 
 import torch
 
-from projects.tutorials.babyai_go_to_local_bc_offpolicy import (
-    BCOffPolicyBabyAIGoToLocalExperimentConfig,
-)
 from plugins.babyai_plugin.babyai_constants import BABYAI_EXPERT_TRAJECTORIES_DIR
 from plugins.minigrid_plugin.minigrid_offpolicy import (
     MiniGridOffPolicyExpertCELoss,
     create_minigrid_offpolicy_data_iterator,
+)
+from projects.tutorials.babyai_go_to_local_bc_offpolicy import (
+    BCOffPolicyBabyAIGoToLocalExperimentConfig,
 )
 from utils.experiment_utils import PipelineStage, OffPolicyPipelineComponent
 
@@ -29,13 +29,10 @@ class DistributedBCOffPolicyBabyAIGoToLocalExperimentConfig(
     ):
         res = super().machine_params(mode, gpu_id, n_train_processes, **kwargs)
 
-        if (
-            res["nprocesses"] > 0
-            and isinstance(res["gpu_ids"][0], int)
-            and res["gpu_ids"][0] >= 0
-        ):
-            res["nprocesses"] = [res["nprocesses"] // 2] * 2
-            res["gpu_ids"] = [0, 1]
+        if res["nprocesses"] > 0 and torch.cuda.is_available():
+            ngpu_to_use = min(torch.cuda.device_count(), 2)
+            res["nprocesses"] = [res["nprocesses"] // ngpu_to_use] * ngpu_to_use
+            res["gpu_ids"] = list(range(ngpu_to_use))
 
         return res
 
@@ -65,7 +62,7 @@ class DistributedBCOffPolicyBabyAIGoToLocalExperimentConfig(
                     loss_names=[],
                     max_stage_steps=total_train_steps,
                     offpolicy_component=OffPolicyPipelineComponent(
-                        data_iterator_builder=lambda **kwargs: create_minigrid_offpolicy_data_iterator(
+                        data_iterator_builder=lambda **extra_kwargs: create_minigrid_offpolicy_data_iterator(
                             path=os.path.join(
                                 BABYAI_EXPERT_TRAJECTORIES_DIR,
                                 "BabyAI-GoToLocal-v0{}.pkl".format(
@@ -75,7 +72,7 @@ class DistributedBCOffPolicyBabyAIGoToLocalExperimentConfig(
                             nrollouts=cls.NUM_TRAIN_SAMPLERS // num_mini_batch,
                             rollout_len=cls.ROLLOUT_STEPS,
                             instr_len=cls.INSTR_LEN,
-                            **kwargs,
+                            **extra_kwargs,
                         ),
                         data_iterator_kwargs_generator=cls.expert_ce_loss_kwargs_generator,
                         loss_names=["offpolicy_expert_ce_loss"],

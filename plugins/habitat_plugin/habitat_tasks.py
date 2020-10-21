@@ -1,9 +1,10 @@
-# TODO: @klemenkotar please fix all type errors
-
+from abc import ABC
 from typing import Tuple, List, Dict, Any, Optional, Union, Sequence, cast
 
 import gym
 import numpy as np
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
+from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 
 from core.base_abstractions.misc import RLStepResult
@@ -18,9 +19,10 @@ from plugins.habitat_plugin.habitat_constants import (
     LOOK_DOWN,
 )
 from plugins.habitat_plugin.habitat_environment import HabitatEnvironment
+from utils.system import get_logger
 
 
-class HabitatTask(Task[HabitatEnvironment]):
+class HabitatTask(Task[HabitatEnvironment], ABC):
     def __init__(
         self,
         env: HabitatEnvironment,
@@ -81,6 +83,7 @@ class PointNavTask(Task[HabitatEnvironment]):
         sensors: List[Sensor],
         task_info: Dict[str, Any],
         max_steps: int,
+        failed_end_reward: float = 0.0,
         **kwargs
     ) -> None:
         super().__init__(
@@ -92,21 +95,30 @@ class PointNavTask(Task[HabitatEnvironment]):
 
         # Get the geodesic distance to target from the environemnt and make sure it is
         # a valid value
-        self.last_geodesic_distance = self.env.env.get_metrics()["distance_to_goal"]
-        if (
-            self.last_geodesic_distance is None
-            or self.last_geodesic_distance in [float("-inf"), float("inf")]
-            or np.isnan(self.last_geodesic_distance)
-        ):
-            self.last_geodesic_distance = 0.0
+        self.last_geodesic_distance = self.current_geodesic_dist_to_target()
+        self.start_distance = self.last_geodesic_distance
+        assert self.last_geodesic_distance is not None
 
+        # noinspection PyProtectedMember
         self._shortest_path_follower = ShortestPathFollower(
-            env.env.sim, env.env._config.TASK.SUCCESS_DISTANCE, False
+            cast(HabitatSim, env.env.sim), env.env._config.TASK.SUCCESS_DISTANCE, False
         )
         self._shortest_path_follower.mode = "geodesic_path"
 
         self._rewards: List[float] = []
         self._metrics = None
+        self.failed_end_reward = failed_end_reward
+
+    def current_geodesic_dist_to_target(self) -> Optional[float]:
+        metrics = self.env.env.get_metrics()
+        if metrics["distance_to_goal"] is None:
+            habitat_env = self.env.env
+            habitat_env.task.measurements.update_measures(
+                episode=habitat_env.current_episode, action=None, task=habitat_env.task
+            )
+            metrics = self.env.env.get_metrics()
+
+        return metrics["distance_to_goal"]
 
     @property
     def action_space(self):
@@ -150,25 +162,32 @@ class PointNavTask(Task[HabitatEnvironment]):
         return self.env.current_frame["rgb"]
 
     def _is_goal_in_range(self) -> bool:
-        # The habitat simulator will return an SPL value of 0.0 whenever the goal is not in range
-        return bool(self.env.env.get_metrics()["spl"])
+        return (
+            self.current_geodesic_dist_to_target() <= self.task_info["distance_to_goal"]
+        )
 
     def judge(self) -> float:
         reward = -0.01
 
-        new_geodesic_distance = self.env.env.get_metrics()["distance_to_goal"]
-        if (
-            new_geodesic_distance is None
-            or new_geodesic_distance in [float("-inf"), float("inf")]
-            or np.isnan(new_geodesic_distance)
-        ):
-            new_geodesic_distance = self.last_geodesic_distance
-        delta_distance_reward = self.last_geodesic_distance - new_geodesic_distance
-        reward += delta_distance_reward
-        self.last_geodesic_distance = new_geodesic_distance
+        new_geodesic_distance = self.current_geodesic_dist_to_target()
+        if self.last_geodesic_distance is None:
+            self.last_geodesic_distance = new_geodesic_distance
 
-        if self._took_end_action:
-            reward += 10.0 if self._success else 0.0
+        if self.last_geodesic_distance is not None:
+            if (
+                new_geodesic_distance is None
+                or new_geodesic_distance in [float("-inf"), float("inf")]
+                or np.isnan(new_geodesic_distance)
+            ):
+                new_geodesic_distance = self.last_geodesic_distance
+            delta_distance_reward = self.last_geodesic_distance - new_geodesic_distance
+            reward += delta_distance_reward
+            self.last_geodesic_distance = new_geodesic_distance
+
+            if self.is_done():
+                reward += 10.0 if self._success else self.failed_end_reward
+        else:
+            get_logger().warning("Could not get geodesic distance from habitat env.")
 
         self._rewards.append(float(reward))
 
@@ -180,10 +199,11 @@ class PointNavTask(Task[HabitatEnvironment]):
         else:
             _metrics = self.env.env.get_metrics()
             metrics = {
-                "success": self._success,
+                "success": 1 * self._success,
                 "ep_length": self.num_steps_taken(),
-                "total_reward": np.sum(self._rewards),
+                "reward": np.sum(self._rewards),
                 "spl": _metrics["spl"] if _metrics["spl"] is not None else 0.0,
+                "dist_to_target": self.current_geodesic_dist_to_target(),
             }
             self._rewards = []
             return metrics
@@ -193,8 +213,15 @@ class PointNavTask(Task[HabitatEnvironment]):
             return self.class_action_names().index(END), True
 
         target = self.task_info["target"]
-        action = self._shortest_path_follower.get_next_action(target)
-        return action, action is not None
+        habitat_action = self._shortest_path_follower.get_next_action(target)
+        if habitat_action == HabitatSimActions.MOVE_FORWARD:
+            return self.class_action_names().index(MOVE_AHEAD), True
+        elif habitat_action == HabitatSimActions.TURN_LEFT:
+            return self.class_action_names().index(ROTATE_LEFT), True
+        elif habitat_action == HabitatSimActions.TURN_RIGHT:
+            return self.class_action_names().index(ROTATE_RIGHT), True
+        else:
+            return 0, False
 
 
 class ObjectNavTask(HabitatTask):
@@ -217,16 +244,16 @@ class ObjectNavTask(HabitatTask):
 
         # Get the geodesic distance to target from the environemnt and make sure it is
         # a valid value
-        self.last_geodesic_distance = self.env.env.get_metrics()["distance_to_goal"]
-        if (
+        self.last_geodesic_distance = self.current_geodesic_dist_to_target()
+        assert not (
             self.last_geodesic_distance is None
             or self.last_geodesic_distance in [float("-inf"), float("inf")]
             or np.isnan(self.last_geodesic_distance)
-        ):
-            self.last_geodesic_distance = 0.0
+        ), "Bad geodesic distance"
         self._min_distance_to_goal = self.last_geodesic_distance
         self._num_invalid_actions = 0
 
+        # noinspection PyProtectedMember
         self._shortest_path_follower = ShortestPathFollower(
             env.env.sim, env.env._config.TASK.SUCCESS_DISTANCE, False
         )
@@ -256,6 +283,17 @@ class ObjectNavTask(HabitatTask):
 
     def close(self) -> None:
         self.env.stop()
+
+    def current_geodesic_dist_to_target(self) -> Optional[float]:
+        metrics = self.env.env.get_metrics()
+        if metrics["distance_to_goal"] is None:
+            habitat_env = self.env.env
+            habitat_env.task.measurements.update_measures(
+                episode=habitat_env.current_episode, action=None, task=habitat_env.task
+            )
+            metrics = self.env.env.get_metrics()
+
+        return metrics["distance_to_goal"]
 
     def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
         assert isinstance(action, int)
@@ -315,7 +353,7 @@ class ObjectNavTask(HabitatTask):
         reward = -0.01
 
         # Get geodesic distance reward
-        new_geodesic_distance = self.env.env.get_metrics()["distance_to_goal"]
+        new_geodesic_distance = self.current_geodesic_dist_to_target()
         self._min_distance_to_goal = min(
             new_geodesic_distance, self._min_distance_to_goal
         )

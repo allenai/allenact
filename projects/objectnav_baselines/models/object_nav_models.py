@@ -11,7 +11,6 @@ import torch
 import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
-from core.models.basic_models import SimpleCNN, RNNStateEncoder
 from core.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     LinearCriticHead,
@@ -20,8 +19,9 @@ from core.algorithms.onpolicy_sync.policy import (
     Memory,
     ObservationType,
 )
-from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
+from core.base_abstractions.misc import ActorCriticOutput
+from core.models.basic_models import SimpleCNN, RNNStateEncoder
 
 
 class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
@@ -114,6 +114,7 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
+        # noinspection PyTypeChecker
         return self.object_type_embedding(  # type:ignore
             observations[self.goal_sensor_uuid].to(torch.int64)
         )
@@ -174,6 +175,7 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         goal_dims: int = 32,
         resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
         combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
+        include_auxiliary_head: bool = False,
     ):
 
         super().__init__(
@@ -181,6 +183,7 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         )
 
         self._hidden_size = hidden_size
+        self.include_auxiliary_head = include_auxiliary_head
         if (
             rgb_resnet_preprocessor_uuid is None
             or depth_resnet_preprocessor_uuid is None
@@ -213,6 +216,9 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         )
         self.actor = LinearActorHead(self._hidden_size, action_space.n)
         self.critic = LinearCriticHead(self._hidden_size)
+        if self.include_auxiliary_head:
+            self.auxiliary_actor = LinearActorHead(self._hidden_size, action_space.n)
+
         self.train()
 
     @property
@@ -260,7 +266,11 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         x, rnn_hidden_states = self.state_encoder(x, memory.tensor("rnn"), masks)
         return (
             ActorCriticOutput(
-                distributions=self.actor(x), values=self.critic(x), extras={}
+                distributions=self.actor(x),
+                values=self.critic(x),
+                extras={"auxiliary_distributions": self.auxiliary_actor(x)}
+                if self.include_auxiliary_head
+                else {},
             ),
             memory.set_tensor("rnn", rnn_hidden_states),
         )
@@ -355,7 +365,8 @@ class ResnetTensorGoalEncoder(nn.Module):
 
         return observations, use_agent, nstep, nsampler, nagent
 
-    def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
+    @staticmethod
+    def adapt_output(x, use_agent, nstep, nsampler, nagent):
         if use_agent:
             return x.view(nstep, nsampler, nagent, -1)
         return x.view(nstep, nsampler * nagent, -1)
@@ -372,7 +383,7 @@ class ResnetTensorGoalEncoder(nn.Module):
             self.distribute_target(observations),
         ]
         x = self.target_obs_combiner(torch.cat(embs, dim=1,))
-        x = x.view(x.size(0), -1)  # flatten
+        x = x.reshape(x.size(0), -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
 
@@ -494,7 +505,8 @@ class ResnetDualTensorGoalEncoder(nn.Module):
 
         return observations, use_agent, nstep, nsampler, nagent
 
-    def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
+    @staticmethod
+    def adapt_output(x, use_agent, nstep, nsampler, nagent):
         if use_agent:
             return x.view(nstep, nsampler, nagent, -1)
         return x.view(nstep, nsampler * nagent, -1)
@@ -517,6 +529,6 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         ]
         depth_x = self.depth_target_obs_combiner(torch.cat(depth_embs, dim=1,))
         x = torch.cat([rgb_x, depth_x], dim=1)
-        x = x.view(x.size(0), -1)  # flatten
+        x = x.reshape(x.size(0), -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)

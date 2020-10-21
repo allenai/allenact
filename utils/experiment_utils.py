@@ -4,7 +4,7 @@ import collections.abc
 import copy
 import random
 import typing
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from typing import (
     Callable,
     NamedTuple,
@@ -23,11 +23,11 @@ import numpy as np
 import torch
 from torch import optim
 
-from core.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from core.algorithms.offpolicy_sync.losses.abstract_offpolicy_loss import (
     AbstractOffPolicyLoss,
     Memory,
 )
+from core.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCriticLoss
 from core.base_abstractions.misc import Loss
 
 
@@ -138,20 +138,26 @@ class ScalarMeanTracker(object):
         self._sums: Dict[str, float] = OrderedDict()
         self._counts: Dict[str, int] = OrderedDict()
 
-    def add_scalars(self, scalars: Dict[str, Union[float, int]], n: int = 1) -> None:
+    def add_scalars(
+        self, scalars: Dict[str, Union[float, int]], n: Union[int, Dict[str, int]] = 1
+    ) -> None:
         """Add additional scalars to track.
 
         # Parameters
 
         scalars : A dictionary of `scalar key -> value` pairs.
         """
+        ndict = typing.cast(
+            Dict[str, int], (n if isinstance(n, Dict) else defaultdict(lambda: n))  # type: ignore
+        )
+
         for k in scalars:
             if k not in self._sums:
-                self._sums[k] = n * scalars[k]
-                self._counts[k] = n
+                self._sums[k] = ndict[k] * scalars[k]
+                self._counts[k] = ndict[k]
             else:
-                self._sums[k] += n * scalars[k]
-                self._counts[k] += n
+                self._sums[k] += ndict[k] * scalars[k]
+                self._counts[k] += ndict[k]
 
     def pop_and_reset(self) -> Dict[str, float]:
         """Return tracked means and reset.
@@ -192,6 +198,70 @@ class ScalarMeanTracker(object):
             len(self._sums), len(self._counts)
         )
         return len(self._sums) == 0
+
+
+class LoggingPackage(object):
+    """Data package used for logging."""
+
+    def __init__(
+        self,
+        mode: str,
+        training_steps: Optional[int],
+        pipeline_stage: Optional[int] = None,
+        off_policy_steps: Optional[int] = None,
+    ) -> None:
+        self.mode = mode
+
+        self.training_steps: int = training_steps
+        self.pipeline_stage = pipeline_stage
+        self.off_policy_steps: Optional[int] = off_policy_steps
+
+        self.metrics_tracker = ScalarMeanTracker()
+        self.train_info_tracker = ScalarMeanTracker()
+        self.metric_dicts: List[Any] = []
+        self.viz_data: Optional[Dict[str, List[Dict[str, Any]]]] = None
+        self.checkpoint_file_name: Optional[str] = None
+
+        self.num_empty_metrics_dicts_added: int = 0
+
+    @property
+    def num_non_empty_metrics_dicts_added(self) -> int:
+        return len(self.metric_dicts)
+
+    @staticmethod
+    def _metrics_dict_is_empty(
+        single_task_metrics_dict: Dict[str, Union[float, int]]
+    ) -> bool:
+        return (
+            len(single_task_metrics_dict) == 0
+            or (
+                len(single_task_metrics_dict) == 1
+                and "task_info" in single_task_metrics_dict
+            )
+            or (
+                "success" in single_task_metrics_dict
+                and single_task_metrics_dict["success"] is None
+            )
+        )
+
+    def add_metrics_dict(
+        self, single_task_metrics_dict: Dict[str, Union[float, int]]
+    ) -> bool:
+        if self._metrics_dict_is_empty(single_task_metrics_dict):
+            self.num_empty_metrics_dicts_added += 1
+            return False
+
+        self.metric_dicts.append(single_task_metrics_dict)
+        self.metrics_tracker.add_scalars(
+            {k: v for k, v in single_task_metrics_dict.items() if k != "task_info"}
+        )
+        return True
+
+    def add_train_info_dict(
+        self, train_info_dict: Dict[str, Union[int, float]], n: int
+    ):
+        assert n >= 0
+        self.train_info_tracker.add_scalars(scalars=train_info_dict, n=n)
 
 
 class LinearDecay(object):
@@ -493,6 +563,13 @@ class TrainingPipeline(object):
         self.should_log = should_log
 
         self.pipeline_stages = pipeline_stages
+        if len(self.pipeline_stages) > len(set(id(ps) for ps in pipeline_stages)):
+            raise RuntimeError(
+                "Duplicate `PipelineStage` object instances found in the pipeline stages input"
+                " to `TrainingPipeline`. `PipelineStage` objects are not immutable, if you'd"
+                " like to have multiple pipeline stages of the same type, please instantiate"
+                " multiple separate instances."
+            )
 
         self._current_stage: Optional[PipelineStage] = None
 

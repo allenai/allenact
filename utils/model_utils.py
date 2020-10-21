@@ -17,7 +17,7 @@ class Flatten(nn.Module):
         # Returns
         Flattened tensor.
         """
-        return x.view(x.size(0), -1)
+        return x.reshape(x.size(0), -1)
 
 
 def init_linear_layer(

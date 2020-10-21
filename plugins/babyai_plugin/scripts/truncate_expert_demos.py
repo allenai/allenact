@@ -6,7 +6,7 @@ import babyai
 from plugins.babyai_plugin.babyai_constants import BABYAI_EXPERT_TRAJECTORIES_DIR
 
 
-def make_small_demos(dir):
+def make_small_demos(dir: str):
     for file_path in glob.glob(os.path.join(dir, "*.pkl")):
         if "valid" not in file_path and "small" not in file_path:
             new_file_path = file_path.replace(".pkl", "-small.pkl")

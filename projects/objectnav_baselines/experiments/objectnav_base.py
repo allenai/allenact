@@ -1,12 +1,14 @@
+from abc import ABC
+
 from core.base_abstractions.experiment_config import ExperimentConfig
 
 
-class ObjectNavBaseConfig(ExperimentConfig):
+class ObjectNavBaseConfig(ExperimentConfig, ABC):
     """The base object navigation configuration file."""
 
     def __init__(self):
-        self.CAMERA_WIDTH = 640
-        self.CAMERA_HEIGHT = 480
+        self.CAMERA_WIDTH = 400
+        self.CAMERA_HEIGHT = 300
         self.SCREEN_SIZE = 224
         self.MAX_STEPS = 500
         self.STEP_SIZE = 0.25

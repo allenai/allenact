@@ -220,7 +220,7 @@ stage with linearly decaying learning rate:
     def training_pipeline(cls, **kwargs) -> TrainingPipeline:
         ppo_steps = int(150000)
         return TrainingPipeline(
-            named_losses=dict(ppo_loss=Builder(PPO, kwargs={}, default=PPOConfig,)),
+            named_losses=dict(ppo_loss=PPO(**PPOConfig)),
             pipeline_stages=[
                 PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps)
             ],
