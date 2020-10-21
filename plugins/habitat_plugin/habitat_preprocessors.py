@@ -87,9 +87,7 @@ class ResnetPreProcessorHabitat(Preprocessor):
             List[torch.device], list(range(torch.cuda.device_count()))
         )
 
-        self.resnet: Union[
-            ResNetEmbedder, torch.nn.DataParallel[ResNetEmbedder]
-        ] = ResNetEmbedder(
+        self.resnet: Union[ResNetEmbedder, torch.nn.DataParallel] = ResNetEmbedder(
             self.make_model(pretrained=True).to(self.device), pool=self.pool
         )
 

@@ -21,7 +21,7 @@ class PointNavTaskSampler(TaskSampler):
         filter_dataset_func: Optional[
             Callable[[habitat.Dataset], habitat.Dataset]
         ] = None,
-        **kwargs,
+        **task_init_kwargs,
     ) -> None:
         self.grid_size = 0.25
         self.env: Optional[HabitatEnvironment] = None
@@ -37,12 +37,19 @@ class PointNavTaskSampler(TaskSampler):
 
         self._last_sampled_task: Optional[PointNavTask] = None
 
+        self.task_init_kwargs = task_init_kwargs
+
     def _create_environment(self) -> HabitatEnvironment:
         dataset = habitat.make_dataset(
             self.env_config.DATASET.TYPE, config=self.env_config.DATASET
         )
+        if len(dataset.episodes) == 0:
+            raise RuntimeError("Empty input dataset.")
+
         if self.filter_dataset_func is not None:
             dataset = self.filter_dataset_func(dataset)
+            if len(dataset.episodes) == 0:
+                raise RuntimeError("Empty dataset after filtering.")
 
         env = HabitatEnvironment(config=self.env_config, dataset=dataset)
         self.max_tasks = (
@@ -101,6 +108,7 @@ class PointNavTaskSampler(TaskSampler):
             task_info=task_info,
             max_steps=self.max_steps,
             action_space=self._action_space,
+            **self.task_init_kwargs,
         )
 
         if self.max_tasks is not None:

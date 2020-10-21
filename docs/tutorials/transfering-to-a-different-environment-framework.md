@@ -60,11 +60,11 @@ to swap out our sensor classes:
 Next we need to define the simulator config:
 
 ```python
-    CONFIG = habitat.get_config("configs/gibson.yaml")
+    CONFIG = get_habitat_config("configs/gibson.yaml")
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
     CONFIG.SIMULATOR_GPU_IDS = TRAIN_GPUS
-    CONFIG.DATASET.SCENES_DIR = "habitat/habitat-api/data/scene_datasets/"
+    CONFIG.DATASET.SCENES_DIR = HABITAT_SCENE_DATASETS_DIR
     CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
     CONFIG.DATASET.DATA_PATH = TRAIN_SCENES
     CONFIG.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]

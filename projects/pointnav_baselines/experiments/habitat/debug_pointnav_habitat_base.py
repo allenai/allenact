@@ -6,12 +6,14 @@ import gym
 import habitat
 import torch
 
-from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from core.base_abstractions.experiment_config import MachineParams
 from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
+from plugins.habitat_plugin.habitat_constants import HABITAT_DATASETS_DIR, HABITAT_CONFIGS_DIR, \
+    HABITAT_SCENE_DATASETS_DIR
 from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
 from plugins.habitat_plugin.habitat_tasks import PointNavTask
+from plugins.habitat_plugin.habitat_utils import get_habitat_config
 from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
 from utils.experiment_utils import Builder
 
@@ -24,25 +26,21 @@ class DebugPointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
     def __init__(self):
         super().__init__()
 
-        habitat_data_dir = os.path.join(ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/habitat")
         task_data_dir_template = os.path.join(
-            habitat_data_dir, "datasets/pointnav/habitat-test-scenes/v1/{}/{}.json.gz"
+            HABITAT_DATASETS_DIR, "pointnav/habitat-test-scenes/v1/{}/{}.json.gz"
         )
         self.TRAIN_SCENES = task_data_dir_template.format(*(["train"] * 2))
         self.VALID_SCENES = task_data_dir_template.format(*(["val"] * 2))
         self.TEST_SCENES = task_data_dir_template.format(*(["test"] * 2))
 
-        scene_data_dir = os.path.join(habitat_data_dir, "scene_datasets")
-        config_data_dir = os.path.join(habitat_data_dir, "configs")
-
-        self.NUM_PROCESSES = 8 if torch.cuda.is_available() else 1
-        self.CONFIG = habitat.get_config(
-            os.path.join(config_data_dir, "debug_habitat_pointnav.yaml")
+        self.NUM_PROCESSES = 8 if torch.cuda.is_available() else 4
+        self.CONFIG = get_habitat_config(
+            os.path.join(HABITAT_CONFIGS_DIR, "debug_habitat_pointnav.yaml")
         )
         self.CONFIG.defrost()
         self.CONFIG.NUM_PROCESSES = self.NUM_PROCESSES
         self.CONFIG.SIMULATOR_GPU_IDS = [torch.cuda.device_count() - 1]
-        self.CONFIG.DATASET.SCENES_DIR = scene_data_dir
+        self.CONFIG.DATASET.SCENES_DIR = HABITAT_SCENE_DATASETS_DIR
         self.CONFIG.DATASET.POINTNAVV1.CONTENT_SCENES = ["*"]
         self.CONFIG.DATASET.DATA_PATH = self.TRAIN_SCENES
         self.CONFIG.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
@@ -127,9 +125,8 @@ class DebugPointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
         episodes = [
             e
             for e in dataset.episodes
-            if float(e.info["geodesic_distance"]) < 1.5 and "skokloster" in e.scene_id
+            if float(e.info["geodesic_distance"]) < 1.5
         ]
-        # episodes = [episodes[0]]
         for i, e in enumerate(episodes):
             e.episode_id = str(i)
         dataset.episodes = episodes
@@ -150,7 +147,7 @@ class DebugPointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             "distance_to_goal": self.DISTANCE_TO_GOAL,
-            "filter_dataset_func": DebugPointNavHabitatBaseConfig.make_easy_dataset,
+            # "filter_dataset_func": DebugPointNavHabitatBaseConfig.make_easy_dataset,
         }
 
     def valid_task_sampler_args(
@@ -161,6 +158,8 @@ class DebugPointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
+        if total_processes != 1:
+            raise NotImplementedError("In validation, `total_processes` must equal 1 for habitat tasks")
         config = self.CONFIG.clone()
         config.defrost()
         config.DATASET.DATA_PATH = self.VALID_SCENES

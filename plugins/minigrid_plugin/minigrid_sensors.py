@@ -34,16 +34,16 @@ class EgocentricMiniGridSensor(Sensor[MiniGridEnv, Task[MiniGridEnv]]):
         self.view_channels = view_channels
         self.num_objects = (
             typing.cast(
-                int, max(map(abs, gym_minigrid.minigrid.OBJECT_TO_IDX.values()))
+                int, max(map(abs, gym_minigrid.minigrid.OBJECT_TO_IDX.values()))  # type: ignore
             )
             + 1
         )
         self.num_colors = (
-            typing.cast(int, max(map(abs, gym_minigrid.minigrid.COLOR_TO_IDX.values())))
+            typing.cast(int, max(map(abs, gym_minigrid.minigrid.COLOR_TO_IDX.values())))  # type: ignore
             + 1
         )
         self.num_states = (
-            typing.cast(int, max(map(abs, gym_minigrid.minigrid.STATE_TO_IDX.values())))
+            typing.cast(int, max(map(abs, gym_minigrid.minigrid.STATE_TO_IDX.values())))  # type: ignore
             + 1
         )
 

@@ -7,6 +7,7 @@ import numpy as np
 from habitat.config import Config
 from habitat.core.dataset import Episode, Dataset
 from habitat.core.simulator import Observations, AgentState, ShortestPathPoint
+from habitat.tasks.nav.nav import NavigationEpisode as HabitatNavigationEpisode
 
 from utils.cache_utils import DynamicDistanceCache
 from utils.system import get_logger
@@ -37,12 +38,12 @@ class HabitatEnvironment(object):
         self._current_frame = obs
         return obs
 
-    def get_distance_to_target(self) -> float:
-        curr = self.get_location()
-        goal = self.get_current_episode().goals[0].view_points[0].agent_state.position
-        return self.env.sim.geodesic_distance(curr, goal)
+    # def get_distance_to_target(self) -> float:
+    #     curr = self.get_location()
+    #     goal = self.get_current_episode().goals[0].view_points[0].agent_state.position
+    #     return self.env.sim.geodesic_distance(curr, goal)
 
-    def get_location(self) -> List[float]:
+    def get_location(self) -> Optional[np.ndarray]:
         return self.env.sim.get_agent_state().position
 
     def get_rotation(self) -> Optional[List[float]]:
@@ -53,8 +54,8 @@ class HabitatEnvironment(object):
     ) -> List[ShortestPathPoint]:
         return self.env.sim.action_space_shortest_path(source_state, [target_state])
 
-    def get_current_episode(self) -> Episode:
-        return self.env.current_episode
+    def get_current_episode(self) -> HabitatNavigationEpisode:
+        return self.env.current_episode  # type: ignore
 
     # noinspection PyMethodMayBeStatic
     def start(self):

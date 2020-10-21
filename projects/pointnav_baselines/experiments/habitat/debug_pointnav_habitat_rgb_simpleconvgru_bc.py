@@ -46,7 +46,7 @@ class PointNavHabitatRGBDeterministiSimpleConvGRUImitationExperimentConfig(
         self.CONFIG = self.CONFIG.clone()
         self.CONFIG.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
 
-        self.TRAIN_CONFIGS = construct_env_configs(self.CONFIG)
+        self.TRAIN_CONFIGS = construct_env_configs(config=self.CONFIG, allow_scene_repeat=True)
 
     @classmethod
     def tag(cls):
@@ -82,7 +82,7 @@ class PointNavHabitatRGBDeterministiSimpleConvGRUImitationExperimentConfig(
                 PipelineStage(
                     loss_names=["imitation_loss"],
                     max_stage_steps=imitate_steps,
-                    # teacher_forcing=LinearDecay(steps=int(1e5), startp=1.0, endp=1.0,),
+                    # teacher_forcing=LinearDecay(steps=int(1e5), startp=1.0, endp=0.0,),
                 ),
             ],
             lr_scheduler_builder=Builder(

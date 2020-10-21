@@ -89,7 +89,7 @@ class RoboThorEnvironment:
                 self.controller, object_type, point
             )
         except:
-            get_logger().warning(
+            get_logger().debug(
                 "Failed to find path for {} in {}. Start point {}, agent state {}.".format(
                     object_type,
                     self.controller.last_event.metadata["sceneName"],
@@ -137,7 +137,7 @@ class RoboThorEnvironment:
                 # renderImage=False
             ).metadata["actionReturn"]["corners"]
         except:
-            get_logger().warning(
+            get_logger().debug(
                 "Failed to find path for {} in {}. Start point {}, agent state {}.".format(
                     target,
                     self.controller.last_event.metadata["sceneName"],

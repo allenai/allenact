@@ -83,6 +83,7 @@ class PointNavTask(Task[HabitatEnvironment]):
         sensors: List[Sensor],
         task_info: Dict[str, Any],
         max_steps: int,
+        failed_end_reward: float = 0.0,
         **kwargs
     ) -> None:
         super().__init__(
@@ -106,6 +107,7 @@ class PointNavTask(Task[HabitatEnvironment]):
 
         self._rewards: List[float] = []
         self._metrics = None
+        self.failed_end_reward = failed_end_reward
 
     def current_geodesic_dist_to_target(self) -> Optional[float]:
         metrics = self.env.env.get_metrics()
@@ -183,7 +185,7 @@ class PointNavTask(Task[HabitatEnvironment]):
             self.last_geodesic_distance = new_geodesic_distance
 
             if self.is_done():
-                reward += 10.0 if self._success else 0.0
+                reward += 10.0 if self._success else self.failed_end_reward
         else:
             get_logger().warning("Could not get geodesic distance from habitat env.")
 
@@ -292,7 +294,6 @@ class ObjectNavTask(HabitatTask):
             metrics = self.env.env.get_metrics()
 
         return metrics["distance_to_goal"]
-
 
     def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
         assert isinstance(action, int)

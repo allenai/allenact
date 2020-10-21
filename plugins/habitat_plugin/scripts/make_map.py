@@ -1,6 +1,16 @@
+import os
+
 import habitat
 import numpy as np
 from tqdm import tqdm
+
+from plugins.habitat_plugin.habitat_constants import (
+    HABITAT_CONFIGS_DIR,
+    HABITAT_DATA_BASE,
+    HABITAT_SCENE_DATASETS_DIR,
+    HABITAT_DATASETS_DIR,
+)
+from plugins.habitat_plugin.habitat_utils import get_habitat_config
 
 map_resolution = 0.05
 map_size = 960
@@ -15,18 +25,20 @@ def make_map(env, scene):
             vacancy_map[j, i] = env.sim.is_navigable([x, 0.0, z])
 
     np.save(
-        "habitat/habitat-api/data/map_data/pointnav/v1/gibson/data/" + scene,
+        os.path.join(HABITAT_DATA_BASE, "map_data/pointnav/v1/gibson/data/" + scene),
         vacancy_map,
     )
 
 
 def generate_maps():
-    config = habitat.get_config("habitat/habitat-api/configs/tasks/pointnav.yaml")
-    config.defrost()
-    config.DATASET.DATA_PATH = (
-        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
+    config = get_habitat_config(
+        os.path.join(HABITAT_CONFIGS_DIR, "tasks/pointnav.yaml")
     )
-    config.DATASET.SCENES_DIR = "habitat/habitat-api/data/scene_datasets/"
+    config.defrost()
+    config.DATASET.DATA_PATH = os.path.join(
+        HABITAT_DATASETS_DIR, "pointnav/gibson/v1/train/train.json.gz"
+    )
+    config.DATASET.SCENES_DIR = HABITAT_SCENE_DATASETS_DIR
     config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = 0
     config.freeze()
 

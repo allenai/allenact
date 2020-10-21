@@ -109,7 +109,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         elif dist > 0.2:
             return False
         else:
-            get_logger().warning(
+            get_logger().debug(
                 "No path for {} from {} to {}".format(
                     self.env.scene_name, self.env.agent_state(), tget
                 )

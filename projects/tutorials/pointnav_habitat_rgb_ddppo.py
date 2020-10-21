@@ -1,7 +1,7 @@
+import os
 from typing import Dict, Any, List, Optional
 
 import gym
-import habitat
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -13,13 +13,20 @@ from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from core.base_abstractions.experiment_config import ExperimentConfig
 from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
+from plugins.habitat_plugin.habitat_constants import (
+    HABITAT_DATASETS_DIR,
+    HABITAT_CONFIGS_DIR,
+)
 from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.habitat_plugin.habitat_sensors import (
     RGBSensorHabitat,
     TargetCoordinatesSensorHabitat,
 )
 from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
-from plugins.habitat_plugin.habitat_utils import construct_env_configs
+from plugins.habitat_plugin.habitat_utils import (
+    construct_env_configs,
+    get_habitat_config,
+)
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
@@ -27,8 +34,8 @@ from projects.pointnav_baselines.models.point_nav_models import (
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
-    """A Point Navigation experiment configuration in RoboThor."""
+class PointNavHabitatRGBPPOTutorialExperimentConfig(ExperimentConfig):
+    """A Point Navigation experiment configuration in Habitat."""
 
     # Task Parameters
     MAX_STEPS = 500
@@ -38,6 +45,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         "failed_stop_reward": 0.0,
         "shaping_weight": 1.0,
     }
+    DISTANCE_TO_GOAL = 0.2
 
     # Simulator Parameters
     CAMERA_WIDTH = 640
@@ -46,22 +54,21 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     # Training Engine Parameters
     ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
-    NUM_PROCESSES = 80
+    NUM_PROCESSES = max(5 * torch.cuda.device_count() - 1, 4)
     TRAINING_GPUS = list(range(torch.cuda.device_count()))
     VALIDATION_GPUS = [torch.cuda.device_count() - 1]
     TESTING_GPUS = [torch.cuda.device_count() - 1]
 
-    TRAIN_SCENES = (
-        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/train/train.json.gz"
+    task_data_dir_template = os.path.join(
+        HABITAT_DATASETS_DIR, "pointnav/gibson/v1/{}/{}.json.gz"
     )
-    VALID_SCENES = (
-        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/val/val.json.gz"
-    )
-    TEST_SCENES = (
-        "habitat/habitat-api/data/datasets/pointnav/gibson/v1/test/test.json.gz"
-    )
+    TRAIN_SCENES = task_data_dir_template.format(*(["train"] * 2))
+    VALID_SCENES = task_data_dir_template.format(*(["val"] * 2))
+    TEST_SCENES = task_data_dir_template.format(*(["test"] * 2))
 
-    CONFIG = habitat.get_config("configs/gibson.yaml")
+    CONFIG = get_habitat_config(
+        os.path.join(HABITAT_CONFIGS_DIR, "tasks/pointnav_gibson.yaml")
+    )
     CONFIG.defrost()
     CONFIG.NUM_PROCESSES = NUM_PROCESSES
     CONFIG.SIMULATOR_GPU_IDS = TRAINING_GPUS
@@ -76,15 +83,15 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS = MAX_STEPS
 
     CONFIG.TASK.TYPE = "Nav-v0"
-    CONFIG.TASK.SUCCESS_DISTANCE = 0.2
+    CONFIG.TASK.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
     CONFIG.TASK.SENSORS = ["POINTGOAL_WITH_GPS_COMPASS_SENSOR"]
     CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.GOAL_FORMAT = "POLAR"
     CONFIG.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.DIMENSIONALITY = 2
     CONFIG.TASK.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
     CONFIG.TASK.MEASUREMENTS = ["DISTANCE_TO_GOAL", "SUCCESS", "SPL"]
     CONFIG.TASK.SPL.TYPE = "SPL"
-    CONFIG.TASK.SPL.SUCCESS_DISTANCE = 0.2
-    CONFIG.TASK.SUCCESS.SUCCESS_DISTANCE = 0.2
+    CONFIG.TASK.SPL.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
+    CONFIG.TASK.SUCCESS.SUCCESS_DISTANCE = DISTANCE_TO_GOAL
 
     CONFIG.MODE = "train"
 
@@ -276,11 +283,4 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        config = self.TEST_CONFIGS[process_ind]  # type:ignore
-        return {
-            "env_config": config,
-            "max_steps": self.MAX_STEPS,
-            "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
-            "distance_to_goal": self.DISTANCE_TO_GOAL,  # type:ignore
-        }
+        raise NotImplementedError("Testing not implemented for this tutorial.")

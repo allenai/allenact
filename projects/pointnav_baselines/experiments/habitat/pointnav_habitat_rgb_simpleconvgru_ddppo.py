@@ -5,18 +5,18 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from projects.pointnav_baselines.experiments.habitat.pointnav_habitat_base import (
-    PointNavHabitatBaseConfig,
-)
-from projects.pointnav_baselines.models.point_nav_models import (
-    PointNavActorCriticSimpleConvRNN,
-)
 from plugins.habitat_plugin.habitat_sensors import (
     RGBSensorHabitat,
     TargetCoordinatesSensorHabitat,
 )
 from plugins.habitat_plugin.habitat_tasks import PointNavTask
 from plugins.habitat_plugin.habitat_utils import construct_env_configs
+from projects.pointnav_baselines.experiments.habitat.pointnav_habitat_base import (
+    PointNavHabitatBaseConfig,
+)
+from projects.pointnav_baselines.models.point_nav_models import (
+    PointNavActorCriticSimpleConvRNN,
+)
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -47,7 +47,7 @@ class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(
         self.CONFIG = self.CONFIG.clone()
         self.CONFIG.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
 
-        self.TRAIN_CONFIGS = construct_env_configs(self.CONFIG)
+        self.TRAIN_CONFIGS = construct_env_configs(config=self.CONFIG)
 
     @classmethod
     def tag(cls):
@@ -56,10 +56,10 @@ class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(
     @classmethod
     def training_pipeline(cls, **kwargs):
         ppo_steps = int(75000000)
-        lr = 3e-4
+        lr = cls.LR
         num_mini_batch = 1
         update_repeats = 3
-        num_steps = 30
+        num_steps = cls.NUM_STEPS
         save_interval = 5000000
         log_interval = 10000
         gamma = 0.99
