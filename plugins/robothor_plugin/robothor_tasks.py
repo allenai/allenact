@@ -396,12 +396,21 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         if end_action_only:
             return 0, False
         else:
-            self.env.step(
-                {
-                    "action": "ObjectNavExpertAction",
-                    "objectType": self.task_info["object_type"],
-                }
-            )
+            try:
+                self.env.step(
+                    {
+                        "action": "ObjectNavExpertAction",
+                        "objectType": self.task_info["object_type"],
+                    }
+                )
+            except ValueError:
+                raise RuntimeError(
+                    "Attempting to use the action `ObjectNavExpertAction` which is not supported by your version of"
+                    " AI2-THOR. The action `ObjectNavExpertAction` is experimental. In order"
+                    " to enable this action, please install the (in development) version of AI2-THOR. Through pip"
+                    " this can be done with the command"
+                    " `pip install -e git+https://github.com/allenai/ai2thor.git@7d914cec13aae62298f5a6a816adb8ac6946c61f#egg=ai2thor`."
+                )
             if self.env.last_action_success:
                 expert_action: Optional[str] = self.env.last_event.metadata[
                     "actionReturn"
