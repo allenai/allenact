@@ -99,7 +99,7 @@ class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(
         return PointNavActorCriticSimpleConvRNN(
             action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
-            rgb_uuid=None,
+            rgb_uuid="rgb",
             depth_uuid="depth",
             goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
