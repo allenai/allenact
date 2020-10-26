@@ -40,13 +40,13 @@ class SimpleCNN(nn.Module):
         self,
         observation_space: SpaceDict,
         output_size: int,
+        rgb_uuid: Optional[str],
+        depth_uuid: Optional[str],
         layer_channels: Sequence[int] = (32, 64, 32),
         kernel_sizes: Sequence[Tuple[int, int]] = ((8, 8), (4, 4), (3, 3)),
         layers_stride: Sequence[Tuple[int, int]] = ((4, 4), (2, 2), (1, 1)),
         paddings: Sequence[Tuple[int, int]] = ((0, 0), (0, 0), (0, 0)),
         dilations: Sequence[Tuple[int, int]] = ((1, 1), (1, 1), (1, 1)),
-        rgb_uuid: str = "rgb",
-        depth_uuid: str = "depth",
         flatten: bool = True,
         output_relu: bool = True,
     ):
@@ -60,14 +60,16 @@ class SimpleCNN(nn.Module):
         super().__init__()
 
         self.rgb_uuid = rgb_uuid
-        if self.rgb_uuid in observation_space.spaces:
+        if self.rgb_uuid is not None:
+            assert self.rgb_uuid in observation_space.spaces
             self._n_input_rgb = observation_space.spaces[self.rgb_uuid].shape[2]
             assert self._n_input_rgb >= 0
         else:
             self._n_input_rgb = 0
 
         self.depth_uuid = depth_uuid
-        if self.depth_uuid in observation_space.spaces:
+        if self.depth_uuid is not None:
+            assert self.depth_uuid in observation_space.spaces
             self._n_input_depth = observation_space.spaces[self.depth_uuid].shape[2]
             assert self._n_input_depth >= 0
         else:
@@ -219,13 +221,13 @@ class SimpleCNN(nn.Module):
         cnn_output_list: List[torch.Tensor] = []
         use_agent: Optional[bool] = None
 
-        if self._n_input_rgb > 0:
+        if self.rgb_uuid is not None:
             use_agent = check_use_agent(len(observations[self.rgb_uuid]) == 6)
             cnn_output_list.append(
                 compute_cnn_output(self.rgb_cnn, observations[self.rgb_uuid])
             )
 
-        if self._n_input_depth > 0:
+        if self.depth_uuid is not None:
             use_agent = check_use_agent(len(observations[self.depth_uuid]) == 6)
             cnn_output_list.append(
                 compute_cnn_output(self.depth_cnn, observations[self.depth_uuid])

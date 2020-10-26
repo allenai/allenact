@@ -360,9 +360,9 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
     ) -> Any:
         im = self.frame_from_env(env)
-        assert (im.shape[-1] == 1 and im.dtype == np.float32) or (
-            im.shape[-1] == 3 and im.dtype == np.uint8
-        ), (
+        assert (
+            im.dtype == np.float32 and (len(im.shape) == 2 or im.shape[-1] == 1)
+        ) or (im.shape[-1] == 3 and im.dtype == np.uint8), (
             "Input frame must either have 3 channels and be of"
             " type np.uint8 or have one channel and be of type np.float32"
         )

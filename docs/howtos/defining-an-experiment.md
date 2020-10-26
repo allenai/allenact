@@ -80,6 +80,8 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
         return ObjectNavBaselineActorCritic(
             action_space=gym.spaces.Discrete(len(ObjectNavTask.class_action_names())),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
+            rgb_uuid=cls.SENSORS[0].uuid,
+            depth_uuid=None,
             goal_sensor_uuid="goal_object_type_ind",
             hidden_size=512,
             object_type_embedding_dim=8,

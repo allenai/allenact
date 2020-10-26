@@ -30,7 +30,7 @@ tensorboard = "*"
 torch = "~=1.4.0"
 ai2thor = {editable = true,git = "https://github.com/allenai/ai2thor.git",ref = "ExpRoom"}
 networkx = "*"
-Pillow = "==7.2.0"
+Pillow = "<7.0.0"
 setuptools = "*"
 setproctitle = "*"
 moviepy = "*"
