@@ -38,6 +38,8 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         action_space: gym.spaces.Discrete,
         observation_space: SpaceDict,
         goal_sensor_uuid: str,
+        rgb_uuid: Optional[str],
+        depth_uuid: Optional[str],
         hidden_size=512,
         object_type_embedding_dim=8,
         trainable_masked_hidden_state: bool = False,
@@ -55,7 +57,12 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         self._hidden_size = hidden_size
         self.object_type_embedding_size = object_type_embedding_dim
 
-        self.visual_encoder = SimpleCNN(self.observation_space, self._hidden_size)
+        self.visual_encoder = SimpleCNN(
+            observation_space=self.observation_space,
+            output_size=self._hidden_size,
+            rgb_uuid=rgb_uuid,
+            depth_uuid=depth_uuid,
+        )
 
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self._hidden_size) + object_type_embedding_dim,
@@ -107,6 +114,7 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
+        # noinspection PyTypeChecker
         return self.object_type_embedding(  # type:ignore
             observations[self.goal_sensor_uuid].to(torch.int64)
         )

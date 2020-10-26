@@ -5,15 +5,15 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
+from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
+from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from projects.pointnav_baselines.experiments.robothor.pointnav_robothor_base import (
     PointNavRoboThorBaseConfig,
 )
 from projects.pointnav_baselines.models.point_nav_models import (
     PointNavActorCriticSimpleConvRNN,
 )
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
-from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
-from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -83,6 +83,8 @@ class PointNavRoboThorRGBPPOExperimentConfig(PointNavRoboThorBaseConfig):
         return PointNavActorCriticSimpleConvRNN(
             action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
+            rgb_uuid="rgb",
+            depth_uuid=None,
             goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
             embed_coordinates=False,

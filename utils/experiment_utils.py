@@ -408,12 +408,6 @@ class PipelineStage(object):
         reference the `Loss` objects in a `TrainingPipeline` instance.
     max_stage_steps : Either the total number of steps agents should take in this stage or
         a Callable object (e.g. a function)
-    early_stopping_criterion: An `EarlyStoppingCriterion` object which determines if
-        training in this stage should be stopped early. If `None` then no early stopping
-        occurs. If `early_stopping_criterion` is not `None` then we do not guarantee
-        reproducibility when restarting a model from a checkpoint (as the
-         `EarlyStoppingCriterion` object may store internal state which is not
-         saved in the checkpoint).
     loss_weights : A list of floating point numbers describing the relative weights
         applied to the losses referenced by `loss_name`. Should be the same length
         as `loss_name`. If this is `None`, all weights will be assumed to be one.
@@ -425,14 +419,21 @@ class PipelineStage(object):
         self,
         loss_names: List[str],
         max_stage_steps: Union[int, Callable],
-        early_stopping_criterion: Optional[EarlyStoppingCriterion] = None,
         loss_weights: Optional[typing.Sequence[float]] = None,
         teacher_forcing: Optional[LinearDecay] = None,
         offpolicy_component: Optional[OffPolicyPipelineComponent] = None,
     ):
         self.loss_names = loss_names
         self.max_stage_steps = max_stage_steps
-        self.early_stopping_criterion = early_stopping_criterion
+        # TODO: The early stopping criterion is currently disabled. Should be reenabled to work with
+        #   distributed training.
+        self.early_stopping_criterion = None
+        #     early_stopping_criterion: An `EarlyStoppingCriterion` object which determines if
+        #         training in this stage should be stopped early. If `None` then no early stopping
+        #         occurs. If `early_stopping_criterion` is not `None` then we do not guarantee
+        #         reproducibility when restarting a model from a checkpoint (as the
+        #          `EarlyStoppingCriterion` object may store internal state which is not
+        #          saved in the checkpoint).
         self.loss_weights = loss_weights
         self.teacher_forcing = teacher_forcing
         self.offpolicy_component = offpolicy_component
@@ -616,7 +617,10 @@ class TrainingPipeline(object):
         return self.pipeline_stages.index(self.current_stage)
 
     def before_rollout(self, train_valid_metrics: Optional[Dict] = None):
-        if train_valid_metrics is not None:
+        if (
+            train_valid_metrics is not None
+            and self.current_stage.early_stopping_criterion is not None
+        ):
             self.current_stage.early_stopping_criterion_met = self.current_stage.early_stopping_criterion(
                 stage_steps=self.current_stage.steps_taken_in_stage,
                 total_steps=self.total_steps,

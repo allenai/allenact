@@ -23,6 +23,8 @@ class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
         self,
         action_space: gym.spaces.Discrete,
         observation_space: SpaceDict,
+        rgb_uuid: Optional[str],
+        depth_uuid: Optional[str],
         goal_sensor_uuid: str,
         hidden_size=512,
         embed_coordinates=False,
@@ -46,7 +48,12 @@ class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
             self.sensor_fuser = nn.Linear(hidden_size * 2, hidden_size)
             self.sensor_fusion = True
 
-        self.visual_encoder = SimpleCNN(observation_space, hidden_size)
+        self.visual_encoder = SimpleCNN(
+            observation_space=observation_space,
+            output_size=hidden_size,
+            rgb_uuid=rgb_uuid,
+            depth_uuid=depth_uuid,
+        )
 
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self.recurrent_hidden_state_size)

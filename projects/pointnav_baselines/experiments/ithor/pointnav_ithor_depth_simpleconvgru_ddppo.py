@@ -88,6 +88,8 @@ class PointNaviThorRGBPPOExperimentConfig(PointNaviThorBaseConfig):
         return PointNavActorCriticSimpleConvRNN(
             action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
+            rgb_uuid=None,
+            depth_uuid="depth_lowres",
             goal_sensor_uuid="target_coordinates_ind",
             hidden_size=512,
             embed_coordinates=False,
