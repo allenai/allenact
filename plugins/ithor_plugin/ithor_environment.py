@@ -4,9 +4,8 @@ import copy
 import functools
 import math
 import random
-import typing
 import warnings
-from typing import Tuple, Dict, List, Set, Union, Any, Optional, Mapping
+from typing import Tuple, Dict, List, Set, Union, Any, Optional, Mapping, cast
 
 import ai2thor.server
 import networkx as nx
@@ -644,7 +643,7 @@ class IThorEnvironment(object):
         self, action_dict: Dict[str, Union[str, int, float]]
     ) -> ai2thor.server.Event:
         """Take a step in the ai2thor environment."""
-        action = typing.cast(str, action_dict["action"])
+        action = cast(str, action_dict["action"])
 
         skip_render = "renderImage" in action_dict and not action_dict["renderImage"]
         last_frame: Optional[np.ndarray] = None

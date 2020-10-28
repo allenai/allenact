@@ -8,12 +8,12 @@ from torch import nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from plugins.minigrid_plugin.minigrid_models import MiniGridSimpleConvRNN
-from plugins.minigrid_plugin.minigrid_sensors import EgocentricMiniGridSensor
-from plugins.minigrid_plugin.minigrid_tasks import MiniGridTaskSampler, MiniGridTask
 from core.algorithms.onpolicy_sync.losses.ppo import PPO, PPOConfig
 from core.base_abstractions.experiment_config import ExperimentConfig, TaskSampler
 from core.base_abstractions.sensor import SensorSuite
+from plugins.minigrid_plugin.minigrid_models import MiniGridSimpleConvRNN
+from plugins.minigrid_plugin.minigrid_sensors import EgocentricMiniGridSensor
+from plugins.minigrid_plugin.minigrid_tasks import MiniGridTaskSampler, MiniGridTask
 from utils.experiment_utils import TrainingPipeline, Builder, PipelineStage, LinearDecay
 
 

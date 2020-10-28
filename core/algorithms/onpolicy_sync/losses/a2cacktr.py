@@ -1,6 +1,5 @@
 """Implementation of A2C and ACKTR losses."""
-import typing
-from typing import Tuple, Dict, Optional
+from typing import cast, Tuple, Dict, Optional
 
 import torch
 
@@ -41,22 +40,19 @@ class A2CACKTR(AbstractActorCriticLoss):
         batch: ObservationType,
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
     ) -> Dict[str, Tuple[torch.Tensor, Optional[float]]]:
-        actions = typing.cast(torch.LongTensor, batch["actions"])
+        actions = cast(torch.LongTensor, batch["actions"])
         values = actor_critic_output.values
         action_log_probs = actor_critic_output.distributions.log_probs(actions)
 
         dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy().unsqueeze(
             -1
         )
-        value_loss = 0.5 * (
-            typing.cast(torch.FloatTensor, batch["returns"]) - values
-        ).pow(2)
+        value_loss = 0.5 * (cast(torch.FloatTensor, batch["returns"]) - values).pow(2)
 
         # TODO: Decided not to use normalized advantages here,
         #   is this correct? (it's how it's done in Kostrikov's)
         action_loss = -(
-            typing.cast(torch.FloatTensor, batch["adv_targ"]).detach()
-            * action_log_probs
+            cast(torch.FloatTensor, batch["adv_targ"]).detach() * action_log_probs
         )
 
         if self.acktr:
@@ -86,7 +82,7 @@ class A2CACKTR(AbstractActorCriticLoss):
             for (key, (loss, weight)) in losses_per_step.items()
         }
 
-        total_loss = typing.cast(
+        total_loss = cast(
             torch.Tensor,
             sum(
                 loss * weight if weight is not None else loss

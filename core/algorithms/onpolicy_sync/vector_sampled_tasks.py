@@ -4,7 +4,6 @@
 # LICENSE file in the root directory of this source tree.
 import time
 import traceback
-import typing
 from multiprocessing.connection import Connection
 from multiprocessing.context import BaseContext
 from multiprocessing.process import BaseProcess
@@ -20,6 +19,8 @@ from typing import (
     Union,
     Dict,
     Generator,
+    Iterator,
+    cast,
 )
 
 import numpy as np
@@ -132,7 +133,7 @@ class VectorSampledTasks(object):
             ).format(self._valid_start_methods, multiprocessing_start_method)
             self._mp_ctx = mp.get_context(multiprocessing_start_method)
         else:
-            self._mp_ctx = typing.cast(BaseContext, mp_ctx)
+            self._mp_ctx = cast(BaseContext, mp_ctx)
 
         self.npaused_per_process = [0] * self._num_processes
         self.sampler_index_to_process_ind_and_subprocess_ind: Optional[
@@ -192,7 +193,7 @@ class VectorSampledTasks(object):
             for j in range(len(part))
         ]
 
-    def _partition_to_processes(self, seq: Union[typing.Iterator, typing.Sequence]):
+    def _partition_to_processes(self, seq: Union[Iterator, Sequence]):
         subparts_list: List[List] = [[] for _ in range(self._num_processes)]
 
         seq = list(seq)

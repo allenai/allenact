@@ -1,8 +1,6 @@
 """Defining the PPO loss for actor critic type models."""
 
-import typing
-from typing import Dict, Union
-from typing import Optional, Callable
+from typing import Dict, Optional, Callable, cast, Tuple
 
 import torch
 
@@ -10,8 +8,8 @@ from core.algorithms.onpolicy_sync.losses.abstract_loss import (
     AbstractActorCriticLoss,
     ObservationType,
 )
-from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
+from core.base_abstractions.misc import ActorCriticOutput
 
 
 class PPO(AbstractActorCriticLoss):
@@ -51,9 +49,9 @@ class PPO(AbstractActorCriticLoss):
         step_count: int,
         batch: ObservationType,
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
-    ) -> Dict[str, typing.Tuple[torch.Tensor, Optional[float]]]:
+    ) -> Dict[str, Tuple[torch.Tensor, Optional[float]]]:
 
-        actions = typing.cast(torch.LongTensor, batch["actions"])
+        actions = cast(torch.LongTensor, batch["actions"])
         values = actor_critic_output.values
         dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy().unsqueeze(
             -1
@@ -78,9 +76,9 @@ class PPO(AbstractActorCriticLoss):
             value_losses_clipped = (value_pred_clipped - batch["returns"]).pow(2)
             value_loss = 0.5 * torch.max(value_losses, value_losses_clipped)
         else:
-            value_loss = 0.5 * (
-                typing.cast(torch.FloatTensor, batch["returns"]) - values
-            ).pow(2)
+            value_loss = 0.5 * (cast(torch.FloatTensor, batch["returns"]) - values).pow(
+                2
+            )
 
         # noinspection PyUnresolvedReferences
         return {
@@ -113,7 +111,7 @@ class PPO(AbstractActorCriticLoss):
         return (
             total_loss,
             {
-                "ppo_total": typing.cast(torch.Tensor, total_loss).item(),
+                "ppo_total": cast(torch.Tensor, total_loss).item(),
                 **{key: loss.item() for key, (loss, _) in losses.items()},
             },
         )
@@ -165,10 +163,7 @@ class PPOValue(AbstractActorCriticLoss):
             value_loss = 0.5 * torch.max(value_losses, value_losses_clipped).mean()
         else:
             value_loss = (
-                0.5
-                * (typing.cast(torch.FloatTensor, batch["returns"]) - values)
-                .pow(2)
-                .mean()
+                0.5 * (cast(torch.FloatTensor, batch["returns"]) - values).pow(2).mean()
             )
 
         return (

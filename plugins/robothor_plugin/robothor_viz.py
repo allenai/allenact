@@ -2,8 +2,8 @@ import copy
 import json
 import math
 import os
-from typing import Tuple, Sequence, Union, Dict, Optional, Any, cast, Generator, List
 from pathlib import Path
+from typing import Tuple, Sequence, Union, Dict, Optional, Any, cast, Generator, List
 
 import cv2
 import numpy as np
@@ -14,7 +14,6 @@ from matplotlib.figure import Figure
 
 from utils.system import get_logger
 from utils.viz_utils import TrajectoryViz
-
 
 ROBOTHOR_VIZ_CACHED_TOPDOWN_VIEWS_DIR = os.path.abspath(
     os.path.join(os.path.dirname(Path(__file__)), "data", "topdown")

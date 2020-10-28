@@ -1,4 +1,3 @@
-import typing
 from typing import Dict, Optional, List, cast, Tuple
 
 import babyai.model
@@ -302,7 +301,7 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         _, nsamplers, _ = recurrent_hidden_states.shape
         rollouts_len = images.shape[0] // nsamplers
 
-        masks = typing.cast(
+        masks = cast(
             torch.FloatTensor, masks.view(rollouts_len, nsamplers, *masks.shape[1:])
         )
         instrs: Optional[torch.Tensor] = None

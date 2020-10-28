@@ -1,4 +1,3 @@
-# TODO: @klemenkotar please fix all type errors
 import glob
 import os
 import shutil

@@ -1,5 +1,4 @@
-import typing
-from typing import Tuple, Dict, Union, Sequence, Optional
+from typing import Tuple, Dict, Union, Sequence, Optional, cast
 
 import gym
 import torch
@@ -84,7 +83,7 @@ class ResnetTensorGoalEncoder(nn.Module):
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
-        return typing.cast(
+        return cast(
             torch.FloatTensor,
             self.embed_class(observations[self.goal_uuid].to(torch.int64)),
         )
@@ -336,7 +335,7 @@ class ResnetFasterRCNNTensorsGoalEncoder(nn.Module):
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
-        return typing.cast(
+        return cast(
             torch.FloatTensor,
             self.embed_class(observations[self.goal_uuid].to(torch.int64)),
         )

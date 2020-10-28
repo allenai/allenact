@@ -1,11 +1,12 @@
 from typing import Dict, Any
 
+import torch.multiprocessing as mp
 from torch import nn
 
 from core.base_abstractions.experiment_config import ExperimentConfig
 from core.base_abstractions.task import TaskSampler
 from utils.experiment_utils import TrainingPipeline
-import torch.multiprocessing as mp
+
 
 # noinspection PyAbstractClass,PyTypeChecker
 class MyConfig(ExperimentConfig):

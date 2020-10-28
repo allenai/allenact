@@ -1,4 +1,3 @@
-import typing
 from typing import Optional, Tuple, cast
 
 import gym
@@ -83,7 +82,7 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
         return (
             ActorCriticOutput(
                 distributions=CategoricalDistr(logits=main_logits),
-                values=typing.cast(torch.FloatTensor, values),
+                values=cast(torch.FloatTensor, values),
                 extras={
                     "auxiliary_distributions": CategoricalDistr(logits=aux_logits),
                 },

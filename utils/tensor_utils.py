@@ -3,9 +3,8 @@
 import numbers
 import os
 import tempfile
-import typing
 from collections import defaultdict
-from typing import List, Dict, Optional, DefaultDict, Union, Any
+from typing import List, Dict, Optional, DefaultDict, Union, Any, cast
 
 import PIL
 import numpy as np
@@ -177,7 +176,7 @@ def batch_observations(
                 )
 
     if len(observations) == 0:
-        return typing.cast(Dict[str, Union[Dict, torch.Tensor]], observations)
+        return cast(Dict[str, Union[Dict, torch.Tensor]], observations)
 
     batch = dict_from_observation(observations[0])
 
@@ -186,7 +185,7 @@ def batch_observations(
 
     dict_to_batch(batch)
 
-    return typing.cast(Dict[str, Union[Dict, torch.Tensor]], batch)
+    return cast(Dict[str, Union[Dict, torch.Tensor]], batch)
 
 
 def to_tensor(v) -> torch.Tensor:

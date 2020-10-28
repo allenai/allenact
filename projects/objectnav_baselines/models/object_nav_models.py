@@ -3,7 +3,6 @@
 Object navigation is currently available as a Task in AI2-THOR and
 Facebook's Habitat.
 """
-import typing
 from typing import Tuple, Dict, Optional, cast
 
 import gym
@@ -341,7 +340,7 @@ class ResnetTensorGoalEncoder(nn.Module):
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
-        return typing.cast(
+        return cast(
             torch.FloatTensor,
             self.embed_class(observations[self.goal_uuid].to(torch.int64)),
         )
@@ -476,7 +475,7 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
-        return typing.cast(
+        return cast(
             torch.FloatTensor,
             self.embed_class(observations[self.goal_uuid].to(torch.int64)),
         )

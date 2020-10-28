@@ -1,7 +1,6 @@
 """Defining imitation losses for actor critic type models."""
 
-import typing
-from typing import Dict
+from typing import Dict, cast
 
 import torch
 
@@ -9,8 +8,8 @@ from core.algorithms.onpolicy_sync.losses.abstract_loss import (
     AbstractActorCriticLoss,
     ObservationType,
 )
-from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
+from core.base_abstractions.misc import ActorCriticOutput
 
 
 class Imitation(AbstractActorCriticLoss):
@@ -43,7 +42,7 @@ class Imitation(AbstractActorCriticLoss):
         A (0-dimensional) torch.FloatTensor corresponding to the computed loss. `.backward()` will be called on this
         tensor in order to compute a gradient update to the ActorCriticModel's parameters.
         """
-        observations = typing.cast(Dict[str, torch.Tensor], batch["observations"])
+        observations = cast(Dict[str, torch.Tensor], batch["observations"])
 
         if "expert_action" in observations:
             expert_actions_and_mask = observations["expert_action"]
@@ -69,15 +68,15 @@ class Imitation(AbstractActorCriticLoss):
             total_loss = -(
                 expert_actions_masks
                 * actor_critic_output.distributions.log_probs(
-                    typing.cast(torch.LongTensor, expert_actions)
+                    cast(torch.LongTensor, expert_actions)
                 )
             ).sum() / torch.clamp(expert_successes, min=1)
         # # TODO fix+test for expert_policy
         # elif "expert_policy" in observations:
-        #     expert_policies = typing.cast(
+        #     expert_policies = cast(
         #         Dict[str, torch.Tensor], batch["observations"]
         #     )["expert_policy"][..., :-1]
-        #     expert_actions_masks = typing.cast(
+        #     expert_actions_masks = cast(
         #         Dict[str, torch.Tensor], batch["observations"]
         #     )["expert_policy"][..., -1:]
         #

@@ -2,12 +2,12 @@
 
 import abc
 import typing
-from typing import Dict, Union, Tuple
+from typing import Dict, Tuple
 
 import torch
 
-from core.base_abstractions.misc import Loss, Memory
 from core.algorithms.onpolicy_sync.policy import ObservationType
+from core.base_abstractions.misc import Loss, Memory
 
 ModelType = typing.TypeVar("ModelType")
 

@@ -11,8 +11,8 @@ import torch
 from gym.spaces.dict import Dict as SpaceDict
 from torch import nn
 
-from core.base_abstractions.misc import ActorCriticOutput, Memory
 from core.base_abstractions.distributions import CategoricalDistr
+from core.base_abstractions.misc import ActorCriticOutput, Memory
 
 DistributionType = TypeVar("DistributionType")
 

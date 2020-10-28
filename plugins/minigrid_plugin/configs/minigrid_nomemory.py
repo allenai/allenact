@@ -3,10 +3,10 @@
 import gym
 from torch import nn
 
-from plugins.minigrid_plugin.minigrid_models import MiniGridSimpleConv
-from projects.tutorials.minigrid_tutorial import MiniGridTutorialExperimentConfig
-from plugins.minigrid_plugin.minigrid_tasks import MiniGridTask
 from core.base_abstractions.sensor import SensorSuite
+from plugins.minigrid_plugin.minigrid_models import MiniGridSimpleConv
+from plugins.minigrid_plugin.minigrid_tasks import MiniGridTask
+from projects.tutorials.minigrid_tutorial import MiniGridTutorialExperimentConfig
 
 
 class MiniGridNoMemoryExperimentConfig(MiniGridTutorialExperimentConfig):

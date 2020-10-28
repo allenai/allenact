@@ -1,5 +1,4 @@
-import typing
-from typing import Tuple, Dict, Optional, Union, List
+from typing import Tuple, Dict, Optional, Union, List, cast
 
 import gym
 import torch
@@ -297,7 +296,7 @@ class ResnetTensorGoalEncoder(nn.Module):
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
-        return typing.cast(
+        return cast(
             torch.FloatTensor,
             self.embed_goal(observations[self.goal_uuid].to(torch.int64)),
         )
@@ -429,7 +428,7 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
-        return typing.cast(
+        return cast(
             torch.FloatTensor,
             self.embed_goal(observations[self.goal_uuid].to(torch.int64)),
         )

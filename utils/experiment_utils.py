@@ -128,7 +128,7 @@ class Builder(tuple, typing.Generic[ToBuildType]):
         allkwargs = copy.deepcopy(self.default)
         recursive_update(allkwargs, self.kwargs)
         recursive_update(allkwargs, kwargs)
-        return typing.cast(Callable, self.class_type)(**allkwargs)
+        return cast(Callable, self.class_type)(**allkwargs)
 
 
 class ScalarMeanTracker(object):
@@ -147,7 +147,7 @@ class ScalarMeanTracker(object):
 
         scalars : A dictionary of `scalar key -> value` pairs.
         """
-        ndict = typing.cast(
+        ndict = cast(
             Dict[str, int], (n if isinstance(n, Dict) else defaultdict(lambda: n))  # type: ignore
         )
 
@@ -668,7 +668,7 @@ class TrainingPipeline(object):
         if self.current_stage.named_losses is None:
             for loss_name in self.current_stage.loss_names:
                 if isinstance(self.named_losses[loss_name], Builder):
-                    self.named_losses[loss_name] = typing.cast(
+                    self.named_losses[loss_name] = cast(
                         Builder["AbstractActorCriticLoss"],
                         self.named_losses[loss_name],
                     )()
@@ -685,7 +685,7 @@ class TrainingPipeline(object):
         if self.current_stage.offpolicy_named_losses is None:
             for loss_name in self.current_stage.offpolicy_component.loss_names:
                 if isinstance(self.named_losses[loss_name], Builder):
-                    self.named_losses[loss_name] = typing.cast(
+                    self.named_losses[loss_name] = cast(
                         Builder["AbstractOffPolicyLoss"], self.named_losses[loss_name],
                     )()
 

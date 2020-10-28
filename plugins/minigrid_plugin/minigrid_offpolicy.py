@@ -1,13 +1,13 @@
 import os
 import queue
-from collections import defaultdict
 import random
+from collections import defaultdict
 from typing import Dict, Tuple, Any, cast, Iterator, List, Union, Optional
 
+import babyai
 import numpy as np
 import torch
 from gym_minigrid.minigrid import MiniGridEnv
-import babyai
 
 from core.algorithms.offpolicy_sync.losses.abstract_offpolicy_loss import (
     AbstractOffPolicyLoss,

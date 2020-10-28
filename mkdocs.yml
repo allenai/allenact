@@ -122,6 +122,7 @@ nav:
       - ithor_sensors: api/plugins/ithor_plugin/ithor_sensors.md
       - scripts:
         - make_objectnav_debug_dataset: api/plugins/ithor_plugin/scripts/make_objectnav_debug_dataset.md
+        - make_pointnav_debug_dataset: api/plugins/ithor_plugin/scripts/make_pointnav_debug_dataset.md
       - ithor_task_samplers: api/plugins/ithor_plugin/ithor_task_samplers.md
     - robothor_plugin:
       - robothor_preprocessors: api/plugins/robothor_plugin/robothor_preprocessors.md
@@ -133,15 +134,14 @@ nav:
       - configs:
         - resnet18_objectnav: api/plugins/robothor_plugin/configs/resnet18_objectnav.md
         - debug_objectnav_robothor_rgb_ddppo: api/plugins/robothor_plugin/configs/debug_objectnav_robothor_rgb_ddppo.md
-        - simple_pointnav: api/plugins/robothor_plugin/configs/simple_pointnav.md
         - resnet18_pointnav: api/plugins/robothor_plugin/configs/resnet18_pointnav.md
         - pointnav_base: api/plugins/robothor_plugin/configs/pointnav_base.md
         - resnet18_nav_base: api/plugins/robothor_plugin/configs/resnet18_nav_base.md
         - nav_base: api/plugins/robothor_plugin/configs/nav_base.md
-        - simple_objectnav: api/plugins/robothor_plugin/configs/simple_objectnav.md
         - objectnav_base: api/plugins/robothor_plugin/configs/objectnav_base.md
       - scripts:
         - make_objectnav_debug_dataset: api/plugins/robothor_plugin/scripts/make_objectnav_debug_dataset.md
+        - make_pointnav_debug_dataset: api/plugins/robothor_plugin/scripts/make_pointnav_debug_dataset.md
       - robothor_sensors: api/plugins/robothor_plugin/robothor_sensors.md
       - robothor_viz: api/plugins/robothor_plugin/robothor_viz.md
     - minigrid_plugin:

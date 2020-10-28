@@ -5,8 +5,9 @@ from typing import Dict, Tuple, List, Any, Optional, Union, Sequence, cast
 import gym
 import numpy as np
 
-from plugins.ithor_plugin.ithor_environment import IThorEnvironment
-from plugins.ithor_plugin.ithor_util import round_to_factor
+from core.base_abstractions.misc import RLStepResult
+from core.base_abstractions.sensor import Sensor
+from core.base_abstractions.task import Task
 from plugins.ithor_plugin.ithor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
@@ -15,9 +16,8 @@ from plugins.ithor_plugin.ithor_constants import (
     LOOK_UP,
     END,
 )
-from core.base_abstractions.misc import RLStepResult
-from core.base_abstractions.sensor import Sensor
-from core.base_abstractions.task import Task
+from plugins.ithor_plugin.ithor_environment import IThorEnvironment
+from plugins.ithor_plugin.ithor_util import round_to_factor
 
 
 class ObjectNavTask(Task[IThorEnvironment]):

@@ -5,10 +5,8 @@ import queue
 import random
 import time
 import traceback
-import typing
 from collections import defaultdict
 from multiprocessing.context import BaseContext
-from queue import Empty
 from typing import (
     Optional,
     Any,
@@ -28,7 +26,6 @@ import torch.multiprocessing as mp  # type: ignore
 import torch.optim
 from torch import nn
 from torch import optim
-
 # noinspection PyProtectedMember
 from torch.optim.lr_scheduler import _LRScheduler
 
@@ -157,14 +154,14 @@ class OnPolicyRLEngine(object):
                     self.device
                 )
                 set_seed(self.seed)
-                self.actor_critic = typing.cast(
+                self.actor_critic = cast(
                     ActorCriticModel,
                     self.config.create_model(observation_set=self.observation_set),
                 ).to(self.device)
             else:
                 # no observation set
                 set_seed(self.seed)
-                self.actor_critic = typing.cast(
+                self.actor_critic = cast(
                     ActorCriticModel, self.config.create_model()
                 ).to(self.device)
 
@@ -288,7 +285,7 @@ class OnPolicyRLEngine(object):
             # Map location CPU is almost always better than mapping to a CUDA device.
             ckpt = torch.load(ckpt, map_location="cpu")
 
-        ckpt = typing.cast(
+        ckpt = cast(
             Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]], ckpt,
         )
 
@@ -316,7 +313,7 @@ class OnPolicyRLEngine(object):
                     num_tasks -= 1
                 done = num_tasks == 0
 
-            except Empty:
+            except queue.Empty:
                 if num_tasks <= 0:
                     break
                 else:
@@ -639,7 +636,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         }
 
         if self.lr_scheduler is not None:
-            save_dict["scheduler_state"] = typing.cast(
+            save_dict["scheduler_state"] = cast(
                 _LRScheduler, self.lr_scheduler
             ).state_dict()
 
@@ -657,7 +654,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         if restart_pipeline:
             self.training_pipeline.restart_pipeline()
         else:
-            self.seed = typing.cast(int, ckpt["trainer_seed"])
+            self.seed = cast(int, ckpt["trainer_seed"])
             self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])  # type: ignore
             if self.lr_scheduler is not None:
                 self.lr_scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
@@ -671,12 +668,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             loss_name in self.training_pipeline.named_losses
         ), "undefined referenced loss {}".format(loss_name)
         if isinstance(self.training_pipeline.named_losses[loss_name], Builder):
-            return typing.cast(
+            return cast(
                 Builder[AbstractActorCriticLoss],
                 self.training_pipeline.named_losses[loss_name],
             )()
         else:
-            return typing.cast(
+            return cast(
                 AbstractActorCriticLoss, self.training_pipeline.named_losses[loss_name]
             )
 
@@ -1194,7 +1191,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     num_samplers=self.num_samplers,
                     actor_critic=self.actor_critic
                     if isinstance(self.actor_critic, ActorCriticModel)
-                    else typing.cast(ActorCriticModel, self.actor_critic.module),
+                    else cast(ActorCriticModel, self.actor_critic.module),
                 )
             )
 
@@ -1270,7 +1267,7 @@ class OnPolicyInference(OnPolicyRLEngine):
         assert self.actor_critic is not None, "called run_eval with no actor_critic"
 
         ckpt = self.checkpoint_load(checkpoint_file_name)
-        total_steps = typing.cast(int, ckpt["total_steps"])
+        total_steps = cast(int, ckpt["total_steps"])
 
         rollouts = RolloutStorage(
             num_steps=rollout_steps,

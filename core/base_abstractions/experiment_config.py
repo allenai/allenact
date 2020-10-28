@@ -2,8 +2,7 @@
 experiments."""
 
 import abc
-import typing
-from typing import Dict, Any, Optional, List, Union, Sequence, Tuple
+from typing import Dict, Any, Optional, List, Union, Sequence, Tuple, cast
 
 import torch
 import torch.nn as nn
@@ -97,7 +96,7 @@ class MachineParams(object):
                         f"It appears the cuda device {d} is not available on your system."
                     )
 
-        return typing.cast(Tuple[torch.device, ...], devices)
+        return cast(Tuple[torch.device, ...], devices)
 
     @property
     def observation_set(self) -> Optional[ObservationSet]:

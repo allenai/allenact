@@ -2,9 +2,8 @@ import copy
 import curses
 import itertools
 import time
-import typing
 from functools import lru_cache
-from typing import Optional, Tuple, Any, List, Union
+from typing import Optional, Tuple, Any, List, Union, cast
 
 import numpy as np
 from gym.utils import seeding
@@ -95,7 +94,7 @@ class LightHouseEnvironment(object):
         # There's literature indicating that having linear correlations between seeds of multiple
         # PRNG's can correlate the outputs
         self.seed = seed
-        self.np_seeded_random_gen, _ = typing.cast(
+        self.np_seeded_random_gen, _ = cast(
             Tuple[np.random.RandomState, Any], seeding.np_random(self.seed)
         )
 
@@ -109,7 +108,7 @@ class LightHouseEnvironment(object):
                 self.np_seeded_random_gen.randint(low=0, high=len(self.world_corners))
             ]
         self.world_tensor[
-            tuple(typing.cast(np.ndarray, self.world_radius + self.goal_position))
+            tuple(cast(np.ndarray, self.world_radius + self.goal_position))
         ] = GOAL
 
         if self.curses_screen is not None:

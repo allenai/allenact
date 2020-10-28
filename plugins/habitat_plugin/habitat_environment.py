@@ -5,7 +5,7 @@ from typing import Dict, Union, List, Optional
 import habitat
 import numpy as np
 from habitat.config import Config
-from habitat.core.dataset import Episode, Dataset
+from habitat.core.dataset import Dataset
 from habitat.core.simulator import Observations, AgentState, ShortestPathPoint
 from habitat.tasks.nav.nav import NavigationEpisode as HabitatNavigationEpisode
 
