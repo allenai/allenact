@@ -1,6 +1,6 @@
 from typing import Optional
 
-from utils.experiment_utils import Builder
+from plugins.robothor_plugin.robothor_viz import ThorViz
 from projects.tutorials.pointnav_robothor_rgb_ddppo import (
     PointNavRoboThorRGBPPOExperimentConfig,
 )
@@ -12,7 +12,6 @@ from utils.viz_utils import (
     TensorViz1D,
     TensorViz2D,
 )
-from plugins.robothor_plugin.robothor_viz import ThorViz
 
 
 class PointNavRoboThorRGBPPOVizExperimentConfig(PointNavRoboThorRGBPPOExperimentConfig):
@@ -25,12 +24,12 @@ class PointNavRoboThorRGBPPOVizExperimentConfig(PointNavRoboThorRGBPPOExperiment
     """
 
     viz_ep_ids = [
-        "FloorPlan_Train1_1_0",
-        "FloorPlan_Train1_1_7",
-        "FloorPlan_Train1_1_11",
-        "FloorPlan_Train1_1_12",
+        "FloorPlan_Train1_1_3",
+        "FloorPlan_Train1_1_4",
+        "FloorPlan_Train1_1_5",
+        "FloorPlan_Train1_1_6",
     ]
-    viz_video_ids = [["FloorPlan_Train1_1_7"], ["FloorPlan_Train1_1_11"]]
+    viz_video_ids = [["FloorPlan_Train1_1_3"], ["FloorPlan_Train1_1_4"]]
 
     viz: Optional[VizSuite] = None
 

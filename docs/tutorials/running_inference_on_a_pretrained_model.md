@@ -94,12 +94,12 @@ class PointNavRoboThorRGBPPOVizExperimentConfig(
     ...
 
     viz_ep_ids = [
-        "FloorPlan_Train1_1_0",
-        "FloorPlan_Train1_1_7",
-        "FloorPlan_Train1_1_11",
-        "FloorPlan_Train1_1_12",
+        "FloorPlan_Train1_1_3",
+        "FloorPlan_Train1_1_4",
+        "FloorPlan_Train1_1_5",
+        "FloorPlan_Train1_1_6",
     ]
-    viz_video_ids = [["FloorPlan_Train1_1_7"], ["FloorPlan_Train1_1_11"]]
+    viz_video_ids = [["FloorPlan_Train1_1_3"], ["FloorPlan_Train1_1_4"]]
 
     viz: Optional[VizSuite] = None
 

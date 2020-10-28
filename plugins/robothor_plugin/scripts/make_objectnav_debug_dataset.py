@@ -1,8 +1,7 @@
 import gzip
 import json
 import os
-import shutil
-from typing import Sequence
+from typing import Sequence, Optional
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from plugins.robothor_plugin.robothor_task_samplers import ObjectNavDatasetTaskSampler
@@ -10,7 +9,7 @@ from plugins.robothor_plugin.robothor_task_samplers import ObjectNavDatasetTaskS
 
 def create_debug_dataset_from_train_dataset(
     scene: str,
-    target: str,
+    target_object_type: Optional[str],
     episodes_subset: Sequence[int],
     train_dataset_path: str,
     base_debug_output_path: str,
@@ -30,10 +29,18 @@ def create_debug_dataset_from_train_dataset(
         scene=scene, base_directory=os.path.join(train_dataset_path, "episodes")
     )
 
-    target_episodes = [ep for ep in episodes if ep["object_type"] == target]
-
-    ids = ["{}_{}_{}".format(scene, target, epit) for epit in episodes_subset]
-    debug_episodes = [ep for ep in target_episodes if ep["id"] in ids]
+    if target_object_type is not None:
+        ids = {
+            "{}_{}_{}".format(scene, target_object_type, epit)
+            for epit in episodes_subset
+        }
+    else:
+        ids = {"{}_{}".format(scene, epit) for epit in episodes_subset}
+    debug_episodes = [ep for ep in episodes if ep["id"] in ids]
+    assert len(ids) == len(debug_episodes), (
+        f"Number of input ids ({len(ids)}) does not equal"
+        f" number of output debug tasks ({len(debug_episodes)})"
+    )
 
     # sort by episode_ids
     debug_episodes = [
@@ -66,7 +73,7 @@ if __name__ == "__main__":
 
     create_debug_dataset_from_train_dataset(
         scene=SCENE,
-        target=TARGET,
+        target_object_type=TARGET,
         episodes_subset=EPISODES,
         train_dataset_path=os.path.join(
             ABS_PATH_OF_TOP_LEVEL_DIR, "datasets", "robothor-objectnav", "train"

@@ -22,6 +22,9 @@ if [ "$1" = "robothor-pointnav" ]
 then
     echo "Downloading RoboTHOR PointNav Dataset ..."
     install_dataset "$1"
+    cd ..
+    echo "Generating RoboTHOR PointNav Debug Dataset ..."
+    PYTHONPATH=. python ./plugins/robothor_plugin/scripts/make_pointnav_debug_dataset.py
 
 elif [ "$1" = "robothor-objectnav" ]
 then
@@ -35,6 +38,9 @@ elif [ "$1" = "ithor-pointnav" ]
 then
     echo "Downloading iTHOR PointNav Dataset ..."
     install_dataset "$1"
+    cd ..
+    echo "Generating iTHOR PointNav Debug Dataset ..."
+    PYTHONPATH=. python ./plugins/ithor_plugin/scripts/make_pointnav_debug_dataset.py
 
 elif [ "$1" = "ithor-objectnav" ]
 then
