@@ -939,6 +939,8 @@ class IThorEnvironment(object):
             return
 
         source_key = self.get_key(self.last_event.metadata["agent"])
+        self._check_contains_key(source_key)
+
         edge_dict = self.graph[source_key]
         to_remove_key = None
         for target_key in self.graph[source_key]:

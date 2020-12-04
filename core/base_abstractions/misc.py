@@ -299,11 +299,8 @@ class Memory(Dict):
 
         Sliced memory
         """
-        if start is None:
-            start = 0
         checked = False
         total: Optional[int] = None
-        index: Optional[torch.Tensor] = None
 
         res = Memory()
         for key in self:
@@ -316,25 +313,6 @@ class Memory(Dict):
 
             if not checked:
                 total = tensor.shape[dim]
-                if start < 0:
-                    start += total
-                if stop is None:
-                    stop = total
-                elif stop < 0:
-                    stop += total
-
-                assert (
-                    0 <= start <= stop <= total
-                ), "attempting to slice with first {} last {} for {} elems".format(
-                    start, stop, total
-                )
-
-                # assume all tensors are in the same device
-                index = torch.as_tensor(
-                    list(range(start, stop, step)),
-                    dtype=torch.int64,
-                    device=tensor.device,
-                )
 
                 checked = True
 
@@ -342,11 +320,17 @@ class Memory(Dict):
                 total == tensor.shape[dim]
             ), "attempting to slice along non-uniform dimension {}".format(dim)
 
-            if index.shape[0] < total:
+            if start is not None or stop is not None or step != 1:
+                slice_tuple = (
+                    (slice(None),) * dim
+                    + (slice(start, stop, step),)
+                    + (slice(None),) * (len(tensor.shape) - (1 + dim))
+                )
+                sliced_tensor = tensor[slice_tuple]
                 res.check_append(
-                    key,
-                    tensor.index_select(dim=dim, index=index),
-                    self.sampler_dim(key),
+                    key=key,
+                    tensor=sliced_tensor,
+                    sampler_dim=self.sampler_dim(key),
                 )
             else:
                 res.check_append(

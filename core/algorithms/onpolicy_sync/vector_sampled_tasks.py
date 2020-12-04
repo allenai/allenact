@@ -931,6 +931,15 @@ class SingleProcessVectorSampledTasks(object):
                     task_sampler.reset()
                     current_task = task_sampler.next_task()
 
+                    if current_task is None:
+                        raise RuntimeError(
+                            "After resetting the task sampler it seems to have"
+                            " no new tasks (the `task_sampler.next_task()` call"
+                            " returned `None` after the reset). This suggests that"
+                            " the task sampler's reset method was not implemented"
+                            f" correctly (task sampler type is {type(task_sampler)})."
+                        )
+
                     command, data = yield "done"
                 elif command == SEED_COMMAND:
                     task_sampler.set_seed(data)
