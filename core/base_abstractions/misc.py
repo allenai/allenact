@@ -328,9 +328,7 @@ class Memory(Dict):
                 )
                 sliced_tensor = tensor[slice_tuple]
                 res.check_append(
-                    key=key,
-                    tensor=sliced_tensor,
-                    sampler_dim=self.sampler_dim(key),
+                    key=key, tensor=sliced_tensor, sampler_dim=self.sampler_dim(key),
                 )
             else:
                 res.check_append(

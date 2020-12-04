@@ -6,6 +6,7 @@ import torch
 from torch import nn
 import numpy as np
 
+
 class Flatten(nn.Module):
     """Flatten input tensor so that it is of shape (FLATTENED_BATCH x -1)."""
 
