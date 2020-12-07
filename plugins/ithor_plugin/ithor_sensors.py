@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Union
 
 import gym
 import numpy as np
@@ -7,11 +7,17 @@ from core.base_abstractions.sensor import Sensor, RGBSensor
 from core.base_abstractions.task import Task
 from plugins.ithor_plugin.ithor_environment import IThorEnvironment
 from plugins.ithor_plugin.ithor_tasks import ObjectNavTask
+from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from utils.misc_utils import prepare_locals_for_super
 
 
-class RGBSensorThor(RGBSensor[IThorEnvironment, Task[IThorEnvironment]]):
-    """Sensor for RGB images in iTHOR.
+class RGBSensorThor(
+    RGBSensor[
+        Union[IThorEnvironment, RoboThorEnvironment],
+        Union[Task[IThorEnvironment], Task[RoboThorEnvironment]],
+    ]
+):
+    """Sensor for RGB images in THOR.
 
     Returns from a running IThorEnvironment instance, the current RGB
     frame corresponding to the agent's egocentric view.

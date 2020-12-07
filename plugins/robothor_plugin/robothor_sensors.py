@@ -1,4 +1,4 @@
-from typing import Any, Tuple, Optional
+from typing import Any, Tuple, Optional, Union
 
 import gym
 import numpy as np
@@ -6,9 +6,11 @@ import quaternion  # noqa # pylint: disable=unused-import
 
 from core.base_abstractions.sensor import Sensor, RGBSensor, DepthSensor
 from core.base_abstractions.task import Task
+from plugins.ithor_plugin.ithor_environment import IThorEnvironment
 from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from utils.misc_utils import prepare_locals_for_super
+from utils.system import get_logger
 
 
 class RGBSensorRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnvironment]]):
@@ -17,6 +19,12 @@ class RGBSensorRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnvironment]
     Returns from a running RoboThorEnvironment instance, the current RGB
     frame corresponding to the agent's egocentric view.
     """
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        get_logger().warning(
+            "`RGBSensorRoboThor` is deprecated, use `RGBSensorThor` instead."
+        )
+        super().__init__(*args, **kwargs)
 
     def frame_from_env(self, env: RoboThorEnvironment) -> np.ndarray:
         return env.current_frame.copy()
@@ -102,8 +110,12 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
         )
 
 
-class DepthSensorRoboThor(DepthSensor[RoboThorEnvironment, Task[RoboThorEnvironment]]):
-    # For backwards compatibility
+class DepthSensorThor(
+    DepthSensor[
+        Union[IThorEnvironment, RoboThorEnvironment],
+        Union[Task[IThorEnvironment], Task[RoboThorEnvironment]],
+    ],
+):
     def __init__(
         self,
         use_resnet_normalization: Optional[bool] = None,
@@ -128,5 +140,16 @@ class DepthSensorRoboThor(DepthSensor[RoboThorEnvironment, Task[RoboThorEnvironm
 
         super().__init__(**prepare_locals_for_super(locals()))
 
-    def frame_from_env(self, env: RoboThorEnvironment) -> np.ndarray:
-        return env.current_depth.copy()
+    def frame_from_env(
+        self, env: Union[IThorEnvironment, RoboThorEnvironment]
+    ) -> np.ndarray:
+        return env.controller.last_event.depth_frame
+
+
+class DepthSensorRoboThor(DepthSensorThor):
+    # For backwards compatibility
+    def __init__(self, *args: Any, **kwargs: Any):
+        get_logger().warning(
+            "`DepthSensorRoboThor` is deprecated, use `DepthSensorThor` instead."
+        )
+        super().__init__(*args, **kwargs)

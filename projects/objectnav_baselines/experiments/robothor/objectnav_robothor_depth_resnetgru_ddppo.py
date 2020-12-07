@@ -8,7 +8,7 @@ from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.ithor_plugin.ithor_sensors import GoalObjectTypeThorSensor
-from plugins.robothor_plugin.robothor_sensors import DepthSensorRoboThor
+from plugins.robothor_plugin.robothor_sensors import DepthSensorThor
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base import (
     ObjectNavRoboThorBaseConfig,
@@ -28,7 +28,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig):
 
         self.ENV_ARGS["renderDepthImage"] = True
 
-        DepthSensorRoboThor(
+        DepthSensorThor(
             height=self.SCREEN_SIZE,
             width=self.SCREEN_SIZE,
             use_normalization=True,

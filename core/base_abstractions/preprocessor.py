@@ -1,6 +1,6 @@
 import abc
 from collections import OrderedDict
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, List, Union, Sequence
 
 import gym
 import networkx as nx
@@ -162,7 +162,7 @@ class ObservationSet:
     def __init__(
         self,
         source_ids: List[str],
-        all_preprocessors: List[Union[Preprocessor, Builder[Preprocessor]]],
+        all_preprocessors: Sequence[Union[Preprocessor, Builder[Preprocessor]]],
         all_sensors: List[Sensor],
     ) -> None:
         """Initializer.
