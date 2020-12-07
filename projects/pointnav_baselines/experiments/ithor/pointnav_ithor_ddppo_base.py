@@ -1,3 +1,5 @@
+from abc import ABC
+
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -9,7 +11,7 @@ from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base import (
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class PointNaviThorPPOBaseConfig(PointNaviThorBaseConfig):
+class PointNaviThorPPOBaseConfig(PointNaviThorBaseConfig, ABC):
     """The base config for all iTHOR PPO PointNav experiments."""
 
     @classmethod

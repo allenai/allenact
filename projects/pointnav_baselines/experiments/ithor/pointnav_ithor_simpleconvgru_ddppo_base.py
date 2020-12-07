@@ -1,3 +1,5 @@
+from abc import ABC
+
 import gym
 import torch.nn as nn
 
@@ -15,7 +17,7 @@ from projects.pointnav_baselines.models.point_nav_models import (
 )
 
 
-class PointNaviThorSimpleConvGRUPPOBaseConfig(PointNaviThorPPOBaseConfig):
+class PointNaviThorSimpleConvGRUPPOBaseConfig(PointNaviThorPPOBaseConfig, ABC):
     """The base config for all iTHOR PPO PointNav experiments."""
 
     @classmethod
