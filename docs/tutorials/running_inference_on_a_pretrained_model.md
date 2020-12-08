@@ -149,7 +149,7 @@ Running test on the same downloaded models, but using the visualization-enabled 
  
 ```bash
 python main.py \
-    pointnav_robothor_rgb_ddppo_viz
+    pointnav_robothor_rgb_ddppo_viz \
     -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ \
     -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30/exp_PointNavRobothorRGBPPO__stage_00__steps_000039031200.pt \
     -b projects/tutorials \
