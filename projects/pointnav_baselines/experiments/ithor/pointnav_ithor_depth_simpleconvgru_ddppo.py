@@ -5,12 +5,17 @@ from plugins.robothor_plugin.robothor_sensors import (
 from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base import (
     PointNaviThorBaseConfig,
 )
-from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_simpleconvgru_ddppo_base import (
-    PointNaviThorSimpleConvGRUPPOBaseConfig,
+from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_ddppo_base import (
+    PointNaviThorPPOBaseConfig,
+)
+from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_simpleconvgru_base import (
+    PointNaviThorSimpleConvGRUBaseConfig,
 )
 
 
-class PointNaviThorDepthPPOExperimentConfig(PointNaviThorSimpleConvGRUPPOBaseConfig):
+class PointNaviThorDepthPPOExperimentConfig(
+    PointNaviThorPPOBaseConfig, PointNaviThorSimpleConvGRUBaseConfig
+):
     """An Point Navigation experiment configuration in iThor with Depth
     input."""
 

@@ -3,12 +3,14 @@ from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_ddppo_base import (
     PointNaviThorPPOBaseConfig,
 )
-from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_simpleconvgru_ddppo_base import (
-    PointNaviThorSimpleConvGRUPPOBaseConfig,
+from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_simpleconvgru_base import (
+    PointNaviThorSimpleConvGRUBaseConfig,
 )
 
 
-class PointNaviThorRGBPPOExperimentConfig(PointNaviThorSimpleConvGRUPPOBaseConfig):
+class PointNaviThorRGBPPOExperimentConfig(
+    PointNaviThorPPOBaseConfig, PointNaviThorSimpleConvGRUBaseConfig
+):
     """An Point Navigation experiment configuration in iThor with RGB input."""
 
     SENSORS = [

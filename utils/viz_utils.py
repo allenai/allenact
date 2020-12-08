@@ -3,6 +3,17 @@ import json
 from typing import Dict, Any, Union, Optional, List, Tuple, Sequence, Callable, cast
 
 import numpy as np
+
+try:
+    # When debugging we don't want to use the interactive version of matplotlib
+    # as it causes all sorts of problems.
+    import pydevd
+    import matplotlib
+
+    matplotlib.use("agg")
+except ImportError as _:
+    pass
+
 from matplotlib import pyplot as plt, markers
 from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure

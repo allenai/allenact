@@ -83,7 +83,7 @@ class PointNaviThorBaseConfig(PointNavBaseConfig, ABC):
             nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.VALID_GPU_IDS
         elif mode == "test":
-            nprocesses = 15
+            nprocesses = 10
             gpu_ids = [] if not torch.cuda.is_available() else self.TEST_GPU_IDS
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")

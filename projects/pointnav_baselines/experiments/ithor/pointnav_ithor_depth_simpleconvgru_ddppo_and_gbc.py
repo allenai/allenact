@@ -1,4 +1,3 @@
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from plugins.robothor_plugin.robothor_sensors import (
     DepthSensorThor,
     GPSCompassSensorRoboThor,
@@ -6,27 +5,21 @@ from plugins.robothor_plugin.robothor_sensors import (
 from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base import (
     PointNaviThorBaseConfig,
 )
-from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_ddppo_base import (
-    PointNaviThorPPOBaseConfig,
+from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_ddppo_and_gbc_base import (
+    PointNaviThorPPOAndGBCBaseConfig,
 )
 from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_simpleconvgru_base import (
     PointNaviThorSimpleConvGRUBaseConfig,
 )
 
 
-class PointNaviThorRGBDPPOExperimentConfig(
-    PointNaviThorPPOBaseConfig, PointNaviThorSimpleConvGRUBaseConfig
+class PointNaviThorDepthPPOExperimentConfig(
+    PointNaviThorPPOAndGBCBaseConfig, PointNaviThorSimpleConvGRUBaseConfig
 ):
-    """An Point Navigation experiment configuration in iThor with RGBD
+    """An Point Navigation experiment configuration in iThor with Depth
     input."""
 
-    SENSORS = [
-        RGBSensorThor(
-            height=PointNaviThorBaseConfig.SCREEN_SIZE,
-            width=PointNaviThorBaseConfig.SCREEN_SIZE,
-            use_resnet_normalization=True,
-            uuid="rgb_lowres",
-        ),
+    SENSORS = PointNaviThorPPOAndGBCBaseConfig.SENSORS + (
         DepthSensorThor(
             height=PointNaviThorBaseConfig.SCREEN_SIZE,
             width=PointNaviThorBaseConfig.SCREEN_SIZE,
@@ -34,8 +27,8 @@ class PointNaviThorRGBDPPOExperimentConfig(
             uuid="depth_lowres",
         ),
         GPSCompassSensorRoboThor(),
-    ]
+    )
 
     @classmethod
     def tag(cls):
-        return "Pointnav-iTHOR-RGBD-SimpleConv-DDPPO"
+        return "Pointnav-iTHOR-Depth-SimpleConv-DDPPOAndGBC"
