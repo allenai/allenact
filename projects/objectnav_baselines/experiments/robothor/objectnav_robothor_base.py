@@ -2,28 +2,46 @@ import glob
 import os
 from abc import ABC
 from math import ceil
-from typing import Dict, Any, List, Optional, Sequence
+from typing import Dict, Any, List, Optional, Sequence, Union
 
 import gym
 import numpy as np
 import torch
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
-from core.base_abstractions.preprocessor import ObservationSet
-from core.base_abstractions.sensor import ExpertActionSensor
+from core.base_abstractions.preprocessor import ObservationSet, Preprocessor
+from core.base_abstractions.sensor import ExpertActionSensor, Sensor
 from core.base_abstractions.task import TaskSampler
+from plugins.robothor_plugin.robothor_sensors import DepthSensorThor
 from plugins.robothor_plugin.robothor_task_samplers import ObjectNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from utils.experiment_utils import Builder
+from utils.system import get_logger
 
 
 class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
     """The base config for all RoboTHOR ObjectNav experiments."""
 
-    def __init__(self):
-        super().__init__()
-        self.TARGET_TYPES = sorted(
+    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
+    SENSORS: Optional[Sequence[Sensor]] = None
+    PREPROCESSORS: Sequence[Union[Preprocessor, Builder[Preprocessor]]] = tuple()
+
+    NUM_PROCESSES = 60
+    TRAIN_GPU_IDS = list(range(min(torch.cuda.device_count(), 8)))
+    SAMPLER_GPU_IDS = TRAIN_GPU_IDS
+    VALID_GPU_IDS = [torch.cuda.device_count() - 1] if torch.cuda.is_available() else []
+    TEST_GPU_IDS = [0]
+
+    TRAIN_DATASET_DIR = os.path.join(
+        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-objectnav/train"
+    )
+    VAL_DATASET_DIR = os.path.join(
+        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-objectnav/val"
+    )
+
+    TARGET_TYPES = tuple(
+        sorted(
             [
                 "AlarmClock",
                 "Apple",
@@ -39,6 +57,11 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
                 "Vase",
             ]
         )
+    )
+
+    def __init__(self):
+        super().__init__()
+
         self.ENV_ARGS = dict(
             width=self.CAMERA_WIDTH,
             height=self.CAMERA_HEIGHT,
@@ -51,26 +74,8 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
             snapToGrid=False,
             agentMode="bot",
             include_private_scenes=False,
+            renderDepthImage=any(isinstance(s, DepthSensorThor) for s in self.SENSORS),
         )
-
-        self.NUM_PROCESSES = 60
-        self.TRAIN_GPU_IDS = list(range(min(torch.cuda.device_count(), 8)))
-        self.SAMPLER_GPU_IDS = self.TRAIN_GPU_IDS
-        self.VALID_GPU_IDS = (
-            [torch.cuda.device_count() - 1] if torch.cuda.is_available() else []
-        )
-        self.TEST_GPU_IDS = [0]
-
-        self.ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
-
-        self.TRAIN_DATASET_DIR = os.path.join(
-            ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-objectnav/train"
-        )
-        self.VAL_DATASET_DIR = os.path.join(
-            ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-objectnav/val"
-        )
-
-        self.SENSORS = None
 
     @staticmethod
     def split_num_processes(nprocesses: int, ndevices: int):
@@ -106,10 +111,8 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
         sensors = [*self.SENSORS]
-        observations = [*self.OBSERVATIONS]
         if mode != "train":
             sensors = [s for s in sensors if not isinstance(s, ExpertActionSensor)]
-            observations = [o for o in observations if "expert_action" not in o]
 
         # Disable parallelization for validation process
         if mode == "valid":
@@ -120,7 +123,11 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
             Builder(
                 ObservationSet,
                 kwargs=dict(
-                    source_ids=observations,
+                    source_ids=[s.uuid for s in sensors]
+                    + [
+                        (p() if isinstance(p, Builder) else p).uuid
+                        for p in self.PREPROCESSORS
+                    ],
                     all_preprocessors=self.PREPROCESSORS,
                     all_sensors=sensors,
                 ),
@@ -157,8 +164,9 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
         scenes_dir: str,
         process_ind: int,
         total_processes: int,
-        seeds: Optional[List[int]] = None,
-        deterministic_cudnn: bool = False,
+        devices: Optional[List[int]],
+        seeds: Optional[List[int]],
+        deterministic_cudnn: bool,
         include_expert_sensor: bool = True,
     ) -> Dict[str, Any]:
         path = os.path.join(scenes_dir, "*.json.gz")
@@ -172,20 +180,19 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
                     " on how this can be done."
                 ).format(scenes_dir)
             )
+
+        oversample_warning = (
+            f"Warning: oversampling some of the scenes ({scenes}) to feed all processes ({total_processes})."
+            " You can avoid this by setting a number of workers divisible by the number of scenes"
+        )
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
-                print(
-                    "Warning: oversampling some of the scenes to feed all processes."
-                    " You can avoid this by setting a number of workers divisible by the number of scenes"
-                )
+                get_logger().warning(oversample_warning)
             scenes = scenes * int(ceil(total_processes / len(scenes)))
             scenes = scenes[: total_processes * (len(scenes) // total_processes)]
-        else:
-            if len(scenes) % total_processes != 0:
-                print(
-                    "Warning: oversampling some of the scenes to feed all processes."
-                    " You can avoid this by setting a number of workers divisor of the number of scenes"
-                )
+        elif len(scenes) % total_processes != 0:
+            get_logger().warning(oversample_warning)
+
         inds = self._partition_inds(len(scenes), total_processes)
 
         return {
@@ -203,6 +210,16 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG,
+            "env_args": {
+                **self.ENV_ARGS,
+                "x_display": (
+                    f"0.{devices[process_ind % len(devices)]}"
+                    if devices is not None
+                    and len(devices) > 0
+                    and devices[process_ind % len(devices)] >= 0
+                    else None
+                ),
+            },
         }
 
     def train_task_sampler_args(
@@ -217,18 +234,12 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
             os.path.join(self.TRAIN_DATASET_DIR, "episodes"),
             process_ind,
             total_processes,
+            devices=devices,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
         res["scene_directory"] = self.TRAIN_DATASET_DIR
         res["loop_dataset"] = True
-        res["env_args"] = {}
-        res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)])
-            if devices is not None and len(devices) > 0
-            else None
-        )
         res["allow_flipping"] = True
         return res
 
@@ -244,19 +255,13 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
             os.path.join(self.VAL_DATASET_DIR, "episodes"),
             process_ind,
             total_processes,
+            devices=devices,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
             include_expert_sensor=False,
         )
         res["scene_directory"] = self.VAL_DATASET_DIR
         res["loop_dataset"] = False
-        res["env_args"] = {}
-        res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)])
-            if devices is not None and len(devices) > 0
-            else None
-        )
         return res
 
     def test_task_sampler_args(
@@ -267,21 +272,10 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        res = self._get_sampler_args_for_scene_split(
-            os.path.join(self.VAL_DATASET_DIR, "episodes"),
-            process_ind,
-            total_processes,
+        return self.valid_task_sampler_args(
+            process_ind=process_ind,
+            total_processes=total_processes,
+            devices=devices,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
-            include_expert_sensor=False,
         )
-        res["scene_directory"] = self.VAL_DATASET_DIR
-        res["loop_dataset"] = False
-        res["env_args"] = {}
-        res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)])
-            if devices is not None and len(devices) > 0
-            else None
-        )
-        return res

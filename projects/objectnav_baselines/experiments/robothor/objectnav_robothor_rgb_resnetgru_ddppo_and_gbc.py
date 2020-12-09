@@ -1,13 +1,12 @@
 from torchvision import models
 
 from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
-from plugins.ithor_plugin.ithor_sensors import GoalObjectTypeThorSensor
-from plugins.robothor_plugin.robothor_sensors import DepthSensorThor
+from plugins.ithor_plugin.ithor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base import (
     ObjectNavRoboThorBaseConfig,
 )
-from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_ddppo_base import (
-    ObjectNavRoboThorPPOBaseExperimentConfig,
+from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_ddppo_and_gbc_base import (
+    ObjectNavRoboThorPPOAndGBCBaseExperimentConfig,
 )
 from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_resnetgru_base import (
     ObjectNavRoboThorResNetGRUBaseExperimentConfig,
@@ -15,19 +14,19 @@ from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_resnet
 from utils.experiment_utils import Builder
 
 
-class ObjectNavRoboThorRGBPPOExperimentConfig(
-    ObjectNavRoboThorPPOBaseExperimentConfig,
+class ObjectNaviThorRGBPPOExperimentConfig(
+    ObjectNavRoboThorPPOAndGBCBaseExperimentConfig,
     ObjectNavRoboThorResNetGRUBaseExperimentConfig,
 ):
-    """An Object Navigation experiment configuration in RoboThor with Depth
+    """An Object Navigation experiment configuration in RoboThor with RGB
     input."""
 
-    SENSORS = (
-        DepthSensorThor(
+    SENSORS = ObjectNavRoboThorPPOAndGBCBaseExperimentConfig.SENSORS + (
+        RGBSensorThor(
             height=ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
             width=ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
-            use_normalization=True,
-            uuid="depth_lowres",
+            use_resnet_normalization=True,
+            uuid="rgb_lowres",
         ),
         GoalObjectTypeThorSensor(
             object_types=ObjectNavRoboThorBaseConfig.TARGET_TYPES,
@@ -45,8 +44,8 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(
                 "output_dims": 512,
                 "pool": False,
                 "torchvision_resnet_model": models.resnet18,
-                "input_uuids": ["depth_lowres"],
-                "output_uuid": "depth_resnet",
+                "input_uuids": ["rgb_lowres"],
+                "output_uuid": "rgb_resnet",
                 "parallel": False,
             },
         ),
@@ -54,4 +53,4 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(
 
     @classmethod
     def tag(cls):
-        return "Objectnav-RoboTHOR-Depth-ResNetGRU-DDPPO"
+        return "Objectnav-RoboTHOR-RGB-ResNetGRU-DDPPO"

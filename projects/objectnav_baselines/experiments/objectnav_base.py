@@ -6,15 +6,16 @@ from core.base_abstractions.experiment_config import ExperimentConfig
 class ObjectNavBaseConfig(ExperimentConfig, ABC):
     """The base object navigation configuration file."""
 
+    CAMERA_WIDTH = 400
+    CAMERA_HEIGHT = 300
+    SCREEN_SIZE = 224
+    MAX_STEPS = 500
+    STEP_SIZE = 0.25
+    ROTATION_DEGREES = 30.0
+    VISIBILITY_DISTANCE = 1.0
+    STOCHASTIC = True
+
     def __init__(self):
-        self.CAMERA_WIDTH = 400
-        self.CAMERA_HEIGHT = 300
-        self.SCREEN_SIZE = 224
-        self.MAX_STEPS = 500
-        self.STEP_SIZE = 0.25
-        self.ROTATION_DEGREES = 30.0
-        self.VISIBILITY_DISTANCE = 1.0
-        self.STOCHASTIC = True
         self.REWARD_CONFIG = {
             "step_penalty": -0.01,
             "goal_success_reward": 10.0,

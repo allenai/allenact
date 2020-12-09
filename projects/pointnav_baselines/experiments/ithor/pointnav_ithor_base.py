@@ -10,7 +10,7 @@ import torch
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from core.base_abstractions.preprocessor import ObservationSet, Preprocessor
-from core.base_abstractions.sensor import Sensor
+from core.base_abstractions.sensor import Sensor, ExpertActionSensor
 from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_sensors import DepthSensorThor
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
@@ -38,6 +38,8 @@ class PointNaviThorBaseConfig(PointNavBaseConfig, ABC):
     VAL_DATASET_DIR = os.path.join(
         ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/ithor-pointnav/val"
     )
+
+    TARGET_TYPES: Optional[Sequence[str]] = None
 
     def __init__(self):
         super().__init__()
@@ -97,7 +99,11 @@ class PointNaviThorBaseConfig(PointNavBaseConfig, ABC):
             Builder(
                 ObservationSet,
                 kwargs=dict(
-                    source_ids=[s.uuid for s in self.SENSORS],
+                    source_ids=[s.uuid for s in self.SENSORS]
+                    + [
+                        (p() if isinstance(p, Builder) else p).uuid
+                        for p in self.PREPROCESSORS
+                    ],
                     all_preprocessors=self.PREPROCESSORS,
                     all_sensors=self.SENSORS,
                 ),
@@ -133,6 +139,7 @@ class PointNaviThorBaseConfig(PointNavBaseConfig, ABC):
         devices: Optional[List[int]],
         seeds: Optional[List[int]],
         deterministic_cudnn: bool,
+        include_expert_sensor: bool = True,
     ) -> Dict[str, Any]:
         path = os.path.join(scenes_dir, "*.json.gz")
         scenes = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(path)]
@@ -162,9 +169,13 @@ class PointNaviThorBaseConfig(PointNavBaseConfig, ABC):
 
         return {
             "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
-            "object_types": None,
+            "object_types": self.TARGET_TYPES,
             "max_steps": self.MAX_STEPS,
-            "sensors": self.SENSORS,
+            "sensors": [
+                s
+                for s in self.SENSORS
+                if (include_expert_sensor or not isinstance(s, ExpertActionSensor))
+            ],
             "action_space": gym.spaces.Discrete(
                 len(ObjectNavTask.class_action_names())
             ),
@@ -219,6 +230,7 @@ class PointNaviThorBaseConfig(PointNavBaseConfig, ABC):
             devices=devices,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
+            include_expert_sensor=False,
         )
         res["scene_directory"] = self.VAL_DATASET_DIR
         res["loop_dataset"] = False
