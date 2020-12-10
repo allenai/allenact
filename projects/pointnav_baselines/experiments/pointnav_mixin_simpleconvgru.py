@@ -3,33 +3,33 @@ from abc import ABC
 import gym
 import torch.nn as nn
 
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
-from plugins.robothor_plugin.robothor_sensors import (
-    DepthSensorThor,
-    GPSCompassSensorRoboThor,
-)
+from core.base_abstractions.sensor import DepthSensor, RGBSensor
+from plugins.habitat_plugin.habitat_sensors import TargetCoordinatesSensorHabitat
+from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
-from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base import (
-    PointNaviThorBaseConfig,
-)
+from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
 from projects.pointnav_baselines.models.point_nav_models import (
     PointNavActorCriticSimpleConvRNN,
 )
 
 
-class PointNaviThorSimpleConvGRUBaseConfig(PointNaviThorBaseConfig, ABC):
+class PointNavMixInSimpleConvGRUConfig(PointNavBaseConfig, ABC):
     """The base config for all iTHOR PPO PointNav experiments."""
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        rgb_uuid = next(
-            (s.uuid for s in cls.SENSORS if isinstance(s, RGBSensorThor)), None
-        )
+        rgb_uuid = next((s.uuid for s in cls.SENSORS if isinstance(s, RGBSensor)), None)
         depth_uuid = next(
-            (s.uuid for s in cls.SENSORS if isinstance(s, DepthSensorThor)), None
+            (s.uuid for s in cls.SENSORS if isinstance(s, DepthSensor)), None
         )
         goal_sensor_uuid = next(
-            (s.uuid for s in cls.SENSORS if isinstance(s, GPSCompassSensorRoboThor)),
+            (
+                s.uuid
+                for s in cls.SENSORS
+                if isinstance(
+                    s, (GPSCompassSensorRoboThor, TargetCoordinatesSensorHabitat)
+                )
+            ),
             None,
         )
 

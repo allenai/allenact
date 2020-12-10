@@ -42,7 +42,7 @@ def evenly_distribute_count_into_bins(count: int, nbins: int) -> List[int]:
     A list of positive integers which sum to `count`. These values will be
     as close to equal as possible (may differ by at most 1).
     """
-    assert count >= nbins, "NUM_PROCESSES {} < ndevices {}".format(count, nbins)
+    assert count >= nbins, f"count ({count}) < nbins ({nbins})"
     res = [0] * nbins
     for it in range(count):
         res[it % nbins] += 1

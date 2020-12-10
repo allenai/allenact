@@ -6,16 +6,19 @@ from plugins.robothor_plugin.robothor_sensors import (
 from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base import (
     PointNaviThorBaseConfig,
 )
-from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_ddppo_base import (
-    PointNaviThorPPOBaseConfig,
+
+from projects.pointnav_baselines.experiments.pointnav_mixin_simpleconvgru import (
+    PointNavMixInSimpleConvGRUConfig,
 )
-from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_simpleconvgru_base import (
-    PointNaviThorSimpleConvGRUBaseConfig,
+from projects.pointnav_baselines.experiments.pointnav_thor_mixin_ddppo import (
+    PointNavThorMixInPPOConfig,
 )
 
 
 class PointNaviThorRGBDPPOExperimentConfig(
-    PointNaviThorPPOBaseConfig, PointNaviThorSimpleConvGRUBaseConfig
+    PointNaviThorBaseConfig,
+    PointNavThorMixInPPOConfig,
+    PointNavMixInSimpleConvGRUConfig,
 ):
     """An Point Navigation experiment configuration in iThor with RGBD
     input."""

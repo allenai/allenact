@@ -5,22 +5,23 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base import (
-    PointNaviThorBaseConfig,
-)
+from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class PointNaviThorPPOBaseConfig(PointNaviThorBaseConfig, ABC):
+class PointNavHabitatMixInPPOConfig(PointNavBaseConfig, ABC):
     """The base config for all iTHOR PPO PointNav experiments."""
+
+    NUM_STEPS = 128
+    LR = 2.5e-4
 
     @classmethod
     def training_pipeline(cls, **kwargs):
         ppo_steps = int(75000000)
-        lr = 3e-4
+        lr = cls.LR
         num_mini_batch = 1
-        update_repeats = 4
-        num_steps = 128
+        update_repeats = 3
+        num_steps = cls.NUM_STEPS
         save_interval = 5000000
         log_interval = 10000
         gamma = 0.99
