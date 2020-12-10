@@ -16,7 +16,7 @@ from plugins.robothor_plugin.robothor_sensors import DepthSensorThor
 from plugins.robothor_plugin.robothor_task_samplers import ObjectNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
-from utils.experiment_utils import Builder
+from utils.experiment_utils import Builder, evenly_distribute_count_into_bins
 from utils.system import get_logger
 
 
@@ -77,16 +77,6 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
             renderDepthImage=any(isinstance(s, DepthSensorThor) for s in self.SENSORS),
         )
 
-    @staticmethod
-    def split_num_processes(nprocesses: int, ndevices: int):
-        assert nprocesses >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
-            nprocesses, ndevices
-        )
-        res = [0] * ndevices
-        for it in range(nprocesses):
-            res[it % ndevices] += 1
-        return res
-
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
             workers_per_device = 1
@@ -98,7 +88,7 @@ class ObjectNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
             nprocesses = (
                 1
                 if not torch.cuda.is_available()
-                else self.split_num_processes(self.NUM_PROCESSES, ndevices=len(gpu_ids))
+                else evenly_distribute_count_into_bins(self.NUM_PROCESSES, len(gpu_ids))
             )
             sampler_devices = self.SAMPLER_GPU_IDS
         elif mode == "valid":

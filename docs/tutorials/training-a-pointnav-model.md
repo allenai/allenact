@@ -290,22 +290,15 @@ often we save the model weights and run validation on them.
 ```
 
 
-We define the helper method `split_num_processes` to split the different scenes that we want to train with
-amongst the different available devices. "machine_params" returns the hardware parameters of each
+We use the helper method `evenly_distribute_count_into_bins` to split the different scenes that we want to train with
+amongst the different available devices. `machine_params` returns the hardware parameters of each
 process, based on the list of devices we defined above.
 ```python
-    def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices".format(self.NUM_PROCESSES, ndevices)
-        res = [0] * ndevices
-        for it in range(self.NUM_PROCESSES):
-            res[it % ndevices] += 1
-        return res
-
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
             workers_per_device = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.TRAINING_GPUS * workers_per_device
-            nprocesses = 1 if not torch.cuda.is_available() else self.split_num_processes(len(gpu_ids))
+            nprocesses = 1 if not torch.cuda.is_available() else evenly_distribute_count_into_bins(self.NUM_PROCESSES, len(gpu_ids))
             sampler_devices = self.TRAINING_GPUS
         elif mode == "valid":
             nprocesses = 1

@@ -31,7 +31,13 @@ from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )
-from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
+from utils.experiment_utils import (
+    Builder,
+    PipelineStage,
+    TrainingPipeline,
+    LinearDecay,
+    evenly_distribute_count_into_bins,
+)
 
 
 class PointNavHabitatRGBPPOTutorialExperimentConfig(ExperimentConfig):
@@ -165,15 +171,6 @@ class PointNavHabitatRGBPPOTutorialExperimentConfig(ExperimentConfig):
             ),
         )
 
-    def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
-            self.NUM_PROCESSES, ndevices
-        )
-        res = [0] * ndevices
-        for it in range(self.NUM_PROCESSES):
-            res[it % ndevices] += 1
-        return res
-
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
             workers_per_device = 1
@@ -185,7 +182,7 @@ class PointNavHabitatRGBPPOTutorialExperimentConfig(ExperimentConfig):
             nprocesses = (
                 1
                 if not torch.cuda.is_available()
-                else self.split_num_processes(len(gpu_ids))
+                else evenly_distribute_count_into_bins(self.NUM_PROCESSES, len(gpu_ids))
             )
         elif mode == "valid":
             nprocesses = 1

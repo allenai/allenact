@@ -15,7 +15,7 @@ from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
 from plugins.habitat_plugin.habitat_tasks import PointNavTask
 from plugins.habitat_plugin.habitat_utils import get_habitat_config
 from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
-from utils.experiment_utils import Builder
+from utils.experiment_utils import Builder, evenly_distribute_count_into_bins
 
 
 class DebugPointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
@@ -77,19 +77,10 @@ class DebugPointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
     def tag(cls):
         return "PointNav"
 
-    def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
-            self.NUM_PROCESSES, ndevices
-        )
-        res = [0] * ndevices
-        for it in range(self.NUM_PROCESSES):
-            res[it % ndevices] += 1
-        return res
-
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
             devices = self.TRAIN_GPUS
-            nprocesses = self.split_num_processes(len(devices))
+            nprocesses = evenly_distribute_count_into_bins(self.NUM_PROCESSES, len(devices))
         elif mode == "valid":
             nprocesses = 0
             devices = self.VALIDATION_GPUS

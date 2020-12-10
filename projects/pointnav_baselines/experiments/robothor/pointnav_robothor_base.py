@@ -2,25 +2,43 @@ import glob
 import os
 from abc import ABC
 from math import ceil
-from typing import Dict, Any, List, Optional, Sequence
+from typing import Dict, Any, List, Optional, Sequence, Union
 
 import gym
 import numpy as np
 import torch
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
-from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.preprocessor import ObservationSet, Preprocessor
+from core.base_abstractions.sensor import Sensor
 from core.base_abstractions.task import TaskSampler
+from plugins.robothor_plugin.robothor_sensors import DepthSensorThor
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
-from utils.experiment_utils import Builder
+from utils.experiment_utils import Builder, evenly_distribute_count_into_bins
 
 
 class PointNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
     """The base config for all iTHOR PointNav experiments."""
 
     ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
+    SENSORS: Optional[Sequence[Sensor]] = None
+    PREPROCESSORS: Sequence[Union[Preprocessor, Builder[Preprocessor]]] = tuple()
+
+    NUM_PROCESSES = 60
+    TRAIN_GPU_IDS = list(range(torch.cuda.device_count()))
+    VALID_GPU_IDS = [torch.cuda.device_count() - 1]
+    TEST_GPU_IDS = [torch.cuda.device_count() - 1]
+
+    TRAIN_DATASET_DIR = os.path.join(
+        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/train"
+    )
+    VAL_DATASET_DIR = os.path.join(
+        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/val"
+    )
+
+    TARGET_TYPES: Optional[Sequence[str]] = None
 
     def __init__(self):
         super().__init__()
@@ -35,30 +53,8 @@ class PointNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
             snapToGrid=False,
             agentMode="bot",
             include_private_scenes=False,
+            renderDepthImage=any(isinstance(s, DepthSensorThor) for s in self.SENSORS),
         )
-
-        self.NUM_PROCESSES = 60
-        self.TRAIN_GPU_IDS = list(range(torch.cuda.device_count()))
-        self.VALID_GPU_IDS = [torch.cuda.device_count() - 1]
-        self.TEST_GPU_IDS = [torch.cuda.device_count() - 1]
-
-        self.TRAIN_DATASET_DIR = os.path.join(
-            ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/train"
-        )
-        self.VAL_DATASET_DIR = os.path.join(
-            ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/val"
-        )
-        self.TARGET_TYPES = None
-        self.SENSORS = None
-
-    def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
-            self.NUM_PROCESSES, ndevices
-        )
-        res = [0] * ndevices
-        for it in range(self.NUM_PROCESSES):
-            res[it % ndevices] += 1
-        return res
 
     def machine_params(self, mode="train", **kwargs):
         sampler_devices: Sequence[int] = []
@@ -72,7 +68,7 @@ class PointNavRoboThorBaseConfig(ObjectNavBaseConfig, ABC):
             nprocesses = (
                 1
                 if not torch.cuda.is_available()
-                else self.split_num_processes(len(gpu_ids))
+                else evenly_distribute_count_into_bins(self.NUM_PROCESSES, len(gpu_ids))
             )
             sampler_devices = self.TRAIN_GPU_IDS
         elif mode == "valid":
