@@ -8,8 +8,15 @@ import gym
 
 from core.base_abstractions.sensor import Sensor
 from core.base_abstractions.task import TaskSampler
-from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
-from plugins.robothor_plugin.robothor_tasks import ObjectNavTask, PointNavTask
+from plugins.robothor_plugin.robothor_environment import (
+    RoboThorEnvironment,
+    RoboThorMultiEnvironment,
+)
+from plugins.robothor_plugin.robothor_tasks import (
+    ObjectNavTask,
+    PointNavTask,
+    NavToPartnerTask,
+)
 from utils.cache_utils import str_to_pos_for_cache
 from utils.experiment_utils import set_seed, set_deterministic_cudnn
 from utils.system import get_logger
@@ -895,3 +902,202 @@ class PointNavDatasetTaskSampler(TaskSampler):
         Can be float('inf').
         """
         return float("inf") if self.max_tasks is None else self.max_tasks
+
+
+class NavToPartnerTaskSampler(TaskSampler):
+    def __init__(
+        self,
+        scenes: List[str],
+        sensors: List[Sensor],
+        max_steps: int,
+        env_args: Dict[str, Any],
+        action_space: gym.Space,
+        rewards_config: Dict,
+        scene_period: Optional[Union[int, str]] = None,
+        max_tasks: Optional[int] = None,
+        seed: Optional[int] = None,
+        deterministic_cudnn: bool = False,
+        **kwargs,
+    ) -> None:
+        self.rewards_config = rewards_config
+        self.env_args = env_args
+        self.scenes = scenes
+        self.env: Optional[RoboThorMultiEnvironment] = None
+        self.sensors = sensors
+        self.max_steps = max_steps
+        self._action_space = action_space
+
+        self.scene_counter: Optional[int] = None
+        self.scene_order: Optional[List[str]] = None
+        self.scene_id: Optional[int] = None
+        self.scene_period: Optional[
+            Union[str, int]
+        ] = scene_period  # default makes a random choice
+        self.max_tasks: Optional[int] = None
+        self.reset_tasks = max_tasks
+
+        self._last_sampled_task: Optional[PointNavTask] = None
+
+        self.seed: Optional[int] = None
+        self.set_seed(seed)
+
+        if deterministic_cudnn:
+            set_deterministic_cudnn()
+
+        self.reset()
+
+    def _create_environment(self) -> RoboThorMultiEnvironment:
+        env = RoboThorMultiEnvironment(**self.env_args)
+        return env
+
+    @property
+    def length(self) -> Union[int, float]:
+        """Length.
+
+        # Returns
+
+        Number of total tasks remaining that can be sampled.
+        Can be float('inf').
+        """
+        return float("inf") if self.max_tasks is None else self.max_tasks
+
+    @property
+    def total_unique(self) -> Optional[Union[int, float]]:
+        return self.reset_tasks
+
+    @property
+    def last_sampled_task(self) -> Optional[PointNavTask]:
+        return self._last_sampled_task
+
+    def close(self) -> None:
+        if self.env is not None:
+            self.env.stop()
+
+    @property
+    def all_observation_spaces_equal(self) -> bool:
+        """Check if observation spaces equal.
+
+        # Returns
+
+        True if all Tasks that can be sampled by this sampler
+        have the     same observation space. Otherwise False.
+        """
+        return True
+
+    def sample_scene(self, force_advance_scene: bool):
+        if force_advance_scene:
+            if self.scene_period != "manual":
+                get_logger().warning(
+                    "When sampling scene, have `force_advance_scene == True`"
+                    "but `self.scene_period` is not equal to 'manual',"
+                    "this may cause unexpected behavior."
+                )
+            self.scene_id = (1 + self.scene_id) % len(self.scenes)
+            if self.scene_id == 0:
+                random.shuffle(self.scene_order)
+
+        if self.scene_period is None:
+            # Random scene
+            self.scene_id = random.randint(0, len(self.scenes) - 1)
+        elif self.scene_period == "manual":
+            pass
+        elif self.scene_counter >= cast(int, self.scene_period):
+            if self.scene_id == len(self.scene_order) - 1:
+                # Randomize scene order for next iteration
+                random.shuffle(self.scene_order)
+                # Move to next scene
+                self.scene_id = 0
+            else:
+                # Move to next scene
+                self.scene_id += 1
+            # Reset scene counter
+            self.scene_counter = 1
+        elif isinstance(self.scene_period, int):
+            # Stay in current scene
+            self.scene_counter += 1
+        else:
+            raise NotImplementedError(
+                "Invalid scene_period {}".format(self.scene_period)
+            )
+
+        if self.max_tasks is not None:
+            self.max_tasks -= 1
+
+        return self.scenes[int(self.scene_order[self.scene_id])]
+
+    def next_task(
+        self, force_advance_scene: bool = False
+    ) -> Optional[NavToPartnerTask]:
+        if self.max_tasks is not None and self.max_tasks <= 0:
+            return None
+
+        scene = self.sample_scene(force_advance_scene)
+
+        if self.env is not None:
+            if scene.replace("_physics", "") != self.env.scene_name.replace(
+                "_physics", ""
+            ):
+                self.env.reset(scene_name=scene)
+        else:
+            self.env = self._create_environment()
+            self.env.reset(scene_name=scene)
+
+        too_close_to_target = True
+        for _ in range(10):
+            self.env.randomize_agent_location(agent_id=0)
+            self.env.randomize_agent_location(agent_id=1)
+
+            pose1 = self.env.agent_state(0)
+            pose2 = self.env.agent_state(1)
+            dist = self.env.distance_cache.find_distance(
+                {k: pose1[k] for k in ["x", "y", "z"]},
+                {k: pose2[k] for k in ["x", "y", "z"]},
+                self.env.distance_from_point_to_point,
+            )
+
+            too_close_to_target = (
+                dist <= 1.25 * self.rewards_config["max_success_distance"]
+            )
+            if not too_close_to_target:
+                break
+
+        task_info = {
+            "scene": scene,
+            "initial_position1": {k: pose1[k] for k in ["x", "y", "z"]},
+            "initial_position2": {k: pose2[k] for k in ["x", "y", "z"]},
+            "initial_orientation1": pose1["rotation"]["y"],
+            "initial_orientation2": pose2["rotation"]["y"],
+            "id": "_".join(
+                [scene]
+                + ["%4.2f" % pose1[k] for k in ["x", "y", "z"]]
+                + ["%4.2f" % pose1["rotation"]["y"]]
+                + ["%4.2f" % pose2[k] for k in ["x", "y", "z"]]
+                + ["%4.2f" % pose2["rotation"]["y"]]
+                + ["%d" % random.randint(0, 2 ** 31 - 1)]
+            ),
+        }
+
+        if too_close_to_target:
+            get_logger().warning("Bad sampled episode {}".format(task_info))
+
+        self._last_sampled_task = NavToPartnerTask(
+            env=self.env,
+            sensors=self.sensors,
+            task_info=task_info,
+            max_steps=self.max_steps,
+            action_space=self._action_space,
+            reward_configs=self.rewards_config,
+        )
+        return self._last_sampled_task
+
+    def reset(self):
+        self.scene_counter = 0
+        self.scene_order = list(range(len(self.scenes)))
+        random.shuffle(self.scene_order)
+        self.scene_id = 0
+        self.max_tasks = self.reset_tasks
+
+    def set_seed(self, seed: int):
+        self.seed = seed
+        if seed is not None:
+            set_seed(seed)

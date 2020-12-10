@@ -62,12 +62,14 @@ class ThorViz(TrajectoryViz):
         view_triangle_only_on_last: bool = True,
         disable_view_triangle: bool = False,
         line_opacity: float = 1.0,
+        **kwargs
     ):
         super().__init__(
             path_to_trajectory=path_to_trajectory,
             label=label,
             figsize=figsize,
             fontsize=fontsize,
+            **kwargs
         )
 
         if isinstance(scenes[0], str):

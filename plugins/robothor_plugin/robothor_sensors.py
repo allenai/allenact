@@ -6,7 +6,10 @@ import quaternion  # noqa # pylint: disable=unused-import
 
 from core.base_abstractions.sensor import Sensor, RGBSensor, DepthSensor
 from core.base_abstractions.task import Task
-from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
+from plugins.robothor_plugin.robothor_environment import (
+    RoboThorEnvironment,
+    RoboThorMultiEnvironment,
+)
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from utils.misc_utils import prepare_locals_for_super
 
@@ -20,6 +23,37 @@ class RGBSensorRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnvironment]
 
     def frame_from_env(self, env: RoboThorEnvironment) -> np.ndarray:
         return env.current_frame.copy()
+
+
+class RGBSensorMultiRoboThor(
+    RGBSensor[RoboThorMultiEnvironment, Task[RoboThorMultiEnvironment]]
+):
+    """Sensor for RGB images in RoboTHOR.
+
+    Returns from a running RoboThorEnvironment instance, the current RGB
+    frame corresponding to the agent's egocentric view.
+    """
+
+    def __init__(self, agent_count: int = 2, **kwargs):
+        # TODO take all named args from superclass and pass with super().__init__(**prepare_locals_for_super(locals()))
+        super().__init__(**kwargs)
+        self.agent_count = agent_count
+        self.agent_id = 0
+
+    def frame_from_env(self, env: RoboThorMultiEnvironment) -> np.ndarray:
+        return env.current_frames[self.agent_id].copy()
+
+    def get_observation(
+        self,
+        env: RoboThorMultiEnvironment,
+        task: Task[RoboThorMultiEnvironment],
+        *args: Any,
+        **kwargs: Any
+    ) -> Any:
+        obs = []
+        for self.agent_id in range(self.agent_count):
+            obs.append(super().get_observation(env, task, *args, **kwargs))
+        return np.stack(obs, axis=0)  # agents x width x height x channels
 
 
 class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):

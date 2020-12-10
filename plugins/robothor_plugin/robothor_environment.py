@@ -521,3 +521,182 @@ class RoboThorCachedEnvironment:
     def visible_objects(self) -> List[Dict[str, Any]]:
         """Return all visible objects."""
         return self.all_objects_with_properties({"visible": True})
+
+
+class RoboThorMultiEnvironment(RoboThorEnvironment):
+    """Wrapper for the robo2thor controller providing additional functionality
+    and bookkeeping.
+
+    See [here](https://ai2thor.allenai.org/robothor/documentation) for comprehensive
+     documentation on RoboTHOR.
+
+    # Attributes
+
+    controller : The AI2THOR controller.
+    config : The AI2THOR controller configuration
+    """
+
+    def __init__(self, **kwargs):
+        if "agentCount" in kwargs:
+            assert kwargs["agentCount"] > 0
+        else:
+            kwargs["agentCount"] = 2
+
+        super().__init__(**kwargs)
+
+        self.agent_count = self.config["agentCount"]
+
+    def distance_to_object_type(self, object_type: str, agent_id: int = 0) -> float:
+        """Minimal geodesic distance to object of given type from agent's
+        current location.
+
+        It might return -1.0 for unreachable targets.
+        """
+
+        assert 0 <= agent_id < self.agent_count
+
+        return self.distance_cache.find_distance(
+            self.controller.last_event.events[agent_id].metadata["agent"]["position"],
+            object_type,
+            self.distance_from_point_to_object_type,
+        )
+
+    def distance_to_point(self, target: Dict[str, float], agent_id: int = 0) -> float:
+        """Minimal geodesic distance to end point from agent's current
+        location.
+
+        It might return -1.0 for unreachable targets.
+        """
+        assert 0 <= agent_id < self.agent_count
+
+        return self.distance_cache.find_distance(
+            self.controller.last_event.events[agent_id].metadata["agent"]["position"],
+            target,
+            self.distance_from_point_to_point,
+        )
+
+    def agent_state(self, agent_id: int = 0) -> Dict:
+        """Return agent position, rotation and horizon."""
+        assert 0 <= agent_id < self.agent_count
+
+        agent_meta = self.last_event.events[agent_id].metadata["agent"]
+        return {
+            **{k: float(v) for k, v in agent_meta["position"].items()},
+            "rotation": {k: float(v) for k, v in agent_meta["rotation"].items()},
+            "horizon": round(float(agent_meta["cameraHorizon"]), 1),
+        }
+
+    def teleport(
+        self,
+        pose: Dict[str, float],
+        rotation: Dict[str, float],
+        horizon: float = 0.0,
+        agent_id: int = 0,
+    ):
+        assert 0 <= agent_id < self.agent_count
+        e = self.controller.step(
+            action="TeleportFull",
+            x=pose["x"],
+            y=pose["y"],
+            z=pose["z"],
+            rotation=rotation,
+            horizon=horizon,
+            agentId=agent_id,
+        )
+        return e.metadata["lastActionSuccess"]
+
+    def randomize_agent_location(
+        self,
+        seed: int = None,
+        partial_position: Optional[Dict[str, float]] = None,
+        agent_id: int = 0,
+    ) -> Dict[str, Union[Dict[str, float], float]]:
+        """Teleports the agent to a random reachable location in the scene."""
+        assert 0 <= agent_id < self.agent_count
+
+        if partial_position is None:
+            partial_position = {}
+        k = 0
+        state: Optional[Dict] = None
+
+        while k == 0 or (not self.last_action_success and k < 10):
+            # self.reset()
+            state = {**self.random_reachable_state(seed=seed), **partial_position}
+            # get_logger().debug("picked target location {}".format(state))
+            self.controller.step("TeleportFull", **state, agentId=agent_id)
+            k += 1
+
+        if not self.last_action_success:
+            get_logger().warning(
+                (
+                    "Randomize agent location in scene {} and current random state {}"
+                    " with seed {} and partial position {} failed in "
+                    "10 attempts. Forcing the action."
+                ).format(self.scene_name, state, seed, partial_position)
+            )
+            self.controller.step("TeleportFull", **state, force_action=True, agentId=agent_id)  # type: ignore
+            assert self.last_action_success, "Force action failed with {}".format(state)
+
+        # get_logger().debug("location after teleport full {}".format(self.agent_state()))
+        # self.controller.step("TeleportFull", **self.agent_state())  # TODO only for debug
+        # get_logger().debug("location after re-teleport full {}".format(self.agent_state()))
+
+        return self.agent_state(agent_id=agent_id)
+
+    @property
+    def current_frames(self) -> List[np.ndarray]:
+        """Returns rgb images corresponding to the agents' egocentric views."""
+        return [
+            self.controller.last_event.events[agent_id].frame
+            for agent_id in range(self.agent_count)
+        ]
+
+    @property
+    def current_depths(self) -> List[np.ndarray]:
+        """Returns depth images corresponding to the agents' egocentric views."""
+        return [
+            self.controller.last_event.events[agent_id].depth_frame
+            for agent_id in range(self.agent_count)
+        ]
+
+    # @property
+    # def last_action(self) -> str:
+    #     """Last action, as a string, taken by the agent."""
+    #     return self.controller.last_event.metadata["lastAction"]
+    #
+    # @property
+    # def last_action_success(self) -> bool:
+    #     """Was the last action taken by the agent a success?"""
+    #     return self.controller.last_event.metadata["lastActionSuccess"]
+    #
+    # @property
+    # def last_action_return(self) -> Any:
+    #     """Get the value returned by the last action (if applicable).
+    #
+    #     For an example of an action that returns a value, see
+    #     `"GetReachablePositions"`.
+    #     """
+    #     return self.controller.last_event.metadata["actionReturn"]
+
+    # def all_objects(self) -> List[Dict[str, Any]]:
+    #     """Return all object metadata."""
+    #     return self.controller.last_event.metadata["objects"]
+    #
+    # def all_objects_with_properties(
+    #     self, properties: Dict[str, Any]
+    # ) -> List[Dict[str, Any]]:
+    #     """Find all objects with the given properties."""
+    #     objects = []
+    #     for o in self.all_objects():
+    #         satisfies_all = True
+    #         for k, v in properties.items():
+    #             if o[k] != v:
+    #                 satisfies_all = False
+    #                 break
+    #         if satisfies_all:
+    #             objects.append(o)
+    #     return objects
+    #
+    # def visible_objects(self) -> List[Dict[str, Any]]:
+    #     """Return all visible objects."""
+    #     return self.all_objects_with_properties({"visible": True})
