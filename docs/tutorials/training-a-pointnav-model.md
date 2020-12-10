@@ -98,7 +98,7 @@ from projects.pointnav_baselines.models.point_nav_models import (
 )
 from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from core.base_abstractions.experiment_config import ExperimentConfig
-from core.base_abstractions.preprocessor import ObservationSet, ResNetPreprocessor
+from core.base_abstractions.preprocessor import SensorPreprocessorGraph, ResNetPreprocessor
 from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
@@ -314,16 +314,27 @@ process, based on the list of devices we defined above.
             for prep in self.PREPROCESSORS:
                 prep.kwargs["parallel"] = False
 
-        observation_set = Builder(ObservationSet, kwargs=dict(
-            source_ids=self.OBSERVATIONS, all_preprocessors=self.PREPROCESSORS, all_sensors=self.SENSORS
-        )) if mode == 'train' or nprocesses > 0 else None
+        sensor_preprocessor_graph = (
+            SensorPreprocessorGraph(
+                source_observation_spaces=SensorSuite(self.SENSORS).observation_spaces,
+                preprocessors=self.PREPROCESSORS,
+            )
+            if mode == "train"
+            or (
+                (isinstance(nprocesses, int) and nprocesses > 0)
+                or (isinstance(nprocesses, Sequence) and sum(nprocesses) > 0)
+            )
+            else None
+        )
 
-        return {
-            "nprocesses": nprocesses,
-            "gpu_ids": gpu_ids,
-            "sampler_devices": sampler_devices if mode == "train" else gpu_ids,
-            "observation_set": observation_set,
-        }
+        return MachineParams(
+            nprocesses=nprocesses,
+            devices=gpu_ids,
+            sampler_devices=sampler_devices
+            if mode == "train"
+            else gpu_ids,  # ignored with > 1 gpu_ids
+            sensor_preprocessor_graph=sensor_preprocessor_graph,
+        )
 ```
 
 Now we define the actual model that we will be using. **AllenAct** offers first-class support for PyTorch,
@@ -339,7 +350,7 @@ distance to the target) with `goal_dims`.
     def create_model(cls, **kwargs) -> nn.Module:
         return ResnetTensorPointNavActorCritic(
             action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
-            observation_space=kwargs["observation_set"].observation_spaces,
+            observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             rgb_resnet_preprocessor_uuid="rgb_resnet",
             hidden_size=512,

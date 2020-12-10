@@ -91,7 +91,7 @@ class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(
     def create_model(cls, **kwargs) -> nn.Module:
         return PointNavActorCriticSimpleConvRNN(
             action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
-            observation_space=kwargs["observation_set"].observation_spaces,
+            observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             rgb_uuid="rgb",
             depth_uuid=None,
             goal_sensor_uuid="target_coordinates_ind",

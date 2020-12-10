@@ -1,5 +1,4 @@
 import abc
-from collections import OrderedDict
 from typing import Dict, Any, Callable, Optional, List, Union, cast
 from typing import Sequence
 
@@ -11,7 +10,6 @@ from gym.spaces import Dict as SpaceDict
 from torch import nn as nn
 from torchvision import models
 
-from core.base_abstractions.sensor import Sensor, SensorSuite
 from utils.experiment_utils import Builder
 from utils.misc_utils import prepare_locals_for_super
 from utils.system import get_logger
@@ -77,22 +75,45 @@ class SensorPreprocessorGraph:
 
     preprocessors : List containing preprocessors with required input uuids, output uuid of each
         sensor must be unique.
+    observation_spaces: The observation spaces of the values returned when calling `get_observations`.
+        By default (see the `additionally_exposed_uuids` parameter to to change this default) the observations
+        returned by the `SensorPreprocessorGraph` **include only the sink nodes** of the graph (i.e.
+        those that are not used by any other preprocessor).
+        Thus if one of the input preprocessors takes as input the `'YOUR_SENSOR_UUID'` sensor, then
+        `'YOUR_SENSOR_UUID'` will not be returned when calling `get_observations`.
+    device: The `torch.device` upon which the preprocessors are run.
     """
 
     preprocessors: Dict[str, Preprocessor]
     observation_spaces: SpaceDict
+    device: torch.device
 
     def __init__(
-        self, preprocessors: Sequence[Union[Preprocessor, Builder[Preprocessor]]],
+        self,
+        source_observation_spaces: SpaceDict,
+        preprocessors: Sequence[Union[Preprocessor, Builder[Preprocessor]]],
+        additional_output_uuids: Sequence[str] = tuple(),
     ) -> None:
         """Initializer.
 
         # Parameters
 
+        source_observation_spaces : The observation spaces of all sensors before preprocessing.
+            This generally should be the output of `SensorSuite.observation_spaces`.
         preprocessors : The preprocessors that will be included in the graph.
+        additional_output_uuids: As described in the documentation for this class, the observations
+            returned when calling `get_observations` only include, by default, those observations
+            that are not processed by any preprocessor. If you'd like to include observations that
+            would otherwise not be included, the uuids of these sensors should be included as
+            a sequence of strings here.
         """
-        self.preprocessors: Dict[str, Preprocessor] = OrderedDict()
-        spaces: OrderedDict[str, gym.Space] = OrderedDict()
+        self.device: torch.device = torch.device("cpu")
+
+        obs_spaces: Dict[str, gym.Space] = {
+            k: source_observation_spaces[k] for k in source_observation_spaces
+        }
+
+        self.preprocessors: Dict[str, Preprocessor] = {}
         for preprocessor in preprocessors:
             if isinstance(preprocessor, Builder):
                 preprocessor = preprocessor()
@@ -100,21 +121,28 @@ class SensorPreprocessorGraph:
             assert (
                 preprocessor.uuid not in self.preprocessors
             ), "'{}' is duplicated preprocessor uuid".format(preprocessor.uuid)
+
             self.preprocessors[preprocessor.uuid] = preprocessor
-            spaces[preprocessor.uuid] = preprocessor.observation_space
-        self.observation_spaces = SpaceDict(spaces=spaces)
+            obs_spaces[preprocessor.uuid] = preprocessor.observation_space
 
         g = nx.DiGraph()
-        for k in self.preprocessors:
+        for k in obs_spaces:
             g.add_node(k)
         for k in self.preprocessors:
             for j in self.preprocessors[k].input_uuids:
-                if j not in g:
-                    g.add_node(j)
-                g.add_edge(k, j)
+                g.add_edge(j, k)
+
         assert nx.is_directed_acyclic_graph(
             g
         ), "preprocessors do not form a direct acyclic graph"
+
+        self.observation_spaces = SpaceDict(
+            spaces={
+                uuid: obs_spaces[uuid]
+                for uuid in obs_spaces
+                if uuid in additional_output_uuids or g.out_degree(uuid) == 0
+            }
+        )
 
         # ensure dependencies are precomputed
         self.compute_order = [n for n in nx.dfs_postorder_nodes(g)]
@@ -135,6 +163,7 @@ class SensorPreprocessorGraph:
     def to(self, device: torch.device) -> "SensorPreprocessorGraph":
         for k, v in self.preprocessors.items():
             self.preprocessors[k] = v.to(device)
+        self.device = device
         return self
 
     def get_observations(
@@ -151,98 +180,22 @@ class SensorPreprocessorGraph:
             if uuid not in obs:
                 obs[uuid] = self.preprocessors[uuid].process(obs)
 
-        return obs
+        return {uuid: obs[uuid] for uuid in self.observation_spaces}
 
 
 class PreprocessorGraph(SensorPreprocessorGraph):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        get_logger().warning(
+        raise DeprecationWarning(
             "`PreprocessorGraph` has been deprecated, use `SensorPreprocessorGraph` instead."
         )
 
 
 class ObservationSet:
-    """Represents a list of source_ids, corresponding to sensors and
-    preprocessors, with each source being identified through a unique id.
-
-    # Attributes
-
-    source_ids : Sequence containing sensor and preprocessor ids to be consumed by agents. Each source uuid must be unique.
-    graph : Computation graph for all preprocessors.
-    observation_spaces : Observation spaces of all output sources.
-    device : Device where the SensorPreprocessorGraph is executed.
-    """
-
-    source_ids: Sequence[str]
-    graph: SensorPreprocessorGraph
-    observation_spaces: SpaceDict
-    device: torch.device = torch.device("cpu")
-
-    def __init__(
-        self,
-        source_ids: Sequence[str],
-        all_preprocessors: Sequence[Union[Preprocessor, Builder[Preprocessor]]],
-        all_sensors: Sequence[Sensor],
-    ) -> None:
-        """Initializer.
-
-        # Parameters
-
-        source_ids : The sensors and preprocessors that will be included in the set.
-        all_preprocessors : The entire list of preprocessors to be executed.
-        all_sensors : The entire list of sensors.
-        """
-
-        self.graph = SensorPreprocessorGraph(all_preprocessors)
-
-        self.source_ids = source_ids
-        assert len(set(self.source_ids)) == len(
-            self.source_ids
-        ), "No duplicated uuids allowed in source_ids"
-
-        sensor_spaces = SensorSuite(all_sensors).observation_spaces
-        preprocessor_spaces = self.graph.observation_spaces
-        spaces: OrderedDict[str, gym.Space] = OrderedDict()
-        for uuid in self.source_ids:
-            assert (
-                uuid in sensor_spaces.spaces or uuid in preprocessor_spaces.spaces
-            ), "uuid {} missing from sensor suite and preprocessor graph".format(uuid)
-            if uuid in sensor_spaces.spaces:
-                spaces[uuid] = sensor_spaces[uuid]
-            else:
-                spaces[uuid] = preprocessor_spaces[uuid]
-        self.observation_spaces = SpaceDict(spaces=spaces)
-
-    def get(self, uuid: str) -> Preprocessor:
-        """Return preprocessor with the given `uuid`.
-
-        # Parameters
-
-        uuid : The unique id of the preprocessor.
-
-        # Returns
-
-        The preprocessor with unique id `uuid`.
-        """
-        return self.graph.get(uuid)
-
-    def to(self, device: torch.device) -> "ObservationSet":
-        self.graph = self.graph.to(device)
-        self.device = device
-        return self
-
-    def get_observations(
-        self, obs: Dict[str, Any], *args: Any, **kwargs: Any
-    ) -> Dict[str, Any]:
-        """Get all observations within a dictionary.
-
-        # Returns
-
-        Collect observations from all sources and return them packaged inside a Dict.
-        """
-        obs = self.graph.get_observations(obs)
-        return OrderedDict([(k, obs[k]) for k in self.source_ids])
+    def __init__(self, *args, **kwargs) -> None:
+        raise DeprecationWarning(
+            "`ObservationSet` has been deprecated. Use `SensorPreprocessorGraph` instead."
+        )
 
 
 class ResNetEmbedder(nn.Module):

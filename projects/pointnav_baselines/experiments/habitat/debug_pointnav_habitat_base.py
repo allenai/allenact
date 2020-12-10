@@ -1,21 +1,25 @@
 import os
 from abc import ABC
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Sequence
 
 import gym
 import habitat
 import torch
 
 from core.base_abstractions.experiment_config import MachineParams
-from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.preprocessor import SensorPreprocessorGraph
+from core.base_abstractions.sensor import SensorSuite
 from core.base_abstractions.task import TaskSampler
-from plugins.habitat_plugin.habitat_constants import HABITAT_DATASETS_DIR, HABITAT_CONFIGS_DIR, \
-    HABITAT_SCENE_DATASETS_DIR
+from plugins.habitat_plugin.habitat_constants import (
+    HABITAT_DATASETS_DIR,
+    HABITAT_CONFIGS_DIR,
+    HABITAT_SCENE_DATASETS_DIR,
+)
 from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
 from plugins.habitat_plugin.habitat_tasks import PointNavTask
 from plugins.habitat_plugin.habitat_utils import get_habitat_config
 from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
-from utils.experiment_utils import Builder, evenly_distribute_count_into_bins
+from utils.experiment_utils import evenly_distribute_count_into_bins
 
 
 class DebugPointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
@@ -80,7 +84,9 @@ class DebugPointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
             devices = self.TRAIN_GPUS
-            nprocesses = evenly_distribute_count_into_bins(self.NUM_PROCESSES, len(devices))
+            nprocesses = evenly_distribute_count_into_bins(
+                self.NUM_PROCESSES, len(devices)
+            )
         elif mode == "valid":
             nprocesses = 0
             devices = self.VALIDATION_GPUS
@@ -90,21 +96,23 @@ class DebugPointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
-        observation_set = (
-            Builder(
-                ObservationSet,
-                kwargs=dict(
-                    source_ids=self.OBSERVATIONS,
-                    all_preprocessors=self.PREPROCESSORS,
-                    all_sensors=self.SENSORS,
-                ),
+        sensor_preprocessor_graph = (
+            SensorPreprocessorGraph(
+                source_observation_spaces=SensorSuite(self.SENSORS).observation_spaces,
+                preprocessors=self.PREPROCESSORS,
             )
-            if mode == "train" or nprocesses > 0
+            if mode == "train"
+            or (
+                (isinstance(nprocesses, int) and nprocesses > 0)
+                or (isinstance(nprocesses, Sequence) and sum(nprocesses) > 0)
+            )
             else None
         )
 
         return MachineParams(
-            nprocesses=nprocesses, devices=devices, observation_set=observation_set
+            nprocesses=nprocesses,
+            devices=devices,
+            sensor_preprocessor_graph=sensor_preprocessor_graph,
         )
 
     @classmethod
@@ -114,9 +122,7 @@ class DebugPointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
     @staticmethod
     def make_easy_dataset(dataset: habitat.Dataset) -> habitat.Dataset:
         episodes = [
-            e
-            for e in dataset.episodes
-            if float(e.info["geodesic_distance"]) < 1.5
+            e for e in dataset.episodes if float(e.info["geodesic_distance"]) < 1.5
         ]
         for i, e in enumerate(episodes):
             e.episode_id = str(i)
@@ -150,7 +156,9 @@ class DebugPointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         if total_processes != 1:
-            raise NotImplementedError("In validation, `total_processes` must equal 1 for habitat tasks")
+            raise NotImplementedError(
+                "In validation, `total_processes` must equal 1 for habitat tasks"
+            )
         config = self.CONFIG.clone()
         config.defrost()
         config.DATASET.DATA_PATH = self.VALID_SCENES

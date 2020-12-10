@@ -24,7 +24,7 @@ class ObjectNavRoboThorResNetGRUBaseExperimentConfig(ObjectNavRoboThorBaseConfig
 
         return ResnetTensorObjectNavActorCritic(
             action_space=gym.spaces.Discrete(len(ObjectNavTask.class_action_names())),
-            observation_space=kwargs["observation_set"].observation_spaces,
+            observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             goal_sensor_uuid=goal_sensor_uuid,
             rgb_resnet_preprocessor_uuid="rgb_resnet" if has_rgb else None,
             depth_resnet_preprocessor_uuid="depth_resnet" if has_depth else None,

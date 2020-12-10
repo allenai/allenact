@@ -9,8 +9,9 @@ import numpy as np
 import torch
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
-from core.base_abstractions.preprocessor import ObservationSet, Preprocessor
-from core.base_abstractions.sensor import Sensor, ExpertActionSensor
+from core.base_abstractions.experiment_config import MachineParams
+from core.base_abstractions.preprocessor import Preprocessor, SensorPreprocessorGraph
+from core.base_abstractions.sensor import Sensor, ExpertActionSensor, SensorSuite
 from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_sensors import DepthSensorThor
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
@@ -86,31 +87,27 @@ class PointNaviThorBaseConfig(PointNavBaseConfig, ABC):
             for prep in self.PREPROCESSORS:
                 prep.kwargs["parallel"] = False
 
-        observation_set = (
-            Builder(
-                ObservationSet,
-                kwargs=dict(
-                    source_ids=[s.uuid for s in self.SENSORS]
-                    + [
-                        (p() if isinstance(p, Builder) else p).uuid
-                        for p in self.PREPROCESSORS
-                    ],
-                    all_preprocessors=self.PREPROCESSORS,
-                    all_sensors=self.SENSORS,
-                ),
+        sensor_preprocessor_graph = (
+            SensorPreprocessorGraph(
+                source_observation_spaces=SensorSuite(self.SENSORS).observation_spaces,
+                preprocessors=self.PREPROCESSORS,
             )
-            if mode == "train" or nprocesses > 0
+            if mode == "train"
+            or (
+                (isinstance(nprocesses, int) and nprocesses > 0)
+                or (isinstance(nprocesses, Sequence) and sum(nprocesses) > 0)
+            )
             else None
         )
 
-        return {
-            "nprocesses": nprocesses,
-            "gpu_ids": gpu_ids,
-            "sampler_devices": sampler_devices
+        return MachineParams(
+            nprocesses=nprocesses,
+            devices=gpu_ids,
+            sampler_devices=sampler_devices
             if mode == "train"
             else gpu_ids,  # ignored with > 1 gpu_ids
-            "observation_set": observation_set,
-        }
+            sensor_preprocessor_graph=sensor_preprocessor_graph,
+        )
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:

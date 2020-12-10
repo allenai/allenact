@@ -35,7 +35,7 @@ class PointNaviThorSimpleConvGRUBaseConfig(PointNaviThorBaseConfig, ABC):
 
         return PointNavActorCriticSimpleConvRNN(
             action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
-            observation_space=kwargs["observation_set"].observation_spaces,
+            observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             rgb_uuid=rgb_uuid,
             depth_uuid=depth_uuid,
             goal_sensor_uuid=goal_sensor_uuid,

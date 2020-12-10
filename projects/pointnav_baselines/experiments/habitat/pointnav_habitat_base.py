@@ -1,12 +1,13 @@
 import os
 from abc import ABC
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Sequence
 
 import gym
 import torch
 
 from core.base_abstractions.experiment_config import MachineParams
-from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.preprocessor import SensorPreprocessorGraph
+from core.base_abstractions.sensor import SensorSuite
 from core.base_abstractions.task import TaskSampler
 from plugins.habitat_plugin.habitat_constants import (
     HABITAT_DATASETS_DIR,
@@ -17,7 +18,7 @@ from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
 from plugins.habitat_plugin.habitat_tasks import PointNavTask
 from plugins.habitat_plugin.habitat_utils import get_habitat_config
 from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
-from utils.experiment_utils import Builder, evenly_distribute_count_into_bins
+from utils.experiment_utils import evenly_distribute_count_into_bins
 
 
 class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
@@ -112,21 +113,21 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
-        observation_set = (
-            Builder(
-                ObservationSet,
-                kwargs=dict(
-                    source_ids=self.OBSERVATIONS,
-                    all_preprocessors=self.PREPROCESSORS,
-                    all_sensors=self.SENSORS,
-                ),
+        sensor_preprocessor_graph = (
+            SensorPreprocessorGraph(
+                source_observation_spaces=SensorSuite(self.SENSORS).observation_spaces,
+                preprocessors=self.PREPROCESSORS,
             )
-            if mode == "train" or nprocesses > 0
+            if mode == "train"
+            or (
+                (isinstance(nprocesses, int) and nprocesses > 0)
+                or (isinstance(nprocesses, Sequence) and sum(nprocesses) > 0)
+            )
             else None
         )
 
         return MachineParams(
-            nprocesses=nprocesses, devices=gpu_ids, observation_set=observation_set,
+            nprocesses=nprocesses, devices=gpu_ids, sensor_preprocessor_graph=sensor_preprocessor_graph,
         )
 
     @classmethod
