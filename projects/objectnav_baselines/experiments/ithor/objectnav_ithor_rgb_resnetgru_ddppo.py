@@ -6,7 +6,7 @@ from torchvision import models
 
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
+from core.base_abstractions.preprocessor import ResNetPreprocessor
 from plugins.ithor_plugin.ithor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.objectnav_baselines.experiments.ithor.objectnav_ithor_base import (
@@ -36,7 +36,7 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
 
         self.PREPROCESSORS = [
             Builder(
-                ResnetPreProcessorHabitat,
+                ResNetPreprocessor,
                 {
                     "input_height": self.SCREEN_SIZE,
                     "input_width": self.SCREEN_SIZE,

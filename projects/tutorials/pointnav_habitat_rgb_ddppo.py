@@ -11,13 +11,12 @@ from torchvision import models
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from core.base_abstractions.experiment_config import ExperimentConfig
-from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.preprocessor import ObservationSet, ResNetPreprocessor
 from core.base_abstractions.task import TaskSampler
 from plugins.habitat_plugin.habitat_constants import (
     HABITAT_DATASETS_DIR,
     HABITAT_CONFIGS_DIR,
 )
-from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.habitat_plugin.habitat_sensors import (
     RGBSensorHabitat,
     TargetCoordinatesSensorHabitat,
@@ -110,7 +109,7 @@ class PointNavHabitatRGBPPOTutorialExperimentConfig(ExperimentConfig):
 
     PREPROCESSORS = [
         Builder(
-            ResnetPreProcessorHabitat,
+            ResNetPreprocessor,
             {
                 "input_height": SCREEN_SIZE,
                 "input_width": SCREEN_SIZE,

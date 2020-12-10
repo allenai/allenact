@@ -1,7 +1,7 @@
 from torchvision import models
 
+from core.base_abstractions.preprocessor import ResNetPreprocessor
 from core.base_abstractions.sensor import ExpertActionSensor
-from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.ithor_plugin.ithor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base import (
@@ -38,7 +38,7 @@ class ObjectNaviThorRGBDAggerExperimentConfig(
 
     PREPROCESSORS = [
         Builder(
-            ResnetPreProcessorHabitat,
+            ResNetPreprocessor,
             {
                 "input_height": ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
                 "input_width": ObjectNavRoboThorBaseConfig.SCREEN_SIZE,

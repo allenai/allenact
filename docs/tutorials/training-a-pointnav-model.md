@@ -77,6 +77,7 @@ be using this file to run our experiments, but you can create a new directory in
 experiment there.
 
 We start off by importing everything we will need:
+
 ```python
 import glob
 from math import ceil
@@ -97,9 +98,8 @@ from projects.pointnav_baselines.models.point_nav_models import (
 )
 from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from core.base_abstractions.experiment_config import ExperimentConfig
-from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.preprocessor import ObservationSet, ResNetPreprocessor
 from core.base_abstractions.task import TaskSampler
-from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
@@ -195,7 +195,7 @@ sensor scaling and normalizing our input), but for the sake of efficiency, all n
 use this abstraction.
 ```python
     PREPROCESSORS = [
-            Builder(ResnetPreProcessorHabitat,
+            Builder(ResNetPreprocessor,
                 {
                     "input_height": SCREEN_SIZE,
                     "input_width": SCREEN_SIZE,

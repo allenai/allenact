@@ -1,14 +1,20 @@
 import abc
 from collections import OrderedDict
-from typing import Dict, Any, List, Union, Sequence
+from typing import Dict, Any, Callable, Optional, List, Union, cast
+from typing import Sequence
 
 import gym
 import networkx as nx
+import numpy as np
 import torch
 from gym.spaces import Dict as SpaceDict
+from torch import nn as nn
+from torchvision import models
 
 from core.base_abstractions.sensor import Sensor, SensorSuite
 from utils.experiment_utils import Builder
+from utils.misc_utils import prepare_locals_for_super
+from utils.system import get_logger
 
 
 class Preprocessor(abc.ABC):
@@ -57,9 +63,15 @@ class Preprocessor(abc.ABC):
         raise NotImplementedError()
 
 
-class PreprocessorGraph:
+class SensorPreprocessorGraph:
     """Represents a graph of preprocessors, with each preprocessor being
     identified through a universally unique id.
+
+    Allows for the construction of observations that are a function of
+    sensor readings. For instance, perhaps rather than giving your agent
+    a raw RGB image, you'd rather first pass that image through a pre-trained
+    convolutional network and only give your agent the resulting features
+    (see e.g. the `ResNetPreprocessor` class).
 
     # Attributes
 
@@ -71,7 +83,7 @@ class PreprocessorGraph:
     observation_spaces: SpaceDict
 
     def __init__(
-        self, preprocessors: List[Union[Preprocessor, Builder[Preprocessor]]],
+        self, preprocessors: Sequence[Union[Preprocessor, Builder[Preprocessor]]],
     ) -> None:
         """Initializer.
 
@@ -120,7 +132,7 @@ class PreprocessorGraph:
         """
         return self.preprocessors[uuid]
 
-    def to(self, device: torch.device) -> "PreprocessorGraph":
+    def to(self, device: torch.device) -> "SensorPreprocessorGraph":
         for k, v in self.preprocessors.items():
             self.preprocessors[k] = v.to(device)
         return self
@@ -142,28 +154,36 @@ class PreprocessorGraph:
         return obs
 
 
+class PreprocessorGraph(SensorPreprocessorGraph):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        get_logger().warning(
+            "`PreprocessorGraph` has been deprecated, use `SensorPreprocessorGraph` instead."
+        )
+
+
 class ObservationSet:
     """Represents a list of source_ids, corresponding to sensors and
     preprocessors, with each source being identified through a unique id.
 
     # Attributes
 
-    source_ids : List containing sensor and preprocessor ids to be consumed by agents. Each source uuid must be unique.
+    source_ids : Sequence containing sensor and preprocessor ids to be consumed by agents. Each source uuid must be unique.
     graph : Computation graph for all preprocessors.
     observation_spaces : Observation spaces of all output sources.
-    device : Device where the PreprocessorGraph is executed.
+    device : Device where the SensorPreprocessorGraph is executed.
     """
 
-    source_ids: List[str]
-    graph: PreprocessorGraph
+    source_ids: Sequence[str]
+    graph: SensorPreprocessorGraph
     observation_spaces: SpaceDict
     device: torch.device = torch.device("cpu")
 
     def __init__(
         self,
-        source_ids: List[str],
+        source_ids: Sequence[str],
         all_preprocessors: Sequence[Union[Preprocessor, Builder[Preprocessor]]],
-        all_sensors: List[Sensor],
+        all_sensors: Sequence[Sensor],
     ) -> None:
         """Initializer.
 
@@ -174,7 +194,7 @@ class ObservationSet:
         all_sensors : The entire list of sensors.
         """
 
-        self.graph = PreprocessorGraph(all_preprocessors)
+        self.graph = SensorPreprocessorGraph(all_preprocessors)
 
         self.source_ids = source_ids
         assert len(set(self.source_ids)) == len(
@@ -223,3 +243,129 @@ class ObservationSet:
         """
         obs = self.graph.get_observations(obs)
         return OrderedDict([(k, obs[k]) for k in self.source_ids])
+
+
+class ResNetEmbedder(nn.Module):
+    def __init__(self, resnet, pool=True):
+        super().__init__()
+        self.model = resnet
+        self.pool = pool
+        self.eval()
+
+    def forward(self, x):
+        with torch.no_grad():
+            x = self.model.conv1(x)
+            x = self.model.bn1(x)
+            x = self.model.relu(x)
+            x = self.model.maxpool(x)
+
+            x = self.model.layer1(x)
+            x = self.model.layer2(x)
+            x = self.model.layer3(x)
+            x = self.model.layer4(x)
+
+            if not self.pool:
+                return x
+            else:
+                x = self.model.avgpool(x)
+                x = torch.flatten(x, 1)
+                return x
+
+
+class ResNetPreprocessor(Preprocessor):
+    """Preprocess RGB or depth image using a ResNet model."""
+
+    def __init__(
+        self,
+        input_uuids: List[str],
+        output_uuid: str,
+        input_height: int,
+        input_width: int,
+        output_height: int,
+        output_width: int,
+        output_dims: int,
+        pool: bool,
+        torchvision_resnet_model: Callable[..., models.ResNet] = models.resnet18,
+        parallel: bool = False,
+        device: Optional[torch.device] = None,
+        device_ids: Optional[List[torch.device]] = None,
+        **kwargs: Any
+    ):
+        def f(x, k):
+            assert k in x, "{} must be set in ResNetPreprocessor".format(k)
+            return x[k]
+
+        def optf(x, k, default):
+            return x[k] if k in x else default
+
+        self.input_height = input_height
+        self.input_width = input_width
+        self.output_height = output_height
+        self.output_width = output_width
+        self.output_dims = output_dims
+        self.pool = pool
+        self.make_model = torchvision_resnet_model
+        self.parallel = parallel
+
+        if parallel:
+            # TODO: Does parallel being true make sense? It seems to do
+            #  something pretty surprising to me.
+            raise NotImplementedError("`parallel == True` is not currently supported.")
+
+        self.device = (
+            device
+            if device is not None
+            else ("cuda" if self.parallel and torch.cuda.is_available() else "cpu")
+        )
+        self.device_ids = device_ids or cast(
+            List[torch.device], list(range(torch.cuda.device_count()))
+        )
+
+        self._resnet: Optional[Union[ResNetEmbedder, torch.nn.DataParallel]] = None
+
+        low = -np.inf
+        high = np.inf
+        shape = (self.output_dims, self.output_height, self.output_width)
+
+        assert (
+            len(input_uuids) == 1
+        ), "resnet preprocessor can only consume one observation type"
+
+        observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
+
+        super().__init__(**prepare_locals_for_super(locals()))
+
+    @property
+    def resnet(self) -> Union[ResNetEmbedder, torch.nn.DataParallel]:
+        if self._resnet is None:
+            self._resnet = ResNetEmbedder(
+                self.make_model(pretrained=True).to(self.device), pool=self.pool
+            )
+            if self.parallel:
+                assert (
+                    torch.cuda.is_available()
+                ), "attempt to parallelize resnet without cuda"
+                get_logger().info("Distributing resnet")
+                self._resnet = self.resnet.to(torch.device("cuda"))
+
+                self._resnet = torch.nn.DataParallel(
+                    self.resnet, device_ids=self.device_ids
+                )
+                get_logger().info(
+                    "Detected {} devices".format(torch.cuda.device_count())
+                )
+
+        return self._resnet
+
+    def to(self, device: torch.device) -> "ResNetPreprocessor":
+        if not self.parallel:
+            self._resnet = self.resnet.to(device)
+            self.device = device
+        return self
+
+    def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:
+        x = obs[self.input_uuids[0]].to(self.device).permute(0, 3, 1, 2)  # bhwc -> bchw
+        # If the input is depth, repeat it across all 3 channels
+        if x.shape[1] == 1:
+            x = x.repeat(1, 3, 1, 1)
+        return self.resnet(x.to(self.device))

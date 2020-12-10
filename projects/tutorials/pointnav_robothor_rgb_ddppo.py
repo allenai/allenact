@@ -15,9 +15,8 @@ from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from core.base_abstractions.experiment_config import ExperimentConfig
-from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.preprocessor import ObservationSet, ResNetPreprocessor
 from core.base_abstractions.task import TaskSampler
-from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
@@ -78,7 +77,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     PREPROCESSORS = [
         Builder(
-            ResnetPreProcessorHabitat,
+            ResNetPreprocessor,
             {
                 "input_height": SCREEN_SIZE,
                 "input_width": SCREEN_SIZE,
