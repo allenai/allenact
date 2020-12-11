@@ -35,7 +35,6 @@ class ObjectNavMixInResNetGRUConfig(ObjectNavBaseConfig):
                     torchvision_resnet_model=models.resnet18,
                     input_uuids=["rgb_lowres"],
                     output_uuid="rgb_resnet",
-                    parallel=False,
                 )
             )
 
@@ -51,7 +50,6 @@ class ObjectNavMixInResNetGRUConfig(ObjectNavBaseConfig):
                     torchvision_resnet_model=models.resnet18,
                     input_uuids=["depth_lowres"],
                     output_uuid="depth_resnet",
-                    parallel=False,
                 )
             )
 

@@ -1,4 +1,3 @@
-
 from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base import (

@@ -165,6 +165,7 @@ class RoboThorEnvironment:
 
         It might return -1.0 for unreachable targets.
         """
+
         def retry_dist(position: Dict[str, float], target: Dict[str, float]):
             d = self.distance_from_point_to_point(position, target, 0.05)
             if d < 0:

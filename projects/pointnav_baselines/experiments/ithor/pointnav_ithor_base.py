@@ -2,7 +2,9 @@ import os
 from abc import ABC
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
-from projects.pointnav_baselines.experiments.pointnav_thor_base import PointNavThorBaseConfig
+from projects.pointnav_baselines.experiments.pointnav_thor_base import (
+    PointNavThorBaseConfig,
+)
 
 
 class PointNaviThorBaseConfig(PointNavThorBaseConfig, ABC):

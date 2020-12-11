@@ -239,7 +239,6 @@ class ResNetPreprocessor(Preprocessor):
         output_dims: int,
         pool: bool,
         torchvision_resnet_model: Callable[..., models.ResNet] = models.resnet18,
-        parallel: bool = False,
         device: Optional[torch.device] = None,
         device_ids: Optional[List[torch.device]] = None,
         **kwargs: Any
@@ -258,23 +257,13 @@ class ResNetPreprocessor(Preprocessor):
         self.output_dims = output_dims
         self.pool = pool
         self.make_model = torchvision_resnet_model
-        self.parallel = parallel
 
-        if parallel:
-            # TODO: Does parallel being true make sense? It seems to do
-            #  something pretty surprising to me.
-            raise NotImplementedError("`parallel == True` is not currently supported.")
-
-        self.device = (
-            device
-            if device is not None
-            else ("cuda" if self.parallel and torch.cuda.is_available() else "cpu")
-        )
+        self.device = torch.device("cpu") if device is None else device
         self.device_ids = device_ids or cast(
             List[torch.device], list(range(torch.cuda.device_count()))
         )
 
-        self._resnet: Optional[Union[ResNetEmbedder, torch.nn.DataParallel]] = None
+        self._resnet: Optional[ResNetEmbedder] = None
 
         low = -np.inf
         high = np.inf
@@ -289,31 +278,16 @@ class ResNetPreprocessor(Preprocessor):
         super().__init__(**prepare_locals_for_super(locals()))
 
     @property
-    def resnet(self) -> Union[ResNetEmbedder, torch.nn.DataParallel]:
+    def resnet(self) -> ResNetEmbedder:
         if self._resnet is None:
             self._resnet = ResNetEmbedder(
                 self.make_model(pretrained=True).to(self.device), pool=self.pool
             )
-            if self.parallel:
-                assert (
-                    torch.cuda.is_available()
-                ), "attempt to parallelize resnet without cuda"
-                get_logger().info("Distributing resnet")
-                self._resnet = self.resnet.to(torch.device("cuda"))
-
-                self._resnet = torch.nn.DataParallel(
-                    self.resnet, device_ids=self.device_ids
-                )
-                get_logger().info(
-                    "Detected {} devices".format(torch.cuda.device_count())
-                )
-
         return self._resnet
 
     def to(self, device: torch.device) -> "ResNetPreprocessor":
-        if not self.parallel:
-            self._resnet = self.resnet.to(device)
-            self.device = device
+        self._resnet = self.resnet.to(device)
+        self.device = device
         return self
 
     def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:
