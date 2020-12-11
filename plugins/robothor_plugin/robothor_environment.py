@@ -44,7 +44,12 @@ class RoboThorEnvironment:
             agentMode="bot",
             width=640,
             height=480,
+            agentCount=1,
         )
+
+        if "agentCount" in kwargs:
+            assert kwargs["agentCount"] > 0
+
         recursive_update(self.config, {**kwargs, "agentMode": "bot"})
         self.controller = Controller(
             **self.config, server_class=ai2thor.fifo_server.FifoServer
@@ -54,6 +59,8 @@ class RoboThorEnvironment:
         }
         self.distance_cache = DynamicDistanceCache(rounding=1)
         assert len(self.known_good_locations[self.scene_name]) > 10
+
+        self.agent_count = self.config["agentCount"]
 
     def initialize_grid_dimensions(
         self, reachable_points: Collection[Dict[str, float]]
@@ -116,14 +123,17 @@ class RoboThorEnvironment:
             return metrics.path_distance(path)
         return -1.0
 
-    def distance_to_object_type(self, object_type: str) -> float:
+    def distance_to_object_type(self, object_type: str, agent_id: int = 0) -> float:
         """Minimal geodesic distance to object of given type from agent's
         current location.
 
         It might return -1.0 for unreachable targets.
         """
+
+        assert 0 <= agent_id < self.agent_count
+
         return self.distance_cache.find_distance(
-            self.controller.last_event.metadata["agent"]["position"],
+            self.controller.last_event.events[agent_id].metadata["agent"]["position"],
             object_type,
             self.distance_from_point_to_object_type,
         )
@@ -159,12 +169,14 @@ class RoboThorEnvironment:
             return metrics.path_distance(path)
         return -1.0
 
-    def distance_to_point(self, target: Dict[str, float]) -> float:
+    def distance_to_point(self, target: Dict[str, float], agent_id: int = 0) -> float:
         """Minimal geodesic distance to end point from agent's current
         location.
 
         It might return -1.0 for unreachable targets.
         """
+
+        assert 0 <= agent_id < self.agent_count
 
         def retry_dist(position: Dict[str, float], target: Dict[str, float]):
             d = self.distance_from_point_to_point(position, target, 0.05)
@@ -182,14 +194,16 @@ class RoboThorEnvironment:
             return d
 
         return self.distance_cache.find_distance(
-            self.controller.last_event.metadata["agent"]["position"],
+            self.controller.last_event.events[agent_id].metadata["agent"]["position"],
             target,
             retry_dist,
         )
 
-    def agent_state(self) -> Dict:
+    def agent_state(self, agent_id: int = 0) -> Dict:
         """Return agent position, rotation and horizon."""
-        agent_meta = self.last_event.metadata["agent"]
+        assert 0 <= agent_id < self.agent_count
+
+        agent_meta = self.last_event.events[agent_id].metadata["agent"]
         return {
             **{k: float(v) for k, v in agent_meta["position"].items()},
             "rotation": {k: float(v) for k, v in agent_meta["rotation"].items()},
@@ -197,8 +211,13 @@ class RoboThorEnvironment:
         }
 
     def teleport(
-        self, pose: Dict[str, float], rotation: Dict[str, float], horizon: float = 0.0
+        self,
+        pose: Dict[str, float],
+        rotation: Dict[str, float],
+        horizon: float = 0.0,
+        agent_id: int = 0,
     ):
+        assert 0 <= agent_id < self.agent_count
         e = self.controller.step(
             action="TeleportFull",
             x=pose["x"],
@@ -206,6 +225,7 @@ class RoboThorEnvironment:
             z=pose["z"],
             rotation=rotation,
             horizon=horizon,
+            agentId=agent_id,
         )
         return e.metadata["lastActionSuccess"]
 
@@ -246,9 +266,14 @@ class RoboThorEnvironment:
         }
 
     def randomize_agent_location(
-        self, seed: int = None, partial_position: Optional[Dict[str, float]] = None
+        self,
+        seed: int = None,
+        partial_position: Optional[Dict[str, float]] = None,
+        agent_id: int = 0,
     ) -> Dict[str, Union[Dict[str, float], float]]:
         """Teleports the agent to a random reachable location in the scene."""
+        assert 0 <= agent_id < self.agent_count
+
         if partial_position is None:
             partial_position = {}
         k = 0
@@ -258,7 +283,7 @@ class RoboThorEnvironment:
             # self.reset()
             state = {**self.random_reachable_state(seed=seed), **partial_position}
             # get_logger().debug("picked target location {}".format(state))
-            self.controller.step("TeleportFull", **state)
+            self.controller.step("TeleportFull", **state, agentId=agent_id)
             k += 1
 
         if not self.last_action_success:
@@ -269,14 +294,14 @@ class RoboThorEnvironment:
                     "10 attempts. Forcing the action."
                 ).format(self.scene_name, state, seed, partial_position)
             )
-            self.controller.step("TeleportFull", **state, force_action=True)  # type: ignore
+            self.controller.step("TeleportFull", **state, force_action=True, agentId=agent_id)  # type: ignore
             assert self.last_action_success, "Force action failed with {}".format(state)
 
         # get_logger().debug("location after teleport full {}".format(self.agent_state()))
         # self.controller.step("TeleportFull", **self.agent_state())  # TODO only for debug
         # get_logger().debug("location after re-teleport full {}".format(self.agent_state()))
 
-        return self.agent_state()
+        return self.agent_state(agent_id=agent_id)
 
     def known_good_locations_list(self):
         return self.known_good_locations[self.scene_name]
@@ -305,6 +330,23 @@ class RoboThorEnvironment:
     def current_depth(self) -> np.ndarray:
         """Returns depth image corresponding to the agent's egocentric view."""
         return self.controller.last_event.depth_frame
+
+    @property
+    def current_frames(self) -> List[np.ndarray]:
+        """Returns rgb images corresponding to the agents' egocentric views."""
+        return [
+            self.controller.last_event.events[agent_id].frame
+            for agent_id in range(self.agent_count)
+        ]
+
+    @property
+    def current_depths(self) -> List[np.ndarray]:
+        """Returns depth images corresponding to the agents' egocentric
+        views."""
+        return [
+            self.controller.last_event.events[agent_id].depth_frame
+            for agent_id in range(self.agent_count)
+        ]
 
     @property
     def last_event(self) -> ai2thor.server.Event:
