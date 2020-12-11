@@ -227,7 +227,8 @@ class OnPolicyRunner(object):
         restart_pipeline: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
     ):
-        self.save_project_state()
+        if not self.disable_config_saving:
+            self.save_project_state()
 
         devices = self.worker_devices("train")
         num_workers = len(devices)
@@ -427,9 +428,6 @@ class OnPolicyRunner(object):
         )
 
     def save_project_state(self):
-        if self.disable_config_saving:
-            return
-
         base_dir = os.path.join(
             self.output_dir,
             "used_configs",
