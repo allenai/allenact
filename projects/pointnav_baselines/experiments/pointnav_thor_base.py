@@ -65,7 +65,7 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
             )
             sampler_devices = self.TRAIN_GPU_IDS
         elif mode == "valid":
-            nprocesses = 1
+            nprocesses = 1 if torch.cuda.is_available() else 0
             gpu_ids = [] if not torch.cuda.is_available() else self.VALID_GPU_IDS
         elif mode == "test":
             nprocesses = 10

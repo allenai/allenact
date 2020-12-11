@@ -2,10 +2,10 @@ import os
 from abc import ABC
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
-from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
+from projects.pointnav_baselines.experiments.pointnav_thor_base import PointNavThorBaseConfig
 
 
-class PointNaviThorBaseConfig(PointNavBaseConfig, ABC):
+class PointNaviThorBaseConfig(PointNavThorBaseConfig, ABC):
     """The base config for all iTHOR PointNav experiments."""
 
     NUM_PROCESSES = 40

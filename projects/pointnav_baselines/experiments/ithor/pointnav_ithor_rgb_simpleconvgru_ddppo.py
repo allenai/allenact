@@ -1,6 +1,3 @@
-from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base_ddppo import (
-    PointNaviThorBasePPOConfig,
-)
 
 from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
@@ -24,8 +21,8 @@ class PointNaviThorRGBPPOExperimentConfig(
 
     SENSORS = [
         RGBSensorThor(
-            height=PointNaviThorBasePPOConfig.SCREEN_SIZE,
-            width=PointNaviThorBasePPOConfig.SCREEN_SIZE,
+            height=PointNaviThorBaseConfig.SCREEN_SIZE,
+            width=PointNaviThorBaseConfig.SCREEN_SIZE,
             use_resnet_normalization=True,
             uuid="rgb_lowres",
         ),
