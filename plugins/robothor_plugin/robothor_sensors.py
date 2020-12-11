@@ -6,10 +6,7 @@ import quaternion  # noqa # pylint: disable=unused-import
 
 from core.base_abstractions.sensor import Sensor, RGBSensor, DepthSensor
 from core.base_abstractions.task import Task
-from plugins.robothor_plugin.robothor_environment import (
-    RoboThorEnvironment,
-    RoboThorMultiEnvironment,
-)
+from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from utils.misc_utils import prepare_locals_for_super
 
@@ -25,9 +22,7 @@ class RGBSensorRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnvironment]
         return env.current_frame.copy()
 
 
-class RGBSensorMultiRoboThor(
-    RGBSensor[RoboThorMultiEnvironment, Task[RoboThorMultiEnvironment]]
-):
+class RGBSensorMultiRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnvironment]]):
     """Sensor for RGB images in RoboTHOR.
 
     Returns from a running RoboThorEnvironment instance, the current RGB
@@ -40,13 +35,13 @@ class RGBSensorMultiRoboThor(
         self.agent_count = agent_count
         self.agent_id = 0
 
-    def frame_from_env(self, env: RoboThorMultiEnvironment) -> np.ndarray:
+    def frame_from_env(self, env: RoboThorEnvironment) -> np.ndarray:
         return env.current_frames[self.agent_id].copy()
 
     def get_observation(
         self,
-        env: RoboThorMultiEnvironment,
-        task: Task[RoboThorMultiEnvironment],
+        env: RoboThorEnvironment,
+        task: Task[RoboThorEnvironment],
         *args: Any,
         **kwargs: Any
     ) -> Any:

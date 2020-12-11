@@ -8,10 +8,7 @@ import gym
 
 from core.base_abstractions.sensor import Sensor
 from core.base_abstractions.task import TaskSampler
-from plugins.robothor_plugin.robothor_environment import (
-    RoboThorEnvironment,
-    RoboThorMultiEnvironment,
-)
+from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from plugins.robothor_plugin.robothor_tasks import (
     ObjectNavTask,
     PointNavTask,
@@ -922,7 +919,7 @@ class NavToPartnerTaskSampler(TaskSampler):
         self.rewards_config = rewards_config
         self.env_args = env_args
         self.scenes = scenes
-        self.env: Optional[RoboThorMultiEnvironment] = None
+        self.env: Optional[RoboThorEnvironment] = None
         self.sensors = sensors
         self.max_steps = max_steps
         self._action_space = action_space
@@ -946,8 +943,11 @@ class NavToPartnerTaskSampler(TaskSampler):
 
         self.reset()
 
-    def _create_environment(self) -> RoboThorMultiEnvironment:
-        env = RoboThorMultiEnvironment(**self.env_args)
+    def _create_environment(self) -> RoboThorEnvironment:
+        assert (
+            self.env_args["agentCount"] == 2
+        ), "NavToPartner is only defined for 2 agents!"
+        env = RoboThorEnvironment(**self.env_args)
         return env
 
     @property

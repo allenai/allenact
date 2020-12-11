@@ -16,10 +16,7 @@ from plugins.robothor_plugin.robothor_constants import (
     LOOK_DOWN,
     PASS,
 )
-from plugins.robothor_plugin.robothor_environment import (
-    RoboThorEnvironment,
-    RoboThorMultiEnvironment,
-)
+from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from utils.system import get_logger
 from utils.tensor_utils import tile_images
 
@@ -435,12 +432,12 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 return 0, False
 
 
-class NavToPartnerTask(Task[RoboThorMultiEnvironment]):
+class NavToPartnerTask(Task[RoboThorEnvironment]):
     _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT)
 
     def __init__(
         self,
-        env: RoboThorMultiEnvironment,
+        env: RoboThorEnvironment,
         sensors: List[Sensor],
         task_info: Dict[str, Any],
         max_steps: int,
@@ -451,6 +448,8 @@ class NavToPartnerTask(Task[RoboThorMultiEnvironment]):
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
         self.reward_configs = reward_configs
+
+        assert self.env.agent_count == 2, "NavToPartnerTask only defined for 2 agents!"
 
         pose1 = self.env.agent_state(0)
         pose2 = self.env.agent_state(1)

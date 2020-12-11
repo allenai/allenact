@@ -66,6 +66,7 @@ class NavToPartnerRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         rotateStepDegrees=30.0,
         visibilityDistance=1.0,
         gridSize=0.25,
+        agentCount=2,
     )
 
     @classmethod
