@@ -1069,11 +1069,11 @@ class NavToPartnerTaskSampler(TaskSampler):
             "initial_orientation2": pose2["rotation"]["y"],
             "id": "_".join(
                 [scene]
-                + ["%4.2f" % pose1[k] for k in ["x", "y", "z"]]
-                + ["%4.2f" % pose1["rotation"]["y"]]
-                + ["%4.2f" % pose2[k] for k in ["x", "y", "z"]]
-                + ["%4.2f" % pose2["rotation"]["y"]]
-                + ["%d" % random.randint(0, 2 ** 31 - 1)]
+                # + ["%4.2f" % pose1[k] for k in ["x", "y", "z"]]
+                # + ["%4.2f" % pose1["rotation"]["y"]]
+                # + ["%4.2f" % pose2[k] for k in ["x", "y", "z"]]
+                # + ["%4.2f" % pose2["rotation"]["y"]]
+                + ["%d" % random.randint(0, 2 ** 63 - 1)]
             ),
         }
 

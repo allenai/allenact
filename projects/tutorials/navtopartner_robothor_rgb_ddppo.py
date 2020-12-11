@@ -18,6 +18,9 @@ from plugins.robothor_plugin.robothor_task_samplers import NavToPartnerTaskSampl
 from plugins.robothor_plugin.robothor_tasks import NavToPartnerTask
 from plugins.robothor_plugin.robothor_models import NavToPartnerActorCriticSimpleConvRNN
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
+from utils.viz_utils import VizSuite, AgentViewViz
+from utils.multi_agent_viz_utils import MultiTrajectoryViz
+from plugins.robothor_plugin.robothor_viz import ThorMultiViz
 
 
 class NavToPartnerRoboThorRGBPPOExperimentConfig(ExperimentConfig):
@@ -71,12 +74,12 @@ class NavToPartnerRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        ppo_steps = int(25000000)
+        ppo_steps = int(1000000)
         lr = 3e-4
         num_mini_batch = 1
         update_repeats = 3
         num_steps = 30
-        save_interval = 1000000
+        save_interval = 200000
         log_interval = 1
         gamma = 0.99
         use_gae = True
@@ -112,7 +115,30 @@ class NavToPartnerRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             res[it % ndevices] += 1
         return res
 
+    viz: Optional[VizSuite] = None
+
+    def get_viz(self, mode):
+        if self.viz is not None:
+            return self.viz
+
+        self.viz = VizSuite(
+            mode=mode,
+            # Basic 2D trajectory visualizer (task output source):
+            base_trajectory=MultiTrajectoryViz(),  # plt_colormaps=["cool", "cool"]),
+            # Egocentric view visualizer (vector task source):
+            egeocentric=AgentViewViz(max_video_length=100, max_episodes_in_group=1),
+            # Specialized 2D trajectory visualizer (task output source):
+            thor_trajectory=ThorMultiViz(
+                figsize=(16, 8),
+                viz_rows_cols=(448, 448),
+                scenes=("FloorPlan_Train{}_{}", 1, 1, 1, 1),
+            ),
+        )
+
+        return self.viz
+
     def machine_params(self, mode="train", **kwargs):
+        visualizer = None
         if mode == "train":
             devices = (
                 ["cpu"] if not torch.cuda.is_available() else list(self.TRAINING_GPUS)
@@ -128,12 +154,14 @@ class NavToPartnerRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         elif mode == "test":
             nprocesses = 1
             devices = ["cpu"] if not torch.cuda.is_available() else self.TESTING_GPUS
+            visualizer = self.get_viz(mode=mode)
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
         return {
             "nprocesses": nprocesses,
             "devices": devices,
+            "visualizer": visualizer,
         }
 
     # TODO Define Model
@@ -269,5 +297,5 @@ class NavToPartnerRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             if devices is not None and len(devices) > 0
             else None,
         }
-        res["max_tasks"] = 40
+        res["max_tasks"] = 4
         return res
