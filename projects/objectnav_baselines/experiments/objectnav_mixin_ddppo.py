@@ -9,7 +9,7 @@ from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base i
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class ObjectNavRoboThorPPOBaseExperimentConfig(ObjectNavRoboThorBaseConfig):
+class ObjectNavMixInPPOConfig(ObjectNavRoboThorBaseConfig):
     def training_pipeline(self, **kwargs):
         ppo_steps = int(300000000)
         lr = 3e-4

@@ -9,13 +9,11 @@ from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from plugins.ithor_plugin.ithor_sensors import TakeEndActionThorNavSensor
 from plugins.robothor_plugin import robothor_constants
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
-from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base import (
-    ObjectNavRoboThorBaseConfig,
-)
+from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class ObjectNavRoboThorPPOAndGBCBaseExperimentConfig(ObjectNavRoboThorBaseConfig):
+class ObjectNavThorMixInPPOAndGBCConfig(ObjectNavBaseConfig):
     SENSORS = (
         TakeEndActionThorNavSensor(
             nactions=len(ObjectNavTask.class_action_names()), uuid="expert_group_action"

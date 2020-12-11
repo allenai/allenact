@@ -196,11 +196,6 @@ class PointNavHabitatRGBPPOTutorialExperimentConfig(ExperimentConfig):
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
-        # Disable parallelization for validation process
-        if mode == "valid":
-            for prep in self.PREPROCESSORS:
-                prep.kwargs["parallel"] = False
-
         sensor_preprocessor_graph = (
             SensorPreprocessorGraph(
                 source_observation_spaces=SensorSuite(self.SENSORS).observation_spaces,

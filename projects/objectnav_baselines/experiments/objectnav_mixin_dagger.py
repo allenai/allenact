@@ -3,13 +3,11 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
 from core.algorithms.onpolicy_sync.losses.imitation import Imitation
-from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base import (
-    ObjectNavRoboThorBaseConfig,
-)
+from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
-class ObjectNavThorDAggerBaseExperimentConfig(ObjectNavRoboThorBaseConfig):
+class ObjectNavMixInDAggerConfig(ObjectNavBaseConfig):
     """An Object Navigation experiment configuration in RoboThor with RGB
     input."""
 

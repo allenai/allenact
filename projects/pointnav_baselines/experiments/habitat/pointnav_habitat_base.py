@@ -23,9 +23,10 @@ from plugins.habitat_plugin.habitat_utils import (
 )
 from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
 from utils.experiment_utils import evenly_distribute_count_into_bins
+from utils.system import get_logger
 
 
-def create_gibson_pointnav_config(
+def create_pointnav_config(
     config_yaml_path: str,
     mode: str,
     scenes_path: str,
@@ -110,7 +111,7 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
             num_processes: int,
             simulator_gpu_ids: Sequence[int],
         ):
-            return create_gibson_pointnav_config(
+            return create_pointnav_config(
                 config_yaml_path=self.BASE_CONFIG_YAML_PATH,
                 mode=mode,
                 scenes_path=scenes_path,
@@ -155,7 +156,9 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
         return self.TASK_DATA_DIR_TEMPLATE.format(*(["val"] * 2))
 
     def test_scenes_path(self):
-        return self.TASK_DATA_DIR_TEMPLATE.format(*(["test"] * 2))
+        get_logger().warning("Running tests on the validation set!")
+        return self.TASK_DATA_DIR_TEMPLATE.format(*(["val"] * 2))
+        # return self.TASK_DATA_DIR_TEMPLATE.format(*(["test"] * 2))
 
     @classmethod
     def tag(cls):

@@ -13,18 +13,19 @@ from core.base_abstractions.preprocessor import SensorPreprocessorGraph
 from core.base_abstractions.sensor import SensorSuite, ExpertActionSensor
 from core.base_abstractions.task import TaskSampler
 from plugins.robothor_plugin.robothor_sensors import DepthSensorThor
-from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
+from plugins.robothor_plugin.robothor_task_samplers import ObjectNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
-from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
+from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from utils.experiment_utils import evenly_distribute_count_into_bins
 from utils.system import get_logger
 
 
-class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
+class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
     """The base config for all iTHOR PointNav experiments."""
 
     NUM_PROCESSES: Optional[int] = None
     TRAIN_GPU_IDS = list(range(torch.cuda.device_count()))
+    SAMPLER_GPU_IDS = TRAIN_GPU_IDS
     VALID_GPU_IDS = [torch.cuda.device_count() - 1]
     TEST_GPU_IDS = [torch.cuda.device_count() - 1]
 
@@ -35,6 +36,7 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
 
     def __init__(self):
         super().__init__()
+
         self.ENV_ARGS = dict(
             width=self.CAMERA_WIDTH,
             height=self.CAMERA_HEIGHT,
@@ -42,6 +44,7 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
             applyActionNoise=self.STOCHASTIC,
             agentType="stochastic",
             rotateStepDegrees=self.ROTATION_DEGREES,
+            visibilityDistance=self.VISIBILITY_DISTANCE,
             gridSize=self.STEP_SIZE,
             snapToGrid=False,
             agentMode="bot",
@@ -63,20 +66,24 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
                 if not torch.cuda.is_available()
                 else evenly_distribute_count_into_bins(self.NUM_PROCESSES, len(gpu_ids))
             )
-            sampler_devices = self.TRAIN_GPU_IDS
+            sampler_devices = self.SAMPLER_GPU_IDS
         elif mode == "valid":
             nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.VALID_GPU_IDS
         elif mode == "test":
-            nprocesses = 10
+            nprocesses = 10 if torch.cuda.is_available() else 1
             gpu_ids = [] if not torch.cuda.is_available() else self.TEST_GPU_IDS
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
+        sensors = [*self.SENSORS]
+        if mode != "train":
+            sensors = [s for s in sensors if not isinstance(s, ExpertActionSensor)]
+
         sensor_preprocessor_graph = (
             SensorPreprocessorGraph(
-                source_observation_spaces=SensorSuite(self.SENSORS).observation_spaces,
-                preprocessors=self.PREPROCESSORS,
+                source_observation_spaces=SensorSuite(sensors).observation_spaces,
+                preprocessors=self.preprocessors(),
             )
             if mode == "train"
             or (
@@ -97,7 +104,7 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return PointNavDatasetTaskSampler(**kwargs)
+        return ObjectNavDatasetTaskSampler(**kwargs)
 
     @staticmethod
     def _partition_inds(n: int, num_parts: int):

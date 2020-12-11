@@ -1,24 +1,21 @@
-from torchvision import models
-
-from core.base_abstractions.preprocessor import ResNetPreprocessor
 from core.base_abstractions.sensor import ExpertActionSensor
 from plugins.ithor_plugin.ithor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
+from projects.objectnav_baselines.experiments.objectnav_mixin_dagger import (
+    ObjectNavMixInDAggerConfig,
+)
+from projects.objectnav_baselines.experiments.objectnav_mixin_resnetgru import (
+    ObjectNavMixInResNetGRUConfig,
+)
 from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base import (
     ObjectNavRoboThorBaseConfig,
 )
-from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_dagger_base import (
-    ObjectNavThorDAggerBaseExperimentConfig,
-)
-from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_resnetgru_base import (
-    ObjectNavRoboThorResNetGRUBaseExperimentConfig,
-)
-from utils.experiment_utils import Builder
 
 
 class ObjectNaviThorRGBDAggerExperimentConfig(
-    ObjectNavThorDAggerBaseExperimentConfig,
-    ObjectNavRoboThorResNetGRUBaseExperimentConfig,
+    ObjectNavRoboThorBaseConfig,
+    ObjectNavMixInDAggerConfig,
+    ObjectNavMixInResNetGRUConfig,
 ):
     """An Object Navigation experiment configuration in RoboThor with RGB
     input."""
@@ -34,24 +31,6 @@ class ObjectNaviThorRGBDAggerExperimentConfig(
             object_types=ObjectNavRoboThorBaseConfig.TARGET_TYPES,
         ),
         ExpertActionSensor(nactions=len(ObjectNavTask.class_action_names()),),
-    ]
-
-    PREPROCESSORS = [
-        Builder(
-            ResNetPreprocessor,
-            {
-                "input_height": ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
-                "input_width": ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
-                "output_width": 7,
-                "output_height": 7,
-                "output_dims": 512,
-                "pool": False,
-                "torchvision_resnet_model": models.resnet18,
-                "input_uuids": ["rgb_lowres"],
-                "output_uuid": "rgb_resnet",
-                "parallel": False,
-            },
-        ),
     ]
 
     @classmethod
