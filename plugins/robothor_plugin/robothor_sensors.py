@@ -22,6 +22,35 @@ class RGBSensorRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnvironment]
         return env.current_frame.copy()
 
 
+class RGBSensorMultiRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnvironment]]):
+    """Sensor for RGB images in RoboTHOR.
+
+    Returns from a running RoboThorEnvironment instance, the current RGB
+    frame corresponding to the agent's egocentric view.
+    """
+
+    def __init__(self, agent_count: int = 2, **kwargs):
+        # TODO take all named args from superclass and pass with super().__init__(**prepare_locals_for_super(locals()))
+        super().__init__(**kwargs)
+        self.agent_count = agent_count
+        self.agent_id = 0
+
+    def frame_from_env(self, env: RoboThorEnvironment) -> np.ndarray:
+        return env.current_frames[self.agent_id].copy()
+
+    def get_observation(
+        self,
+        env: RoboThorEnvironment,
+        task: Task[RoboThorEnvironment],
+        *args: Any,
+        **kwargs: Any
+    ) -> Any:
+        obs = []
+        for self.agent_id in range(self.agent_count):
+            obs.append(super().get_observation(env, task, *args, **kwargs))
+        return np.stack(obs, axis=0)  # agents x width x height x channels
+
+
 class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
     def __init__(self, uuid: str = "target_coordinates_ind", **kwargs: Any):
         observation_space = gym.spaces.Box(

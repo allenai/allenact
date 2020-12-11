@@ -31,9 +31,7 @@ class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(
 
         self.SENSORS = [
             DepthSensorHabitat(
-                height=self.SCREEN_SIZE,
-                width=self.SCREEN_SIZE,
-                use_normalization=True,
+                height=self.SCREEN_SIZE, width=self.SCREEN_SIZE, use_normalization=True,
             ),
             TargetCoordinatesSensorHabitat(coordinate_dims=2),
         ]

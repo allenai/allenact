@@ -46,7 +46,9 @@ class PointNavHabitatRGBDeterministiSimpleConvGRUImitationExperimentConfig(
         self.CONFIG = self.CONFIG.clone()
         self.CONFIG.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
 
-        self.TRAIN_CONFIGS = construct_env_configs(config=self.CONFIG, allow_scene_repeat=True)
+        self.TRAIN_CONFIGS = construct_env_configs(
+            config=self.CONFIG, allow_scene_repeat=True
+        )
 
     @classmethod
     def tag(cls):
