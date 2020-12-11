@@ -141,7 +141,7 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
         return PointNavTaskSampler(
-            **{"failed_end_reward": cls.FAILED_END_REWARD, **kwargs} # type: ignore
+            **{"failed_end_reward": cls.FAILED_END_REWARD, **kwargs}  # type: ignore
         )
 
     def train_task_sampler_args(

@@ -8,11 +8,14 @@ from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from plugins.habitat_plugin.habitat_sensors import (
     RGBSensorHabitat,
-    TargetCoordinatesSensorHabitat, DepthSensorHabitat,
+    TargetCoordinatesSensorHabitat,
+    DepthSensorHabitat,
 )
 from plugins.habitat_plugin.habitat_tasks import PointNavTask
 from plugins.habitat_plugin.habitat_utils import construct_env_configs
-from projects.pointnav_baselines.experiments.habitat.debug_pointnav_habitat_base import DebugPointNavHabitatBaseConfig
+from projects.pointnav_baselines.experiments.habitat.debug_pointnav_habitat_base import (
+    DebugPointNavHabitatBaseConfig,
+)
 from projects.pointnav_baselines.models.point_nav_models import (
     PointNavActorCriticSimpleConvRNN,
 )
@@ -34,9 +37,7 @@ class PointNavHabitatRGBDDeterministiSimpleConvGRUDDPPOExperimentConfig(
                 use_resnet_normalization=True,
             ),
             DepthSensorHabitat(
-                height=self.SCREEN_SIZE,
-                width=self.SCREEN_SIZE,
-                use_normalization=True,
+                height=self.SCREEN_SIZE, width=self.SCREEN_SIZE, use_normalization=True,
             ),
             TargetCoordinatesSensorHabitat(coordinate_dims=2),
         ]
@@ -52,7 +53,9 @@ class PointNavHabitatRGBDDeterministiSimpleConvGRUDDPPOExperimentConfig(
         self.CONFIG = self.CONFIG.clone()
         self.CONFIG.SIMULATOR.AGENT_0.SENSORS = ["DEPTH_SENSOR", "RGB_SENSOR"]
 
-        self.TRAIN_CONFIGS = construct_env_configs(config=self.CONFIG, allow_scene_repeat=True)
+        self.TRAIN_CONFIGS = construct_env_configs(
+            config=self.CONFIG, allow_scene_repeat=True
+        )
 
     @classmethod
     def tag(cls):

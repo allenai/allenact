@@ -9,8 +9,11 @@ import torch
 from core.base_abstractions.experiment_config import MachineParams
 from core.base_abstractions.preprocessor import ObservationSet
 from core.base_abstractions.task import TaskSampler
-from plugins.habitat_plugin.habitat_constants import HABITAT_DATASETS_DIR, HABITAT_CONFIGS_DIR, \
-    HABITAT_SCENE_DATASETS_DIR
+from plugins.habitat_plugin.habitat_constants import (
+    HABITAT_DATASETS_DIR,
+    HABITAT_CONFIGS_DIR,
+    HABITAT_SCENE_DATASETS_DIR,
+)
 from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
 from plugins.habitat_plugin.habitat_tasks import PointNavTask
 from plugins.habitat_plugin.habitat_utils import get_habitat_config
@@ -123,9 +126,7 @@ class DebugPointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
     @staticmethod
     def make_easy_dataset(dataset: habitat.Dataset) -> habitat.Dataset:
         episodes = [
-            e
-            for e in dataset.episodes
-            if float(e.info["geodesic_distance"]) < 1.5
+            e for e in dataset.episodes if float(e.info["geodesic_distance"]) < 1.5
         ]
         for i, e in enumerate(episodes):
             e.episode_id = str(i)
@@ -159,7 +160,9 @@ class DebugPointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         if total_processes != 1:
-            raise NotImplementedError("In validation, `total_processes` must equal 1 for habitat tasks")
+            raise NotImplementedError(
+                "In validation, `total_processes` must equal 1 for habitat tasks"
+            )
         config = self.CONFIG.clone()
         config.defrost()
         config.DATASET.DATA_PATH = self.VALID_SCENES

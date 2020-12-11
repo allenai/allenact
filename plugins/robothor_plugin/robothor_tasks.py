@@ -14,9 +14,11 @@ from plugins.robothor_plugin.robothor_constants import (
     END,
     LOOK_UP,
     LOOK_DOWN,
+    PASS,
 )
 from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from utils.system import get_logger
+from utils.tensor_utils import tile_images
 
 
 class PointNavTask(Task[RoboThorEnvironment]):
@@ -428,3 +430,113 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                     return 0, False
             else:
                 return 0, False
+
+
+class NavToPartnerTask(Task[RoboThorEnvironment]):
+    _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT)
+
+    def __init__(
+        self,
+        env: RoboThorEnvironment,
+        sensors: List[Sensor],
+        task_info: Dict[str, Any],
+        max_steps: int,
+        reward_configs: Dict[str, Any],
+        **kwargs,
+    ) -> None:
+        super().__init__(
+            env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
+        )
+        self.reward_configs = reward_configs
+
+        assert self.env.agent_count == 2, "NavToPartnerTask only defined for 2 agents!"
+
+        pose1 = self.env.agent_state(0)
+        pose2 = self.env.agent_state(1)
+        self.last_geodesic_distance = self.env.distance_cache.find_distance(
+            {k: pose1[k] for k in ["x", "y", "z"]},
+            {k: pose2[k] for k in ["x", "y", "z"]},
+            self.env.distance_from_point_to_point,
+        )
+
+        self.task_info["followed_path1"] = [pose1]
+        self.task_info["followed_path2"] = [pose2]
+        self.task_info["action_names"] = self.action_names()
+
+    @property
+    def action_space(self):
+        return gym.spaces.Discrete(len(self._actions))
+
+    def reached_terminal_state(self) -> bool:
+        return (
+            self.last_geodesic_distance <= self.reward_configs["max_success_distance"]
+        )
+
+    @classmethod
+    def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
+        return cls._actions
+
+    def close(self) -> None:
+        self.env.stop()
+
+    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+        assert isinstance(action, Sequence)
+        action = cast(List, action)
+
+        action_str1 = self.action_names()[action[0]]
+        action_str2 = self.action_names()[action[1]]
+
+        self.env.step({"action": action_str1, "agentId": 0})
+        self.last_action_success1 = self.env.last_action_success
+        self.env.step({"action": action_str2, "agentId": 1})
+        self.last_action_success2 = self.env.last_action_success
+
+        pose1 = self.env.agent_state(0)
+        self.task_info["followed_path1"].append(pose1)
+        pose2 = self.env.agent_state(1)
+        self.task_info["followed_path2"].append(pose2)
+
+        self.last_geodesic_distance = self.env.distance_cache.find_distance(
+            {k: pose1[k] for k in ["x", "y", "z"]},
+            {k: pose2[k] for k in ["x", "y", "z"]},
+            self.env.distance_from_point_to_point,
+        )
+
+        step_result = RLStepResult(
+            observation=self.get_observations(),
+            reward=self.judge(),
+            done=self.is_done(),
+            info={
+                "last_action_success": [
+                    self.last_action_success1,
+                    self.last_action_success2,
+                ],
+                "action": action,
+            },
+        )
+        return step_result
+
+    def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
+        assert mode in ["rgb", "depth"], "only rgb and depth rendering is implemented"
+        if mode == "rgb":
+            return tile_images(self.env.current_frames)
+        elif mode == "depth":
+            return tile_images(self.env.current_depths)
+
+    def judge(self) -> List[float]:
+        """Judge the last event."""
+        reward = self.reward_configs["step_penalty"]
+
+        if self.reached_terminal_state():
+            reward += self.reward_configs["success_reward"]
+
+        return [reward] * 2  # same reward for both agents without shaping
+
+    def metrics(self) -> Dict[str, Any]:
+        if not self.is_done():
+            return {}
+
+        return {
+            **super().metrics(),
+            "success": self.reached_terminal_state(),
+        }
