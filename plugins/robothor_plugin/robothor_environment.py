@@ -91,11 +91,15 @@ class RoboThorEnvironment:
     def path_from_point_to_object_type(
         self, point: Dict[str, float], object_type: str
     ) -> Optional[List[Dict[str, float]]]:
-        try:
-            return metrics.get_shortest_path_to_object_type(
-                self.controller, object_type, point
-            )
-        except:
+        event = self.controller.step(
+            action="GetShortestPath",
+            objectType=object_type,
+            position=point,
+            allowedError=0.05,
+        )
+        if event.metadata["lastActionSuccess"]:
+            return event.metadata["actionReturn"]["corners"]
+        else:
             get_logger().debug(
                 "Failed to find path for {} in {}. Start point {}, agent state {}.".format(
                     object_type,
@@ -135,7 +139,7 @@ class RoboThorEnvironment:
         )
 
     def path_from_point_to_point(
-        self, position: Dict[str, float], target: Dict[str, float]
+        self, position: Dict[str, float], target: Dict[str, float], allowedError: float
     ) -> Optional[List[Dict[str, float]]]:
         try:
             return self.controller.step(
@@ -144,7 +148,7 @@ class RoboThorEnvironment:
                 x=target["x"],
                 y=target["y"],
                 z=target["z"],
-                # renderImage=False
+                allowedError=allowedError,
             ).metadata["actionReturn"]["corners"]
         except:
             get_logger().debug(
@@ -158,9 +162,9 @@ class RoboThorEnvironment:
             return None
 
     def distance_from_point_to_point(
-        self, position: Dict[str, float], target: Dict[str, float]
+        self, position: Dict[str, float], target: Dict[str, float], allowedError: float
     ) -> float:
-        path = self.path_from_point_to_point(position, target)
+        path = self.path_from_point_to_point(position, target, allowedError)
         if path:
             return metrics.path_distance(path)
         return -1.0
@@ -171,12 +175,28 @@ class RoboThorEnvironment:
 
         It might return -1.0 for unreachable targets.
         """
+
         assert 0 <= agent_id < self.agent_count
+
+        def retry_dist(position: Dict[str, float], target: Dict[str, float]):
+            d = self.distance_from_point_to_point(position, target, 0.05)
+            if d < 0:
+                get_logger().warning(
+                    f"Could not find a path from {position} to {target} with 0.05 error tolerance."
+                    f" Increasing this tolerance to 0.1 any trying again."
+                )
+                d = self.distance_from_point_to_point(position, target, 0.1)
+                if d < 0:
+                    get_logger().warning(
+                        f"Could not find a path from {position} to {target} with 0.1 error tolerance."
+                        f" Returning a distance of -1."
+                    )
+            return d
 
         return self.distance_cache.find_distance(
             self.controller.last_event.events[agent_id].metadata["agent"]["position"],
             target,
-            self.distance_from_point_to_point,
+            retry_dist,
         )
 
     def agent_state(self, agent_id: int = 0) -> Dict:

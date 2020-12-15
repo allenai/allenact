@@ -7,6 +7,7 @@ import numpy as np
 from core.base_abstractions.misc import RLStepResult
 from core.base_abstractions.sensor import Sensor
 from core.base_abstractions.task import Task
+from plugins.ithor_plugin.ithor_environment import IThorEnvironment
 from plugins.robothor_plugin.robothor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
@@ -19,6 +20,23 @@ from plugins.robothor_plugin.robothor_constants import (
 from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from utils.system import get_logger
 from utils.tensor_utils import tile_images
+
+
+def spl_metric(
+    success: bool, optimal_distance: float, travelled_distance: float
+) -> Optional[float]:
+    if not success:
+        return 0.0
+    elif optimal_distance < 0:
+        return None
+    elif optimal_distance == 0:
+        if travelled_distance == 0:
+            return 1.0
+        else:
+            return 0.0
+    else:
+        travelled_distance = max(travelled_distance, optimal_distance)
+        return optimal_distance / travelled_distance
 
 
 class PointNavTask(Task[RoboThorEnvironment]):
@@ -50,10 +68,10 @@ class PointNavTask(Task[RoboThorEnvironment]):
         self.path: List[Any] = (
             []
         )  # the initial coordinate will be directly taken from the optimal path
+        self.travelled_distance = 0.0
 
         self.task_info["followed_path"] = [self.env.agent_state()]
         self.task_info["action_names"] = self.action_names()
-        self.num_moves_made = 0
 
     @property
     def action_space(self):
@@ -85,8 +103,10 @@ class PointNavTask(Task[RoboThorEnvironment]):
             pose = self.env.agent_state()
             self.path.append({k: pose[k] for k in ["x", "y", "z"]})
             self.task_info["followed_path"].append(pose)
-        if len(self.path) > 1 and self.path[-1] != self.path[-2]:
-            self.num_moves_made += 1
+        if len(self.path) > 1:
+            self.travelled_distance += IThorEnvironment.position_dist(
+                p0=self.path[-1], p1=self.path[-2], ignore_y=True
+            )
         step_result = RLStepResult(
             observation=self.get_observations(),
             reward=self.judge(),
@@ -149,17 +169,11 @@ class PointNavTask(Task[RoboThorEnvironment]):
                     if self._success
                     else self.reward_configs["failed_stop_reward"]
                 )
+        elif self.num_steps_taken() + 1 >= self.max_steps:
+            reward += self.reward_configs.get("reached_max_steps_reward", 0.0)
 
         self._rewards.append(float(reward))
         return float(reward)
-
-    def spl(self):
-        if not self._success:
-            return 0.0
-        li = self.optimal_distance
-        pi = self.num_moves_made * self.env.config["gridSize"]
-        res = li / (max(pi, li) + 1e-8)
-        return res
 
     def dist_to_target(self):
         return self.env.distance_to_point(self.task_info["target"])
@@ -175,15 +189,21 @@ class PointNavTask(Task[RoboThorEnvironment]):
             return {}
 
         dist2tget = self.dist_to_target()
-        spl = self.spl()
+        spl = spl_metric(
+            success=self._success,
+            optimal_distance=self.optimal_distance,
+            travelled_distance=self.travelled_distance,
+        )
 
-        return {
+        metrics = {
             **super(PointNavTask, self).metrics(),
             "success": self._success,  # False also if no path to target
             "total_reward": total_reward,
             "dist_to_target": dist2tget,
-            "spl": spl,
         }
+        if spl is not None:
+            metrics["spl"] = spl
+        return metrics
 
 
 class ObjectNavTask(Task[RoboThorEnvironment]):
@@ -216,11 +236,12 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self.path: List = (
             []
         )  # the initial coordinate will be directly taken from the optimal path
+        self.travelled_distance = 0.0
+
         self.task_info["followed_path"] = [self.env.agent_state()]
         self.task_info["taken_actions"] = []
         self.task_info["action_names"] = self.action_names()
 
-        self.num_moves_made = 0
         self.optimal_distance = self.last_geodesic_distance
         self.closest_geo_distance = self.last_geodesic_distance
 
@@ -262,8 +283,10 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             pose = self.env.agent_state()
             self.path.append({k: pose[k] for k in ["x", "y", "z"]})
             self.task_info["followed_path"].append(pose)
-        if len(self.path) > 1 and self.path[-1] != self.path[-2]:
-            self.num_moves_made += 1
+        if len(self.path) > 1:
+            self.travelled_distance += IThorEnvironment.position_dist(
+                p0=self.path[-1], p1=self.path[-2], ignore_y=True
+            )
         step_result = RLStepResult(
             observation=self.get_observations(),
             reward=self.judge(),
@@ -338,17 +361,11 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 reward += self.reward_configs["goal_success_reward"]
             else:
                 reward += self.reward_configs["failed_stop_reward"]
+        elif self.num_steps_taken() + 1 >= self.max_steps:
+            reward += self.reward_configs.get("reached_max_steps_reward", 0.0)
 
         self._rewards.append(float(reward))
         return float(reward)
-
-    def spl(self):
-        if not self._success:
-            return 0.0
-        li = self.optimal_distance
-        pi = self.num_moves_made * self.env.config["gridSize"]
-        res = li / (max(pi, li) + 1e-8)
-        return res
 
     def get_observations(self, **kwargs) -> Any:
         obs = self.sensor_suite.get_observations(env=self.env, task=self)
@@ -369,17 +386,11 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
 
         dist2tget = self.env.distance_to_object_type(self.task_info["object_type"])
 
-        if self._success:
-            li = self.optimal_distance
-            pi = self.num_moves_made * self.env.config["gridSize"]
-            if min(pi, li) < 0:
-                spl = -1.0
-            elif li == pi:
-                spl = 1.0
-            else:
-                spl = li / (max(pi, li))
-        else:
-            spl = 0.0
+        spl = spl_metric(
+            success=self._success,
+            optimal_distance=self.optimal_distance,
+            travelled_distance=self.travelled_distance,
+        )
 
         metrics = {
             **super(ObjectNavTask, self).metrics(),
@@ -387,7 +398,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             "total_reward": np.sum(self._rewards),
             "dist_to_target": dist2tget,
         }
-        if spl >= 0:
+        if spl is not None:
             metrics["spl"] = spl
         return metrics
 

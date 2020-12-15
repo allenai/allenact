@@ -102,10 +102,13 @@ from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from core.base_abstractions.experiment_config import ExperimentConfig
-from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.preprocessor import SensorPreprocessorGraph, ResNetPreprocessor
 from core.base_abstractions.task import TaskSampler
+<<<<<<< HEAD
 from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
+=======
+>>>>>>> master
 from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
@@ -211,6 +214,7 @@ use this abstraction.
 
 ```python
     PREPROCESSORS = [
+<<<<<<< HEAD
         Builder(
             ResnetPreProcessorHabitat,
             {
@@ -226,6 +230,21 @@ use this abstraction.
                 "parallel": False,
             },
         ),
+=======
+            Builder(ResNetPreprocessor,
+                {
+                    "input_height": SCREEN_SIZE,
+                    "input_width": SCREEN_SIZE,
+                    "output_width": 7,
+                    "output_height": 7,
+                    "output_dims": 512,
+                    "pool": False,
+                    "torchvision_resnet_model": models.resnet18,
+                    "input_uuids": ["rgb_lowres"],
+                    "output_uuid": "rgb_resnet",
+                }
+            ),
+>>>>>>> master
     ]
 ```
 Next, we must define all of the observation inputs that our model will use. These are just
@@ -301,11 +320,19 @@ often we save the model weights and run validation on them.
             ),
         )
 ```
+<<<<<<< HEAD
 We define the helper method `split_num_processes` to split the different scenes that we want to train with
 amongst the different available devices. "machine_params" returns the hardware parameters of each
+=======
+
+
+We use the helper method `evenly_distribute_count_into_bins` to split the different scenes that we want to train with
+amongst the different available devices. `machine_params` returns the hardware parameters of each
+>>>>>>> master
 process, based on the list of devices we defined above.
 
 ```python
+<<<<<<< HEAD
     def split_num_processes(self, ndevices):
         assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
             self.NUM_PROCESSES, ndevices
@@ -315,10 +342,13 @@ process, based on the list of devices we defined above.
             res[it % ndevices] += 1
         return res
 
+=======
+>>>>>>> master
     def machine_params(self, mode="train", **kwargs):
         sampler_devices: List[int] = []
         if mode == "train":
             workers_per_device = 1
+<<<<<<< HEAD
             gpu_ids = (
                 []
                 if not torch.cuda.is_available()
@@ -330,6 +360,11 @@ process, based on the list of devices we defined above.
                 else self.split_num_processes(len(gpu_ids))
             )
             sampler_devices = list(self.TRAINING_GPUS)
+=======
+            gpu_ids = [] if not torch.cuda.is_available() else self.TRAINING_GPUS * workers_per_device
+            nprocesses = 1 if not torch.cuda.is_available() else evenly_distribute_count_into_bins(self.NUM_PROCESSES, len(gpu_ids))
+            sampler_devices = self.TRAINING_GPUS
+>>>>>>> master
         elif mode == "valid":
             nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.VALIDATION_GPUS
@@ -339,6 +374,7 @@ process, based on the list of devices we defined above.
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
+<<<<<<< HEAD
         # Disable parallelization for validation process
         if mode == "valid":
             for prep in self.PREPROCESSORS:
@@ -354,15 +390,29 @@ process, based on the list of devices we defined above.
                 ),
             )
             if mode == "train" or nprocesses > 0
+=======
+        sensor_preprocessor_graph = (
+            SensorPreprocessorGraph(
+                source_observation_spaces=SensorSuite(self.SENSORS).observation_spaces,
+                preprocessors=self.PREPROCESSORS,
+            )
+            if mode == "train"
+            or (
+                (isinstance(nprocesses, int) and nprocesses > 0)
+                or (isinstance(nprocesses, Sequence) and sum(nprocesses) > 0)
+            )
+>>>>>>> master
             else None
         )
 
-        return {
-            "nprocesses": nprocesses,
-            "gpu_ids": gpu_ids,
-            "sampler_devices": sampler_devices if mode == "train" else gpu_ids,
-            "observation_set": observation_set,
-        }
+        return MachineParams(
+            nprocesses=nprocesses,
+            devices=gpu_ids,
+            sampler_devices=sampler_devices
+            if mode == "train"
+            else gpu_ids,  # ignored with > 1 gpu_ids
+            sensor_preprocessor_graph=sensor_preprocessor_graph,
+        )
 ```
 Now we define the actual model that we will be using. **AllenAct** offers first-class support for PyTorch,
 so any PyTorch model that implements the provided `ActorCriticModel` class will work here. Here we borrow a modelfrom the `pointnav_baselines` project (which
@@ -377,7 +427,7 @@ distance to the target) with `goal_dims`.
     def create_model(cls, **kwargs) -> nn.Module:
         return ResnetTensorPointNavActorCritic(
             action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
-            observation_space=kwargs["observation_set"].observation_spaces,
+            observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             rgb_resnet_preprocessor_uuid="rgb_resnet",
             hidden_size=512,

@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Sequence
 
 import gym
 import torch
@@ -10,14 +10,17 @@ from torchvision import models
 
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from core.base_abstractions.experiment_config import ExperimentConfig
-from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.experiment_config import ExperimentConfig, MachineParams
+from core.base_abstractions.preprocessor import (
+    ResNetPreprocessor,
+    SensorPreprocessorGraph,
+)
+from core.base_abstractions.sensor import SensorSuite
 from core.base_abstractions.task import TaskSampler
 from plugins.habitat_plugin.habitat_constants import (
     HABITAT_DATASETS_DIR,
     HABITAT_CONFIGS_DIR,
 )
-from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.habitat_plugin.habitat_sensors import (
     RGBSensorHabitat,
     TargetCoordinatesSensorHabitat,
@@ -31,7 +34,13 @@ from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )
-from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
+from utils.experiment_utils import (
+    Builder,
+    PipelineStage,
+    TrainingPipeline,
+    LinearDecay,
+    evenly_distribute_count_into_bins,
+)
 
 
 class PointNavHabitatRGBPPOTutorialExperimentConfig(ExperimentConfig):
@@ -104,7 +113,7 @@ class PointNavHabitatRGBPPOTutorialExperimentConfig(ExperimentConfig):
 
     PREPROCESSORS = [
         Builder(
-            ResnetPreProcessorHabitat,
+            ResNetPreprocessor,
             {
                 "input_height": SCREEN_SIZE,
                 "input_width": SCREEN_SIZE,
@@ -115,7 +124,6 @@ class PointNavHabitatRGBPPOTutorialExperimentConfig(ExperimentConfig):
                 "torchvision_resnet_model": models.resnet18,
                 "input_uuids": ["rgb_lowres"],
                 "output_uuid": "rgb_resnet",
-                "parallel": False,  # TODO False for debugging
             },
         ),
     ]
@@ -165,15 +173,6 @@ class PointNavHabitatRGBPPOTutorialExperimentConfig(ExperimentConfig):
             ),
         )
 
-    def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
-            self.NUM_PROCESSES, ndevices
-        )
-        res = [0] * ndevices
-        for it in range(self.NUM_PROCESSES):
-            res[it % ndevices] += 1
-        return res
-
     def machine_params(self, mode="train", **kwargs):
         if mode == "train":
             workers_per_device = 1
@@ -185,7 +184,7 @@ class PointNavHabitatRGBPPOTutorialExperimentConfig(ExperimentConfig):
             nprocesses = (
                 1
                 if not torch.cuda.is_available()
-                else self.split_num_processes(len(gpu_ids))
+                else evenly_distribute_count_into_bins(self.NUM_PROCESSES, len(gpu_ids))
             )
         elif mode == "valid":
             nprocesses = 1
@@ -196,36 +195,31 @@ class PointNavHabitatRGBPPOTutorialExperimentConfig(ExperimentConfig):
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
-        # Disable parallelization for validation process
-        if mode == "valid":
-            for prep in self.PREPROCESSORS:
-                prep.kwargs["parallel"] = False
-
-        observation_set = (
-            Builder(
-                ObservationSet,
-                kwargs=dict(
-                    source_ids=self.OBSERVATIONS,
-                    all_preprocessors=self.PREPROCESSORS,
-                    all_sensors=self.SENSORS,
-                ),
+        sensor_preprocessor_graph = (
+            SensorPreprocessorGraph(
+                source_observation_spaces=SensorSuite(self.SENSORS).observation_spaces,
+                preprocessors=self.PREPROCESSORS,
             )
-            if mode == "train" or nprocesses > 0
+            if mode == "train"
+            or (
+                (isinstance(nprocesses, int) and nprocesses > 0)
+                or (isinstance(nprocesses, Sequence) and sum(nprocesses) > 0)
+            )
             else None
         )
 
-        return {
-            "nprocesses": nprocesses,
-            "gpu_ids": gpu_ids,
-            "observation_set": observation_set,
-        }
+        return MachineParams(
+            nprocesses=nprocesses,
+            devices=gpu_ids,
+            sensor_preprocessor_graph=sensor_preprocessor_graph,
+        )
 
     # Define Model
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return ResnetTensorPointNavActorCritic(
             action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
-            observation_space=kwargs["observation_set"].observation_spaces,
+            observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",
             rgb_resnet_preprocessor_uuid="rgb_resnet",
             hidden_size=512,

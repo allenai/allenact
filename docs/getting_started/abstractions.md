@@ -33,13 +33,13 @@ and an [example implementation](/api/plugins/ithor_plugin/ithor_task_samplers/#o
 
 Tasks define the scope of the interaction between agents and an environment (including the action types agents are 
 allowed to execute), as well as metrics to evaluate the agents' performance. For example, we might define a task 
-`ObjectNavTask` in which agents receive observations obtained from the environment (e.g. RGB images) or directly from 
+`ObjectNaviThorGridTask` in which agents receive observations obtained from the environment (e.g. RGB images) or directly from 
 the task (e.g. a target object class) and are allowed to execute actions such as `MoveAhead`, `RotateRight`, 
 `RotateLeft`, and `End` whenever agents determine they have reached their target. The metrics might include a
 success indicator or some quantitative metric on the optimality of the followed path.  
 
 See the [abstract `Task` class](/api/core/base_abstractions/task/#task) 
-and an [example implementation](/api/plugins/ithor_plugin/ithor_tasks/#objectnavtask).
+and an [example implementation](/api/plugins/robothor_plugin/robothor_tasks/#objectnavtask).
 
 ## Sensor
 

@@ -92,67 +92,73 @@ decided to leave this way of passing in configurations exposed to the user to of
 of the underlying environment.
 
 Finally we need to replace the task sampler and its argument generating functions:
+
 ```python
     # Define Task Sampler
-    from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
-    @classmethod
-    def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return PointNavTaskSampler(**kwargs)
+from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
 
-    def train_task_sampler_args(
+
+@classmethod
+def make_sampler_fn(cls, **kwargs) -> TaskSampler:
+    return PointNavTaskSampler(**kwargs)
+
+
+def train_task_sampler_args(
         self,
         process_ind: int,
         total_processes: int,
         devices: Optional[List[int]] = None,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
-    ) -> Dict[str, Any]:
-        config = self.TRAIN_CONFIGS[process_ind]
-        return {
-            "env_config": config,
-            "max_steps": self.MAX_STEPS,
-            "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
-            "distance_to_goal": self.DISTANCE_TO_GOAL,
-        }
+) -> Dict[str, Any]:
+    config = self.TRAIN_CONFIGS_PER_PROCESS[process_ind]
+    return {
+        "env_config": config,
+        "max_steps": self.MAX_STEPS,
+        "sensors": self.SENSORS,
+        "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+        "distance_to_goal": self.DISTANCE_TO_GOAL,
+    }
 
-    def valid_task_sampler_args(
+
+def valid_task_sampler_args(
         self,
         process_ind: int,
         total_processes: int,
         devices: Optional[List[int]] = None,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
-    ) -> Dict[str, Any]:
-        config = self.CONFIG.clone()
-        config.defrost()
-        config.DATASET.DATA_PATH = self.VALID_SCENES
-        config.MODE = "validate"
-        config.freeze()
-        return {
-            "env_config": config,
-            "max_steps": self.MAX_STEPS,
-            "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
-            "distance_to_goal": self.DISTANCE_TO_GOAL,
-        }
+) -> Dict[str, Any]:
+    config = self.CONFIG.clone()
+    config.defrost()
+    config.DATASET.DATA_PATH = self.VALID_SCENES_PATH
+    config.MODE = "validate"
+    config.freeze()
+    return {
+        "env_config": config,
+        "max_steps": self.MAX_STEPS,
+        "sensors": self.SENSORS,
+        "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+        "distance_to_goal": self.DISTANCE_TO_GOAL,
+    }
 
-    def test_task_sampler_args(
+
+def test_task_sampler_args(
         self,
         process_ind: int,
         total_processes: int,
         devices: Optional[List[int]] = None,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
-    ) -> Dict[str, Any]:
-        config = self.TEST_CONFIGS[process_ind]
-        return {
-            "env_config": config,
-            "max_steps": self.MAX_STEPS,
-            "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
-            "distance_to_goal": self.DISTANCE_TO_GOAL,
-        }
+) -> Dict[str, Any]:
+    config = self.TEST_CONFIGS[process_ind]
+    return {
+        "env_config": config,
+        "max_steps": self.MAX_STEPS,
+        "sensors": self.SENSORS,
+        "action_space": gym.spaces.Discrete(len(PointNavTask.action_names())),
+        "distance_to_goal": self.DISTANCE_TO_GOAL,
+    }
 ```
 
 As we can see this code looks very similar as well, we simply need to pass slightly different parameters.
