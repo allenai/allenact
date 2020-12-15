@@ -101,21 +101,27 @@ from torchvision import models
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from core.base_abstractions.experiment_config import ExperimentConfig
-from core.base_abstractions.preprocessor import SensorPreprocessorGraph, ResNetPreprocessor
+from core.base_abstractions.experiment_config import ExperimentConfig, MachineParams
+from core.base_abstractions.preprocessor import (
+    ResNetPreprocessor,
+    SensorPreprocessorGraph,
+)
+from core.base_abstractions.sensor import SensorSuite
 from core.base_abstractions.task import TaskSampler
-<<<<<<< HEAD
-from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
-=======
->>>>>>> master
 from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )
-from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
+from utils.experiment_utils import (
+    Builder,
+    PipelineStage,
+    TrainingPipeline,
+    LinearDecay,
+    evenly_distribute_count_into_bins,
+)
 ```
 Next we define a new experiment config class:
 ```python
@@ -214,9 +220,8 @@ use this abstraction.
 
 ```python
     PREPROCESSORS = [
-<<<<<<< HEAD
         Builder(
-            ResnetPreProcessorHabitat,
+            ResNetPreprocessor,
             {
                 "input_height": SCREEN_SIZE,
                 "input_width": SCREEN_SIZE,
@@ -227,24 +232,8 @@ use this abstraction.
                 "torchvision_resnet_model": models.resnet18,
                 "input_uuids": ["rgb_lowres"],
                 "output_uuid": "rgb_resnet",
-                "parallel": False,
             },
         ),
-=======
-            Builder(ResNetPreprocessor,
-                {
-                    "input_height": SCREEN_SIZE,
-                    "input_width": SCREEN_SIZE,
-                    "output_width": 7,
-                    "output_height": 7,
-                    "output_dims": 512,
-                    "pool": False,
-                    "torchvision_resnet_model": models.resnet18,
-                    "input_uuids": ["rgb_lowres"],
-                    "output_uuid": "rgb_resnet",
-                }
-            ),
->>>>>>> master
     ]
 ```
 Next, we must define all of the observation inputs that our model will use. These are just
@@ -320,35 +309,14 @@ often we save the model weights and run validation on them.
             ),
         )
 ```
-<<<<<<< HEAD
-We define the helper method `split_num_processes` to split the different scenes that we want to train with
-amongst the different available devices. "machine_params" returns the hardware parameters of each
-=======
-
-
-We use the helper method `evenly_distribute_count_into_bins` to split the different scenes that we want to train with
-amongst the different available devices. `machine_params` returns the hardware parameters of each
->>>>>>> master
+The `machine_params` method returns the hardware parameters of each
 process, based on the list of devices we defined above.
 
 ```python
-<<<<<<< HEAD
-    def split_num_processes(self, ndevices):
-        assert self.NUM_PROCESSES >= ndevices, "NUM_PROCESSES {} < ndevices {}".format(
-            self.NUM_PROCESSES, ndevices
-        )
-        res = [0] * ndevices
-        for it in range(self.NUM_PROCESSES):
-            res[it % ndevices] += 1
-        return res
-
-=======
->>>>>>> master
     def machine_params(self, mode="train", **kwargs):
         sampler_devices: List[int] = []
         if mode == "train":
             workers_per_device = 1
-<<<<<<< HEAD
             gpu_ids = (
                 []
                 if not torch.cuda.is_available()
@@ -357,14 +325,9 @@ process, based on the list of devices we defined above.
             nprocesses = (
                 8
                 if not torch.cuda.is_available()
-                else self.split_num_processes(len(gpu_ids))
+                else evenly_distribute_count_into_bins(self.NUM_PROCESSES, len(gpu_ids))
             )
             sampler_devices = list(self.TRAINING_GPUS)
-=======
-            gpu_ids = [] if not torch.cuda.is_available() else self.TRAINING_GPUS * workers_per_device
-            nprocesses = 1 if not torch.cuda.is_available() else evenly_distribute_count_into_bins(self.NUM_PROCESSES, len(gpu_ids))
-            sampler_devices = self.TRAINING_GPUS
->>>>>>> master
         elif mode == "valid":
             nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.VALIDATION_GPUS
@@ -374,23 +337,6 @@ process, based on the list of devices we defined above.
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
-<<<<<<< HEAD
-        # Disable parallelization for validation process
-        if mode == "valid":
-            for prep in self.PREPROCESSORS:
-                prep.kwargs["parallel"] = False
-
-        observation_set = (
-            Builder(
-                ObservationSet,
-                kwargs=dict(
-                    source_ids=self.OBSERVATIONS,
-                    all_preprocessors=self.PREPROCESSORS,
-                    all_sensors=self.SENSORS,
-                ),
-            )
-            if mode == "train" or nprocesses > 0
-=======
         sensor_preprocessor_graph = (
             SensorPreprocessorGraph(
                 source_observation_spaces=SensorSuite(self.SENSORS).observation_spaces,
@@ -401,7 +347,6 @@ process, based on the list of devices we defined above.
                 (isinstance(nprocesses, int) and nprocesses > 0)
                 or (isinstance(nprocesses, Sequence) and sum(nprocesses) > 0)
             )
->>>>>>> master
             else None
         )
 
@@ -602,15 +547,12 @@ If we start up a tensorboard server during training and specify that `output_dir
 something like this:
 ![tensorboard output](../img/point-nav-baseline-tb.png)
 
-
 ## Training Model On Full Dataset
 We can also train the model on the full dataset by changing back our dataset path and running the same command as above.
 But be aware, training this takes nearly 2 days on a machine with 8 GPU.
 
-
 ## Testing Model
 To test the performance of a model please refer to [this tutorial](running-inference-on-a-pretrained-model.md).
-
 
 ## Conclusion
 In this tutorial, we learned how to create a new PointNav experiment using **AllenAct**. There are many simple

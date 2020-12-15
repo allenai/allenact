@@ -73,6 +73,7 @@ nav:
     - algorithms:
       - onpolicy_sync:
         - losses:
+          - grouped_action_imitation: api/core/algorithms/onpolicy_sync/losses/grouped_action_imitation.md
           - imitation: api/core/algorithms/onpolicy_sync/losses/imitation.md
           - abstract_loss: api/core/algorithms/onpolicy_sync/losses/abstract_loss.md
           - ppo: api/core/algorithms/onpolicy_sync/losses/ppo.md
@@ -152,13 +153,19 @@ nav:
           - objectnav_robothor_rgb_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_ddppo.md
           - objectnav_robothor_rgb_resnetgru_dagger: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_dagger.md
           - objectnav_robothor_rgbd_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgbd_resnetgru_ddppo.md
+          - objectnav_robothor_rgb_resnetgru_ddppo_and_gbc: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_ddppo_and_gbc.md
           - objectnav_robothor_depth_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_depth_resnetgru_ddppo.md
         - ithor:
           - objectnav_ithor_rgbd_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_rgbd_resnetgru_ddppo.md
           - objectnav_ithor_depth_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_depth_resnetgru_ddppo.md
           - objectnav_ithor_rgb_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_rgb_resnetgru_ddppo.md
           - objectnav_ithor_base: api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_base.md
+        - objectnav_thor_mixin_ddppo_and_gbc: api/projects/objectnav_baselines/experiments/objectnav_thor_mixin_ddppo_and_gbc.md
+        - objectnav_thor_base: api/projects/objectnav_baselines/experiments/objectnav_thor_base.md
+        - objectnav_mixin_resnetgru: api/projects/objectnav_baselines/experiments/objectnav_mixin_resnetgru.md
         - objectnav_base: api/projects/objectnav_baselines/experiments/objectnav_base.md
+        - objectnav_mixin_ddppo: api/projects/objectnav_baselines/experiments/objectnav_mixin_ddppo.md
+        - objectnav_mixin_dagger: api/projects/objectnav_baselines/experiments/objectnav_mixin_dagger.md
       - models:
         - object_nav_models: api/projects/objectnav_baselines/models/object_nav_models.md
     - babyai_baselines:
@@ -197,11 +204,17 @@ nav:
           - pointnav_habitat_depth_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo.md
           - debug_pointnav_habitat_base: api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base.md
         - pointnav_base: api/projects/pointnav_baselines/experiments/pointnav_base.md
+        - pointnav_habitat_mixin_ddppo: api/projects/pointnav_baselines/experiments/pointnav_habitat_mixin_ddppo.md
         - ithor:
           - pointnav_ithor_rgbd_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_rgbd_simpleconvgru_ddppo.md
+          - pointnav_ithor_depth_simpleconvgru_ddppo_and_gbc: api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_depth_simpleconvgru_ddppo_and_gbc.md
           - pointnav_ithor_rgb_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_rgb_simpleconvgru_ddppo.md
           - pointnav_ithor_base: api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_base.md
           - pointnav_ithor_depth_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_depth_simpleconvgru_ddppo.md
+        - pointnav_mixin_simpleconvgru: api/projects/pointnav_baselines/experiments/pointnav_mixin_simpleconvgru.md
+        - pointnav_thor_mixin_ddppo: api/projects/pointnav_baselines/experiments/pointnav_thor_mixin_ddppo.md
+        - pointnav_thor_mixin_ddppo_and_gbc: api/projects/pointnav_baselines/experiments/pointnav_thor_mixin_ddppo_and_gbc.md
+        - pointnav_thor_base: api/projects/pointnav_baselines/experiments/pointnav_thor_base.md
       - models:
         - point_nav_models: api/projects/pointnav_baselines/models/point_nav_models.md
     - tutorials:
