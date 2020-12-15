@@ -200,9 +200,8 @@ class PointNavTask(Task[RoboThorEnvironment]):
             "success": self._success,  # False also if no path to target
             "total_reward": total_reward,
             "dist_to_target": dist2tget,
+            "spl": 0 if spl is None else spl
         }
-        if spl is not None:
-            metrics["spl"] = spl
         return metrics
 
 
@@ -397,9 +396,8 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             "success": self._success,
             "total_reward": np.sum(self._rewards),
             "dist_to_target": dist2tget,
+            "spl": 0 if spl is None else spl
         }
-        if spl is not None:
-            metrics["spl"] = spl
         return metrics
 
     def query_expert(self, end_action_only: bool = False, **kwargs) -> Tuple[int, bool]:
