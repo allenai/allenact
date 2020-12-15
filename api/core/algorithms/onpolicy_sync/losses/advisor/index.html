@@ -3218,32 +3218,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../../../../projects/tutorials/running_inference_tutorial/" title="running_inference_tutorial" class="md-nav__link">
-      running_inference_tutorial
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../../../../projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object/" title="object_nav_ithor_dagger_then_ppo_one_object" class="md-nav__link">
       object_nav_ithor_dagger_then_ppo_one_object
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../../../../projects/tutorials/minigrid_offpolicy_tutorial/" title="minigrid_offpolicy_tutorial" class="md-nav__link">
-      minigrid_offpolicy_tutorial
     </a>
   </li>
 
@@ -3278,32 +3254,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../../../../projects/tutorials/training_a_pointnav_model/" title="training_a_pointnav_model" class="md-nav__link">
-      training_a_pointnav_model
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../../../../projects/tutorials/object_nav_ithor_ppo_one_object/" title="object_nav_ithor_ppo_one_object" class="md-nav__link">
       object_nav_ithor_ppo_one_object
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../../../../projects/tutorials/minigrid_tutorial/" title="minigrid_tutorial" class="md-nav__link">
-      minigrid_tutorial
     </a>
   </li>
 
@@ -3674,14 +3626,14 @@
                 
                 <p><a name="core.algorithms.onpolicy_sync.losses.advisor"></a> </p>
 <h1 id="corealgorithmsonpolicy_synclossesadvisor"><code>core.algorithms.onpolicy_sync.losses.advisor</code><a class="headerlink" href="#corealgorithmsonpolicy_synclossesadvisor" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/algorithms/onpolicy_sync/losses/advisor.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/algorithms/onpolicy_sync/losses/advisor.py#L1">[view_source]</a></p>
 <p>Defining the PPO loss for actor critic type models.</p>
 <p><a name="core.algorithms.onpolicy_sync.losses.advisor.AdvisorImitationStage"></a></p>
 <h2 id="advisorimitationstage"><code>AdvisorImitationStage</code><a class="headerlink" href="#advisorimitationstage" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">AdvisorImitationStage</span><span class="p">(</span><span class="n">AbstractActorCriticLoss</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/algorithms/onpolicy_sync/losses/advisor.py#L21">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/algorithms/onpolicy_sync/losses/advisor.py#L21">[view_source]</a></p>
 <p>Implementation of the Advisor loss' stage 1 when main and auxiliary
 actors are equally weighted.</p>
 <p><a name="core.algorithms.onpolicy_sync.losses.advisor.AdvisorImitationStage.loss"></a></p>
@@ -3689,7 +3641,7 @@ actors are equally weighted.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">loss</span><span class="p">(</span><span class="n">step_count</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">batch</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]],</span> <span class="n">actor_critic_output</span><span class="p">:</span> <span class="n">ActorCriticOutput</span><span class="p">[</span><span class="n">CategoricalDistr</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/algorithms/onpolicy_sync/losses/advisor.py#L25">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/algorithms/onpolicy_sync/losses/advisor.py#L25">[view_source]</a></p>
 <p>Compute imitation loss on main and auxiliary policies.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -3711,7 +3663,7 @@ tensor in order to compute a gradient update to the ActorCriticModel's parameter
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">AdvisorWeightedStage</span><span class="p">(</span><span class="n">AbstractActorCriticLoss</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/algorithms/onpolicy_sync/losses/advisor.py#L111">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/algorithms/onpolicy_sync/losses/advisor.py#L111">[view_source]</a></p>
 <p>Implementation of the Advisor loss' second stage (simplest variant).</p>
 <p><strong>Attributes</strong></p>
 <ul>
@@ -3740,7 +3692,7 @@ tensor in order to compute a gradient update to the ActorCriticModel's parameter
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">rl_loss</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">PPO</span><span class="p">,</span> <span class="n">A2C</span><span class="p">],</span> <span class="n">Builder</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">PPO</span><span class="p">,</span> <span class="n">A2C</span><span class="p">]]]],</span> <span class="n">fixed_alpha</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">fixed_bound</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span> <span class="n">alpha_scheduler</span><span class="p">:</span> <span class="n">AlphaScheduler</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">smooth_expert_weight_decay</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/algorithms/onpolicy_sync/losses/advisor.py#L136">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/algorithms/onpolicy_sync/losses/advisor.py#L136">[view_source]</a></p>
 <p>Initializer.</p>
 <p>See the class documentation for parameter definitions not included below.</p>
 <p><strong>Parameters</strong></p>

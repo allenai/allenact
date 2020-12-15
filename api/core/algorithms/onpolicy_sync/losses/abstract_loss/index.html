@@ -3283,32 +3283,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../../../../projects/tutorials/running_inference_tutorial/" title="running_inference_tutorial" class="md-nav__link">
-      running_inference_tutorial
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../../../../projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object/" title="object_nav_ithor_dagger_then_ppo_one_object" class="md-nav__link">
       object_nav_ithor_dagger_then_ppo_one_object
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../../../../projects/tutorials/minigrid_offpolicy_tutorial/" title="minigrid_offpolicy_tutorial" class="md-nav__link">
-      minigrid_offpolicy_tutorial
     </a>
   </li>
 
@@ -3343,32 +3319,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../../../../projects/tutorials/training_a_pointnav_model/" title="training_a_pointnav_model" class="md-nav__link">
-      training_a_pointnav_model
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../../../../projects/tutorials/object_nav_ithor_ppo_one_object/" title="object_nav_ithor_ppo_one_object" class="md-nav__link">
       object_nav_ithor_ppo_one_object
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../../../../projects/tutorials/minigrid_tutorial/" title="minigrid_tutorial" class="md-nav__link">
-      minigrid_tutorial
     </a>
   </li>
 
@@ -3719,14 +3671,14 @@
                 
                 <p><a name="core.algorithms.onpolicy_sync.losses.abstract_loss"></a> </p>
 <h1 id="corealgorithmsonpolicy_synclossesabstract_loss"><code>core.algorithms.onpolicy_sync.losses.abstract_loss</code><a class="headerlink" href="#corealgorithmsonpolicy_synclossesabstract_loss" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/algorithms/onpolicy_sync/losses/abstract_loss.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/algorithms/onpolicy_sync/losses/abstract_loss.py#L1">[view_source]</a></p>
 <p>Defining abstract loss classes for actor critic models.</p>
 <p><a name="core.algorithms.onpolicy_sync.losses.abstract_loss.AbstractActorCriticLoss"></a></p>
 <h2 id="abstractactorcriticloss"><code>AbstractActorCriticLoss</code><a class="headerlink" href="#abstractactorcriticloss" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">AbstractActorCriticLoss</span><span class="p">(</span><span class="n">Loss</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/algorithms/onpolicy_sync/losses/abstract_loss.py#L13">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/algorithms/onpolicy_sync/losses/abstract_loss.py#L13">[view_source]</a></p>
 <p>Abstract class representing a loss function used to train an
 ActorCriticModel.</p>
 <p><a name="core.algorithms.onpolicy_sync.losses.abstract_loss.AbstractActorCriticLoss.loss"></a></p>
@@ -3735,7 +3687,7 @@ ActorCriticModel.</p>
  <span class="o">|</span> <span class="n">loss</span><span class="p">(</span><span class="n">step_count</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">batch</span><span class="p">:</span> <span class="n">ObservationType</span><span class="p">,</span> <span class="n">actor_critic_output</span><span class="p">:</span> <span class="n">ActorCriticOutput</span><span class="p">[</span><span class="n">CategoricalDistr</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="p">,)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/algorithms/onpolicy_sync/losses/abstract_loss.py#L18">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/algorithms/onpolicy_sync/losses/abstract_loss.py#L18">[view_source]</a></p>
 <p>Computes the loss.</p>
 <p><strong>Parameters</strong></p>
 <ul>

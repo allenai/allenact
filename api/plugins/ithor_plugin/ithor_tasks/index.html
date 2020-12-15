@@ -3293,32 +3293,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../../projects/tutorials/running_inference_tutorial/" title="running_inference_tutorial" class="md-nav__link">
-      running_inference_tutorial
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../../projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object/" title="object_nav_ithor_dagger_then_ppo_one_object" class="md-nav__link">
       object_nav_ithor_dagger_then_ppo_one_object
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../../projects/tutorials/minigrid_offpolicy_tutorial/" title="minigrid_offpolicy_tutorial" class="md-nav__link">
-      minigrid_offpolicy_tutorial
     </a>
   </li>
 
@@ -3353,32 +3329,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../../projects/tutorials/training_a_pointnav_model/" title="training_a_pointnav_model" class="md-nav__link">
-      training_a_pointnav_model
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../../projects/tutorials/object_nav_ithor_ppo_one_object/" title="object_nav_ithor_ppo_one_object" class="md-nav__link">
       object_nav_ithor_ppo_one_object
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../../projects/tutorials/minigrid_tutorial/" title="minigrid_tutorial" class="md-nav__link">
-      minigrid_tutorial
     </a>
   </li>
 
@@ -3743,13 +3695,13 @@
                 
                 <p><a name="plugins.ithor_plugin.ithor_tasks"></a> </p>
 <h1 id="pluginsithor_pluginithor_tasks"><code>plugins.ithor_plugin.ithor_tasks</code><a class="headerlink" href="#pluginsithor_pluginithor_tasks" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/ithor_plugin/ithor_tasks.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/ithor_plugin/ithor_tasks.py#L1">[view_source]</a></p>
 <p><a name="plugins.ithor_plugin.ithor_tasks.ObjectNaviThorGridTask"></a></p>
 <h2 id="objectnavithorgridtask"><code>ObjectNaviThorGridTask</code><a class="headerlink" href="#objectnavithorgridtask" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNaviThorGridTask</span><span class="p">(</span><span class="n">Task</span><span class="p">[</span><span class="n">IThorEnvironment</span><span class="p">])</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/ithor_plugin/ithor_tasks.py#L23">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/ithor_plugin/ithor_tasks.py#L23">[view_source]</a></p>
 <p>Defines the object navigation task in AI2-THOR.</p>
 <p>In object navigation an agent is randomly initialized into an AI2-THOR scene and must
 find an object of a given type (e.g. tomato, television, etc). An object is considered
@@ -3791,7 +3743,7 @@ otherwise it receives a negative reward.</li>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">env</span><span class="p">:</span> <span class="n">IThorEnvironment</span><span class="p">,</span> <span class="n">sensors</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Sensor</span><span class="p">],</span> <span class="n">task_info</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">max_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/ithor_plugin/ithor_tasks.py#L61">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/ithor_plugin/ithor_tasks.py#L61">[view_source]</a></p>
 <p>Initializer.</p>
 <p>See class documentation for parameter definitions.</p>
 <p><a name="plugins.ithor_plugin.ithor_tasks.ObjectNaviThorGridTask.is_goal_object_visible"></a></p>
@@ -3799,14 +3751,14 @@ otherwise it receives a negative reward.</li>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">is_goal_object_visible</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/ithor_plugin/ithor_tasks.py#L127">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/ithor_plugin/ithor_tasks.py#L127">[view_source]</a></p>
 <p>Is the goal object currently visible?</p>
 <p><a name="plugins.ithor_plugin.ithor_tasks.ObjectNaviThorGridTask.judge"></a></p>
 <h3 id="objectnavithorgridtaskjudge"><code>ObjectNaviThorGridTask.judge</code><a class="headerlink" href="#objectnavithorgridtaskjudge" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">judge</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/ithor_plugin/ithor_tasks.py#L134">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/ithor_plugin/ithor_tasks.py#L134">[view_source]</a></p>
 <p>Compute the reward after having taken a step.</p>
                 
               

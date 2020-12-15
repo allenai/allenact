@@ -3220,32 +3220,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../projects/tutorials/running_inference_tutorial/" title="running_inference_tutorial" class="md-nav__link">
-      running_inference_tutorial
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object/" title="object_nav_ithor_dagger_then_ppo_one_object" class="md-nav__link">
       object_nav_ithor_dagger_then_ppo_one_object
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../projects/tutorials/minigrid_offpolicy_tutorial/" title="minigrid_offpolicy_tutorial" class="md-nav__link">
-      minigrid_offpolicy_tutorial
     </a>
   </li>
 
@@ -3280,32 +3256,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../projects/tutorials/training_a_pointnav_model/" title="training_a_pointnav_model" class="md-nav__link">
-      training_a_pointnav_model
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../projects/tutorials/object_nav_ithor_ppo_one_object/" title="object_nav_ithor_ppo_one_object" class="md-nav__link">
       object_nav_ithor_ppo_one_object
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../projects/tutorials/minigrid_tutorial/" title="minigrid_tutorial" class="md-nav__link">
-      minigrid_tutorial
     </a>
   </li>
 
@@ -3771,21 +3723,21 @@
                 
                 <p><a name="utils.tensor_utils"></a> </p>
 <h1 id="utilstensor_utils"><code>utils.tensor_utils</code><a class="headerlink" href="#utilstensor_utils" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/utils/tensor_utils.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/utils/tensor_utils.py#L1">[view_source]</a></p>
 <p>Functions used to manipulate pytorch tensors and numpy arrays.</p>
 <p><a name="utils.tensor_utils.to_device_recursively"></a></p>
 <h3 id="to_device_recursively"><code>to_device_recursively</code><a class="headerlink" href="#to_device_recursively" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code><span class="n">to_device_recursively</span><span class="p">(</span><span class="nb">input</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">inplace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/utils/tensor_utils.py#L25">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/utils/tensor_utils.py#L25">[view_source]</a></p>
 <p>Recursively places tensors on the appropriate device.</p>
 <p><a name="utils.tensor_utils.detach_recursively"></a></p>
 <h3 id="detach_recursively"><code>detach_recursively</code><a class="headerlink" href="#detach_recursively" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code><span class="n">detach_recursively</span><span class="p">(</span><span class="nb">input</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/utils/tensor_utils.py#L84">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/utils/tensor_utils.py#L84">[view_source]</a></p>
 <p>Recursively detaches tensors in some data structure from their
 computation graph.</p>
 <p><a name="utils.tensor_utils.batch_observations"></a></p>
@@ -3793,7 +3745,7 @@ computation graph.</p>
 <div class="codehilite"><pre><span></span><code><span class="n">batch_observations</span><span class="p">(</span><span class="n">observations</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">],</span> <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/utils/tensor_utils.py#L130">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/utils/tensor_utils.py#L130">[view_source]</a></p>
 <p>Transpose a batch of observation dicts to a dict of batched
 observations.</p>
 <p><strong>Arguments</strong></p>
@@ -3809,7 +3761,7 @@ observations.</p>
 <div class="codehilite"><pre><span></span><code><span class="n">to_tensor</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/utils/tensor_utils.py#L191">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/utils/tensor_utils.py#L191">[view_source]</a></p>
 <p>Return a torch.Tensor version of the input.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -3822,7 +3774,7 @@ observations.</p>
 <div class="codehilite"><pre><span></span><code><span class="n">tile_images</span><span class="p">(</span><span class="n">images</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/utils/tensor_utils.py#L212">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/utils/tensor_utils.py#L212">[view_source]</a></p>
 <p>Tile multiple images into single image.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -3836,7 +3788,7 @@ observations.</p>
 <div class="codehilite"><pre><span></span><code><span class="n">image</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">tensor</span><span class="p">,</span> <span class="n">rescale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dataformats</span><span class="o">=</span><span class="s2">&quot;CHW&quot;</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/utils/tensor_utils.py#L262">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/utils/tensor_utils.py#L262">[view_source]</a></p>
 <p>Outputs a <code>Summary</code> protocol buffer with images. The summary has up to
 <code>max_images</code> summary values containing images. The images are built from
 <code>tensor</code> which must be 3-D with shape <code>[height, width, channels]</code> and where
@@ -3866,7 +3818,7 @@ observations.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ScaleBothSides</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/utils/tensor_utils.py#L463">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/utils/tensor_utils.py#L463">[view_source]</a></p>
 <p>Rescales the input PIL.Image to the given 'width' and <code>height</code>.</p>
 <p>Attributes
     width: new width

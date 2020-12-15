@@ -3328,32 +3328,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../../projects/tutorials/running_inference_tutorial/" title="running_inference_tutorial" class="md-nav__link">
-      running_inference_tutorial
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../../projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object/" title="object_nav_ithor_dagger_then_ppo_one_object" class="md-nav__link">
       object_nav_ithor_dagger_then_ppo_one_object
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../../projects/tutorials/minigrid_offpolicy_tutorial/" title="minigrid_offpolicy_tutorial" class="md-nav__link">
-      minigrid_offpolicy_tutorial
     </a>
   </li>
 
@@ -3388,32 +3364,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../../projects/tutorials/training_a_pointnav_model/" title="training_a_pointnav_model" class="md-nav__link">
-      training_a_pointnav_model
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../../projects/tutorials/object_nav_ithor_ppo_one_object/" title="object_nav_ithor_ppo_one_object" class="md-nav__link">
       object_nav_ithor_ppo_one_object
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../../projects/tutorials/minigrid_tutorial/" title="minigrid_tutorial" class="md-nav__link">
-      minigrid_tutorial
     </a>
   </li>
 
@@ -3813,19 +3765,19 @@
                 
                 <p><a name="core.base_abstractions.misc"></a> </p>
 <h1 id="corebase_abstractionsmisc"><code>core.base_abstractions.misc</code><a class="headerlink" href="#corebase_abstractionsmisc" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/misc.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/misc.py#L1">[view_source]</a></p>
 <p><a name="core.base_abstractions.misc.Memory"></a></p>
 <h2 id="memory"><code>Memory</code><a class="headerlink" href="#memory" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Memory</span><span class="p">(</span><span class="n">Dict</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/misc.py#L76">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/misc.py#L76">[view_source]</a></p>
 <p><a name="core.base_abstractions.misc.Memory.check_append"></a></p>
 <h3 id="memorycheck_append"><code>Memory.check_append</code><a class="headerlink" href="#memorycheck_append" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">check_append</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">sampler_dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Memory&quot;</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/misc.py#L106">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/misc.py#L106">[view_source]</a></p>
 <p>Appends a new memory type given its identifier, its memory tensor
 and its sampler dim.</p>
 <p><strong>Parameters</strong></p>
@@ -3841,7 +3793,7 @@ and its sampler dim.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">tensor</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/misc.py#L141">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/misc.py#L141">[view_source]</a></p>
 <p>Returns the memory tensor for a given memory type.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -3854,7 +3806,7 @@ and its sampler dim.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">sampler_dim</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/misc.py#L155">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/misc.py#L155">[view_source]</a></p>
 <p>Returns the sampler dimension for the given memory type.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -3867,7 +3819,7 @@ and its sampler dim.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">sampler_select</span><span class="p">(</span><span class="n">keep</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;Memory&quot;</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/misc.py#L169">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/misc.py#L169">[view_source]</a></p>
 <p>Equivalent to PyTorch index_select along the <code>sampler_dim</code> of each
 memory type.</p>
 <p><strong>Parameters</strong></p>
@@ -3881,7 +3833,7 @@ memory type.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">set_tensor</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Memory&quot;</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/misc.py#L204">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/misc.py#L204">[view_source]</a></p>
 <p>Replaces tensor for given key with an updated version.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -3895,7 +3847,7 @@ memory type.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">step_select</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Memory&quot;</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/misc.py#L226">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/misc.py#L226">[view_source]</a></p>
 <p>Equivalent to slicing with length 1 for the <code>step</code> (i.e first)
 dimension in rollouts storage.</p>
 <p><strong>Parameters</strong></p>
@@ -3909,7 +3861,7 @@ dimension in rollouts storage.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">step_squeeze</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Memory&quot;</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/misc.py#L256">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/misc.py#L256">[view_source]</a></p>
 <p>Equivalent to simple indexing for the <code>step</code> (i.e first) dimension
 in rollouts storage.</p>
 <p><strong>Parameters</strong></p>
@@ -3923,7 +3875,7 @@ in rollouts storage.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="nb">slice</span><span class="p">(</span><span class="n">dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">stop</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Memory&quot;</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/misc.py#L281">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/misc.py#L281">[view_source]</a></p>
 <p>Slicing for dimensions that have same extents in all memory types.
 It also accepts negative indices.</p>
 <p><strong>Parameters</strong></p>

@@ -3447,32 +3447,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../../projects/tutorials/running_inference_tutorial/" title="running_inference_tutorial" class="md-nav__link">
-      running_inference_tutorial
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../../projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object/" title="object_nav_ithor_dagger_then_ppo_one_object" class="md-nav__link">
       object_nav_ithor_dagger_then_ppo_one_object
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../../projects/tutorials/minigrid_offpolicy_tutorial/" title="minigrid_offpolicy_tutorial" class="md-nav__link">
-      minigrid_offpolicy_tutorial
     </a>
   </li>
 
@@ -3507,32 +3483,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../../projects/tutorials/training_a_pointnav_model/" title="training_a_pointnav_model" class="md-nav__link">
-      training_a_pointnav_model
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../../projects/tutorials/object_nav_ithor_ppo_one_object/" title="object_nav_ithor_ppo_one_object" class="md-nav__link">
       object_nav_ithor_ppo_one_object
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../../projects/tutorials/minigrid_tutorial/" title="minigrid_tutorial" class="md-nav__link">
-      minigrid_tutorial
     </a>
   </li>
 
@@ -4051,13 +4003,13 @@
                 
                 <p><a name="core.base_abstractions.sensor"></a> </p>
 <h1 id="corebase_abstractionssensor"><code>core.base_abstractions.sensor</code><a class="headerlink" href="#corebase_abstractionssensor" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L5">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L5">[view_source]</a></p>
 <p><a name="core.base_abstractions.sensor.Sensor"></a></p>
 <h2 id="sensor"><code>Sensor</code><a class="headerlink" href="#sensor" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Sensor</span><span class="p">(</span><span class="n">Generic</span><span class="p">[</span><span class="n">EnvType</span><span class="p">,</span> <span class="n">SubTaskType</span><span class="p">])</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L38">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L38">[view_source]</a></p>
 <p>Represents a sensor that provides data from the environment to agent.
 The user of this class needs to implement the get_observation method and
 the user is also required to set the below attributes:</p>
@@ -4072,7 +4024,7 @@ the user is also required to set the below attributes:</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">get_observation</span><span class="p">(</span><span class="n">env</span><span class="p">:</span> <span class="n">EnvType</span><span class="p">,</span> <span class="n">task</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">SubTaskType</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L57">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L57">[view_source]</a></p>
 <p>Returns observations from the environment (or task).</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -4086,7 +4038,7 @@ the user is also required to set the below attributes:</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">SensorSuite</span><span class="p">(</span><span class="n">Generic</span><span class="p">[</span><span class="n">EnvType</span><span class="p">])</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L74">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L74">[view_source]</a></p>
 <p>Represents a set of sensors, with each sensor being identified through a
 unique id.</p>
 <p><strong>Attributes</strong></p>
@@ -4099,7 +4051,7 @@ unique id.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">sensors</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L87">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L87">[view_source]</a></p>
 <p>Initializer.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -4110,7 +4062,7 @@ unique id.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">get</span><span class="p">(</span><span class="n">uuid</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sensor</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L104">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L104">[view_source]</a></p>
 <p>Return sensor with the given <code>uuid</code>.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -4123,7 +4075,7 @@ unique id.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">get_observations</span><span class="p">(</span><span class="n">env</span><span class="p">:</span> <span class="n">EnvType</span><span class="p">,</span> <span class="n">task</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">SubTaskType</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L117">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L117">[view_source]</a></p>
 <p>Get all observations corresponding to the sensors in the suite.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -4137,13 +4089,13 @@ unique id.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">VisionSensor</span><span class="p">(</span><span class="n">Sensor</span><span class="p">[</span><span class="n">EnvType</span><span class="p">,</span> <span class="n">SubTaskType</span><span class="p">])</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L226">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L226">[view_source]</a></p>
 <p><a name="core.base_abstractions.sensor.VisionSensor.__init__"></a></p>
 <h3 id="visionsensor__init__"><code>VisionSensor.__init__</code><a class="headerlink" href="#visionsensor__init__" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">mean</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">stdev</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">height</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">width</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">uuid</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;vision&quot;</span><span class="p">,</span> <span class="n">output_shape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">output_channels</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">unnormalized_infimum</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">unnormalized_supremum</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">scale_first</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L227">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L227">[view_source]</a></p>
 <p>Initializer.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -4162,7 +4114,7 @@ unique id.</p>
  <span class="o">|</span> <span class="n">height</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L336">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L336">[view_source]</a></p>
 <p>Height that input image will be rescale to have.</p>
 <p><strong>Returns</strong></p>
 <p>The height as a non-negative integer or <code>None</code> if no rescaling is done.</p>
@@ -4172,7 +4124,7 @@ unique id.</p>
  <span class="o">|</span> <span class="n">width</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L346">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L346">[view_source]</a></p>
 <p>Width that input image will be rescale to have.</p>
 <p><strong>Returns</strong></p>
 <p>The width as a non-negative integer or <code>None</code> if no rescaling is done.</p>
@@ -4181,7 +4133,7 @@ unique id.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">RGBSensor</span><span class="p">(</span><span class="n">VisionSensor</span><span class="p">[</span><span class="n">EnvType</span><span class="p">,</span> <span class="n">SubTaskType</span><span class="p">],</span>  <span class="n">ABC</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L390">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L390">[view_source]</a></p>
 <p><a name="core.base_abstractions.sensor.RGBSensor.__init__"></a></p>
 <h3 id="rgbsensor__init__"><code>RGBSensor.__init__</code><a class="headerlink" href="#rgbsensor__init__" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">use_resnet_normalization</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">mean</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
@@ -4191,7 +4143,7 @@ unique id.</p>
  <span class="o">|</span>         <span class="p">),</span> <span class="n">height</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">width</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">uuid</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;rgb&quot;</span><span class="p">,</span> <span class="n">output_shape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">output_channels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span> <span class="n">unnormalized_infimum</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">unnormalized_supremum</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">scale_first</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L391">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L391">[view_source]</a></p>
 <p>Initializer.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -4208,13 +4160,13 @@ unique id.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">DepthSensor</span><span class="p">(</span><span class="n">VisionSensor</span><span class="p">[</span><span class="n">EnvType</span><span class="p">,</span> <span class="n">SubTaskType</span><span class="p">],</span>  <span class="n">ABC</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L429">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L429">[view_source]</a></p>
 <p><a name="core.base_abstractions.sensor.DepthSensor.__init__"></a></p>
 <h3 id="depthsensor__init__"><code>DepthSensor.__init__</code><a class="headerlink" href="#depthsensor__init__" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">use_normalization</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">mean</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.5</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">stdev</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.25</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">height</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">width</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">uuid</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;depth&quot;</span><span class="p">,</span> <span class="n">output_shape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">output_channels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">unnormalized_infimum</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">unnormalized_supremum</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span> <span class="n">scale_first</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L430">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L430">[view_source]</a></p>
 <p>Initializer.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -4230,13 +4182,13 @@ unique id.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ResNetSensor</span><span class="p">(</span><span class="n">VisionSensor</span><span class="p">[</span><span class="n">EnvType</span><span class="p">,</span> <span class="n">SubTaskType</span><span class="p">],</span>  <span class="n">ABC</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L471">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L471">[view_source]</a></p>
 <p><a name="core.base_abstractions.sensor.ResNetSensor.to"></a></p>
 <h3 id="resnetsensorto"><code>ResNetSensor.to</code><a class="headerlink" href="#resnetsensorto" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;ResNetSensor&quot;</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L496">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L496">[view_source]</a></p>
 <p>Moves sensor to specified device.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -4247,7 +4199,7 @@ unique id.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">RGBResNetSensor</span><span class="p">(</span><span class="n">ResNetSensor</span><span class="p">[</span><span class="n">EnvType</span><span class="p">,</span> <span class="n">SubTaskType</span><span class="p">],</span>  <span class="n">ABC</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L524">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L524">[view_source]</a></p>
 <p><a name="core.base_abstractions.sensor.RGBResNetSensor.__init__"></a></p>
 <h3 id="rgbresnetsensor__init__"><code>RGBResNetSensor.__init__</code><a class="headerlink" href="#rgbresnetsensor__init__" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">use_resnet_normalization</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">mean</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
@@ -4257,7 +4209,7 @@ unique id.</p>
  <span class="o">|</span>         <span class="p">),</span> <span class="n">height</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">width</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">uuid</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;rgbresnet&quot;</span><span class="p">,</span> <span class="n">output_shape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2048</span><span class="p">,),</span> <span class="n">output_channels</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">unnormalized_infimum</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">unnormalized_supremum</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">scale_first</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L525">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L525">[view_source]</a></p>
 <p>Initializer.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -4275,13 +4227,13 @@ unique id.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">DepthResNetSensor</span><span class="p">(</span><span class="n">ResNetSensor</span><span class="p">[</span><span class="n">EnvType</span><span class="p">,</span> <span class="n">SubTaskType</span><span class="p">],</span>  <span class="n">ABC</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L563">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L563">[view_source]</a></p>
 <p><a name="core.base_abstractions.sensor.DepthResNetSensor.__init__"></a></p>
 <h3 id="depthresnetsensor__init__"><code>DepthResNetSensor.__init__</code><a class="headerlink" href="#depthresnetsensor__init__" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">use_normalization</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">mean</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.5</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">stdev</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.25</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">height</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">width</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">uuid</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;depthresnet&quot;</span><span class="p">,</span> <span class="n">output_shape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2048</span><span class="p">,),</span> <span class="n">output_channels</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">unnormalized_infimum</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">unnormalized_supremum</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">scale_first</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/core/base_abstractions/sensor.py#L564">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/core/base_abstractions/sensor.py#L564">[view_source]</a></p>
 <p>Initializer.</p>
 <p><strong>Parameters</strong></p>
 <ul>

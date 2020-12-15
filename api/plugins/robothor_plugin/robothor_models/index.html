@@ -3381,32 +3381,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../../projects/tutorials/running_inference_tutorial/" title="running_inference_tutorial" class="md-nav__link">
-      running_inference_tutorial
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../../projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object/" title="object_nav_ithor_dagger_then_ppo_one_object" class="md-nav__link">
       object_nav_ithor_dagger_then_ppo_one_object
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../../projects/tutorials/minigrid_offpolicy_tutorial/" title="minigrid_offpolicy_tutorial" class="md-nav__link">
-      minigrid_offpolicy_tutorial
     </a>
   </li>
 
@@ -3441,32 +3417,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../../projects/tutorials/training_a_pointnav_model/" title="training_a_pointnav_model" class="md-nav__link">
-      training_a_pointnav_model
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../../projects/tutorials/object_nav_ithor_ppo_one_object/" title="object_nav_ithor_ppo_one_object" class="md-nav__link">
       object_nav_ithor_ppo_one_object
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../../projects/tutorials/minigrid_tutorial/" title="minigrid_tutorial" class="md-nav__link">
-      minigrid_tutorial
     </a>
   </li>
 
@@ -3919,33 +3871,33 @@
                 
                 <p><a name="plugins.robothor_plugin.robothor_models"></a> </p>
 <h1 id="pluginsrobothor_pluginrobothor_models"><code>plugins.robothor_plugin.robothor_models</code><a class="headerlink" href="#pluginsrobothor_pluginrobothor_models" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/robothor_plugin/robothor_models.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/robothor_plugin/robothor_models.py#L1">[view_source]</a></p>
 <p><a name="plugins.robothor_plugin.robothor_models.ResnetTensorGoalEncoder"></a></p>
 <h2 id="resnettensorgoalencoder"><code>ResnetTensorGoalEncoder</code><a class="headerlink" href="#resnettensorgoalencoder" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ResnetTensorGoalEncoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/robothor_plugin/robothor_models.py#L20">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/robothor_plugin/robothor_models.py#L20">[view_source]</a></p>
 <p><a name="plugins.robothor_plugin.robothor_models.ResnetTensorGoalEncoder.get_object_type_encoding"></a></p>
 <h3 id="resnettensorgoalencoderget_object_type_encoding"><code>ResnetTensorGoalEncoder.get_object_type_encoding</code><a class="headerlink" href="#resnettensorgoalencoderget_object_type_encoding" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">get_object_type_encoding</span><span class="p">(</span><span class="n">observations</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/robothor_plugin/robothor_models.py#L82">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/robothor_plugin/robothor_models.py#L82">[view_source]</a></p>
 <p>Get the object type encoding from input batched observations.</p>
 <p><a name="plugins.robothor_plugin.robothor_models.ResnetTensorObjectNavActorCritic"></a></p>
 <h2 id="resnettensorobjectnavactorcritic"><code>ResnetTensorObjectNavActorCritic</code><a class="headerlink" href="#resnettensorobjectnavactorcritic" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ResnetTensorObjectNavActorCritic</span><span class="p">(</span><span class="n">ActorCriticModel</span><span class="p">[</span><span class="n">CategoricalDistr</span><span class="p">])</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/robothor_plugin/robothor_models.py#L142">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/robothor_plugin/robothor_models.py#L142">[view_source]</a></p>
 <p><a name="plugins.robothor_plugin.robothor_models.ResnetTensorObjectNavActorCritic.recurrent_hidden_state_size"></a></p>
 <h3 id="resnettensorobjectnavactorcriticrecurrent_hidden_state_size"><code>ResnetTensorObjectNavActorCritic.recurrent_hidden_state_size</code><a class="headerlink" href="#resnettensorobjectnavactorcriticrecurrent_hidden_state_size" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="nd">@property</span>
  <span class="o">|</span> <span class="n">recurrent_hidden_state_size</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]]],</span> <span class="n">torch</span><span class="o">.</span><span class="n">dtype</span><span class="p">]]]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/robothor_plugin/robothor_models.py#L178">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/robothor_plugin/robothor_models.py#L178">[view_source]</a></p>
 <p>The recurrent hidden state size of the model.</p>
 <p><a name="plugins.robothor_plugin.robothor_models.ResnetTensorObjectNavActorCritic.is_blind"></a></p>
 <h3 id="resnettensorobjectnavactorcriticis_blind"><code>ResnetTensorObjectNavActorCritic.is_blind</code><a class="headerlink" href="#resnettensorobjectnavactorcriticis_blind" title="Permanent link">#</a></h3>
@@ -3953,7 +3905,7 @@
  <span class="o">|</span> <span class="n">is_blind</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/robothor_plugin/robothor_models.py#L185">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/robothor_plugin/robothor_models.py#L185">[view_source]</a></p>
 <p>True if the model is blind (e.g. neither 'depth' or 'rgb' is an
 input observation type).</p>
 <p><a name="plugins.robothor_plugin.robothor_models.ResnetTensorObjectNavActorCritic.num_recurrent_layers"></a></p>
@@ -3962,41 +3914,41 @@ input observation type).</p>
  <span class="o">|</span> <span class="n">num_recurrent_layers</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/robothor_plugin/robothor_models.py#L191">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/robothor_plugin/robothor_models.py#L191">[view_source]</a></p>
 <p>Number of recurrent hidden layers.</p>
 <p><a name="plugins.robothor_plugin.robothor_models.ResnetTensorObjectNavActorCritic.get_object_type_encoding"></a></p>
 <h3 id="resnettensorobjectnavactorcriticget_object_type_encoding"><code>ResnetTensorObjectNavActorCritic.get_object_type_encoding</code><a class="headerlink" href="#resnettensorobjectnavactorcriticget_object_type_encoding" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">get_object_type_encoding</span><span class="p">(</span><span class="n">observations</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/robothor_plugin/robothor_models.py#L207">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/robothor_plugin/robothor_models.py#L207">[view_source]</a></p>
 <p>Get the object type encoding from input batched observations.</p>
 <p><a name="plugins.robothor_plugin.robothor_models.ResnetFasterRCNNTensorsGoalEncoder"></a></p>
 <h2 id="resnetfasterrcnntensorsgoalencoder"><code>ResnetFasterRCNNTensorsGoalEncoder</code><a class="headerlink" href="#resnetfasterrcnntensorsgoalencoder" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ResnetFasterRCNNTensorsGoalEncoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/robothor_plugin/robothor_models.py#L232">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/robothor_plugin/robothor_models.py#L232">[view_source]</a></p>
 <p><a name="plugins.robothor_plugin.robothor_models.ResnetFasterRCNNTensorsGoalEncoder.get_object_type_encoding"></a></p>
 <h3 id="resnetfasterrcnntensorsgoalencoderget_object_type_encoding"><code>ResnetFasterRCNNTensorsGoalEncoder.get_object_type_encoding</code><a class="headerlink" href="#resnetfasterrcnntensorsgoalencoderget_object_type_encoding" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">get_object_type_encoding</span><span class="p">(</span><span class="n">observations</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/robothor_plugin/robothor_models.py#L334">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/robothor_plugin/robothor_models.py#L334">[view_source]</a></p>
 <p>Get the object type encoding from input batched observations.</p>
 <p><a name="plugins.robothor_plugin.robothor_models.ResnetFasterRCNNTensorsObjectNavActorCritic"></a></p>
 <h2 id="resnetfasterrcnntensorsobjectnavactorcritic"><code>ResnetFasterRCNNTensorsObjectNavActorCritic</code><a class="headerlink" href="#resnetfasterrcnntensorsobjectnavactorcritic" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ResnetFasterRCNNTensorsObjectNavActorCritic</span><span class="p">(</span><span class="n">ActorCriticModel</span><span class="p">[</span><span class="n">CategoricalDistr</span><span class="p">])</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/robothor_plugin/robothor_models.py#L421">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/robothor_plugin/robothor_models.py#L421">[view_source]</a></p>
 <p><a name="plugins.robothor_plugin.robothor_models.ResnetFasterRCNNTensorsObjectNavActorCritic.recurrent_hidden_state_size"></a></p>
 <h3 id="resnetfasterrcnntensorsobjectnavactorcriticrecurrent_hidden_state_size"><code>ResnetFasterRCNNTensorsObjectNavActorCritic.recurrent_hidden_state_size</code><a class="headerlink" href="#resnetfasterrcnntensorsobjectnavactorcriticrecurrent_hidden_state_size" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="nd">@property</span>
  <span class="o">|</span> <span class="n">recurrent_hidden_state_size</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/robothor_plugin/robothor_models.py#L465">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/robothor_plugin/robothor_models.py#L465">[view_source]</a></p>
 <p>The recurrent hidden state size of the model.</p>
 <p><a name="plugins.robothor_plugin.robothor_models.ResnetFasterRCNNTensorsObjectNavActorCritic.is_blind"></a></p>
 <h3 id="resnetfasterrcnntensorsobjectnavactorcriticis_blind"><code>ResnetFasterRCNNTensorsObjectNavActorCritic.is_blind</code><a class="headerlink" href="#resnetfasterrcnntensorsobjectnavactorcriticis_blind" title="Permanent link">#</a></h3>
@@ -4004,7 +3956,7 @@ input observation type).</p>
  <span class="o">|</span> <span class="n">is_blind</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/robothor_plugin/robothor_models.py#L470">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/robothor_plugin/robothor_models.py#L470">[view_source]</a></p>
 <p>True if the model is blind (e.g. neither 'depth' or 'rgb' is an
 input observation type).</p>
 <p><a name="plugins.robothor_plugin.robothor_models.ResnetFasterRCNNTensorsObjectNavActorCritic.num_recurrent_layers"></a></p>
@@ -4013,14 +3965,14 @@ input observation type).</p>
  <span class="o">|</span> <span class="n">num_recurrent_layers</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/robothor_plugin/robothor_models.py#L476">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/robothor_plugin/robothor_models.py#L476">[view_source]</a></p>
 <p>Number of recurrent hidden layers.</p>
 <p><a name="plugins.robothor_plugin.robothor_models.ResnetFasterRCNNTensorsObjectNavActorCritic.get_object_type_encoding"></a></p>
 <h3 id="resnetfasterrcnntensorsobjectnavactorcriticget_object_type_encoding"><code>ResnetFasterRCNNTensorsObjectNavActorCritic.get_object_type_encoding</code><a class="headerlink" href="#resnetfasterrcnntensorsobjectnavactorcriticget_object_type_encoding" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">get_object_type_encoding</span><span class="p">(</span><span class="n">observations</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/plugins/robothor_plugin/robothor_models.py#L492">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/plugins/robothor_plugin/robothor_models.py#L492">[view_source]</a></p>
 <p>Get the object type encoding from input batched observations.</p>
                 
               

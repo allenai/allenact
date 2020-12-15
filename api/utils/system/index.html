@@ -3220,32 +3220,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../projects/tutorials/running_inference_tutorial/" title="running_inference_tutorial" class="md-nav__link">
-      running_inference_tutorial
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object/" title="object_nav_ithor_dagger_then_ppo_one_object" class="md-nav__link">
       object_nav_ithor_dagger_then_ppo_one_object
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../projects/tutorials/minigrid_offpolicy_tutorial/" title="minigrid_offpolicy_tutorial" class="md-nav__link">
-      minigrid_offpolicy_tutorial
     </a>
   </li>
 
@@ -3280,32 +3256,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../projects/tutorials/training_a_pointnav_model/" title="training_a_pointnav_model" class="md-nav__link">
-      training_a_pointnav_model
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
     <a href="../../projects/tutorials/object_nav_ithor_ppo_one_object/" title="object_nav_ithor_ppo_one_object" class="md-nav__link">
       object_nav_ithor_ppo_one_object
-    </a>
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../../projects/tutorials/minigrid_tutorial/" title="minigrid_tutorial" class="md-nav__link">
-      minigrid_tutorial
     </a>
   </li>
 
@@ -3729,17 +3681,17 @@
                 
                 <p><a name="utils.system"></a> </p>
 <h1 id="utilssystem"><code>utils.system</code><a class="headerlink" href="#utilssystem" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/utils/system.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/utils/system.py#L1">[view_source]</a></p>
 <p><a name="utils.system.HUMAN_LOG_LEVELS"></a></p>
 <h3 id="human_log_levels"><code>HUMAN_LOG_LEVELS</code><a class="headerlink" href="#human_log_levels" title="Permanent link">#</a></h3>
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/utils/system.py#L12">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/utils/system.py#L12">[view_source]</a></p>
 <p>Available log levels: "debug", "info", "warning", "error", "none"</p>
 <p><a name="utils.system.get_logger"></a></p>
 <h3 id="get_logger"><code>get_logger</code><a class="headerlink" href="#get_logger" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code><span class="n">get_logger</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/utils/system.py#L20">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/utils/system.py#L20">[view_source]</a></p>
 <p>Get a <code>logging.Logger</code> to stderr. It can be called whenever we wish to
 log some message. Messages can get mixed-up
 (https://docs.python.org/3.6/library/multiprocessing.html#logging), but it
@@ -3751,7 +3703,7 @@ works well in most cases.</p>
 <div class="codehilite"><pre><span></span><code><span class="n">init_logging</span><span class="p">(</span><span class="n">human_log_level</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;info&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/utils/system.py#L35">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/utils/system.py#L35">[view_source]</a></p>
 <p>Init the <code>logging.Logger</code>.</p>
 <p>It should be called only once in the app (e.g. in <code>main</code>). It sets
 the log_level to one of <code>HUMAN_LOG_LEVELS</code>. And sets up a handler
@@ -3761,7 +3713,7 @@ for stderr. The logging level is propagated to all supproceeses.</p>
 <div class="codehilite"><pre><span></span><code><span class="n">find_free_port</span><span class="p">(</span><span class="n">address</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/c31a5506c7c86068fab62bcbe350553f291ba11e/utils/system.py#L63">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/a0ceda1fdc8c4ea79f5e3acd6cef24f1959c2d69/utils/system.py#L63">[view_source]</a></p>
 <p>Finds a free port for distributed training.</p>
 <p><strong>Returns</strong></p>
 <p><code>port</code>: port number that can be used to listen</p>
