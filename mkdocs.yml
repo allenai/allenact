@@ -131,14 +131,6 @@ nav:
       - robothor_constants: api/plugins/robothor_plugin/robothor_constants.md
       - robothor_models: api/plugins/robothor_plugin/robothor_models.md
       - robothor_tasks: api/plugins/robothor_plugin/robothor_tasks.md
-      - configs:
-        - resnet18_objectnav: api/plugins/robothor_plugin/configs/resnet18_objectnav.md
-        - debug_objectnav_robothor_rgb_ddppo: api/plugins/robothor_plugin/configs/debug_objectnav_robothor_rgb_ddppo.md
-        - resnet18_pointnav: api/plugins/robothor_plugin/configs/resnet18_pointnav.md
-        - pointnav_base: api/plugins/robothor_plugin/configs/pointnav_base.md
-        - resnet18_nav_base: api/plugins/robothor_plugin/configs/resnet18_nav_base.md
-        - nav_base: api/plugins/robothor_plugin/configs/nav_base.md
-        - objectnav_base: api/plugins/robothor_plugin/configs/objectnav_base.md
       - scripts:
         - make_objectnav_debug_dataset: api/plugins/robothor_plugin/scripts/make_objectnav_debug_dataset.md
         - make_pointnav_debug_dataset: api/plugins/robothor_plugin/scripts/make_pointnav_debug_dataset.md
@@ -158,6 +150,7 @@ nav:
         - robothor:
           - objectnav_robothor_base: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_base.md
           - objectnav_robothor_rgb_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_ddppo.md
+          - objectnav_robothor_rgb_resnetgru_dagger: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_dagger.md
           - objectnav_robothor_rgbd_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgbd_resnetgru_ddppo.md
           - objectnav_robothor_depth_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_depth_resnetgru_ddppo.md
         - ithor:
@@ -215,7 +208,8 @@ nav:
       - pointnav_habitat_rgb_ddppo: api/projects/tutorials/pointnav_habitat_rgb_ddppo.md
       - pointnav_robothor_rgb_ddppo: api/projects/tutorials/pointnav_robothor_rgb_ddppo.md
       - object_nav_ithor_dagger_then_ppo_one_object: api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object.md
-      - babyai_go_to_local_bc_offpolicy: api/projects/tutorials/babyai_go_to_local_bc_offpolicy.md
+      - minigrid_offpolicy_tutorial: api/projects/tutorials/minigrid_offpolicy_tutorial.md
+      - navtopartner_robothor_rgb_ppo: api/projects/tutorials/navtopartner_robothor_rgb_ppo.md
       - pointnav_ithor_rgb_ddppo: api/projects/tutorials/pointnav_ithor_rgb_ddppo.md
       - pointnav_robothor_rgb_ddppo_viz: api/projects/tutorials/pointnav_robothor_rgb_ddppo_viz.md
       - object_nav_ithor_ppo_one_object: api/projects/tutorials/object_nav_ithor_ppo_one_object.md
@@ -231,9 +225,11 @@ nav:
     - system: api/utils/system.md
     - cacheless_frcnn: api/utils/cacheless_frcnn.md
     - misc_utils: api/utils/misc_utils.md
+    - multi_agent_viz_utils: api/utils/multi_agent_viz_utils.md
     - viz_utils: api/utils/viz_utils.md
     - tensor_utils: api/utils/tensor_utils.md
     - cache_utils: api/utils/cache_utils.md
+    - literate: api/utils/literate.md
 markdown_extensions:
 - toc:
     permalink: '#'

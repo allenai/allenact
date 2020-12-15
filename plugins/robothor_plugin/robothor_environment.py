@@ -321,7 +321,8 @@ class RoboThorEnvironment:
 
     @property
     def current_depths(self) -> List[np.ndarray]:
-        """Returns depth images corresponding to the agents' egocentric views."""
+        """Returns depth images corresponding to the agents' egocentric
+        views."""
         return [
             self.controller.last_event.events[agent_id].depth_frame
             for agent_id in range(self.agent_count)
