@@ -8,7 +8,7 @@ from plugins.minigrid_plugin.minigrid_offpolicy import (
     MiniGridOffPolicyExpertCELoss,
     create_minigrid_offpolicy_data_iterator,
 )
-from projects.tutorials.babyai_go_to_local_bc_offpolicy import (
+from projects.tutorials.minigrid_offpolicy_tutorial import (
     BCOffPolicyBabyAIGoToLocalExperimentConfig,
 )
 from utils.experiment_utils import PipelineStage, OffPolicyPipelineComponent

@@ -38,10 +38,12 @@ class MiniGridOffPolicyExpertCELoss(AbstractOffPolicyLoss[ActorCriticModel]):
             :2
         ]
 
+        # Initialize Memory if empty
         if len(memory) == 0:
             spec = model.recurrent_memory_specification
             for key in spec:
                 dims_template, dtype = spec[key]
+                # get sampler_dim and all_dims from dims_template (and nrollouts)
 
                 dim_names = [d[0] for d in dims_template]
                 sampler_dim = dim_names.index("sampler")
@@ -59,6 +61,7 @@ class MiniGridOffPolicyExpertCELoss(AbstractOffPolicyLoss[ActorCriticModel]):
                     sampler_dim=sampler_dim,
                 )
 
+        # Forward data (through the actor and critic)
         ac_out, memory = model.forward(
             observations=batch,
             memory=memory,
@@ -66,6 +69,7 @@ class MiniGridOffPolicyExpertCELoss(AbstractOffPolicyLoss[ActorCriticModel]):
             masks=cast(torch.FloatTensor, batch["masks"]),
         )
 
+        # Compute the loss from the actor's output and expert action
         expert_ce_loss = -ac_out.distributions.log_probs(batch["expert_action"]).mean()
 
         info = {"expert_ce": expert_ce_loss.item()}
@@ -74,8 +78,8 @@ class MiniGridOffPolicyExpertCELoss(AbstractOffPolicyLoss[ActorCriticModel]):
             if "completed_episode_count" not in memory:
                 memory["completed_episode_count"] = 0
             memory["completed_episode_count"] += (
-                int(np.prod(batch["masks"].shape))  # type:ignore
-                - batch["masks"].sum().item()  # type:ignore
+                int(np.prod(batch["masks"].shape))  # type: ignore
+                - batch["masks"].sum().item()  # type: ignore
             )
             info["epoch_progress"] = (
                 memory["completed_episode_count"] / self.total_episodes_in_epoch

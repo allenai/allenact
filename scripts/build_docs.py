@@ -10,6 +10,7 @@ from git import Git
 from ruamel.yaml import YAML  # type: ignore
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
+from utils.literate import literate_python_to_markdown
 
 
 class StringColors:
@@ -46,6 +47,13 @@ def render_file(
     classes and functions in the file. More information here:
     https://pypi.org/project/pydoc-markdown/
     """
+    # First try literate
+    try:
+        literate_python_to_markdown(path=os.path.join(relative_src_path, src_file))
+    except Exception as _:
+        pass
+
+    # Now do standard pydocmd
     relative_src_namespace = relative_src_path.replace("/", ".")
     src_base = src_file.replace(".py", "")
 
