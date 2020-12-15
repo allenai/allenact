@@ -200,21 +200,9 @@ if __name__ == "__main__":
     #     )
     # )
 
-    # literate_python_to_markdown(
-    #     os.path.join(
-    #         ABS_PATH_OF_TOP_LEVEL_DIR, "projects/tutorials/minigrid_tutorial.py"
-    #     )
-    # )
-
-    # literate_python_to_markdown(
-    #     os.path.join(
-    #         ABS_PATH_OF_TOP_LEVEL_DIR,
-    #         "projects/tutorials/minigrid_offpolicy_tutorial.py",
-    #     )
-    # )
     literate_python_to_markdown(
         os.path.join(
             ABS_PATH_OF_TOP_LEVEL_DIR,
-            "projects/tutorials/pointnav_robothor_rgb_ddppo.py",
+            "projects/tutorials/training_a_pointnav_model.py",
         )
     )

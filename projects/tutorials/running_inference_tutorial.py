@@ -39,7 +39,7 @@ For our current setup the following command would work:
 
 ```bash
 python main.py \
-    pointnav_robothor_rgb_ddppo \
+    training_a_pointnav_model \
     -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ \
     -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30/exp_PointNavRobothorRGBPPO__stage_00__steps_000039031200.pt \
     -b projects/tutorials \
@@ -50,7 +50,7 @@ For testing on all saved checkpoints we just need to omit `<PATH_TO_CHECKPOINT>`
 
 ```bash
 python main.py \
-    pointnav_robothor_rgb_ddppo \
+    training_a_pointnav_model \
     -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ \
     -b projects/tutorials  \
     -t 2020-08-31_12-13-30
@@ -95,7 +95,7 @@ of using a different (typically shorter) list of episodes or enforce the ones us
 from typing import Optional
 
 from plugins.robothor_plugin.robothor_viz import ThorViz
-from projects.tutorials.pointnav_robothor_rgb_ddppo import (
+from projects.tutorials.training_a_pointnav_model import (
     PointNavRoboThorRGBPPOExperimentConfig,
 )
 from utils.viz_utils import (

@@ -80,7 +80,7 @@ which can be very useful given how expensive RL models are to train.
 The `projects/` directory is home to different projects using `AllenAct`. Currently it is populated with baselines
 of popular tasks and tutorials.
 
-We already have all the code for this tutorial stored in `projects/tutorials/pointnav_robothor_rgb_ddppo.py`. We will
+We already have all the code for this tutorial stored in `projects/tutorials/training_a_pointnav_model.py`. We will
 be using this file to run our experiments, but you can create a new directory in `projects/` and start writing your
 experiment there.
 
@@ -594,7 +594,7 @@ python main.py -o <PATH_TO_OUTPUT> -c -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EX
 ```
 If using the same configuration as we have set up, the following command should work:
 ```bash
-python main.py -o storage/robothor-pointnav-rgb-resnet-resnet -b projects/tutorials pointnav_robothor_rgb_ddppo
+python main.py training_a_pointnav_model -o storage/robothor-pointnav-rgb-resnet-resnet -b projects/tutorials
 ```
 If we start up a tensorboard server during training and specify that `output_dir=storage` the output should look
 something like this:
