@@ -48,10 +48,14 @@ def render_file(
     https://pypi.org/project/pydoc-markdown/
     """
     # First try literate
+    was_literate = False
     try:
-        literate_python_to_markdown(path=os.path.join(relative_src_path, src_file))
+        was_literate = literate_python_to_markdown(path=os.path.join(relative_src_path, src_file))
     except Exception as _:
         pass
+
+    if was_literate:
+        return
 
     # Now do standard pydocmd
     relative_src_namespace = relative_src_path.replace("/", ".")
