@@ -31,7 +31,7 @@ from plugins.ithor_plugin.ithor_constants import (
     END,
 )
 ...
-class ObjectNavTask(Task[IThorEnvironment]):
+class ObjectNaviThorGridTask(Task[IThorEnvironment]):
     _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT, LOOK_DOWN, LOOK_UP, END)
 
     def __init__(
@@ -70,7 +70,7 @@ class ObjectNavTask(Task[IThorEnvironment]):
 ### Step method
 Next, we define the main method `_step` that will be called every time the agent produces a new action: 
 ```python
-class ObjectNavTask(Task[IThorEnvironment]):
+class ObjectNaviThorGridTask(Task[IThorEnvironment]):
     ...
     def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
         assert isinstance(action, int)
@@ -80,7 +80,7 @@ class ObjectNavTask(Task[IThorEnvironment]):
 
         if action_str == END:
             self._took_end_action = True
-            self._success = self._is_goal_object_visible()
+            self._success = self.is_goal_object_visible()
             self.last_action_success = self._success
         else:
             self.env.step({"action": action_str})
@@ -96,7 +96,7 @@ class ObjectNavTask(Task[IThorEnvironment]):
     
     ...
 
-    def _is_goal_object_visible(self) -> bool:
+    def is_goal_object_visible(self) -> bool:
         return any(
             o["objectType"] == self.task_info["object_type"]
             for o in self.env.visible_objects()
@@ -171,7 +171,7 @@ class ObjectNavTaskSampler(TaskSampler):
 
         self.scene_id: Optional[int] = None
 
-        self._last_sampled_task: Optional[ObjectNavTask] = None
+        self._last_sampled_task: Optional[ObjectNaviThorGridTask] = None
 
         set_seed(seed)
 
@@ -208,14 +208,14 @@ Finally, we need to define methods to determine the number of available tasks (p
         return None
 
     @property
-    def last_sampled_task(self) -> Optional[ObjectNavTask]:
+    def last_sampled_task(self) -> Optional[ObjectNaviThorGridTask]:
         return self._last_sampled_task
 
     @property
     def all_observation_spaces_equal(self) -> bool:
         return True
 
-    def next_task(self) -> Optional[ObjectNavTask]:
+    def next_task(self) -> Optional[ObjectNaviThorGridTask]:
         self.scene_id = random.randint(0, len(self.scenes) - 1)
         self.scene = self.scenes[self.scene_id]
 
@@ -230,7 +230,7 @@ Finally, we need to define methods to determine the number of available tasks (p
 
         task_info = {"object_type": random.sample(self.object_types, 1)}
 
-        self._last_sampled_task = ObjectNavTask(
+        self._last_sampled_task = ObjectNaviThorGridTask(
             env=self.env,
             sensors=self.sensors,
             task_info=task_info,

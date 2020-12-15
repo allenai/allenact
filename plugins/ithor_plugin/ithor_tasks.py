@@ -20,7 +20,7 @@ from plugins.ithor_plugin.ithor_environment import IThorEnvironment
 from plugins.ithor_plugin.ithor_util import round_to_factor
 
 
-class ObjectNavTask(Task[IThorEnvironment]):
+class ObjectNaviThorGridTask(Task[IThorEnvironment]):
     """Defines the object navigation task in AI2-THOR.
 
     In object navigation an agent is randomly initialized into an AI2-THOR scene and must
@@ -101,7 +101,7 @@ class ObjectNavTask(Task[IThorEnvironment]):
 
         if action_str == END:
             self._took_end_action = True
-            self._success = self._is_goal_object_visible()
+            self._success = self.is_goal_object_visible()
             self.last_action_success = self._success
         else:
             self.env.step({"action": action_str})
@@ -124,7 +124,7 @@ class ObjectNavTask(Task[IThorEnvironment]):
         assert mode == "rgb", "only rgb rendering is implemented"
         return self.env.current_frame
 
-    def _is_goal_object_visible(self) -> bool:
+    def is_goal_object_visible(self) -> bool:
         """Is the goal object currently visible?"""
         return any(
             o["objectType"] == self.task_info["object_type"]
@@ -147,12 +147,15 @@ class ObjectNavTask(Task[IThorEnvironment]):
         if not self.is_done():
             return {}
         else:
-            return {"success": self._success, **super(ObjectNavTask, self).metrics()}
+            return {
+                "success": self._success,
+                **super(ObjectNaviThorGridTask, self).metrics(),
+            }
 
     def query_expert(self, **kwargs) -> Tuple[int, bool]:
         target = self.task_info["object_type"]
 
-        if self._is_goal_object_visible():
+        if self.is_goal_object_visible():
             return self.class_action_names().index(END), True
         else:
             key = (self.env.scene_name, target)

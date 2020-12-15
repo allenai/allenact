@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional, List, Union, Sequence, Tuple, cast
 import torch
 import torch.nn as nn
 
-from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.preprocessor import SensorPreprocessorGraph
 from core.base_abstractions.task import TaskSampler
 from utils.experiment_utils import TrainingPipeline, Builder
 from utils.system import get_logger
@@ -21,8 +21,8 @@ class MachineParams(object):
         devices: Union[
             None, int, str, torch.device, Sequence[Union[int, str, torch.device]]
         ] = None,
-        observation_set: Optional[
-            Union[ObservationSet, Builder[ObservationSet]]
+        sensor_preprocessor_graph: Optional[
+            Union[SensorPreprocessorGraph, Builder[SensorPreprocessorGraph]]
         ] = None,
         sampler_devices: Union[
             None, int, str, torch.device, Sequence[Union[int, str, torch.device]]
@@ -47,7 +47,7 @@ class MachineParams(object):
             devices=devices, nworkers=len(self.nprocesses)
         )
 
-        self._observation_set_maybe_builder = observation_set
+        self._sensor_preprocessor_graph_maybe_builder = sensor_preprocessor_graph
         self.sampler_devices: Tuple[
             torch.device, ...
         ] = None if sampler_devices is None else self._standardize_devices(
@@ -55,7 +55,7 @@ class MachineParams(object):
         )
         self._visualizer_maybe_builder = visualizer
 
-        self._observation_set_cached: Optional[ObservationSet] = None
+        self._sensor_preprocessor_graph_cached: Optional[SensorPreprocessorGraph] = None
         self._visualizer_cached: Optional[VizSuite] = None
 
     @classmethod
@@ -99,17 +99,21 @@ class MachineParams(object):
         return cast(Tuple[torch.device, ...], devices)
 
     @property
-    def observation_set(self) -> Optional[ObservationSet]:
-        if self._observation_set_maybe_builder is None:
+    def sensor_preprocessor_graph(self) -> Optional[SensorPreprocessorGraph]:
+        if self._sensor_preprocessor_graph_maybe_builder is None:
             return None
 
-        if self._observation_set_cached is None:
-            if isinstance(self._observation_set_maybe_builder, Builder):
-                self._observation_set_cached = self._observation_set_maybe_builder()
+        if self._sensor_preprocessor_graph_cached is None:
+            if isinstance(self._sensor_preprocessor_graph_maybe_builder, Builder):
+                self._sensor_preprocessor_graph_cached = (
+                    self._sensor_preprocessor_graph_maybe_builder()
+                )
             else:
-                self._observation_set_cached = self._observation_set_maybe_builder
+                self._sensor_preprocessor_graph_cached = (
+                    self._sensor_preprocessor_graph_maybe_builder
+                )
 
-        return self._observation_set_cached
+        return self._sensor_preprocessor_graph_cached
 
     @property
     def visualizer(self) -> Optional[VizSuite]:
