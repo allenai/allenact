@@ -1,6 +1,6 @@
 # literate: tutorials/minigrid-tutorial.md
 # %%
-"""# Tutorial: Navigation in MiniGridd."""
+"""# Tutorial: Navigation in MiniGrid."""
 
 # %%
 """

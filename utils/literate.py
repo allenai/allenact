@@ -176,7 +176,10 @@ def literate_python_to_markdown(path: str) -> bool:
             elif mode == "code":
                 code_lines.append(line)
             else:
-                raise NotImplementedError
+                raise NotImplementedError(
+                    f"mode {mode} is not implemented. Last 5 lines: "
+                    + "\n".join(output_lines[-5:])
+                )
 
         if mode == "code" and len(code_lines) != 0:
             output_lines.extend(
@@ -203,9 +206,15 @@ if __name__ == "__main__":
     #     )
     # )
 
+    # literate_python_to_markdown(
+    #     os.path.join(
+    #         ABS_PATH_OF_TOP_LEVEL_DIR,
+    #         "projects/tutorials/minigrid_offpolicy_tutorial.py",
+    #     )
+    # )
     literate_python_to_markdown(
         os.path.join(
             ABS_PATH_OF_TOP_LEVEL_DIR,
-            "projects/tutorials/minigrid_offpolicy_tutorial.py",
+            "projects/tutorials/pointnav_robothor_rgb_ddppo.py",
         )
     )

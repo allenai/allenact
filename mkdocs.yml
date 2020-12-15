@@ -40,7 +40,7 @@ nav:
   - Navigation in Minigrid: tutorials/minigrid-tutorial.md
   - PointNav in RoboTHOR: tutorials/training-a-pointnav-model.md
   - Swapping environments: tutorials/transfering-to-a-different-environment-framework.md
-  - Using a pre-trained model: tutorials/running_inference_on_a_pretrained_model.md
+  - Using a pre-trained model: tutorials/running-inference-on-a-pretrained-model.md
   - Off-policy training: tutorials/offpolicy-tutorial.md
 #  - IL to RL with pipelines: tutorials/training-pipelines.md
 - HowTos:
@@ -207,11 +207,11 @@ nav:
     - tutorials:
       - pointnav_habitat_rgb_ddppo: api/projects/tutorials/pointnav_habitat_rgb_ddppo.md
       - pointnav_robothor_rgb_ddppo: api/projects/tutorials/pointnav_robothor_rgb_ddppo.md
+      - running_inference_tutorial: api/projects/tutorials/running_inference_tutorial.md
       - object_nav_ithor_dagger_then_ppo_one_object: api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object.md
       - minigrid_offpolicy_tutorial: api/projects/tutorials/minigrid_offpolicy_tutorial.md
       - navtopartner_robothor_rgb_ppo: api/projects/tutorials/navtopartner_robothor_rgb_ppo.md
       - pointnav_ithor_rgb_ddppo: api/projects/tutorials/pointnav_ithor_rgb_ddppo.md
-      - pointnav_robothor_rgb_ddppo_viz: api/projects/tutorials/pointnav_robothor_rgb_ddppo_viz.md
       - object_nav_ithor_ppo_one_object: api/projects/tutorials/object_nav_ithor_ppo_one_object.md
       - minigrid_tutorial: api/projects/tutorials/minigrid_tutorial.md
   - tests:
