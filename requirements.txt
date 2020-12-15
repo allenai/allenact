@@ -1,5 +1,5 @@
 absl-py==0.10.0
-ai2thor==2.4.22
+ai2thor==2.5.1
 appdirs==1.4.4
 appnope==0.1.0
 attrs==20.2.0
