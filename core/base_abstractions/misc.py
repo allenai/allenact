@@ -120,6 +120,14 @@ class Memory(Dict):
                 tensor, dim = kwargs[key]
                 self.check_append(key, tensor, dim)
 
+    def __setitem__(
+        self, key: KeyType, value: Union[Tuple[torch.Tensor, int], "Memory"]
+    ):
+        if isinstance(value, Memory):
+            super().__setitem__(key, Memory()._copy(value))
+        else:
+            super().__setitem__(key, value)
+
     def _copy(self, source):
         class Copier:
             res = self
@@ -127,6 +135,7 @@ class Memory(Dict):
             def __call__(self, node, key, path, *args, **kwargs):
                 tensor, dim = node[key]
                 self.res.check_append(path + [key], tensor, dim)
+                return True
 
         func = Copier()
         self._traversal(source, func)
@@ -135,19 +144,22 @@ class Memory(Dict):
     @staticmethod
     def _dfs(
         node: "Memory",
-        func: Callable[["Memory", Hashable, List[Hashable]], None],
+        func: Callable[["Memory", Hashable, List[Hashable]], bool],
         path: List[Hashable] = [],
-    ):
+    ) -> bool:
         for key in node:
             if isinstance(node[key], Dict):
-                Memory._dfs(node[key], func, path + [key])
+                if not Memory._dfs(node[key], func, path + [key]):
+                    return False
             else:
-                func(node, key, path)
+                if not func(node, key, path):
+                    return False
+        return True
 
     @staticmethod
     def _bfs(
         node: "Memory",
-        func: Callable[["Memory", Hashable, List[Hashable]], None],
+        func: Callable[["Memory", Hashable, List[Hashable]], bool],
         path: List[Hashable] = [],
     ):
         to_visit = [(path, node)]
@@ -158,7 +170,8 @@ class Memory(Dict):
                     if isinstance(node[key], Dict):
                         new_to_visit.append((path + [key], node[key]))
                     else:
-                        func(node, key, path)
+                        if not func(node, key, path):
+                            return
             to_visit = new_to_visit
 
     def _traverse_to_parent(self, key: KeyType) -> Tuple["Memory", Hashable]:
@@ -275,7 +288,7 @@ class Memory(Dict):
             valid = False
             res = Memory()
 
-            def __call__(self, node, key, path, *args, **kwargs):
+            def __call__(self, node, key, path, *args, **kwargs) -> bool:
                 sampler_dim = node.sampler_dim(key)
                 tensor = node.tensor(key)
                 assert len(keep) == 0 or (
@@ -293,6 +306,7 @@ class Memory(Dict):
                     )
                     self.res.check_append(path + [key], tensor, sampler_dim)
                     self.valid = True
+                return True
 
         func = SamplerSelector()
         self._traversal(self, func)
@@ -346,7 +360,7 @@ class Memory(Dict):
         class StepSelector:
             res = Memory()
 
-            def __call__(self, node, key, path, *args, **kwargs):
+            def __call__(self, node, key, path, *args, **kwargs) -> bool:
                 tensor = node.tensor(key)
                 assert (
                     tensor.shape[0] > step
@@ -365,6 +379,7 @@ class Memory(Dict):
                         node.tensor(key)[step:, ...],
                         node.sampler_dim(key),
                     )
+                return True
 
         func = StepSelector()
         self._traversal(self, func)
@@ -386,7 +401,7 @@ class Memory(Dict):
         class StepSqueezer:
             res = Memory()
 
-            def __call__(self, node, key, path, *args, **kwargs):
+            def __call__(self, node, key, path, *args, **kwargs) -> bool:
                 tensor = node.tensor(key)
                 assert (
                     tensor.shape[0] > step
@@ -398,6 +413,7 @@ class Memory(Dict):
                     node.tensor(key)[step, ...],
                     node.sampler_dim(key) - 1,
                 )
+                return True
 
         func = StepSqueezer()
         self._traversal(self, func)
@@ -430,7 +446,7 @@ class Memory(Dict):
             total: Optional[int] = None
             res = Memory()
 
-            def __call__(self, node, key, path, *args, **kwargs):
+            def __call__(self, node, key, path, *args, **kwargs) -> bool:
                 tensor = node.tensor(key)
                 assert (
                     len(tensor.shape) > dim
@@ -462,6 +478,7 @@ class Memory(Dict):
                     self.res.check_append(
                         path + [key], tensor, node.sampler_dim(key),
                     )
+                return True
 
         func = Slicer()
         self._traversal(self, func)
@@ -469,10 +486,11 @@ class Memory(Dict):
 
     def to(self, device: torch.device) -> "Memory":
         class Mover:
-            def __call__(self, node, key, *args, **kwargs):
+            def __call__(self, node, key, *args, **kwargs) -> bool:
                 tensor = node.tensor(key)
                 if tensor.device != device:
                     node.set_tensor(key, tensor.to(device))
+                return True
 
         func = Mover()
         self._traversal(self, func)
@@ -482,8 +500,9 @@ class Memory(Dict):
         class Counter:
             count: int = 0
 
-            def __call__(self, *args, **kwargs):
+            def __call__(self, *args, **kwargs) -> bool:
                 self.count += 1
+                return True
 
         func = Counter()
         self._traversal(self, func)
