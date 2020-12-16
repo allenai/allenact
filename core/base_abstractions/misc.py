@@ -114,6 +114,9 @@ class Memory(Dict):
                 )
         elif len(kwargs) > 0:
             for key in kwargs:
+                assert isinstance(
+                    kwargs[key], tuple
+                ), "Only Tuple[torch.Tensor, int]] accepted as keyword arg"
                 assert (
                     len(kwargs[key]) == 2
                 ), "Only Tuple[torch.Tensor, int]] accepted as keyword arg"
@@ -124,6 +127,8 @@ class Memory(Dict):
         self, key: KeyType, value: Union[Tuple[torch.Tensor, int], "Memory"]
     ):
         if isinstance(value, Memory):
+            # Prevent cyclic graphs by enforcing a deepcopy of
+            # the value Memory (but reusing the same tensors)
             super().__setitem__(key, Memory()._copy(value))
         else:
             super().__setitem__(key, value)
