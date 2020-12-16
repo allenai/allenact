@@ -488,11 +488,3 @@ class Memory(Dict):
         func = Counter()
         self._traversal(self, func)
         return func.count
-
-
-from core.base_abstractions.misc import Memory
-import torch
-
-m = Memory([("hello", (torch.zeros(5, 4, 3, 2), 1))])
-mw = Memory([("hello", (torch.zeros(5, 4, 3, 2), 1))], world=None)
-len(m)
