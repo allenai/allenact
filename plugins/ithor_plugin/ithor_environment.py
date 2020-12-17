@@ -35,8 +35,8 @@ class IThorEnvironment(object):
         local_thor_build: Optional[str] = None,
         visibility_distance: float = VISIBILITY_DISTANCE,
         fov: float = FOV,
-        width: int = 300,
-        height: int = 300,
+        player_screen_width: int = 300,
+        player_screen_height: int = 300,
         quality: str = "Very Low",
         restrict_to_initially_reachable_points: bool = False,
         make_agents_visible: bool = True,
@@ -56,8 +56,8 @@ class IThorEnvironment(object):
         visibility_distance : The distance (in meters) at which objects, in the viewport of the agent,
             are considered visible by ai2thor and will have their "visible" flag be set to `True` in the metadata.
         fov : The agent's camera's field of view.
-        width : The width resolution (in pixels) of the images returned by ai2thor.
-        height : The height resolution (in pixels) of the images returned by ai2thor.
+        player_screen_width : The width resolution (in pixels) of the images returned by ai2thor.
+        player_screen_height : The height resolution (in pixels) of the images returned by ai2thor.
         quality : The quality at which to render. Possible quality settings can be found in
             `ai2thor._quality_settings.QUALITY_SETTINGS`.
         restrict_to_initially_reachable_points : Whether or not to restrict the agent to locations in ai2thor
@@ -73,8 +73,8 @@ class IThorEnvironment(object):
             their own when the drawer is opened or closed, instead they are effectively glued down).
         """
 
-        self._start_width = width
-        self._start_height = height
+        self._start_player_screen_width = player_screen_width
+        self._start_player_screen_height = player_screen_height
         self._local_thor_build = local_thor_build
         self.x_display = x_display
         self.controller: Optional[Controller] = None
@@ -183,8 +183,8 @@ class IThorEnvironment(object):
         def create_controller():
             return Controller(
                 x_display=self.x_display,
-                width=self._start_width,
-                height=self._start_height,
+                width=self._start_player_screen_width,
+                height=self._start_player_screen_height,
                 local_executable_path=self._local_thor_build,
                 quality=self._quality,
             )
@@ -192,14 +192,14 @@ class IThorEnvironment(object):
         self.controller = create_controller()
 
         if (
-            self._start_height,
-            self._start_width,
+            self._start_player_screen_height,
+            self._start_player_screen_width,
         ) != self.current_frame.shape[:2]:
             self.controller.step(
                 {
                     "action": "ChangeResolution",
-                    "x": self._start_width,
-                    "y": self._start_height,
+                    "x": self._start_player_screen_width,
+                    "y": self._start_player_screen_height,
                 }
             )
 
