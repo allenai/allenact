@@ -21,7 +21,9 @@ from utils.system import get_logger
 
 EnvType = TypeVar("EnvType")
 DistributionType = TypeVar("DistributionType")
+
 KeyType = Union[Hashable, List[Hashable]]
+TraversalOperatorType = Callable[["Memory", Hashable, List[Hashable]], bool]
 
 
 class RLStepResult(NamedTuple):
@@ -93,7 +95,9 @@ class Memory(Dict):
     def __init__(self, *args, **kwargs):
         super().__init__()
 
-        self._traversal = self._bfs
+        self._traversal: Callable[
+            ["Memory", TraversalOperatorType, List[Hashable]], bool
+        ] = self._bfs
 
         if len(args) > 0:
             assert len(args) == 1, (
@@ -128,7 +132,7 @@ class Memory(Dict):
     ):
         if isinstance(value, Memory):
             # Prevent cyclic graphs by enforcing a deepcopy of
-            # the value Memory (but reusing the same tensors)
+            # the value Memory (still reusing the same tensors)
             super().__setitem__(key, Memory()._copy(value))
         else:
             super().__setitem__(key, value)
@@ -140,33 +144,29 @@ class Memory(Dict):
             def __call__(self, node, key, path, *args, **kwargs):
                 tensor, dim = node[key]
                 self.res.check_append(path + [key], tensor, dim)
-                return True
+                return True  # continue traversal
 
         func = Copier()
         self._traversal(source, func)
         return self
 
-    @staticmethod
+    @classmethod
     def _dfs(
-        node: "Memory",
-        func: Callable[["Memory", Hashable, List[Hashable]], bool],
-        path: List[Hashable] = [],
+        cls, node: "Memory", func: TraversalOperatorType, path: List[Hashable] = [],
     ) -> bool:
         for key in node:
             if isinstance(node[key], Dict):
                 if not Memory._dfs(node[key], func, path + [key]):
-                    return False
+                    return False  # terminate traversal
             else:
                 if not func(node, key, path):
-                    return False
-        return True
+                    return False  # terminate traversal
+        return True  # continue/finished traversal
 
-    @staticmethod
+    @classmethod
     def _bfs(
-        node: "Memory",
-        func: Callable[["Memory", Hashable, List[Hashable]], bool],
-        path: List[Hashable] = [],
-    ):
+        cls, node: "Memory", func: TraversalOperatorType, path: List[Hashable] = [],
+    ) -> bool:
         to_visit = [(path, node)]
         while len(to_visit) > 0:
             new_to_visit = []
@@ -176,8 +176,9 @@ class Memory(Dict):
                         new_to_visit.append((path + [key], node[key]))
                     else:
                         if not func(node, key, path):
-                            return
+                            return False  # terminate traversal
             to_visit = new_to_visit
+        return True  # finished traversal
 
     def _traverse_to_parent(self, key: KeyType) -> Tuple["Memory", Hashable]:
         mem: Memory = self
@@ -311,7 +312,7 @@ class Memory(Dict):
                     )
                     self.res.check_append(path + [key], tensor, sampler_dim)
                     self.valid = True
-                return True
+                return True  # continue traversal
 
         func = SamplerSelector()
         self._traversal(self, func)
@@ -384,7 +385,7 @@ class Memory(Dict):
                         node.tensor(key)[step:, ...],
                         node.sampler_dim(key),
                     )
-                return True
+                return True  # continue traversal
 
         func = StepSelector()
         self._traversal(self, func)
@@ -418,7 +419,7 @@ class Memory(Dict):
                     node.tensor(key)[step, ...],
                     node.sampler_dim(key) - 1,
                 )
-                return True
+                return True  # continue traversal
 
         func = StepSqueezer()
         self._traversal(self, func)
@@ -483,7 +484,7 @@ class Memory(Dict):
                     self.res.check_append(
                         path + [key], tensor, node.sampler_dim(key),
                     )
-                return True
+                return True  # continue traversal
 
         func = Slicer()
         self._traversal(self, func)
@@ -495,7 +496,7 @@ class Memory(Dict):
                 tensor = node.tensor(key)
                 if tensor.device != device:
                     node.set_tensor(key, tensor.to(device))
-                return True
+                return True  # continue traversal
 
         func = Mover()
         self._traversal(self, func)
@@ -507,7 +508,7 @@ class Memory(Dict):
 
             def __call__(self, *args, **kwargs) -> bool:
                 self.count += 1
-                return True
+                return True  # continue traversal
 
         func = Counter()
         self._traversal(self, func)
