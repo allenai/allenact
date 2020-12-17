@@ -45,8 +45,8 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     ]
 
     ENV_ARGS = {
-        "height": SCREEN_SIZE,
-        "width": SCREEN_SIZE,
+        "player_scren_height": SCREEN_SIZE,
+        "player_scren_width": SCREEN_SIZE,
         "quality": "Very Low",
     }
 
