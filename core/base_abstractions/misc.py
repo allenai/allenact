@@ -23,7 +23,8 @@ EnvType = TypeVar("EnvType")
 DistributionType = TypeVar("DistributionType")
 
 KeyType = Union[Hashable, List[Hashable]]
-TraversalOperatorType = Callable[["Memory", Hashable, List[Hashable]], bool]
+TraversalOperatorType = Callable[["Memory", Hashable, List[Hashable]], Optional[bool]]
+StoredTensorAxisType = Tuple[torch.Tensor, int]
 
 
 class RLStepResult(NamedTuple):
@@ -95,9 +96,10 @@ class Memory(Dict):
     def __init__(self, *args, **kwargs):
         super().__init__()
 
-        self._traversal: Callable[
-            ["Memory", TraversalOperatorType, List[Hashable]], bool
-        ] = self._bfs
+        self.traversal: Callable[
+            ["Memory", TraversalOperatorType, List[Hashable], Optional[Hashable]],
+            Optional[bool],
+        ] = self.bfs
 
         if len(args) > 0:
             assert len(args) == 1, (
@@ -127,60 +129,67 @@ class Memory(Dict):
                 tensor, dim = kwargs[key]
                 self.check_append(key, tensor, dim)
 
-    def __setitem__(
-        self, key: KeyType, value: Union[Tuple[torch.Tensor, int], "Memory"]
-    ):
-        if isinstance(value, Memory):
-            # Prevent cyclic graphs by enforcing a deepcopy of
-            # the value Memory (still reusing the same tensors)
-            super().__setitem__(key, Memory()._copy(value))
-        else:
-            super().__setitem__(key, value)
-
     def _copy(self, source):
         class Copier:
             res = self
 
             def __call__(self, node, key, path, *args, **kwargs):
-                tensor, dim = node[key]
-                self.res.check_append(path + [key], tensor, dim)
-                return True  # continue traversal
+                self.res.check_append(path + [key], *node[key])
 
         func = Copier()
-        self._traversal(source, func)
+        self.traversal(source, cast(TraversalOperatorType, func))
         return self
 
-    @classmethod
-    def _dfs(
-        cls, node: "Memory", func: TraversalOperatorType, path: List[Hashable] = [],
-    ) -> bool:
+    @staticmethod
+    def dfs(
+        node: "Memory",
+        func: TraversalOperatorType,
+        path: List[Hashable] = [],
+        topkey: Optional[Hashable] = None,
+    ) -> Optional[bool]:
         for key in node:
+            if topkey is not None:
+                assert topkey in node, "Requested missing topkey {}".format(topkey)
+                if key != topkey:
+                    continue
             if isinstance(node[key], Dict):
-                if not Memory._dfs(node[key], func, path + [key]):
-                    return False  # terminate traversal
+                # Do not propagate topkey (traverse all subkeys)
+                if Memory.dfs(node[key], func, path + [key]):
+                    return True  # terminate traversal
             else:
-                if not func(node, key, path):
-                    return False  # terminate traversal
-        return True  # continue/finished traversal
+                if func(node, key, path):
+                    return True  # terminate traversal
 
-    @classmethod
-    def _bfs(
-        cls, node: "Memory", func: TraversalOperatorType, path: List[Hashable] = [],
-    ) -> bool:
+    @staticmethod
+    def bfs(
+        node: "Memory",
+        func: TraversalOperatorType,
+        path: List[Hashable] = [],
+        topkey: Optional[Hashable] = None,
+    ) -> Optional[bool]:
         to_visit = [(path, node)]
         while len(to_visit) > 0:
             new_to_visit = []
             for path, node in to_visit:
                 for key in node:
+                    if topkey is not None:
+                        assert topkey in node, "Requested missing topkey {}".format(
+                            topkey
+                        )
+                        if key != topkey:
+                            continue
                     if isinstance(node[key], Dict):
                         new_to_visit.append((path + [key], node[key]))
                     else:
-                        if not func(node, key, path):
-                            return False  # terminate traversal
+                        if func(node, key, path):
+                            return True  # terminate traversal
+            # Do not propagate topkey (traverse all subkeys)
+            topkey = None
             to_visit = new_to_visit
-        return True  # finished traversal
 
-    def _traverse_to_parent(self, key: KeyType) -> Tuple["Memory", Hashable]:
+    def traverse_to_parent(
+        self, key: KeyType, create_children: bool = False
+    ) -> Tuple["Memory", Hashable]:
         mem: Memory = self
         if not isinstance(key, Hashable):
             assert isinstance(key, List)
@@ -189,7 +198,12 @@ class Memory(Dict):
             while len(key) > 1:
                 cur_key = key.pop()
                 if cur_key not in mem:
-                    mem[cur_key] = Memory()
+                    if create_children:
+                        # create Memory for missing key
+                        mem[cur_key] = Memory()
+                    else:
+                        # inform about first missing key
+                        return mem, cast(Hashable, cur_key)
                 mem = mem[cur_key]
             # This is the (flat) key within the parent Memory
             key = key[0]
@@ -222,7 +236,7 @@ class Memory(Dict):
         )
 
         path = key
-        mem, key = self._traverse_to_parent(key)
+        mem, key = self.traverse_to_parent(key, create_children=True)
 
         assert key not in mem, "Reused key {}".format(path)
         assert (
@@ -251,7 +265,7 @@ class Memory(Dict):
         ), "key {} must be Hashable or List[Hashable]".format(key)
 
         path = key
-        mem, key = self._traverse_to_parent(key)
+        mem, key = self.traverse_to_parent(key, create_children=False)
 
         assert key in mem, "Missing key {}".format(path)
         return mem[key][0]
@@ -272,7 +286,7 @@ class Memory(Dict):
         ), "key {} must be Hashable or List[Hashable]".format(key)
 
         path = key
-        mem, key = self._traverse_to_parent(key)
+        mem, key = self.traverse_to_parent(key, create_children=False)
 
         assert key in mem, "Missing key {}".format(path)
         return mem[key][1]
@@ -294,7 +308,7 @@ class Memory(Dict):
             valid = False
             res = Memory()
 
-            def __call__(self, node, key, path, *args, **kwargs) -> bool:
+            def __call__(self, node, key, path, *args, **kwargs):
                 sampler_dim = node.sampler_dim(key)
                 tensor = node.tensor(key)
                 assert len(keep) == 0 or (
@@ -312,10 +326,9 @@ class Memory(Dict):
                     )
                     self.res.check_append(path + [key], tensor, sampler_dim)
                     self.valid = True
-                return True  # continue traversal
 
         func = SamplerSelector()
-        self._traversal(self, func)
+        self.traversal(self, cast(TraversalOperatorType, func))
         return func.res if func.valid else self
 
     def set_tensor(self, key: KeyType, tensor: torch.Tensor) -> "Memory":
@@ -337,7 +350,7 @@ class Memory(Dict):
         ), "key {} must be Hashable or List[Hashable]".format(key)
 
         path = key
-        mem, key = self._traverse_to_parent(key)
+        mem, key = self.traverse_to_parent(key, create_children=False)
 
         assert key in mem, "Missing key {}".format(path)
 
@@ -350,7 +363,9 @@ class Memory(Dict):
 
         return self
 
-    def step_select(self, step: int) -> "Memory":
+    def step_select(
+        self, step: int, key: Optional[KeyType] = None
+    ) -> Union["Memory", StoredTensorAxisType]:
         """Equivalent to slicing with length 1 for the `step` (i.e. first)
         dimension in rollouts storage.
 
@@ -363,10 +378,18 @@ class Memory(Dict):
         Sliced memory with a single step
         """
 
+        if key is not None:
+            path = key
+            mem, key = self.traverse_to_parent(key, create_children=False)
+
+            assert key in mem, "Missing key {}".format(path)
+        else:
+            mem = self
+
         class StepSelector:
             res = Memory()
 
-            def __call__(self, node, key, path, *args, **kwargs) -> bool:
+            def __call__(self, node, key, path, *args, **kwargs):
                 tensor = node.tensor(key)
                 assert (
                     tensor.shape[0] > step
@@ -385,13 +408,14 @@ class Memory(Dict):
                         node.tensor(key)[step:, ...],
                         node.sampler_dim(key),
                     )
-                return True  # continue traversal
 
         func = StepSelector()
-        self._traversal(self, func)
+        self.traversal(mem, cast(TraversalOperatorType, func), topkey=key)
         return func.res
 
-    def step_squeeze(self, step: int) -> "Memory":
+    def step_squeeze(
+        self, step: int, key: Optional[KeyType] = None
+    ) -> Union["Memory", StoredTensorAxisType]:
         """Equivalent to simple indexing for the `step` (i.e first) dimension
         in rollouts storage.
 
@@ -404,10 +428,18 @@ class Memory(Dict):
         Sliced memory with a single step (and squeezed step dimension)
         """
 
+        if key is not None:
+            path = key
+            mem, key = self.traverse_to_parent(key, create_children=False)
+
+            assert key in mem, "Missing key {}".format(path)
+        else:
+            mem = self
+
         class StepSqueezer:
             res = Memory()
 
-            def __call__(self, node, key, path, *args, **kwargs) -> bool:
+            def __call__(self, node, key, path, *args, **kwargs):
                 tensor = node.tensor(key)
                 assert (
                     tensor.shape[0] > step
@@ -419,10 +451,9 @@ class Memory(Dict):
                     node.tensor(key)[step, ...],
                     node.sampler_dim(key) - 1,
                 )
-                return True  # continue traversal
 
         func = StepSqueezer()
-        self._traversal(self, func)
+        self.traversal(mem, cast(TraversalOperatorType, func), topkey=key)
         return func.res
 
     def slice(
@@ -431,7 +462,8 @@ class Memory(Dict):
         start: Optional[int] = None,
         stop: Optional[int] = None,
         step: int = 1,
-    ) -> "Memory":
+        key: Optional[KeyType] = None,
+    ) -> Union["Memory", StoredTensorAxisType]:
         """Slicing for dimensions that have same extents in all memory types.
         It also accepts negative indices.
 
@@ -447,12 +479,20 @@ class Memory(Dict):
         Sliced memory
         """
 
+        if key is not None:
+            path = key
+            mem, key = self.traverse_to_parent(key, create_children=False)
+
+            assert key in mem, "Missing key {}".format(path)
+        else:
+            mem = self
+
         class Slicer:
-            checked: bool = False
+            checked = False
             total: Optional[int] = None
             res = Memory()
 
-            def __call__(self, node, key, path, *args, **kwargs) -> bool:
+            def __call__(self, node, key, path, *args, **kwargs):
                 tensor = node.tensor(key)
                 assert (
                     len(tensor.shape) > dim
@@ -484,32 +524,93 @@ class Memory(Dict):
                     self.res.check_append(
                         path + [key], tensor, node.sampler_dim(key),
                     )
-                return True  # continue traversal
 
         func = Slicer()
-        self._traversal(self, func)
+        self.traversal(mem, cast(TraversalOperatorType, func), topkey=key)
+        return func.res
+
+    # in-place, but returns the original memory views
+    def narrow_steps(
+        self, num_steps: int, key: Optional[KeyType] = None
+    ) -> Optional[Union["Memory", StoredTensorAxisType]]:
+        if num_steps == 0:
+            get_logger().warning("Attempting to unnarrow with num_steps == 0")
+            return None
+
+        if key is not None:
+            path = key
+            mem, key = self.traverse_to_parent(key, create_children=False)
+
+            assert key in mem, "Missing key {}".format(path)
+        else:
+            mem = self
+
+        class Narrower:
+            origin = key
+            res = (
+                (Memory(mem[key]) if isinstance(mem[key], Memory) else mem[key])
+                if key is not None
+                else (Memory(mem) if isinstance(mem, Memory) else mem)
+            )
+
+            def __call__(self, node, key, path, *args, **kwargs):
+                assert (
+                    len(path) == 0 and key == self.origin or path[0] == self.origin
+                ) or self.origin is None, (
+                    "narrowing unwanted node path {} key {}".format(path, key)
+                )
+                node[key] = (
+                    node.tensor(key).narrow(dim=0, start=0, length=num_steps),
+                    node.sampler_dim(key),
+                )
+
+        func = Narrower()
+        self.traversal(mem, cast(TraversalOperatorType, func), topkey=key)
         return func.res
 
     def to(self, device: torch.device) -> "Memory":
         class Mover:
-            def __call__(self, node, key, *args, **kwargs) -> bool:
+            def __call__(self, node, key, *args, **kwargs):
                 tensor = node.tensor(key)
                 if tensor.device != device:
                     node.set_tensor(key, tensor.to(device))
-                return True  # continue traversal
 
         func = Mover()
-        self._traversal(self, func)
+        self.traversal(self, cast(TraversalOperatorType, func))
         return self
+
+    def __setitem__(
+        self, key: KeyType, value: Union[Tuple[torch.Tensor, int], "Memory", int]
+    ):
+        if isinstance(value, Memory):
+            # Prevent cyclic graphs by enforcing a deepcopy of
+            # the value Memory (still reusing the same tensors)
+            super().__setitem__(key, Memory()._copy(value))
+        else:
+            super().__setitem__(key, value)
 
     def __len__(self):
         class Counter:
-            count: int = 0
+            count = 0
 
-            def __call__(self, *args, **kwargs) -> bool:
+            def __call__(self, *args, **kwargs):
                 self.count += 1
-                return True  # continue traversal
 
         func = Counter()
-        self._traversal(self, func)
+        self.traversal(self, cast(TraversalOperatorType, func))
         return func.count
+
+    def __contains__(self, key: KeyType):
+        mem, key = self.traverse_to_parent(key, create_children=False)
+        return super(Memory, mem).__contains__(key)
+
+    def all_tensor_keys(self):
+        class Lister:
+            paths = []
+
+            def __call__(self, node, key, path, *args, **kwargs):
+                self.paths.append(path + [key])
+
+        func = Lister()
+        self.traversal(self, cast(TraversalOperatorType, func))
+        return func.paths
