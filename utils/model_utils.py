@@ -4,6 +4,7 @@ from typing import Sequence, Tuple, Union, Optional
 
 import torch
 from torch import nn
+import numpy as np
 
 
 class Flatten(nn.Module):
@@ -171,3 +172,34 @@ def compute_cnn_output(
         cnn_output = cnn_output.reshape((nsteps, nsamplers,) + cnn_output.shape[1:])
 
     return cnn_output
+
+
+def simple_conv_and_linear_weights_init(m):
+    if type(m) in [
+        nn.Conv1d,
+        nn.Conv2d,
+        nn.Conv3d,
+        nn.ConvTranspose1d,
+        nn.ConvTranspose2d,
+        nn.ConvTranspose3d,
+    ]:
+        weight_shape = list(m.weight.data.size())
+        fan_in = np.prod(weight_shape[1:4])
+        fan_out = np.prod(weight_shape[2:4]) * weight_shape[0]
+        w_bound = np.sqrt(6.0 / (fan_in + fan_out))
+        m.weight.data.uniform_(-w_bound, w_bound)
+        if m.bias is not None:
+            m.bias.data.fill_(0)
+    elif type(m) == nn.Linear:
+        simple_linear_weights_init(m)
+
+
+def simple_linear_weights_init(m):
+    if type(m) == nn.Linear:
+        weight_shape = list(m.weight.data.size())
+        fan_in = weight_shape[1]
+        fan_out = weight_shape[0]
+        w_bound = np.sqrt(6.0 / (fan_in + fan_out))
+        m.weight.data.uniform_(-w_bound, w_bound)
+        if m.bias is not None:
+            m.bias.data.fill_(0)

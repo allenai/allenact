@@ -15,7 +15,7 @@ from core.base_abstractions.sensor import SensorSuite
 from core.base_abstractions.task import TaskSampler
 from plugins.ithor_plugin.ithor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
 from plugins.ithor_plugin.ithor_task_samplers import ObjectNavTaskSampler
-from plugins.ithor_plugin.ithor_tasks import ObjectNavTask
+from plugins.ithor_plugin.ithor_tasks import ObjectNaviThorGridTask
 from projects.objectnav_baselines.models.object_nav_models import (
     ObjectNavBaselineActorCritic,
 )
@@ -118,7 +118,9 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return ObjectNavBaselineActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask.class_action_names())),
+            action_space=gym.spaces.Discrete(
+                len(ObjectNaviThorGridTask.class_action_names())
+            ),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             rgb_uuid=cls.SENSORS[0].uuid,
             depth_uuid=None,
@@ -168,7 +170,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(
-                len(ObjectNavTask.class_action_names())
+                len(ObjectNaviThorGridTask.class_action_names())
             ),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,

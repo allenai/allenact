@@ -30,6 +30,7 @@ from utils.experiment_utils import (
 from utils.misc_utils import all_equal, get_git_diff_of_project
 from utils.system import get_logger, find_free_port
 from utils.tensor_utils import SummaryWriter
+
 # Has results queue (aggregated per trainer), checkpoints queue and mp context
 # Instantiates train, validate, and test workers
 # Logging
@@ -50,6 +51,8 @@ class OnPolicyRunner(object):
         mp_ctx: Optional[BaseContext] = None,
         multiprocessing_start_method: str = "forkserver",
         extra_tag: str = "",
+        disable_tensorboard: bool = False,
+        disable_config_saving: bool = False,
     ):
         self.config = config
         self.output_dir = output_dir
@@ -61,6 +64,8 @@ class OnPolicyRunner(object):
         self.mode = mode
         self.visualizer: Optional[VizSuite] = None
         self.deterministic_agents = deterministic_agents
+        self.disable_tensorboard = disable_tensorboard
+        self.disable_config_saving = disable_config_saving
 
         assert self.mode in [
             "train",
@@ -138,9 +143,12 @@ class OnPolicyRunner(object):
         return devices
 
     def init_visualizer(self, mode: str):
-        # Note: Avoid instantiating anything in machine_params (use Builder if needed)
-        machine_params = MachineParams.instance_from(self.config.machine_params(mode))
-        self.visualizer = machine_params.visualizer
+        if not self.disable_tensorboard:
+            # Note: Avoid instantiating anything in machine_params (use Builder if needed)
+            machine_params = MachineParams.instance_from(
+                self.config.machine_params(mode)
+            )
+            self.visualizer = machine_params.visualizer
 
     @staticmethod
     def init_process(mode: str, id: int):
@@ -219,7 +227,8 @@ class OnPolicyRunner(object):
         restart_pipeline: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
     ):
-        self.save_project_state()
+        if not self.disable_config_saving:
+            self.save_project_state()
 
         devices = self.worker_devices("train")
         num_workers = len(devices)
@@ -468,7 +477,9 @@ class OnPolicyRunner(object):
 
         get_logger().info("Config files saved to {}".format(base_dir))
 
-    def process_eval_package(self, log_writer: SummaryWriter, pkg: LoggingPackage):
+    def process_eval_package(
+        self, log_writer: Optional[SummaryWriter], pkg: LoggingPackage
+    ):
         training_steps = pkg.training_steps
         checkpoint_file_name = pkg.checkpoint_file_name
         render = pkg.viz_data
@@ -479,11 +490,13 @@ class OnPolicyRunner(object):
 
         mode = pkg.mode
 
-        log_writer.add_scalar(f"{mode}/num_tasks_evaled", num_tasks, training_steps)
+        if log_writer is not None:
+            log_writer.add_scalar(f"{mode}/num_tasks_evaled", num_tasks, training_steps)
 
         message = [f"{mode} {training_steps} steps:"]
         for k in sorted(metric_means.keys()):
-            log_writer.add_scalar(f"{mode}/{k}", metric_means[k], training_steps)
+            if log_writer is not None:
+                log_writer.add_scalar(f"{mode}/{k}", metric_means[k], training_steps)
             message.append(f"{k} {metric_means[k]}")
         message.append(f"tasks {num_tasks} checkpoint {checkpoint_file_name}")
         get_logger().info(" ".join(message))
@@ -498,7 +511,7 @@ class OnPolicyRunner(object):
 
     def process_train_packages(
         self,
-        log_writer: SummaryWriter,
+        log_writer: Optional[SummaryWriter],
         pkgs: List[LoggingPackage],
         last_steps=0,
         last_offpolicy_steps=0,
@@ -510,11 +523,12 @@ class OnPolicyRunner(object):
 
         training_steps = pkgs[0].training_steps
         offpolicy_steps = pkgs[0].off_policy_steps
-        log_writer.add_scalar(
-            tag="train/pipeline_stage",
-            scalar_value=pkgs[0].pipeline_stage,
-            global_step=training_steps,
-        )
+        if log_writer is not None:
+            log_writer.add_scalar(
+                tag="train/pipeline_stage",
+                scalar_value=pkgs[0].pipeline_stage,
+                global_step=training_steps,
+            )
 
         metrics_and_train_info_tracker = ScalarMeanTracker()
         for pkg in pkgs:
@@ -531,24 +545,27 @@ class OnPolicyRunner(object):
         ]
         means = metrics_and_train_info_tracker.means()
         for k in sorted(means.keys(), key=lambda mean_key: ("/" in mean_key, mean_key)):
-            if "offpolicy" not in k:
-                log_writer.add_scalar(
-                    "{}/".format(self.mode) + k, means[k], training_steps
-                )
-            else:
-                log_writer.add_scalar(k, means[k], training_steps)
+            if log_writer is not None:
+                if "offpolicy" not in k:
+                    log_writer.add_scalar(
+                        "{}/".format(self.mode) + k, means[k], training_steps
+                    )
+                else:
+                    log_writer.add_scalar(k, means[k], training_steps)
             message.append(k + " {:.3g}".format(means[k]))
         message += ["elapsed_time {:.3g}s".format(current_time - last_time)]
 
         if last_steps > 0:
             fps = (training_steps - last_steps) / (current_time - last_time)
             message += ["approx_fps {:.3g}".format(fps)]
-            log_writer.add_scalar("train/approx_fps", fps, training_steps)
+            if log_writer is not None:
+                log_writer.add_scalar("train/approx_fps", fps, training_steps)
 
         if last_offpolicy_steps > 0:
             fps = (offpolicy_steps - last_offpolicy_steps) / (current_time - last_time)
             message += ["offpolicy/approx_fps {:.3g}".format(fps)]
-            log_writer.add_scalar("offpolicy/approx_fps", fps, training_steps)
+            if log_writer is not None:
+                log_writer.add_scalar("offpolicy/approx_fps", fps, training_steps)
 
         get_logger().info(" ".join(message))
 
@@ -556,7 +573,7 @@ class OnPolicyRunner(object):
 
     def process_test_packages(
         self,
-        log_writer: SummaryWriter,
+        log_writer: Optional[SummaryWriter],
         pkgs: List[LoggingPackage],
         all_results: Optional[List[Any]] = None,
     ):
@@ -582,7 +599,8 @@ class OnPolicyRunner(object):
 
         metric_means = all_metrics_tracker.means()
         for k in sorted(metric_means.keys()):
-            log_writer.add_scalar(f"{mode}/{k}", metric_means[k], training_steps)
+            if log_writer is not None:
+                log_writer.add_scalar(f"{mode}/{k}", metric_means[k], training_steps)
             message.append(k + " {:.3g}".format(metric_means[k]))
 
         if all_results is not None:
@@ -593,7 +611,8 @@ class OnPolicyRunner(object):
             all_results.append(results)
 
         num_tasks = sum([pkg.num_non_empty_metrics_dicts_added for pkg in pkgs])
-        log_writer.add_scalar(f"{mode}/num_tasks_evaled", num_tasks, training_steps)
+        if log_writer is not None:
+            log_writer.add_scalar(f"{mode}/num_tasks_evaled", num_tasks, training_steps)
 
         message.append(
             "tasks {} checkpoint {}".format(num_tasks, checkpoint_file_name[0])
@@ -617,10 +636,12 @@ class OnPolicyRunner(object):
     ):
         finalized = False
 
-        log_writer = SummaryWriter(
-            log_dir=self.log_writer_path(start_time_str),
-            filename_suffix="__{}_{}".format(self.mode, self.local_start_time_str),
-        )
+        log_writer: Optional[SummaryWriter] = None
+        if not self.disable_tensorboard:
+            log_writer = SummaryWriter(
+                log_dir=self.log_writer_path(start_time_str),
+                filename_suffix="__{}_{}".format(self.mode, self.local_start_time_str),
+            )
 
         # To aggregate/buffer metrics from trainers/testers
         collected: List[LoggingPackage] = []

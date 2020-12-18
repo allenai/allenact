@@ -180,16 +180,14 @@ class IThorEnvironment(object):
                 "Trying to start the environment but it is already started."
             )
 
-        def create_controller():
-            return Controller(
-                x_display=self.x_display,
-                width=self._start_player_screen_width,
-                height=self._start_player_screen_height,
-                local_executable_path=self._local_thor_build,
-                quality=self._quality,
-            )
-
-        self.controller = create_controller()
+        self.controller = Controller(
+            x_display=self.x_display,
+            width=self._start_player_screen_width,
+            height=self._start_player_screen_height,
+            local_executable_path=self._local_thor_build,
+            quality=self._quality,
+            server_class=ai2thor.fifo_server.FifoServer,
+        )
 
         if (
             self._start_player_screen_height,
@@ -939,6 +937,8 @@ class IThorEnvironment(object):
             return
 
         source_key = self.get_key(self.last_event.metadata["agent"])
+        self._check_contains_key(source_key)
+
         edge_dict = self.graph[source_key]
         to_remove_key = None
         for target_key in self.graph[source_key]:

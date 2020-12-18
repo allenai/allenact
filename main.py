@@ -142,6 +142,26 @@ def get_args():
         ),
     )
 
+    parser.add_argument(
+        "-i",
+        "--disable_tensorboard",
+        dest="disable_tensorboard",
+        action="store_true",
+        required=False,
+        help="disable tensorboard logging",
+    )
+    parser.set_defaults(disable_tensorboard=False)
+
+    parser.add_argument(
+        "-a",
+        "--disable_config_saving",
+        dest="disable_config_saving",
+        action="store_true",
+        required=False,
+        help="disable saving the used config in the output directory",
+    )
+    parser.set_defaults(disable_config_saving=False)
+
     return parser.parse_args()
 
 
@@ -258,6 +278,8 @@ def main():
             deterministic_cudnn=args.deterministic_cudnn,
             deterministic_agents=args.deterministic_agents,
             extra_tag=args.extra_tag,
+            disable_tensorboard=args.disable_tensorboard,
+            disable_config_saving=args.disable_config_saving,
         ).start_train(
             checkpoint=args.checkpoint,
             restart_pipeline=args.restart_pipeline,
@@ -273,6 +295,8 @@ def main():
             deterministic_cudnn=args.deterministic_cudnn,
             deterministic_agents=args.deterministic_agents,
             extra_tag=args.extra_tag,
+            disable_tensorboard=args.disable_tensorboard,
+            disable_config_saving=args.disable_config_saving,
         ).start_test(
             experiment_date=args.test_date,
             checkpoint=args.checkpoint,

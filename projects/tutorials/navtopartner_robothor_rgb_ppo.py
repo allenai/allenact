@@ -1,5 +1,3 @@
-import glob
-import os
 from math import ceil
 from typing import Dict, Any, List, Optional, Sequence
 
@@ -9,88 +7,57 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
-from torchvision import models
 
-from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from core.algorithms.onpolicy_sync.losses import PPO
 from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from core.base_abstractions.experiment_config import ExperimentConfig
-from core.base_abstractions.preprocessor import ObservationSet
+from core.base_abstractions.sensor import SensorSuite
 from core.base_abstractions.task import TaskSampler
-from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
-from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
-from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
-from plugins.robothor_plugin.robothor_tasks import PointNavTask
-from projects.pointnav_baselines.models.point_nav_models import (
-    ResnetTensorPointNavActorCritic,
-)
+from plugins.robothor_plugin.robothor_sensors import RGBSensorMultiRoboThor
+from plugins.robothor_plugin.robothor_task_samplers import NavToPartnerTaskSampler
+from plugins.robothor_plugin.robothor_tasks import NavToPartnerTask
+from plugins.robothor_plugin.robothor_models import NavToPartnerActorCriticSimpleConvRNN
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
+from utils.viz_utils import VizSuite, AgentViewViz
+from utils.multi_agent_viz_utils import MultiTrajectoryViz
+from plugins.robothor_plugin.robothor_viz import ThorMultiViz
 
 
-class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
-    """A Point Navigation experiment configuration in RoboThor."""
+class NavToPartnerRoboThorRGBPPOExperimentConfig(ExperimentConfig):
+    """A Multi-Agent Navigation experiment configuration in RoboThor."""
 
     # Task Parameters
     MAX_STEPS = 500
     REWARD_CONFIG = {
         "step_penalty": -0.01,
-        "goal_success_reward": 10.0,
-        "failed_stop_reward": 0.0,
-        "shaping_weight": 1.0,
+        "max_success_distance": 0.75,
+        "success_reward": 5.0,
     }
 
     # Simulator Parameters
-    CAMERA_WIDTH = 640
-    CAMERA_HEIGHT = 480
+    CAMERA_WIDTH = 300
+    CAMERA_HEIGHT = 300
     SCREEN_SIZE = 224
 
     # Training Engine Parameters
     ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
     NUM_PROCESSES = 20
-    TRAINING_GPUS: Sequence[int] = [0]
-    VALIDATION_GPUS: Sequence[int] = [0]
-    TESTING_GPUS: Sequence[int] = [0]
-
-    # Dataset Parameters
-    TRAIN_DATASET_DIR = os.path.join(
-        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/debug"
-    )
-    VAL_DATASET_DIR = os.path.join(
-        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/debug"
-    )
+    TRAINING_GPUS: List[int] = [0]
+    VALIDATION_GPUS: List[int] = [0]
+    TESTING_GPUS: List[int] = [0]
 
     SENSORS = [
-        RGBSensorThor(
+        RGBSensorMultiRoboThor(
+            agent_count=2,
             height=SCREEN_SIZE,
             width=SCREEN_SIZE,
             use_resnet_normalization=True,
-            uuid="rgb_lowres",
-        ),
-        GPSCompassSensorRoboThor(),
-    ]
-
-    PREPROCESSORS = [
-        Builder(
-            ResnetPreProcessorHabitat,
-            {
-                "input_height": SCREEN_SIZE,
-                "input_width": SCREEN_SIZE,
-                "output_width": 7,
-                "output_height": 7,
-                "output_dims": 512,
-                "pool": False,
-                "torchvision_resnet_model": models.resnet18,
-                "input_uuids": ["rgb_lowres"],
-                "output_uuid": "rgb_resnet",
-                "parallel": False,
-            },
+            uuid="rgb",
         ),
     ]
 
     OBSERVATIONS = [
-        "rgb_resnet",
-        "target_coordinates_ind",
+        "rgb",
     ]
 
     ENV_ARGS = dict(
@@ -99,21 +66,22 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         rotateStepDegrees=30.0,
         visibilityDistance=1.0,
         gridSize=0.25,
+        agentCount=2,
     )
 
     @classmethod
     def tag(cls):
-        return "PointNavRobothorRGBPPO"
+        return "NavToPartnerRobothorRGBPPO"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
-        ppo_steps = int(250000000)
+        ppo_steps = int(1000000)
         lr = 3e-4
         num_mini_batch = 1
         update_repeats = 3
         num_steps = 30
-        save_interval = 5000000
-        log_interval = 1000
+        save_interval = 200000
+        log_interval = 1
         gamma = 0.99
         use_gae = True
         gae_lambda = 0.95
@@ -148,71 +116,70 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             res[it % ndevices] += 1
         return res
 
+    viz: Optional[VizSuite] = None
+
+    def get_viz(self, mode):
+        if self.viz is not None:
+            return self.viz
+
+        self.viz = VizSuite(
+            mode=mode,
+            # Basic 2D trajectory visualizer (task output source):
+            base_trajectory=MultiTrajectoryViz(),  # plt_colormaps=["cool", "cool"]),
+            # Egocentric view visualizer (vector task source):
+            egeocentric=AgentViewViz(max_video_length=100, max_episodes_in_group=1),
+            # Specialized 2D trajectory visualizer (task output source):
+            thor_trajectory=ThorMultiViz(
+                figsize=(16, 8),
+                viz_rows_cols=(448, 448),
+                scenes=("FloorPlan_Train{}_{}", 1, 1, 1, 1),
+            ),
+        )
+
+        return self.viz
+
     def machine_params(self, mode="train", **kwargs):
-        sampler_devices: List[int] = []
+        visualizer = None
         if mode == "train":
-            workers_per_device = 1
-            gpu_ids = (
-                []
-                if not torch.cuda.is_available()
-                else list(self.TRAINING_GPUS) * workers_per_device
+            devices = (
+                ["cpu"] if not torch.cuda.is_available() else list(self.TRAINING_GPUS)
             )
             nprocesses = (
-                8
+                4
                 if not torch.cuda.is_available()
-                else self.split_num_processes(len(gpu_ids))
+                else self.split_num_processes(len(devices))
             )
-            sampler_devices = list(self.TRAINING_GPUS)
         elif mode == "valid":
-            nprocesses = 1
-            gpu_ids = [] if not torch.cuda.is_available() else self.VALIDATION_GPUS
+            nprocesses = 0
+            devices = ["cpu"] if not torch.cuda.is_available() else self.VALIDATION_GPUS
         elif mode == "test":
             nprocesses = 1
-            gpu_ids = [] if not torch.cuda.is_available() else self.TESTING_GPUS
+            devices = ["cpu"] if not torch.cuda.is_available() else self.TESTING_GPUS
+            visualizer = self.get_viz(mode=mode)
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
-        # Disable parallelization for validation process
-        if mode == "valid":
-            for prep in self.PREPROCESSORS:
-                prep.kwargs["parallel"] = False
-
-        observation_set = (
-            Builder(
-                ObservationSet,
-                kwargs=dict(
-                    source_ids=self.OBSERVATIONS,
-                    all_preprocessors=self.PREPROCESSORS,
-                    all_sensors=self.SENSORS,
-                ),
-            )
-            if mode == "train" or nprocesses > 0
-            else None
-        )
-
         return {
             "nprocesses": nprocesses,
-            "gpu_ids": gpu_ids,
-            "sampler_devices": sampler_devices if mode == "train" else gpu_ids,
-            "observation_set": observation_set,
+            "devices": devices,
+            "visualizer": visualizer,
         }
 
-    # Define Model
+    # TODO Define Model
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ResnetTensorPointNavActorCritic(
-            action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
-            observation_space=kwargs["observation_set"].observation_spaces,
-            goal_sensor_uuid="target_coordinates_ind",
-            rgb_resnet_preprocessor_uuid="rgb_resnet",
+        return NavToPartnerActorCriticSimpleConvRNN(
+            action_space=gym.spaces.Discrete(
+                len(NavToPartnerTask.class_action_names())
+            ),
+            observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             hidden_size=512,
-            goal_dims=32,
         )
 
     # Define Task Sampler
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return PointNavDatasetTaskSampler(**kwargs)
+        return NavToPartnerTaskSampler(**kwargs)
 
     # Utility Functions for distributing scenes between GPUs
     @staticmethod
@@ -223,23 +190,12 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     def _get_sampler_args_for_scene_split(
         self,
-        scenes_dir: str,
+        scenes: List[str],
         process_ind: int,
         total_processes: int,
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        path = os.path.join(scenes_dir, "*.json.gz")
-        scenes = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(path)]
-        if len(scenes) == 0:
-            raise RuntimeError(
-                (
-                    "Could find no scene dataset information in directory {}."
-                    " Are you sure you've downloaded them? "
-                    " If not, see https://allenact.org/installation/download-datasets/ information"
-                    " on how this can be done."
-                ).format(scenes_dir)
-            )
         if total_processes > len(scenes):  # oversample some scenes -> bias
             if total_processes % len(scenes) != 0:
                 print(
@@ -260,7 +216,9 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
+            "action_space": gym.spaces.Discrete(
+                len(NavToPartnerTask.class_action_names())
+            ),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG,
@@ -274,23 +232,21 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
+        scenes = ["FloorPlan_Train1_1"]
+
         res = self._get_sampler_args_for_scene_split(
-            os.path.join(self.TRAIN_DATASET_DIR, "episodes"),
+            scenes,
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = self.TRAIN_DATASET_DIR
-        res["loop_dataset"] = True
-        res["env_args"] = {}
-        res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)])
+        res["env_args"] = {
+            **self.ENV_ARGS,
+            "x_display": ("0.%d" % devices[process_ind % len(devices)])
             if devices is not None and len(devices) > 0
-            else None
-        )
-        res["allow_flipping"] = True
+            else None,
+        }
         return res
 
     def valid_task_sampler_args(
@@ -301,22 +257,22 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
+        scenes = ["FloorPlan_Train1_1"]
+
         res = self._get_sampler_args_for_scene_split(
-            os.path.join(self.VAL_DATASET_DIR, "episodes"),
+            scenes,
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = self.VAL_DATASET_DIR
-        res["loop_dataset"] = False
-        res["env_args"] = {}
-        res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)])
+        res["env_args"] = {
+            **self.ENV_ARGS,
+            "x_display": ("0.%d" % devices[process_ind % len(devices)])
             if devices is not None and len(devices) > 0
-            else None
-        )
+            else None,
+        }
+        res["max_tasks"] = 20
         return res
 
     def test_task_sampler_args(
@@ -327,15 +283,20 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
+        scenes = ["FloorPlan_Train1_1"]
+
         res = self._get_sampler_args_for_scene_split(
-            os.path.join(self.VAL_DATASET_DIR, "episodes"),
+            scenes,
             process_ind,
             total_processes,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = self.VAL_DATASET_DIR
-        res["loop_dataset"] = False
-        res["env_args"] = {}
-        res["env_args"].update(self.ENV_ARGS)
+        res["env_args"] = {
+            **self.ENV_ARGS,
+            "x_display": ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None,
+        }
+        res["max_tasks"] = 4
         return res

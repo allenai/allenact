@@ -62,12 +62,14 @@ class ThorViz(TrajectoryViz):
         view_triangle_only_on_last: bool = True,
         disable_view_triangle: bool = False,
         line_opacity: float = 1.0,
+        **kwargs
     ):
         super().__init__(
             path_to_trajectory=path_to_trajectory,
             label=label,
             figsize=figsize,
             fontsize=fontsize,
+            **kwargs
         )
 
         if isinstance(scenes[0], str):
@@ -291,20 +293,28 @@ class ThorViz(TrajectoryViz):
         view_triangle_only_on_last: bool = False,
         disable_view_triangle: bool = False,
         line_opacity: float = 1.0,
+        trajectory_start_end_color_str: Tuple[str, str] = ("red", "green"),
     ) -> np.ndarray:
+        import colour as col
+
         if single_color:
             frame = ThorViz.add_lines_to_map(
                 list(map(ThorViz.position_to_tuple, positions)),
                 frame,
                 pos_translator,
                 line_opacity,
-                (0, 255, 0),
+                tuple(
+                    map(
+                        lambda x: int(round(255 * x)),
+                        col.Color(trajectory_start_end_color_str[0]).rgb,
+                    )
+                ),
             )
         else:
-            import colour as col
-
             colors = list(
-                col.Color("red").range_to(col.Color("green"), len(positions) - 1)
+                col.Color(trajectory_start_end_color_str[0]).range_to(
+                    col.Color(trajectory_start_end_color_str[1]), len(positions) - 1
+                )
             )
             for i in range(len(positions) - 1):
                 frame = ThorViz.add_line_to_map(
@@ -361,6 +371,57 @@ class ThorViz(TrajectoryViz):
             disable_view_triangle=self.disable_view_triangle,
             line_opacity=self.line_opacity,
         )
+
+        fig, ax = plt.subplots(figsize=self.figsize)
+        ax.set_title(episode_id, fontsize=self.fontsize)
+        ax.imshow(self.crop_viz_image(im)[:, :, ::-1])
+        ax.axis("off")
+
+        return fig
+
+
+class ThorMultiViz(ThorViz):
+    def __init__(
+        self,
+        path_to_trajectory_prefix: Sequence[str] = ("task_info", "followed_path"),
+        agent_suffixes: Sequence[str] = ("1", "2"),
+        label: str = "thor_trajectories",
+        trajectory_start_end_color_strs: Sequence[Tuple[str, str]] = (
+            ("red", "green"),
+            ("cyan", "purple"),
+        ),
+        **kwargs
+    ):
+        super().__init__(label=label, **kwargs)
+
+        self.path_to_trajectory_prefix = list(path_to_trajectory_prefix)
+        self.agent_suffixes = list(agent_suffixes)
+        self.trajectory_start_end_color_strs = list(trajectory_start_end_color_strs)
+
+    def make_fig(self, episode: Any, episode_id: str) -> Figure:
+        if self.thor_top_downs is None:
+            self.init_top_down_render()
+
+        roomname = "_".join(episode_id.split("_")[:3])
+        im = self.thor_top_downs[roomname]
+
+        for agent, start_end_color in zip(
+            self.agent_suffixes, self.trajectory_start_end_color_strs
+        ):
+            path = self.path_to_trajectory_prefix[:]
+            path[-1] = path[-1] + agent
+            trajectory = self._access(episode, path)
+
+            im = self.visualize_agent_path(
+                trajectory,
+                im,
+                self.map_data["pos_translator"],
+                single_color=self.single_color,
+                view_triangle_only_on_last=self.view_triangle_only_on_last,
+                disable_view_triangle=self.disable_view_triangle,
+                line_opacity=self.line_opacity,
+                trajectory_start_end_color_str=start_end_color,
+            )
 
         fig, ax = plt.subplots(figsize=self.figsize)
         ax.set_title(episode_id, fontsize=self.fontsize)

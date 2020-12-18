@@ -31,6 +31,24 @@ from core.algorithms.onpolicy_sync.losses.abstract_loss import AbstractActorCrit
 from core.base_abstractions.misc import Loss
 
 
+def evenly_distribute_count_into_bins(count: int, nbins: int) -> List[int]:
+    """Distribute a count into a number of bins.
+
+    # Parameters
+    count: A positive integer to be distributed, should be `>= nbins`.
+    nbins: The number of bins.
+
+    # Returns
+    A list of positive integers which sum to `count`. These values will be
+    as close to equal as possible (may differ by at most 1).
+    """
+    assert count >= nbins, f"count ({count}) < nbins ({nbins})"
+    res = [0] * nbins
+    for it in range(count):
+        res[it % nbins] += 1
+    return res
+
+
 def recursive_update(
     original: Union[Dict, collections.abc.MutableMapping],
     update: Union[Dict, collections.abc.MutableMapping],

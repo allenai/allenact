@@ -38,12 +38,12 @@ class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
         self._hidden_size = hidden_size
         self.embed_coordinates = embed_coordinates
         if self.embed_coordinates:
-            self.coorinate_embedding_size = coordinate_embedding_dim
+            self.coordinate_embedding_size = coordinate_embedding_dim
         else:
-            self.coorinate_embedding_size = coordinate_dims
+            self.coordinate_embedding_size = coordinate_dims
 
         self.sensor_fusion = False
-        if "rgb" in observation_space.spaces and "depth" in observation_space.spaces:
+        if rgb_uuid is not None and depth_uuid is not None:
             self.sensor_fuser = nn.Linear(hidden_size * 2, hidden_size)
             self.sensor_fusion = True
 
@@ -56,7 +56,7 @@ class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
 
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self.recurrent_hidden_state_size)
-            + self.coorinate_embedding_size,
+            + self.coordinate_embedding_size,
             self._hidden_size,
             num_layers=num_rnn_layers,
             rnn_type=rnn_type,
