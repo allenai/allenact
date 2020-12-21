@@ -45,7 +45,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     # Training Engine Parameters
     ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
-    NUM_PROCESSES = 1
+    NUM_PROCESSES = 60
     TRAINING_GPUS = list(range(torch.cuda.device_count()))
     VALIDATION_GPUS = [torch.cuda.device_count() - 1]
     TESTING_GPUS = [torch.cuda.device_count() - 1]
@@ -79,7 +79,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 uuid='orbslam_depth'
             ),
             vocab_file='/app/ORB_SLAM2/Vocabulary/ORBvoc.bin',
-            use_slam_viewer=True,
+            use_slam_viewer=False,
             uuid=ORBSLAM_UUID
         )
     ]
@@ -104,7 +104,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     OBSERVATIONS = [
         "rgb_resnet",
-        "target_coordinates_ind",
+        ORBSLAM_UUID,
     ]
 
     ENV_ARGS = dict(
@@ -218,7 +218,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         return ResnetTensorPointNavActorCritic(
             action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             observation_space=kwargs["observation_set"].observation_spaces,
-            goal_sensor_uuid="target_coordinates_ind",
+            goal_sensor_uuid=cls.ORBSLAM_UUID,
             rgb_resnet_preprocessor_uuid="rgb_resnet",
             hidden_size=512,
             goal_dims=32,
@@ -300,11 +300,11 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         res["loop_dataset"] = True
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = '1' # (
-        #     ("0.%d" % devices[process_ind % len(devices)])
-        #     if devices is not None and len(devices) > 0
-        #     else None
-        # )
+        res["env_args"]["x_display"] = (
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
+        )
         res["allow_flipping"] = True
         return res
 
@@ -327,11 +327,11 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         res["loop_dataset"] = False
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = '1' # (
-        #     ("0.%d" % devices[process_ind % len(devices)])
-        #     if devices is not None and len(devices) > 0
-        #     else None
-        # )
+        res["env_args"]["x_display"] = (
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
+        )
         return res
 
     def test_task_sampler_args(

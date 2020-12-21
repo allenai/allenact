@@ -2,7 +2,6 @@ import os
 import math
 import yaml
 from typing import Any, Optional
-from functools import reduce
 from tempfile import mkstemp
 
 import gym
@@ -10,65 +9,14 @@ import numpy as np
 
 import orbslam2
 from core.base_abstractions.task import SubTaskType, Task
-from core.base_abstractions.misc import EnvType
 from core.base_abstractions.sensor import Sensor, RGBSensor, DepthSensor
-from plugins.robothor_plugin.robothor_sensors import RGBSensorRoboThor, DepthSensorRoboThor, GPSCompassSensorRoboThor
+from core.base_abstractions.misc import EnvType
 from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
+from plugins.robothor_plugin.robothor_sensors import RGBSensorRoboThor, DepthSensorRoboThor, GPSCompassSensorRoboThor
+from plugins.robothor_plugin.robothor_tasks import PointNavTask
+from plugins.orbslam2_plugin.orbslam2_util import state_to_pose, matrix_to_euler_angles
 from utils.misc_utils import prepare_locals_for_super
-from plugins.robothor_plugin.robothor_tasks import ObjectNavTask, PointNavTask
 
-
-# Modified from pytorch3d.transforms
-def euler_angles_to_matrix(euler_angles):
-    """ Input: Euler angles in ZYX order """
-
-    def _axis_angle_rotation(axis, angle):
-        cos, sin = np.cos(angle), np.sin(angle)
-        one, zero = np.ones_like(angle), np.zeros_like(angle)
-        if axis == "X":
-            R_flat = (one, zero, zero, zero, cos, -sin, zero, sin, cos)
-        elif axis == "Y":
-            R_flat = (cos, zero, sin, zero, one, zero, -sin, zero, cos)
-        elif axis == "Z":
-            R_flat = (cos, -sin, zero, sin, cos, zero, zero, zero, one)
-        return np.stack(R_flat, -1).reshape(angle.shape + (3, 3))
-
-    matrices = map(_axis_angle_rotation, 'ZYX', euler_angles)
-    return reduce(np.matmul, matrices)
-
-def matrix_to_euler_angles(matrix):
-    """ Output: Euler angles in XYZ order """
-
-    def _angle_from_tan(axis, other_axis, data, horizontal):
-        i1, i2 = {"X": (2, 1), "Y": (0, 2), "Z": (1, 0)}[axis]
-        if horizontal:
-            i2, i1 = i1, i2
-        even = (axis + other_axis) in ["XY", "YZ", "ZX"]
-        if horizontal == even:
-            return np.arctan2(data[..., i1], data[..., i2])
-        return np.arctan2(-data[..., i2], data[..., i1])
-
-    o = (
-        _angle_from_tan('X', 'Y', matrix[..., 2], False),
-        np.arcsin(matrix[..., 0, 2] * (-1.0 if 0 - 2 in [-1, 2] else 1.0)),
-        _angle_from_tan('Z', 'Y', matrix[..., 0, :], True)
-    )
-    return np.stack(o, -1)
-##
-
-def compute_pose(agent_position, agent_rotation):
-    pose = np.eye(4, dtype=np.float32)
-    pose[:3, 3] = np.array([agent_position[d] for d in 'xyz'])
-    pose[:3, :3] = euler_angles_to_matrix(np.deg2rad(
-        np.array([agent_rotation[d] for d in 'zyx'])
-    ))
-    return pose
-
-def state_to_pose(agent_state):
-    agent_position = {k : agent_state[k] for k in 'xyz'}
-    agent_rotation = {k : agent_state['rotation'][k] for k in 'xyz'}
-    pose = compute_pose(agent_position, agent_rotation)
-    return pose
 
 # check Camera.fps, Camera.bf, ThDepth, DepthMapFactor
 # parameterize ORBextractor
