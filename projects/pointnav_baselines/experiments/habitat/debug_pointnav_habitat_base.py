@@ -8,7 +8,9 @@ from plugins.habitat_plugin.habitat_constants import (
     HABITAT_DATASETS_DIR,
     HABITAT_CONFIGS_DIR,
 )
-from projects.pointnav_baselines.experiments.habitat.pointnav_habitat_base import PointNavHabitatBaseConfig
+from projects.pointnav_baselines.experiments.habitat.pointnav_habitat_base import (
+    PointNavHabitatBaseConfig,
+)
 
 
 class DebugPointNavHabitatBaseConfig(PointNavHabitatBaseConfig, ABC):
@@ -19,7 +21,9 @@ class DebugPointNavHabitatBaseConfig(PointNavHabitatBaseConfig, ABC):
     TASK_DATA_DIR_TEMPLATE = os.path.join(
         HABITAT_DATASETS_DIR, "pointnav/habitat-test-scenes/v1/{}/{}.json.gz"
     )
-    BASE_CONFIG_YAML_PATH = os.path.join(HABITAT_CONFIGS_DIR, "debug_habitat_pointnav.yaml")
+    BASE_CONFIG_YAML_PATH = os.path.join(
+        HABITAT_CONFIGS_DIR, "debug_habitat_pointnav.yaml"
+    )
 
     NUM_TRAIN_PROCESSES = 8 if torch.cuda.is_available() else 4
 
