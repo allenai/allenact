@@ -42,6 +42,10 @@ class CategoricalDistr(Distr):
     def log_probs_tensor(self):
         return torch.log_softmax(self.logits, dim=-1)
 
+    @lazy_property
+    def probs_tensor(self):
+        return torch.softmax(self.logits, dim=-1)
+
     def mode(self):
         return self.probs.argmax(dim=-1, keepdim=True)
 

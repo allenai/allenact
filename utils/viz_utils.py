@@ -1,11 +1,34 @@
 import abc
 import json
-from typing import Dict, Any, Union, Optional, List, Tuple, Sequence, Callable, cast
+from typing import (
+    Dict,
+    Any,
+    Union,
+    Optional,
+    List,
+    Tuple,
+    Sequence,
+    Callable,
+    cast,
+    Set,
+)
 
 import numpy as np
+
+try:
+    # When debugging we don't want to use the interactive version of matplotlib
+    # as it causes all sorts of problems.
+    import pydevd
+    import matplotlib
+
+    matplotlib.use("agg")
+except ImportError as _:
+    pass
+
 from matplotlib import pyplot as plt, markers
 from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
+import cv2
 
 from utils.experiment_utils import Builder
 from utils.system import get_logger
@@ -19,6 +42,7 @@ class AbstractViz:
         vector_task_sources: Sequence[Tuple[str, Dict[str, Any]]] = (),
         rollout_sources: Sequence[Union[str, Sequence[str]]] = (),
         actor_critic_source: bool = False,
+        **kwargs,  # accepts `max_episodes_in_group`
     ):
         self.label = label
         self.vector_task_sources = list(vector_task_sources)
@@ -32,9 +56,16 @@ class AbstractViz:
         self.path_to_id: Optional[Sequence[str]] = None
         self.episode_ids: Optional[List[Sequence[str]]] = None
 
+        if "max_episodes_in_group" in kwargs:
+            self.max_episodes_in_group = kwargs["max_episodes_in_group"]
+            self.assigned_max_eps_in_group = True
+        else:
+            self.max_episodes_in_group = 8
+            self.assigned_max_eps_in_group = False
+
     @staticmethod
     def _source_to_str(source, is_vector_task):
-        source_type = "vector_task" if is_vector_task else "rollout"
+        source_type = "vector_task" if is_vector_task else "rollout_or_actor_critic"
         return "{}__{}".format(
             source_type,
             "__{}_sep__".format(source_type).join(["{}".format(s) for s in source]),
@@ -47,21 +78,49 @@ class AbstractViz:
             dictionary = dictionary[path.pop()]
         return dictionary
 
+    def _auto_viz_order(self, task_outputs):
+        if task_outputs is None:
+            return None, None
+
+        all_episodes = {
+            self._access(episode, self.path_to_id): episode for episode in task_outputs
+        }
+
+        if self.episode_ids is None:
+            all_episode_keys = list(all_episodes.keys())
+            viz_order = []
+            for page_start in range(
+                0, len(all_episode_keys), self.max_episodes_in_group
+            ):
+                viz_order.append(
+                    all_episode_keys[
+                        page_start : page_start + self.max_episodes_in_group
+                    ]
+                )
+            get_logger().debug("visualizing with order {}".format(viz_order))
+        else:
+            viz_order = self.episode_ids
+
+        return viz_order, all_episodes
+
     def _setup(
         self,
         mode: str,
         path_to_id: Sequence[str],
-        episode_ids: Sequence[Union[Sequence[str], str]],
+        episode_ids: Optional[Sequence[Union[Sequence[str], str]]],
+        max_episodes_in_group: int,
         force: bool = False,
     ):
         self.mode = mode
         self.path_to_id = list(path_to_id)
-        if self.episode_ids is None or force:
+        if (self.episode_ids is None or force) and episode_ids is not None:
             self.episode_ids = (
                 list(episode_ids)
                 if not isinstance(episode_ids[0], str)
                 else [list(cast(List[str], episode_ids))]
             )
+        if not self.assigned_max_eps_in_group or force:
+            self.max_episodes_in_group = max_episodes_in_group
 
     @abc.abstractmethod
     def log(
@@ -91,8 +150,9 @@ class TrajectoryViz(AbstractViz):
         fontsize: float = 5,
         start_marker_shape: str = "$\spadesuit$",
         start_marker_scale: int = 100,
+        **other_base_kwargs,
     ):
-        super().__init__(label)
+        super().__init__(label, **other_base_kwargs)
         self.path_to_trajectory = list(path_to_trajectory)
         self.path_to_target_location = (
             list(path_to_target_location)
@@ -117,14 +177,12 @@ class TrajectoryViz(AbstractViz):
         render: Optional[Dict[str, List[Dict[str, Any]]]],
         num_steps: int,
     ):
-        if task_outputs is None:
+        viz_order, all_episodes = self._auto_viz_order(task_outputs)
+        if viz_order is None:
+            get_logger().debug("trajectory viz returning without visualizing")
             return
 
-        all_episodes = {
-            self._access(episode, self.path_to_id): episode for episode in task_outputs
-        }
-
-        for page, current_ids in enumerate(self.episode_ids):
+        for page, current_ids in enumerate(viz_order):
             figs = []
             for episode_id in current_ids:
                 # assert episode_id in all_episodes
@@ -253,15 +311,22 @@ class AgentViewViz(AbstractViz):
             {"mode": "raw_rgb_list"},
         ),
         episode_ids: Optional[Sequence[Union[Sequence[str], str]]] = None,
+        **other_base_kwargs,
     ):
-        super().__init__(label, vector_task_sources=[vector_task_source])
+        super().__init__(
+            label, vector_task_sources=[vector_task_source], **other_base_kwargs,
+        )
         self.max_clip_length = max_clip_length
         self.max_video_length = max_video_length
 
         self.episode_ids = (
-            list(episode_ids)
-            if not isinstance(episode_ids[0], str)
-            else [list(cast(List[str], episode_ids))]
+            (
+                list(episode_ids)
+                if not isinstance(episode_ids[0], str)
+                else [list(cast(List[str], episode_ids))]
+            )
+            if episode_ids is not None
+            else None
         )
 
     def log(
@@ -275,7 +340,13 @@ class AgentViewViz(AbstractViz):
             return
 
         datum_id = self._source_to_str(self.vector_task_sources[0], is_vector_task=True)
-        for page, current_ids in enumerate(self.episode_ids):
+
+        viz_order, _ = self._auto_viz_order(task_outputs)
+        if viz_order is None:
+            get_logger().debug("agent view viz returning without visualizing")
+            return
+
+        for page, current_ids in enumerate(viz_order):
             images = []  # list of lists of rgb frames
             for episode_id in current_ids:
                 # assert episode_id in render
@@ -284,8 +355,12 @@ class AgentViewViz(AbstractViz):
                         "skipping viz for missing episode {}".format(episode_id)
                     )
                     continue
-                # TODO overlay episode id?
-                images.append([step[datum_id] for step in render[episode_id]])
+                images.append(
+                    [
+                        self._overlay_label(step[datum_id], episode_id)
+                        for step in render[episode_id]
+                    ]
+                )
             if len(images) == 0:
                 continue
             vid = self.make_vid(images)
@@ -295,6 +370,38 @@ class AgentViewViz(AbstractViz):
                     vid,
                     global_step=num_steps,
                 )
+
+    @staticmethod
+    def _overlay_label(
+        img,
+        text,
+        pos=(0, 0),
+        bg_color=(255, 255, 255),
+        fg_color=(0, 0, 0),
+        scale=0.4,
+        thickness=1,
+        margin=2,
+        font_face=cv2.FONT_HERSHEY_SIMPLEX,
+    ):
+        txt_size = cv2.getTextSize(text, font_face, scale, thickness)
+
+        end_x = pos[0] + txt_size[0][0] + margin
+        end_y = pos[1]
+
+        pos = (pos[0], pos[1] + txt_size[0][1] + margin)
+
+        cv2.rectangle(img, pos, (end_x, end_y), bg_color, cv2.FILLED)
+        cv2.putText(
+            img=img,
+            text=text,
+            org=pos,
+            fontFace=font_face,
+            fontScale=scale,
+            color=fg_color,
+            thickness=thickness,
+            lineType=cv2.LINE_AA,
+        )
+        return img
 
     def make_vid(self, images):
         max_length = max([len(ep) for ep in images])
@@ -332,6 +439,7 @@ class AbstractTensorViz(AbstractViz):
         rollout_source: Union[str, Sequence[str]],
         label: Optional[str] = None,
         figsize: Tuple[float, float] = (3, 3),
+        **other_base_kwargs,
     ):
         if label is None:
             if isinstance(rollout_source, str):
@@ -339,7 +447,7 @@ class AbstractTensorViz(AbstractViz):
             else:
                 label = "/".join(rollout_source)
 
-        super().__init__(label, rollout_sources=[rollout_source])
+        super().__init__(label, rollout_sources=[rollout_source], **other_base_kwargs)
 
         self.figsize = figsize
         self.datum_id = self._source_to_str(
@@ -356,7 +464,12 @@ class AbstractTensorViz(AbstractViz):
         if render is None:
             return
 
-        for page, current_ids in enumerate(self.episode_ids):
+        viz_order, _ = self._auto_viz_order(task_outputs)
+        if viz_order is None:
+            get_logger().debug("tensor viz returning without visualizing")
+            return
+
+        for page, current_ids in enumerate(viz_order):
             figs = []
             for episode_id in current_ids:
                 if episode_id not in render or len(render[episode_id]) == 0:
@@ -395,8 +508,9 @@ class TensorViz1D(AbstractTensorViz):
         rollout_source: Union[str, Sequence[str]] = "action_log_probs",
         label: Optional[str] = None,
         figsize: Tuple[float, float] = (3, 3),
+        **other_base_kwargs,
     ):
-        super().__init__(rollout_source, label, figsize)
+        super().__init__(rollout_source, label, figsize, **other_base_kwargs)
 
     def make_fig(self, episode_src, episode_id):
         assert episode_src[0].size == 1
@@ -421,8 +535,9 @@ class TensorViz2D(AbstractTensorViz):
         label: Optional[str] = None,
         figsize: Tuple[float, float] = (10, 10),
         fontsize: float = 5,
+        **other_base_kwargs,
     ):
-        super().__init__(rollout_source, label, figsize)
+        super().__init__(rollout_source, label, figsize, **other_base_kwargs)
         self.fontsize = fontsize
 
     def make_fig(self, episode_src, episode_id):
@@ -455,8 +570,9 @@ class ActorViz(AbstractViz):
         action_names_path: Optional[Sequence[str]] = ("task_info", "action_names"),
         figsize: Tuple[float, float] = (1, 5),
         fontsize: float = 5,
+        **other_base_kwargs,
     ):
-        super().__init__(label, actor_critic_source=True)
+        super().__init__(label, actor_critic_source=True, **other_base_kwargs)
         self.action_names_path: Optional[Sequence[str]] = (
             list(action_names_path) if action_names_path is not None else None
         )
@@ -484,7 +600,12 @@ class ActorViz(AbstractViz):
                 self._access(task_outputs[0], self.action_names_path)
             )
 
-        for page, current_ids in enumerate(self.episode_ids):
+        viz_order, _ = self._auto_viz_order(task_outputs)
+        if viz_order is None:
+            get_logger().debug("actor viz returning without visualizing")
+            return
+
+        for page, current_ids in enumerate(viz_order):
             figs = []
             for episode_id in current_ids:
                 # assert episode_id in render
@@ -543,16 +664,24 @@ class ActorViz(AbstractViz):
 class VizSuite(AbstractViz):
     def __init__(
         self,
-        episode_ids: Sequence[Union[Sequence[str], str]],
+        episode_ids: Optional[Sequence[Union[Sequence[str], str]]] = None,
         path_to_id: Sequence[str] = ("task_info", "id"),
         mode: str = "valid",
-        force_episodes: bool = False,
+        force_episodes_and_max_episodes_in_group: bool = False,
+        max_episodes_in_group: int = 8,
         *viz,
         **kw_viz,
     ):
-        super().__init__()
-        self._setup(mode, path_to_id, episode_ids)
-        self.force_episodes = force_episodes
+        super().__init__(max_episodes_in_group=max_episodes_in_group)
+        self._setup(
+            mode=mode,
+            path_to_id=path_to_id,
+            episode_ids=episode_ids,
+            max_episodes_in_group=max_episodes_in_group,
+        )
+        self.force_episodes_and_max_episodes_in_group = (
+            force_episodes_and_max_episodes_in_group
+        )
 
         self.all_episode_ids = self._episodes_set()
 
@@ -588,26 +717,34 @@ class VizSuite(AbstractViz):
             vector_task_sources += v.vector_task_sources
             actor_critic_source |= v.actor_critic_source
 
-            if v.episode_ids is not None and not self.force_episodes:
+            if (
+                v.episode_ids is not None
+                and not self.force_episodes_and_max_episodes_in_group
+            ):
                 cur_episodes = self._episodes_set(v.episode_ids)
                 for ep in cur_episodes:
-                    if ep not in self.all_episode_ids:
+                    if (
+                        self.all_episode_ids is not None
+                        and ep not in self.all_episode_ids
+                    ):
                         new_episodes.append(ep)
                         get_logger().info(
-                            "Added new episodes {} from {}".format(
-                                new_episodes, v.label
-                            )
+                            "Added new episode {} from {}".format(ep, v.label)
                         )
 
             v._setup(
-                self.mode, self.path_to_id, self.episode_ids, force=self.force_episodes
+                mode=self.mode,
+                path_to_id=self.path_to_id,
+                episode_ids=self.episode_ids,
+                max_episodes_in_group=self.max_episodes_in_group,
+                force=self.force_episodes_and_max_episodes_in_group,
             )
 
         get_logger().info("Logging labels {}".format(labels))
 
         if len(new_episodes) > 0:
             get_logger().info("Added new episodes {}".format(new_episodes))
-            self.episode_ids.append(new_episodes)
+            self.episode_ids.append(new_episodes)  # new group with all added episodes
             self.all_episode_ids = self._episodes_set()
 
         rol_flat = {json.dumps(src, sort_keys=True): src for src in rollout_sources}
@@ -622,9 +759,12 @@ class VizSuite(AbstractViz):
             actor_critic_source,
         )
 
-    def _episodes_set(self, episode_list=None):
-        all_episode_ids = []
+    def _episodes_set(self, episode_list=None) -> Optional[Set[str]]:
         source = self.episode_ids if episode_list is None else episode_list
+        if source is None:
+            return None
+
+        all_episode_ids: List[str] = []
         for group in source:
             all_episode_ids += group
         return set(all_episode_ids)
@@ -646,7 +786,9 @@ class VizSuite(AbstractViz):
 
     def _collect_actor_critic(self, actor_critic):
         actor_critic_data = {
-            epid: dict() for epid in self.last_it2epid if epid in self.all_episode_ids
+            epid: dict()
+            for epid in self.last_it2epid
+            if self.all_episode_ids is None or epid in self.all_episode_ids
         }
         if len(actor_critic_data) > 0 and actor_critic is not None:
             if self.actor_critic_source:
@@ -695,7 +837,9 @@ class VizSuite(AbstractViz):
             epid for it, epid in enumerate(self.last_it2epid) if it in alive_set
         ]
         rollout_data = {
-            epid: dict() for epid in alive_it2epid if epid in self.all_episode_ids
+            epid: dict()
+            for epid in alive_it2epid
+            if self.all_episode_ids is None or epid in self.all_episode_ids
         }
         if len(rollout_data) > 0 and rollout is not None:
             for source in self.rollout_sources:
@@ -754,7 +898,9 @@ class VizSuite(AbstractViz):
         # get_logger().debug("basic epids {}".format(it2epid))
 
         vector_task_data = {
-            epid: dict() for epid in it2epid if epid in self.all_episode_ids
+            epid: dict()
+            for epid in it2epid
+            if self.all_episode_ids is None or epid in self.all_episode_ids
         }
         if len(vector_task_data) > 0:
             for (

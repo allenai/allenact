@@ -167,7 +167,6 @@ class FasterRCNNPreProcessorRoboThor(Preprocessor):
         max_dets: int,
         detector_spatial_res: int,
         detector_thres: float,
-        parallel: bool = False,
         device: Optional[torch.device] = None,
         device_ids: Optional[List[torch.device]] = None,
         **kwargs: Any,
@@ -177,31 +176,16 @@ class FasterRCNNPreProcessorRoboThor(Preprocessor):
         self.max_dets = max_dets
         self.detector_spatial_res = detector_spatial_res
         self.detector_thres = detector_thres
-        self.parallel = parallel
-        self.device = (
-            device
-            if device is not None
-            else ("cuda" if self.parallel and torch.cuda.is_available() else "cpu")
-        )
+        self.device = torch.device("cpu") if device is None else device
         self.device_ids = device_ids or cast(
             List[torch.device], list(range(torch.cuda.device_count()))
         )
 
-        self.frcnn: Union[BatchedFasterRCNN, torch.nn.DataParallel] = BatchedFasterRCNN(
+        self.frcnn: BatchedFasterRCNN = BatchedFasterRCNN(
             thres=self.detector_thres,
             maxdets=self.max_dets,
             res=self.detector_spatial_res,
         )
-
-        if self.parallel:
-            assert (
-                torch.cuda.is_available()
-            ), "attempt to parallelize detector without cuda"
-            get_logger().info("Distributing detector")
-            self.frcnn = self.frcnn.to(torch.device("cuda"))
-
-            self.frcnn = torch.nn.DataParallel(self.frcnn, device_ids=self.device_ids)
-            get_logger().info("Detected {} devices".format(torch.cuda.device_count()))
 
         spaces: OrderedDict[str, gym.Space] = OrderedDict()
         shape = (self.max_dets, self.detector_spatial_res, self.detector_spatial_res)
@@ -227,9 +211,8 @@ class FasterRCNNPreProcessorRoboThor(Preprocessor):
         super().__init__(**prepare_locals_for_super(locals()))
 
     def to(self, device: torch.device) -> "FasterRCNNPreProcessorRoboThor":
-        if not self.parallel:
-            self.frcnn = self.frcnn.to(device)
-            self.device = device
+        self.frcnn = self.frcnn.to(device)
+        self.device = device
         return self
 
     def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:

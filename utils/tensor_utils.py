@@ -171,10 +171,9 @@ def batch_observations(
             if isinstance(input_batch[sensor], Dict):
                 dict_to_batch(input_batch[sensor])
             else:
-                input_batch[sensor] = torch.stack(input_batch[sensor], dim=0).to(
-                    device=device
-                )
-
+                input_batch[sensor] = torch.stack([batch.to(device=device) 
+                            for batch in input_batch[sensor]], dim=0)
+                            
     if len(observations) == 0:
         return cast(Dict[str, Union[Dict, torch.Tensor]], observations)
 

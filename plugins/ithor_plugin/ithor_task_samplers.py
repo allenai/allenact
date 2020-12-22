@@ -7,7 +7,7 @@ import gym
 from core.base_abstractions.sensor import Sensor
 from core.base_abstractions.task import TaskSampler
 from plugins.ithor_plugin.ithor_environment import IThorEnvironment
-from plugins.ithor_plugin.ithor_tasks import ObjectNavTask
+from plugins.ithor_plugin.ithor_tasks import ObjectNaviThorGridTask
 from utils.experiment_utils import set_deterministic_cudnn, set_seed
 from utils.system import get_logger
 
@@ -45,7 +45,7 @@ class ObjectNavTaskSampler(TaskSampler):
         self.max_tasks: Optional[int] = None
         self.reset_tasks = max_tasks
 
-        self._last_sampled_task: Optional[ObjectNavTask] = None
+        self._last_sampled_task: Optional[ObjectNaviThorGridTask] = None
 
         self.seed: Optional[int] = None
         self.set_seed(seed)
@@ -79,7 +79,7 @@ class ObjectNavTaskSampler(TaskSampler):
         return None
 
     @property
-    def last_sampled_task(self) -> Optional[ObjectNavTask]:
+    def last_sampled_task(self) -> Optional[ObjectNaviThorGridTask]:
         return self._last_sampled_task
 
     def close(self) -> None:
@@ -138,7 +138,9 @@ class ObjectNavTaskSampler(TaskSampler):
 
         return self.scenes[int(self.scene_order[self.scene_id])]
 
-    def next_task(self, force_advance_scene: bool = False) -> Optional[ObjectNavTask]:
+    def next_task(
+        self, force_advance_scene: bool = False
+    ) -> Optional[ObjectNaviThorGridTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
 
@@ -173,7 +175,7 @@ class ObjectNavTaskSampler(TaskSampler):
 
         task_info["start_pose"] = copy.copy(pose)
 
-        self._last_sampled_task = ObjectNavTask(
+        self._last_sampled_task = ObjectNaviThorGridTask(
             env=self.env,
             sensors=self.sensors,
             task_info=task_info,

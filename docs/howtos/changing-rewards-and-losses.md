@@ -8,7 +8,7 @@ In order to train actor-critic agents, we need to specify
 ## Rewards
 
 We will use the [object navigation task in `iTHOR`](/api/plugins/ithor_plugin/ithor_tasks/#objectnavtask) as a 
-running example. We can see how the `ObjectNavTask._step(self, action: int) -> RLStepResult` method computes the reward for the latest 
+running example. We can see how the `ObjectNaviThorGridTask._step(self, action: int) -> RLStepResult` method computes the reward for the latest 
 action by invoking a function like:
 
 ```python
@@ -27,7 +27,7 @@ def judge(self) -> float:
 Any reward shaping can be easily added by e.g. modifying the definition of an existing class:
 
 ```python
-class NavigationWithShaping(plugins.ithor_plugin.ithor_tasks.ObjectNavTask):
+class NavigationWithShaping(plugins.ithor_plugin.ithor_tasks.ObjectNaviThorGridTask):
     def judge(self) -> float:
         reward = super().judge()
         

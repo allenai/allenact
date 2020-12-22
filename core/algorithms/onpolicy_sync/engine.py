@@ -146,18 +146,20 @@ class OnPolicyRLEngine(object):
 
         self._vector_tasks: Optional[VectorSampledTasks] = None
 
-        self.observation_set = None
+        self.sensor_preprocessor_graph = None
         self.actor_critic: Optional[ActorCriticModel] = None
         if self.num_samplers > 0:
-            if self.machine_params.observation_set is not None:
+            if self.machine_params.sensor_preprocessor_graph is not None:
                 # centralized observation set,
-                self.observation_set = self.machine_params.observation_set.to(
+                self.sensor_preprocessor_graph = self.machine_params.sensor_preprocessor_graph.to(
                     self.device
                 )
                 set_seed(self.seed)
                 self.actor_critic = cast(
                     ActorCriticModel,
-                    self.config.create_model(observation_set=self.observation_set),
+                    self.config.create_model(
+                        sensor_preprocessor_graph=self.sensor_preprocessor_graph
+                    ),
                 ).to(self.device)
             else:
                 # no observation set
@@ -334,9 +336,9 @@ class OnPolicyRLEngine(object):
         return logging_pkg
 
     def _preprocess_observations(self, batched_observations):
-        if self.observation_set is None:
+        if self.sensor_preprocessor_graph is None:
             return batched_observations
-        return self.observation_set.get_observations(batched_observations)
+        return self.sensor_preprocessor_graph.get_observations(batched_observations)
 
     def remove_paused(self, observations):
         paused, keep, running = [], [], []
