@@ -4,8 +4,10 @@ channels:
   - pytorch
   - conda-forge
 dependencies:
+  - python-blosc
   - black=19.10b0
   - colour
+  - python-blosc
   - coverage
   - filelock
   - flake8
