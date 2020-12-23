@@ -468,9 +468,9 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         # prev_actions are of shape [num_steps, num_samplers, num_agents, 1]
         # masks are of shape [num_steps, num_samplers, num_agents, 1]
 
-        num_steps, num_samplers, num_agents = masks.shape[:3]
+        num_steps, num_samplers = masks.shape[:2]
         num_layers = recurrent_hidden_states.shape[0]
-        assert num_agents == 1
+        num_agents = 1
 
         # Flatten all observation batch dims
         def recursively_adapt_observations(obs):

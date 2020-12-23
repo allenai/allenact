@@ -2,6 +2,7 @@ import random
 import warnings
 from typing import Tuple, Any, List, Dict, Optional, Union, Callable, Sequence, cast
 
+import torch
 import gym
 import networkx as nx
 import numpy as np
@@ -59,9 +60,11 @@ class MiniGridTask(Task[CrossingEnv]):
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         return self.env.render(mode=mode)
 
-    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+    def _step(self, action: torch.Tensor) -> RLStepResult:
         # if self.num_steps_taken() == 0:
         #     self.env.render()
+        # get_logger().info("action {}".format(action))
+        action = action.item()
         assert isinstance(action, int)
         action = cast(int, action)
 

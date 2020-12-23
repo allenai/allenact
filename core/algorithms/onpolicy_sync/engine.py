@@ -54,6 +54,7 @@ from utils.tensor_utils import (
     detach_recursively,
 )
 from utils.viz_utils import VizSuite
+from utils.spaces_utils import flatten as spaces_flatten
 
 
 class OnPolicyRLEngine(object):
@@ -382,10 +383,11 @@ class OnPolicyRLEngine(object):
                 rollouts.masks[rollouts.step : rollouts.step + 1],
             )
 
-        actions = (
+        actions = spaces_flatten(
+            self.actor_critic.action_space,
             actor_critic_output.distributions.sample()
             if not self.deterministic_agents
-            else actor_critic_output.distributions.mode()
+            else actor_critic_output.distributions.mode(),
         )
 
         return actions, actor_critic_output, memory, step_observation
@@ -397,9 +399,9 @@ class OnPolicyRLEngine(object):
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None) -> int:
         actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
 
-        # Squeeze step and action dimensions and send a list for each sampler's agents
+        # Squeeze step dimension and send a flattened actions Tensor for each sampler
         outputs: List[RLStepResult] = self.vector_tasks.step(
-            [[a.item() for a in ac] for ac in actions.squeeze(0).squeeze(-1)]
+            [a for a in actions.squeeze(0)]
         )
 
         # Save after task completion metrics
@@ -413,31 +415,32 @@ class OnPolicyRLEngine(object):
         rewards: Union[List, torch.Tensor]
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
 
-        rewards = torch.tensor(
-            rewards, dtype=torch.float, device=self.device,  # type:ignore
-        )
-
-        # We want rewards to have dimensions [step, sampler, agent, reward]
-        if len(rewards.shape) == 1:
-            # Rewards are of shape [sampler,]
-            rewards = rewards.view(1, -1, 1, 1)
-        elif len(rewards.shape) == 2:
-            # Rewards are of shape [sampler, agent]
-            rewards = rewards.unsqueeze(0).unsqueeze(-1)
+        if isinstance(rewards[0], torch.Tensor):
+            rewards = torch.stack(rewards, dim=0)
         else:
-            raise NotImplementedError
+            get_logger().warning("Using deprecated rewards format")
+            rewards = torch.tensor(
+                rewards, dtype=torch.float, device=self.device,  # type:ignore
+            )
+
+            # We want rewards to have dimensions [step, sampler, reward]
+            if len(rewards.shape) == 1:
+                # Rewards are of shape [sampler,]
+                rewards = rewards.view(1, -1, 1)
+            elif len(rewards.shape) == 2:
+                # Rewards are of shape [sampler, agent]
+                rewards = rewards.unsqueeze(0)
+            else:
+                raise NotImplementedError
 
         # If done then clean the history of observations.
         masks = torch.tensor(
-            [[0.0] if done else [1.0] for done in dones],
+            [0.0 if done else 1.0 for done in dones],
             dtype=torch.float32,
             device=self.device,  # type:ignore
-        )
-
-        # Expand masks with new agents dimension
-        num_task_samplers = masks.shape[0]
-        num_agents = rewards.shape[2]
-        masks = masks.view(1, num_task_samplers, 1, 1).expand(-1, -1, num_agents, -1)
+        ).view(
+            1, -1, 1
+        )  # entries along sampler dimension
 
         npaused, keep, batch = self.remove_paused(observations)
 
@@ -991,14 +994,15 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         step_observation: Dict[str, torch.Tensor],
         step_count: int,
     ):
-        if len(actions.shape) == len(step_observation["expert_action"].shape) + 1:
-            # Missing agent dimension
-            step_observation["expert_action"] = step_observation[
-                "expert_action"
-            ].unsqueeze(-2)
-        tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
-        expert_actions = step_observation["expert_action"][..., :1]
-        expert_action_exists_mask = step_observation["expert_action"][..., 1:]
+        raise NotImplementedError()
+        expert_actions = [act[0] for act in step_observation["expert_action"]]
+        expert_masks = [act[1] for act in step_observation["expert_action"]]
+        flattened_expert = spaces_flatten(
+            self.actor_critic.action_space, step_observation["expert_action"]
+        )
+        tf_mask_shape = flattened_expert.shape[:-1] + (1,)
+        expert_actions = flattened_expert[..., :-1]
+        expert_action_exists_mask = flattened_expert[..., -1:]
 
         assert (
             expert_actions.shape == actions.shape

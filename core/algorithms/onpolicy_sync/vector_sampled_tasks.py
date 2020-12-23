@@ -26,6 +26,7 @@ from typing import (
 import numpy as np
 from gym.spaces.dict import Dict as SpaceDict
 from setproctitle import setproctitle as ptitle
+import torch
 
 from core.base_abstractions.misc import RLStepResult
 from core.base_abstractions.task import TaskSampler
@@ -460,7 +461,7 @@ class VectorSampledTasks(object):
             )
         ]
 
-    def step_at(self, sampler_index: int, action: int) -> List[RLStepResult]:
+    def step_at(self, sampler_index: int, action: torch.Tensor) -> List[RLStepResult]:
         """Step in the index_process task in the vector.
 
         # Parameters
@@ -478,7 +479,7 @@ class VectorSampledTasks(object):
             )
         ]
 
-    def async_step(self, actions: List[List[int]]) -> None:
+    def async_step(self, actions: List[torch.Tensor]) -> None:
         """Asynchronously step in the vectorized Tasks.
 
         # Parameters
@@ -486,10 +487,10 @@ class VectorSampledTasks(object):
         actions : actions to be performed in the vectorized Tasks.
         """
         self._is_waiting = True
-        for write_fn, action_list in zip(
+        for write_fn, action_tensor in zip(
             self._connection_write_fns, self._partition_to_processes(actions)
         ):
-            write_fn((STEP_COMMAND, action_list))
+            write_fn((STEP_COMMAND, action_tensor))
 
     def wait_step(self) -> List[Dict[str, Any]]:
         """Wait until all the asynchronized processes have synchronized."""
@@ -499,7 +500,7 @@ class VectorSampledTasks(object):
         self._is_waiting = False
         return observations
 
-    def step(self, actions: List[List[int]]):
+    def step(self, actions: List[torch.Tensor]):
         """Perform actions in the vectorized tasks.
 
         # Parameters
@@ -859,9 +860,9 @@ class SingleProcessVectorSampledTasks(object):
 
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
-                    # TODO Adding this for backward compatibility with existing tasks. Would be best to just send data.
-                    if len(data) == 1:
-                        data = data[0]
+                    # # TODO Adding this for backward compatibility with existing tasks. Would be best to just send data.
+                    # if len(data) == 1:
+                    #     data = data[0]
                     step_result: RLStepResult = current_task.step(data)
                     if current_task.is_done():
                         metrics = current_task.metrics()

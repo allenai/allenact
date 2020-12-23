@@ -28,6 +28,7 @@ from core.base_abstractions.misc import EnvType
 from utils.misc_utils import prepare_locals_for_super
 from utils.model_utils import Flatten
 from utils.tensor_utils import ScaleBothSides
+from utils.spaces_utils import flatten
 
 if TYPE_CHECKING:
     from core.base_abstractions.task import SubTaskType
@@ -134,15 +135,15 @@ class SensorSuite(Generic[EnvType]):
         }
 
 
-class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
+class GeneralExpertActionSensor(Sensor[EnvType, SubTaskType]):
     def __init__(
         self,
-        nactions: int,
+        action_space: gym.Space,
         uuid: str = "expert_action",
         expert_args: Optional[Dict[str, Any]] = None,
         **kwargs: Any
     ) -> None:
-        self.nactions = nactions
+        self.action_space = action_space
         self.expert_args: Dict[str, Any] = expert_args or {}
 
         observation_space = self._get_observation_space()
@@ -158,9 +159,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         only if the expert failed to generate a true expert action. The
         value `num actions in task` should be in `config["nactions"]`
         """
-        return gym.spaces.Tuple(
-            (gym.spaces.Discrete(self.nactions), gym.spaces.Discrete(2))
-        )
+        return gym.spaces.Tuple((self.action_space, gym.spaces.Discrete(2)))
 
     def get_observation(
         self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
@@ -168,13 +167,52 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         # If the task is completed, we needn't (perhaps can't) find the expert
         # action from the (current) terminal state.
         if task.is_done():
-            return np.array([-1, False], dtype=np.int64)
+            return None, False
         action, expert_was_successful = task.query_expert(**self.expert_args)
-        assert isinstance(action, int), (
-            "In expert action sensor, `task.query_expert()` "
-            "did not return an integer action."
+        action_flag = np.concatenate(
+            [
+                flatten(self.action_space, action).numpy(),
+                np.asarray(expert_was_successful),
+            ]
         )
-        return np.array([action, expert_was_successful], dtype=np.int64)
+        return action_flag
+
+
+class GeneralExpertActionSensor(Sensor[EnvType, SubTaskType]):
+    def __init__(
+        self,
+        action_space: gym.Space,
+        uuid: str = "expert_action",
+        expert_args: Optional[Dict[str, Any]] = None,
+        **kwargs: Any
+    ) -> None:
+        self.action_space = action_space
+        self.expert_args: Dict[str, Any] = expert_args or {}
+
+        observation_space = self._get_observation_space()
+
+        super().__init__(**prepare_locals_for_super(locals()))
+
+    def _get_observation_space(self) -> gym.spaces.Tuple:
+        """The observation space of the expert action sensor.
+
+        Will equal `gym.spaces.Tuple(gym.spaces.Discrete(num actions in
+        task), gym.spaces.Discrete(2))` where the first entry of the
+        tuple is the expert action index and the second equals 0 if and
+        only if the expert failed to generate a true expert action. The
+        value `num actions in task` should be in `config["nactions"]`
+        """
+        return gym.spaces.Tuple((self.action_space, gym.spaces.Discrete(2)))
+
+    def get_observation(
+        self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
+    ) -> Any:
+        # If the task is completed, we needn't (perhaps can't) find the expert
+        # action from the (current) terminal state.
+        if task.is_done():
+            return None, False
+        action, expert_was_successful = task.query_expert(**self.expert_args)
+        return action, expert_was_successful
 
 
 class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
@@ -185,6 +223,7 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
         expert_args: Optional[Dict[str, Any]] = None,
         **kwargs: Any
     ) -> None:
+        raise NotImplementedError()
         self.nactions = nactions
         self.expert_args: Dict[str, Any] = expert_args or {}
 

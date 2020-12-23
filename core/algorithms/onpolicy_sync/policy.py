@@ -13,6 +13,7 @@ from torch import nn
 
 from core.base_abstractions.distributions import CategoricalDistr
 from core.base_abstractions.misc import ActorCriticOutput, Memory
+from utils.spaces_utils import unflatten as spaces_unflatten
 
 DistributionType = TypeVar("DistributionType")
 
@@ -22,21 +23,21 @@ MemorySpecType = Tuple[MemoryShapeType, torch.dtype]
 FullMemorySpecType = Dict[str, MemorySpecType]
 
 ObservationType = Dict[str, Union[torch.Tensor, Dict[str, Any]]]
+ActionType = torch.Tensor
 
 
 class ActorCriticModel(Generic[DistributionType], nn.Module):
     """Abstract class defining a deep (recurrent) actor critic agent.
 
-    When defining a new agent, you should over subclass this class and implement the abstract methods.
+    When defining a new agent, you should subclass this class and implement the abstract methods.
 
     # Attributes
 
-    action_space : The space of actions available to the agent. Currently only discrete
-        actions are allowed (so this space will always be of type `gym.spaces.Discrete`).
+    action_space : The space of actions available to the agent. This is of type `gym.spaces.Space`.
     observation_space: The observation space expected by the agent. This is of type `gym.spaces.dict`.
     """
 
-    def __init__(self, action_space: gym.spaces.Discrete, observation_space: SpaceDict):
+    def __init__(self, action_space: gym.Space, observation_space: SpaceDict):
         """Initializer.
 
         # Parameters
@@ -46,7 +47,6 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
         """
         super().__init__()
         self.action_space = action_space
-        self.dim_actions = action_space.n
         self.observation_space = observation_space
 
     @property
@@ -71,14 +71,7 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
                 "step" not in dim_names
             ), "`step` is automatically added and cannot be reused"
 
-            assert (
-                "sampler" in dim_names
-            ), "`sampler` dim must be defined (right before `agent` if present)"
-
-            assert (
-                "agent" not in dim_names
-                or dim_names[dim_names.index("agent") - 1] == "sampler"
-            ), "`agent` dim must be right after `sampler`"
+            assert "sampler" in dim_names, "`sampler` dim must be defined"
 
         return spec
 
@@ -100,12 +93,23 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
         and `layer` and `hidden` correspond to the standard RNN hidden state parametrization.
         2. The data type, e.g. `torch.float32`.
 
-        The `sampler` dimension is mandatory for all memories.
+        The `sampler` dimension placeholder is mandatory for all memories.
 
         For a single-agent ActorCritic model it is often more convenient to skip the agent dimension, e.g.
         `(("layer", 1), ("sampler", None), ("hidden", 32))` for a GRU memory.
         """
         raise NotImplementedError()
+
+    def unflatten(
+        self, flattened_actions: torch.Tensor
+    ) -> Union[Tuple, Dict, torch.Tensor, int, float]:
+        """Unflattens a flattened actions tensor, e.g. the prev_actions tensor passed to forward.
+
+        # Returns
+
+        The unflattened tensors or scalars corresponding to the input flattened actions tensor.
+        """
+        return spaces_unflatten(self.action_space, flattened_actions)
 
     @abc.abstractmethod
     def forward(  # type:ignore
@@ -124,15 +128,15 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
                        current observations.
         memory : `Memory` object with recurrent memory. The shape of each tensor is determined by the corresponding
                  entry in `_recurrent_memory_specification`.
-        prev_actions : tensor of shape [steps, samplers, agents, ...] with the previous actions.
+        prev_actions : tensor of shape [steps, samplers, ...] with the flattened previous actions.
         masks : tensor of shape [steps, samplers, agents, 1] with zeros indicating steps where a new episode/task
                 starts.
 
         # Returns
 
         A tuple whose first element is an object of class ActorCriticOutput which stores
-        the agent's probability distribution over possible actions (shape [steps, samplers, agents, num_actions]),
-        the agent's value for the state (shape [steps, samplers, agents, 1]), and any extra information needed for
+        the agents' probability distribution over possible actions (shape [steps, samplers, ...]),
+        the agents' value for the state (shape [steps, samplers, ..., 1]), and any extra information needed for
         loss computations. The second element is an optional `Memory`, which is only used in models with recurrent
         memory.
         """
@@ -152,15 +156,6 @@ class LinearActorCriticHead(nn.Module):
     def forward(self, x):
         out = self.actor_and_critic(x)
 
-        assert len(out.shape) in [
-            3,
-            4,
-        ], "x must be [step, sampler, data] or [step, sampler, agent, data]"
-
-        if len(out.shape) == 3:
-            # [step, sampler, data] -> [step, sampler, agent, data]
-            out = out.unsqueeze(-2)
-
         logits = out[..., :-1]
         values = out[..., -1:]
         # noinspection PyArgumentList
@@ -175,18 +170,7 @@ class LinearCriticHead(nn.Module):
         nn.init.constant_(self.fc.bias, 0)
 
     def forward(self, x):
-        out = self.fc(x)
-
-        assert len(out.shape) in [
-            3,
-            4,
-        ], "x must be [step, sampler, data] or [step, sampler, agent, data]"
-
-        if len(out.shape) == 3:
-            # [step, sampler, data] -> [step, sampler, agent, data]
-            out = out.unsqueeze(-2)
-
-        return out
+        return self.fc(x)
 
 
 class LinearActorHead(nn.Module):
@@ -199,15 +183,6 @@ class LinearActorHead(nn.Module):
 
     def forward(self, x: torch.FloatTensor):  # type: ignore
         x = self.linear(x)  # type:ignore
-
-        assert len(x.shape) in [
-            3,
-            4,
-        ], "x must be [step, sampler, data] or [step, sampler, agent, data]"
-
-        if len(x.shape) == 3:
-            # [step, sampler, data] -> [step, sampler, agent, data]
-            x = cast(torch.FloatTensor, x.unsqueeze(-2))
 
         # noinspection PyArgumentList
         return CategoricalDistr(logits=x)

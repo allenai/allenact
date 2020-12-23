@@ -15,6 +15,7 @@ from core.algorithms.onpolicy_sync.policy import (
 )
 from core.base_abstractions.misc import Memory
 from utils.system import get_logger
+from utils.spaces_utils import flatdim
 
 
 class RolloutStorage(object):
@@ -36,7 +37,7 @@ class RolloutStorage(object):
             "observations": dict(),
         }
 
-        self.dim_names = ["step", "sampler", "agent", None]
+        self.dim_names = ["step", "sampler", None]
 
         self.memory: Memory = self.create_memory(
             actor_critic.recurrent_memory_specification, num_samplers
@@ -45,38 +46,24 @@ class RolloutStorage(object):
 
         self.num_agents = getattr(actor_critic, "num_agents", 1)
 
-        self.rewards = torch.zeros(num_steps, num_samplers, self.num_agents, 1,)
-        self.value_preds = torch.zeros(num_steps + 1, num_samplers, self.num_agents, 1,)
-        self.returns = torch.zeros(num_steps + 1, num_samplers, self.num_agents, 1,)
-        self.action_log_probs = torch.zeros(
-            num_steps, num_samplers, self.num_agents, 1,
-        )
+        self.rewards: Optional[torch.Tensor] = None
+        self.value_preds: Optional[torch.Tensor] = None
+        self.returns: Optional[torch.Tensor] = None
+        self.action_log_probs: Optional[torch.Tensor] = None
 
-        action_space = actor_critic.action_space
+        self.masks = torch.ones(num_steps + 1, num_samplers, 1)
 
-        if action_space.__class__.__name__ == "Discrete":
-            action_shape = 1
-        else:
-            action_shape = action_space.shape[0]
-
-        self.actions = torch.zeros(
-            num_steps, num_samplers, self.num_agents, action_shape,
-        )
-        self.prev_actions = torch.zeros(
-            num_steps + 1, num_samplers, self.num_agents, action_shape,
-        )
-
-        if action_space.__class__.__name__ == "Discrete":
-            self.actions = self.actions.long()
-            self.prev_actions = self.prev_actions.long()
-
-        self.masks = torch.ones(num_steps + 1, num_samplers, self.num_agents, 1,)
+        action_shape = flatdim(actor_critic.action_space)
+        self.actions = torch.zeros(num_steps, num_samplers, action_shape,)
+        self.prev_actions = torch.zeros(num_steps + 1, num_samplers, action_shape,)
 
         self.step = 0
 
         self.unnarrow_data: DefaultDict[
             str, Union[int, torch.Tensor, Dict]
         ] = defaultdict(dict)
+
+        self.device = "cpu"
 
     def create_memory(
         self, spec: Optional[FullMemorySpecType], num_samplers: int,
@@ -108,13 +95,19 @@ class RolloutStorage(object):
     def to(self, device: torch.device):
         self.observations.to(device)
         self.memory.to(device)
-        self.rewards = self.rewards.to(device)
-        self.value_preds = self.value_preds.to(device)
-        self.returns = self.returns.to(device)
-        self.action_log_probs = self.action_log_probs.to(device)
         self.actions = self.actions.to(device)
         self.prev_actions = self.prev_actions.to(device)
         self.masks = self.masks.to(device)
+
+        if self.rewards is not None:
+            self.rewards = self.rewards.to(device)
+            self.value_preds = self.value_preds.to(device)
+            self.action_log_probs = self.action_log_probs.to(device)
+
+        if self.returns is not None:
+            self.returns = self.returns.to(device)
+
+        self.device = device
 
     def insert_observations(
         self, observations: ObservationType, time_step: int = 0,
@@ -171,11 +164,7 @@ class RolloutStorage(object):
                         self.num_steps + 1,  # required for observations (and memory)
                         *(1 for _ in range(len(current_data.shape))),
                     )
-                    .to(
-                        torch.device("cpu")
-                        if self.actions.get_device() < 0
-                        else self.actions.get_device()
-                    ),
+                    .to(self.device),
                     sampler_dim,
                 )
 
@@ -199,6 +188,14 @@ class RolloutStorage(object):
                 # current_data does not have a step dimension
                 storage[flatten_name][0][time_step].copy_(current_data)
 
+    def create_tensor_storage(self, num_steps: int, step: torch.Tensor) -> torch.Tensor:
+        # print("CREATE", step.shape)
+        return (
+            torch.zeros_like(step)
+            .repeat(num_steps, *(1 for _ in range(len(step[0].shape))),)
+            .to(self.device)
+        )
+
     def insert(
         self,
         observations: ObservationType,
@@ -214,12 +211,24 @@ class RolloutStorage(object):
 
         self.actions[self.step : self.step + 1].copy_(actions)  # type:ignore
         self.prev_actions[self.step + 1 : self.step + 2].copy_(actions)  # type:ignore
+
+        self.masks[self.step + 1 : self.step + 2].copy_(masks)  # type:ignore
+
+        if self.rewards is None:
+            self.rewards = self.create_tensor_storage(self.num_steps, rewards)
+            self.value_preds = self.create_tensor_storage(
+                self.num_steps + 1, value_preds
+            )
+            self.action_log_probs = self.create_tensor_storage(
+                self.num_steps, action_log_probs
+            )
+            self.returns = self.create_tensor_storage(self.num_steps + 1, value_preds)
+
         self.action_log_probs[self.step : self.step + 1].copy_(  # type:ignore
             action_log_probs
         )
         self.value_preds[self.step : self.step + 1].copy_(value_preds)  # type:ignore
         self.rewards[self.step : self.step + 1].copy_(rewards)  # type:ignore
-        self.masks[self.step + 1 : self.step + 2].copy_(masks)  # type:ignore
 
         self.step = (self.step + 1) % self.num_steps
 
@@ -232,11 +241,13 @@ class RolloutStorage(object):
         self.memory = self.memory.sampler_select(keep_list)
         self.actions = self.actions[:, keep_list]
         self.prev_actions = self.prev_actions[:, keep_list]
-        self.action_log_probs = self.action_log_probs[:, keep_list]
-        self.value_preds = self.value_preds[:, keep_list]
-        self.rewards = self.rewards[:, keep_list]
         self.masks = self.masks[:, keep_list]
-        self.returns = self.returns[:, keep_list]
+
+        if self.rewards is not None:
+            self.action_log_probs = self.action_log_probs[:, keep_list]
+            self.value_preds = self.value_preds[:, keep_list]
+            self.rewards = self.rewards[:, keep_list]
+            self.returns = self.returns[:, keep_list]
 
     def narrow(self):
         assert len(self.unnarrow_data) == 0, "attempting to narrow narrowed rollouts"
@@ -250,25 +261,33 @@ class RolloutStorage(object):
             for key in storage:
                 self.unnarrow_data[storage_name][key] = storage.tensor(key)
                 storage[key] = (
-                    storage.tensor(key).narrow(dim=0, start=0, length=self.step + 1),
+                    storage.tensor(key).narrow(
+                        dimension=0, start=0, length=self.step + 1
+                    ),
                     storage.sampler_dim(key),
                 )
 
         for name in ["prev_actions", "value_preds", "returns", "masks"]:
-            self.unnarrow_data[name] = getattr(self, name)
-            setattr(
-                self,
-                name,
-                self.unnarrow_data[name].narrow(dim=0, start=0, length=self.step + 1),
-            )
+            if getattr(self, name) is not None:
+                self.unnarrow_data[name] = getattr(self, name)
+                setattr(
+                    self,
+                    name,
+                    self.unnarrow_data[name].narrow(
+                        dimension=0, start=0, length=self.step + 1
+                    ),
+                )
 
         for name in ["actions", "action_log_probs", "rewards"]:
-            self.unnarrow_data[name] = getattr(self, name)
-            setattr(
-                self,
-                name,
-                self.unnarrow_data[name].narrow(dim=0, start=0, length=self.step),
-            )
+            if getattr(self, name) is not None:
+                self.unnarrow_data[name] = getattr(self, name)
+                setattr(
+                    self,
+                    name,
+                    self.unnarrow_data[name].narrow(
+                        dimension=0, start=0, length=self.step
+                    ),
+                )
 
         self.unnarrow_data["num_steps"] = self.num_steps
         self.num_steps = self.step
@@ -304,8 +323,9 @@ class RolloutStorage(object):
             "action_log_probs",
             "rewards",
         ]:
-            setattr(self, name, self.unnarrow_data[name])
-            self.unnarrow_data.pop(name)
+            if name in self.unnarrow_data:
+                setattr(self, name, self.unnarrow_data[name])
+                self.unnarrow_data.pop(name)
 
         self.num_steps = self.unnarrow_data["num_steps"]
         self.unnarrow_data.pop("num_steps")
@@ -326,22 +346,38 @@ class RolloutStorage(object):
     def compute_returns(
         self, next_value: torch.Tensor, use_gae: bool, gamma: float, tau: float
     ):
+        mask_step_shape = self.masks.shape[1:] + (1,) * (
+            len(self.value_preds.shape) - len(self.masks.shape)
+        )
+
+        # print("rewards", self.rewards.shape)
+        # print("value_preds", self.value_preds.shape)
+        # print("returns", self.returns.shape)
+        # print("masks", self.masks.shape, mask_step_shape)
+
         if use_gae:
             self.value_preds[-1] = next_value
             gae = 0
-            for step in reversed(range(self.rewards.size(0))):
+            for step in reversed(range(self.rewards.shape[0])):
                 delta = (
                     self.rewards[step]
-                    + gamma * self.value_preds[step + 1] * self.masks[step + 1]
+                    + gamma
+                    * self.value_preds[step + 1]
+                    * self.masks[step + 1].view(mask_step_shape)
                     - self.value_preds[step]
                 )
-                gae = delta + gamma * tau * self.masks[step + 1] * gae  # type:ignore
+                gae = (
+                    delta
+                    + gamma * tau * self.masks[step + 1].view(mask_step_shape) * gae
+                )  # type:ignore
                 self.returns[step] = gae + self.value_preds[step]
         else:
             self.returns[-1] = next_value
-            for step in reversed(range(self.rewards.size(0))):
+            for step in reversed(range(self.rewards.shape[0])):
                 self.returns[step] = (
-                    self.returns[step + 1] * gamma * self.masks[step + 1]
+                    self.returns[step + 1]
+                    * gamma
+                    * self.masks[step + 1].view(mask_step_shape)
                     + self.rewards[step]
                 )
 
@@ -350,7 +386,7 @@ class RolloutStorage(object):
             advantages.std() + 1e-5
         )
 
-        num_samplers = self.rewards.size(1)
+        num_samplers = self.rewards.shape[1]
         assert num_samplers >= num_mini_batch, (
             "The number of task samplers ({}) "
             "must be greater than or equal to the number of "

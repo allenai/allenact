@@ -424,7 +424,7 @@ class RNNStateEncoder(nn.Module):
         int,
         int,
     ]:
-        nsteps, nsamplers, nagents = masks.shape[:3]  # masks always have all dimensions
+        nsteps, nsamplers = masks.shape[:2]
 
         assert len(hidden_states.shape) in [
             3,
@@ -436,21 +436,25 @@ class RNNStateEncoder(nn.Module):
             4,
         ], "observations must be [step, sampler, data] or [step, sampler, agent, data]"
 
+        nagents = 1
         mem_agent: bool
         if len(hidden_states.shape) == 4:  # [layer, sampler, agent, hidden]
             mem_agent = True
+            nagents = hidden_states.shape[2]
         else:  # [layer, sampler, hidden]
             mem_agent = False
 
         obs_agent: bool
         if len(x.shape) == 4:  # [step, sampler, agent, dims]
             obs_agent = True
-        else:  # [step, sampler, agent, dims]
+        else:  # [step, sampler, dims]
             obs_agent = False
 
         # Flatten (nsamplers, nagents)
         x = x.view(nsteps, nsamplers * nagents, -1)  # type:ignore
-        masks = masks.view(nsteps, nsamplers * nagents)  # type:ignore
+        masks = masks.expand(-1, -1, nagents).reshape(  # type:ignore
+            nsteps, nsamplers * nagents
+        )
 
         # Flatten (nsamplers, nagents) and remove step dim
         hidden_states = hidden_states.view(  # type:ignore
@@ -602,14 +606,14 @@ class LinearActorCritic(ActorCriticModel[CategoricalDistr]):
     def forward(self, observations, memory, prev_actions, masks):
         out = self.linear(observations[self.input_uuid])
 
-        assert len(out.shape) in [
-            3,
-            4,
-        ], "observations must be [step, sampler, data] or [step, sampler, agent, data]"
+        # assert len(out.shape) in [
+        #     3,
+        #     4,
+        # ], "observations must be [step, sampler, data] or [step, sampler, agent, data]"
 
-        if len(out.shape) == 3:
-            # [step, sampler, data] -> [step, sampler, agent, data]
-            out = out.unsqueeze(-2)
+        # if len(out.shape) == 3:
+        #     # [step, sampler, data] -> [step, sampler, agent, data]
+        #     out = out.unsqueeze(-2)
 
         # noinspection PyArgumentList
         return (
@@ -703,11 +707,20 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
         prev_actions: torch.Tensor,
         masks: torch.FloatTensor,
     ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
+        # print("observations", observations[self.input_uuid].shape)
+        # print("memory", memory.tensor(self.memory_key).shape)
+        # print(
+        #     "prev_actions",
+        #     prev_actions.shape if prev_actions is not None else prev_actions,
+        # )
+        # print("masks", masks.shape)
         rnn_out, mem_return = self.state_encoder(
             x=observations[self.input_uuid],
             hidden_states=memory.tensor(self.memory_key),
             masks=masks,
         )
+
+        # print("rnn_out", rnn_out.shape)
 
         # noinspection PyCallingNonCallable
         out, _ = self.ac_nonrecurrent_head(
@@ -717,6 +730,7 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
             masks=masks,
         )
 
+        # print("out", out.values.shape)
         # noinspection PyArgumentList
         return (
             out,
