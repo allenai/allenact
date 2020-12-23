@@ -50,7 +50,9 @@ def render_file(
     # First try literate
     was_literate = False
     try:
-        was_literate = literate_python_to_markdown(path=os.path.join(relative_src_path, src_file))
+        was_literate = literate_python_to_markdown(
+            path=os.path.join(relative_src_path, src_file)
+        )
     except Exception as _:
         pass
 
