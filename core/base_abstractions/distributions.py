@@ -33,10 +33,12 @@ class CategoricalDistr(Distr):
         raise Exception("Inverse CDF is not defined for categorical distributions.")
 
     def sample(self, sample_shape=torch.Size()):
-        return super().sample(sample_shape).unsqueeze(-1)
+        res = super().sample(sample_shape)
+        return res.view(*res.shape[:2], -1)  # return [steps, sampler, flattened]
 
     def log_probs(self, actions: torch.LongTensor) -> torch.FloatTensor:
-        return super().log_prob(actions.squeeze(-1)).unsqueeze(-1)
+        res = super().log_prob(actions.squeeze(-1))
+        return res.view(*res.shape[:2], -1)  # return [steps, sampler, flattened]
 
     @lazy_property
     def log_probs_tensor(self):

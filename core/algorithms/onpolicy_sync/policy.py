@@ -159,7 +159,10 @@ class LinearActorCriticHead(nn.Module):
         logits = out[..., :-1]
         values = out[..., -1:]
         # noinspection PyArgumentList
-        return CategoricalDistr(logits=logits), values
+        return (
+            CategoricalDistr(logits=logits),
+            values.view(*values.shape[:2], -1),
+        )  # steps, samplers, flattened
 
 
 class LinearCriticHead(nn.Module):
@@ -170,7 +173,7 @@ class LinearCriticHead(nn.Module):
         nn.init.constant_(self.fc.bias, 0)
 
     def forward(self, x):
-        return self.fc(x)
+        return self.fc(x).view(*x.shape[:2], -1)  # steps, samplers, flattened
 
 
 class LinearActorHead(nn.Module):

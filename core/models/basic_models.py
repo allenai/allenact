@@ -606,20 +606,13 @@ class LinearActorCritic(ActorCriticModel[CategoricalDistr]):
     def forward(self, observations, memory, prev_actions, masks):
         out = self.linear(observations[self.input_uuid])
 
-        # assert len(out.shape) in [
-        #     3,
-        #     4,
-        # ], "observations must be [step, sampler, data] or [step, sampler, agent, data]"
-
-        # if len(out.shape) == 3:
-        #     # [step, sampler, data] -> [step, sampler, agent, data]
-        #     out = out.unsqueeze(-2)
-
         # noinspection PyArgumentList
         return (
             ActorCriticOutput(
                 distributions=CategoricalDistr(logits=out[..., :-1]),
-                values=cast(torch.FloatTensor, out[..., -1:]),
+                values=cast(
+                    torch.FloatTensor, out[..., -1:].view(*out.shape[:2], -1)
+                ),  # ensure [steps, samplers, flattened]
                 extras={},
             ),
             None,
@@ -707,20 +700,11 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
         prev_actions: torch.Tensor,
         masks: torch.FloatTensor,
     ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
-        # print("observations", observations[self.input_uuid].shape)
-        # print("memory", memory.tensor(self.memory_key).shape)
-        # print(
-        #     "prev_actions",
-        #     prev_actions.shape if prev_actions is not None else prev_actions,
-        # )
-        # print("masks", masks.shape)
         rnn_out, mem_return = self.state_encoder(
             x=observations[self.input_uuid],
             hidden_states=memory.tensor(self.memory_key),
             masks=masks,
         )
-
-        # print("rnn_out", rnn_out.shape)
 
         # noinspection PyCallingNonCallable
         out, _ = self.ac_nonrecurrent_head(
@@ -730,7 +714,6 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
             masks=masks,
         )
 
-        # print("out", out.values.shape)
         # noinspection PyArgumentList
         return (
             out,

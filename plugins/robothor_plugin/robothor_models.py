@@ -517,7 +517,7 @@ class ResnetFasterRCNNTensorsObjectNavActorCritic(ActorCriticModel[CategoricalDi
 class NavToPartnerActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
     def __init__(
         self,
-        action_space: gym.spaces.Discrete,
+        action_space: gym.spaces.Space,
         observation_space: SpaceDict,
         rgb_uuid: Optional[str] = "rgb",
         hidden_size=512,
@@ -544,7 +544,7 @@ class NavToPartnerActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
             rnn_type=rnn_type,
         )
 
-        self.actor_critic = LinearActorCriticHead(self._hidden_size, action_space.n)
+        self.actor_critic = LinearActorCriticHead(self._hidden_size, action_space[0].n)
 
         self.train()
 

@@ -192,7 +192,7 @@ class RolloutStorage(object):
         # print("CREATE", step.shape)
         return (
             torch.zeros_like(step)
-            .repeat(num_steps, *(1 for _ in range(len(step[0].shape))),)
+            .repeat(num_steps, *(1 for _ in range(len(step.shape[1:]))),)
             .to(self.device)
         )
 
@@ -349,11 +349,6 @@ class RolloutStorage(object):
         mask_step_shape = self.masks.shape[1:] + (1,) * (
             len(self.value_preds.shape) - len(self.masks.shape)
         )
-
-        # print("rewards", self.rewards.shape)
-        # print("value_preds", self.value_preds.shape)
-        # print("returns", self.returns.shape)
-        # print("masks", self.masks.shape, mask_step_shape)
 
         if use_gae:
             self.value_preds[-1] = next_value

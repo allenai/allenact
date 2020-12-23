@@ -383,11 +383,11 @@ class OnPolicyRLEngine(object):
                 rollouts.masks[rollouts.step : rollouts.step + 1],
             )
 
-        actions = spaces_flatten(
-            self.actor_critic.action_space,
+        # Assume distributions outputs provide flattened actions
+        actions = (
             actor_critic_output.distributions.sample()
             if not self.deterministic_agents
-            else actor_critic_output.distributions.mode(),
+            else actor_critic_output.distributions.mode()
         )
 
         return actions, actor_critic_output, memory, step_observation
@@ -418,7 +418,7 @@ class OnPolicyRLEngine(object):
         if isinstance(rewards[0], torch.Tensor):
             rewards = torch.stack(rewards, dim=0)
         else:
-            get_logger().warning("Using deprecated rewards format")
+            get_logger().debug("Using deprecated rewards format")
             rewards = torch.tensor(
                 rewards, dtype=torch.float, device=self.device,  # type:ignore
             )
