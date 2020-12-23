@@ -40,7 +40,7 @@ dependencies:
     - docstr-coverage==1.2.0
     - gin-config==0.3.0
     - "gym>=0.17.0,<0.18.0"
-    - gym-minigrid==1.0.1
+    - gym-minigrid>=1.0.1
     - mkdocs==1.1.2
     - mkdocs-material==5.5.3
     - moviepy==1.0.3
