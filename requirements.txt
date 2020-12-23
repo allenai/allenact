@@ -38,7 +38,7 @@ google-auth==1.22.1
 google-auth-oauthlib==0.4.1
 grpcio==1.33.1
 gym==0.17.3
-gym-minigrid==1.0.1
+gym-minigrid>=1.0.1
 identify==1.5.6
 idna==2.10
 imageio==2.9.0
