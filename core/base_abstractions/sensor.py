@@ -194,7 +194,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
             unflattened_space, (unflattened_action, expert_was_successful)
         )
 
-        flattened_torch = flatten(self.observation_space, unflattened_torch)
+        flattened_torch = flatten(unflattened_space, unflattened_torch)
         return flattened_torch.cpu().numpy()
 
 
