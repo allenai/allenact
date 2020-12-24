@@ -1,20 +1,21 @@
+from typing import Any, Optional
+from tempfile import mkstemp
 import os
 import math
 import yaml
-from typing import Any, Optional
-from tempfile import mkstemp
 
-import gym
+from scipy.spatial.transform import Rotation as R
 import numpy as np
-
+import quaternion
+import gym
 import orbslam2
+
 from core.base_abstractions.task import SubTaskType, Task
 from core.base_abstractions.sensor import Sensor, RGBSensor, DepthSensor
 from core.base_abstractions.misc import EnvType
 from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
-from plugins.robothor_plugin.robothor_sensors import RGBSensorRoboThor, DepthSensorRoboThor, GPSCompassSensorRoboThor
+from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from plugins.robothor_plugin.robothor_tasks import PointNavTask
-from plugins.orbslam2_plugin.orbslam2_util import state_to_pose, matrix_to_euler_angles
 from utils.misc_utils import prepare_locals_for_super
 
 
@@ -36,33 +37,48 @@ def init_settings(w, h, fov):
         'Viewer.ViewpointX': 0, 'Viewer.ViewpointY': -0.7, 'Viewer.ViewpointZ': -1.8, 'Viewer.ViewpointF': 500
     }
 
+def state_to_pose(agent_state):
+    agent_position = np.array([agent_state[k] for k in 'xyz'])
+    agent_rotation = np.array([agent_state['rotation'][k] for k in 'xyz'])
+    pose = np.eye(4, dtype=np.float32)
+    pose[:3, 3] = agent_position
+    pose[:3, :3] = R.from_euler('xyz', agent_rotation, degrees=True).as_matrix()
+    return pose
+
+def pose_to_state(pose):
+    agent_position = pose[:3, 3]
+    agent_rotation = R.from_matrix(pose[:3, :3]).as_euler('xyz', degrees=True)
+    state = {
+        **{k : agent_position[i] for i, k in enumerate('xyz')},
+        'rotation' : {k : agent_rotation[i] for i, k in enumerate('xyz')}
+    }
+    return state
+
 class ORBSLAMSensor(Sensor[EnvType, SubTaskType]):
     def __init__(self, rgb_sensor: RGBSensor, depth_sensor: DepthSensor, vocab_file: str, use_slam_viewer: bool, uuid: str = "orbslam", **kwargs: Any):
+        self.rgb_sensor = rgb_sensor
+        self.depth_sensor = depth_sensor
+        self.vocab_file = vocab_file
+        self.use_slam_viewer = use_slam_viewer
         observation_space = self._get_observation_space()
         super().__init__(**prepare_locals_for_super(locals()))
-        self.rgb_sensor, self.depth_sensor = rgb_sensor, depth_sensor
-        self.vocab_file, self.use_slam_viewer = vocab_file, use_slam_viewer
         self.slam_system = None
 
     def _get_observation_space(self):
         raise NotImplementedError()
 
-    def initialize_slam(self, env):
+    def _initialize_slam(self, env):
         raise NotImplementedError()
 
-    def reset(self, agent_state):
-        if self.slam_system is not None:
-            pose = state_to_pose(agent_state)
-            self.slam_system.reset(pose)
+    def _reset(self, agent_state):
+        pose = state_to_pose(agent_state)
+        self.slam_system.reset(pose)
 
-    def stop(self):
+    def _stop(self):
         self.slam_system.shutdown()
 
 
 class ORBSLAMCompassSensorRoboThor(ORBSLAMSensor[RoboThorEnvironment, PointNavTask]):
-
-    def __init__(self, rgb_sensor: RGBSensor, depth_sensor: DepthSensor, vocab_file: str, use_slam_viewer: bool, uuid: str = "target_coordinates_ind", **kwargs: Any):
-        super().__init__(rgb_sensor, depth_sensor, vocab_file, use_slam_viewer, uuid, **kwargs)
 
     def _get_observation_space(self):
         return gym.spaces.Box(
@@ -72,7 +88,7 @@ class ORBSLAMCompassSensorRoboThor(ORBSLAMSensor[RoboThorEnvironment, PointNavTa
             dtype=np.float32,
         )
 
-    def initialize_slam(self, env):
+    def _initialize_slam(self, env):
         settings_file = mkstemp()[1]
         with open(settings_file, 'w') as file:
             file.write('%YAML:1.0')
@@ -87,7 +103,10 @@ class ORBSLAMCompassSensorRoboThor(ORBSLAMSensor[RoboThorEnvironment, PointNavTa
 
     def get_observation(self, env: RoboThorEnvironment, task: Optional[PointNavTask], *args: Any, **kwargs: Any) -> Any:
         if self.slam_system is None:
-            self.slam_system = self.initialize_slam(env)
+            self.slam_system = self._initialize_slam(env)
+
+        if task.num_steps_taken() == 0:
+            self._reset(env.agent_state())
 
         frame = np.uint8(self.rgb_sensor.get_observation(env, task, *args, **kwargs) * 255)
         depth = np.float32(self.depth_sensor.get_observation(env, task, *args, **kwargs)[:, :, 0])
@@ -95,11 +114,10 @@ class ORBSLAMCompassSensorRoboThor(ORBSLAMSensor[RoboThorEnvironment, PointNavTa
 
         pose = self.slam_system.get_world_pose()
         agent_position = pose[:3, 3]
-        agent_rotation = np.rad2deg(matrix_to_euler_angles(pose[:3, :3]))
-        rotation_world_agent = GPSCompassSensorRoboThor.quaternion_from_y_angle(agent_rotation[1])
+        rotation_world_agent = np.quaternion(*R.from_matrix(pose[:3, :3]).as_quat())
         goal_position = np.array([task.task_info["target"][k] for k in 'xyz'])
 
-        goal = GPSCompassSensorRoboThor._compute_pointgoal(GPSCompassSensorRoboThor,
+        goal = GPSCompassSensorRoboThor.compute_pointgoal(
             agent_position, rotation_world_agent, goal_position
         )
         return goal
