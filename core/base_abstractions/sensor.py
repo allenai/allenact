@@ -29,10 +29,8 @@ from utils.misc_utils import prepare_locals_for_super
 from utils.model_utils import Flatten
 from utils.tensor_utils import ScaleBothSides
 from utils.spaces_utils import (
-    unflatten,
     flatten,
     torch_point,
-    numpy_point,
     flatten_space,
 )
 
