@@ -20,7 +20,7 @@ import PIL
 import gym
 import numpy as np
 import torch
-from gym.spaces import Dict as SpaceDict
+from gym.spaces import Dict as SpaceDict, unflatten as gym_unflatten
 from torch import nn
 from torchvision import transforms, models
 
@@ -28,7 +28,7 @@ from core.base_abstractions.misc import EnvType
 from utils.misc_utils import prepare_locals_for_super
 from utils.model_utils import Flatten
 from utils.tensor_utils import ScaleBothSides
-from utils.spaces_utils import flatten
+from utils.spaces_utils import unflatten, flatten, torch_point, numpy_point
 
 if TYPE_CHECKING:
     from core.base_abstractions.task import SubTaskType
@@ -135,7 +135,7 @@ class SensorSuite(Generic[EnvType]):
         }
 
 
-class GeneralExpertActionSensor(Sensor[EnvType, SubTaskType]):
+class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
     def __init__(
         self,
         action_space: gym.Space,
@@ -167,52 +167,22 @@ class GeneralExpertActionSensor(Sensor[EnvType, SubTaskType]):
         # If the task is completed, we needn't (perhaps can't) find the expert
         # action from the (current) terminal state.
         if task.is_done():
-            return None, False
+            return np.array([self.action_space.sample(), False], dtype=np.int64)
+
         action, expert_was_successful = task.query_expert(**self.expert_args)
-        action_flag = np.concatenate(
-            [
-                flatten(self.action_space, action).numpy(),
-                np.asarray(expert_was_successful),
-            ]
+
+        if isinstance(action, int):
+            assert isinstance(self.action_space, gym.spaces.Discrete)
+            unflattened_action = action
+        else:
+            # Assume we receive a gym-flattened numpy action
+            unflattened_action = gym_unflatten(self.action_space, action)
+
+        unflattened_torch = torch_point(
+            self.observation_space, (unflattened_action, expert_was_successful)
         )
-        return action_flag
-
-
-class GeneralExpertActionSensor(Sensor[EnvType, SubTaskType]):
-    def __init__(
-        self,
-        action_space: gym.Space,
-        uuid: str = "expert_action",
-        expert_args: Optional[Dict[str, Any]] = None,
-        **kwargs: Any
-    ) -> None:
-        self.action_space = action_space
-        self.expert_args: Dict[str, Any] = expert_args or {}
-
-        observation_space = self._get_observation_space()
-
-        super().__init__(**prepare_locals_for_super(locals()))
-
-    def _get_observation_space(self) -> gym.spaces.Tuple:
-        """The observation space of the expert action sensor.
-
-        Will equal `gym.spaces.Tuple(gym.spaces.Discrete(num actions in
-        task), gym.spaces.Discrete(2))` where the first entry of the
-        tuple is the expert action index and the second equals 0 if and
-        only if the expert failed to generate a true expert action. The
-        value `num actions in task` should be in `config["nactions"]`
-        """
-        return gym.spaces.Tuple((self.action_space, gym.spaces.Discrete(2)))
-
-    def get_observation(
-        self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
-    ) -> Any:
-        # If the task is completed, we needn't (perhaps can't) find the expert
-        # action from the (current) terminal state.
-        if task.is_done():
-            return None, False
-        action, expert_was_successful = task.query_expert(**self.expert_args)
-        return action, expert_was_successful
+        flattened_torch = flatten(self.observation_space, unflattened_torch)
+        return flattened_torch.cpu().numpy()
 
 
 class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
@@ -223,7 +193,6 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
         expert_args: Optional[Dict[str, Any]] = None,
         **kwargs: Any
     ) -> None:
-        raise NotImplementedError()
         self.nactions = nactions
         self.expert_args: Dict[str, Any] = expert_args or {}
 

@@ -54,7 +54,6 @@ from utils.tensor_utils import (
     detach_recursively,
 )
 from utils.viz_utils import VizSuite
-from utils.spaces_utils import flatten as spaces_flatten
 
 
 class OnPolicyRLEngine(object):
@@ -994,15 +993,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         step_observation: Dict[str, torch.Tensor],
         step_count: int,
     ):
-        raise NotImplementedError()
-        expert_actions = [act[0] for act in step_observation["expert_action"]]
-        expert_masks = [act[1] for act in step_observation["expert_action"]]
-        flattened_expert = spaces_flatten(
-            self.actor_critic.action_space, step_observation["expert_action"]
-        )
-        tf_mask_shape = flattened_expert.shape[:-1] + (1,)
-        expert_actions = flattened_expert[..., :-1]
-        expert_action_exists_mask = flattened_expert[..., -1:]
+        # raise NotImplementedError()
+        tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
+        expert_actions = step_observation["expert_action"][..., :-1]
+        expert_action_exists_mask = step_observation["expert_action"][..., -1:]
 
         assert (
             expert_actions.shape == actions.shape

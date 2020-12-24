@@ -30,41 +30,45 @@ def flatdim(space):
         raise NotImplementedError
 
 
-def flatten(space, x):
+def flatten(space, torch_x):
     """Flatten data points from a space.
     """
     if isinstance(space, Box):
-        return x.view(x.shape[: -len(space.shape)] + (-1,))
+        return torch_x.view(torch_x.shape[: -len(space.shape)] + (-1,))
     elif isinstance(space, Discrete):
         # assume tensor input already contains a dimension for action
-        return x if isinstance(x, torch.Tensor) else torch.tensor(x).view(-1)
+        return (
+            torch_x
+            if isinstance(torch_x, torch.Tensor)
+            else torch.tensor(torch_x).view(-1)
+        )
     elif isinstance(space, Tuple):
         return torch.cat(
-            [flatten(s, x_part) for x_part, s in zip(x, space.spaces)], dim=-1
+            [flatten(s, x_part) for x_part, s in zip(torch_x, space.spaces)], dim=-1
         )
     elif isinstance(space, Dict):
         return torch.cat(
-            [flatten(s, x[key]) for key, s in space.spaces.items()], dim=-1
+            [flatten(s, torch_x[key]) for key, s in space.spaces.items()], dim=-1
         )
     elif isinstance(space, MultiBinary):
-        return x.view(x.shape[: -len(space.shape)] + (-1,))
+        return torch_x.view(torch_x.shape[: -len(space.shape)] + (-1,))
     elif isinstance(space, MultiDiscrete):
-        return x.view(x.shape[: -len(space.shape)] + (-1,))
+        return torch_x.view(torch_x.shape[: -len(space.shape)] + (-1,))
     else:
         raise NotImplementedError
 
 
-def unflatten(space, x):
+def unflatten(space, torch_x):
     """Unflatten a concatenated data points tensor from a space.
     """
     if isinstance(space, Box):
-        return x.view(x.shape[:-1] + space.shape).float()
+        return torch_x.view(torch_x.shape[:-1] + space.shape).float()
     elif isinstance(space, Discrete):
-        res = x.view(x.shape[:-1] + space.shape).long()
+        res = torch_x.view(torch_x.shape[:-1] + space.shape).long()
         return res if len(res.shape) > 0 else res.item()
     elif isinstance(space, Tuple):
         dims = [flatdim(s) for s in space.spaces]
-        list_flattened = torch.split(x, dims, dim=-1)
+        list_flattened = torch.split(torch_x, dims, dim=-1)
         list_unflattened = [
             unflatten(s, flattened)
             for flattened, s in zip(list_flattened, space.spaces)
@@ -72,36 +76,59 @@ def unflatten(space, x):
         return tuple(list_unflattened)
     elif isinstance(space, Dict):
         dims = [flatdim(s) for s in space.spaces.values()]
-        list_flattened = torch.split(x, dims, dim=-1)
+        list_flattened = torch.split(torch_x, dims, dim=-1)
         list_unflattened = [
             (key, unflatten(s, flattened))
             for flattened, (key, s) in zip(list_flattened, space.spaces.items())
         ]
         return OrderedDict(list_unflattened)
     elif isinstance(space, MultiBinary):
-        return x.view(x.shape[:-1] + space.shape).byte()
+        return torch_x.view(torch_x.shape[:-1] + space.shape).byte()
     elif isinstance(space, MultiDiscrete):
-        return x.view(x.shape[:-1] + space.shape).long()
+        return torch_x.view(torch_x.shape[:-1] + space.shape).long()
     else:
         raise NotImplementedError
 
 
-def torch_point(space, x):
+def torch_point(space, np_x):
     """Convert numpy space point into torch.
     """
     if isinstance(space, Box):
-        return torch.from_numpy(x)
+        return torch.from_numpy(np_x)
     elif isinstance(space, Discrete):
-        return x
+        return np_x
     elif isinstance(space, Tuple):
-        return tuple([torch_point(s, x_part) for x_part, s in zip(x, space.spaces)])
+        return tuple([torch_point(s, x_part) for x_part, s in zip(np_x, space.spaces)])
     elif isinstance(space, Dict):
         return OrderedDict(
-            [(key, torch_point(s, x[key])) for key, s in space.spaces.items()]
+            [(key, torch_point(s, np_x[key])) for key, s in space.spaces.items()]
         )
     elif isinstance(space, MultiBinary):
-        return torch.from_numpy(x)
+        return torch.from_numpy(np_x)
     elif isinstance(space, MultiDiscrete):
-        return torch.from_numpy(x)
+        return torch.from_numpy(np_x)
+    else:
+        raise NotImplementedError
+
+
+def numpy_point(space, torch_x):
+    """Convert numpy space point into torch.
+    """
+    if isinstance(space, Box):
+        return torch_x.cpu().numpy()
+    elif isinstance(space, Discrete):
+        return torch_x
+    elif isinstance(space, Tuple):
+        return tuple(
+            [numpy_point(s, x_part) for x_part, s in zip(torch_x, space.spaces)]
+        )
+    elif isinstance(space, Dict):
+        return OrderedDict(
+            [(key, numpy_point(s, torch_x[key])) for key, s in space.spaces.items()]
+        )
+    elif isinstance(space, MultiBinary):
+        return torch_x.cpu().numpy()
+    elif isinstance(space, MultiDiscrete):
+        return torch_x.cpu().numpy()
     else:
         raise NotImplementedError

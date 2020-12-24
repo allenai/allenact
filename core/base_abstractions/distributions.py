@@ -37,7 +37,9 @@ class CategoricalDistr(Distr):
         return res.view(*res.shape[:2], -1)  # return [steps, sampler, flattened]
 
     def log_probs(self, actions: torch.LongTensor) -> torch.FloatTensor:
-        res = super().log_prob(actions.squeeze(-1))
+        res = super().log_prob(
+            actions.squeeze(-1)
+        )  # if single actor, actions have a singleton action dim
         return res.view(*res.shape[:2], -1)  # return [steps, sampler, flattened]
 
     @lazy_property
