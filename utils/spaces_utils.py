@@ -132,3 +132,27 @@ def numpy_point(space, torch_x):
         return torch_x.cpu().numpy()
     else:
         raise NotImplementedError
+
+
+def flatten_space(space):
+    if isinstance(space, Box):
+        return Box(space.low.flatten(), space.high.flatten())
+    if isinstance(space, Discrete):
+        return Box(low=0, high=space.n, shape=(1,))
+    if isinstance(space, Tuple):
+        space = [flatten_space(s) for s in space.spaces]
+        return Box(
+            low=np.concatenate([s.low for s in space]),
+            high=np.concatenate([s.high for s in space]),
+        )
+    if isinstance(space, Dict):
+        space = [flatten_space(s) for s in space.spaces.values()]
+        return Box(
+            low=np.concatenate([s.low for s in space]),
+            high=np.concatenate([s.high for s in space]),
+        )
+    if isinstance(space, MultiBinary):
+        return Box(low=0, high=1, shape=(space.n,))
+    if isinstance(space, MultiDiscrete):
+        return Box(low=np.zeros_like(space.nvec), high=space.nvec,)
+    raise NotImplementedError

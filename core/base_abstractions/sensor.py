@@ -28,7 +28,13 @@ from core.base_abstractions.misc import EnvType
 from utils.misc_utils import prepare_locals_for_super
 from utils.model_utils import Flatten
 from utils.tensor_utils import ScaleBothSides
-from utils.spaces_utils import unflatten, flatten, torch_point, numpy_point
+from utils.spaces_utils import (
+    unflatten,
+    flatten,
+    torch_point,
+    numpy_point,
+    flatten_space,
+)
 
 if TYPE_CHECKING:
     from core.base_abstractions.task import SubTaskType
@@ -159,7 +165,9 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         only if the expert failed to generate a true expert action. The
         value `num actions in task` should be in `config["nactions"]`
         """
-        return gym.spaces.Tuple((self.action_space, gym.spaces.Discrete(2)))
+        return flatten_space(
+            gym.spaces.Tuple((self.action_space, gym.spaces.Discrete(2)))
+        )
 
     def get_observation(
         self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
@@ -178,9 +186,14 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
             # Assume we receive a gym-flattened numpy action
             unflattened_action = gym_unflatten(self.action_space, action)
 
-        unflattened_torch = torch_point(
-            self.observation_space, (unflattened_action, expert_was_successful)
+        unflattened_space = gym.spaces.Tuple(
+            (self.action_space, gym.spaces.Discrete(2))
         )
+
+        unflattened_torch = torch_point(
+            unflattened_space, (unflattened_action, expert_was_successful)
+        )
+
         flattened_torch = flatten(self.observation_space, unflattened_torch)
         return flattened_torch.cpu().numpy()
 
