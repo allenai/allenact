@@ -69,9 +69,10 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
         )
         super().__init__(**prepare_locals_for_super(locals()))
 
-    def _compute_pointgoal(self, source_position, source_rotation, goal_position):
+    @staticmethod
+    def compute_pointgoal(source_position, source_rotation, goal_position):
         direction_vector = goal_position - source_position
-        direction_vector_agent = self.quaternion_rotate_vector(
+        direction_vector_agent = GPSCompassSensorRoboThor.quaternion_rotate_vector(
             source_rotation.inverse(), direction_vector
         )
 
