@@ -135,7 +135,7 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
 
         goal_position = np.array([task.task_info["target"][k] for k in ["x", "y", "z"]])
 
-        return self._compute_pointgoal(
+        return self.compute_pointgoal(
             agent_position, rotation_world_agent, goal_position
         )
 
