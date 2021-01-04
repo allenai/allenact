@@ -103,8 +103,6 @@ class RolloutStorage(object):
             self.rewards = self.rewards.to(device)
             self.value_preds = self.value_preds.to(device)
             self.action_log_probs = self.action_log_probs.to(device)
-
-        if self.returns is not None:
             self.returns = self.returns.to(device)
 
         self.device = device
