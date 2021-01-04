@@ -150,6 +150,9 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         self.action_space = action_space
         self.expert_args: Dict[str, Any] = expert_args or {}
 
+        self.unflattened_observation_space = gym.spaces.Tuple(
+            (self.action_space, gym.spaces.Discrete(2))
+        )
         observation_space = self._get_observation_space()
 
         super().__init__(**prepare_locals_for_super(locals()))
@@ -163,9 +166,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         only if the expert failed to generate a true expert action. The
         value `num actions in task` should be in `config["nactions"]`
         """
-        return flatten_space(
-            gym.spaces.Tuple((self.action_space, gym.spaces.Discrete(2)))
-        )
+        return flatten_space(self.unflattened_observation_space)
 
     def get_observation(
         self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
@@ -173,7 +174,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         # If the task is completed, we needn't (perhaps can't) find the expert
         # action from the (current) terminal state.
         if task.is_done():
-            return np.array([self.action_space.sample(), False], dtype=np.int64)
+            return np.array([self.action_space.sample(), False])
 
         action, expert_was_successful = task.query_expert(**self.expert_args)
 
@@ -184,15 +185,12 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
             # Assume we receive a gym-flattened numpy action
             unflattened_action = gym_unflatten(self.action_space, action)
 
-        unflattened_space = gym.spaces.Tuple(
-            (self.action_space, gym.spaces.Discrete(2))
-        )
-
         unflattened_torch = torch_point(
-            unflattened_space, (unflattened_action, expert_was_successful)
+            self.unflattened_observation_space,
+            (unflattened_action, expert_was_successful),
         )
 
-        flattened_torch = flatten(unflattened_space, unflattened_torch)
+        flattened_torch = flatten(self.unflattened_observation_space, unflattened_torch)
         return flattened_torch.cpu().numpy()
 
 
