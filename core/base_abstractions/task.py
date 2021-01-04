@@ -17,7 +17,6 @@ import torch
 
 from core.base_abstractions.misc import RLStepResult
 from core.base_abstractions.sensor import Sensor, SensorSuite
-from utils.spaces_utils import flatten
 
 EnvType = TypeVar("EnvType")
 
