@@ -48,7 +48,9 @@ class TestSpaces(object):
         assert self.same(back, gsample)
 
     def test_flatten(self):
+        # We flatten Discrete to 1 value
         assert asp.flatdim(self.space) == 24
+        # gym flattens Discrete to one-hot
         assert gsp.flatdim(self.space) == 34
 
         asample = asp.torch_point(self.space, self.space.sample())
@@ -58,23 +60,26 @@ class TestSpaces(object):
 
         flattened_space = asp.flatten_space(self.space)
         assert flattened_space.shape == (24,)
+        # The maximum comes from Discrete(11)
         assert flattened_space.high.max() == 11.0
         assert flattened_space.low.min() == -10.0
 
         gym_flattened_space = gsp.flatten_space(self.space)
         assert gym_flattened_space.shape == (34,)
+        # The maximum comes from Box(-10, 10, (3, 4))
         assert gym_flattened_space.high.max() == 10.0
         assert gym_flattened_space.low.min() == -10.0
 
     def test_batched(self):
         samples = [self.space.sample() for _ in range(10)]
-        fsamples = [
+        flattened = [
             asp.flatten(self.space, asp.torch_point(self.space, sample))
             for sample in samples
         ]
-        stacked = torch.stack(fsamples, dim=0)
+        stacked = torch.stack(flattened, dim=0)
         unflattened = asp.unflatten(self.space, stacked)
         for bidx, refsample in enumerate(samples):
+            # Compare each torch-ified sample to the corresponding unflattened from the stack
             assert self.same(asp.torch_point(self.space, refsample), unflattened, bidx)
 
 
