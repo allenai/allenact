@@ -82,6 +82,13 @@ class TestSpaces(object):
             # Compare each torch-ified sample to the corresponding unflattened from the stack
             assert self.same(asp.torch_point(self.space, refsample), unflattened, bidx)
 
+        # flatten assumes discrete spaces contain an additional dimension
+        # for "action" after "step" when passed as tensors
+        unflattened["second"][0]["third"] = unflattened["second"][0]["third"].unsqueeze(
+            -1
+        )
+        assert self.same(asp.flatten(self.space, unflattened), stacked)
+
 
 if __name__ == "__main__":
     TestSpaces().test_conversion()  # type:ignore
