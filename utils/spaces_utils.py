@@ -112,7 +112,7 @@ def torch_point(space, np_x):
 
 
 def numpy_point(space, torch_x):
-    """Convert numpy space point into torch.
+    """Convert torch space point into numpy.
     """
     if isinstance(space, Box):
         return torch_x.cpu().numpy()
