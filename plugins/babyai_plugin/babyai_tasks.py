@@ -8,6 +8,7 @@ import gym
 import numpy as np
 from gym.utils import seeding
 from gym_minigrid.minigrid import MiniGridEnv
+import torch
 
 from core.base_abstractions.misc import RLStepResult
 from core.base_abstractions.sensor import Sensor, SensorSuite
@@ -48,9 +49,10 @@ class BabyAITask(Task[MiniGridEnv]):
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         return self.env.render(mode=mode)
 
-    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
-        assert isinstance(action, int)
-        action = cast(int, action)
+    def _step(self, action: torch.Tensor) -> RLStepResult:
+        # assert isinstance(action, int)
+        # action = cast(int, action)
+        action = action.item()
 
         minigrid_obs, reward, done, info = self.env.step(action=action)
         self._last_action = action
