@@ -33,6 +33,7 @@ class TestSpaces(object):
                     return False
             return True
         else:
+            # np.array_equal also works for torch tensors and scalars
             if bidx is None:
                 return np.array_equal(a, b)
             else:
