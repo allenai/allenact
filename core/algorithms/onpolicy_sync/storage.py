@@ -63,7 +63,7 @@ class RolloutStorage(object):
             str, Union[int, torch.Tensor, Dict]
         ] = defaultdict(dict)
 
-        self.device = "cpu"
+        self.device = torch.device("cpu")
 
     def create_memory(
         self, spec: Optional[FullMemorySpecType], num_samplers: int,
@@ -186,13 +186,10 @@ class RolloutStorage(object):
                 # current_data does not have a step dimension
                 storage[flatten_name][0][time_step].copy_(current_data)
 
-    def create_tensor_storage(self, num_steps: int, step: torch.Tensor) -> torch.Tensor:
-        # print("CREATE", step.shape)
-        return (
-            torch.zeros_like(step)
-            .repeat(num_steps, *(1 for _ in range(len(step.shape[1:]))),)
-            .to(self.device)
-        )
+    def create_tensor_storage(
+        self, num_steps: int, template: torch.Tensor
+    ) -> torch.Tensor:
+        return torch.cat([torch.zeros_like(template).to(self.device)] * num_steps)
 
     def insert(
         self,
@@ -213,6 +210,11 @@ class RolloutStorage(object):
         self.masks[self.step + 1 : self.step + 2].copy_(masks)  # type:ignore
 
         if self.rewards is None:
+            # We delay the instantiation of storage for `rewards`, `value_preds`, `action_log_probs`, and `returns`
+            # as we do not, a priori, know what shape these will be. For instance, if we are in a multi-agent setting
+            # then there may be many rewards (one for each agent). When flattening `rewards`, `value_preds`,
+            # `action_log_probs` and `returns` this is not strictly necessary.
+
             self.rewards = self.create_tensor_storage(self.num_steps, rewards)
             self.value_preds = self.create_tensor_storage(
                 self.num_steps + 1, value_preds
@@ -248,6 +250,10 @@ class RolloutStorage(object):
             self.returns = self.returns[:, keep_list]
 
     def narrow(self):
+        """
+        This function is used by the training engine (in decentralized distributed settings) to temporarily narrow the
+        step dimension in the storage. The reverse operation, `unnarrow`, is automatically called by `after_update`.
+        """
         assert len(self.unnarrow_data) == 0, "attempting to narrow narrowed rollouts"
 
         if self.step == 0:  # we're actually done
@@ -265,25 +271,18 @@ class RolloutStorage(object):
                     storage.sampler_dim(key),
                 )
 
-        for name in ["prev_actions", "value_preds", "returns", "masks"]:
+        to_narrow_to_step = ["actions", "action_log_probs", "rewards"]
+        to_narrow_to_step_plus_1 = ["prev_actions", "value_preds", "returns", "masks"]
+        for name in to_narrow_to_step + to_narrow_to_step_plus_1:
             if getattr(self, name) is not None:
                 self.unnarrow_data[name] = getattr(self, name)
                 setattr(
                     self,
                     name,
                     self.unnarrow_data[name].narrow(
-                        dimension=0, start=0, length=self.step + 1
-                    ),
-                )
-
-        for name in ["actions", "action_log_probs", "rewards"]:
-            if getattr(self, name) is not None:
-                self.unnarrow_data[name] = getattr(self, name)
-                setattr(
-                    self,
-                    name,
-                    self.unnarrow_data[name].narrow(
-                        dimension=0, start=0, length=self.step
+                        dimension=0,
+                        start=0,
+                        length=self.step + (name in to_narrow_to_step_plus_1),
                     ),
                 )
 
@@ -344,9 +343,10 @@ class RolloutStorage(object):
     def compute_returns(
         self, next_value: torch.Tensor, use_gae: bool, gamma: float, tau: float
     ):
-        mask_step_shape = self.masks.shape[1:] + (1,) * (
+        reshaped_mask_shape = self.masks.shape + (1,) * (
             len(self.value_preds.shape) - len(self.masks.shape)
         )
+        reshaped_mask = self.masks.view(*reshaped_mask_shape)
 
         if use_gae:
             self.value_preds[-1] = next_value
@@ -354,23 +354,16 @@ class RolloutStorage(object):
             for step in reversed(range(self.rewards.shape[0])):
                 delta = (
                     self.rewards[step]
-                    + gamma
-                    * self.value_preds[step + 1]
-                    * self.masks[step + 1].view(mask_step_shape)
+                    + gamma * self.value_preds[step + 1] * reshaped_mask[step + 1]
                     - self.value_preds[step]
                 )
-                gae = (
-                    delta
-                    + gamma * tau * self.masks[step + 1].view(mask_step_shape) * gae
-                )  # type:ignore
+                gae = delta + gamma * tau * reshaped_mask[step + 1] * gae  # type:ignore
                 self.returns[step] = gae + self.value_preds[step]
         else:
             self.returns[-1] = next_value
             for step in reversed(range(self.rewards.shape[0])):
                 self.returns[step] = (
-                    self.returns[step + 1]
-                    * gamma
-                    * self.masks[step + 1].view(mask_step_shape)
+                    self.returns[step + 1] * gamma * reshaped_mask[step + 1]
                     + self.rewards[step]
                 )
 

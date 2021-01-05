@@ -382,7 +382,8 @@ class OnPolicyRLEngine(object):
                 rollouts.masks[rollouts.step : rollouts.step + 1],
             )
 
-        # Assume distributions outputs provide flattened actions
+        # Assume distributions outputs provide flattened actions ([step, samplers, -1])
+        # rather than an arbitrary action sample (e.g. an action OrderedDict)
         actions = (
             actor_critic_output.distributions.sample()
             if not self.deterministic_agents
@@ -993,7 +994,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         step_observation: Dict[str, torch.Tensor],
         step_count: int,
     ):
-        # raise NotImplementedError()
+        # Recall that the last dimension of the expert action tensor has its last element equal to
+        # 0 if the expert action could not be computed and otherwise equals 1.
         tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
         expert_actions = step_observation["expert_action"][..., :-1]
         expert_action_exists_mask = step_observation["expert_action"][..., -1:]

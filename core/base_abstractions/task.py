@@ -103,7 +103,7 @@ class Task(Generic[EnvType]):
         one."""
         self._num_steps_taken += 1
 
-    def step(self, action: Union[int, torch.Tensor]) -> RLStepResult:
+    def step(self, action: Any) -> RLStepResult:
         """Take an action in the environment (one per agent).
 
         Takes the action in the environment corresponding to
@@ -142,7 +142,7 @@ class Task(Generic[EnvType]):
         return sr.clone({"done": sr.done or self.is_done()})
 
     @abstractmethod
-    def _step(self, action: torch.Tensor) -> RLStepResult:
+    def _step(self, action: Any) -> RLStepResult:
         """Helper function called by `step` to take a step by each agent in the
         environment.
 

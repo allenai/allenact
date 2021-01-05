@@ -100,7 +100,7 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
         """
         raise NotImplementedError()
 
-    def unflatten(
+    def unflatten_actions(
         self, flattened_actions: torch.Tensor
     ) -> Union[Tuple, Dict, torch.Tensor, int, float]:
         """Unflattens a flattened actions tensor, e.g. the prev_actions tensor passed to forward.
