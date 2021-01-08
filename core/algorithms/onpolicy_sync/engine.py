@@ -54,6 +54,7 @@ from utils.tensor_utils import (
     detach_recursively,
 )
 from utils.viz_utils import VizSuite
+from utils import spaces_utils as su
 
 
 class OnPolicyRLEngine(object):
@@ -375,15 +376,15 @@ class OnPolicyRLEngine(object):
         with torch.no_grad():
             step_observation = rollouts.pick_observation_step(rollouts.step)
             memory = rollouts.pick_memory_step(rollouts.step)
+            prev_actions = rollouts.pick_prev_actions_step(rollouts.step)
             actor_critic_output, memory = self.actor_critic(
                 step_observation,
                 memory,
-                rollouts.prev_actions[rollouts.step : rollouts.step + 1],
+                prev_actions,
                 rollouts.masks[rollouts.step : rollouts.step + 1],
             )
 
-        # Assume distributions outputs provide flattened actions ([step, samplers, -1])
-        # rather than an arbitrary action sample (e.g. an action OrderedDict)
+        # Assume actions do not contain a step dimension
         actions = (
             actor_critic_output.distributions.sample()
             if not self.deterministic_agents
@@ -399,9 +400,9 @@ class OnPolicyRLEngine(object):
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None) -> int:
         actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
 
-        # Squeeze step dimension and send a flattened actions Tensor for each sampler
+        # Convert actions into list of actions and send them
         outputs: List[RLStepResult] = self.vector_tasks.step(
-            [a for a in actions.squeeze(0)]
+            su.action_list(self.actor_critic.action_space, actions)
         )
 
         # Save after task completion metrics
@@ -415,23 +416,16 @@ class OnPolicyRLEngine(object):
         rewards: Union[List, torch.Tensor]
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
 
-        if isinstance(rewards[0], torch.Tensor):
-            rewards = torch.stack(rewards, dim=0)
-        else:
-            get_logger().debug("Using deprecated rewards format")
-            rewards = torch.tensor(
-                rewards, dtype=torch.float, device=self.device,  # type:ignore
-            )
+        rewards = torch.tensor(
+            rewards, dtype=torch.float, device=self.device,  # type:ignore
+        )
 
-            # We want rewards to have dimensions [step, sampler, reward]
-            if len(rewards.shape) == 1:
-                # Rewards are of shape [sampler,]
-                rewards = rewards.view(1, -1, 1)
-            elif len(rewards.shape) == 2:
-                # Rewards are of shape [sampler, agent]
-                rewards = rewards.unsqueeze(0)
-            else:
-                raise NotImplementedError
+        # We want rewards to have dimensions [sampler, reward]
+        if len(rewards.shape) == 1:
+            # Rewards are of shape [sampler,]
+            rewards = rewards.unsqueeze(-1)
+        else:
+            raise NotImplementedError()
 
         # If done then clean the history of observations.
         masks = torch.tensor(
@@ -439,8 +433,8 @@ class OnPolicyRLEngine(object):
             dtype=torch.float32,
             device=self.device,  # type:ignore
         ).view(
-            1, -1, 1
-        )  # entries along sampler dimension
+            -1, 1
+        )  # [sampler, 1]
 
         npaused, keep, batch = self.remove_paused(observations)
 
@@ -452,13 +446,11 @@ class OnPolicyRLEngine(object):
             if len(keep) > 0
             else batch,
             memory=self._active_memory(memory, keep),
-            actions=actions[:, keep],
-            action_log_probs=actor_critic_output.distributions.log_probs(actions)[
-                :, keep
-            ],
-            value_preds=actor_critic_output.values[:, keep],
-            rewards=rewards[:, keep],
-            masks=masks[:, keep],
+            actions=su.flatten(self.actor_critic.action_space, actions)[keep],
+            action_log_probs=actor_critic_output.distributions.log_probs(actions)[keep],
+            value_preds=actor_critic_output.values.squeeze(0)[keep],  # squeeze step dim
+            rewards=rewards[keep],
+            masks=masks[keep],
         )
 
         # TODO we always miss tensors for the last action in the last episode of each worker
@@ -750,9 +742,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 actions, enforce_info = self.apply_teacher_forcing(
                     actions, step_observation, approx_steps
                 )
-                num_enforced = (
-                    enforce_info["teacher_forcing_mask"].sum().item()
-                    / actions.nelement()
+                num_enforced = enforce_info["teacher_forcing_mask"].sum().item() / len(
+                    actions
                 )
             else:
                 num_enforced = 0
@@ -767,7 +758,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 ("teacher_package", teacher_force_info, actions.nelement())
             )
 
-        self.step_count += actions.nelement()
+        self.step_count += len(actions)  # increment by the number of samplers
 
         return actions, actor_critic_output, memory, step_observation
 
@@ -989,16 +980,15 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         return data_iterator
 
     def apply_teacher_forcing(
-        self,
-        actions: torch.Tensor,
-        step_observation: Dict[str, torch.Tensor],
-        step_count: int,
+        self, actions: Any, step_observation: Dict[str, torch.Tensor], step_count: int,
     ):
         # Recall that the last dimension of the expert action tensor has its last element equal to
         # 0 if the expert action could not be computed and otherwise equals 1.
         tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
         expert_actions = step_observation["expert_action"][..., :-1]
         expert_action_exists_mask = step_observation["expert_action"][..., -1:]
+
+        actions = su.flatten(self.actor_critic.action_space, actions)
 
         assert (
             expert_actions.shape == actions.shape
@@ -1017,10 +1007,16 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             .to(self.device)
         ) * expert_action_exists_mask
 
-        actions = torch.where(teacher_forcing_mask.byte(), expert_actions, actions)
+        extended_shape = teacher_forcing_mask.shape + (1,) * (
+            actions.shape - teacher_forcing_mask.shape
+        )
+
+        actions = torch.where(
+            teacher_forcing_mask.byte().view(extended_shape), expert_actions, actions
+        )
 
         return (
-            actions,
+            su.unflatten(self.actor_critic.action_space, actions),
             {"teacher_forcing_mask": teacher_forcing_mask},
         )
 

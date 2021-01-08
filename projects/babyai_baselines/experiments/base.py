@@ -226,7 +226,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig, ABC):
             2 ** 31 - 1 + self.TEST_SEED_OFFSET + process_ind + total_processes * i
             for i in range(max_tasks)
         ]
-        print(max_tasks, process_ind, total_processes, task_seeds_list)
+        # print(max_tasks, process_ind, total_processes, task_seeds_list)
 
         assert len(task_seeds_list) == 0 or (
             min(task_seeds_list) >= 0 and max(task_seeds_list) <= 2 ** 32 - 1

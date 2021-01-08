@@ -609,10 +609,10 @@ class LinearActorCritic(ActorCriticModel[CategoricalDistr]):
         # noinspection PyArgumentList
         return (
             ActorCriticOutput(
+                # ensure [steps, samplers, ...]
                 distributions=CategoricalDistr(logits=out[..., :-1]),
-                values=cast(
-                    torch.FloatTensor, out[..., -1:].view(*out.shape[:2], -1)
-                ),  # ensure [steps, samplers, flattened]
+                # ensure [steps, samplers, flattened]
+                values=cast(torch.FloatTensor, out[..., -1:].view(*out.shape[:2], -1)),
                 extras={},
             ),
             None,

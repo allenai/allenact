@@ -20,24 +20,23 @@ import PIL
 import gym
 import numpy as np
 import torch
-from gym.spaces import Dict as SpaceDict, unflatten as gym_unflatten
+
 from torch import nn
 from torchvision import transforms, models
+from gym import spaces as gyms
 
 from core.base_abstractions.misc import EnvType
 from utils.misc_utils import prepare_locals_for_super
 from utils.model_utils import Flatten
 from utils.tensor_utils import ScaleBothSides
-from utils.spaces_utils import (
-    flatten,
-    torch_point,
-    flatten_space,
-)
+from utils import spaces_utils as su
 
 if TYPE_CHECKING:
     from core.base_abstractions.task import SubTaskType
 else:
     SubTaskType = TypeVar("SubTaskType", bound="Task")
+
+SpaceDict = gyms.Dict
 
 
 class Sensor(Generic[EnvType, SubTaskType]):
@@ -166,7 +165,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         only if the expert failed to generate a true expert action. The
         value `num actions in task` should be in `config["nactions"]`
         """
-        return flatten_space(self.unflattened_observation_space)
+        return su.flatten_space(self.unflattened_observation_space)
 
     def get_observation(
         self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
@@ -183,14 +182,16 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
             unflattened_action = action
         else:
             # Assume we receive a gym-flattened numpy action
-            unflattened_action = gym_unflatten(self.action_space, action)
+            unflattened_action = gyms.unflatten(self.action_space, action)
 
-        unflattened_torch = torch_point(
+        unflattened_torch = su.torch_point(
             self.unflattened_observation_space,
             (unflattened_action, expert_was_successful),
         )
 
-        flattened_torch = flatten(self.unflattened_observation_space, unflattened_torch)
+        flattened_torch = su.flatten(
+            self.unflattened_observation_space, unflattened_torch
+        )
         return flattened_torch.cpu().numpy()
 
 

@@ -494,13 +494,10 @@ class NavToPartnerTask(Task[RoboThorEnvironment]):
     def close(self) -> None:
         self.env.stop()
 
-    def _step(self, action: torch.Tensor) -> RLStepResult:
-        # assert isinstance(action, Sequence)
-        # action = action.cpu().numpy().tolist()
-        # action = cast(List, action)
-
-        action_str1 = self.action_names()[action[0].item()]
-        action_str2 = self.action_names()[action[1].item()]
+    def _step(self, action: Tuple[int, int]) -> RLStepResult:
+        assert isinstance(action, Tuple)
+        action_str1 = self.action_names()[action[0]]
+        action_str2 = self.action_names()[action[1]]
 
         self.env.step({"action": action_str1, "agentId": 0})
         self.last_action_success1 = self.env.last_action_success
@@ -539,14 +536,14 @@ class NavToPartnerTask(Task[RoboThorEnvironment]):
         elif mode == "depth":
             return tile_images(self.env.current_depths)
 
-    def judge(self) -> List[float]:
+    def judge(self) -> float:
         """Judge the last event."""
         reward = self.reward_configs["step_penalty"]
 
         if self.reached_terminal_state():
             reward += self.reward_configs["success_reward"]
 
-        return [reward] * 2  # same reward for both agents without shaping
+        return reward  # reward shared by both agents (no shaping)
 
     def metrics(self) -> Dict[str, Any]:
         if not self.is_done():

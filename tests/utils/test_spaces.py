@@ -1,21 +1,26 @@
 from typing import Tuple
 from collections import OrderedDict
+import warnings
 
-from gym import spaces as gsp
 import numpy as np
 import torch
+from gym import spaces as gyms
 
-from utils import spaces_utils as asp
+from utils import spaces_utils as su
 
 
 class TestSpaces(object):
-    space = gsp.Dict(
+    space = gyms.Dict(
         {
-            "first": gsp.Tuple(
-                [gsp.Box(-10, 10, (3, 4)), gsp.MultiDiscrete([2, 3, 4]),]
+            "first": gyms.Tuple(
+                [
+                    gyms.Box(-10, 10, (3, 4)),
+                    gyms.MultiDiscrete([2, 3, 4]),
+                    gyms.Box(-1, 1, ()),
+                ]
             ),
-            "second": gsp.Tuple(
-                [gsp.Dict({"third": gsp.Discrete(11)}), gsp.MultiBinary(8),]
+            "second": gyms.Tuple(
+                [gyms.Dict({"third": gyms.Discrete(11)}), gyms.MultiBinary(8),]
             ),
         }
     )
@@ -42,56 +47,90 @@ class TestSpaces(object):
     def test_conversion(self):
         gsample = self.space.sample()
 
-        asample = asp.torch_point(self.space, gsample)
+        asample = su.torch_point(self.space, gsample)
 
-        back = asp.numpy_point(self.space, asample)
+        back = su.numpy_point(self.space, asample)
 
         assert self.same(back, gsample)
 
     def test_flatten(self):
         # We flatten Discrete to 1 value
-        assert asp.flatdim(self.space) == 24
+        assert su.flatdim(self.space) == 25
         # gym flattens Discrete to one-hot
-        assert gsp.flatdim(self.space) == 34
+        assert gyms.flatdim(self.space) == 35
 
-        asample = asp.torch_point(self.space, self.space.sample())
-        flattened = asp.flatten(self.space, asample)
-        unflattened = asp.unflatten(self.space, flattened)
+        asample = su.torch_point(self.space, self.space.sample())
+        flattened = su.flatten(self.space, asample)
+        unflattened = su.unflatten(self.space, flattened)
         assert self.same(asample, unflattened)
 
-        flattened_space = asp.flatten_space(self.space)
-        assert flattened_space.shape == (24,)
-        # The maximum comes from Discrete(11)
-        assert flattened_space.high.max() == 11.0
-        assert flattened_space.low.min() == -10.0
+        # suppress `UserWarning: WARN: Box bound precision lowered by casting to float32`
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
 
-        gym_flattened_space = gsp.flatten_space(self.space)
-        assert gym_flattened_space.shape == (34,)
-        # The maximum comes from Box(-10, 10, (3, 4))
-        assert gym_flattened_space.high.max() == 10.0
-        assert gym_flattened_space.low.min() == -10.0
+            flattened_space = su.flatten_space(self.space)
+            assert flattened_space.shape == (25,)
+            # The maximum comes from Discrete(11)
+            assert flattened_space.high.max() == 11.0
+            assert flattened_space.low.min() == -10.0
+
+            gym_flattened_space = gyms.flatten_space(self.space)
+            assert gym_flattened_space.shape == (35,)
+            # The maximum comes from Box(-10, 10, (3, 4))
+            assert gym_flattened_space.high.max() == 10.0
+            assert gym_flattened_space.low.min() == -10.0
 
     def test_batched(self):
         samples = [self.space.sample() for _ in range(10)]
         flattened = [
-            asp.flatten(self.space, asp.torch_point(self.space, sample))
+            su.flatten(self.space, su.torch_point(self.space, sample))
             for sample in samples
         ]
         stacked = torch.stack(flattened, dim=0)
-        unflattened = asp.unflatten(self.space, stacked)
+        unflattened = su.unflatten(self.space, stacked)
         for bidx, refsample in enumerate(samples):
             # Compare each torch-ified sample to the corresponding unflattened from the stack
-            assert self.same(asp.torch_point(self.space, refsample), unflattened, bidx)
+            assert self.same(su.torch_point(self.space, refsample), unflattened, bidx)
 
-        # flatten assumes discrete spaces contain an additional dimension
-        # for "action" after "step" when passed as tensors
-        unflattened["second"][0]["third"] = unflattened["second"][0]["third"].unsqueeze(
-            -1
+        assert self.same(su.flatten(self.space, unflattened), stacked)
+
+    def test_log_prob_space(self):
+        lp_space = gyms.Dict(
+            {
+                "first": gyms.Tuple(
+                    [
+                        gyms.Box(-np.inf, np.inf, (3, 4)),
+                        gyms.Box(-np.inf, 0, (3,)),
+                        gyms.Box(-np.inf, np.inf, ()),
+                    ]
+                ),
+                "second": gyms.Tuple(
+                    [
+                        gyms.Dict({"third": gyms.Box(-np.inf, 0, ())}),
+                        gyms.Box(-np.inf, 0, (8,)),
+                    ]
+                ),
+            }
         )
-        assert self.same(asp.flatten(self.space, unflattened), stacked)
+
+        lp_auto = su.log_prob_space(self.space)
+
+        lp_sample = su.torch_point(lp_space, lp_space.sample())
+        auto_sample = su.torch_point(lp_auto, lp_auto.sample())
+
+        for sample in [lp_sample, auto_sample]:
+            lp_flatten = su.flatten(lp_space, sample)
+            auto_flatten = su.flatten(lp_auto, sample)
+
+            assert np.array_equal(lp_flatten, auto_flatten)
+
+            assert self.same(
+                su.unflatten(lp_auto, lp_flatten), su.unflatten(lp_space, auto_flatten),
+            )
 
 
 if __name__ == "__main__":
     TestSpaces().test_conversion()  # type:ignore
     TestSpaces().test_flatten()  # type:ignore
     TestSpaces().test_batched()  # type:ignore
+    TestSpaces().test_log_prob_space()  # type:ignore

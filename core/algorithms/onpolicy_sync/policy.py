@@ -4,7 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
-from typing import TypeVar, Generic, Tuple, Optional, Union, Dict, cast, Any
+from typing import TypeVar, Generic, Tuple, Optional, Union, Dict, List, Any
+from collections import OrderedDict
 
 import gym
 import torch
@@ -13,7 +14,6 @@ from torch import nn
 
 from core.base_abstractions.distributions import CategoricalDistr
 from core.base_abstractions.misc import ActorCriticOutput, Memory
-from utils.spaces_utils import unflatten as spaces_unflatten
 
 DistributionType = TypeVar("DistributionType")
 
@@ -23,7 +23,7 @@ MemorySpecType = Tuple[MemoryShapeType, torch.dtype]
 FullMemorySpecType = Dict[str, MemorySpecType]
 
 ObservationType = Dict[str, Union[torch.Tensor, Dict[str, Any]]]
-ActionType = torch.Tensor
+ActionType = Union[torch.Tensor, OrderedDict, Tuple]
 
 
 class ActorCriticModel(Generic[DistributionType], nn.Module):
@@ -48,6 +48,7 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
         super().__init__()
         self.action_space = action_space
         self.observation_space = observation_space
+        self.memory_spec: Optional[List[Optional[FullMemorySpecType]]] = None
 
     @property
     def recurrent_memory_specification(self) -> Optional[FullMemorySpecType]:
@@ -58,22 +59,25 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
 
         The memory specification from `_recurrent_memory_shape`.
         """
-        spec = self._recurrent_memory_specification()
+        if self.memory_spec is None:
+            self.memory_spec = [self._recurrent_memory_specification()]
 
-        if spec is None:
-            return spec
+            spec = self.memory_spec[0]
 
-        for key in spec:
-            dims, _ = spec[key]
-            dim_names = [d[0] for d in dims]
+            if spec is None:
+                return None
 
-            assert (
-                "step" not in dim_names
-            ), "`step` is automatically added and cannot be reused"
+            for key in spec:
+                dims, _ = spec[key]
+                dim_names = [d[0] for d in dims]
 
-            assert "sampler" in dim_names, "`sampler` dim must be defined"
+                assert (
+                    "step" not in dim_names
+                ), "`step` is automatically added and cannot be reused"
 
-        return spec
+                assert "sampler" in dim_names, "`sampler` dim must be defined"
+
+        return self.memory_spec[0]
 
     @abc.abstractmethod
     def _recurrent_memory_specification(self) -> Optional[FullMemorySpecType]:
@@ -100,23 +104,12 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
         """
         raise NotImplementedError()
 
-    def unflatten_actions(
-        self, flattened_actions: torch.Tensor
-    ) -> Union[Tuple, Dict, torch.Tensor, int, float]:
-        """Unflattens a flattened actions tensor, e.g. the prev_actions tensor passed to forward.
-
-        # Returns
-
-        The unflattened tensors or scalars corresponding to the input flattened actions tensor.
-        """
-        return spaces_unflatten(self.action_space, flattened_actions)
-
     @abc.abstractmethod
     def forward(  # type:ignore
         self,
         observations: ObservationType,
         memory: Memory,
-        prev_actions: torch.Tensor,
+        prev_actions: ActionType,
         masks: torch.FloatTensor,
     ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         """Transforms input observations (& previous hidden state) into action
@@ -128,7 +121,7 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
                        current observations.
         memory : `Memory` object with recurrent memory. The shape of each tensor is determined by the corresponding
                  entry in `_recurrent_memory_specification`.
-        prev_actions : tensor of shape [steps, samplers, ...] with the flattened previous actions.
+        prev_actions : ActionType with tensors of shape [steps, samplers, ...] with the previous actions.
         masks : tensor of shape [steps, samplers, agents, 1] with zeros indicating steps where a new episode/task
                 starts.
 
@@ -161,8 +154,8 @@ class LinearActorCriticHead(nn.Module):
         # noinspection PyArgumentList
         return (
             CategoricalDistr(logits=logits),
-            values.view(*values.shape[:2], -1),
-        )  # steps, samplers, flattened
+            values,  # .view(*values.shape[:2], -1),
+        )
 
 
 class LinearCriticHead(nn.Module):
@@ -173,7 +166,7 @@ class LinearCriticHead(nn.Module):
         nn.init.constant_(self.fc.bias, 0)
 
     def forward(self, x):
-        return self.fc(x).view(*x.shape[:2], -1)  # steps, samplers, flattened
+        return self.fc(x)  # .view(*x.shape[:2], -1)  # steps, samplers, flattened
 
 
 class LinearActorHead(nn.Module):

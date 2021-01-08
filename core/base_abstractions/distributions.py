@@ -1,3 +1,5 @@
+from typing import cast, Any
+
 import abc
 
 import torch
@@ -9,19 +11,37 @@ Modify standard PyTorch distributions so they are compatible with this code.
 """
 
 
-class Distr(torch.distributions.Categorical, abc.ABC):
+class Distr(abc.ABC):
     @abc.abstractmethod
-    def log_probs(self, actions: torch.LongTensor):
+    def log_probs(self, actions: Any):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def entropy(self):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def sample(self, sample_shape=torch.Size()):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def mode(self):
         raise NotImplementedError()
 
 
-class CategoricalDistr(Distr):
+class CategoricalDistr(torch.distributions.Categorical, Distr):
     """A categorical distribution extending PyTorch's Categorical."""
 
-    def __init__(self, probs=None, logits=None, validate_args=None):
-        super(CategoricalDistr, self).__init__(
-            probs=probs, logits=logits, validate_args=validate_args
-        )
+    def log_probs(self, actions: torch.LongTensor) -> torch.FloatTensor:
+        # add an action dimension and squeeze step dimension
+        return super().log_prob(actions).unsqueeze(-1).squeeze(0)
+
+    def sample(self, sample_shape=torch.Size()):
+        # squeeze the  step dimension
+        return super().sample(sample_shape).squeeze(0)
+
+    def mode(self):
+        return self._param.argmax(dim=-1, keepdim=False)
 
     def rsample(self, sample_shape=torch.Size()):
         raise NotImplementedError()
@@ -32,16 +52,6 @@ class CategoricalDistr(Distr):
     def icdf(self, value):
         raise Exception("Inverse CDF is not defined for categorical distributions.")
 
-    def sample(self, sample_shape=torch.Size()):
-        res = super().sample(sample_shape)
-        return res.view(*res.shape[:2], -1)  # return [steps, sampler, flattened]
-
-    def log_probs(self, actions: torch.LongTensor) -> torch.FloatTensor:
-        res = super().log_prob(
-            actions.squeeze(-1)
-        )  # if single actor, actions have a singleton action dim
-        return res.view(*res.shape[:2], -1)  # return [steps, sampler, flattened]
-
     @lazy_property
     def log_probs_tensor(self):
         return torch.log_softmax(self.logits, dim=-1)
@@ -49,9 +59,6 @@ class CategoricalDistr(Distr):
     @lazy_property
     def probs_tensor(self):
         return torch.softmax(self.logits, dim=-1)
-
-    def mode(self):
-        return self.probs.argmax(dim=-1, keepdim=True)
 
 
 class AddBias(nn.Module):

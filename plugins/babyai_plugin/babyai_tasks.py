@@ -49,10 +49,8 @@ class BabyAITask(Task[MiniGridEnv]):
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         return self.env.render(mode=mode)
 
-    def _step(self, action: torch.Tensor) -> RLStepResult:
-        # assert isinstance(action, int)
-        # action = cast(int, action)
-        action = action.item()
+    def _step(self, action: int) -> RLStepResult:
+        assert isinstance(action, int)
 
         minigrid_obs, reward, done, info = self.env.step(action=action)
         self._last_action = action
