@@ -30,7 +30,10 @@ class Distr(abc.ABC):
 
 
 class CategoricalDistr(torch.distributions.Categorical, Distr):
-    """A categorical distribution extending PyTorch's Categorical."""
+    """A categorical distribution extending PyTorch's Categorical.
+
+       probs or logits are assumed to be passed with a step dimension as in: [step, samplers, actions]
+    """
 
     def log_probs(self, actions: torch.LongTensor) -> torch.FloatTensor:
         # add an action dimension and squeeze step dimension
