@@ -57,7 +57,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     # Training Engine Parameters
     ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
-    NUM_PROCESSES = 1
+    NUM_PROCESSES = 4
     TRAINING_GPUS = list(range(torch.cuda.device_count()))
     VALIDATION_GPUS = [torch.cuda.device_count() - 1]
     TESTING_GPUS = [torch.cuda.device_count() - 1]
@@ -124,9 +124,9 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     ENV_ARGS = dict(
         width=CAMERA_WIDTH,
         height=CAMERA_HEIGHT,
-        rotateStepDegrees=20.0,
+        rotateStepDegrees=10.0,
         visibilityDistance=1.0,
-        gridSize=0.25,
+        gridSize=0.15,
         renderDepthImage = True
     )
 
@@ -317,11 +317,12 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         res["loop_dataset"] = True
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)])
-            if devices is not None and len(devices) > 0
-            else None
-        )
+        res["env_args"]["x_display"] = '1'
+        # res["env_args"]["x_display"] = (
+        #     ("0.%d" % devices[process_ind % len(devices)])
+        #     if devices is not None and len(devices) > 0
+        #     else None
+        # )
         res["allow_flipping"] = True
         return res
 
@@ -344,11 +345,12 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         res["loop_dataset"] = False
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
-        res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)])
-            if devices is not None and len(devices) > 0
-            else None
-        )
+        res["env_args"]["x_display"] = '1'
+        # res["env_args"]["x_display"] = (
+        #     ("0.%d" % devices[process_ind % len(devices)])
+        #     if devices is not None and len(devices) > 0
+        #     else None
+        # )
         return res
 
     def test_task_sampler_args(
