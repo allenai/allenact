@@ -466,4 +466,4 @@ class RolloutStorage(object):
         return self.memory.step_squeeze(step)
 
     def pick_prev_actions_step(self, step: int) -> ActionType:
-        return su.unflatten(self.action_space, self.prev_actions[step])
+        return su.unflatten(self.action_space, self.prev_actions[step : step + 1])

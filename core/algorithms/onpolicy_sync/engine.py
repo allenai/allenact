@@ -737,13 +737,15 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         else:
             approx_steps = self.step_count  # this is actually accurate
 
+        num_actions = actor_critic_output.values.shape[1]
+
         if self.training_pipeline.current_stage.teacher_forcing is not None:
             if self.training_pipeline.current_stage.teacher_forcing(approx_steps) > 0:
                 actions, enforce_info = self.apply_teacher_forcing(
                     actions, step_observation, approx_steps
                 )
-                num_enforced = enforce_info["teacher_forcing_mask"].sum().item() / len(
-                    actions
+                num_enforced = (
+                    enforce_info["teacher_forcing_mask"].sum().item() / num_actions
                 )
             else:
                 num_enforced = 0
@@ -758,7 +760,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 ("teacher_package", teacher_force_info, actions.nelement())
             )
 
-        self.step_count += len(actions)  # increment by the number of samplers
+        self.step_count += num_actions
 
         return actions, actor_critic_output, memory, step_observation
 
