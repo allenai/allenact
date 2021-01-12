@@ -32,4 +32,4 @@ class ObjectNaviThorRGBPPOExperimentConfig(
 
     @classmethod
     def tag(cls):
-        return "Objectnav-RoboTHOR-RGB-ResNetGRU-DDPPO"
+        return "Objectnav-RoboTHOR-RGB-ResNetGRU-DDPPOAndGBC"
