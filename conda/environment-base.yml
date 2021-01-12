@@ -45,7 +45,6 @@ dependencies:
     - mkdocs==1.1.2
     - mkdocs-material==5.5.3
     - moviepy==1.0.3
-    - pipenv-setup
     - pre-commit
     - pydoc-markdown==3.4.0
     - pyquaternion==0.9.9

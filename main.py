@@ -7,7 +7,6 @@ import inspect
 import os
 from typing import Dict, Tuple, List, Optional, Type
 
-import gin
 from setproctitle import setproctitle as ptitle
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
@@ -249,8 +248,6 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, str]]:
     assert (
         len(experiments) == 1
     ), "Too many or two few experiments defined in {}".format(module_path)
-
-    gin.parse_config_files_and_bindings(None, args.gp)
 
     config = experiments[0]()
     sources = _config_source(config_type=experiments[0])

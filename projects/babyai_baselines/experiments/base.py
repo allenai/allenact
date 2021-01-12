@@ -1,7 +1,6 @@
 from abc import ABC
 from typing import Dict, Any, List, Optional, Union, Sequence
 
-import gin
 import gym
 import torch
 import torch.nn as nn
@@ -147,7 +146,6 @@ class BaseBabyAIExperimentConfig(ExperimentConfig, ABC):
         )
 
     @classmethod
-    @gin.configurable
     def machine_params(
         cls, mode="train", gpu_id="default", n_train_processes="default", **kwargs
     ):
