@@ -42,12 +42,12 @@ class GoalObjectTypeThorSensor(Sensor):
             self.ordered_object_types
         ), "object types input to goal object type sensor must be ordered"
 
+        self.target_to_detector_map = target_to_detector_map
+
         if target_to_detector_map is None:
             self.object_type_to_ind = {
                 ot: i for i, ot in enumerate(self.ordered_object_types)
             }
-
-            observation_space = gym.spaces.Discrete(len(self.ordered_object_types))
         else:
             assert (
                 detector_types is not None
@@ -61,9 +61,15 @@ class GoalObjectTypeThorSensor(Sensor):
                 for ot in self.ordered_object_types
             }
 
-            observation_space = gym.spaces.Discrete(len(self.detector_types))
+        observation_space = self._get_observation_space()
 
         super().__init__(**prepare_locals_for_super(locals()))
+
+    def _get_observation_space(self):
+        if self.target_to_detector_map:
+            return gym.spaces.Discrete(len(self.ordered_object_types))
+        else:
+            return gym.spaces.Discrete(len(self.detector_types))
 
     def get_observation(
         self,
@@ -83,7 +89,9 @@ class TakeEndActionThorNavSensor(
 ):
     def __init__(self, nactions: int, uuid: str, **kwargs: Any) -> None:
         self.nactions = nactions
+
         observation_space = self._get_observation_space()
+
         super().__init__(**prepare_locals_for_super(locals()))
 
     def _get_observation_space(self) -> gym.spaces.Discrete:

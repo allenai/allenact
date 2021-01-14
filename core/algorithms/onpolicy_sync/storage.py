@@ -48,6 +48,7 @@ class RolloutStorage(object):
         self.value_preds: Optional[torch.Tensor] = None
         self.returns: Optional[torch.Tensor] = None
         self.rewards: Optional[torch.Tensor] = None
+        self.action_log_probs: Optional[torch.Tensor] = None
 
         self.masks = torch.ones(num_steps + 1, num_samplers, 1)
 
@@ -56,9 +57,6 @@ class RolloutStorage(object):
         action_shape = su.flatdim(self.action_space)
         self.actions = torch.zeros(num_steps, num_samplers, action_shape,)
         self.prev_actions = torch.zeros(num_steps + 1, num_samplers, action_shape,)
-
-        assert su.flatdim(su.log_prob_space(self.action_space)) == action_shape
-        self.action_log_probs = torch.zeros(num_steps, num_samplers, action_shape,)
 
         self.step = 0
 
@@ -101,12 +99,12 @@ class RolloutStorage(object):
         self.actions = self.actions.to(device)
         self.prev_actions = self.prev_actions.to(device)
         self.masks = self.masks.to(device)
-        self.action_log_probs = self.action_log_probs.to(device)
 
         if self.rewards is not None:
             self.rewards = self.rewards.to(device)
             self.value_preds = self.value_preds.to(device)
             self.returns = self.returns.to(device)
+            self.action_log_probs = self.action_log_probs.to(device)
 
         self.device = device
 
@@ -207,17 +205,15 @@ class RolloutStorage(object):
         self.insert_observations(observations, time_step=self.step + 1)
         self.insert_memory(memory, time_step=self.step + 1)
 
+        assert actions.shape == self.actions[self.step].shape
+
         self.actions[self.step].copy_(actions)  # type:ignore
         self.prev_actions[self.step + 1].copy_(actions)  # type:ignore
-
-        self.action_log_probs[self.step].copy_(  # type:ignore
-            action_log_probs
-        )
 
         self.masks[self.step + 1].copy_(masks)  # type:ignore
 
         if self.rewards is None:
-            # We delay the instantiation of storage for `rewards`, `value_preds`, and `returns`
+            # We delay the instantiation of storage for `rewards`, `value_preds`, `action_log_probs` and `returns`
             # as we do not, a priori, know what shape these will be. For instance, if we are in a multi-agent setting
             # then there may be many rewards (one for each agent).
             self.rewards = self.create_tensor_storage(
@@ -232,8 +228,15 @@ class RolloutStorage(object):
                 self.num_steps + 1, value_returns_template
             )
 
+            self.action_log_probs = self.create_tensor_storage(
+                self.num_steps, action_log_probs.unsqueeze(0)
+            )
+
         self.value_preds[self.step].copy_(value_preds)  # type:ignore
         self.rewards[self.step].copy_(rewards)  # type:ignore
+        self.action_log_probs[self.step].copy_(  # type:ignore
+            action_log_probs
+        )
 
         self.step = (self.step + 1) % self.num_steps
 

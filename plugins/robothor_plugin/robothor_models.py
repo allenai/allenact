@@ -523,9 +523,9 @@ class TupleLinearActorCriticHead(LinearActorCriticHead):
         values = out[..., -1:]
         # noinspection PyArgumentList
         return (
-            TupleCategoricalDistr(logits=logits.squeeze(0)),
-            values.view(*values.shape[:2], -1),
-        )  # steps, samplers, flattened
+            TupleCategoricalDistr(logits=logits),  # [steps, samplers, ...]
+            values.view(*values.shape[:2], -1),  # [steps, samplers, flattened]
+        )
 
 
 class NavToPartnerActorCriticSimpleConvRNN(ActorCriticModel[TupleCategoricalDistr]):

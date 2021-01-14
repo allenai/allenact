@@ -81,8 +81,12 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
         # noinspection PyArgumentList
         return (
             ActorCriticOutput(
-                distributions=CategoricalDistr(logits=main_logits),
-                values=cast(torch.FloatTensor, values),
+                distributions=CategoricalDistr(
+                    logits=main_logits
+                ),  # step x sampler x ...
+                values=cast(
+                    torch.FloatTensor, values.view(values.shape[:2] + (-1,))
+                ),  # step x sampler x flattened
                 extras={
                     "auxiliary_distributions": CategoricalDistr(logits=aux_logits),
                 },

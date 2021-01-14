@@ -94,43 +94,46 @@ class TestSpaces(object):
 
         assert self.same(su.flatten(self.space, unflattened), stacked)
 
-    def test_log_prob_space(self):
-        lp_space = gyms.Dict(
-            {
-                "first": gyms.Tuple(
-                    [
-                        gyms.Box(-np.inf, np.inf, (3, 4)),
-                        gyms.Box(-np.inf, 0, (3,)),
-                        gyms.Box(-np.inf, np.inf, ()),
-                    ]
-                ),
-                "second": gyms.Tuple(
-                    [
-                        gyms.Dict({"third": gyms.Box(-np.inf, 0, ())}),
-                        gyms.Box(-np.inf, 0, (8,)),
-                    ]
-                ),
-            }
+    def test_tolist(self):
+        space = gyms.MultiDiscrete([3, 3])
+        actions = su.torch_point(space, space.sample())  # single sampler
+        actions = actions.unsqueeze(0).unsqueeze(0)  # add [step, sampler]
+        flat_actions = su.flatten(space, actions)
+        al = su.action_list(space, flat_actions)
+        assert len(al) == 1
+        assert len(al[0]) == 2
+
+        space = gyms.Tuple([gyms.MultiDiscrete([3, 3]), gyms.Discrete(2)])
+        actions = su.torch_point(space, space.sample())  # single sampler
+        actions = (
+            actions[0].unsqueeze(0).unsqueeze(0),
+            torch.tensor(actions[1]).unsqueeze(0).unsqueeze(0),
+        )  # add [step, sampler]
+        flat_actions = su.flatten(space, actions)
+        al = su.action_list(space, flat_actions)
+        assert len(al) == 1
+        assert len(al[0][0]) == 2
+        assert isinstance(al[0][1], int)
+
+        space = gyms.Dict(
+            {"tuple": gyms.MultiDiscrete([3, 3]), "scalar": gyms.Discrete(2)}
         )
-
-        lp_auto = su.log_prob_space(self.space)
-
-        lp_sample = su.torch_point(lp_space, lp_space.sample())
-        auto_sample = su.torch_point(lp_auto, lp_auto.sample())
-
-        for sample in [lp_sample, auto_sample]:
-            lp_flatten = su.flatten(lp_space, sample)
-            auto_flatten = su.flatten(lp_auto, sample)
-
-            assert np.array_equal(lp_flatten, auto_flatten)
-
-            assert self.same(
-                su.unflatten(lp_auto, lp_flatten), su.unflatten(lp_space, auto_flatten),
-            )
+        actions = su.torch_point(space, space.sample())  # single sampler
+        actions = OrderedDict(
+            [
+                ("tuple", actions["tuple"].unsqueeze(0).unsqueeze(0)),
+                ("scalar", torch.tensor(actions["scalar"]).unsqueeze(0).unsqueeze(0)),
+            ]
+        )
+        flat_actions = su.flatten(space, actions)
+        al = su.action_list(space, flat_actions)
+        assert len(al) == 1
+        assert len(al[0]["tuple"]) == 2
+        assert isinstance(al[0]["scalar"], int)
 
 
 if __name__ == "__main__":
     TestSpaces().test_conversion()  # type:ignore
     TestSpaces().test_flatten()  # type:ignore
     TestSpaces().test_batched()  # type:ignore
-    TestSpaces().test_log_prob_space()  # type:ignore
+    TestSpaces().test_tolist()  # type:ignore

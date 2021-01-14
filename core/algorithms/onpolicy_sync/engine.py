@@ -400,9 +400,20 @@ class OnPolicyRLEngine(object):
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None) -> int:
         actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
 
-        # Convert actions into list of actions and send them
+        self.vector_tasks.call_at(0, "render", ["human"])
+
+        # Flatten actions and add a `sampler` dimension when we only have one active sampler:
+        flat_actions = su.flatten(self.actor_critic.action_space, actions)
+
+        assert len(flat_actions.shape) == 3, (
+            "Distribution samples must include step and task sampler dimensions [step, sampler, ...]. The simplest way"
+            "to accomplish this is to pass param tensors (like `logits` in a `CategoricalDistr`) with these dimensions"
+            "to the Distribution."
+        )
+
+        # Convert flattened actions into list of actions and send them
         outputs: List[RLStepResult] = self.vector_tasks.step(
-            su.action_list(self.actor_critic.action_space, actions)
+            su.action_list(self.actor_critic.action_space, flat_actions)
         )
 
         # Save after task completion metrics
@@ -446,9 +457,11 @@ class OnPolicyRLEngine(object):
             if len(keep) > 0
             else batch,
             memory=self._active_memory(memory, keep),
-            actions=su.flatten(self.actor_critic.action_space, actions)[keep],
-            action_log_probs=actor_critic_output.distributions.log_probs(actions)[keep],
-            value_preds=actor_critic_output.values.squeeze(0)[keep],  # squeeze step dim
+            actions=flat_actions[0, keep],
+            action_log_probs=actor_critic_output.distributions.log_prob(actions)[
+                0, keep
+            ],
+            value_preds=actor_critic_output.values[0, keep],
             rewards=rewards[keep],
             masks=masks[keep],
         )
@@ -773,7 +786,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             )
 
             for bit, batch in enumerate(data_generator):
-                # masks is always [steps, samplers, agents, 1]:
+                # masks is always [steps, samplers, 1]:
                 num_rollout_steps, num_samplers = batch["masks"].shape[:2]
                 bsize = num_rollout_steps * num_samplers
 

@@ -1,4 +1,4 @@
-from typing import cast, Any
+from typing import Any
 
 import abc
 
@@ -13,47 +13,34 @@ Modify standard PyTorch distributions so they are compatible with this code.
 
 class Distr(abc.ABC):
     @abc.abstractmethod
-    def log_probs(self, actions: Any):
+    def log_prob(self, actions: Any):
+        """Return the log probability/ies of the provided action/s."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def entropy(self):
+        """Return the entropy or entropies."""
         raise NotImplementedError()
 
     @abc.abstractmethod
     def sample(self, sample_shape=torch.Size()):
+        """Sample actions."""
         raise NotImplementedError()
 
-    @abc.abstractmethod
     def mode(self):
+        """If available, return the action(s) with highest probability.
+        It will only be called if using deterministic agents."""
         raise NotImplementedError()
 
 
 class CategoricalDistr(torch.distributions.Categorical, Distr):
     """A categorical distribution extending PyTorch's Categorical.
 
-       probs or logits are assumed to be passed with a step dimension as in: [step, samplers, actions]
+       probs or logits are assumed to be passed with step and sampler dimensions as in: [step, samplers, ...]
     """
 
-    def log_probs(self, actions: torch.LongTensor) -> torch.FloatTensor:
-        # add an action dimension and squeeze step dimension
-        return super().log_prob(actions).unsqueeze(-1).squeeze(0)
-
-    def sample(self, sample_shape=torch.Size()):
-        # squeeze the  step dimension
-        return super().sample(sample_shape).squeeze(0)
-
     def mode(self):
-        return self._param.argmax(dim=-1, keepdim=False)
-
-    def rsample(self, sample_shape=torch.Size()):
-        raise NotImplementedError()
-
-    def cdf(self, value):
-        raise Exception("CDF is not defined for categorical distributions.")
-
-    def icdf(self, value):
-        raise Exception("Inverse CDF is not defined for categorical distributions.")
+        return self._param.argmax(dim=-1, keepdim=False)  # match sample()'s shape
 
     @lazy_property
     def log_probs_tensor(self):

@@ -46,9 +46,6 @@ class Imitation(AbstractActorCriticLoss):
 
         if "expert_action" in observations:
             expert_actions_and_mask = observations["expert_action"]
-            if len(expert_actions_and_mask.shape) == 3:
-                # No agent dimension in expert action
-                expert_actions_and_mask = expert_actions_and_mask.unsqueeze(-2)
 
             assert expert_actions_and_mask.shape[-1] == 2
             expert_actions_and_mask_reshaped = expert_actions_and_mask.view(-1, 2)
@@ -67,7 +64,7 @@ class Imitation(AbstractActorCriticLoss):
 
             total_loss = -(
                 expert_actions_masks
-                * actor_critic_output.distributions.log_probs(
+                * actor_critic_output.distributions.log_prob(
                     cast(torch.LongTensor, expert_actions)
                 )
             ).sum() / torch.clamp(expert_successes, min=1)

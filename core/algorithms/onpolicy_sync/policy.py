@@ -23,7 +23,7 @@ MemorySpecType = Tuple[MemoryShapeType, torch.dtype]
 FullMemorySpecType = Dict[str, MemorySpecType]
 
 ObservationType = Dict[str, Union[torch.Tensor, Dict[str, Any]]]
-ActionType = Union[torch.Tensor, OrderedDict, Tuple]
+ActionType = Union[torch.Tensor, OrderedDict, Tuple, int]
 
 
 class ActorCriticModel(Generic[DistributionType], nn.Module):
@@ -168,7 +168,7 @@ class LinearCriticHead(nn.Module):
         nn.init.constant_(self.fc.bias, 0)
 
     def forward(self, x):
-        return self.fc(x).view(*x.shape[:2], -1)  # steps, samplers, flattened
+        return self.fc(x).view(*x.shape[:2], -1)  # [steps, samplers, flattened]
 
 
 class LinearActorHead(nn.Module):
@@ -183,4 +183,4 @@ class LinearActorHead(nn.Module):
         x = self.linear(x)  # type:ignore
 
         # noinspection PyArgumentList
-        return CategoricalDistr(logits=x)
+        return CategoricalDistr(logits=x)  # logits are [step, sampler, ...]

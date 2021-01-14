@@ -152,6 +152,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         self.unflattened_observation_space = gym.spaces.Tuple(
             (self.action_space, gym.spaces.Discrete(2))
         )
+
         observation_space = self._get_observation_space()
 
         super().__init__(**prepare_locals_for_super(locals()))
@@ -205,8 +206,6 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
     ) -> None:
         self.nactions = nactions
         self.expert_args: Dict[str, Any] = expert_args or {}
-
-        observation_space = self._get_observation_space()
 
         super().__init__(**prepare_locals_for_super(locals()))
 
@@ -295,7 +294,7 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
 
         self.to_pil = transforms.ToPILImage()  # assumes mode="RGB" for 3 channels
 
-        observation_space = self._get_observation_space(
+        self._observation_space = self._make_observation_space(
             output_shape=output_shape,
             output_channels=output_channels,
             unnormalized_infimum=unnormalized_infimum,
@@ -306,9 +305,11 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             "Pillow version >=7.0.0 is very broken, please downgrade" "to version 6.2.1"
         )
 
+        observation_space = self._get_observation_space()
+
         super().__init__(**prepare_locals_for_super(locals()))
 
-    def _get_observation_space(
+    def _make_observation_space(
         self,
         output_shape: Optional[Tuple[int, ...]],
         output_channels: Optional[int],
@@ -349,6 +350,9 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
                 out_shape,
             )
             return gym.spaces.Box(low=np.float32(low), high=np.float32(high))
+
+    def _get_observation_space(self):
+        return self._observation_space
 
     @property
     def height(self) -> Optional[int]:

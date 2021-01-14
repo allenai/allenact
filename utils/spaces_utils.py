@@ -114,7 +114,7 @@ def torch_point(space, np_x):
     elif isinstance(space, gym.MultiBinary):
         return torch.from_numpy(np_x)
     elif isinstance(space, gym.MultiDiscrete):
-        return torch.from_numpy(np_x)
+        return torch.from_numpy(np.asarray(np_x))
     else:
         raise NotImplementedError
 
@@ -168,38 +168,24 @@ def flatten_space(space: gym.Space):
     raise NotImplementedError
 
 
-def log_prob_space(space: gym.Space):
-    if isinstance(space, gym.Box):
-        return gym.Box(low=-np.inf, high=np.inf, shape=space.shape)
-    if isinstance(space, gym.Discrete):
-        return gym.Box(low=-np.inf, high=0.0, shape=())
-    if isinstance(space, gym.Tuple):
-        return gym.Tuple(list(log_prob_space(s) for s in space.spaces))
-    if isinstance(space, gym.Dict):
-        return gym.Dict({key: log_prob_space(space[key]) for key in space.spaces})
-    if isinstance(space, gym.MultiBinary):
-        return gym.Box(low=-np.inf, high=0.0, shape=(space.n,))
-    if isinstance(space, gym.MultiDiscrete):
-        return gym.Box(low=-np.inf, high=0.0, shape=(len(space.nvec),))
-    raise NotImplementedError
+def action_list(
+    action_space: gym.Space, flat_actions: torch.Tensor
+) -> List[ActionType]:
+    """Convert flattened actions to list.
 
+       Assumes `flat_actions` are of shape `[step, sampler, flatdim]`.
+    """
 
-def value_space(space: gym.Space):
-    if isinstance(space, gym.Box):
-        return gym.Box(low=-np.inf, high=np.inf, shape=())
-    if isinstance(space, gym.Discrete):
-        return gym.Box(low=-np.inf, high=np.inf, shape=())
-    if isinstance(space, gym.Tuple):
-        return gym.Tuple(list(value_space(s) for s in space.spaces))
-    if isinstance(space, gym.Dict):
-        return gym.Dict({key: value_space(space[key]) for key in space.spaces})
-    if isinstance(space, gym.MultiBinary):
-        return gym.Box(low=-np.inf, high=np.inf, shape=())
-    if isinstance(space, gym.MultiDiscrete):
-        return gym.Box(low=-np.inf, high=np.inf, shape=())
-    raise NotImplementedError
+    def tolist(action):
+        if isinstance(action, torch.Tensor):
+            return action.tolist()
+        if isinstance(action, Tuple):
+            actions = [tolist(ac) for ac in action]
+            return tuple(actions)
+        if isinstance(action, OrderedDict):
+            actions = [(key, tolist(action[key])) for key in action.keys()]
+            return OrderedDict(actions)
+        # else, it's a scalar
+        return action
 
-
-def action_list(action_space: gym.Space, actions: ActionType) -> List[ActionType]:
-    # no step dimension in actions
-    return [unflatten(action_space, ac) for ac in flatten(action_space, actions)]
+    return [tolist(unflatten(action_space, ac)) for ac in flat_actions[0]]
