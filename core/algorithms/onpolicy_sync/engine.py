@@ -397,10 +397,28 @@ class OnPolicyRLEngine(object):
     def _active_memory(memory, keep):
         return memory.sampler_select(keep) if memory is not None else memory
 
+    def probe(self, dones: List[bool], period=10000):
+        sampler_id = 0
+        done = dones[sampler_id]
+        if self.worker_id == 0 and self.mode == "train":
+            if done:
+                if getattr(self, "_vis_steps", None) is None or (
+                    self._vis_steps < 0
+                    and (self.training_pipeline.total_steps + self._vis_steps) >= period
+                ):
+                    self._vis_steps = self.training_pipeline.total_steps
+            if (
+                getattr(self, "_vis_steps", None) is not None
+                and self._vis_steps >= 0
+                and (self.training_pipeline.total_steps - self._vis_steps) < period
+            ):
+                if not done or self._vis_steps == self.training_pipeline.total_steps:
+                    self.vector_tasks.call_at(sampler_id, "render", ["human"])
+                else:
+                    self._vis_steps = -self._vis_steps
+
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None) -> int:
         actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
-
-        # self.vector_tasks.call_at(0, "render", ["human"])
 
         # Flatten actions and add a `sampler` dimension when we only have one active sampler:
         flat_actions = su.flatten(self.actor_critic.action_space, actions)
@@ -446,6 +464,8 @@ class OnPolicyRLEngine(object):
         ).view(
             -1, 1
         )  # [sampler, 1]
+
+        # self.probe(dones)
 
         npaused, keep, batch = self.remove_paused(observations)
 
