@@ -33,11 +33,6 @@ class TupleCategoricalDistr(Distr):
             torch.FloatTensor,
             torch.stack([dist.entropy() for dist in self.dists], dim=-1),
         )
-        # # Independent sources => joint entropy == sum of entropies
-        # res: Union[int, torch.FloatTensor] = 0
-        # for dist in self.dists:
-        #     res = res + dist.entropy()
-        # return res
 
     def sample(self, sample_shape=torch.Size()) -> Tuple[torch.LongTensor, ...]:
         return tuple([dist.sample(sample_shape) for dist in self.dists])

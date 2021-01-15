@@ -420,7 +420,7 @@ class OnPolicyRLEngine(object):
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None) -> int:
         actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
 
-        # Flatten actions and add a `sampler` dimension when we only have one active sampler:
+        # Flatten actions
         flat_actions = su.flatten(self.actor_critic.action_space, actions)
 
         assert len(flat_actions.shape) == 3, (
