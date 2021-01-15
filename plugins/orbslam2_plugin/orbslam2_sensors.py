@@ -1,4 +1,5 @@
 from typing import Any, Optional
+# import shared_memory
 from multiprocessing.managers import BaseManager
 from contextlib import contextmanager
 from tempfile import mkstemp
@@ -9,6 +10,7 @@ import yaml
 
 from orbslam2 import SLAM
 from scipy.spatial.transform import Rotation as R
+from scipy.spatial.distance import euclidean
 import numpy as np
 import quaternion
 import gym
@@ -28,14 +30,14 @@ class ProcessManager(BaseManager):
 ProcessManager.register('SLAM', SLAM)
 
 class ORBSLAMSensor(Sensor[EnvType, SubTaskType]):
-    def __init__(self, rgb_sensor: RGBSensor, depth_sensor: DepthSensor, vocab_file: str, use_slam_viewer: bool, uuid: str = "orbslam", **kwargs: Any):
+    def __init__(self, rgb_sensor: RGBSensor, depth_sensor: DepthSensor, vocab_file: str, use_slam_viewer: bool, mem_limit: int = 2048, uuid: str = "orbslam", **kwargs: Any):
         self.rgb_sensor = rgb_sensor
         self.depth_sensor = depth_sensor
         self.vocab_file = vocab_file
         self.use_slam_viewer = use_slam_viewer
         observation_space = self._get_observation_space()
         super().__init__(**prepare_locals_for_super(locals()))
-        self.mem_limit = 4096
+        self.mem_limit = mem_limit
         self.manager = None
         self.slam = None
 
@@ -97,10 +99,16 @@ class ORBSLAMCompassSensorRoboThor(ORBSLAMSensor[RoboThorEnvironment, PointNavTa
         return {
             'Camera.fx': f_x, 'Camera.fy': f_y, 'Camera.cx': c_x, 'Camera.cy': c_y,
             'Camera.k1': 0.0, 'Camera.k2': 0.0, 'Camera.p1': 0.0, 'Camera.p2': 0.0,
-            'Camera.width': w, 'Camera.height': h, 'Camera.fps': 0.0, 'Camera.bf': 40.0, 'Camera.RGB': 1,
+            # 'Camera.width': w, 'Camera.height': h, 'Camera.fps': 0.0, 'Camera.bf': 40.0, 'Camera.RGB': 1,
+            # 'ThDepth': 200.0, 'DepthMapFactor': 1.0,
+            # 'ORBextractor.nFeatures': 2000, 'ORBextractor.scaleFactor': 1.2, 'ORBextractor.nLevels': 12,
+            # 'ORBextractor.iniThFAST': 10, 'ORBextractor.minThFAST': 1,
+
+            'Camera.width': w, 'Camera.height': h, 'Camera.fps': 0.0, 'Camera.bf': 50.0, 'Camera.RGB': 1,
             'ThDepth': 200.0, 'DepthMapFactor': 1.0,
-            'ORBextractor.nFeatures': 1000, 'ORBextractor.scaleFactor': 1.2, 'ORBextractor.nLevels': 8,
-            'ORBextractor.iniThFAST': 20, 'ORBextractor.minThFAST': 1,
+            'ORBextractor.nFeatures': 2500, 'ORBextractor.scaleFactor': 1.2, 'ORBextractor.nLevels': 8,
+            'ORBextractor.iniThFAST': 5, 'ORBextractor.minThFAST': 1,
+
             'Viewer.KeyFrameSize': 0.05, 'Viewer.KeyFrameLineWidth': 1, 'Viewer.GraphLineWidth': 0.9,
             'Viewer.PointSize':2, 'Viewer.CameraSize': 0.08, 'Viewer.CameraLineWidth': 3,
             'Viewer.ViewpointX': 0, 'Viewer.ViewpointY': -0.7, 'Viewer.ViewpointZ': -1.8, 'Viewer.ViewpointF': 500
@@ -129,9 +137,18 @@ class ORBSLAMCompassSensorRoboThor(ORBSLAMSensor[RoboThorEnvironment, PointNavTa
 
         pose = self.slam.get_world_pose()
         agent_position = pose[:3, 3]
-        rotation_world_agent = np.quaternion(*R.from_matrix(pose[:3, :3]).as_quat())
-        goal_position = np.array([task.task_info["target"][k] for k in 'xyz'])
+        y_rot = R.from_matrix(pose[:3, :3]).as_euler('xyz', degrees=True)[1]
+        rotation_world_agent = GPSCompassSensorRoboThor.quaternion_from_y_angle(y_rot)
 
+        # agent_state = env.agent_state()
+        # gt_agent_position = np.array([agent_state[k] for k in ["x", "y", "z"]])
+        # gt_y_rot = agent_state["rotation"]["y"]
+        # gt_rotation_world_agent = GPSCompassSensorRoboThor.quaternion_from_y_angle(gt_y_rot)
+        # if euclidean(gt_agent_position, agent_position) > 0 or abs(gt_y_rot % 360 - y_rot % 360) > 0:
+        #     agent_position = gt_agent_position
+        #     rotation_world_agent = gt_rotation_world_agent
+
+        goal_position = np.array([task.task_info["target"][k] for k in 'xyz'])
         goal = GPSCompassSensorRoboThor.compute_pointgoal(
             agent_position, rotation_world_agent, goal_position
         )
