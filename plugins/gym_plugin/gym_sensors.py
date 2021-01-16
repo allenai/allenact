@@ -11,7 +11,7 @@ from plugins.gym_plugin.gym_environment import GymEnvironment
 class GymBox2DSensor(Sensor[gym.Env, Task[gym.Env]]):
     def __init__(
         self,
-        gym_env_name: str = "CarRacing-v0",
+        gym_env_name: str = "LunarLanderContinuous-v2",
         uuid: str = "gym_box2d_sensor",
         **kwargs: Any
     ):
