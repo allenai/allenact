@@ -1070,7 +1070,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         ) * expert_action_exists_mask
 
         extended_shape = teacher_forcing_mask.shape + (1,) * (
-            actions.shape - teacher_forcing_mask.shape
+            len(actions.shape) - len(teacher_forcing_mask.shape)
         )
 
         actions = torch.where(
