@@ -481,7 +481,7 @@ class OnPolicyRLEngine(object):
         if len(rewards.shape) == 1:
             # Rewards are of shape [sampler,]
             rewards = rewards.unsqueeze(-1)
-        else:
+        elif len(rewards.shape) > 1:
             raise NotImplementedError()
 
         # If done then clean the history of observations.
