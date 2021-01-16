@@ -165,6 +165,8 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
 
 class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def __init__(self, uuid: str = "target_object_id", **kwargs: Any):
+        observation_space = self._get_observation_space()
+
         super().__init__(**prepare_locals_for_super(locals()))
 
     def _get_observation_space(self):
@@ -184,6 +186,8 @@ class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
 
 class AgentCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def __init__(self, uuid: str = "agent_position_and_rotation", **kwargs: Any):
+        observation_space = self._get_observation_space()
+
         super().__init__(**prepare_locals_for_super(locals()))
 
     def _get_observation_space(self):
