@@ -54,9 +54,9 @@ class RolloutStorage(object):
 
         self.action_space = actor_critic.action_space
 
-        action_shape = su.flatdim(self.action_space)
-        self.actions = torch.zeros(num_steps, num_samplers, action_shape,)
-        self.prev_actions = torch.zeros(num_steps + 1, num_samplers, action_shape,)
+        action_flat_dim = su.flatdim(self.action_space)
+        self.actions = torch.zeros(num_steps, num_samplers, action_flat_dim,)
+        self.prev_actions = torch.zeros(num_steps + 1, num_samplers, action_flat_dim,)
 
         self.step = 0
 
