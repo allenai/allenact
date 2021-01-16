@@ -1,4 +1,4 @@
-from typing import Tuple, Union, cast
+from typing import Tuple
 
 import torch
 
@@ -7,35 +7,24 @@ from core.base_abstractions.distributions import CategoricalDistr, Distr
 
 class TupleCategoricalDistr(Distr):
     def __init__(self, probs=None, logits=None, validate_args=None):
-        if probs is not None:
-            params = [
-                CategoricalDistr(probs=probs[..., it, :], validate_args=validate_args)
-                for it in range(probs.shape[-2])
-            ]
-        else:
-            params = [
-                CategoricalDistr(logits=logits[..., it, :], validate_args=validate_args)
-                for it in range(logits.shape[-2])
-            ]
-
-        self.dists = tuple(params)
+        self.dists = CategoricalDistr(
+            probs=probs, logits=logits, validate_args=validate_args
+        )
 
     def log_prob(self, actions: Tuple[torch.LongTensor, ...]) -> torch.FloatTensor:
-        return cast(
-            torch.FloatTensor,
-            torch.stack(
-                [dist.log_prob(act) for dist, act in zip(self.dists, actions)], dim=-1
-            ),
-        )
+        # flattened output [steps, samplers, num_agents]
+        return self.dists.log_prob(torch.stack(actions, dim=-1))
 
     def entropy(self) -> torch.FloatTensor:
-        return cast(
-            torch.FloatTensor,
-            torch.stack([dist.entropy() for dist in self.dists], dim=-1),
-        )
+        # flattened output [steps, samplers, num_agents]
+        return self.dists.entropy()
 
     def sample(self, sample_shape=torch.Size()) -> Tuple[torch.LongTensor, ...]:
-        return tuple([dist.sample(sample_shape) for dist in self.dists])
+        # split and remove trailing singleton dim
+        res = self.dists.sample(sample_shape).split(1, dim=-1)
+        return tuple([r.view(r.shape[:2]) for r in res])
 
     def mode(self) -> Tuple[torch.LongTensor, ...]:
-        return tuple([dist.mode() for dist in self.dists])
+        # split and remove trailing singleton dim
+        res = self.dists.mode().split(1, dim=-1)
+        return tuple([r.view(r.shape[:2]) for r in res])
