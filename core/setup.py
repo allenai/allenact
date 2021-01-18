@@ -1,16 +1,25 @@
+import os
+from pathlib import Path
+
 from setuptools import find_packages, setup
 
-__version__ = "0.2.0+alpha"
-
-# Extra dependencies required for various plugins
-extras = {}
-
 if __name__ == "__main__":
+    os.chdir(os.path.join(os.path.abspath(os.path.dirname(Path(__file__))), ".."))
+
+    with open(".VERSION", "r") as f:
+        __version__ = f.readline()
+
+    # Extra dependencies required for various plugins
+    # extras = {}
+
     setup(
         name="allenact",
         version=__version__,
         description="AllenAct framework",
-        long_description="AllenAct is a modular and flexible learning framework designed with a focus on the unique requirements of Embodied-AI research.",
+        long_description=(
+            "AllenAct is a modular and flexible learning framework designed with"
+            " a focus on the unique requirements of Embodied-AI research."
+        ),
         classifiers=[
             "Intended Audience :: Science/Research",
             "Development Status :: 3 - Alpha",
@@ -26,7 +35,7 @@ if __name__ == "__main__":
         author="Allen Institute for Artificial Intelligence",
         author_email="lucaw@allenai.org",
         license="MIT",
-        packages=find_packages(where="allenact"),
+        packages=find_packages(where="..", include=["allenact", "allenact.*"]),
         install_requires=[
             "gym>=0.17.0,<0.18.0",
             "tensorboardx==2.1",

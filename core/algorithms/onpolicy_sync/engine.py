@@ -398,10 +398,10 @@ class OnPolicyRLEngine(object):
         return memory.sampler_select(keep) if memory is not None else memory
 
     def probe(self, dones: List[bool], npaused, period=100000):
-        """
-        Debugging util. When called from self.collect_rollout_step(...), calls render for the 0-th task sampler of the
-        0-th distributed worker for the first beginning episode spaced at least period steps from the beginning
-        of the previous one.
+        """Debugging util. When called from self.collect_rollout_step(...),
+        calls render for the 0-th task sampler of the 0-th distributed worker
+        for the first beginning episode spaced at least period steps from the
+        beginning of the previous one.
 
         For valid, train, it currently renders all episodes for the 0-th task sampler of the
         0-th distributed worker. If this is not wanted, it must be hard-coded for now below.

@@ -258,9 +258,12 @@ class RolloutStorage(object):
             self.returns = self.returns[:, keep_list]
 
     def narrow(self):
-        """
-        This function is used by the training engine (in decentralized distributed settings) to temporarily narrow the
-        step dimension in the storage. The reverse operation, `unnarrow`, is automatically called by `after_update`.
+        """This function is used by the training engine (in decentralized
+        distributed settings) to temporarily narrow the step dimension in the
+        storage.
+
+        The reverse operation, `unnarrow`, is automatically called by
+        `after_update`.
         """
         assert len(self.unnarrow_data) == 0, "attempting to narrow narrowed rollouts"
 

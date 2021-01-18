@@ -29,14 +29,17 @@ class Distr(abc.ABC):
 
     def mode(self):
         """If available, return the action(s) with highest probability.
-        It will only be called if using deterministic agents."""
+
+        It will only be called if using deterministic agents.
+        """
         raise NotImplementedError()
 
 
 class CategoricalDistr(torch.distributions.Categorical, Distr):
     """A categorical distribution extending PyTorch's Categorical.
 
-       probs or logits are assumed to be passed with step and sampler dimensions as in: [step, samplers, ...]
+    probs or logits are assumed to be passed with step and sampler
+    dimensions as in: [step, samplers, ...]
     """
 
     def mode(self):

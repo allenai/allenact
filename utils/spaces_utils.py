@@ -17,8 +17,9 @@ def flatdim(space):
     """Return the number of dimensions a flattened equivalent of this space
     would have.
 
-    Accepts a space and returns an integer. Raises ``NotImplementedError`` if
-    the space is not defined in ``gym.spaces``.
+    Accepts a space and returns an integer. Raises
+    ``NotImplementedError`` if the space is not defined in
+    ``gym.spaces``.
     """
     if isinstance(space, gym.Box):
         return int(np.prod(space.shape))
@@ -37,8 +38,7 @@ def flatdim(space):
 
 
 def flatten(space, torch_x):
-    """Flatten data points from a space.
-    """
+    """Flatten data points from a space."""
     if isinstance(space, gym.Box):
         if len(space.shape) > 0:
             return torch_x.view(torch_x.shape[: -len(space.shape)] + (-1,))
@@ -67,8 +67,7 @@ def flatten(space, torch_x):
 
 
 def unflatten(space, torch_x):
-    """Unflatten a concatenated data points tensor from a space.
-    """
+    """Unflatten a concatenated data points tensor from a space."""
     if isinstance(space, gym.Box):
         return torch_x.view(torch_x.shape[:-1] + space.shape).float()
     elif isinstance(space, gym.Discrete):
@@ -99,8 +98,7 @@ def unflatten(space, torch_x):
 
 
 def torch_point(space, np_x):
-    """Convert numpy space point into torch.
-    """
+    """Convert numpy space point into torch."""
     if isinstance(space, gym.Box):
         return torch.from_numpy(np_x)
     elif isinstance(space, gym.Discrete):
@@ -122,8 +120,7 @@ def torch_point(space, np_x):
 def numpy_point(
     space: gym.Space, torch_x: Union[int, torch.Tensor, OrderedDict, Tuple]
 ):
-    """Convert torch space point into numpy.
-    """
+    """Convert torch space point into numpy."""
     if isinstance(space, gym.Box):
         return torch_x.cpu().numpy()
     elif isinstance(space, gym.Discrete):
@@ -173,7 +170,7 @@ def action_list(
 ) -> List[ActionType]:
     """Convert flattened actions to list.
 
-       Assumes `flat_actions` are of shape `[step, sampler, flatdim]`.
+    Assumes `flat_actions` are of shape `[step, sampler, flatdim]`.
     """
 
     def tolist(action):

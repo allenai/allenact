@@ -182,3 +182,7 @@ src
 # Files created when running training
 **/used_configs
 *.patch
+
+# Package building
+*.egg_info
+*.egg-info
