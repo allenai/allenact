@@ -128,7 +128,7 @@ class MiniGridOffPolicyExpertCELoss(AbstractOffPolicyLoss[ActorCriticModel]):
         )
 
         # Compute the loss from the actor's output and expert action
-        expert_ce_loss = -ac_out.distributions.log_probs(batch["expert_action"]).mean()
+        expert_ce_loss = -ac_out.distributions.log_prob(batch["expert_action"]).mean()
 
         info = {"expert_ce": expert_ce_loss.item()}
 

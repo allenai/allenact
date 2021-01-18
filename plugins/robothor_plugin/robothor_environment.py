@@ -89,13 +89,13 @@ class RoboThorEnvironment:
         self.controller.step("ResetObjectFilter", renderImage=False)
 
     def path_from_point_to_object_type(
-        self, point: Dict[str, float], object_type: str
+        self, point: Dict[str, float], object_type: str, allowed_error: float
     ) -> Optional[List[Dict[str, float]]]:
         event = self.controller.step(
             action="GetShortestPath",
             objectType=object_type,
             position=point,
-            allowedError=0.05,
+            allowedError=allowed_error,
         )
         if event.metadata["lastActionSuccess"]:
             return event.metadata["actionReturn"]["corners"]
@@ -111,16 +111,21 @@ class RoboThorEnvironment:
             return None
 
     def distance_from_point_to_object_type(
-        self, point: Dict[str, float], object_type: str
+        self, point: Dict[str, float], object_type: str, allowed_error: float
     ) -> float:
         """Minimal geodesic distance from a point to an object of the given
         type.
 
         It might return -1.0 for unreachable targets.
         """
-        path = self.path_from_point_to_object_type(point, object_type)
+        path = self.path_from_point_to_object_type(point, object_type, allowed_error)
         if path:
-            return metrics.path_distance(path)
+            # Because `allowed_error != 0` means that the path returned above might not start
+            # at `point`, we explicitly add any offset there is.
+            s_dist = math.sqrt(
+                (point["x"] - path[0]["x"]) ** 2 + (point["z"] - path[0]["z"]) ** 2
+            )
+            return metrics.path_distance(path) + s_dist
         return -1.0
 
     def distance_to_object_type(self, object_type: str, agent_id: int = 0) -> float:
@@ -129,13 +134,38 @@ class RoboThorEnvironment:
 
         It might return -1.0 for unreachable targets.
         """
-
         assert 0 <= agent_id < self.agent_count
+
+        def retry_dist(position: Dict[str, float], object_type: str):
+            allowed_error = 0.05
+            debug_log = ""
+            d = -1
+            while allowed_error < 2.5:
+                d = self.distance_from_point_to_object_type(
+                    position, object_type, allowed_error
+                )
+                if d < 0:
+                    debug_log = (
+                        f"In scene {self.scene_name}, could not find a path from {position} to {object_type} with"
+                        f" {allowed_error} error tolerance. Increasing this tolerance to"
+                        f" {2 * allowed_error} any trying again."
+                    )
+                    allowed_error *= 2
+                else:
+                    break
+            if d < 0:
+                get_logger().warning(
+                    f"In scene {self.scene_name}, could not find a path from {position} to {object_type}"
+                    f" with {allowed_error} error tolerance. Returning a distance of -1."
+                )
+            elif debug_log != "":
+                get_logger().debug(debug_log)
+            return d
 
         return self.distance_cache.find_distance(
             self.controller.last_event.events[agent_id].metadata["agent"]["position"],
             object_type,
-            self.distance_from_point_to_object_type,
+            retry_dist,
         )
 
     def path_from_point_to_point(
@@ -162,11 +192,20 @@ class RoboThorEnvironment:
             return None
 
     def distance_from_point_to_point(
-        self, position: Dict[str, float], target: Dict[str, float], allowedError: float
+        self, position: Dict[str, float], target: Dict[str, float], allowed_error: float
     ) -> float:
-        path = self.path_from_point_to_point(position, target, allowedError)
+        path = self.path_from_point_to_point(position, target, allowed_error)
         if path:
-            return metrics.path_distance(path)
+            # Because `allowed_error != 0` means that the path returned above might not start
+            # or end exactly at the position/target points, we explictly add any offset there is.
+            s_dist = math.sqrt(
+                (position["x"] - path[0]["x"]) ** 2
+                + (position["z"] - path[0]["z"]) ** 2
+            )
+            t_dist = math.sqrt(
+                (target["x"] - path[-1]["x"]) ** 2 + (target["z"] - path[-1]["z"]) ** 2
+            )
+            return metrics.path_distance(path) + s_dist + t_dist
         return -1.0
 
     def distance_to_point(self, target: Dict[str, float], agent_id: int = 0) -> float:
@@ -179,18 +218,27 @@ class RoboThorEnvironment:
         assert 0 <= agent_id < self.agent_count
 
         def retry_dist(position: Dict[str, float], target: Dict[str, float]):
-            d = self.distance_from_point_to_point(position, target, 0.05)
+            allowed_error = 0.05
+            debug_log = ""
+            d = -1
+            while allowed_error < 2.5:
+                d = self.distance_from_point_to_point(position, target, allowed_error)
+                if d < 0:
+                    debug_log = (
+                        f"In scene {self.scene_name}, could not find a path from {position} to {target} with"
+                        f" {allowed_error} error tolerance. Increasing this tolerance to"
+                        f" {2 * allowed_error} any trying again."
+                    )
+                    allowed_error *= 2
+                else:
+                    break
             if d < 0:
                 get_logger().warning(
-                    f"Could not find a path from {position} to {target} with 0.05 error tolerance."
-                    f" Increasing this tolerance to 0.1 any trying again."
+                    f"In scene {self.scene_name}, could not find a path from {position} to {target}"
+                    f" with {allowed_error} error tolerance. Returning a distance of -1."
                 )
-                d = self.distance_from_point_to_point(position, target, 0.1)
-                if d < 0:
-                    get_logger().warning(
-                        f"Could not find a path from {position} to {target} with 0.1 error tolerance."
-                        f" Returning a distance of -1."
-                    )
+            elif debug_log != "":
+                get_logger().debug(debug_log)
             return d
 
         return self.distance_cache.find_distance(

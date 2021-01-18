@@ -61,13 +61,17 @@ class RGBSensorMultiRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnviron
 
 class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
     def __init__(self, uuid: str = "target_coordinates_ind", **kwargs: Any):
-        observation_space = gym.spaces.Box(
+        observation_space = self._get_observation_space()
+
+        super().__init__(**prepare_locals_for_super(locals()))
+
+    def _get_observation_space(self):
+        return gym.spaces.Box(
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             shape=(2,),
             dtype=np.float32,
         )
-        super().__init__(**prepare_locals_for_super(locals()))
 
     def _compute_pointgoal(self, source_position, source_rotation, goal_position):
         direction_vector = goal_position - source_position

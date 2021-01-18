@@ -169,8 +169,11 @@ class NavToPartnerRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return NavToPartnerActorCriticSimpleConvRNN(
-            action_space=gym.spaces.Discrete(
-                len(NavToPartnerTask.class_action_names())
+            action_space=gym.spaces.Tuple(
+                [
+                    gym.spaces.Discrete(len(NavToPartnerTask.class_action_names())),
+                    gym.spaces.Discrete(len(NavToPartnerTask.class_action_names())),
+                ]
             ),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             hidden_size=512,
@@ -216,8 +219,11 @@ class NavToPartnerRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(
-                len(NavToPartnerTask.class_action_names())
+            "action_space": gym.spaces.Tuple(
+                [
+                    gym.spaces.Discrete(len(NavToPartnerTask.class_action_names())),
+                    gym.spaces.Discrete(len(NavToPartnerTask.class_action_names())),
+                ]
             ),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,

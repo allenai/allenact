@@ -70,7 +70,7 @@ class MiniGridOffPolicyExpertCELoss(AbstractOffPolicyLoss[ActorCriticModel]):
         )
 
         # Compute the loss from the actor's output and expert action
-        expert_ce_loss = -ac_out.distributions.log_probs(batch["expert_action"]).mean()
+        expert_ce_loss = -ac_out.distributions.log_prob(batch["expert_action"]).mean()
 
         info = {"expert_ce": expert_ce_loss.item()}
 
@@ -222,13 +222,13 @@ class ExpertTrajectoryIterator(Iterator):
 
         to_return = {
             "masks": np.array(masks, dtype=np.float32).reshape(
-                (self.rollout_len, 1, 1)  # steps x agent x mask
+                (self.rollout_len, 1)  # steps x mask
             ),
             "minigrid_ego_image": np.stack(
                 minigrid_ego_image, axis=0
             ),  # steps x height x width x channels
             "expert_action": np.array(expert_actions, dtype=np.int64).reshape(
-                (self.rollout_len, 1, -1)  # steps x agent x action
+                (self.rollout_len)  # steps
             ),
         }
         if self.minigrid_mission_sensor is not None:

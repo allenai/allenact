@@ -80,14 +80,17 @@ class CornerSensor(Sensor[LightHouseEnvironment, Any]):
         self.world_dim = world_dim
         self.view_corner_offsets: Optional[np.ndarray] = None
 
-        observation_space = gym.spaces.Box(
-            low=min(LightHouseEnvironment.SPACE_LEVELS),
-            high=max(LightHouseEnvironment.SPACE_LEVELS),
-            shape=(2 ** world_dim + 2,),
-            dtype=int,
-        )
+        observation_space = self._get_observation_space()
 
         super().__init__(**prepare_locals_for_super(locals()))
+
+    def _get_observation_space(self):
+        return gym.spaces.Box(
+            low=min(LightHouseEnvironment.SPACE_LEVELS),
+            high=max(LightHouseEnvironment.SPACE_LEVELS),
+            shape=(2 ** self.world_dim + 2,),
+            dtype=int,
+        )
 
     def get_observation(
         self,
@@ -162,7 +165,12 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
         self.design_matrix = design_matrix
         self.tuple_to_ind = tuple_to_ind
 
-        observation_space = gym.spaces.Box(
+        observation_space = self._get_observation_space()
+
+        super().__init__(**prepare_locals_for_super(locals()))
+
+    def _get_observation_space(self):
+        return gym.spaces.Box(
             low=min(LightHouseEnvironment.SPACE_LEVELS),
             high=max(LightHouseEnvironment.SPACE_LEVELS),
             shape=(
@@ -174,8 +182,6 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
             ),
             dtype=int,
         )
-
-        super().__init__(**prepare_locals_for_super(locals()))
 
     def view_tuple_to_design_array(self, view_tuple: Tuple):
         return np.array(

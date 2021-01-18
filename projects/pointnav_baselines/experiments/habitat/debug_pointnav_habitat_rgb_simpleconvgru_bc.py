@@ -12,7 +12,9 @@ from plugins.habitat_plugin.habitat_tasks import PointNavTask
 from projects.pointnav_baselines.experiments.habitat.debug_pointnav_habitat_base import (
     DebugPointNavHabitatBaseConfig,
 )
-from projects.pointnav_baselines.experiments.pointnav_mixin_simpleconvgru import PointNavMixInSimpleConvGRUConfig
+from projects.pointnav_baselines.experiments.pointnav_mixin_simpleconvgru import (
+    PointNavMixInSimpleConvGRUConfig,
+)
 from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
@@ -31,7 +33,6 @@ class PointNavHabitatRGBDeterministiSimpleConvGRUImitationExperimentConfig(
         TargetCoordinatesSensorHabitat(coordinate_dims=2),
         ExpertActionSensor(nactions=len(PointNavTask.class_action_names())),
     ]
-
 
     @classmethod
     def tag(cls):

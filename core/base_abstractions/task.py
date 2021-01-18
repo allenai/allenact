@@ -13,6 +13,7 @@ from typing import Dict, Any, Tuple, Generic, Union, Optional, TypeVar, Sequence
 import gym
 import numpy as np
 from gym.spaces.dict import Dict as SpaceDict
+import torch
 
 from core.base_abstractions.misc import RLStepResult
 from core.base_abstractions.sensor import Sensor, SensorSuite
@@ -102,7 +103,7 @@ class Task(Generic[EnvType]):
         one."""
         self._num_steps_taken += 1
 
-    def step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+    def step(self, action: Any) -> RLStepResult:
         """Take an action in the environment (one per agent).
 
         Takes the action in the environment corresponding to
@@ -124,6 +125,7 @@ class Task(Generic[EnvType]):
         assert not self.is_done()
         sr = self._step(action=action)
 
+        # If reward is Sequence, it's assumed to follow the same order imposed by spaces' flatten operation
         if isinstance(sr.reward, Sequence):
             if isinstance(self._total_reward, Sequence):
                 for it, rew in enumerate(sr.reward):
@@ -140,7 +142,7 @@ class Task(Generic[EnvType]):
         return sr.clone({"done": sr.done or self.is_done()})
 
     @abstractmethod
-    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
+    def _step(self, action: Any) -> RLStepResult:
         """Helper function called by `step` to take a step by each agent in the
         environment.
 
