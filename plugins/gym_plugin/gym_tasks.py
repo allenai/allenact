@@ -14,6 +14,11 @@ from plugins.gym_plugin.gym_sensors import GymBox2DSensor
 
 
 class GymTask(Task[gym.Env]):
+    """ Abstract gym task.
+
+        Subclasses need to implement `class_action_names` and `_step`.
+    """
+
     def __init__(
         self,
         env: GymEnvironment,
@@ -65,7 +70,7 @@ class GymTask(Task[gym.Env]):
 
 
 class GymContinuousBox2DTask(GymTask):
-    """ Task around a continuous gym Box2D Env; allows interfacing allenact with
+    """ Task for a continuous-control gym Box2D Env; it allows interfacing allenact with
     gym tasks.
     """
 
