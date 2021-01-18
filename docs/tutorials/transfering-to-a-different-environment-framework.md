@@ -95,7 +95,7 @@ Finally we need to replace the task sampler and its argument generating function
 
 ```python
     # Define Task Sampler
-from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
+from allenact_plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
 
 
 @classmethod

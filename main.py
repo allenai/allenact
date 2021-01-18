@@ -9,10 +9,10 @@ from typing import Dict, Tuple, List, Optional, Type
 
 from setproctitle import setproctitle as ptitle
 
+from allenact.algorithms.onpolicy_sync.runner import OnPolicyRunner
+from allenact.base_abstractions.experiment_config import ExperimentConfig
+from allenact.utils.system import get_logger, init_logging, HUMAN_LOG_LEVELS
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
-from core.algorithms.onpolicy_sync.runner import OnPolicyRunner
-from core.base_abstractions.experiment_config import ExperimentConfig
-from utils.system import get_logger, init_logging, HUMAN_LOG_LEVELS
 
 
 def get_args():

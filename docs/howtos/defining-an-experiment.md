@@ -8,7 +8,7 @@ might running a "full"/"hard" version of navigation within AI2-THOR, see our tut
  [Swapping in a new environment](../tutorials/transfering-to-a-different-environment-framework.md).
 
 The interface to be implemented by the experiment specification is defined in
-[core.base_abstractions.experiment_config](/api/core/base_abstractions/experiment_config#experimentconfig). If you'd
+[allenact.base_abstractions.experiment_config](/api/allenact/base_abstractions/experiment_config#experimentconfig). If you'd
 like to skip ahead and see the finished configuration, [see here](https://github.com/allenai/allenact/blob/master/projects/tutorials/object_nav_ithor_ppo_one_object.py).
 We begin by making the following imports:
 
@@ -23,18 +23,18 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from core.algorithms.onpolicy_sync.losses import PPO
-from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from core.base_abstractions.experiment_config import ExperimentConfig
-from core.base_abstractions.sensor import SensorSuite
-from core.base_abstractions.task import TaskSampler
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
-from plugins.ithor_plugin.ithor_task_samplers import ObjectNavTaskSampler
-from plugins.ithor_plugin.ithor_tasks import ObjectNaviThorGridTask
+from allenact.algorithms.onpolicy_sync.losses import PPO
+from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from allenact.base_abstractions.experiment_config import ExperimentConfig
+from allenact.base_abstractions.sensor import SensorSuite
+from allenact.base_abstractions.task import TaskSampler
+from allenact_plugins.ithor_plugin.ithor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
+from allenact_plugins.ithor_plugin.ithor_task_samplers import ObjectNavTaskSampler
+from allenact_plugins.ithor_plugin.ithor_tasks import ObjectNaviThorGridTask
 from projects.objectnav_baselines.models.object_nav_models import (
-    ObjectNavBaselineActorCritic,
+ ObjectNavBaselineActorCritic,
 )
-from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
+from allenact.utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 ```
 
 Now first method to implement is `tag`, which provides a string identifying the experiment:
@@ -218,7 +218,7 @@ configuration will propagate to all subclassed configurations.
 
 In `machine_params` we define machine configuration parameters that will be used for training, validation and test:
 ```python
-class ObjectNavThorPPOExperimentConfig(core.base_abstractions.experiment_config.ExperimentConfig):
+class ObjectNavThorPPOExperimentConfig(allenact.base_abstractions.experiment_config.ExperimentConfig):
     ...
     @classmethod
     def machine_params(cls, mode="train", **kwargs):

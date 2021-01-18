@@ -20,9 +20,10 @@ We need to define the methods `action_space`, `render`, `_step`, `reached_termin
 
 ### Initialization, action space and termination
 Let's start with the definition of the action space and task initialization:
+
 ```python
 ...
-from plugins.ithor_plugin.ithor_constants import (
+from allenact_plugins.ithor_plugin.ithor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
     ROTATE_RIGHT,
@@ -30,17 +31,20 @@ from plugins.ithor_plugin.ithor_constants import (
     LOOK_UP,
     END,
 )
+
 ...
+
+
 class ObjectNaviThorGridTask(Task[IThorEnvironment]):
     _actions = (MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT, LOOK_DOWN, LOOK_UP, END)
 
     def __init__(
-        self,
-        env: IThorEnvironment,
-        sensors: List[Sensor],
-        task_info: Dict[str, Any],
-        max_steps: int,
-        **kwargs
+            self,
+            env: IThorEnvironment,
+            sensors: List[Sensor],
+            task_info: Dict[str, Any],
+            max_steps: int,
+            **kwargs
     ) -> None:
         super().__init__(
             env=env,
@@ -58,12 +62,13 @@ class ObjectNaviThorGridTask(Task[IThorEnvironment]):
     @classmethod
     def class_action_names(cls) -> Tuple[str, ...]:
         return cls._actions
-    
+
     def reached_terminal_state(self) -> bool:
         return self._took_end_action
 
     def close(self) -> None:
         self.env.stop()
+
     ...
 ```
 

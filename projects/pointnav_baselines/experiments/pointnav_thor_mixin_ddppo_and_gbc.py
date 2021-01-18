@@ -4,18 +4,23 @@ import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from core.algorithms.onpolicy_sync.losses import PPO
-from core.algorithms.onpolicy_sync.losses.grouped_action_imitation import (
+from allenact.algorithms.onpolicy_sync.losses import PPO
+from allenact.algorithms.onpolicy_sync.losses.grouped_action_imitation import (
     GroupedActionImitation,
 )
-from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from plugins.ithor_plugin.ithor_sensors import TakeEndActionThorNavSensor
-from plugins.robothor_plugin import robothor_constants
-from plugins.robothor_plugin.robothor_tasks import PointNavTask
+from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from allenact.utils.experiment_utils import (
+    Builder,
+    PipelineStage,
+    TrainingPipeline,
+    LinearDecay,
+)
+from allenact_plugins.ithor_plugin.ithor_sensors import TakeEndActionThorNavSensor
+from allenact_plugins.robothor_plugin import robothor_constants
+from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
 from projects.pointnav_baselines.experiments.pointnav_thor_base import (
     PointNavThorBaseConfig,
 )
-from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
 class PointNavThorMixInPPOAndGBCConfig(PointNavThorBaseConfig, ABC):

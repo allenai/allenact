@@ -89,15 +89,18 @@ from typing import Optional, List, Tuple
 import torch
 from gym_minigrid.minigrid import MiniGridEnv
 
-from plugins.babyai_plugin.babyai_constants import BABYAI_EXPERT_TRAJECTORIES_DIR
-from plugins.minigrid_plugin.minigrid_offpolicy import (
+from allenact.utils.experiment_utils import PipelineStage, OffPolicyPipelineComponent
+from allenact_plugins.babyai_plugin.babyai_constants import (
+    BABYAI_EXPERT_TRAJECTORIES_DIR,
+)
+from allenact_plugins.minigrid_plugin.minigrid_offpolicy import (
     MiniGridOffPolicyExpertCELoss,
     create_minigrid_offpolicy_data_iterator,
 )
 from projects.babyai_baselines.experiments.go_to_local.base import (
     BaseBabyAIGoToLocalExperimentConfig,
 )
-from utils.experiment_utils import PipelineStage, OffPolicyPipelineComponent
+
 
 # %%
 class BCOffPolicyBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentConfig):

@@ -27,7 +27,7 @@ def judge(self) -> float:
 Any reward shaping can be easily added by e.g. modifying the definition of an existing class:
 
 ```python
-class NavigationWithShaping(plugins.ithor_plugin.ithor_tasks.ObjectNaviThorGridTask):
+class NavigationWithShaping(allenact_plugins.ithor_plugin.ithor_tasks.ObjectNaviThorGridTask):
     def judge(self) -> float:
         reward = super().judge()
         
@@ -52,7 +52,7 @@ availability of an expert providing optimal actions to agents and combining imit
 through multiple stages:
 
 ```python
-class MyExperimentConfig(core.base_abstractions.experiment_config.ExperimentConfig):
+class MyExperimentConfig(allenact.base_abstractions.experiment_config.ExperimentConfig):
     ...
     @classmethod
     def training_pipeline(cls, **kwargs):
@@ -62,9 +62,9 @@ class MyExperimentConfig(core.base_abstractions.experiment_config.ExperimentConf
         ...
         return utils.experiment_utils.TrainingPipeline(
             named_losses={
-                "imitation_loss": core.algorithms.onpolicy_sync.losses.imitation.Imitation(),
-                "ppo_loss": core.algorithms.onpolicy_sync.losses.ppo.PPO(
-                    **core.algorithms.onpolicy_sync.losses.ppo.PPOConfig,
+                "imitation_loss": allenact.algorithms.onpolicy_sync.losses.imitation.Imitation(),
+                "ppo_loss": allenact.algorithms.onpolicy_sync.losses.ppo.PPO(
+                    **allenact.algorithms.onpolicy_sync.losses.ppo.PPOConfig,
                 ),
             },
             ...

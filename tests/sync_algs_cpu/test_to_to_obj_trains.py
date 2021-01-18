@@ -1,6 +1,6 @@
 import math
 
-from core.algorithms.onpolicy_sync.runner import OnPolicyRunner
+from allenact.algorithms.onpolicy_sync.runner import OnPolicyRunner
 from projects.babyai_baselines.experiments.go_to_obj.ppo import (
     PPOBabyAIGoToObjExperimentConfig,
 )

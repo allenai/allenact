@@ -1,4 +1,4 @@
-from plugins.habitat_plugin.habitat_sensors import (
+from allenact_plugins.habitat_plugin.habitat_sensors import (
     DepthSensorHabitat,
     TargetCoordinatesSensorHabitat,
 )

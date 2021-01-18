@@ -1,4 +1,7 @@
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
+from allenact_plugins.ithor_plugin.ithor_sensors import (
+    RGBSensorThor,
+    GoalObjectTypeThorSensor,
+)
 from projects.objectnav_baselines.experiments.objectnav_mixin_resnetgru import (
     ObjectNavMixInResNetGRUConfig,
 )

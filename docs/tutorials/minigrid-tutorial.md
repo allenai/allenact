@@ -64,13 +64,21 @@ from torch import nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from core.algorithms.onpolicy_sync.losses.ppo import PPO, PPOConfig
-from core.base_abstractions.experiment_config import ExperimentConfig, TaskSampler
-from core.base_abstractions.sensor import SensorSuite
-from plugins.minigrid_plugin.minigrid_models import MiniGridSimpleConvRNN
-from plugins.minigrid_plugin.minigrid_sensors import EgocentricMiniGridSensor
-from plugins.minigrid_plugin.minigrid_tasks import MiniGridTaskSampler, MiniGridTask
-from utils.experiment_utils import TrainingPipeline, Builder, PipelineStage, LinearDecay
+from allenact.algorithms.onpolicy_sync.losses.ppo import PPO, PPOConfig
+from allenact.base_abstractions.experiment_config import ExperimentConfig, TaskSampler
+from allenact.base_abstractions.sensor import SensorSuite
+from allenact.utils.experiment_utils import (
+    TrainingPipeline,
+    Builder,
+    PipelineStage,
+    LinearDecay,
+)
+from allenact_plugins.minigrid_plugin.minigrid_models import MiniGridSimpleConvRNN
+from allenact_plugins.minigrid_plugin.minigrid_sensors import EgocentricMiniGridSensor
+from allenact_plugins.minigrid_plugin.minigrid_tasks import (
+    MiniGridTaskSampler,
+    MiniGridTask,
+)
 ```
 We now create the `MiniGridTutorialExperimentConfig` class which we will use to define our experiment.
 For pedagogical reasons, we will add methods to this class one at a time below with a description of what

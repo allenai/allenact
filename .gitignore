@@ -170,7 +170,7 @@ docs/LICENSE.md
 metrics__*.json
 
 # Robothor
-plugins/robothor_plugin/data/*
+allenact_plugins/robothor_plugin/data/*
 
 # Habitat
 habitat

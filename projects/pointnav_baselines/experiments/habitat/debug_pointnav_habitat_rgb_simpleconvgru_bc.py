@@ -2,20 +2,20 @@ import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from core.algorithms.onpolicy_sync.losses.imitation import Imitation
-from core.base_abstractions.sensor import ExpertActionSensor
-from plugins.habitat_plugin.habitat_sensors import (
+from allenact.algorithms.onpolicy_sync.losses.imitation import Imitation
+from allenact.base_abstractions.sensor import ExpertActionSensor
+from allenact.utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
+from allenact_plugins.habitat_plugin.habitat_sensors import (
     RGBSensorHabitat,
     TargetCoordinatesSensorHabitat,
 )
-from plugins.habitat_plugin.habitat_tasks import PointNavTask
+from allenact_plugins.habitat_plugin.habitat_tasks import PointNavTask
 from projects.pointnav_baselines.experiments.habitat.debug_pointnav_habitat_base import (
     DebugPointNavHabitatBaseConfig,
 )
 from projects.pointnav_baselines.experiments.pointnav_mixin_simpleconvgru import (
     PointNavMixInSimpleConvGRUConfig,
 )
-from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
 class PointNavHabitatRGBDeterministiSimpleConvGRUImitationExperimentConfig(

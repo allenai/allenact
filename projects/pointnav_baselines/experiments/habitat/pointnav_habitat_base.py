@@ -6,24 +6,24 @@ import gym
 import habitat
 import torch
 
-from core.base_abstractions.experiment_config import MachineParams
-from core.base_abstractions.preprocessor import SensorPreprocessorGraph
-from core.base_abstractions.sensor import SensorSuite, DepthSensor, RGBSensor
-from core.base_abstractions.task import TaskSampler
-from plugins.habitat_plugin.habitat_constants import (
+from allenact.base_abstractions.experiment_config import MachineParams
+from allenact.base_abstractions.preprocessor import SensorPreprocessorGraph
+from allenact.base_abstractions.sensor import SensorSuite, DepthSensor, RGBSensor
+from allenact.base_abstractions.task import TaskSampler
+from allenact.utils.experiment_utils import evenly_distribute_count_into_bins
+from allenact.utils.system import get_logger
+from allenact_plugins.habitat_plugin.habitat_constants import (
     HABITAT_DATASETS_DIR,
     HABITAT_CONFIGS_DIR,
     HABITAT_SCENE_DATASETS_DIR,
 )
-from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
-from plugins.habitat_plugin.habitat_tasks import PointNavTask
-from plugins.habitat_plugin.habitat_utils import (
+from allenact_plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
+from allenact_plugins.habitat_plugin.habitat_tasks import PointNavTask
+from allenact_plugins.habitat_plugin.habitat_utils import (
     get_habitat_config,
     construct_env_configs,
 )
 from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
-from utils.experiment_utils import evenly_distribute_count_into_bins
-from utils.system import get_logger
 
 
 def create_pointnav_config(

@@ -1,5 +1,8 @@
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
-from plugins.robothor_plugin.robothor_sensors import DepthSensorThor
+from allenact_plugins.ithor_plugin.ithor_sensors import (
+    RGBSensorThor,
+    GoalObjectTypeThorSensor,
+)
+from allenact_plugins.robothor_plugin.robothor_sensors import DepthSensorThor
 from projects.objectnav_baselines.experiments.objectnav_mixin_ddppo import (
     ObjectNavMixInPPOConfig,
 )

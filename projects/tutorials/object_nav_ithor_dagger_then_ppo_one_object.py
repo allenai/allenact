@@ -2,13 +2,18 @@ import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from core.algorithms.onpolicy_sync.losses import PPO
-from core.algorithms.onpolicy_sync.losses.imitation import Imitation
-from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from allenact.algorithms.onpolicy_sync.losses import PPO
+from allenact.algorithms.onpolicy_sync.losses.imitation import Imitation
+from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from allenact.utils.experiment_utils import (
+    Builder,
+    PipelineStage,
+    TrainingPipeline,
+    LinearDecay,
+)
 from projects.tutorials.object_nav_ithor_ppo_one_object import (
     ObjectNavThorPPOExperimentConfig,
 )
-from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
 class ObjectNavThorDaggerThenPPOExperimentConfig(ObjectNavThorPPOExperimentConfig):
