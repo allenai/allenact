@@ -19,6 +19,7 @@ if __name__ == "__main__":
                     for clean_dep in (dep.strip() for dep in f.readlines())
                     if clean_dep != "" and not clean_dep.startswith("#")
                 ]
+    extras["all"] = sum(extras.values(), [])
 
     os.chdir(os.path.join(base_dir, ".."))
 

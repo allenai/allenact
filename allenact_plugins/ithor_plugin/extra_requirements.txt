@@ -1,2 +1,2 @@
-ai2thor>=2.5.0
+ai2thor>=2.5.3
 networkx
