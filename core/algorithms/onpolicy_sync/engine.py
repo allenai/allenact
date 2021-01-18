@@ -54,6 +54,7 @@ from utils.tensor_utils import (
     detach_recursively,
 )
 from utils.viz_utils import VizSuite
+from utils import spaces_utils as su
 
 
 class OnPolicyRLEngine(object):
@@ -375,13 +376,15 @@ class OnPolicyRLEngine(object):
         with torch.no_grad():
             step_observation = rollouts.pick_observation_step(rollouts.step)
             memory = rollouts.pick_memory_step(rollouts.step)
+            prev_actions = rollouts.pick_prev_actions_step(rollouts.step)
             actor_critic_output, memory = self.actor_critic(
                 step_observation,
                 memory,
-                rollouts.prev_actions[rollouts.step : rollouts.step + 1],
+                prev_actions,
                 rollouts.masks[rollouts.step : rollouts.step + 1],
             )
 
+        # Assume actions do not contain a step dimension
         actions = (
             actor_critic_output.distributions.sample()
             if not self.deterministic_agents
@@ -394,12 +397,69 @@ class OnPolicyRLEngine(object):
     def _active_memory(memory, keep):
         return memory.sampler_select(keep) if memory is not None else memory
 
+    def probe(self, dones: List[bool], npaused, period=100000):
+        """
+        Debugging util. When called from self.collect_rollout_step(...), calls render for the 0-th task sampler of the
+        0-th distributed worker for the first beginning episode spaced at least period steps from the beginning
+        of the previous one.
+
+        For valid, train, it currently renders all episodes for the 0-th task sampler of the
+        0-th distributed worker. If this is not wanted, it must be hard-coded for now below.
+
+        :param dones: dones list from self.collect_rollout_step(...)
+        :param npaused: number of newly paused tasks returned by self.removed_paused(...)
+        :param period: minimal spacing in sampled steps between the beginning of episodes to be shown.
+        """
+        sampler_id = 0
+        done = dones[sampler_id]
+        if self.mode != "train":
+            setattr(
+                self, "_probe_npaused", getattr(self, "_probe_npaused", 0) + npaused
+            )
+            if self._probe_npaused == self.num_samplers:
+                del self._probe_npaused
+                return
+            period = 0
+        if self.worker_id == 0:
+            if done:
+                if period > 0 and (
+                    getattr(self, "_probe_steps", None) is None
+                    or (
+                        self._probe_steps < 0
+                        and (self.training_pipeline.total_steps + self._probe_steps)
+                        >= period
+                    )
+                ):
+                    self._probe_steps = self.training_pipeline.total_steps
+            if period == 0 or (
+                getattr(self, "_probe_steps", None) is not None
+                and self._probe_steps >= 0
+                and ((self.training_pipeline.total_steps - self._probe_steps) < period)
+            ):
+                if (
+                    period == 0
+                    or not done
+                    or self._probe_steps == self.training_pipeline.total_steps
+                ):
+                    self.vector_tasks.call_at(sampler_id, "render", ["human"])
+                else:
+                    self._probe_steps = -self._probe_steps
+
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None) -> int:
         actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
 
-        # Squeeze step and action dimensions and send a list for each sampler's agents
+        # Flatten actions
+        flat_actions = su.flatten(self.actor_critic.action_space, actions)
+
+        assert len(flat_actions.shape) == 3, (
+            "Distribution samples must include step and task sampler dimensions [step, sampler, ...]. The simplest way"
+            "to accomplish this is to pass param tensors (like `logits` in a `CategoricalDistr`) with these dimensions"
+            "to the Distribution."
+        )
+
+        # Convert flattened actions into list of actions and send them
         outputs: List[RLStepResult] = self.vector_tasks.step(
-            [[a.item() for a in ac] for ac in actions.squeeze(0).squeeze(-1)]
+            su.action_list(self.actor_critic.action_space, flat_actions)
         )
 
         # Save after task completion metrics
@@ -417,29 +477,26 @@ class OnPolicyRLEngine(object):
             rewards, dtype=torch.float, device=self.device,  # type:ignore
         )
 
-        # We want rewards to have dimensions [step, sampler, agent, reward]
+        # We want rewards to have dimensions [sampler, reward]
         if len(rewards.shape) == 1:
             # Rewards are of shape [sampler,]
-            rewards = rewards.view(1, -1, 1, 1)
-        elif len(rewards.shape) == 2:
-            # Rewards are of shape [sampler, agent]
-            rewards = rewards.unsqueeze(0).unsqueeze(-1)
-        else:
-            raise NotImplementedError
+            rewards = rewards.unsqueeze(-1)
+        elif len(rewards.shape) > 1:
+            raise NotImplementedError()
 
         # If done then clean the history of observations.
         masks = torch.tensor(
-            [[0.0] if done else [1.0] for done in dones],
+            [0.0 if done else 1.0 for done in dones],
             dtype=torch.float32,
             device=self.device,  # type:ignore
-        )
-
-        # Expand masks with new agents dimension
-        num_task_samplers = masks.shape[0]
-        num_agents = rewards.shape[2]
-        masks = masks.view(1, num_task_samplers, 1, 1).expand(-1, -1, num_agents, -1)
+        ).view(
+            -1, 1
+        )  # [sampler, 1]
 
         npaused, keep, batch = self.remove_paused(observations)
+
+        # TODO self.probe(...) can be useful for debugging (we might want to control it from main?)
+        # self.probe(dones, npaused)
 
         if npaused > 0:
             rollouts.sampler_select(keep)
@@ -449,13 +506,13 @@ class OnPolicyRLEngine(object):
             if len(keep) > 0
             else batch,
             memory=self._active_memory(memory, keep),
-            actions=actions[:, keep],
-            action_log_probs=actor_critic_output.distributions.log_probs(actions)[
-                :, keep
+            actions=flat_actions[0, keep],
+            action_log_probs=actor_critic_output.distributions.log_prob(actions)[
+                0, keep
             ],
-            value_preds=actor_critic_output.values[:, keep],
-            rewards=rewards[:, keep],
-            masks=masks[:, keep],
+            value_preds=actor_critic_output.values[0, keep],
+            rewards=rewards[keep],
+            masks=masks[keep],
         )
 
         # TODO we always miss tensors for the last action in the last episode of each worker
@@ -742,20 +799,19 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         else:
             approx_steps = self.step_count  # this is actually accurate
 
+        num_active_samplers = actor_critic_output.values.shape[1]
+
         if self.training_pipeline.current_stage.teacher_forcing is not None:
             if self.training_pipeline.current_stage.teacher_forcing(approx_steps) > 0:
                 actions, enforce_info = self.apply_teacher_forcing(
                     actions, step_observation, approx_steps
                 )
-                num_enforced = (
-                    enforce_info["teacher_forcing_mask"].sum().item()
-                    / actions.nelement()
-                )
+                empirical_enforced = enforce_info["teacher_forcing_mask"].mean().item()
             else:
-                num_enforced = 0
+                empirical_enforced = 0
 
             teacher_force_info = {
-                "teacher_ratio/sampled": num_enforced,
+                "teacher_ratio/sampled": empirical_enforced,
                 "teacher_ratio/enforced": self.training_pipeline.current_stage.teacher_forcing(
                     approx_steps
                 ),
@@ -764,7 +820,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 ("teacher_package", teacher_force_info, actions.nelement())
             )
 
-        self.step_count += actions.nelement()
+        self.step_count += num_active_samplers
 
         return actions, actor_critic_output, memory, step_observation
 
@@ -777,7 +833,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             )
 
             for bit, batch in enumerate(data_generator):
-                # masks is always [steps, samplers, agents, 1]:
+                # masks is always [steps, samplers, 1]:
                 num_rollout_steps, num_samplers = batch["masks"].shape[:2]
                 bsize = num_rollout_steps * num_samplers
 
@@ -986,19 +1042,15 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         return data_iterator
 
     def apply_teacher_forcing(
-        self,
-        actions: torch.Tensor,
-        step_observation: Dict[str, torch.Tensor],
-        step_count: int,
+        self, actions: Any, step_observation: Dict[str, torch.Tensor], step_count: int,
     ):
-        if len(actions.shape) == len(step_observation["expert_action"].shape) + 1:
-            # Missing agent dimension
-            step_observation["expert_action"] = step_observation[
-                "expert_action"
-            ].unsqueeze(-2)
+        # Recall that the last dimension of the expert action tensor has its last element equal to
+        # 0 if the expert action could not be computed and otherwise equals 1.
         tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
-        expert_actions = step_observation["expert_action"][..., :1]
-        expert_action_exists_mask = step_observation["expert_action"][..., 1:]
+        expert_actions = step_observation["expert_action"][..., :-1]
+        expert_action_exists_mask = step_observation["expert_action"][..., -1:]
+
+        actions = su.flatten(self.actor_critic.action_space, actions)
 
         assert (
             expert_actions.shape == actions.shape
@@ -1017,10 +1069,16 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             .to(self.device)
         ) * expert_action_exists_mask
 
-        actions = torch.where(teacher_forcing_mask.byte(), expert_actions, actions)
+        extended_shape = teacher_forcing_mask.shape + (1,) * (
+            len(actions.shape) - len(teacher_forcing_mask.shape)
+        )
+
+        actions = torch.where(
+            teacher_forcing_mask.byte().view(extended_shape), expert_actions, actions
+        )
 
         return (
-            actions,
+            su.unflatten(self.actor_critic.action_space, actions),
             {"teacher_forcing_mask": teacher_forcing_mask},
         )
 

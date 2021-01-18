@@ -5,12 +5,18 @@ from plugins.habitat_plugin.habitat_sensors import (
 from projects.pointnav_baselines.experiments.habitat.pointnav_habitat_base import (
     PointNavHabitatBaseConfig,
 )
-from projects.pointnav_baselines.experiments.pointnav_habitat_mixin_ddppo import PointNavHabitatMixInPPOConfig
-from projects.pointnav_baselines.experiments.pointnav_mixin_simpleconvgru import PointNavMixInSimpleConvGRUConfig
+from projects.pointnav_baselines.experiments.pointnav_habitat_mixin_ddppo import (
+    PointNavHabitatMixInPPOConfig,
+)
+from projects.pointnav_baselines.experiments.pointnav_mixin_simpleconvgru import (
+    PointNavMixInSimpleConvGRUConfig,
+)
 
 
 class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(
-    PointNavHabitatBaseConfig, PointNavHabitatMixInPPOConfig, PointNavMixInSimpleConvGRUConfig
+    PointNavHabitatBaseConfig,
+    PointNavHabitatMixInPPOConfig,
+    PointNavMixInSimpleConvGRUConfig,
 ):
     """An Point Navigation experiment configuration in Habitat with Depth
     input."""

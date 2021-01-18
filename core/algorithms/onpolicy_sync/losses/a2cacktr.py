@@ -42,11 +42,13 @@ class A2CACKTR(AbstractActorCriticLoss):
     ) -> Dict[str, Tuple[torch.Tensor, Optional[float]]]:
         actions = cast(torch.LongTensor, batch["actions"])
         values = actor_critic_output.values
-        action_log_probs = actor_critic_output.distributions.log_probs(actions)
-
-        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy().unsqueeze(
-            -1
+        action_log_probs = actor_critic_output.distributions.log_prob(actions)
+        action_log_probs = action_log_probs.view(
+            action_log_probs.shape
+            + (1,) * (len(batch["adv_targ"].shape) - len(action_log_probs.shape))
         )
+
+        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy()
         value_loss = 0.5 * (cast(torch.FloatTensor, batch["returns"]) - values).pow(2)
 
         # TODO: Decided not to use normalized advantages here,

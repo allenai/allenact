@@ -146,8 +146,12 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
             simulator_gpu_ids=self.TESTING_GPUS,
         )
 
-        self.TRAIN_CONFIGS_PER_PROCESS = construct_env_configs(self.TRAIN_CONFIG, allow_scene_repeat=True)
-        self.TEST_CONFIG_PER_PROCESS = construct_env_configs(self.TEST_CONFIG, allow_scene_repeat=False)
+        self.TRAIN_CONFIGS_PER_PROCESS = construct_env_configs(
+            self.TRAIN_CONFIG, allow_scene_repeat=True
+        )
+        self.TEST_CONFIG_PER_PROCESS = construct_env_configs(
+            self.TEST_CONFIG, allow_scene_repeat=False
+        )
 
     def train_scenes_path(self):
         return self.TASK_DATA_DIR_TEMPLATE.format(*(["train"] * 2))

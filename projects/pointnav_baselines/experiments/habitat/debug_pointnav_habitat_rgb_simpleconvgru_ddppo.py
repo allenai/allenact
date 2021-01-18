@@ -2,13 +2,21 @@ from plugins.habitat_plugin.habitat_sensors import (
     RGBSensorHabitat,
     TargetCoordinatesSensorHabitat,
 )
-from projects.pointnav_baselines.experiments.habitat.debug_pointnav_habitat_base import DebugPointNavHabitatBaseConfig
-from projects.pointnav_baselines.experiments.pointnav_habitat_mixin_ddppo import PointNavHabitatMixInPPOConfig
-from projects.pointnav_baselines.experiments.pointnav_mixin_simpleconvgru import PointNavMixInSimpleConvGRUConfig
+from projects.pointnav_baselines.experiments.habitat.debug_pointnav_habitat_base import (
+    DebugPointNavHabitatBaseConfig,
+)
+from projects.pointnav_baselines.experiments.pointnav_habitat_mixin_ddppo import (
+    PointNavHabitatMixInPPOConfig,
+)
+from projects.pointnav_baselines.experiments.pointnav_mixin_simpleconvgru import (
+    PointNavMixInSimpleConvGRUConfig,
+)
 
 
 class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(
-    DebugPointNavHabitatBaseConfig, PointNavHabitatMixInPPOConfig, PointNavMixInSimpleConvGRUConfig
+    DebugPointNavHabitatBaseConfig,
+    PointNavHabitatMixInPPOConfig,
+    PointNavMixInSimpleConvGRUConfig,
 ):
     """An Point Navigation experiment configuration in Habitat with Depth
     input."""
@@ -25,4 +33,3 @@ class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(
     @classmethod
     def tag(cls):
         return "Debug-Pointnav-Habitat-RGB-SimpleConv-DDPPO"
-

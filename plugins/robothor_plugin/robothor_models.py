@@ -15,6 +15,7 @@ from core.algorithms.onpolicy_sync.policy import (
 from core.base_abstractions.distributions import CategoricalDistr
 from core.base_abstractions.misc import ActorCriticOutput
 from core.models.basic_models import RNNStateEncoder, SimpleCNN
+from plugins.robothor_plugin.robothor_distributions import TupleCategoricalDistr
 
 
 class ResnetTensorGoalEncoder(nn.Module):
@@ -514,10 +515,23 @@ class ResnetFasterRCNNTensorsObjectNavActorCritic(ActorCriticModel[CategoricalDi
         )
 
 
-class NavToPartnerActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
+class TupleLinearActorCriticHead(LinearActorCriticHead):
+    def forward(self, x):
+        out = self.actor_and_critic(x)
+
+        logits = out[..., :-1]
+        values = out[..., -1:]
+        # noinspection PyArgumentList
+        return (
+            TupleCategoricalDistr(logits=logits),  # [steps, samplers, ...]
+            values.view(*values.shape[:2], -1),  # [steps, samplers, flattened]
+        )
+
+
+class NavToPartnerActorCriticSimpleConvRNN(ActorCriticModel[TupleCategoricalDistr]):
     def __init__(
         self,
-        action_space: gym.spaces.Discrete,
+        action_space: gym.spaces.Tuple,
         observation_space: SpaceDict,
         rgb_uuid: Optional[str] = "rgb",
         hidden_size=512,
@@ -544,7 +558,9 @@ class NavToPartnerActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
             rnn_type=rnn_type,
         )
 
-        self.actor_critic = LinearActorCriticHead(self._hidden_size, action_space.n)
+        self.actor_critic = TupleLinearActorCriticHead(
+            self._hidden_size, action_space[0].n
+        )
 
         self.train()
 
@@ -566,7 +582,7 @@ class NavToPartnerActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
 
     @property
     def num_agents(self):
-        return 2
+        return len(self.action_space)
 
     def _recurrent_memory_specification(self):
         return dict(
@@ -574,7 +590,7 @@ class NavToPartnerActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
                 (
                     ("layer", self.num_recurrent_layers),
                     ("sampler", None),
-                    ("agent", 2),
+                    ("agent", self.num_agents),
                     ("hidden", self.recurrent_hidden_state_size),
                 ),
                 torch.float32,

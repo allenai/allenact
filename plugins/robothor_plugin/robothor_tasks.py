@@ -3,6 +3,7 @@ from typing import Tuple, List, Dict, Any, Optional, Union, Sequence, cast
 
 import gym
 import numpy as np
+import torch
 
 from core.base_abstractions.misc import RLStepResult
 from core.base_abstractions.sensor import Sensor
@@ -474,7 +475,12 @@ class NavToPartnerTask(Task[RoboThorEnvironment]):
 
     @property
     def action_space(self):
-        return gym.spaces.Discrete(len(self._actions))
+        return gym.spaces.Tuple(
+            [
+                gym.spaces.Discrete(len(self._actions)),
+                gym.spaces.Discrete(len(self._actions)),
+            ]
+        )
 
     def reached_terminal_state(self) -> bool:
         return (
@@ -488,10 +494,8 @@ class NavToPartnerTask(Task[RoboThorEnvironment]):
     def close(self) -> None:
         self.env.stop()
 
-    def _step(self, action: Union[int, Sequence[int]]) -> RLStepResult:
-        assert isinstance(action, Sequence)
-        action = cast(List, action)
-
+    def _step(self, action: Tuple[int, int]) -> RLStepResult:
+        assert isinstance(action, Tuple)
         action_str1 = self.action_names()[action[0]]
         action_str2 = self.action_names()[action[1]]
 
@@ -532,14 +536,14 @@ class NavToPartnerTask(Task[RoboThorEnvironment]):
         elif mode == "depth":
             return tile_images(self.env.current_depths)
 
-    def judge(self) -> List[float]:
+    def judge(self) -> float:
         """Judge the last event."""
         reward = self.reward_configs["step_penalty"]
 
         if self.reached_terminal_state():
             reward += self.reward_configs["success_reward"]
 
-        return [reward] * 2  # same reward for both agents without shaping
+        return reward  # reward shared by both agents (no shaping)
 
     def metrics(self) -> Dict[str, Any]:
         if not self.is_done():

@@ -144,7 +144,7 @@ class DynamicDistanceCache(object):
         position: Dict[str, Any],
         target: Union[Dict[str, Any], str],
         native_distance_function: Callable[
-            [Dict[str, Any], Union[Dict[str, Any], str]], float
+            [Dict[str, Any], Union[Dict[str, Any], str], float], float
         ],
     ) -> float:
         # Convert the position to its rounded string representation
@@ -159,7 +159,7 @@ class DynamicDistanceCache(object):
             self.cache[position_str] = {}
         if target_str not in self.cache[position_str]:
             self.cache[position_str][target_str] = native_distance_function(
-                position, target
+                position, target, 0.05
             )
             self.misses += 1
         else:

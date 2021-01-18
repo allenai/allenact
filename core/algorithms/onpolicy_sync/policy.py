@@ -4,7 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
-from typing import TypeVar, Generic, Tuple, Optional, Union, Dict, cast, Any
+from typing import TypeVar, Generic, Tuple, Optional, Union, Dict, List, Any
+from collections import OrderedDict
 
 import gym
 import torch
@@ -22,21 +23,21 @@ MemorySpecType = Tuple[MemoryShapeType, torch.dtype]
 FullMemorySpecType = Dict[str, MemorySpecType]
 
 ObservationType = Dict[str, Union[torch.Tensor, Dict[str, Any]]]
+ActionType = Union[torch.Tensor, OrderedDict, Tuple, int]
 
 
 class ActorCriticModel(Generic[DistributionType], nn.Module):
     """Abstract class defining a deep (recurrent) actor critic agent.
 
-    When defining a new agent, you should over subclass this class and implement the abstract methods.
+    When defining a new agent, you should subclass this class and implement the abstract methods.
 
     # Attributes
 
-    action_space : The space of actions available to the agent. Currently only discrete
-        actions are allowed (so this space will always be of type `gym.spaces.Discrete`).
+    action_space : The space of actions available to the agent. This is of type `gym.spaces.Space`.
     observation_space: The observation space expected by the agent. This is of type `gym.spaces.dict`.
     """
 
-    def __init__(self, action_space: gym.spaces.Discrete, observation_space: SpaceDict):
+    def __init__(self, action_space: gym.Space, observation_space: SpaceDict):
         """Initializer.
 
         # Parameters
@@ -46,8 +47,8 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
         """
         super().__init__()
         self.action_space = action_space
-        self.dim_actions = action_space.n
         self.observation_space = observation_space
+        self.memory_spec: Optional[List[Optional[FullMemorySpecType]]] = None
 
     @property
     def recurrent_memory_specification(self) -> Optional[FullMemorySpecType]:
@@ -58,29 +59,25 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
 
         The memory specification from `_recurrent_memory_shape`.
         """
-        spec = self._recurrent_memory_specification()
+        if self.memory_spec is None:
+            self.memory_spec = [self._recurrent_memory_specification()]
 
-        if spec is None:
-            return spec
+            spec = self.memory_spec[0]
 
-        for key in spec:
-            dims, _ = spec[key]
-            dim_names = [d[0] for d in dims]
+            if spec is None:
+                return None
 
-            assert (
-                "step" not in dim_names
-            ), "`step` is automatically added and cannot be reused"
+            for key in spec:
+                dims, _ = spec[key]
+                dim_names = [d[0] for d in dims]
 
-            assert (
-                "sampler" in dim_names
-            ), "`sampler` dim must be defined (right before `agent` if present)"
+                assert (
+                    "step" not in dim_names
+                ), "`step` is automatically added and cannot be reused"
 
-            assert (
-                "agent" not in dim_names
-                or dim_names[dim_names.index("agent") - 1] == "sampler"
-            ), "`agent` dim must be right after `sampler`"
+                assert "sampler" in dim_names, "`sampler` dim must be defined"
 
-        return spec
+        return self.memory_spec[0]
 
     @abc.abstractmethod
     def _recurrent_memory_specification(self) -> Optional[FullMemorySpecType]:
@@ -100,7 +97,7 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
         and `layer` and `hidden` correspond to the standard RNN hidden state parametrization.
         2. The data type, e.g. `torch.float32`.
 
-        The `sampler` dimension is mandatory for all memories.
+        The `sampler` dimension placeholder is mandatory for all memories.
 
         For a single-agent ActorCritic model it is often more convenient to skip the agent dimension, e.g.
         `(("layer", 1), ("sampler", None), ("hidden", 32))` for a GRU memory.
@@ -112,7 +109,7 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
         self,
         observations: ObservationType,
         memory: Memory,
-        prev_actions: torch.Tensor,
+        prev_actions: ActionType,
         masks: torch.FloatTensor,
     ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         """Transforms input observations (& previous hidden state) into action
@@ -124,15 +121,15 @@ class ActorCriticModel(Generic[DistributionType], nn.Module):
                        current observations.
         memory : `Memory` object with recurrent memory. The shape of each tensor is determined by the corresponding
                  entry in `_recurrent_memory_specification`.
-        prev_actions : tensor of shape [steps, samplers, agents, ...] with the previous actions.
+        prev_actions : ActionType with tensors of shape [steps, samplers, ...] with the previous actions.
         masks : tensor of shape [steps, samplers, agents, 1] with zeros indicating steps where a new episode/task
                 starts.
 
         # Returns
 
         A tuple whose first element is an object of class ActorCriticOutput which stores
-        the agent's probability distribution over possible actions (shape [steps, samplers, agents, num_actions]),
-        the agent's value for the state (shape [steps, samplers, agents, 1]), and any extra information needed for
+        the agents' probability distribution over possible actions (shape [steps, samplers, ...]),
+        the agents' value for the state (shape [steps, samplers, ..., 1]), and any extra information needed for
         loss computations. The second element is an optional `Memory`, which is only used in models with recurrent
         memory.
         """
@@ -152,19 +149,15 @@ class LinearActorCriticHead(nn.Module):
     def forward(self, x):
         out = self.actor_and_critic(x)
 
-        assert len(out.shape) in [
-            3,
-            4,
-        ], "x must be [step, sampler, data] or [step, sampler, agent, data]"
-
-        if len(out.shape) == 3:
-            # [step, sampler, data] -> [step, sampler, agent, data]
-            out = out.unsqueeze(-2)
-
         logits = out[..., :-1]
         values = out[..., -1:]
         # noinspection PyArgumentList
-        return CategoricalDistr(logits=logits), values
+        return (
+            # logits are [step, sampler, ...]
+            CategoricalDistr(logits=logits),
+            # values are [step, sampler, flattened]
+            values.view(*values.shape[:2], -1),
+        )
 
 
 class LinearCriticHead(nn.Module):
@@ -175,18 +168,7 @@ class LinearCriticHead(nn.Module):
         nn.init.constant_(self.fc.bias, 0)
 
     def forward(self, x):
-        out = self.fc(x)
-
-        assert len(out.shape) in [
-            3,
-            4,
-        ], "x must be [step, sampler, data] or [step, sampler, agent, data]"
-
-        if len(out.shape) == 3:
-            # [step, sampler, data] -> [step, sampler, agent, data]
-            out = out.unsqueeze(-2)
-
-        return out
+        return self.fc(x).view(*x.shape[:2], -1)  # [steps, samplers, flattened]
 
 
 class LinearActorHead(nn.Module):
@@ -200,14 +182,5 @@ class LinearActorHead(nn.Module):
     def forward(self, x: torch.FloatTensor):  # type: ignore
         x = self.linear(x)  # type:ignore
 
-        assert len(x.shape) in [
-            3,
-            4,
-        ], "x must be [step, sampler, data] or [step, sampler, agent, data]"
-
-        if len(x.shape) == 3:
-            # [step, sampler, data] -> [step, sampler, agent, data]
-            x = cast(torch.FloatTensor, x.unsqueeze(-2))
-
         # noinspection PyArgumentList
-        return CategoricalDistr(logits=x)
+        return CategoricalDistr(logits=x)  # logits are [step, sampler, ...]

@@ -52,10 +52,6 @@ class GroupedActionImitation(AbstractActorCriticLoss):
                 expert_group_actions.get_device()
             )
 
-        if len(expert_group_actions.shape) == 3:
-            # No agent dimension in expert action
-            expert_group_actions = expert_group_actions.unsqueeze(-2)
-
         expert_group_actions_reshaped = expert_group_actions.view(-1, 1)
 
         expert_group_actions_mask = self.action_groups_mask[

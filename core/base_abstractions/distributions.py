@@ -1,3 +1,5 @@
+from typing import Any
+
 import abc
 
 import torch
@@ -9,34 +11,36 @@ Modify standard PyTorch distributions so they are compatible with this code.
 """
 
 
-class Distr(torch.distributions.Categorical, abc.ABC):
+class Distr(abc.ABC):
     @abc.abstractmethod
-    def log_probs(self, actions: torch.LongTensor):
+    def log_prob(self, actions: Any):
+        """Return the log probability/ies of the provided action/s."""
         raise NotImplementedError()
 
-
-class CategoricalDistr(Distr):
-    """A categorical distribution extending PyTorch's Categorical."""
-
-    def __init__(self, probs=None, logits=None, validate_args=None):
-        super(CategoricalDistr, self).__init__(
-            probs=probs, logits=logits, validate_args=validate_args
-        )
-
-    def rsample(self, sample_shape=torch.Size()):
+    @abc.abstractmethod
+    def entropy(self):
+        """Return the entropy or entropies."""
         raise NotImplementedError()
 
-    def cdf(self, value):
-        raise Exception("CDF is not defined for categorical distributions.")
-
-    def icdf(self, value):
-        raise Exception("Inverse CDF is not defined for categorical distributions.")
-
+    @abc.abstractmethod
     def sample(self, sample_shape=torch.Size()):
-        return super().sample(sample_shape).unsqueeze(-1)
+        """Sample actions."""
+        raise NotImplementedError()
 
-    def log_probs(self, actions: torch.LongTensor) -> torch.FloatTensor:
-        return super().log_prob(actions.squeeze(-1)).unsqueeze(-1)
+    def mode(self):
+        """If available, return the action(s) with highest probability.
+        It will only be called if using deterministic agents."""
+        raise NotImplementedError()
+
+
+class CategoricalDistr(torch.distributions.Categorical, Distr):
+    """A categorical distribution extending PyTorch's Categorical.
+
+       probs or logits are assumed to be passed with step and sampler dimensions as in: [step, samplers, ...]
+    """
+
+    def mode(self):
+        return self._param.argmax(dim=-1, keepdim=False)  # match sample()'s shape
 
     @lazy_property
     def log_probs_tensor(self):
@@ -45,9 +49,6 @@ class CategoricalDistr(Distr):
     @lazy_property
     def probs_tensor(self):
         return torch.softmax(self.logits, dim=-1)
-
-    def mode(self):
-        return self.probs.argmax(dim=-1, keepdim=True)
 
 
 class AddBias(nn.Module):

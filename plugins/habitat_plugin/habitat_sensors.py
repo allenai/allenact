@@ -139,12 +139,17 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def __init__(
         self, coordinate_dims: int, uuid: str = "target_coordinates_ind", **kwargs: Any
     ):
-        # Distance is a non-negative real and angle is normalized to the range (-Pi, Pi] or [-Pi, Pi)
-        observation_space = gym.spaces.Box(
-            np.float32(-3.15), np.float32(1000), shape=(coordinate_dims,)
-        )
+        self.coordinate_dims = coordinate_dims
+
+        observation_space = self._get_observation_space()
 
         super().__init__(**prepare_locals_for_super(locals()))
+
+    def _get_observation_space(self):
+        # Distance is a non-negative real and angle is normalized to the range (-Pi, Pi] or [-Pi, Pi)
+        return gym.spaces.Box(
+            np.float32(-3.15), np.float32(1000), shape=(self.coordinate_dims,)
+        )
 
     def get_observation(
         self,
@@ -160,9 +165,12 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
 
 class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def __init__(self, uuid: str = "target_object_id", **kwargs: Any):
-        observation_space = gym.spaces.Discrete(38)
+        observation_space = self._get_observation_space()
 
         super().__init__(**prepare_locals_for_super(locals()))
+
+    def _get_observation_space(self):
+        return gym.spaces.Discrete(38)
 
     def get_observation(
         self,
@@ -178,11 +186,12 @@ class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
 
 class AgentCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def __init__(self, uuid: str = "agent_position_and_rotation", **kwargs: Any):
-        observation_space = gym.spaces.Box(
-            np.float32(-1000), np.float32(1000), shape=(4,)
-        )
+        observation_space = self._get_observation_space()
 
         super().__init__(**prepare_locals_for_super(locals()))
+
+    def _get_observation_space(self):
+        return gym.spaces.Box(np.float32(-1000), np.float32(1000), shape=(4,))
 
     def get_observation(
         self,
