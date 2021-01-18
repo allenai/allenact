@@ -182,8 +182,8 @@ class IThorEnvironment(object):
 
         self.controller = Controller(
             x_display=self.x_display,
-            player_screen_width=self._start_player_screen_width,
-            player_screen_height=self._start_player_screen_height,
+            width=self._start_player_screen_width,
+            height=self._start_player_screen_height,
             local_executable_path=self._local_thor_build,
             quality=self._quality,
             server_class=ai2thor.fifo_server.FifoServer,

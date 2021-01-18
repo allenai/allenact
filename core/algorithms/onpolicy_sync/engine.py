@@ -397,25 +397,53 @@ class OnPolicyRLEngine(object):
     def _active_memory(memory, keep):
         return memory.sampler_select(keep) if memory is not None else memory
 
-    def probe(self, dones: List[bool], period=10000):
+    def probe(self, dones: List[bool], npaused, period=100000):
+        """
+        Debugging util. When called from self.collect_rollout_step(...), calls render for the 0-th task sampler of the
+        0-th distributed worker for the first beginning episode spaced at least period steps from the beginning
+        of the previous one.
+
+        For valid, train, it currently renders all episodes for the 0-th task sampler of the
+        0-th distributed worker. If this is not wanted, it must be hard-coded for now below.
+
+        :param dones: dones list from self.collect_rollout_step(...)
+        :param npaused: number of newly paused tasks returned by self.removed_paused(...)
+        :param period: minimal spacing in sampled steps between the beginning of episodes to be shown.
+        """
         sampler_id = 0
         done = dones[sampler_id]
-        if self.worker_id == 0 and self.mode == "train":
+        if self.mode != "train":
+            setattr(
+                self, "_probe_npaused", getattr(self, "_probe_npaused", 0) + npaused
+            )
+            if self._probe_npaused == self.num_samplers:
+                del self._probe_npaused
+                return
+            period = 0
+        if self.worker_id == 0:
             if done:
-                if getattr(self, "_vis_steps", None) is None or (
-                    self._vis_steps < 0
-                    and (self.training_pipeline.total_steps + self._vis_steps) >= period
+                if period > 0 and (
+                    getattr(self, "_probe_steps", None) is None
+                    or (
+                        self._probe_steps < 0
+                        and (self.training_pipeline.total_steps + self._probe_steps)
+                        >= period
+                    )
                 ):
-                    self._vis_steps = self.training_pipeline.total_steps
-            if (
-                getattr(self, "_vis_steps", None) is not None
-                and self._vis_steps >= 0
-                and (self.training_pipeline.total_steps - self._vis_steps) < period
+                    self._probe_steps = self.training_pipeline.total_steps
+            if period == 0 or (
+                getattr(self, "_probe_steps", None) is not None
+                and self._probe_steps >= 0
+                and ((self.training_pipeline.total_steps - self._probe_steps) < period)
             ):
-                if not done or self._vis_steps == self.training_pipeline.total_steps:
+                if (
+                    period == 0
+                    or not done
+                    or self._probe_steps == self.training_pipeline.total_steps
+                ):
                     self.vector_tasks.call_at(sampler_id, "render", ["human"])
                 else:
-                    self._vis_steps = -self._vis_steps
+                    self._probe_steps = -self._probe_steps
 
     def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None) -> int:
         actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
@@ -453,7 +481,7 @@ class OnPolicyRLEngine(object):
         if len(rewards.shape) == 1:
             # Rewards are of shape [sampler,]
             rewards = rewards.unsqueeze(-1)
-        else:
+        elif len(rewards.shape) > 1:
             raise NotImplementedError()
 
         # If done then clean the history of observations.
@@ -465,9 +493,10 @@ class OnPolicyRLEngine(object):
             -1, 1
         )  # [sampler, 1]
 
-        # self.probe(dones)
-
         npaused, keep, batch = self.remove_paused(observations)
+
+        # TODO self.probe(...) can be useful for debugging (we might want to control it from main?)
+        # self.probe(dones, npaused)
 
         if npaused > 0:
             rollouts.sampler_select(keep)
@@ -770,21 +799,19 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         else:
             approx_steps = self.step_count  # this is actually accurate
 
-        num_actions = actor_critic_output.values.shape[1]
+        num_active_samplers = actor_critic_output.values.shape[1]
 
         if self.training_pipeline.current_stage.teacher_forcing is not None:
             if self.training_pipeline.current_stage.teacher_forcing(approx_steps) > 0:
                 actions, enforce_info = self.apply_teacher_forcing(
                     actions, step_observation, approx_steps
                 )
-                num_enforced = (
-                    enforce_info["teacher_forcing_mask"].sum().item() / num_actions
-                )
+                empirical_enforced = enforce_info["teacher_forcing_mask"].mean().item()
             else:
-                num_enforced = 0
+                empirical_enforced = 0
 
             teacher_force_info = {
-                "teacher_ratio/sampled": num_enforced,
+                "teacher_ratio/sampled": empirical_enforced,
                 "teacher_ratio/enforced": self.training_pipeline.current_stage.teacher_forcing(
                     approx_steps
                 ),
@@ -793,7 +820,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 ("teacher_package", teacher_force_info, actions.nelement())
             )
 
-        self.step_count += num_actions
+        self.step_count += num_active_samplers
 
         return actions, actor_critic_output, memory, step_observation
 
@@ -1043,7 +1070,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         ) * expert_action_exists_mask
 
         extended_shape = teacher_forcing_mask.shape + (1,) * (
-            actions.shape - teacher_forcing_mask.shape
+            len(actions.shape) - len(teacher_forcing_mask.shape)
         )
 
         actions = torch.where(

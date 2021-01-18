@@ -22,6 +22,7 @@ import numpy as np
 import torch
 
 from torch import nn
+from torch.distributions.utils import lazy_property
 from torchvision import transforms, models
 from gym import spaces as gyms
 
@@ -157,7 +158,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
 
         super().__init__(**prepare_locals_for_super(locals()))
 
-    def _get_observation_space(self) -> gym.spaces.Tuple:
+    def _get_observation_space(self) -> gym.spaces.Box:
         """The observation space of the expert action sensor.
 
         Will equal `gym.spaces.Tuple(gym.spaces.Discrete(num actions in
@@ -168,13 +169,17 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         """
         return su.flatten_space(self.unflattened_observation_space)
 
+    @lazy_property
+    def _zeroed_action(self):
+        return self.action_space.sample().zero_()
+
     def get_observation(
         self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
     ) -> Any:
         # If the task is completed, we needn't (perhaps can't) find the expert
         # action from the (current) terminal state.
         if task.is_done():
-            return np.array([self.action_space.sample(), False])
+            return np.array([self._zeroed_action, False])
 
         action, expert_was_successful = task.query_expert(**self.expert_args)
 
