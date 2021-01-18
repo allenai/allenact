@@ -20,7 +20,7 @@ from allenact.algorithms.onpolicy_sync.policy import (
 )
 from allenact.base_abstractions.distributions import CategoricalDistr
 from allenact.base_abstractions.misc import ActorCriticOutput
-from allenact.models.basic_models import SimpleCNN, RNNStateEncoder
+from allenact.embodiedai.models.basic_models import SimpleCNN, RNNStateEncoder
 
 
 class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):

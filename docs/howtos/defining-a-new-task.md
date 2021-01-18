@@ -2,11 +2,11 @@
 
 In order to use new tasks in our experiments, we need to define two classes:
 
-* A [Task](/api/core/base_abstractions/task#task), including, among others, a `step` implementation providing a
-[RLStepResult](/api/core/base_abstractions/misc#rlstepresult), a `metrics` method providing quantitative performance measurements 
+* A [Task](/api/allenact/base_abstractions/task#task), including, among others, a `step` implementation providing a
+[RLStepResult](/api/allenact/base_abstractions/misc#rlstepresult), a `metrics` method providing quantitative performance measurements 
 for agents and, optionally, a `query_expert` method that can be used e.g. with an
-[imitation loss](/api/core/algorithms/onpolicy_sync/losses/imitation#imitation) during training.
-* A [TaskSampler](/api/core/base_abstractions/task#tasksampler), that allows instantiating new Tasks for the agents to solve during
+[imitation loss](/api/allenact/algorithms/onpolicy_sync/losses/imitation#imitation) during training.
+* A [TaskSampler](/api/allenact/base_abstractions/task#tasksampler), that allows instantiating new Tasks for the agents to solve during
 training, validation and testing.
 
 ## Task
@@ -144,7 +144,7 @@ e.g. for DAgger training.
 We also need to define the corresponding TaskSampler, which must contain implementations for methods `__len__`,
 `total_unique`, `last_sampled_task`, `next_task`, `close`, `reset`, and `set_seed`. Currently,
 an additional method `all_observation_spaces_equal` is used to ensure compatibility with the current
-[RolloutStorage](/api/core/algorithms/onpolicy_sync/storage#rolloutstorage).
+[RolloutStorage](/api/allenact/algorithms/onpolicy_sync/storage#rolloutstorage).
 
 Let's define a tasks sampler able to provide an infinite number of object navigation tasks for AI2-THOR.
 

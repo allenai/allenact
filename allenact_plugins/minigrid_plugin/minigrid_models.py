@@ -15,7 +15,7 @@ from allenact.algorithms.onpolicy_sync.policy import (
     ObservationType,
 )
 from allenact.base_abstractions.distributions import CategoricalDistr
-from allenact.models.basic_models import LinearActorCritic, RNNActorCritic
+from allenact.embodiedai.models.basic_models import LinearActorCritic, RNNActorCritic
 from allenact.utils.misc_utils import prepare_locals_for_super
 
 

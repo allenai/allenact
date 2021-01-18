@@ -45,8 +45,8 @@ class NavigationWithShaping(allenact_plugins.ithor_plugin.ithor_tasks.ObjectNavi
 
 ## Losses
 
-We support [A2C](/api/core/algorithms/onpolicy_sync/losses/a2cacktr#a2c), [PPO](/api/core/algorithms/onpolicy_sync/losses/ppo#ppo),
-and [imitation](/api/core/algorithms/onpolicy_sync/losses/imitation#imitation) losses amongst others. We can easily include
+We support [A2C](/api/allenact/algorithms/onpolicy_sync/losses/a2cacktr#a2c), [PPO](/api/allenact/algorithms/onpolicy_sync/losses/ppo#ppo),
+and [imitation](/api/allenact/algorithms/onpolicy_sync/losses/imitation#imitation) losses amongst others. We can easily include
 [DAgger](https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf) or variations thereof by assuming the
 availability of an expert providing optimal actions to agents and combining imitation and PPO losses in different ways
 through multiple stages:

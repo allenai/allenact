@@ -58,7 +58,7 @@ A complete example can be found in
 ## Loss function
 
 Off-policy losses must implement the
-[AbstractOffPolicyLoss](/api/core/algorithms/offpolicy_sync/losses/abstract_offpolicy_loss/#abstractoffpolicyloss)
+[AbstractOffPolicyLoss](/api/allenact/algorithms/offpolicy_sync/losses/abstract_offpolicy_loss/#abstractoffpolicyloss)
 interface. In this case, we minimize the cross-entropy between the actor's policy and the expert action:
 """
 

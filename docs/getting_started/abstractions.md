@@ -18,7 +18,7 @@ See either the ["designing your first minigrid experiment"](/tutorials/minigrid-
 ["designing an experiment for point navigation"](/tutorials/training-a-pointnav-model)
  tutorials to get an in-depth description of how these experiment configurations are defined in practice.
 
-See also the [abstract `ExperimentConfig` class](/api/core/base_abstractions/experiment_config#experimentconfig) 
+See also the [abstract `ExperimentConfig` class](/api/allenact/base_abstractions/experiment_config#experimentconfig) 
 and an [example implementation](/api/plugins/ithor_plugin/ithor_environment/#ithorenvironment).
 
 ## Task sampler
@@ -26,7 +26,7 @@ and an [example implementation](/api/plugins/ithor_plugin/ithor_environment/#ith
 A task sampler is responsible for generating a sequence of tasks for agents to solve. The sequence of tasks can be 
 randomly generated (e.g. in training) or extracted from an ordered pool (e.g. in validation or testing).
 
-See the [abstract `TaskSampler` class](/api/core/base_abstractions/task/#tasksampler) 
+See the [abstract `TaskSampler` class](/api/allenact/base_abstractions/task/#tasksampler) 
 and an [example implementation](/api/plugins/ithor_plugin/ithor_task_samplers/#objectnavtasksampler).
 
 ## Task
@@ -38,7 +38,7 @@ the task (e.g. a target object class) and are allowed to execute actions such as
 `RotateLeft`, and `End` whenever agents determine they have reached their target. The metrics might include a
 success indicator or some quantitative metric on the optimality of the followed path.  
 
-See the [abstract `Task` class](/api/core/base_abstractions/task/#task) 
+See the [abstract `Task` class](/api/allenact/base_abstractions/task/#task) 
 and an [example implementation](/api/plugins/robothor_plugin/robothor_tasks/#objectnavtask).
 
 ## Sensor
@@ -47,7 +47,7 @@ Sensors provide observations extracted from an environment (e.g. RGB or depth im
 end point in point navigation or target object class in semantic navigation) that can be directly consumed by 
 agents.
 
-See the [abstract `Sensor` class](/api/core/base_abstractions/sensor/#sensor) 
+See the [abstract `Sensor` class](/api/allenact/base_abstractions/sensor/#sensor) 
 and an [example implementation](/api/plugins/ithor_plugin/ithor_sensors/#rgbsensorthor).
 
 ## Actor critic model
@@ -56,14 +56,14 @@ The actor-critic agent is responsible for computing batched action probabilities
 observations provided by sensors, internal state representations, previous actions, and potentially 
 other inputs.
 
-See the [abstract `ActorCriticModel` class](/api/core/algorithms/onpolicy_sync/policy/#ActorCriticModel) 
+See the [abstract `ActorCriticModel` class](/api/allenact/algorithms/onpolicy_sync/policy/#ActorCriticModel) 
 and an
 [example implementation](/api/projects/objectnav_baselines/models/object_nav_models#ObjectNavBaselineActorCritic).
 
 ## Training pipeline
 
 The training pipeline, defined in the
-[`ExperimentConfig`'s `training_pipeline` method](/api/core/base_abstractions/experiment_config/#training_pipeline),
+[`ExperimentConfig`'s `training_pipeline` method](/api/allenact/base_abstractions/experiment_config/#training_pipeline),
 contains one or more training stages where different
 [losses can be combined or sequentially applied](/howtos/defining-a-new-training-pipeline).
  
@@ -73,13 +73,13 @@ Actor-critic losses compute a combination of action loss and value loss out of c
 train actor-critic models with back-propagation, e.g. PPO or A2C.
 
 See the
-[`AbstractActorCriticLoss` class](/api/core/algorithms/onpolicy_sync/losses/abstract_loss#abstractactorcriticloss) 
-and an [example implementation](/api/core/algorithms/onpolicy_sync/losses/ppo/#ppo).
+[`AbstractActorCriticLoss` class](/api/allenact/algorithms/onpolicy_sync/losses/abstract_loss#abstractactorcriticloss) 
+and an [example implementation](/api/allenact/algorithms/onpolicy_sync/losses/ppo/#ppo).
 
 Off-policy losses implement generic training iterations in which a batch of data is run through a model (that can be a
 subgraph of an [`ActorCriticModel`](#actor-critic-model)) and a loss is
 computed on the model's output.
 
 See the
-[`AbstractOffPolicyLoss` class](/api/core/algorithms/offpolicy_sync/losses/abstract_offpolicy_loss#abstractoffpolicyloss) 
+[`AbstractOffPolicyLoss` class](/api/allenact/algorithms/offpolicy_sync/losses/abstract_offpolicy_loss#abstractoffpolicyloss) 
 and an [example implementation](/api/plugins/minigrid_plugin/minigrid_offpolicy/#MiniGridOffPolicyExpertCELoss).
