@@ -1,5 +1,6 @@
 import glob
 import os
+import subprocess
 from pathlib import Path
 
 from setuptools import find_packages, setup
@@ -61,4 +62,14 @@ if __name__ == "__main__":
         setup_requires=["pytest-runner"],
         tests_require=["pytest", "pytest-cov"],
         extras_require=extras,
+    )
+
+    # TODO: Having to hack in installation of babyai for now, seems that extra requires doesn't allow for
+    #   editable installations in some cases.
+    subprocess.check_output(
+        [
+            "pip",
+            "install",
+            "--editable=git+https://github.com/unnat/babyai.git@ff645fe00ea8412a29bd5e2d6f79ae1595d229a7#egg=babyai",
+        ]
     )
