@@ -11,6 +11,7 @@ from core.base_abstractions.task import Task, TaskSampler
 from utils.system import get_logger
 from plugins.gym_plugin.gym_environment import GymEnvironment
 from plugins.gym_plugin.gym_sensors import GymBox2DSensor
+from utils.experiment_utils import set_seed
 
 
 class GymTask(Task[gym.Env]):
@@ -91,6 +92,8 @@ class GymContinuousBox2DTask(GymTask):
 
 
 def task_selector(env_name: str) -> type:
+    """Helper function for `GymTaskSampler`.
+    """
     if env_name in [
         "CarRacing-v0",
         "LunarLanderContinuous-v2",
@@ -102,6 +105,8 @@ def task_selector(env_name: str) -> type:
 
 
 def sensor_selector(env_name: str) -> Sensor:
+    """Helper function for `GymTaskSampler`.
+    """
     if env_name in [
         "CarRacing-v0",
         "LunarLanderContinuous-v2",
@@ -114,6 +119,9 @@ def sensor_selector(env_name: str) -> Sensor:
 
 
 class GymTaskSampler(TaskSampler):
+    """TaskSampler for gym environments.
+    """
+
     def __init__(
         self,
         gym_env_type: str = "LunarLanderContinuous-v2",
@@ -125,6 +133,7 @@ class GymTaskSampler(TaskSampler):
         task_selector: Callable[[str], type] = task_selector,
         repeat_failed_task_for_min_steps: int = 0,
         extra_task_kwargs: Optional[Dict] = None,
+        seed: Optional[int] = None,
         **kwargs,
     ):
         super().__init__()
@@ -186,7 +195,12 @@ class GymTaskSampler(TaskSampler):
                 " this might be a mistake when running testing."
             )
 
-        self.np_seeded_random_gen, _ = seeding.np_random(random.randint(0, 2 ** 31 - 1))
+        if seed is not None:
+            self.set_seed(seed)
+        else:
+            self.np_seeded_random_gen, _ = seeding.np_random(
+                random.randint(0, 2 ** 31 - 1)
+            )
 
         self.num_tasks_generated = 0
         self.task_type = task_selector(self.gym_env_type)
@@ -251,8 +265,10 @@ class GymTaskSampler(TaskSampler):
 
         self.num_tasks_generated += 1
 
+        task_info = {"id": "random%d" % random.randint(0, 2 ** 63 - 1)}
+
         self._last_task = self.task_type(
-            **dict(env=self.env, sensors=self.sensors, task_info={}),
+            **dict(env=self.env, sensors=self.sensors, task_info=task_info),
             **self.extra_task_kwargs,
         )
 
@@ -271,3 +287,5 @@ class GymTaskSampler(TaskSampler):
 
     def set_seed(self, seed: int) -> None:
         self.np_seeded_random_gen, _ = seeding.np_random(seed)
+        if seed is not None:
+            set_seed(seed)

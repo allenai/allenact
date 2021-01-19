@@ -13,6 +13,9 @@ from core.base_abstractions.misc import ActorCriticOutput, Memory
 
 
 class MemorylessActorCritic(ActorCriticModel[GaussianDistr]):
+    """ActorCriticModel for gym tasks with continuous control in the range [-1, 1].
+    """
+
     def __init__(
         self,
         input_uuid: str,
@@ -44,13 +47,6 @@ class MemorylessActorCritic(ActorCriticModel[GaussianDistr]):
             *self.make_mlp_hidden(nn.Tanh, *mlp_hidden_dims), nn.Linear(32, 1),
         )
 
-        # gates
-        self.gates = nn.Sequential(
-            *self.make_mlp_hidden(nn.Tanh, *mlp_hidden_dims),
-            nn.Linear(32, 2),
-            nn.Sigmoid(),
-        )
-
         # maximum standard deviation
         self.register_buffer(
             "action_std",
@@ -78,15 +74,10 @@ class MemorylessActorCritic(ActorCriticModel[GaussianDistr]):
     ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
         means = self.actor(observations[self.input_uuid])
         values = self.critic(observations[self.input_uuid])
-        gates = self.gates(observations[self.input_uuid])
 
         return (
             ActorCriticOutput(
-                GaussianDistr(
-                    loc=means * gates[..., :1], scale=self.action_std * gates[..., 1:]
-                ),
-                values,
-                {},
+                GaussianDistr(loc=means, scale=self.action_std), values, {},
             ),
             None,  # no Memory
         )
