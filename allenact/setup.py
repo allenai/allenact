@@ -10,7 +10,13 @@ if __name__ == "__main__":
         __version__ = f.readline()
 
     # Extra dependencies required for various plugins
-    # extras = {}
+    extras = {
+        "dev": [
+            l.strip()
+            for l in open("dev_requirements.txt", "r").readlines()
+            if l.strip() != ""
+        ]
+    }
 
     setup(
         name="allenact",
@@ -45,6 +51,9 @@ if __name__ == "__main__":
             "moviepy>=1.0.3",
             "filelock",
             "numpy>=1.19.1",
+            "Pillow<7.0.0",
+            "matplotlib>=3.3.1",
+            "networkx",
         ],
         setup_requires=["pytest-runner"],
         tests_require=["pytest", "pytest-cov"],

@@ -62,6 +62,11 @@ nav:
 - Licence: LICENSE.md
 - API:
   - allenact:
+    - embodiedai:
+      - preprocessors:
+        - resnet: api/allenact/embodiedai/preprocessors/resnet.md
+      - models:
+        - basic_models: api/allenact/embodiedai/models/basic_models.md
     - base_abstractions:
       - experiment_config: api/allenact/base_abstractions/experiment_config.md
       - misc: api/allenact/base_abstractions/misc.md
@@ -98,8 +103,6 @@ nav:
       - tensor_utils: api/allenact/utils/tensor_utils.md
       - cache_utils: api/allenact/utils/cache_utils.md
       - literate: api/allenact/utils/literate.md
-    - models:
-      - basic_models: api/allenact/models/basic_models.md
   - allenact_plugins:
     - habitat_plugin:
       - habitat_constants: api/allenact_plugins/habitat_plugin/habitat_constants.md

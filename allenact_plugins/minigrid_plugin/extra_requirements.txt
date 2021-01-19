@@ -1,2 +1,2 @@
-patsy==0.5.1
+patsy>=0.5.1
 gym_minigrid

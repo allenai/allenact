@@ -1,1 +1,4 @@
 habitat@git+https://github.com/Lucaweihs/habitat-lab.git@99124c785bd5ca51e321ea20462f71071cd43ae2
+quaternion
+numpy-quaternion
+pyquaternion>=0.9.9

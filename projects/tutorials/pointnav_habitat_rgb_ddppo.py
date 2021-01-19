@@ -11,12 +11,10 @@ from torchvision import models
 from allenact.algorithms.onpolicy_sync.losses import PPO
 from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from allenact.base_abstractions.experiment_config import ExperimentConfig, MachineParams
-from allenact.base_abstractions.preprocessor import (
-    ResNetPreprocessor,
-    SensorPreprocessorGraph,
-)
+from allenact.base_abstractions.preprocessor import SensorPreprocessorGraph
 from allenact.base_abstractions.sensor import SensorSuite
 from allenact.base_abstractions.task import TaskSampler
+from allenact.embodiedai.preprocessors.resnet import ResNetPreprocessor
 from allenact.utils.experiment_utils import (
     Builder,
     PipelineStage,

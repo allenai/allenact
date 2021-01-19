@@ -1,6 +1,6 @@
 from typing import Any
 
-from allenact.base_abstractions.preprocessor import ResNetPreprocessor
+from allenact.embodiedai.preprocessors.resnet import ResNetPreprocessor
 from allenact.utils.system import get_logger
 
 

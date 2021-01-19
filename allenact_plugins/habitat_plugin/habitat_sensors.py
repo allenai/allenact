@@ -7,9 +7,7 @@ from pyquaternion import Quaternion
 from allenact.base_abstractions.sensor import (
     Sensor,
     RGBSensor,
-    RGBResNetSensor,
     DepthSensor,
-    DepthResNetSensor,
 )
 from allenact.base_abstractions.task import Task
 from allenact.utils.misc_utils import prepare_locals_for_super
@@ -44,35 +42,6 @@ class RGBSensorHabitat(RGBSensor[HabitatEnvironment, Task[HabitatEnvironment]]):
         return env.current_frame["rgb"].copy()
 
 
-class RGBResNetSensorHabitat(
-    RGBResNetSensor[HabitatEnvironment, Task[HabitatEnvironment]]
-):
-    # For backwards compatibility
-    def __init__(
-        self,
-        use_resnet_normalization: bool = True,
-        mean: Optional[np.ndarray] = np.array(
-            [[[0.485, 0.456, 0.406]]], dtype=np.float32
-        ),
-        stdev: Optional[np.ndarray] = np.array(
-            [[[0.229, 0.224, 0.225]]], dtype=np.float32
-        ),
-        height: Optional[int] = None,
-        width: Optional[int] = None,
-        uuid: str = "rgb",
-        output_shape: Optional[Tuple[int, ...]] = (2048,),
-        output_channels: Optional[int] = None,
-        unnormalized_infimum: float = -np.inf,
-        unnormalized_supremum: float = np.inf,
-        scale_first: bool = False,
-        **kwargs: Any
-    ):
-        super().__init__(**prepare_locals_for_super(locals()))
-
-    def frame_from_env(self, env: HabitatEnvironment) -> np.ndarray:
-        return env.current_frame["rgb"].copy()
-
-
 class DepthSensorHabitat(DepthSensor[HabitatEnvironment, Task[HabitatEnvironment]]):
     # For backwards compatibility
     def __init__(
@@ -88,38 +57,6 @@ class DepthSensorHabitat(DepthSensor[HabitatEnvironment, Task[HabitatEnvironment
         output_channels: int = 1,
         unnormalized_infimum: float = 0.0,
         unnormalized_supremum: float = 5.0,
-        scale_first: bool = False,
-        **kwargs: Any
-    ):
-        # Give priority to use_normalization, but use_resnet_normalization for backward compat. if not set
-        if use_resnet_normalization is not None and use_normalization is None:
-            use_normalization = use_resnet_normalization
-        elif use_normalization is None:
-            use_normalization = False
-
-        super().__init__(**prepare_locals_for_super(locals()))
-
-    def frame_from_env(self, env: HabitatEnvironment) -> np.ndarray:
-        return env.current_frame["depth"].copy()
-
-
-class DepthResNetSensorHabitat(
-    DepthResNetSensor[HabitatEnvironment, Task[HabitatEnvironment]]
-):
-    # For backwards compatibility
-    def __init__(
-        self,
-        use_resnet_normalization: Optional[bool] = None,
-        use_normalization: Optional[bool] = None,
-        mean: Optional[np.ndarray] = np.array([[0.5]], dtype=np.float32),
-        stdev: Optional[np.ndarray] = np.array([[0.25]], dtype=np.float32),
-        height: Optional[int] = None,
-        width: Optional[int] = None,
-        uuid: str = "depth",
-        output_shape: Optional[Tuple[int, ...]] = (2048,),
-        output_channels: Optional[int] = None,
-        unnormalized_infimum: float = -np.inf,
-        unnormalized_supremum: float = np.inf,
         scale_first: bool = False,
         **kwargs: Any
     ):

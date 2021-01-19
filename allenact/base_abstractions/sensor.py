@@ -20,16 +20,13 @@ from typing import (
 import PIL
 import gym
 import numpy as np
-import torch
 from gym import spaces as gyms
-from torch import nn
 from torch.distributions.utils import lazy_property
-from torchvision import transforms, models
+from torchvision import transforms
 
 from allenact.base_abstractions.misc import EnvType
 from allenact.utils import spaces_utils as su
 from allenact.utils.misc_utils import prepare_locals_for_super
-from allenact.utils.model_utils import Flatten
 from allenact.utils.system import get_logger
 from allenact.utils.tensor_utils import ScaleBothSides
 
@@ -521,134 +518,3 @@ class DepthSensor(VisionSensor[EnvType, SubTaskType], ABC):
         depth = np.expand_dims(depth, 2)
 
         return depth
-
-
-class ResNetSensor(VisionSensor[EnvType, SubTaskType], ABC):
-    def __init__(
-        self,
-        mean: Optional[np.ndarray] = None,
-        stdev: Optional[np.ndarray] = None,
-        height: Optional[int] = None,
-        width: Optional[int] = None,
-        uuid: str = "resnet",
-        output_shape: Optional[Tuple[int, ...]] = None,
-        output_channels: Optional[int] = None,
-        unnormalized_infimum: float = -np.inf,
-        unnormalized_supremum: float = np.inf,
-        scale_first: bool = True,
-        **kwargs: Any
-    ):
-        self.to_tensor = transforms.ToTensor()
-
-        self.resnet = nn.Sequential(
-            *list(models.resnet50(pretrained=True).children())[:-1] + [Flatten()]
-        ).eval()
-
-        self.device: torch.device = torch.device("cpu")
-
-        super().__init__(**prepare_locals_for_super(locals()))
-
-    def to(self, device: torch.device) -> "ResNetSensor":
-        """Moves sensor to specified device.
-
-        # Parameters
-
-        device : The device for the sensor.
-        """
-        self.device = device
-        self.resnet = self.resnet.to(device)
-        return self
-
-    def observation_to_tensor(self, observation: Any) -> torch.Tensor:
-        return self.to_tensor(observation)
-
-    def get_observation(  # type: ignore
-        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
-    ) -> Any:
-        observation = super().get_observation(env, task, *args, **kwargs)
-
-        input_tensor = (
-            self.observation_to_tensor(observation).unsqueeze(0).to(self.device)
-        )
-        with torch.no_grad():
-            result = self.resnet(input_tensor).detach().cpu().numpy()
-
-        return result
-
-
-class RGBResNetSensor(ResNetSensor[EnvType, SubTaskType], ABC):
-    def __init__(
-        self,
-        use_resnet_normalization: bool = True,
-        mean: Optional[np.ndarray] = np.array(
-            [[[0.485, 0.456, 0.406]]], dtype=np.float32
-        ),
-        stdev: Optional[np.ndarray] = np.array(
-            [[[0.229, 0.224, 0.225]]], dtype=np.float32
-        ),
-        height: Optional[int] = None,
-        width: Optional[int] = None,
-        uuid: str = "rgbresnet",
-        output_shape: Optional[Tuple[int, ...]] = (2048,),
-        output_channels: Optional[int] = None,
-        unnormalized_infimum: float = -np.inf,
-        unnormalized_supremum: float = np.inf,
-        scale_first: bool = True,
-        **kwargs: Any
-    ):
-        """Initializer.
-
-        # Parameters
-
-        config : If `config["use_resnet_normalization"]` is `True` then the RGB images will be normalized
-            with means `[0.485, 0.456, 0.406]` and standard deviations `[0.229, 0.224, 0.225]` (i.e. using the standard
-            resnet normalization). If both `config["height"]` and `config["width"]` are non-negative integers then
-            the RGB image returned from the environment will be rescaled to have shape
-            (config["height"], config["width"], 3) using bilinear sampling before being fed to a ResNet-50 and
-            extracting the flattened 2048-dimensional output embedding.
-        args : Extra args. Currently unused.
-        kwargs : Extra kwargs. Currently unused.
-        """
-        if not use_resnet_normalization:
-            mean, stdev = None, None
-
-        super().__init__(**prepare_locals_for_super(locals()))
-
-
-class DepthResNetSensor(ResNetSensor[EnvType, SubTaskType], ABC):
-    def __init__(
-        self,
-        use_normalization: bool = False,
-        mean: Optional[np.ndarray] = np.array([[0.5]], dtype=np.float32),
-        stdev: Optional[np.ndarray] = np.array([[0.25]], dtype=np.float32),
-        height: Optional[int] = None,
-        width: Optional[int] = None,
-        uuid: str = "depthresnet",
-        output_shape: Optional[Tuple[int, ...]] = (2048,),
-        output_channels: Optional[int] = None,
-        unnormalized_infimum: float = -np.inf,
-        unnormalized_supremum: float = np.inf,
-        scale_first: bool = True,
-        **kwargs: Any
-    ):
-        """Initializer.
-
-        # Parameters
-
-        config : If `config["use_normalization"]` is `True` then the depth images will be normalized
-            with mean 0.5 and standard deviation 0.25. If both `config["height"]` and `config["width"]` are
-            non-negative integers then the depth image returned from the environment will be rescaled to have shape
-            (config["height"], config["width"], 1) using bilinear sampling before being replicated to fill in three
-            channels to feed a ResNet-50 and finally extract the flattened 2048-dimensional output embedding.
-        args : Extra args. Currently unused.
-        kwargs : Extra kwargs. Currently unused.
-        """
-
-        if not use_normalization:
-            mean, stdev = None, None
-
-        super().__init__(**prepare_locals_for_super(locals()))
-
-    def observation_to_tensor(self, depth: Any) -> torch.Tensor:
-        depth = super().observation_to_tensor(depth).squeeze()
-        return torch.stack([depth] * 3, dim=0)
