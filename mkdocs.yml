@@ -149,10 +149,10 @@ nav:
       - minigrid_models: api/plugins/minigrid_plugin/minigrid_models.md
     - gym_plugin:
       - gym_environment: api/plugins/gym_plugin/gym_environment.md
-      - gym_tasks: api/plugins/gym_plugin/gym_tasks.md
       - gym_sensors: api/plugins/gym_plugin/gym_sensors.md
-      - gym_models: api/plugins/gym_plugin/gym_models.md
       - gym_distributions: api/plugins/gym_plugin/gym_distributions.md
+      - gym_models: api/plugins/gym_plugin/gym_models.md
+      - gym_tasks: api/plugins/gym_plugin/gym_tasks.md
   - projects:
     - objectnav_baselines:
       - experiments:
