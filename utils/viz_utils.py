@@ -311,6 +311,8 @@ class AgentViewViz(AbstractViz):
             {"mode": "raw_rgb_list"},
         ),
         episode_ids: Optional[Sequence[Union[Sequence[str], str]]] = None,
+        fps: int = 4,
+        max_render_size: int = 400,
         **other_base_kwargs,
     ):
         super().__init__(
@@ -318,6 +320,8 @@ class AgentViewViz(AbstractViz):
         )
         self.max_clip_length = max_clip_length
         self.max_video_length = max_video_length
+        self.fps = fps
+        self.max_render_size = max_render_size
 
         self.episode_ids = (
             (
@@ -430,7 +434,9 @@ class AgentViewViz(AbstractViz):
                         current_images.append(gray)
             frames.append(tile_images(current_images))
 
-        return process_video(frames, self.max_clip_length, self.max_video_length)
+        return process_video(
+            frames, self.max_clip_length, self.max_video_length, fps=self.fps
+        )
 
 
 class AbstractTensorViz(AbstractViz):
@@ -695,6 +701,8 @@ class VizSuite(AbstractViz):
             if isinstance(v, Builder) or isinstance(v, AbstractViz)
         ]
 
+        self.max_render_size: Optional[int] = None
+
         (
             self.rollout_sources,
             self.vector_task_sources,
@@ -739,6 +747,9 @@ class VizSuite(AbstractViz):
                 max_episodes_in_group=self.max_episodes_in_group,
                 force=self.force_episodes_and_max_episodes_in_group,
             )
+
+            if isinstance(v, AgentViewViz):
+                self.max_render_size = v.max_render_size
 
         get_logger().info("Logging labels {}".format(labels))
 
@@ -897,6 +908,14 @@ class VizSuite(AbstractViz):
         ]
         # get_logger().debug("basic epids {}".format(it2epid))
 
+        def limit_spatial_res(data: np.ndarray, max_size=400):
+            if data.shape[0] <= max_size and data.shape[1] <= max_size:
+                return data
+            else:
+                f = float(max_size) / max(data.shape[0], data.shape[1])
+                size = (int(data.shape[1] * f), int(data.shape[0] * f))
+                return cv2.resize(data, size, 0, 0, interpolation=cv2.INTER_AREA)
+
         vector_task_data = {
             epid: dict()
             for epid in it2epid
@@ -909,6 +928,11 @@ class VizSuite(AbstractViz):
                 datum_id = self._source_to_str(source, is_vector_task=True)
                 method, kwargs = source
                 res = getattr(vector_task, method)(**kwargs)
+                if not isinstance(res, Sequence):
+                    assert len(it2epid) == 1
+                    res = [res]
+                if method == "render":
+                    res = [limit_spatial_res(r, self.max_render_size) for r in res]
                 assert len(res) == len(it2epid)
                 for datum, epid in zip(res, it2epid):
                     if epid in vector_task_data:
