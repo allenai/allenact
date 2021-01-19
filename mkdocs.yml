@@ -42,6 +42,7 @@ nav:
   - Swapping environments: tutorials/transfering-to-a-different-environment-framework.md
   - Using a pre-trained model: tutorials/running-inference-on-a-pretrained-model.md
   - Off-policy training: tutorials/offpolicy-tutorial.md
+  - OpenAI gym for continuous control: tutorials/gym-tutorial.md
 #  - IL to RL with pipelines: tutorials/training-pipelines.md
 - HowTos:
   - Define an experiment: howtos/defining-an-experiment.md
@@ -130,6 +131,7 @@ nav:
       - robothor_task_samplers: api/plugins/robothor_plugin/robothor_task_samplers.md
       - robothor_environment: api/plugins/robothor_plugin/robothor_environment.md
       - robothor_constants: api/plugins/robothor_plugin/robothor_constants.md
+      - robothor_distributions: api/plugins/robothor_plugin/robothor_distributions.md
       - robothor_models: api/plugins/robothor_plugin/robothor_models.md
       - robothor_tasks: api/plugins/robothor_plugin/robothor_tasks.md
       - scripts:
@@ -145,6 +147,12 @@ nav:
       - configs:
         - minigrid_nomemory: api/plugins/minigrid_plugin/configs/minigrid_nomemory.md
       - minigrid_models: api/plugins/minigrid_plugin/minigrid_models.md
+    - gym_plugin:
+      - gym_environment: api/plugins/gym_plugin/gym_environment.md
+      - gym_tasks: api/plugins/gym_plugin/gym_tasks.md
+      - gym_sensors: api/plugins/gym_plugin/gym_sensors.md
+      - gym_models: api/plugins/gym_plugin/gym_models.md
+      - gym_distributions: api/plugins/gym_plugin/gym_distributions.md
   - projects:
     - objectnav_baselines:
       - experiments:
@@ -193,6 +201,7 @@ nav:
           - pointnav_robothor_rgbd_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgbd_simpleconvgru_ddppo.md
           - pointnav_robothor_depth_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_depth_simpleconvgru_ddppo.md
           - pointnav_robothor_rgb_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_simpleconvgru_ddppo.md
+          - pointnav_robothor_rgb_simpleconvgru_ddppo_and_gbc: api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_simpleconvgru_ddppo_and_gbc.md
           - pointnav_robothor_base: api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_base.md
         - habitat:
           - pointnav_habitat_rgb_simpleconvgru_ddppo: api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgb_simpleconvgru_ddppo.md
@@ -221,16 +230,21 @@ nav:
       - pointnav_habitat_rgb_ddppo: api/projects/tutorials/pointnav_habitat_rgb_ddppo.md
       - object_nav_ithor_dagger_then_ppo_one_object: api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object.md
       - navtopartner_robothor_rgb_ppo: api/projects/tutorials/navtopartner_robothor_rgb_ppo.md
+      - gym_tutorial: api/projects/tutorials/gym_tutorial.md
       - pointnav_ithor_rgb_ddppo: api/projects/tutorials/pointnav_ithor_rgb_ddppo.md
       - object_nav_ithor_ppo_one_object: api/projects/tutorials/object_nav_ithor_ppo_one_object.md
+      - minigrid_tutorial: api/projects/tutorials/minigrid_tutorial.md
   - tests:
     - multiprocessing:
       - test_frozen_attribs: api/tests/multiprocessing/test_frozen_attribs.md
+    - utils:
+      - test_spaces: api/tests/utils/test_spaces.md
     - sync_algs_cpu:
       - test_to_to_obj_trains: api/tests/sync_algs_cpu/test_to_to_obj_trains.md
   - utils:
     - model_utils: api/utils/model_utils.md
     - experiment_utils: api/utils/experiment_utils.md
+    - spaces_utils: api/utils/spaces_utils.md
     - system: api/utils/system.md
     - cacheless_frcnn: api/utils/cacheless_frcnn.md
     - misc_utils: api/utils/misc_utils.md
