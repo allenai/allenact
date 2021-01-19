@@ -1,5 +1,4 @@
 import math
-import os
 import random
 import subprocess
 import typing
@@ -9,8 +8,6 @@ from typing import Sequence, List, Optional, Tuple
 
 import numpy as np
 from scipy.special import comb
-
-from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 
 TABLEAU10_RGB = (
     (31, 119, 180),
@@ -27,13 +24,10 @@ TABLEAU10_RGB = (
 
 
 def get_git_diff_of_project() -> Tuple[str, str]:
-    cwd = os.getcwd()
-    os.chdir(ABS_PATH_OF_TOP_LEVEL_DIR)
     short_sha = (
         subprocess.check_output(["git", "describe", "--always"]).decode("utf-8").strip()
     )
     diff = subprocess.check_output(["git", "diff", short_sha]).decode("utf-8")
-    os.chdir(cwd)
     return short_sha, diff
 
 

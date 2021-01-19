@@ -118,7 +118,6 @@ from allenact_plugins.robothor_plugin.robothor_task_samplers import (
     PointNavDatasetTaskSampler,
 )
 from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
-from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )
@@ -187,12 +186,8 @@ Since we are using a dataset to train our model we need to define the path to wh
 download the dataset instructed above we can define the path as follows
 
 ```python
-    TRAIN_DATASET_DIR = os.path.join(
-        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/debug"
-    )
-    VAL_DATASET_DIR = os.path.join(
-        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/debug"
-    )
+    TRAIN_DATASET_DIR = os.path.join(os.getcwd(), "datasets/robothor-pointnav/debug")
+    VAL_DATASET_DIR = os.path.join(os.getcwd(), "datasets/robothor-pointnav/debug")
 ```
 Next, we define the sensors. `RGBSensorThor` is the environment's implementation of an RGB sensor. It takes the
 raw image outputted by the simulator and resizes it, to the input dimensions for our neural network that we

@@ -54,7 +54,9 @@ if __name__ == "__main__":
             "Pillow<7.0.0",
             "matplotlib>=3.3.1",
             "networkx",
+            "opencv-python",
         ],
         setup_requires=["pytest-runner"],
         tests_require=["pytest", "pytest-cov"],
+        entry_points={"console_scripts": ["allenact=allenact.main:main"]},
     )

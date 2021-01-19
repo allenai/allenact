@@ -62,6 +62,7 @@ nav:
 - Licence: LICENSE.md
 - API:
   - allenact:
+    - _constants: api/allenact/_constants.md
     - embodiedai:
       - preprocessors:
         - resnet: api/allenact/embodiedai/preprocessors/resnet.md
@@ -102,7 +103,6 @@ nav:
       - viz_utils: api/allenact/utils/viz_utils.md
       - tensor_utils: api/allenact/utils/tensor_utils.md
       - cache_utils: api/allenact/utils/cache_utils.md
-      - literate: api/allenact/utils/literate.md
   - allenact_plugins:
     - habitat_plugin:
       - habitat_constants: api/allenact_plugins/habitat_plugin/habitat_constants.md

@@ -1,5 +1,6 @@
 import io
 import logging
+import os
 import socket
 import sys
 from contextlib import closing
@@ -7,7 +8,7 @@ from typing import cast, Optional, Tuple
 
 from torch import multiprocessing as mp
 
-from constants import ABS_PATH_OF_TOP_LEVEL_DIR
+from allenact._constants import ALLENACT_INSTALL_DIR
 
 HUMAN_LOG_LEVELS: Tuple[str, ...] = ("debug", "info", "warning", "error", "none")
 """
@@ -106,7 +107,7 @@ def _set_log_formatter():
             formatter = logging.Formatter(fmt=log_format, datefmt=short_date_format)
 
         ch.setFormatter(formatter)
-        ch.addFilter(cast(logging.Filter, _AllenActMessageFilter()))
+        ch.addFilter(cast(logging.Filter, _AllenActMessageFilter(os.getcwd())))
         _LOGGER.addHandler(ch)
 
         sys.excepthook = _excepthook
@@ -140,8 +141,14 @@ def _excepthook(*args):
 
 
 class _AllenActMessageFilter:
+    def __init__(self, working_directory: str):
+        self.working_directory = working_directory
+
     # noinspection PyMethodMayBeStatic
     def filter(self, record):
+        # TODO: Does this work when pip-installing AllenAct?
         return int(
-            ABS_PATH_OF_TOP_LEVEL_DIR in record.pathname or "main" in record.pathname
+            self.working_directory in record.pathname
+            or ALLENACT_INSTALL_DIR in record.pathname
+            or "main" in record.pathname
         )

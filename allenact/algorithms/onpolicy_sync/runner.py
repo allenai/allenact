@@ -6,6 +6,7 @@ import json
 import os
 import queue
 import signal
+import subprocess
 import time
 import traceback
 from collections import defaultdict
@@ -439,11 +440,17 @@ class OnPolicyRunner(object):
         os.makedirs(base_dir, exist_ok=True)
 
         # Saving current git diff
-        sha, diff_str = get_git_diff_of_project()
-        with open(os.path.join(base_dir, "{}.patch".format(sha)), "w") as f:
-            f.write(diff_str)
+        try:
+            sha, diff_str = get_git_diff_of_project()
+            with open(os.path.join(base_dir, "{}.patch".format(sha)), "w") as f:
+                f.write(diff_str)
 
-        get_logger().info("Git diff saved to {}".format(base_dir))
+            get_logger().info("Git diff saved to {}".format(base_dir))
+        except subprocess.CalledProcessError:
+            get_logger().warning(
+                "Failed to get a git diff of the current project."
+                f" Is it possible that {os.getcwd()} is not under version control?"
+            )
 
         # Saving configs
         if self.loaded_config_src_files is not None:

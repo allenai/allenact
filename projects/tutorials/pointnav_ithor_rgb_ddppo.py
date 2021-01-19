@@ -31,7 +31,6 @@ from allenact_plugins.robothor_plugin.robothor_task_samplers import (
     PointNavDatasetTaskSampler,
 )
 from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
-from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )
@@ -62,12 +61,8 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     TESTING_GPUS = [torch.cuda.device_count() - 1]
 
     # Dataset Parameters
-    TRAIN_DATASET_DIR = os.path.join(
-        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/ithor-objectnav/train"
-    )
-    VAL_DATASET_DIR = os.path.join(
-        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/ithor-objectnav/val"
-    )
+    TRAIN_DATASET_DIR = os.path.join(os.getcwd(), "datasets/ithor-objectnav/train")
+    VAL_DATASET_DIR = os.path.join(os.getcwd(), "datasets/ithor-objectnav/val")
 
     SENSORS = [
         RGBSensorThor(

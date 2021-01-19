@@ -121,7 +121,6 @@ from allenact_plugins.robothor_plugin.robothor_task_samplers import (
     PointNavDatasetTaskSampler,
 )
 from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
-from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 from projects.pointnav_baselines.models.point_nav_models import (
     ResnetTensorPointNavActorCritic,
 )
@@ -204,12 +203,8 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     """
 
     # %%
-    TRAIN_DATASET_DIR = os.path.join(
-        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/debug"
-    )
-    VAL_DATASET_DIR = os.path.join(
-        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/debug"
-    )
+    TRAIN_DATASET_DIR = os.path.join(os.getcwd(), "datasets/robothor-pointnav/debug")
+    VAL_DATASET_DIR = os.path.join(os.getcwd(), "datasets/robothor-pointnav/debug")
 
     # %%
     """
