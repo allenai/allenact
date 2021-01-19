@@ -4,6 +4,7 @@
 # Tutorial: OpenAI gym for continuous control.
 
 In this tutorial, we:
+
 1. Introduce the `gym_plugin`, which enables some of the tasks in [OpenAI's gym](https://gym.openai.com/) for training
 and inference within AllenAct.
 1. Show an example of continuous control with an arbitrary action space covering 2 policies for one of the `gym` tasks.
@@ -178,7 +179,7 @@ during testing (or validation), we sample a fixed number of tasks.
             seed=seeds[process_ind],
         )
 ```
-Note that we just sample 3 tasks for validation and testing in this case, which suffice to illustrate the model
+Note that we just sample 3 tasks for validation and testing in this case, which suffice to illustrate the model's
 success.
 
 ### Machine parameters
@@ -193,10 +194,9 @@ CPU usage by returning an empty list of `devices`. We also include a video visua
 ```python
     @classmethod
     def machine_params(cls, mode="train", **kwargs) -> Dict[str, Any]:
-        return {
-            "nprocesses": 8 if mode == "train" else 1,
-            "devices": [],
-            "visualizer": VizSuite(
+        visualizer = None
+        if mode == "test":
+            visualizer = VizSuite(
                 mode=mode,
                 video_viz=AgentViewViz(
                     label="episode_vid",
@@ -205,8 +205,10 @@ CPU usage by returning an empty list of `devices`. We also include a video visua
                     fps=30,
                 ),
             )
-            if mode == "test"
-            else None,
+        return {
+            "nprocesses": 8 if mode == "train" else 1,
+            "devices": [],
+            "visualizer": visualizer,
         }
 ```
 ### Training pipeline
@@ -273,9 +275,17 @@ In order to test for a specific experiment, we need to pass its training start d
 python main.py gym_tutorial -b projects/tutorials -m 1 -o /PATH/TO/gym_output -s 54321 -e -t EXPERIMENT_DATE -k 4
 ```
 
-The option `-k 2` skips two checkpoints after each run. If everything went well, the `test` success rate should converge
-to 1, the episode length below or near 300 steps, and the mean reward to above 250. The images tab in tensorboard will
-contain videos for the sampled test episodes.
+The option `-k 4` skips four checkpoints after each run. If everything went well, the `test` success rate should
+converge to 1, the episode length below or near 300 steps, and the mean reward to above 250. The images tab in
+tensorboard will contain videos for the sampled test episodes.
 
 ![video_results](../img/lunar_lander_continuous_test.png).
+
+If the test command fails with `pyglet.canvas.xlib.NoSuchDisplayException: Cannot connect to "None"`, e.g. when running
+remotely, try prepending `DISPLAY=:0.0` to the command above, assuming you have an xserver running with such display
+available:
+
+```bash
+DISPLAY=:0.0 python main.py gym_tutorial -b projects/tutorials -m 1 -o /PATH/TO/gym_output -s 54321 -e -t EXPERIMENT_DATE -k 4
+```
 

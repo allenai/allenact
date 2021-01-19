@@ -4,6 +4,7 @@
 # Tutorial: OpenAI gym for continuous control.
 
 In this tutorial, we:
+
 1. Introduce the `gym_plugin`, which enables some of the tasks in [OpenAI's gym](https://gym.openai.com/) for training
 and inference within AllenAct.
 1. Show an example of continuous control with an arbitrary action space covering 2 policies for one of the `gym` tasks.
@@ -172,7 +173,7 @@ class GymTutorialExperimentConfig(ExperimentConfig):
             task_seeds_list = None  # no predefined random seeds for training
             deterministic_sampling = False  # randomly sample tasks in training
         else:
-            max_tasks = 4
+            max_tasks = 3
 
             # one seed for each task to sample:
             # - ensures different seeds for each sampler, and
@@ -196,7 +197,7 @@ class GymTutorialExperimentConfig(ExperimentConfig):
 
     # %%
     """
-    Note that we just sample 4 tasks for validation and testing in this case, which suffice to illustrate the model's
+    Note that we just sample 3 tasks for validation and testing in this case, which suffice to illustrate the model's
     success.
     
     ### Machine parameters
@@ -304,4 +305,12 @@ converge to 1, the episode length below or near 300 steps, and the mean reward t
 tensorboard will contain videos for the sampled test episodes.
 
 ![video_results](../img/lunar_lander_continuous_test.png).
+
+If the test command fails with `pyglet.canvas.xlib.NoSuchDisplayException: Cannot connect to "None"`, e.g. when running
+remotely, try prepending `DISPLAY=:0.0` to the command above, assuming you have an xserver running with such display
+available:
+
+```bash
+DISPLAY=:0.0 python main.py gym_tutorial -b projects/tutorials -m 1 -o /PATH/TO/gym_output -s 54321 -e -t EXPERIMENT_DATE -k 4
+```
 """
