@@ -408,7 +408,7 @@ def clips_to_video(clips, h, w, c):
     )
 
 
-def process_video(render, max_clip_len=500, max_video_len=-1):
+def process_video(render, max_clip_len=500, max_video_len=-1, fps=4):
     output = []
     hwc = None
     if len(render) > 0:
@@ -425,7 +425,7 @@ def process_video(render, max_clip_len=500, max_video_len=-1):
                 current = np.stack(clip, axis=0)  # T, H, W, C
                 current = current.transpose((0, 3, 1, 2))  # T, C, H, W
                 current = np.expand_dims(current, axis=0)  # 1, T, C, H, W
-                current, cur_hwc = tensor_to_clip(current, fps=4)
+                current, cur_hwc = tensor_to_clip(current, fps=fps)
 
                 if hwc is None:
                     hwc = cur_hwc

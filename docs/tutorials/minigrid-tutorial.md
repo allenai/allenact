@@ -235,11 +235,11 @@ Given the simplicity of the task and model, we can quickly train the model on th
     def machine_params(cls, mode="train", **kwargs) -> Dict[str, Any]:
         return {
             "nprocesses": 128 if mode == "train" else 16,
-            "gpu_ids": [],
+            "devices": [],
         }
 ```
 We allocate a larger number of samplers for training (128) than for validation or testing (16), and we default to CPU
-usage by returning an empty list of `gpu_ids`.
+usage by returning an empty list of `devices`.
 
 ### Training pipeline
 

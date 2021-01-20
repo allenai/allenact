@@ -4,7 +4,12 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from allenact.algorithms.onpolicy_sync.losses.imitation import Imitation
 from allenact.base_abstractions.sensor import ExpertActionSensor
-from allenact.utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
+from allenact.utils.experiment_utils import (
+    Builder,
+    PipelineStage,
+    TrainingPipeline,
+    LinearDecay,
+)
 from allenact_plugins.habitat_plugin.habitat_sensors import (
     RGBSensorHabitat,
     TargetCoordinatesSensorHabitat,
