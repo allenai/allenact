@@ -76,7 +76,7 @@ class GymContinuousBox2DTask(GymTask):
     """
 
     def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
-        return ()
+        return tuple()
 
     def _step(self, action: Sequence[float]) -> RLStepResult:
         action = np.array(action)
