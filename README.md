@@ -38,6 +38,7 @@ AllenAct is built and backed by the [Allen Institute for AI (AI2)](https://allen
 * _Pre-trained models_: Code and models for a number of standard Embodied AI tasks.
 * _Tutorials_: Start-up code and extensive tutorials to help ramp up to Embodied AI.
 * _First-class PyTorch support_: One of the few RL frameworks to target PyTorch.
+* _Arbitrary action spaces_: Supporting both discrete and continuous actions.
 
 
 ## Contributions
