@@ -1,10 +1,10 @@
 from abc import ABC
 from typing import Optional, Sequence, Union
 
-from core.base_abstractions.experiment_config import ExperimentConfig
-from core.base_abstractions.preprocessor import Preprocessor
-from core.base_abstractions.sensor import Sensor
-from utils.experiment_utils import Builder
+from allenact.base_abstractions.experiment_config import ExperimentConfig
+from allenact.base_abstractions.preprocessor import Preprocessor
+from allenact.base_abstractions.sensor import Sensor
+from allenact.utils.experiment_utils import Builder
 
 
 class PointNavBaseConfig(ExperimentConfig, ABC):

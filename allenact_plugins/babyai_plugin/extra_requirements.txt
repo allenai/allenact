@@ -1,0 +1,2 @@
+babyai@git+https://github.com/unnat/babyai.git@ff645fe00ea8412a29bd5e2d6f79ae1595d229a7
+networkx

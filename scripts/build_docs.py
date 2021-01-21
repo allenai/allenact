@@ -9,8 +9,9 @@ from typing import Dict, Union, Optional, Set, List, Sequence, Mapping
 from git import Git
 from ruamel.yaml import YAML  # type: ignore
 
+from scripts.literate import literate_python_to_markdown
+
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
-from utils.literate import literate_python_to_markdown
 
 
 class StringColors:

@@ -170,7 +170,7 @@ docs/LICENSE.md
 metrics__*.json
 
 # Robothor
-plugins/robothor_plugin/data/*
+allenact_plugins/robothor_plugin/data/*
 
 # Habitat
 habitat
@@ -182,3 +182,7 @@ src
 # Files created when running training
 **/used_configs
 *.patch
+
+# Package building
+*.egg_info
+*.egg-info

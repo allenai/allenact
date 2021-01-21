@@ -4,11 +4,12 @@ import gym
 import torch.nn as nn
 from torchvision import models
 
-from core.base_abstractions.preprocessor import Preprocessor
-from core.base_abstractions.preprocessor import ResNetPreprocessor
-from core.base_abstractions.sensor import RGBSensor, DepthSensor
-from plugins.ithor_plugin.ithor_sensors import GoalObjectTypeThorSensor
-from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
+from allenact.base_abstractions.preprocessor import Preprocessor
+from allenact.base_abstractions.sensor import RGBSensor, DepthSensor
+from allenact.embodiedai.preprocessors.resnet import ResNetPreprocessor
+from allenact.utils.experiment_utils import Builder
+from allenact_plugins.ithor_plugin.ithor_sensors import GoalObjectTypeThorSensor
+from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base import (
     ObjectNavRoboThorBaseConfig,
@@ -16,7 +17,6 @@ from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base i
 from projects.objectnav_baselines.models.object_nav_models import (
     ResnetTensorObjectNavActorCritic,
 )
-from utils.experiment_utils import Builder
 
 
 class ObjectNavMixInResNetGRUConfig(ObjectNavBaseConfig):

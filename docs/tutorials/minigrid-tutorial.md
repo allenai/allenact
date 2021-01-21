@@ -37,10 +37,10 @@ class implementing the `ExperimentConfig` abstraction. For this tutorial, we wil
 `projects/tutorials/minigrid_tutorial.py`.
 
 The `ExperimentConfig` abstraction is used by the
-[OnPolicyTrainer](../api/core/algorithms/onpolicy_sync/engine.md#onpolicytrainer) class (for training) and the
-[OnPolicyInference](../api/core/algorithms/onpolicy_sync/engine.md#onpolicyinference) class (for validation and testing)
+[OnPolicyTrainer](../api/allenact/algorithms/onpolicy_sync/engine.md#onpolicytrainer) class (for training) and the
+[OnPolicyInference](../api/allenact/algorithms/onpolicy_sync/engine.md#onpolicyinference) class (for validation and testing)
 invoked through the entry script `main.py` that calls an orchestrating
-[OnPolicyRunner](../api/core/algorithms/onpolicy_sync/runner.md#onpolicyrunner) class. It includes:
+[OnPolicyRunner](../api/allenact/algorithms/onpolicy_sync/runner.md#onpolicyrunner) class. It includes:
 
 * A `tag` method to identify the experiment.
 * A `create_model` method to instantiate actor-critic models.
@@ -64,13 +64,21 @@ from torch import nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from core.algorithms.onpolicy_sync.losses.ppo import PPO, PPOConfig
-from core.base_abstractions.experiment_config import ExperimentConfig, TaskSampler
-from core.base_abstractions.sensor import SensorSuite
-from plugins.minigrid_plugin.minigrid_models import MiniGridSimpleConvRNN
-from plugins.minigrid_plugin.minigrid_sensors import EgocentricMiniGridSensor
-from plugins.minigrid_plugin.minigrid_tasks import MiniGridTaskSampler, MiniGridTask
-from utils.experiment_utils import TrainingPipeline, Builder, PipelineStage, LinearDecay
+from allenact.algorithms.onpolicy_sync.losses.ppo import PPO, PPOConfig
+from allenact.base_abstractions.experiment_config import ExperimentConfig, TaskSampler
+from allenact.base_abstractions.sensor import SensorSuite
+from allenact.utils.experiment_utils import (
+    TrainingPipeline,
+    Builder,
+    PipelineStage,
+    LinearDecay,
+)
+from allenact_plugins.minigrid_plugin.minigrid_models import MiniGridSimpleConvRNN
+from allenact_plugins.minigrid_plugin.minigrid_sensors import EgocentricMiniGridSensor
+from allenact_plugins.minigrid_plugin.minigrid_tasks import (
+    MiniGridTaskSampler,
+    MiniGridTask,
+)
 ```
 We now create the `MiniGridTutorialExperimentConfig` class which we will use to define our experiment.
 For pedagogical reasons, we will add methods to this class one at a time below with a description of what
@@ -227,11 +235,11 @@ Given the simplicity of the task and model, we can quickly train the model on th
     def machine_params(cls, mode="train", **kwargs) -> Dict[str, Any]:
         return {
             "nprocesses": 128 if mode == "train" else 16,
-            "gpu_ids": [],
+            "devices": [],
         }
 ```
 We allocate a larger number of samplers for training (128) than for validation or testing (16), and we default to CPU
-usage by returning an empty list of `gpu_ids`.
+usage by returning an empty list of `devices`.
 
 ### Training pipeline
 

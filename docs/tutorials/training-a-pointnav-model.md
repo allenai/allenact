@@ -98,29 +98,28 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 
-from constants import ABS_PATH_OF_TOP_LEVEL_DIR
-from core.algorithms.onpolicy_sync.losses import PPO
-from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from core.base_abstractions.experiment_config import ExperimentConfig, MachineParams
-from core.base_abstractions.preprocessor import (
-    ResNetPreprocessor,
-    SensorPreprocessorGraph,
-)
-from core.base_abstractions.sensor import SensorSuite
-from core.base_abstractions.task import TaskSampler
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
-from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
-from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
-from plugins.robothor_plugin.robothor_tasks import PointNavTask
-from projects.pointnav_baselines.models.point_nav_models import (
-    ResnetTensorPointNavActorCritic,
-)
-from utils.experiment_utils import (
+from allenact.algorithms.onpolicy_sync.losses import PPO
+from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from allenact.base_abstractions.experiment_config import ExperimentConfig, MachineParams
+from allenact.base_abstractions.preprocessor import SensorPreprocessorGraph
+from allenact.base_abstractions.sensor import SensorSuite
+from allenact.base_abstractions.task import TaskSampler
+from allenact.embodiedai.preprocessors.resnet import ResNetPreprocessor
+from allenact.utils.experiment_utils import (
     Builder,
     PipelineStage,
     TrainingPipeline,
     LinearDecay,
     evenly_distribute_count_into_bins,
+)
+from allenact_plugins.ithor_plugin.ithor_sensors import RGBSensorThor
+from allenact_plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
+from allenact_plugins.robothor_plugin.robothor_task_samplers import (
+    PointNavDatasetTaskSampler,
+)
+from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
+from projects.pointnav_baselines.models.point_nav_models import (
+    ResnetTensorPointNavActorCritic,
 )
 ```
 Next we define a new experiment config class:
@@ -187,12 +186,8 @@ Since we are using a dataset to train our model we need to define the path to wh
 download the dataset instructed above we can define the path as follows
 
 ```python
-    TRAIN_DATASET_DIR = os.path.join(
-        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/debug"
-    )
-    VAL_DATASET_DIR = os.path.join(
-        ABS_PATH_OF_TOP_LEVEL_DIR, "datasets/robothor-pointnav/debug"
-    )
+    TRAIN_DATASET_DIR = os.path.join(os.getcwd(), "datasets/robothor-pointnav/debug")
+    VAL_DATASET_DIR = os.path.join(os.getcwd(), "datasets/robothor-pointnav/debug")
 ```
 Next, we define the sensors. `RGBSensorThor` is the environment's implementation of an RGB sensor. It takes the
 raw image outputted by the simulator and resizes it, to the input dimensions for our neural network that we

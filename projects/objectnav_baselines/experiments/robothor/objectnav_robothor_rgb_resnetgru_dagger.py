@@ -1,6 +1,9 @@
-from core.base_abstractions.sensor import ExpertActionSensor
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
-from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
+from allenact.base_abstractions.sensor import ExpertActionSensor
+from allenact_plugins.ithor_plugin.ithor_sensors import (
+    RGBSensorThor,
+    GoalObjectTypeThorSensor,
+)
+from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.objectnav_baselines.experiments.objectnav_mixin_dagger import (
     ObjectNavMixInDAggerConfig,
 )

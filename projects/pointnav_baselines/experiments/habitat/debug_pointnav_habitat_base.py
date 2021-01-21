@@ -4,7 +4,7 @@ from abc import ABC
 import habitat
 import torch
 
-from plugins.habitat_plugin.habitat_constants import (
+from allenact_plugins.habitat_plugin.habitat_constants import (
     HABITAT_DATASETS_DIR,
     HABITAT_CONFIGS_DIR,
 )

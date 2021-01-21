@@ -27,7 +27,7 @@ def judge(self) -> float:
 Any reward shaping can be easily added by e.g. modifying the definition of an existing class:
 
 ```python
-class NavigationWithShaping(plugins.ithor_plugin.ithor_tasks.ObjectNaviThorGridTask):
+class NavigationWithShaping(allenact_plugins.ithor_plugin.ithor_tasks.ObjectNaviThorGridTask):
     def judge(self) -> float:
         reward = super().judge()
         
@@ -45,14 +45,14 @@ class NavigationWithShaping(plugins.ithor_plugin.ithor_tasks.ObjectNaviThorGridT
 
 ## Losses
 
-We support [A2C](/api/core/algorithms/onpolicy_sync/losses/a2cacktr#a2c), [PPO](/api/core/algorithms/onpolicy_sync/losses/ppo#ppo),
-and [imitation](/api/core/algorithms/onpolicy_sync/losses/imitation#imitation) losses amongst others. We can easily include
+We support [A2C](/api/allenact/algorithms/onpolicy_sync/losses/a2cacktr#a2c), [PPO](/api/allenact/algorithms/onpolicy_sync/losses/ppo#ppo),
+and [imitation](/api/allenact/algorithms/onpolicy_sync/losses/imitation#imitation) losses amongst others. We can easily include
 [DAgger](https://www.cs.cmu.edu/~sross1/publications/Ross-AIStats11-NoRegret.pdf) or variations thereof by assuming the
 availability of an expert providing optimal actions to agents and combining imitation and PPO losses in different ways
 through multiple stages:
 
 ```python
-class MyExperimentConfig(core.base_abstractions.experiment_config.ExperimentConfig):
+class MyExperimentConfig(allenact.base_abstractions.experiment_config.ExperimentConfig):
     ...
     @classmethod
     def training_pipeline(cls, **kwargs):
@@ -62,9 +62,9 @@ class MyExperimentConfig(core.base_abstractions.experiment_config.ExperimentConf
         ...
         return utils.experiment_utils.TrainingPipeline(
             named_losses={
-                "imitation_loss": core.algorithms.onpolicy_sync.losses.imitation.Imitation(),
-                "ppo_loss": core.algorithms.onpolicy_sync.losses.ppo.PPO(
-                    **core.algorithms.onpolicy_sync.losses.ppo.PPOConfig,
+                "imitation_loss": allenact.algorithms.onpolicy_sync.losses.imitation.Imitation(),
+                "ppo_loss": allenact.algorithms.onpolicy_sync.losses.ppo.PPO(
+                    **allenact.algorithms.onpolicy_sync.losses.ppo.PPOConfig,
                 ),
             },
             ...

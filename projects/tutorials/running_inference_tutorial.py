@@ -94,11 +94,7 @@ of using a different (typically shorter) list of episodes or enforce the ones us
 # %% hide
 from typing import Optional
 
-from plugins.robothor_plugin.robothor_viz import ThorViz
-from projects.tutorials.training_a_pointnav_model import (
-    PointNavRoboThorRGBPPOExperimentConfig,
-)
-from utils.viz_utils import (
+from allenact.utils.viz_utils import (
     VizSuite,
     TrajectoryViz,
     ActorViz,
@@ -106,6 +102,11 @@ from utils.viz_utils import (
     TensorViz1D,
     TensorViz2D,
 )
+from allenact_plugins.robothor_plugin.robothor_viz import ThorViz
+from projects.tutorials.training_a_pointnav_model import (
+    PointNavRoboThorRGBPPOExperimentConfig,
+)
+
 
 # %%
 class PointNavRoboThorRGBPPOVizExperimentConfig(PointNavRoboThorRGBPPOExperimentConfig):

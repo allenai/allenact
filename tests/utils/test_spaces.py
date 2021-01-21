@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from gym import spaces as gyms
 
-from utils import spaces_utils as su
+from allenact.utils import spaces_utils as su
 
 
 class TestSpaces(object):

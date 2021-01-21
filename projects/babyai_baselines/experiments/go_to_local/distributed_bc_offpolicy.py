@@ -3,15 +3,17 @@ from typing import Sequence, Optional
 
 import torch
 
-from plugins.babyai_plugin.babyai_constants import BABYAI_EXPERT_TRAJECTORIES_DIR
-from plugins.minigrid_plugin.minigrid_offpolicy import (
+from allenact.utils.experiment_utils import PipelineStage, OffPolicyPipelineComponent
+from allenact_plugins.babyai_plugin.babyai_constants import (
+    BABYAI_EXPERT_TRAJECTORIES_DIR,
+)
+from allenact_plugins.minigrid_plugin.minigrid_offpolicy import (
     MiniGridOffPolicyExpertCELoss,
     create_minigrid_offpolicy_data_iterator,
 )
 from projects.tutorials.minigrid_offpolicy_tutorial import (
     BCOffPolicyBabyAIGoToLocalExperimentConfig,
 )
-from utils.experiment_utils import PipelineStage, OffPolicyPipelineComponent
 
 
 class DistributedBCOffPolicyBabyAIGoToLocalExperimentConfig(

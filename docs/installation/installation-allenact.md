@@ -13,34 +13,7 @@ In order to install `allenact` and/or its requirements we recommend creating a n
 [python virtual environment](https://docs.python.org/3/tutorial/venv.html) and installing all
 of the below requirements into this virtual environment.
 
-<!--Several tools exist to help manage
-virtual environments, we have had success in using [`pipenv`](https://pipenv.kennethreitz.org/en/latest/)
-and so provide instructions for installing the requirements using `pipenv`
-but also include instructions if you would prefer to install everything directly using `pip`.
-
-### Installing requirements with `pipenv`
-
-If you have already installed [`pipenv`](https://pipenv.kennethreitz.org/en/latest/), you may
-run the following to install all requirements.
-
-```bash
-pipenv install --skip-lock --dev
-```
-
-Please see the documentation of `pipenv` to understand how to use the newly created virtual environment.
--->
-
 ### Installing requirements with `pip`
-
-<!--
-Note: *do not* run the following if you have already installed requirements with `pipenv`
-as above. If you prefer managing your environment manually, all requirements may be installed using
- `pip` by running the following command:
-
-```bash
-pip install -r requirements.txt
-```
--->
 
 There are three main installation paths regarding whether you are interested in installing
 
@@ -88,9 +61,18 @@ or, alternatively, using the experimental `conda` setup described below.
 Depending on your machine configuration, you may need to use `pip3` instead of `pip` in the commands
 above.
 
-### Installing requirements with `conda` (experimental)
+### Installing requirements with `pipenv`
 
-This below is currently experimental and is provided without a guarantee of continued support.
+If you have already installed [`pipenv`](https://pipenv.kennethreitz.org/en/latest/), you may
+run the following to install all requirements.
+
+```bash
+pipenv install --skip-lock -r requirements.txt
+```
+
+Please see the documentation of `pipenv` to understand how to use the newly created virtual environment.
+
+### Installing requirements with `conda`
 
 Clone the repository to your local machine and move into the top-level directory
 
@@ -99,7 +81,7 @@ git clone git@github.com:allenai/allenact.git
 cd allenact
 ```
 
-This folder contains YAML files specifying [Conda environments](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file)
+The `conda` folder contains YAML files specifying [Conda environments](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file)
 compatible with AllenAct. These environment files include: 
 
 * `environment-base.yml` - A base environment file to be used on machines where GPU support is not needed (everything

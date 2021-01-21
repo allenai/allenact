@@ -3,9 +3,9 @@ from typing import Dict, Any
 import torch.multiprocessing as mp
 from torch import nn
 
-from core.base_abstractions.experiment_config import ExperimentConfig
-from core.base_abstractions.task import TaskSampler
-from utils.experiment_utils import TrainingPipeline
+from allenact.base_abstractions.experiment_config import ExperimentConfig
+from allenact.base_abstractions.task import TaskSampler
+from allenact.utils.experiment_utils import TrainingPipeline
 
 
 # noinspection PyAbstractClass,PyTypeChecker
@@ -51,7 +51,7 @@ scfg = MySpecConfig()
 class TestFrozenAttribs(object):
     def test_frozen_inheritance(self):
         from abc import abstractmethod
-        from core.base_abstractions.experiment_config import FrozenClassVariables
+        from allenact.base_abstractions.experiment_config import FrozenClassVariables
 
         class SomeBase(metaclass=FrozenClassVariables):
             yar = 3
