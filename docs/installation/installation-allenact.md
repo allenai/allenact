@@ -21,6 +21,8 @@ There are three main installation paths regarding whether you are interested in 
 1. The main framework and one or more of the available plugins.
 1. The entire library, e.g. for development of more advanced features like a new training algorithm.
 
+Additionally, we also provide instructions to pip install from github.
+
 #### Standalone framework
 
 ```bash
@@ -57,6 +59,23 @@ pip install -r requirements.txt; pip install -r dev_requirements.txt
 ```
 
 or, alternatively, using the experimental `conda` setup described below.
+
+
+#### Bleeding edge pip install
+
+To install the latest `allenact` framework, you can use
+
+```bash
+pip install -e "git+https://github.com/allenai/allenact.git@master#egg=allenact&subdirectory=allenact"
+```
+
+and, similarly, you can also use
+
+```bash
+pip install -e "git+https://github.com/allenai/allenact.git@master#egg=allenact_plugins[all]&subdirectory=allenact_plugins"
+```
+
+to install all plugins.
 
 Depending on your machine configuration, you may need to use `pip3` instead of `pip` in the commands
 above.
