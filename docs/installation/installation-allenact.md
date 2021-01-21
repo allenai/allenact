@@ -9,7 +9,7 @@ PyTorch that supports your CUDA version. In such a case, after installing the be
 should follow the directions for installing PyTorch with older
 versions of CUDA available on the [PyTorch homepage](https://pytorch.org/).
 
-In order to install requirements we recommend creating a new
+In order to install `allenact` and/or its requirements we recommend creating a new
 [python virtual environment](https://docs.python.org/3/tutorial/venv.html) and installing all
 of the below requirements into this virtual environment.
 
