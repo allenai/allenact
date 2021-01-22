@@ -1,12 +1,5 @@
 # Installation of AllenAct
 
-Clone the repository to your local machine and move into the top-level directory
-
-```bash
-git clone git@github.com:allenai/allenact.git
-cd allenact
-```
-
 **Note 1:** This library has been tested *only in python 3.6*. The following assumes you have a working
 version of *python 3.6* installed locally. 
 
@@ -16,23 +9,75 @@ PyTorch that supports your CUDA version. In such a case, after installing the be
 should follow the directions for installing PyTorch with older
 versions of CUDA available on the [PyTorch homepage](https://pytorch.org/).
 
-In order to install requirements we recommend creating a new
+In order to install `allenact` and/or its requirements we recommend creating a new
 [python virtual environment](https://docs.python.org/3/tutorial/venv.html) and installing all
-of the below requirements into this virtual environment. Several tools exist to help manage
-virtual environments, we have had success in using [Anaconda](https://docs.conda.io) and
-[`pipenv`](https://pipenv.kennethreitz.org/en/latest/)
+of the below requirements into this virtual environment.
 
 ### Installing requirements with `pip`
 
-Note: *do not* run the following if you have already installed requirements with `pipenv`
-as above. If you prefer managing your environment manually, all requirements may be installed using
- `pip` by running the following command:
+There are three main installation paths regarding whether you are interested in installing
+
+1. Just the main `allenact` framework (without any plugin).
+1. The main framework and one or more of the available plugins.
+1. The entire library, e.g. for development of more advanced features like a new training algorithm.
+
+Additionally, we also provide instructions to pip install from github.
+
+#### Standalone framework
 
 ```bash
-pip install -r requirements.txt
+pip install allenact
 ```
 
-Depending on your machine configuration, you may need to use `pip3` instead of `pip` in the
+#### Framework and plugins
+
+To install `allenact` and all available plugins, run
+
+```bash
+pip install allenact allenact_plugins[all]
+```
+
+or, for a specific plugin, like for example `ithor_plugin`:
+
+```bash
+pip install allenact allenact_plugins[ithor]
+```
+
+#### Full library
+
+Clone the repository to your local machine and move into the top-level directory
+
+```bash
+git clone git@github.com:allenai/allenact.git
+cd allenact
+```
+
+All requirements may be installed by running the following command:
+
+```bash
+pip install -r requirements.txt; pip install -r dev_requirements.txt
+```
+
+or, alternatively, using the experimental `conda` setup described below.
+
+
+#### Bleeding edge pip install
+
+To install the latest `allenact` framework, you can use
+
+```bash
+pip install -e "git+https://github.com/allenai/allenact.git@master#egg=allenact&subdirectory=allenact"
+```
+
+and, similarly, you can also use
+
+```bash
+pip install -e "git+https://github.com/allenai/allenact.git@master#egg=allenact_plugins[all]&subdirectory=allenact_plugins"
+```
+
+to install all plugins.
+
+Depending on your machine configuration, you may need to use `pip3` instead of `pip` in the commands
 above.
 
 ### Installing requirements with `pipenv`
@@ -47,6 +92,13 @@ pipenv install --skip-lock -r requirements.txt
 Please see the documentation of `pipenv` to understand how to use the newly created virtual environment.
 
 ### Installing requirements with `conda`
+
+Clone the repository to your local machine and move into the top-level directory
+
+```bash
+git clone git@github.com:allenai/allenact.git
+cd allenact
+```
 
 The `conda` folder contains YAML files specifying [Conda environments](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file)
 compatible with AllenAct. These environment files include: 
