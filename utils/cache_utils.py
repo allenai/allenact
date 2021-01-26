@@ -159,7 +159,7 @@ class DynamicDistanceCache(object):
             self.cache[position_str] = {}
         if target_str not in self.cache[position_str]:
             self.cache[position_str][target_str] = native_distance_function(
-                position, target, 0.05
+                position, target
             )
             self.misses += 1
         else:
