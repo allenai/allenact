@@ -1,12 +1,16 @@
+import copy
+import hashlib
 import math
 import random
 import subprocess
 import typing
 from collections import Counter
+from contextlib import contextmanager
 from functools import lru_cache
 from typing import Sequence, List, Optional, Tuple
 
 import numpy as np
+import torch
 from scipy.special import comb
 
 TABLEAU10_RGB = (
@@ -21,6 +25,23 @@ TABLEAU10_RGB = (
     (188, 189, 34),
     (23, 190, 207),
 )
+
+
+@contextmanager
+def tensor_print_options(**print_opts):
+    torch_print_opts = copy.deepcopy(torch._tensor_str.PRINT_OPTS)
+    np_print_opts = np.get_printoptions()
+    try:
+        torch.set_printoptions(**print_opts)
+        np.set_printoptions(**print_opts)
+        yield None
+    finally:
+        torch.set_printoptions(**{k: getattr(torch_print_opts, k) for k in print_opts})
+        np.set_printoptions(**np_print_opts)
+
+
+def md5_hash_str_as_int(to_hash: str):
+    return int(hashlib.md5(to_hash.encode()).hexdigest(), 16,)
 
 
 def get_git_diff_of_project() -> Tuple[str, str]:
