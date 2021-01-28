@@ -276,9 +276,7 @@ class RolloutStorage(object):
             for key in storage:
                 self.unnarrow_data[storage_name][key] = storage.tensor(key)
                 storage[key] = (
-                    storage.tensor(key).narrow(
-                        dimension=0, start=0, length=self.step + 1
-                    ),
+                    storage.tensor(key).narrow(dim=0, start=0, length=self.step + 1),
                     storage.sampler_dim(key),
                 )
 
@@ -291,7 +289,7 @@ class RolloutStorage(object):
                     self,
                     name,
                     self.unnarrow_data[name].narrow(
-                        dimension=0,
+                        dim=0,
                         start=0,
                         length=self.step + (name in to_narrow_to_step_plus_1),
                     ),
