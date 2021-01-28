@@ -1,5 +1,8 @@
 # AllenAct Tutorials
 
+**Note** The provided commands to execute these tutorials assume you have
+[installed the full library](../installation/installation-allenact.md#full-library).
+
 We provide several tutorials to help ramp up researchers to the field of Embodied-AI as well as to the AllenAct framework.
 
 ## [Navigation in MiniGrid](../tutorials/minigrid-tutorial.md)

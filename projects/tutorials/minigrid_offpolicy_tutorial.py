@@ -4,13 +4,16 @@
 
 # %%
 """
+
+**Note** The provided commands to execute in this tutorial assume you have
+[installed the full library](../installation/installation-allenact.md#full-library).
+
 In this tutorial we'll learn how to train an agent from an external dataset by imitating expert actions via
 Behavior Cloning. We'll use a [BabyAI agent](/api/plugins/babyai_plugin/babyai_models#BabyAIRecurrentACModel) to solve
 `GoToLocal` tasks on [MiniGrid](https://github.com/maximecb/gym-minigrid); see the
 `projects/babyai_baselines/experiments/go_to_local` directory for more details.
 
-This tutorial assumes the [installation instructions](../installation/installation-allenact.md) have already been
-followed and, to some extent, this framework's [abstractions](../getting_started/abstractions.md) are known.
+This tutorial assumes `AllenAct`'s [abstractions](../getting_started/abstractions.md) are known.
 
 ## The task
 
@@ -48,12 +51,12 @@ An
 example of a `Data Iterator` for BabyAI expert demos might look as follows:
 """
 
-# %% import_summary plugins.minigrid_plugin.minigrid_offpolicy.ExpertTrajectoryIterator
+# %% import_summary allenact_plugins.minigrid_plugin.minigrid_offpolicy.ExpertTrajectoryIterator
 
 # %%
 """
 A complete example can be found in
-[ExpertTrajectoryIterator](/api/plugins/minigrid_plugin/minigrid_offpolicy#ExpertTrajectoryIterator).
+[ExpertTrajectoryIterator](/api/allenact_plugins/minigrid_plugin/minigrid_offpolicy#ExpertTrajectoryIterator).
 
 ## Loss function
 
@@ -62,12 +65,12 @@ Off-policy losses must implement the
 interface. In this case, we minimize the cross-entropy between the actor's policy and the expert action:
 """
 
-# %% import plugins.minigrid_plugin.minigrid_offpolicy.MiniGridOffPolicyExpertCELoss
+# %% import allenact_plugins.minigrid_plugin.minigrid_offpolicy.MiniGridOffPolicyExpertCELoss
 
 # %%
 """
 A complete example can be found in
-[MiniGridOffPolicyExpertCELoss](/api/plugins/minigrid_plugin/minigrid_offpolicy#MiniGridOffPolicyExpertCELoss).
+[MiniGridOffPolicyExpertCELoss](/api/allenact_plugins/minigrid_plugin/minigrid_offpolicy#MiniGridOffPolicyExpertCELoss).
 Note that in this case we train the entire actor, but it would also be possible to forward data through a different
 subgraph of the ActorCriticModel.
 
@@ -78,7 +81,7 @@ For the experiment configuration, we'll build on top of an existing
 The complete `ExperimentConfig` file for off-policy training is
 [here](/api/projects/tutorials/minigrid_offpolicy_tutorial/#bcoffpolicybabyaigotolocalexperimentconfig), but let's
 focus on the most relevant aspect to enable this type of training:
-providing an [OffPolicyPipelineComponent](/api/utils/experiment_utils/#offpolicypipelinecomponent) object as input to a
+providing an [OffPolicyPipelineComponent](/api/allenact/utils/experiment_utils/#offpolicypipelinecomponent) object as input to a
 `PipelineStage` when instantiating the `TrainingPipeline` in the `training_pipeline` method.
 """
 

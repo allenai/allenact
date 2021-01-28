@@ -26,6 +26,9 @@ the library will download all of the assets it requires to render the scenes aut
 
 **Trying to use `iTHOR` on a machine without an attached display?** 
 
+**Note** These instructions assume you have
+[installed the full library](../installation/installation-allenact.md#full-library).
+
 If you wish to run `iTHOR` on a machine without an attached display (for instance, a remote server such as an AWS
  machine) you will also need to run a script that launches `xserver` processes on your GPUs. This can be done
  with the following command:

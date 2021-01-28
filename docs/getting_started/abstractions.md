@@ -19,7 +19,7 @@ See either the ["designing your first minigrid experiment"](/tutorials/minigrid-
  tutorials to get an in-depth description of how these experiment configurations are defined in practice.
 
 See also the [abstract `ExperimentConfig` class](/api/allenact/base_abstractions/experiment_config#experimentconfig) 
-and an [example implementation](/api/plugins/ithor_plugin/ithor_environment/#ithorenvironment).
+and an [example implementation](/api/allenact_plugins/ithor_plugin/ithor_environment/#ithorenvironment).
 
 ## Task sampler
 
@@ -27,7 +27,7 @@ A task sampler is responsible for generating a sequence of tasks for agents to s
 randomly generated (e.g. in training) or extracted from an ordered pool (e.g. in validation or testing).
 
 See the [abstract `TaskSampler` class](/api/allenact/base_abstractions/task/#tasksampler) 
-and an [example implementation](/api/plugins/ithor_plugin/ithor_task_samplers/#objectnavtasksampler).
+and an [example implementation](/api/allenact_plugins/ithor_plugin/ithor_task_samplers/#objectnavtasksampler).
 
 ## Task
 
@@ -39,7 +39,7 @@ the task (e.g. a target object class) and are allowed to execute actions such as
 success indicator or some quantitative metric on the optimality of the followed path.  
 
 See the [abstract `Task` class](/api/allenact/base_abstractions/task/#task) 
-and an [example implementation](/api/plugins/robothor_plugin/robothor_tasks/#objectnavtask).
+and an [example implementation](/api/allenact_plugins/robothor_plugin/robothor_tasks/#objectnavtask).
 
 ## Sensor
 
@@ -48,7 +48,7 @@ end point in point navigation or target object class in semantic navigation) tha
 agents.
 
 See the [abstract `Sensor` class](/api/allenact/base_abstractions/sensor/#sensor) 
-and an [example implementation](/api/plugins/ithor_plugin/ithor_sensors/#rgbsensorthor).
+and an [example implementation](/api/allenact_plugins/ithor_plugin/ithor_sensors/#rgbsensorthor).
 
 ## Actor critic model
 
@@ -82,4 +82,4 @@ computed on the model's output.
 
 See the
 [`AbstractOffPolicyLoss` class](/api/allenact/algorithms/offpolicy_sync/losses/abstract_offpolicy_loss#abstractoffpolicyloss) 
-and an [example implementation](/api/plugins/minigrid_plugin/minigrid_offpolicy/#MiniGridOffPolicyExpertCELoss).
+and an [example implementation](/api/allenact_plugins/minigrid_plugin/minigrid_offpolicy/#MiniGridOffPolicyExpertCELoss).

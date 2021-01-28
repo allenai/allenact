@@ -93,7 +93,7 @@ class ObjectNavThorExperimentConfig(ExperimentConfig):
 
 We now implement a training pipeline which trains with a single stage using PPO.
 
-In the below we use [Builder](/api/utils/experiment_utils#builder) objects, which allow us to defer the instantiation
+In the below we use [Builder](/api/allenact/utils/experiment_utils#builder) objects, which allow us to defer the instantiation
 of objects of the class passed as their first argument while allowing passing additional keyword arguments to their
 initializers. This is necessary when instantiating things like PyTorch optimizers who take as input the list of
 parameters associated with our agent's model (something we can't know until the `create_model` function has been called).

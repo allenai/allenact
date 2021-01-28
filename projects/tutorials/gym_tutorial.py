@@ -3,6 +3,9 @@
 """
 # Tutorial: OpenAI gym for continuous control.
 
+**Note** The provided commands to execute in this tutorial assume you have
+[installed the full library](../installation/installation-allenact.md#full-library).
+
 In this tutorial, we:
 
 1. Introduce the `gym_plugin`, which enables some of the tasks in [OpenAI's gym](https://gym.openai.com/) for training
@@ -279,7 +282,7 @@ We have a complete implementation of this experiment's configuration class in `p
 To start training from scratch, we just need to invoke
 
 ```bash
-allenact gym_tutorial -b projects/tutorials -m 8 -o /PATH/TO/gym_output -s 54321 -e
+python allenact/main.py gym_tutorial -b projects/tutorials -m 8 -o /PATH/TO/gym_output -s 54321 -e
 ```
 
 from the `allenact` root directory. Note that we include `-e` to enforce deterministic evaluation. Please refer to the
@@ -302,7 +305,7 @@ In order to test for a specific experiment, we need to pass its training start d
 `-t EXPERIMENT_DATE`:
 
 ```bash
-allenact gym_tutorial -b projects/tutorials -m 1 -o /PATH/TO/gym_output -s 54321 -e -t EXPERIMENT_DATE -k 4
+python allenact/main.py gym_tutorial -b projects/tutorials -m 1 -o /PATH/TO/gym_output -s 54321 -e -t EXPERIMENT_DATE -k 4
 ```
 
 The option `-k 4` skips four checkpoints after each run. If everything went well, the `test` success rate should
@@ -316,6 +319,6 @@ remotely, try prepending `DISPLAY=:0.0` to the command above, assuming you have 
 available:
 
 ```bash
-DISPLAY=:0.0 allenact gym_tutorial -b projects/tutorials -m 1 -o /PATH/TO/gym_output -s 54321 -e -t EXPERIMENT_DATE -k 4
+DISPLAY=:0.0 python allenact/main.py gym_tutorial -b projects/tutorials -m 1 -o /PATH/TO/gym_output -s 54321 -e -t EXPERIMENT_DATE -k 4
 ```
 """
