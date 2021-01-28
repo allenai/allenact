@@ -5,6 +5,7 @@ import itertools
 import json
 import os
 import queue
+import random
 import signal
 import subprocess
 import time
@@ -14,12 +15,14 @@ from multiprocessing.context import BaseContext
 from multiprocessing.process import BaseProcess
 from typing import Optional, Dict, Union, Tuple, Sequence, List, Any
 
+import torch
 import torch.multiprocessing as mp
 from setproctitle import setproctitle as ptitle
 
 from allenact.algorithms.onpolicy_sync.engine import (
     OnPolicyTrainer,
     OnPolicyInference,
+    OnPolicyRLEngine,
 )
 from allenact.base_abstractions.experiment_config import ExperimentConfig, MachineParams
 from allenact.utils.experiment_utils import (
@@ -31,7 +34,6 @@ from allenact.utils.experiment_utils import (
 from allenact.utils.misc_utils import all_equal, get_git_diff_of_project
 from allenact.utils.system import get_logger, find_free_port
 from allenact.utils.tensor_utils import SummaryWriter
-
 # Has results queue (aggregated per trainer), checkpoints queue and mp context
 # Instantiates train, validate, and test workers
 # Logging
@@ -50,7 +52,7 @@ class OnPolicyRunner(object):
         deterministic_cudnn: bool = False,
         deterministic_agents: bool = False,
         mp_ctx: Optional[BaseContext] = None,
-        multiprocessing_start_method: str = "forkserver",
+        multiprocessing_start_method: str = "default",
         extra_tag: str = "",
         disable_tensorboard: bool = False,
         disable_config_saving: bool = False,
@@ -58,8 +60,14 @@ class OnPolicyRunner(object):
         self.config = config
         self.output_dir = output_dir
         self.loaded_config_src_files = loaded_config_src_files
-        self.seed = seed
+        self.seed = seed if seed is not None else random.randint(0, 2 ** 31 - 1)
         self.deterministic_cudnn = deterministic_cudnn
+        if multiprocessing_start_method == "default":
+            if torch.cuda.is_available():
+                multiprocessing_start_method = "forkserver"
+            else:
+                # Spawn seems to play nicer with cpus and debugging
+                multiprocessing_start_method = "spawn"
         self.mp_ctx = self.init_context(mp_ctx, multiprocessing_start_method)
         self.extra_tag = extra_tag
         self.mode = mode
@@ -76,8 +84,7 @@ class OnPolicyRunner(object):
         if self.deterministic_cudnn:
             set_deterministic_cudnn()
 
-        if self.seed is not None:
-            set_seed(self.seed)
+        set_seed(self.seed)
 
         self.queues = {
             "results": self.mp_ctx.Queue(),
@@ -188,7 +195,11 @@ class OnPolicyRunner(object):
         OnPolicyRunner.init_process("Train", id)
         engine_kwargs["mode"] = "train"
         engine_kwargs["worker_id"] = id
-        get_logger().info("train {} args {}".format(id, engine_kwargs))
+        engine_kwargs_for_print = {
+            k: (v if k != "initial_model_state_dict" else "[SUPRESSED]")
+            for k, v in engine_kwargs.items()
+        }
+        get_logger().info(f"train {id} args {engine_kwargs_for_print}")
 
         trainer: OnPolicyTrainer = OnPolicyRunner.init_worker(
             engine_class=OnPolicyTrainer, args=engine_args, kwargs=engine_kwargs
@@ -234,9 +245,14 @@ class OnPolicyRunner(object):
         devices = self.worker_devices("train")
         num_workers = len(devices)
 
-        seed = (
-            self.seed
-        )  # same for all workers. used during initialization of the model
+        # Be extra careful to ensure that all models start
+        # with the same initializations.
+        set_seed(self.seed)
+        initial_model_state_dict = self.config.create_model(
+            sensor_preprocessor_graph=MachineParams.instance_from(
+                self.config.machine_params(self.mode)
+            ).sensor_preprocessor_graph
+        ).state_dict()
 
         distributed_port = 0
         if num_workers > 1:
@@ -256,13 +272,14 @@ class OnPolicyRunner(object):
                     if self.running_validation
                     else None,
                     checkpoints_dir=self.checkpoint_dir(),
-                    seed=seed,
+                    seed=self.seed,
                     deterministic_cudnn=self.deterministic_cudnn,
                     mp_ctx=self.mp_ctx,
                     num_workers=num_workers,
                     device=devices[trainer_it],
                     distributed_port=distributed_port,
                     max_sampler_processes_per_worker=max_sampler_processes_per_worker,
+                    initial_model_state_dict=initial_model_state_dict,
                 ),
             )
             train.start()
