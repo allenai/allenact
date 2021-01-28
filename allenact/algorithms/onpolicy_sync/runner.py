@@ -245,9 +245,8 @@ class OnPolicyRunner(object):
         devices = self.worker_devices("train")
         num_workers = len(devices)
 
-        trainer_seeds = OnPolicyRLEngine.worker_seeds(
-            nprocesses=num_workers, initial_seed=self.seed
-        )
+        # Be extra careful to ensure that all models start
+        # with the same initializations.
         set_seed(self.seed)
         initial_model_state_dict = self.config.create_model(
             sensor_preprocessor_graph=MachineParams.instance_from(
@@ -273,7 +272,7 @@ class OnPolicyRunner(object):
                     if self.running_validation
                     else None,
                     checkpoints_dir=self.checkpoint_dir(),
-                    seed=trainer_seeds[trainer_it],
+                    seed=self.seed,
                     deterministic_cudnn=self.deterministic_cudnn,
                     mp_ctx=self.mp_ctx,
                     num_workers=num_workers,
