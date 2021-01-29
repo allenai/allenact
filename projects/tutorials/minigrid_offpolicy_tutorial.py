@@ -6,10 +6,15 @@
 """
 
 **Note** The provided commands to execute in this tutorial assume you have
-[installed the full library](../installation/installation-allenact.md#full-library).
+[installed the full library](../installation/installation-allenact.md#full-library) and the `extra_requirements`
+for the `babyai_plugin` and `minigrid_plugin`. The latter can be installed with:
+
+```bash
+pip install -r allenact_plugins/babyai_plugin/extra_requirements.txt; pip install -r allenact_plugins/minigrid_plugin/extra_requirements.txt
+```
 
 In this tutorial we'll learn how to train an agent from an external dataset by imitating expert actions via
-Behavior Cloning. We'll use a [BabyAI agent](/api/plugins/babyai_plugin/babyai_models#BabyAIRecurrentACModel) to solve
+Behavior Cloning. We'll use a [BabyAI agent](/api/allenact_plugins/babyai_plugin/babyai_models#BabyAIRecurrentACModel) to solve
 `GoToLocal` tasks on [MiniGrid](https://github.com/maximecb/gym-minigrid); see the
 `projects/babyai_baselines/experiments/go_to_local` directory for more details.
 
@@ -27,19 +32,19 @@ We will use a large dataset (**more than 4 GB**) including expert demonstrations
 the data we'll run
 
 ```bash
-PYTHONPATH=. python plugins/babyai_plugin/scripts/download_babyai_expert_demos.py GoToLocal
+PYTHONPATH=. python allenact_plugins/babyai_plugin/scripts/download_babyai_expert_demos.py GoToLocal
 ```
 
 from the project's root directory, which will download `BabyAI-GoToLocal-v0.pkl` and `BabyAI-GoToLocal-v0_valid.pkl` to
-the `plugins/babyai_plugin/data/demos` directory.
+the `allenact_plugins/babyai_plugin/data/demos` directory.
 
 We will also generate small versions of the datasets, which will be useful if running on CPU, by calling
 
 ```bash
-PYTHONPATH=. python plugins/babyai_plugin/scripts/truncate_expert_demos.py
+PYTHONPATH=. python allenact_plugins/babyai_plugin/scripts/truncate_expert_demos.py
 ```
 from the project's root directory, which will generate `BabyAI-GoToLocal-v0-small.pkl` under the same
-`plugins/babyai_plugin/data/demos` directory.
+`allenact_plugins/babyai_plugin/data/demos` directory.
 
 ## Data iterator
 
@@ -183,7 +188,7 @@ We recommend using a machine with a CUDA-capable GPU for this experiment. In ord
 invoke
 
 ```bash
-python main.py -b projects/tutorials minigrid_offpolicy_tutorial -m 8 -o <OUTPUT_PATH>
+PYTHONPATH=. python allenact/main.py -b projects/tutorials minigrid_offpolicy_tutorial -m 8 -o <OUTPUT_PATH>
 ```
 
 Note that with the `-m 8` option we limit to 8 the number of on-policy task sampling processes used between off-policy
