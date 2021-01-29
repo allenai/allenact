@@ -73,9 +73,10 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
             dtype=np.float32,
         )
 
-    def _compute_pointgoal(self, source_position, source_rotation, goal_position):
+    @staticmethod
+    def compute_pointgoal(source_position, source_rotation, goal_position):
         direction_vector = goal_position - source_position
-        direction_vector_agent = self.quaternion_rotate_vector(
+        direction_vector_agent = GPSCompassSensorRoboThor.quaternion_rotate_vector(
             source_rotation.inverse(), direction_vector
         )
 
@@ -138,7 +139,7 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
 
         goal_position = np.array([task.task_info["target"][k] for k in ["x", "y", "z"]])
 
-        return self._compute_pointgoal(
+        return self.compute_pointgoal(
             agent_position, rotation_world_agent, goal_position
         )
 

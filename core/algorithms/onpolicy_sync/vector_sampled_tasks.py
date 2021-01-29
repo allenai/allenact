@@ -360,7 +360,7 @@ class VectorSampledTasks(object):
                 ),
             )
             self._workers.append(ps)
-            ps.daemon = True
+            ps.daemon = False
             ps.start()
             worker_conn.close()
             time.sleep(
