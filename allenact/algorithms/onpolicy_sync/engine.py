@@ -1,5 +1,6 @@
 """Defines the reinforcement learning `OnPolicyRLEngine`."""
 import itertools
+import logging
 import os
 import queue
 import random
@@ -26,6 +27,8 @@ import torch.multiprocessing as mp  # type: ignore
 import torch.optim
 from torch import nn
 from torch import optim
+
+from allenact.utils.misc_utils import md5_hash_str_as_int, tensor_print_options
 
 try:
     # noinspection PyProtectedMember
@@ -91,6 +94,7 @@ class OnPolicyRLEngine(object):
         distributed_port: int = 0,
         deterministic_agents: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
+        initial_model_state_dict: Optional[Dict[str, Any]] = None,
         **kwargs,
     ):
         """Initializer.
@@ -155,24 +159,36 @@ class OnPolicyRLEngine(object):
         self.sensor_preprocessor_graph = None
         self.actor_critic: Optional[ActorCriticModel] = None
         if self.num_samplers > 0:
+            create_model_kwargs = {}
             if self.machine_params.sensor_preprocessor_graph is not None:
-                # centralized observation set,
                 self.sensor_preprocessor_graph = self.machine_params.sensor_preprocessor_graph.to(
                     self.device
                 )
-                set_seed(self.seed)
-                self.actor_critic = cast(
-                    ActorCriticModel,
-                    self.config.create_model(
-                        sensor_preprocessor_graph=self.sensor_preprocessor_graph
-                    ),
-                ).to(self.device)
-            else:
-                # no observation set
-                set_seed(self.seed)
-                self.actor_critic = cast(
-                    ActorCriticModel, self.config.create_model()
-                ).to(self.device)
+                create_model_kwargs[
+                    "sensor_preprocessor_graph"
+                ] = self.sensor_preprocessor_graph
+
+            set_seed(self.seed)
+            self.actor_critic = cast(
+                ActorCriticModel, self.config.create_model(**create_model_kwargs),
+            ).to(self.device)
+
+        if initial_model_state_dict is not None:
+            self.actor_critic.load_state_dict(state_dict=initial_model_state_dict)
+        else:
+            assert mode != "train" or self.num_workers == 1, (
+                "When training with multiple workers you must pass a,"
+                " non-`None` value for the `initial_model_state_dict` argument."
+            )
+
+        if get_logger().level == logging.DEBUG:
+            with tensor_print_options(threshold=2 ** 32, edgeitems=2 ** 32):
+                model_hash = md5_hash_str_as_int(
+                    str(list(sorted(self.actor_critic.state_dict().items())))
+                )
+                get_logger().debug(
+                    f"WORKER ({self.mode}): {self.worker_id}, model weights hash: {model_hash}"
+                )
 
         self.is_distributed = False
         self.store: Optional[torch.distributed.TCPStore] = None  # type:ignore

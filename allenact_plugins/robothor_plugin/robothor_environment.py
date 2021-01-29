@@ -5,7 +5,7 @@ import pickle
 import random
 from typing import Any, Optional, Dict, List, Union, Tuple, Collection
 
-import ai2thor.fifo_server
+from ai2thor.fifo_server import FifoServer
 import ai2thor.server
 import numpy as np
 from ai2thor.controller import Controller
@@ -45,15 +45,14 @@ class RoboThorEnvironment:
             width=640,
             height=480,
             agentCount=1,
+            server_class=FifoServer,
         )
 
         if "agentCount" in kwargs:
             assert kwargs["agentCount"] > 0
 
         recursive_update(self.config, {**kwargs, "agentMode": "bot"})
-        self.controller = Controller(
-            **self.config, server_class=ai2thor.fifo_server.FifoServer
-        )
+        self.controller = Controller(**self.config,)
         self.known_good_locations: Dict[str, Any] = {
             self.scene_name: copy.deepcopy(self.currently_reachable_points)
         }
