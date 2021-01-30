@@ -3,7 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Union, Tuple, List
+from typing import Union, Tuple, List, cast, Iterable
 from collections import OrderedDict
 
 import numpy as np
@@ -122,21 +122,27 @@ def numpy_point(
 ):
     """Convert torch space point into numpy."""
     if isinstance(space, gym.Box):
-        return torch_x.cpu().numpy()
+        return cast(torch.Tensor, torch_x).cpu().numpy()
     elif isinstance(space, gym.Discrete):
         return torch_x
     elif isinstance(space, gym.Tuple):
         return tuple(
-            [numpy_point(s, x_part) for x_part, s in zip(torch_x, space.spaces)]
+            [
+                numpy_point(s, x_part)
+                for x_part, s in zip(cast(Iterable, torch_x), space.spaces)
+            ]
         )
     elif isinstance(space, gym.Dict):
         return OrderedDict(
-            [(key, numpy_point(s, torch_x[key])) for key, s in space.spaces.items()]
+            [
+                (key, numpy_point(s, cast(torch.Tensor, torch_x)[key]))
+                for key, s in space.spaces.items()
+            ]
         )
     elif isinstance(space, gym.MultiBinary):
-        return torch_x.cpu().numpy()
+        return cast(torch.Tensor, torch_x).cpu().numpy()
     elif isinstance(space, gym.MultiDiscrete):
-        return torch_x.cpu().numpy()
+        return cast(torch.Tensor, torch_x).cpu().numpy()
     else:
         raise NotImplementedError
 

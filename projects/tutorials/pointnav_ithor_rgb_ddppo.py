@@ -6,7 +6,6 @@ from typing import Dict, Any, List, Optional, Sequence
 import gym
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
@@ -190,7 +189,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     # Define Model
     @classmethod
-    def create_model(cls, **kwargs) -> nn.Module:
+    def create_model(cls, **kwargs) -> torch.nn.Module:
         return ResnetTensorPointNavActorCritic(
             action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,

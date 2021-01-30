@@ -5,7 +5,6 @@ TODO: this code is not supported as it currently lacks an implementation for rec
 import math
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
@@ -75,7 +74,7 @@ def update_running_stat(aa, m_aa, momentum):
     m_aa *= 1 - momentum
 
 
-class SplitBias(nn.Module):
+class SplitBias(torch.nn.Module):
     def __init__(self, module):
         super(SplitBias, self).__init__()
         self.module = module

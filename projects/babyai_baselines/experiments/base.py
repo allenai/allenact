@@ -1,9 +1,8 @@
 from abc import ABC
-from typing import Dict, Any, List, Optional, Union, Sequence
+from typing import Dict, Any, List, Optional, Union, Sequence, cast
 
 import gym
 import torch
-import torch.nn as nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -133,7 +132,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig, ABC):
         return TrainingPipeline(
             save_interval=save_interval,
             metric_accumulate_interval=metric_accumulate_interval,
-            optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
+            optimizer_builder=Builder(cast(optim.Optimizer, optim.Adam), dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
@@ -176,7 +175,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig, ABC):
         return MachineParams(nprocesses=nprocesses, devices=devices)
 
     @classmethod
-    def create_model(cls, **kwargs) -> nn.Module:
+    def create_model(cls, **kwargs) -> torch.nn.Module:
         sensors = cls.get_sensors()
         return BabyAIRecurrentACModel(
             action_space=gym.spaces.Discrete(len(BabyAITask.class_action_names())),

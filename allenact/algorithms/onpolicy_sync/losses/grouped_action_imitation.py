@@ -28,7 +28,7 @@ class GroupedActionImitation(AbstractActorCriticLoss):
                 [i in action_group for i in range(nactions)]
                 for action_group in action_groups
             ]
-            + [[1] * nactions]
+            + [[1] * nactions]  # type:ignore
         )
 
     def loss(  # type: ignore

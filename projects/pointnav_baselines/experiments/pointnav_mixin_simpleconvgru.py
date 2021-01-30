@@ -1,7 +1,7 @@
 from abc import ABC
 
 import gym
-import torch.nn as nn
+import torch
 
 from allenact.base_abstractions.sensor import DepthSensor, RGBSensor
 
@@ -10,7 +10,7 @@ try:
     # Habitat may not be installed, just create a fake class here in that case
     from allenact_plugins.habitat_plugin.habitat_sensors import TargetCoordinatesSensorHabitat
 except ImportError:
-    class TargetCoordinatesSensorHabitat:
+    class TargetCoordinatesSensorHabitat:  #type:ignore
         pass
 # fmt: on
 
@@ -26,7 +26,7 @@ class PointNavMixInSimpleConvGRUConfig(PointNavBaseConfig, ABC):
     """The base config for all iTHOR PPO PointNav experiments."""
 
     @classmethod
-    def create_model(cls, **kwargs) -> nn.Module:
+    def create_model(cls, **kwargs) -> torch.nn.Module:
         rgb_uuid = next((s.uuid for s in cls.SENSORS if isinstance(s, RGBSensor)), None)
         depth_uuid = next(
             (s.uuid for s in cls.SENSORS if isinstance(s, DepthSensor)), None

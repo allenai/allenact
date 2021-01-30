@@ -3,14 +3,13 @@ from typing import List, Callable, Optional, Any, cast, Dict
 import gym
 import numpy as np
 import torch
-from torch import nn as nn
 from torchvision import models
 
 from allenact.base_abstractions.preprocessor import Preprocessor
 from allenact.utils.misc_utils import prepare_locals_for_super
 
 
-class ResNetEmbedder(nn.Module):
+class ResNetEmbedder(torch.nn.Module):
     def __init__(self, resnet, pool=True):
         super().__init__()
         self.model = resnet

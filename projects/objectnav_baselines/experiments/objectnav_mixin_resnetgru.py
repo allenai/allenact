@@ -1,7 +1,7 @@
 from typing import Sequence, Union
 
 import gym
-import torch.nn as nn
+import torch
 from torchvision import models
 
 from allenact.base_abstractions.preprocessor import Preprocessor
@@ -56,7 +56,7 @@ class ObjectNavMixInResNetGRUConfig(ObjectNavBaseConfig):
         return preprocessors
 
     @classmethod
-    def create_model(cls, **kwargs) -> nn.Module:
+    def create_model(cls, **kwargs) -> torch.nn.Module:
         has_rgb = any(isinstance(s, RGBSensor) for s in cls.SENSORS)
         has_depth = any(isinstance(s, DepthSensor) for s in cls.SENSORS)
         goal_sensor_uuid = next(

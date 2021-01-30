@@ -2,7 +2,6 @@ import abc
 from typing import Any
 
 import torch
-from torch import nn
 from torch.distributions.utils import lazy_property
 
 """
@@ -53,7 +52,7 @@ class CategoricalDistr(torch.distributions.Categorical, Distr):
         return torch.softmax(self.logits, dim=-1)
 
 
-class AddBias(nn.Module):
+class AddBias(torch.nn.Module):
     """Adding bias parameters to input values."""
 
     def __init__(self, bias: torch.FloatTensor):
@@ -64,7 +63,7 @@ class AddBias(nn.Module):
         bias : data to use as the initial values of the bias.
         """
         super(AddBias, self).__init__()
-        self._bias = nn.Parameter(bias.unsqueeze(1), requires_grad=True)
+        self._bias = torch.nn.Parameter(bias.unsqueeze(1), requires_grad=True)
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # type: ignore
         """Adds the stored bias parameters to `x`."""

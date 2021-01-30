@@ -933,7 +933,7 @@ class NavToPartnerTaskSampler(TaskSampler):
         self.max_tasks: Optional[int] = None
         self.reset_tasks = max_tasks
 
-        self._last_sampled_task: Optional[PointNavTask] = None
+        self._last_sampled_task: Optional[NavToPartnerTask] = None
 
         self.seed: Optional[int] = None
         self.set_seed(seed)
@@ -966,7 +966,7 @@ class NavToPartnerTaskSampler(TaskSampler):
         return self.reset_tasks
 
     @property
-    def last_sampled_task(self) -> Optional[PointNavTask]:
+    def last_sampled_task(self) -> Optional[NavToPartnerTask]:
         return self._last_sampled_task
 
     def close(self) -> None:

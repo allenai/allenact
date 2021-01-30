@@ -3,7 +3,6 @@ from typing import Optional, Tuple, cast
 import gym
 import torch
 from gym.spaces.dict import Dict as SpaceDict
-from torch import nn
 
 from allenact.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
@@ -38,15 +37,15 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
         self.in_dim = box_space.shape[0]
 
         self.num_actions = action_space.n
-        self.linear = nn.Linear(self.in_dim, 2 * self.num_actions + 1)
+        self.linear = torch.nn.Linear(self.in_dim, 2 * self.num_actions + 1)
 
-        nn.init.orthogonal_(self.linear.weight)
+        torch.nn.init.orthogonal_(self.linear.weight)
         if ensure_same_weights:
             # Ensure main actor / auxiliary actor start with the same weights
             self.linear.weight.data[self.num_actions : -1, :] = self.linear.weight[
                 : self.num_actions, :
             ]
-        nn.init.constant_(self.linear.bias, 0)
+        torch.nn.init.constant_(self.linear.bias, 0)
 
     @property
     def recurrent_hidden_state_size(self) -> int:

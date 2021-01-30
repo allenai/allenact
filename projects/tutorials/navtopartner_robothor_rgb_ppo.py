@@ -4,7 +4,6 @@ from typing import Dict, Any, List, Optional
 import gym
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -176,7 +175,7 @@ class NavToPartnerRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     # TODO Define Model
     @classmethod
-    def create_model(cls, **kwargs) -> nn.Module:
+    def create_model(cls, **kwargs) -> torch.nn.Module:
         return NavToPartnerActorCriticSimpleConvRNN(
             action_space=gym.spaces.Tuple(
                 [

@@ -1,7 +1,6 @@
 from typing import Dict, Union, Optional, Tuple, Any, Sequence
 
 import torch
-from torch import nn
 import gym
 
 from allenact.algorithms.onpolicy_sync.policy import (
@@ -33,18 +32,19 @@ class MemorylessActorCritic(ActorCriticModel[GaussianDistr]):
         assert len(action_space.shape) == 1
         action_dim = action_space.shape[0]
 
-        mlp_hidden_dims = (state_dim,) + mlp_hidden_dims
+        mlp_hidden_dims = (state_dim,) + tuple(mlp_hidden_dims)
 
         # action mean range -1 to 1
-        self.actor = nn.Sequential(
-            *self.make_mlp_hidden(nn.Tanh, *mlp_hidden_dims),
-            nn.Linear(32, action_dim),
-            nn.Tanh(),
+        self.actor = torch.nn.Sequential(
+            *self.make_mlp_hidden(torch.nn.Tanh, *mlp_hidden_dims),
+            torch.nn.Linear(32, action_dim),
+            torch.nn.Tanh(),
         )
 
         # critic
-        self.critic = nn.Sequential(
-            *self.make_mlp_hidden(nn.Tanh, *mlp_hidden_dims), nn.Linear(32, 1),
+        self.critic = torch.nn.Sequential(
+            *self.make_mlp_hidden(torch.nn.Tanh, *mlp_hidden_dims),
+            torch.nn.Linear(32, 1),
         )
 
         # maximum standard deviation
@@ -58,7 +58,7 @@ class MemorylessActorCritic(ActorCriticModel[GaussianDistr]):
     def make_mlp_hidden(nl, *dims):
         res = []
         for it, dim in enumerate(dims[:-1]):
-            res.append(nn.Linear(dim, dims[it + 1]),)
+            res.append(torch.nn.Linear(dim, dims[it + 1]),)
             res.append(nl())
         return res
 
