@@ -61,11 +61,11 @@ an optimizer, and other parameters like learning rates, batch sizes, etc.
 We first import everything we'll need to define our experiment.
 
 ```python
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional, List, Any, cast
 
 import gym
 from gym_minigrid.envs import EmptyRandomEnv5x5
-from torch import nn
+import torch
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -120,7 +120,7 @@ environments, [MiniGridSimpleConvRNN](../api/allenact_plugins/minigrid_plugin/mi
 
 ```python
     @classmethod
-    def create_model(cls, **kwargs) -> nn.Module:
+    def create_model(cls, **kwargs) -> torch.nn.Module:
         return MiniGridSimpleConvRNN(
             action_space=gym.spaces.Discrete(len(MiniGridTask.class_action_names())),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
@@ -260,7 +260,7 @@ stage with linearly decaying learning rate:
             pipeline_stages=[
                 PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps)
             ],
-            optimizer_builder=Builder(optim.Adam, dict(lr=1e-4)),
+            optimizer_builder=Builder(cast(optim.Optimizer, optim.Adam), dict(lr=1e-4)),
             num_mini_batch=4,
             update_repeats=3,
             max_grad_norm=0.5,

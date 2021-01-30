@@ -45,10 +45,10 @@ The experiment config, similar to the one used for the
 [Navigation in MiniGrid tutorial](../tutorials/minigrid-tutorial.md), is defined as follows:
 
 ```python
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional, List, Any, cast
 
 import gym
-from torch import nn
+import torch
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -90,7 +90,7 @@ instead of `ActorCriticModel[CategoricalDistr]`, since we'll use a
 
 ```python
     @classmethod
-    def create_model(cls, **kwargs) -> nn.Module:
+    def create_model(cls, **kwargs) -> torch.nn.Module:
         return MemorylessActorCritic(
             input_uuid="gym_box_data",
             action_space=gym.spaces.Box(
@@ -239,7 +239,7 @@ and 80 single-batch update repeats per rollout:
             pipeline_stages=[
                 PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps),
             ],
-            optimizer_builder=Builder(optim.Adam, dict(lr=1e-3)),
+            optimizer_builder=Builder(cast(optim.Optimizer, optim.Adam), dict(lr=1e-3)),
             num_mini_batch=1,
             update_repeats=80,
             max_grad_norm=100,
