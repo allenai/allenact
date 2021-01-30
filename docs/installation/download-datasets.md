@@ -1,7 +1,8 @@
 # Downloading datasets 
 
 **Note** These instructions assume you have
-[installed the full library](../installation/installation-allenact.md#full-library).
+[installed the full library](../installation/installation-allenact.md#full-library) and, generally, [installed
+specific plugin requirements](../installation/installation-allenact.md#plugins-extra-requirements).
 
 The below provides instructions on how to download datasets necessary for defining the train, validation, and
 test sets used within the ObjectNav/PointNav tasks in the `iTHOR`, `RoboTHOR`, and `habitat` environments.

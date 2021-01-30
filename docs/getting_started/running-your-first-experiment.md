@@ -4,7 +4,7 @@ Assuming you have [installed the full library](../installation/installation-alle
 first experiment by calling
 
 ```bash
-python allenact/main.py minigrid_tutorial -b projects/tutorials -m 8 -o minigrid_output -s 12345
+PYTHONPATH=. python allenact/main.py minigrid_tutorial -b projects/tutorials -m 8 -o minigrid_output -s 12345
 ```
 
 from the `allenact` root directory.
@@ -48,7 +48,7 @@ A detailed tutorial describing how the `minigrid_tutorial` experiment configurat
  
 To run your own custom experiment simply define a new experiment configuration in a file 
 `projects/YOUR_PROJECT_NAME/experiments/my_custom_experiment.py` after which you may run it with
-`python allenact/main.py my_custom_experiment -b projects/YOUR_PROJECT_NAME/experiments`.
+`PYTHONPATH=. python allenact/main.py my_custom_experiment -b projects/YOUR_PROJECT_NAME/experiments`.
 
 <!-- ## Experiment configuration
 

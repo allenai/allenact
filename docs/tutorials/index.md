@@ -1,7 +1,8 @@
 # AllenAct Tutorials
 
 **Note** The provided commands to execute these tutorials assume you have
-[installed the full library](../installation/installation-allenact.md#full-library).
+[installed the full library](../installation/installation-allenact.md#full-library)
+and the specific requirements for each used plugin.
 
 We provide several tutorials to help ramp up researchers to the field of Embodied-AI as well as to the AllenAct framework.
 

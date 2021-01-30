@@ -1,25 +1,14 @@
 # Installation of supported environments
 
+In general, each supported environment can be installed by just following the instructions
+to [install the full library](../installation/installation-allenact.md#full-library) and
+[the specific requirements for each used plugin](../installation/installation-allenact.md#plugins-extra-requirements).
+
+Alternatively, they can also be [installed via pip](../installation/installation-allenact.md#framework-and-plugins).
+
 Below we provide installation instructions for a number of environments that we support.
 
-## Installation of MiniGrid
-
-MiniGrid will automatically be installed when installing `allenact` and so nothing additional needs to be done.
- If you wish to (re)install it manually using `pip`, simply run the command:
-
-```bash
-pip install gym-minigrid
-```
-
-## Installation of iTHOR
-
-`iTHOR` will automatically be installed when installing `allenact` and so, if you have installed `allenact`
- on a machine with an attached display, nothing additional needs to be done. If you wish to (re)install it manually 
- using `pip`, simply run the command:
-
-```bash
-pip install ai2thor
-```
+## Installation of iTHOR (`ithor` plugin)
 
 The first time you will run an experiment with `iTHOR` (or any script that uses `ai2thor`)
 the library will download all of the assets it requires to render the scenes automatically.
@@ -42,10 +31,9 @@ access (for example if you are running this on a shared university machine) you
 can ask your administrator to run it for you. You only need to run it once (as
 long as you do not turn off your machine).
 
-## Installation of RoboTHOR
+## Installation of RoboTHOR (`robothor` plugin)
 
-`RoboTHOR` is installed in tandem with `iTHOR` when installing the `ai2thor` library. For more information
-see the above section on installing `iTHOR`. 
+`RoboTHOR` is installed in the same way as `iTHOR`. For more information see the above section on installing `iTHOR`. 
 
 ## Installation of Habitat
 
