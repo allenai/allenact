@@ -1,4 +1,4 @@
-from typing import Dict, Union, Optional, Tuple, Any, Sequence
+from typing import Dict, Union, Optional, Tuple, Any, Sequence, cast
 
 import torch
 from torch import nn
@@ -77,7 +77,9 @@ class MemorylessActorCritic(ActorCriticModel[GaussianDistr]):
 
         return (
             ActorCriticOutput(
-                GaussianDistr(loc=means, scale=self.action_std), values, {},
+                cast(DistributionType, GaussianDistr(loc=means, scale=self.action_std)),
+                values,
+                {},
             ),
             None,  # no Memory
         )

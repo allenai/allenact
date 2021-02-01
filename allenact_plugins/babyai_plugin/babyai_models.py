@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, cast, Tuple
+from typing import Dict, Optional, List, cast, Tuple, Any
 
 import babyai.model
 import babyai.rl
@@ -239,8 +239,8 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
                 if not self.include_auxiliary_head
                 else {
                     **extra_predictions,
-                    "auxiliary_distributions": CategoricalDistr(
-                        logits=self.aux(embedding)
+                    "auxiliary_distributions": cast(
+                        Any, CategoricalDistr(logits=self.aux(embedding))
                     ),
                 },
             ),

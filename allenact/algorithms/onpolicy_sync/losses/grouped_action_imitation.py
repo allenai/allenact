@@ -50,8 +50,9 @@ class GroupedActionImitation(AbstractActorCriticLoss):
         # )
 
         if self.action_groups_mask.get_device() != expert_group_actions.get_device():
-            self.action_groups_mask = self.action_groups_mask.cuda(
-                expert_group_actions.get_device()
+            self.action_groups_mask = cast(
+                torch.FloatTensor,
+                self.action_groups_mask.cuda(expert_group_actions.get_device()),
             )
 
         expert_group_actions_reshaped = expert_group_actions.view(-1, 1)
