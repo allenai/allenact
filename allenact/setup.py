@@ -41,7 +41,7 @@ if __name__ == "__main__":
         author="Allen Institute for Artificial Intelligence",
         author_email="lucaw@allenai.org",
         license="MIT",
-        packages=find_packages(where="..", include=["allenact", "allenact.*"]),
+        packages=find_packages(include=["allenact", "allenact.*"]),
         install_requires=[
             "gym>=0.17.0,<0.18.0",
             "tensorboardx==2.1",

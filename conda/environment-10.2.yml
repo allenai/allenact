@@ -34,7 +34,7 @@ dependencies:
   - tqdm
   - setuptools
   - pip:
-    - "--editable=git+https://github.com/unnat/babyai.git@ff645fe00ea8412a29bd5e2d6f79ae1595d229a7#egg=babyai"
+    - "--editable=git+https://github.com/Lucaweihs/babyai.git@0b450eeb3a2dc7116c67900d51391986bdbb84cd#egg=babyai"
     - "--editable=git+https://github.com/Lucaweihs/habitat-lab.git@99124c785bd5ca51e321ea20462f71071cd43ae2#egg=habitat"
     - ai2thor >=2.5.1,<2.6.0
     - numpy-quaternion

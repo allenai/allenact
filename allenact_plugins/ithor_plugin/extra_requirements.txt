@@ -1,4 +1,3 @@
 ai2thor>=2.5.3
-quaternion
 numpy-quaternion
 pyquaternion>=0.9.9

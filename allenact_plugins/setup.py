@@ -50,7 +50,7 @@ if __name__ == "__main__":
         author_email="lucaw@allenai.org",
         license="MIT",
         packages=find_packages(
-            where="..", include=["allenact_plugins", "allenact_plugins.*"]
+            include=["allenact_plugins", "allenact_plugins.*"]
         ),
         install_requires=[
             "gym>=0.17.0,<0.18.0",
@@ -62,14 +62,4 @@ if __name__ == "__main__":
         setup_requires=["pytest-runner"],
         tests_require=["pytest", "pytest-cov"],
         extras_require=extras,
-    )
-
-    # TODO: Having to hack in installation of babyai for now, seems that extra requires doesn't allow for
-    #   editable installations in some cases.
-    subprocess.check_output(
-        [
-            "pip",
-            "install",
-            "--editable=git+https://github.com/unnat/babyai.git@ff645fe00ea8412a29bd5e2d6f79ae1595d229a7#egg=babyai",
-        ]
     )
