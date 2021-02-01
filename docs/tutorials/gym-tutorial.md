@@ -48,7 +48,7 @@ The experiment config, similar to the one used for the
 from typing import Dict, Optional, List, Any, cast
 
 import gym
-import torch
+from torch import nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -90,7 +90,7 @@ instead of `ActorCriticModel[CategoricalDistr]`, since we'll use a
 
 ```python
     @classmethod
-    def create_model(cls, **kwargs) -> torch.nn.Module:
+    def create_model(cls, **kwargs) -> nn.Module:
         return MemorylessActorCritic(
             input_uuid="gym_box_data",
             action_space=gym.spaces.Box(
