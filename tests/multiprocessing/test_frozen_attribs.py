@@ -2,6 +2,7 @@ from typing import Dict, Any
 
 import torch
 import torch.multiprocessing as mp
+from torch import nn
 
 from allenact.base_abstractions.experiment_config import ExperimentConfig
 from allenact.base_abstractions.task import TaskSampler
@@ -21,7 +22,7 @@ class MyConfig(ExperimentConfig):
         return None
 
     @classmethod
-    def create_model(cls, **kwargs) -> torch.nn.Module:
+    def create_model(cls, **kwargs) -> nn.Module:
         return None
 
     @classmethod

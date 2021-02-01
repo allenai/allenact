@@ -2,6 +2,7 @@ from typing import Tuple, Dict, Optional, Union, List, cast
 
 import gym
 import torch
+import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
 from allenact.algorithms.onpolicy_sync.policy import (
@@ -43,7 +44,7 @@ class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
 
         self.sensor_fusion = False
         if rgb_uuid is not None and depth_uuid is not None:
-            self.sensor_fuser = torch.nn.Linear(hidden_size * 2, hidden_size)
+            self.sensor_fuser = nn.Linear(hidden_size * 2, hidden_size)
             self.sensor_fusion = True
 
         self.visual_encoder = SimpleCNN(
@@ -65,7 +66,7 @@ class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
         self.critic = LinearCriticHead(self._hidden_size)
 
         if self.embed_coordinates:
-            self.coordinate_embedding = torch.nn.Linear(
+            self.coordinate_embedding = nn.Linear(
                 coordinate_dims, coordinate_embedding_dim
             )
 
@@ -240,7 +241,7 @@ class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
         )
 
 
-class ResnetTensorGoalEncoder(torch.nn.Module):
+class ResnetTensorGoalEncoder(nn.Module):
     def __init__(
         self,
         observation_spaces: SpaceDict,
@@ -256,26 +257,24 @@ class ResnetTensorGoalEncoder(torch.nn.Module):
         self.goal_dims = goal_dims
         self.resnet_hid_out_dims = resnet_compressor_hidden_out_dims
         self.combine_hid_out_dims = combiner_hidden_out_dims
-        self.embed_goal = torch.nn.Linear(2, self.goal_dims)
+        self.embed_goal = nn.Linear(2, self.goal_dims)
         self.blind = self.resnet_uuid not in observation_spaces.spaces
         if not self.blind:
             self.resnet_tensor_shape = observation_spaces.spaces[self.resnet_uuid].shape
-            self.resnet_compressor = torch.nn.Sequential(
-                torch.nn.Conv2d(
-                    self.resnet_tensor_shape[0], self.resnet_hid_out_dims[0], 1
-                ),
-                torch.nn.ReLU(),
-                torch.nn.Conv2d(*self.resnet_hid_out_dims[0:2], 1),
-                torch.nn.ReLU(),
+            self.resnet_compressor = nn.Sequential(
+                nn.Conv2d(self.resnet_tensor_shape[0], self.resnet_hid_out_dims[0], 1),
+                nn.ReLU(),
+                nn.Conv2d(*self.resnet_hid_out_dims[0:2], 1),
+                nn.ReLU(),
             )
-            self.target_obs_combiner = torch.nn.Sequential(
-                torch.nn.Conv2d(
+            self.target_obs_combiner = nn.Sequential(
+                nn.Conv2d(
                     self.resnet_hid_out_dims[1] + self.goal_dims,
                     self.combine_hid_out_dims[0],
                     1,
                 ),
-                torch.nn.ReLU(),
-                torch.nn.Conv2d(*self.combine_hid_out_dims[0:2], 1),
+                nn.ReLU(),
+                nn.Conv2d(*self.combine_hid_out_dims[0:2], 1),
             )
 
     @property
@@ -351,7 +350,7 @@ class ResnetTensorGoalEncoder(torch.nn.Module):
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
 
 
-class ResnetDualTensorGoalEncoder(torch.nn.Module):
+class ResnetDualTensorGoalEncoder(nn.Module):
     def __init__(
         self,
         observation_spaces: SpaceDict,
@@ -369,7 +368,7 @@ class ResnetDualTensorGoalEncoder(torch.nn.Module):
         self.goal_dims = goal_dims
         self.resnet_hid_out_dims = resnet_compressor_hidden_out_dims
         self.combine_hid_out_dims = combiner_hidden_out_dims
-        self.embed_goal = torch.nn.Linear(2, self.goal_dims)
+        self.embed_goal = nn.Linear(2, self.goal_dims)
         self.blind = (
             self.rgb_resnet_uuid not in observation_spaces.spaces
             or self.depth_resnet_uuid not in observation_spaces.spaces
@@ -378,39 +377,35 @@ class ResnetDualTensorGoalEncoder(torch.nn.Module):
             self.resnet_tensor_shape = observation_spaces.spaces[
                 self.rgb_resnet_uuid
             ].shape
-            self.rgb_resnet_compressor = torch.nn.Sequential(
-                torch.nn.Conv2d(
-                    self.resnet_tensor_shape[0], self.resnet_hid_out_dims[0], 1
-                ),
-                torch.nn.ReLU(),
-                torch.nn.Conv2d(*self.resnet_hid_out_dims[0:2], 1),
-                torch.nn.ReLU(),
+            self.rgb_resnet_compressor = nn.Sequential(
+                nn.Conv2d(self.resnet_tensor_shape[0], self.resnet_hid_out_dims[0], 1),
+                nn.ReLU(),
+                nn.Conv2d(*self.resnet_hid_out_dims[0:2], 1),
+                nn.ReLU(),
             )
-            self.depth_resnet_compressor = torch.nn.Sequential(
-                torch.nn.Conv2d(
-                    self.resnet_tensor_shape[0], self.resnet_hid_out_dims[0], 1
-                ),
-                torch.nn.ReLU(),
-                torch.nn.Conv2d(*self.resnet_hid_out_dims[0:2], 1),
-                torch.nn.ReLU(),
+            self.depth_resnet_compressor = nn.Sequential(
+                nn.Conv2d(self.resnet_tensor_shape[0], self.resnet_hid_out_dims[0], 1),
+                nn.ReLU(),
+                nn.Conv2d(*self.resnet_hid_out_dims[0:2], 1),
+                nn.ReLU(),
             )
-            self.rgb_target_obs_combiner = torch.nn.Sequential(
-                torch.nn.Conv2d(
+            self.rgb_target_obs_combiner = nn.Sequential(
+                nn.Conv2d(
                     self.resnet_hid_out_dims[1] + self.goal_dims,
                     self.combine_hid_out_dims[0],
                     1,
                 ),
-                torch.nn.ReLU(),
-                torch.nn.Conv2d(*self.combine_hid_out_dims[0:2], 1),
+                nn.ReLU(),
+                nn.Conv2d(*self.combine_hid_out_dims[0:2], 1),
             )
-            self.depth_target_obs_combiner = torch.nn.Sequential(
-                torch.nn.Conv2d(
+            self.depth_target_obs_combiner = nn.Sequential(
+                nn.Conv2d(
                     self.resnet_hid_out_dims[1] + self.goal_dims,
                     self.combine_hid_out_dims[0],
                     1,
                 ),
-                torch.nn.ReLU(),
-                torch.nn.Conv2d(*self.combine_hid_out_dims[0:2], 1),
+                nn.ReLU(),
+                nn.Conv2d(*self.combine_hid_out_dims[0:2], 1),
             )
 
     @property

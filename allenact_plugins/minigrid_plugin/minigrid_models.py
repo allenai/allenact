@@ -5,6 +5,7 @@ import gym
 import numpy as np
 import torch
 from gym.spaces.dict import Dict as SpaceDict
+from torch import nn
 
 from allenact.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
@@ -50,7 +51,7 @@ class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
 
         if self.num_objects > 0:
             # Object embedding
-            self.object_embedding = torch.nn.Embedding(
+            self.object_embedding = nn.Embedding(
                 num_embeddings=num_objects, embedding_dim=self.object_embedding_dim
             )
             self.object_channel = self.num_channels
@@ -59,7 +60,7 @@ class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
         self.num_colors = num_colors
         if self.num_colors > 0:
             # Same dimensionality used for colors and states
-            self.color_embedding = torch.nn.Embedding(
+            self.color_embedding = nn.Embedding(
                 num_embeddings=num_colors, embedding_dim=self.object_embedding_dim
             )
             self.color_channel = self.num_channels
@@ -67,7 +68,7 @@ class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
 
         self.num_states = num_states
         if self.num_states > 0:
-            self.state_embedding = torch.nn.Embedding(
+            self.state_embedding = nn.Embedding(
                 num_embeddings=num_states, embedding_dim=self.object_embedding_dim
             )
             self.state_channel = self.num_channels

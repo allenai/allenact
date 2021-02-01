@@ -1,7 +1,7 @@
 """Experiment Config for MiniGrid tutorial."""
 
 import gym
-import torch
+from torch import nn
 
 from allenact.base_abstractions.sensor import SensorSuite
 from allenact_plugins.minigrid_plugin.minigrid_models import MiniGridSimpleConv
@@ -15,7 +15,7 @@ class MiniGridNoMemoryExperimentConfig(MiniGridTutorialExperimentConfig):
         return "MiniGridNoMemory"
 
     @classmethod
-    def create_model(cls, **kwargs) -> torch.nn.Module:
+    def create_model(cls, **kwargs) -> nn.Module:
         return MiniGridSimpleConv(
             action_space=gym.spaces.Discrete(len(MiniGridTask.class_action_names())),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,

@@ -68,7 +68,7 @@ from typing import Dict, Optional, List, Any, cast
 
 import gym
 from gym_minigrid.envs import EmptyRandomEnv5x5
-import torch
+from torch import nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -134,7 +134,7 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
 
     # %%
     @classmethod
-    def create_model(cls, **kwargs) -> torch.nn.Module:
+    def create_model(cls, **kwargs) -> nn.Module:
         return MiniGridSimpleConvRNN(
             action_space=gym.spaces.Discrete(len(MiniGridTask.class_action_names())),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,

@@ -5,6 +5,7 @@ import babyai.rl
 import gym
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from gym.spaces.dict import Dict as SpaceDict
 
@@ -49,22 +50,22 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
 
         self.semantic_embedding = None
         if self.use_cnn2:
-            self.semantic_embedding = torch.nn.Embedding(33, embedding_dim=8)
-            self.image_conv = torch.nn.Sequential(
-                torch.nn.Conv2d(in_channels=24, out_channels=16, kernel_size=(2, 2)),
+            self.semantic_embedding = nn.Embedding(33, embedding_dim=8)
+            self.image_conv = nn.Sequential(
+                nn.Conv2d(in_channels=24, out_channels=16, kernel_size=(2, 2)),
                 *self.image_conv[1:]  # type:ignore
             )
             self.image_conv[0].apply(babyai.model.initialize_parameters)
 
         self.include_auxiliary_head = include_auxiliary_head
         if self.use_memory and self.lang_model == "gru":
-            self.memory_rnn = torch.nn.LSTM(self.image_dim, self.memory_dim)
+            self.memory_rnn = nn.LSTM(self.image_dim, self.memory_dim)
 
         if self.include_auxiliary_head:
-            self.aux = torch.nn.Sequential(
-                torch.nn.Linear(self.memory_dim, 64),
-                torch.nn.Tanh(),
-                torch.nn.Linear(64, action_space.n),
+            self.aux = nn.Sequential(
+                nn.Linear(self.memory_dim, 64),
+                nn.Tanh(),
+                nn.Linear(64, action_space.n),
             )
             self.aux.apply(babyai.model.initialize_parameters)
 

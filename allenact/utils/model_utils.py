@@ -4,9 +4,10 @@ from typing import Sequence, Tuple, Union, Optional
 
 import numpy as np
 import torch
+from torch import nn
 
 
-class Flatten(torch.nn.Module):
+class Flatten(nn.Module):
     """Flatten input tensor so that it is of shape (FLATTENED_BATCH x -1)."""
 
     def forward(self, x):
@@ -21,7 +22,7 @@ class Flatten(torch.nn.Module):
 
 
 def init_linear_layer(
-    module: torch.nn.Linear, weight_init: Callable, bias_init: Callable, gain=1
+    module: nn.Linear, weight_init: Callable, bias_init: Callable, gain=1
 ):
     """Initialize a torch.nn.Linear layer.
 
@@ -71,7 +72,7 @@ def make_cnn(
     output_channels: int,
     flatten: bool = True,
     output_relu: bool = True,
-) -> torch.nn.Module:
+) -> nn.Module:
     assert (
         len(layer_channels)
         == len(kernel_sizes)
@@ -82,14 +83,14 @@ def make_cnn(
         layer_channels, kernel_sizes, strides, paddings, dilations
     )
 
-    net = torch.nn.Sequential()
+    net = nn.Sequential()
 
     input_channels_list = [input_channels] + list(layer_channels)
 
     for it, current_channels in enumerate(layer_channels):
         net.add_module(
             "conv_{}".format(it),
-            torch.nn.Conv2d(
+            nn.Conv2d(
                 in_channels=input_channels_list[it],
                 out_channels=current_channels,
                 kernel_size=kernel_sizes[it],
@@ -99,24 +100,24 @@ def make_cnn(
             ),
         )
         if it < len(layer_channels) - 1:
-            net.add_module("relu_{}".format(it), torch.nn.ReLU(inplace=True))
+            net.add_module("relu_{}".format(it), nn.ReLU(inplace=True))
 
     if flatten:
         net.add_module("flatten", Flatten())
         net.add_module(
             "fc",
-            torch.nn.Linear(
+            nn.Linear(
                 layer_channels[-1] * output_width * output_height, output_channels
             ),
         )
     if output_relu:
-        net.add_module("out_relu", torch.nn.ReLU(True))
+        net.add_module("out_relu", nn.ReLU(True))
 
     return net
 
 
 def compute_cnn_output(
-    cnn: torch.nn.Module,
+    cnn: nn.Module,
     cnn_input: torch.Tensor,
     permute_order: Optional[Tuple[int, ...]] = (
         0,  # FLAT_BATCH (flattening steps, samplers and agents)
@@ -175,12 +176,12 @@ def compute_cnn_output(
 
 def simple_conv_and_linear_weights_init(m):
     if type(m) in [
-        torch.nn.Conv1d,
-        torch.nn.Conv2d,
-        torch.nn.Conv3d,
-        torch.nn.ConvTranspose1d,
-        torch.nn.ConvTranspose2d,
-        torch.nn.ConvTranspose3d,
+        nn.Conv1d,
+        nn.Conv2d,
+        nn.Conv3d,
+        nn.ConvTranspose1d,
+        nn.ConvTranspose2d,
+        nn.ConvTranspose3d,
     ]:
         weight_shape = list(m.weight.data.size())
         fan_in = np.prod(weight_shape[1:4])
@@ -189,12 +190,12 @@ def simple_conv_and_linear_weights_init(m):
         m.weight.data.uniform_(-w_bound, w_bound)
         if m.bias is not None:
             m.bias.data.fill_(0)
-    elif type(m) == torch.nn.Linear:
+    elif type(m) == nn.Linear:
         simple_linear_weights_init(m)
 
 
 def simple_linear_weights_init(m):
-    if type(m) == torch.nn.Linear:
+    if type(m) == nn.Linear:
         weight_shape = list(m.weight.data.size())
         fan_in = weight_shape[1]
         fan_out = weight_shape[0]

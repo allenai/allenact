@@ -3,7 +3,7 @@ from typing import Dict, Any, List, Optional
 
 import gym
 import numpy as np
-import torch
+import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -123,7 +123,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         return {"nprocesses": nprocesses, "gpu_ids": gpu_ids}
 
     @classmethod
-    def create_model(cls, **kwargs) -> torch.nn.Module:
+    def create_model(cls, **kwargs) -> nn.Module:
         return ObjectNavBaselineActorCritic(
             action_space=gym.spaces.Discrete(
                 len(ObjectNaviThorGridTask.class_action_names())

@@ -10,6 +10,7 @@ from typing import TypeVar, Generic, Tuple, Optional, Union, Dict, List, Any
 import gym
 import torch
 from gym.spaces.dict import Dict as SpaceDict
+from torch import nn
 
 from allenact.base_abstractions.distributions import CategoricalDistr
 from allenact.base_abstractions.misc import ActorCriticOutput, Memory
@@ -25,7 +26,7 @@ ObservationType = Dict[str, Union[torch.Tensor, Dict[str, Any]]]
 ActionType = Union[torch.Tensor, OrderedDict, Tuple, int]
 
 
-class ActorCriticModel(Generic[DistributionType], torch.nn.Module):
+class ActorCriticModel(Generic[DistributionType], nn.Module):
     """Abstract class defining a deep (recurrent) actor critic agent.
 
     When defining a new agent, you should subclass this class and implement the abstract methods.
@@ -135,15 +136,15 @@ class ActorCriticModel(Generic[DistributionType], torch.nn.Module):
         raise NotImplementedError()
 
 
-class LinearActorCriticHead(torch.nn.Module):
+class LinearActorCriticHead(nn.Module):
     def __init__(self, input_size: int, num_actions: int):
         super().__init__()
         self.input_size = input_size
         self.num_actions = num_actions
-        self.actor_and_critic = torch.nn.Linear(input_size, 1 + num_actions)
+        self.actor_and_critic = nn.Linear(input_size, 1 + num_actions)
 
-        torch.nn.init.orthogonal_(self.actor_and_critic.weight)
-        torch.nn.init.constant_(self.actor_and_critic.bias, 0)
+        nn.init.orthogonal_(self.actor_and_critic.weight)
+        nn.init.constant_(self.actor_and_critic.bias, 0)
 
     def forward(self, x):
         out = self.actor_and_critic(x)
@@ -159,24 +160,24 @@ class LinearActorCriticHead(torch.nn.Module):
         )
 
 
-class LinearCriticHead(torch.nn.Module):
+class LinearCriticHead(nn.Module):
     def __init__(self, input_size: int):
         super().__init__()
-        self.fc = torch.nn.Linear(input_size, 1)
-        torch.nn.init.orthogonal_(self.fc.weight)
-        torch.nn.init.constant_(self.fc.bias, 0)
+        self.fc = nn.Linear(input_size, 1)
+        nn.init.orthogonal_(self.fc.weight)
+        nn.init.constant_(self.fc.bias, 0)
 
     def forward(self, x):
         return self.fc(x).view(*x.shape[:2], -1)  # [steps, samplers, flattened]
 
 
-class LinearActorHead(torch.nn.Module):
+class LinearActorHead(nn.Module):
     def __init__(self, num_inputs: int, num_outputs: int):
         super().__init__()
 
-        self.linear = torch.nn.Linear(num_inputs, num_outputs)
-        torch.nn.init.orthogonal_(self.linear.weight, gain=0.01)
-        torch.nn.init.constant_(self.linear.bias, 0)
+        self.linear = nn.Linear(num_inputs, num_outputs)
+        nn.init.orthogonal_(self.linear.weight, gain=0.01)
+        nn.init.constant_(self.linear.bias, 0)
 
     def forward(self, x: torch.FloatTensor):  # type: ignore
         x = self.linear(x)  # type:ignore

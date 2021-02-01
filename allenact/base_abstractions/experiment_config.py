@@ -5,6 +5,7 @@ import abc
 from typing import Dict, Any, Optional, List, Union, Sequence, Tuple, cast
 
 import torch
+import torch.nn as nn
 
 from allenact.base_abstractions.preprocessor import SensorPreprocessorGraph
 from allenact.base_abstractions.task import TaskSampler
@@ -209,7 +210,7 @@ class ExperimentConfig(metaclass=FrozenClassVariables):
 
     @classmethod
     @abc.abstractmethod
-    def create_model(cls, **kwargs) -> torch.nn.Module:
+    def create_model(cls, **kwargs) -> nn.Module:
         """Create the neural model."""
         raise NotImplementedError()
 

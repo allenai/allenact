@@ -1,7 +1,7 @@
 from abc import ABC
 
 import gym
-import torch
+import torch.nn as nn
 
 from allenact.base_abstractions.sensor import DepthSensor, RGBSensor
 
@@ -26,7 +26,7 @@ class PointNavMixInSimpleConvGRUConfig(PointNavBaseConfig, ABC):
     """The base config for all iTHOR PPO PointNav experiments."""
 
     @classmethod
-    def create_model(cls, **kwargs) -> torch.nn.Module:
+    def create_model(cls, **kwargs) -> nn.Module:
         rgb_uuid = next((s.uuid for s in cls.SENSORS if isinstance(s, RGBSensor)), None)
         depth_uuid = next(
             (s.uuid for s in cls.SENSORS if isinstance(s, DepthSensor)), None

@@ -2,7 +2,7 @@ from abc import ABC
 from typing import Dict, List, Optional, Union, cast
 
 import gym
-import torch
+import torch.nn as nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -90,7 +90,7 @@ class BaseBabyAIGoToObjExperimentConfig(BaseBabyAIExperimentConfig, ABC):
         )
 
     @classmethod
-    def create_model(cls, **kwargs) -> torch.nn.Module:
+    def create_model(cls, **kwargs) -> nn.Module:
         sensors = cls.get_sensors()
         return BabyAIRecurrentACModel(
             action_space=gym.spaces.Discrete(len(BabyAITask.class_action_names())),

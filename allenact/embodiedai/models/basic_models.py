@@ -16,6 +16,7 @@ import gym
 import numpy as np
 import torch
 from gym.spaces.dict import Dict as SpaceDict
+from torch import nn
 
 from allenact.algorithms.onpolicy_sync.policy import ActorCriticModel, DistributionType
 from allenact.base_abstractions.distributions import CategoricalDistr
@@ -23,7 +24,7 @@ from allenact.base_abstractions.misc import ActorCriticOutput, Memory
 from allenact.utils.model_utils import make_cnn, compute_cnn_output
 
 
-class SimpleCNN(torch.nn.Module):
+class SimpleCNN(nn.Module):
     """A Simple N-Conv CNN followed by a fully connected layer. Takes in
     observations (of type gym.spaces.dict) and produces an embedding of the
     `rgb_uuid` and/or `depth_uuid` components.
@@ -114,7 +115,7 @@ class SimpleCNN(torch.nn.Module):
         input_channels: int,
         flatten: bool,
         output_relu: bool,
-    ) -> torch.nn.Module:
+    ) -> nn.Module:
         output_dims = input_dims
         for kernel_size, stride, padding, dilation in zip(
             self._cnn_layers_kernel_size,
@@ -195,12 +196,10 @@ class SimpleCNN(torch.nn.Module):
     def layer_init(cnn) -> None:
         """Initialize layer parameters using Kaiming normal."""
         for layer in cnn:
-            if isinstance(layer, (torch.nn.Conv2d, torch.nn.Linear)):
-                torch.nn.init.kaiming_normal_(
-                    layer.weight, torch.nn.init.calculate_gain("relu")
-                )
+            if isinstance(layer, (nn.Conv2d, nn.Linear)):
+                nn.init.kaiming_normal_(layer.weight, nn.init.calculate_gain("relu"))
                 if layer.bias is not None:
-                    torch.nn.init.constant_(layer.bias, val=0)
+                    nn.init.constant_(layer.bias, val=0)
 
     @property
     def is_blind(self):
@@ -242,7 +241,7 @@ class SimpleCNN(torch.nn.Module):
         return torch.cat(cnn_output_list, dim=channels_dim)
 
 
-class RNNStateEncoder(torch.nn.Module):
+class RNNStateEncoder(nn.Module):
     """A simple RNN-based model playing a role in many baseline embodied-
     navigation agents.
 
@@ -280,7 +279,7 @@ class RNNStateEncoder(torch.nn.Module):
 
         self.trainable_masked_hidden_state = trainable_masked_hidden_state
         if trainable_masked_hidden_state:
-            self.init_hidden_state = torch.nn.Parameter(
+            self.init_hidden_state = nn.Parameter(
                 0.1 * torch.randn((num_layers, 1, hidden_size)), requires_grad=True
             )
 
@@ -290,9 +289,9 @@ class RNNStateEncoder(torch.nn.Module):
         """Initialize the RNN parameters in the model."""
         for name, param in self.rnn.named_parameters():
             if "weight" in name:
-                torch.nn.init.orthogonal_(param)
+                nn.init.orthogonal_(param)
             elif "bias" in name:
-                torch.nn.init.constant_(param, 0)
+                nn.init.constant_(param, 0)
 
     @property
     def num_recurrent_layers(self) -> int:
@@ -595,10 +594,10 @@ class LinearActorCritic(ActorCriticModel[CategoricalDistr]):
         assert len(box_space.shape) == 1
         self.in_dim = box_space.shape[0]
 
-        self.linear = torch.nn.Linear(self.in_dim, action_space.n + 1)
+        self.linear = nn.Linear(self.in_dim, action_space.n + 1)
 
-        torch.nn.init.orthogonal_(self.linear.weight)
-        torch.nn.init.constant_(self.linear.bias, 0)
+        nn.init.orthogonal_(self.linear.weight)
+        nn.init.constant_(self.linear.bias, 0)
 
     # noinspection PyMethodMayBeStatic
     def _recurrent_memory_specification(self):
