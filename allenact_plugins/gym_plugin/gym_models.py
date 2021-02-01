@@ -1,4 +1,4 @@
-from typing import Dict, Union, Optional, Tuple, Any, Sequence
+from typing import Dict, Union, Optional, Tuple, Any, Sequence, cast
 
 import torch
 from torch import nn
@@ -33,7 +33,7 @@ class MemorylessActorCritic(ActorCriticModel[GaussianDistr]):
         assert len(action_space.shape) == 1
         action_dim = action_space.shape[0]
 
-        mlp_hidden_dims = (state_dim,) + mlp_hidden_dims
+        mlp_hidden_dims = (state_dim,) + tuple(mlp_hidden_dims)
 
         # action mean range -1 to 1
         self.actor = nn.Sequential(
@@ -77,7 +77,9 @@ class MemorylessActorCritic(ActorCriticModel[GaussianDistr]):
 
         return (
             ActorCriticOutput(
-                GaussianDistr(loc=means, scale=self.action_std), values, {},
+                cast(DistributionType, GaussianDistr(loc=means, scale=self.action_std)),
+                values,
+                {},
             ),
             None,  # no Memory
         )

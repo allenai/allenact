@@ -45,7 +45,11 @@ class A2CACKTR(AbstractActorCriticLoss):
         action_log_probs = actor_critic_output.distributions.log_prob(actions)
         action_log_probs = action_log_probs.view(
             action_log_probs.shape
-            + (1,) * (len(batch["adv_targ"].shape) - len(action_log_probs.shape))
+            + (1,)
+            * (
+                len(cast(torch.Tensor, batch["adv_targ"]).shape)
+                - len(action_log_probs.shape)
+            )
         )
 
         dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy()

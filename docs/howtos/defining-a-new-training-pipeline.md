@@ -3,7 +3,7 @@
 Defining a new training pipeline, or even new learning algorithms, is straightforward with the modular design in
 `AllenAct`.
 
-A convenience [Builder](/api/utils/experiment_utils#builder) object allows us to defer the instantiation
+A convenience [Builder](/api/allenact/utils/experiment_utils#builder) object allows us to defer the instantiation
 of objects of the class passed as their first argument while allowing passing additional keyword arguments to their
 initializers.
 

@@ -273,7 +273,7 @@ class RNNStateEncoder(nn.Module):
         self._num_recurrent_layers = num_layers
         self._rnn_type = rnn_type
 
-        self.rnn = getattr(nn, rnn_type)(
+        self.rnn = getattr(torch.nn, rnn_type)(
             input_size=input_size, hidden_size=hidden_size, num_layers=num_layers
         )
 

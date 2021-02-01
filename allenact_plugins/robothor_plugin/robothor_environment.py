@@ -138,7 +138,7 @@ class RoboThorEnvironment:
         def retry_dist(position: Dict[str, float], object_type: str):
             allowed_error = 0.05
             debug_log = ""
-            d = -1
+            d = -1.0
             while allowed_error < 2.5:
                 d = self.distance_from_point_to_object_type(
                     position, object_type, allowed_error
@@ -219,7 +219,7 @@ class RoboThorEnvironment:
         def retry_dist(position: Dict[str, float], target: Dict[str, float]):
             allowed_error = 0.05
             debug_log = ""
-            d = -1
+            d = -1.0
             while allowed_error < 2.5:
                 d = self.distance_from_point_to_point(position, target, allowed_error)
                 if d < 0:

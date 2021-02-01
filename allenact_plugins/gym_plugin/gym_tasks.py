@@ -75,6 +75,7 @@ class GymContinuousBox2DTask(GymTask):
     gym tasks.
     """
 
+    @classmethod
     def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
         return tuple()
 
@@ -140,6 +141,7 @@ class GymTaskSampler(TaskSampler):
 
         self.gym_env_type = gym_env_type
 
+        self.sensors: SensorSuite
         if sensors is None:
             self.sensors = SensorSuite([sensor_selector(self.gym_env_type)])
         else:

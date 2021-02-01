@@ -85,7 +85,7 @@ class SensorSuite(Generic[EnvType]):
     """
 
     sensors: Dict[str, Sensor[EnvType, Any]]
-    observation_spaces: SpaceDict
+    observation_spaces: gyms.Dict
 
     def __init__(self, sensors: Sequence[Sensor]) -> None:
         """Initializer.

@@ -60,6 +60,15 @@ pip install -r requirements.txt; pip install -r dev_requirements.txt
 
 or, alternatively, using the experimental `conda` setup described below.
 
+##### Plugins extra requirements
+
+To install the specific requirements of each plugin, we need to additionally call
+
+```bash
+pip install -r allenact_plugins/<PLUGIN_NAME>_plugin/extra_requirements.txt
+```
+
+from the top-level directory.
 
 #### Bleeding edge pip install
 

@@ -19,7 +19,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(
     """An PointNavigation experiment configuration in RoboThor with RGB
     input."""
 
-    SENSORS = PointNavThorMixInPPOAndGBCConfig.SENSORS + (
+    SENSORS = PointNavThorMixInPPOAndGBCConfig.SENSORS + (  # type:ignore
         RGBSensorThor(
             height=PointNavRoboThorBaseConfig.SCREEN_SIZE,
             width=PointNavRoboThorBaseConfig.SCREEN_SIZE,

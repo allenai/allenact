@@ -10,7 +10,7 @@ try:
     # Habitat may not be installed, just create a fake class here in that case
     from allenact_plugins.habitat_plugin.habitat_sensors import TargetCoordinatesSensorHabitat
 except ImportError:
-    class TargetCoordinatesSensorHabitat:
+    class TargetCoordinatesSensorHabitat:  #type:ignore
         pass
 # fmt: on
 

@@ -21,7 +21,7 @@ class ObjectNaviThorRGBPPOExperimentConfig(
     """An Object Navigation experiment configuration in RoboThor with RGB
     input."""
 
-    SENSORS = ObjectNavThorMixInPPOAndGBCConfig.SENSORS + (
+    SENSORS = ObjectNavThorMixInPPOAndGBCConfig.SENSORS + (  # type:ignore
         RGBSensorThor(
             height=ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
             width=ObjectNavRoboThorBaseConfig.SCREEN_SIZE,

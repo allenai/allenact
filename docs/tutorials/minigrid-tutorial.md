@@ -9,8 +9,13 @@ In this tutorial, we will train an agent to complete the `MiniGrid-Empty-Random-
 * Use one of the supported environments with minimal user effort.
 * Train, validate and test your experiment from the command line.
 
-This tutorial assumes the [installation instructions](../installation/installation-allenact.md) have already been followed and, to some
-extent, this framework's [abstractions](../getting_started/abstractions.md) are known.
+This tutorial assumes the [installation instructions](../installation/installation-allenact.md) have already been
+followed and that, to some extent, this framework's [abstractions](../getting_started/abstractions.md) are known.
+The `extra_requirements` for `minigrid_plugin` and `babyai_plugin` can be installed with.
+
+```bash
+pip install -r allenact_plugins/minigrid_plugin/extra_requirements.txt; pip install -r allenact_plugins/babyai_plugin/extra_requirements.txt
+```
 
 ## The task
 A `MiniGrid-Empty-Random-5x5-v0` task consists of a grid of dimensions 5x5 where an agent spawned at a random
@@ -56,7 +61,7 @@ an optimizer, and other parameters like learning rates, batch sizes, etc.
 We first import everything we'll need to define our experiment.
 
 ```python
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional, List, Any, cast
 
 import gym
 from gym_minigrid.envs import EmptyRandomEnv5x5
@@ -96,7 +101,7 @@ An experiment is identified by a `tag`.
 ### Sensors and Model
 
 A readily available Sensor type for MiniGrid,
-[EgocentricMiniGridSensor](../api/plugins/minigrid_plugin/minigrid_sensors.md#egocentricminigridsensor),
+[EgocentricMiniGridSensor](../api/allenact_plugins/minigrid_plugin/minigrid_sensors.md#egocentricminigridsensor),
 allows us to extract observations in a format consumable by an `ActorCriticModel` agent:
 
 ```python
@@ -111,7 +116,7 @@ relatively large `agent_view_size` means the view will only be clipped by the en
 lateral directions with respect to the agent's orientation.
 
 We define our `ActorCriticModel` agent using a lightweight implementation with recurrent memory for MiniGrid
-environments, [MiniGridSimpleConvRNN](../api/plugins/minigrid_plugin/minigrid_models.md#minigridsimpleconvrnn):
+environments, [MiniGridSimpleConvRNN](../api/allenact_plugins/minigrid_plugin/minigrid_models.md#minigridsimpleconvrnn):
 
 ```python
     @classmethod
@@ -128,7 +133,7 @@ environments, [MiniGridSimpleConvRNN](../api/plugins/minigrid_plugin/minigrid_mo
 
 We use an available TaskSampler implementation for MiniGrid environments that allows to sample both random and
 deterministic `MiniGridTasks`,
-[MiniGridTaskSampler](../api/plugins/minigrid_plugin/minigrid_tasks.md#minigridtasksampler):
+[MiniGridTaskSampler](../api/allenact_plugins/minigrid_plugin/minigrid_tasks.md#minigridtasksampler):
 
 ```python
     @classmethod
@@ -255,7 +260,7 @@ stage with linearly decaying learning rate:
             pipeline_stages=[
                 PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps)
             ],
-            optimizer_builder=Builder(optim.Adam, dict(lr=1e-4)),
+            optimizer_builder=Builder(cast(optim.Optimizer, optim.Adam), dict(lr=1e-4)),
             num_mini_batch=4,
             update_repeats=3,
             max_grad_norm=0.5,
@@ -280,7 +285,7 @@ We have a complete implementation of this experiment's configuration class in `p
 To start training from scratch, we just need to invoke
 
 ```bash
-python main.py minigrid_tutorial -b projects/tutorials -m 8 -o /PATH/TO/minigrid_output -s 12345
+PYTHONPATH=. python allenact/main.py minigrid_tutorial -b projects/tutorials -m 8 -o /PATH/TO/minigrid_output -s 12345
 ```
 
 from the `allenact` root directory.
@@ -317,7 +322,7 @@ In order to test for a specific experiment, we need to pass its training start d
 `-t EXPERIMENT_DATE`:
 
 ```bash
-python main.py minigrid_tutorial -b projects/tutorials -m 1 -o /PATH/TO/minigrid_output -s 12345 -t EXPERIMENT_DATE
+PYTHONPATH=. python allenact/main.py minigrid_tutorial -b projects/tutorials -m 1 -o /PATH/TO/minigrid_output -s 12345 -t EXPERIMENT_DATE
 ```
 
 Again, if everything went well, the `test` success rate should converge to 1 and the mean episode length to a value

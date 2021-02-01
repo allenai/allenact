@@ -60,7 +60,9 @@ class PPO(AbstractActorCriticLoss):
 
         ratio = torch.exp(action_log_probs - batch["old_action_log_probs"])
         ratio = ratio.view(
-            ratio.shape + (1,) * (len(batch["norm_adv_targ"].shape) - len(ratio.shape))
+            ratio.shape
+            + (1,)
+            * (len(cast(torch.Tensor, batch["norm_adv_targ"]).shape) - len(ratio.shape))
         )
 
         surr1 = ratio * batch["norm_adv_targ"]

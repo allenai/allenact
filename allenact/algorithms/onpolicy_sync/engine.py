@@ -437,8 +437,8 @@ class OnPolicyRLEngine(object):
             setattr(
                 self, "_probe_npaused", getattr(self, "_probe_npaused", 0) + npaused
             )
-            if self._probe_npaused == self.num_samplers:
-                del self._probe_npaused
+            if self._probe_npaused == self.num_samplers:  # type:ignore
+                del self._probe_npaused  # type:ignore
                 return
             period = 0
         if self.worker_id == 0:
@@ -446,8 +446,11 @@ class OnPolicyRLEngine(object):
                 if period > 0 and (
                     getattr(self, "_probe_steps", None) is None
                     or (
-                        self._probe_steps < 0
-                        and (self.training_pipeline.total_steps + self._probe_steps)
+                        self._probe_steps < 0  # type:ignore
+                        and (
+                            self.training_pipeline.total_steps
+                            + self._probe_steps  # type:ignore
+                        )
                         >= period
                     )
                 ):

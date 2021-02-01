@@ -585,11 +585,11 @@ should take about 20 minutes on a computer with a NVIDIA GPU.
 
 We can now train a model by running:
 ```bash
-python main.py -o <PATH_TO_OUTPUT> -c -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
+PYTHONPATH=. python allenact/main.py -o <PATH_TO_OUTPUT> -c -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> <EXPERIMENT_NAME>
 ```
 If using the same configuration as we have set up, the following command should work:
 ```bash
-python main.py training_a_pointnav_model -o storage/robothor-pointnav-rgb-resnet-resnet -b projects/tutorials
+PYTHONPATH=. python allenact/main.py training_a_pointnav_model -o storage/robothor-pointnav-rgb-resnet-resnet -b projects/tutorials
 ```
 If we start up a tensorboard server during training and specify that `output_dir=storage` the output should look
 something like this:

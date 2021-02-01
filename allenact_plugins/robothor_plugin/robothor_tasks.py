@@ -493,7 +493,7 @@ class NavToPartnerTask(Task[RoboThorEnvironment]):
         self.env.stop()
 
     def _step(self, action: Tuple[int, int]) -> RLStepResult:
-        assert isinstance(action, Tuple)
+        assert isinstance(action, tuple)
         action_str1 = self.action_names()[action[0]]
         action_str2 = self.action_names()[action[1]]
 

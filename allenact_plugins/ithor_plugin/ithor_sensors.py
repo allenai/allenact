@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, List, Union
+from typing import Any, Dict, Optional, List, Union, Sequence
 
 import gym
 import numpy as np
@@ -24,16 +24,16 @@ class RGBSensorThor(
     frame corresponding to the agent's egocentric view.
     """
 
-    def frame_from_env(self, env: IThorEnvironment) -> np.ndarray:
+    def frame_from_env(self, env: IThorEnvironment) -> np.ndarray:  # type:ignore
         return env.current_frame.copy()
 
 
 class GoalObjectTypeThorSensor(Sensor):
     def __init__(
         self,
-        object_types: List[str],
+        object_types: Sequence[str],
         target_to_detector_map: Optional[Dict[str, str]] = None,
-        detector_types: Optional[List[str]] = None,
+        detector_types: Optional[Sequence[str]] = None,
         uuid: str = "goal_object_type_ind",
         **kwargs: Any
     ):
@@ -103,10 +103,11 @@ class TakeEndActionThorNavSensor(
         """
         return gym.spaces.Discrete(2)
 
-    def get_observation(
+    def get_observation(  # type:ignore
         self,
         env: IThorEnvironment,
         task: Union[ObjectNaviThorGridTask, ObjectNavTask, PointNavTask],
+        *args,
         **kwargs
     ) -> np.ndarray:
         if isinstance(task, ObjectNaviThorGridTask):

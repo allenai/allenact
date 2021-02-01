@@ -1,10 +1,10 @@
 # Structure of the codebase
 
 The codebase consists of the following directories: `allenact`, `datasets`, `docs`, `overrides`, `allenact_plugins`,
-`pretrained_model_ckpts`, `projects`, `scripts`, `tests` and `utils`. Below, we explain the overall structure and how
+`pretrained_model_ckpts`, `projects`, `scripts`, and `tests`. Below, we explain the overall structure and how
 different components of the codebase are organized. 
 
-## [`allenact` directory](https://github.com/allenai/allenact/tree/master/core)
+## [`allenact` directory](https://github.com/allenai/allenact/tree/master/allenact)
 
 Contains runtime algorithms for on-policy and off-policy training and inference, base abstractions used throughout
 the code base and basic models to be used as building blocks in future models.
@@ -15,7 +15,8 @@ policies, rollout storage, etc.
 * `allenact.base_abstractions` includes the base `ExperimentConfig`, distributions, base `Sensor`, `TaskSampler`, `Task`,
 etc.
 
-* `allenact.models` includes basic CNN, and RNN state encoders, besides basic `ActorCriticModel` implementations.
+* `allenact.embodiedai` includes basic CNN, and RNN state encoders, besides basic `ActorCriticModel` implementations
+for embodied AI tasks.
 
 ## [`datasets` directory](https://github.com/allenai/allenact/tree/master/datasets)
 
@@ -33,7 +34,7 @@ the definition and usage of different abstractions, tutorials and per-project do
 Files within this directory are used to the look and structure of the documentation generated when running `mkdocs`.
 See our [FAQ](../FAQ.md) for information on how to generate this documentation for yourself. 
 
-## [`allenact_plugins` directory](https://github.com/allenai/allenact/tree/master/plugins)
+## [`allenact_plugins` directory](https://github.com/allenai/allenact/tree/master/allenact_plugins)
 
 Contains implementations of `ActorCriticModel`s and `Task`s in different environments. Each plugin folder is 
 named as `{environment}_plugin` and contains three subfolders:
@@ -62,7 +63,7 @@ are installed.
 
 Includes unit tests for `allenact`.
 
-## [`utils` directory](https://github.com/allenai/allenact/tree/master/utils)
+## [`allenact.utils` directory](https://github.com/allenai/allenact/tree/master/allenact/utils)
 
 It includes different types of utilities, mainly divided into:
 
@@ -74,4 +75,4 @@ experiment.
 inference.
 * `allenact.utils.system`, including logging and networking helpers.
 
-Other utils files, including `utils.misc_utils`, contain a number of helper functions for different purposes.
+Other utils files, including `allenact.utils.misc_utils`, contain a number of helper functions for different purposes.
