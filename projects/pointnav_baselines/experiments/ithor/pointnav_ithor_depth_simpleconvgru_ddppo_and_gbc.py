@@ -1,4 +1,4 @@
-from plugins.robothor_plugin.robothor_sensors import (
+from allenact_plugins.robothor_plugin.robothor_sensors import (
     DepthSensorThor,
     GPSCompassSensorRoboThor,
 )
@@ -21,7 +21,7 @@ class PointNaviThorDepthPPOExperimentConfig(
     """An Point Navigation experiment configuration in iThor with Depth
     input."""
 
-    SENSORS = PointNavThorMixInPPOAndGBCConfig.SENSORS + (
+    SENSORS = PointNavThorMixInPPOAndGBCConfig.SENSORS + (  # type:ignore
         DepthSensorThor(
             height=PointNaviThorBaseConfig.SCREEN_SIZE,
             width=PointNaviThorBaseConfig.SCREEN_SIZE,

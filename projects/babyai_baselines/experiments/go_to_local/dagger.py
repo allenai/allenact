@@ -1,7 +1,7 @@
+from allenact.utils.experiment_utils import PipelineStage, LinearDecay
 from projects.babyai_baselines.experiments.go_to_local.base import (
     BaseBabyAIGoToLocalExperimentConfig,
 )
-from utils.experiment_utils import PipelineStage, LinearDecay
 
 
 class DaggerBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentConfig):

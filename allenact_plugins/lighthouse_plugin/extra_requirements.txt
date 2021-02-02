@@ -1,0 +1,2 @@
+patsy>=0.5.1
+gym-minigrid>=1.0.1

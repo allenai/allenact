@@ -39,11 +39,11 @@ dmypy run -- --follow-imports=skip .
 Explicitly ignoring type checking (for instance using `# type: ignore`) should be only be done when it would otherwise
 be an extensive burden.
 
+<!-- TODO: This should be updated given how we're changing depdencies in AllenAct.
+
 ### Updating, adding, or removing packages?
 
-We recommend using [pipenv](https://pipenv.kennethreitz.org/en/latest/) to keep track
-of dependencies, ensure reproducibility, and keep things synchronized. If you are
-doing so and have modified any installed packages please run:
+If you are updating, adding, or removing packages please run:
 ```bash
 pipenv-setup sync --pipfile # Syncs packages to setup.py
 pip freeze > requirements.txt # Syncs packages to requirements.py
@@ -51,6 +51,7 @@ pip freeze > requirements.txt # Syncs packages to requirements.py
 before submitting a pull request. If you are not using `pipenv`, you are still
 required to update the file `Pipfile` with newly installed or modified packages. Moreover
 you must manually update the `install_requires` field of the `setup.py` file. 
+-->
 
 ### Setting up pre-commit hooks (optional)
 

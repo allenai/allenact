@@ -1,4 +1,7 @@
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
+from allenact_plugins.ithor_plugin.ithor_sensors import (
+    RGBSensorThor,
+    GoalObjectTypeThorSensor,
+)
 from projects.objectnav_baselines.experiments.objectnav_mixin_resnetgru import (
     ObjectNavMixInResNetGRUConfig,
 )
@@ -18,7 +21,7 @@ class ObjectNaviThorRGBPPOExperimentConfig(
     """An Object Navigation experiment configuration in RoboThor with RGB
     input."""
 
-    SENSORS = ObjectNavThorMixInPPOAndGBCConfig.SENSORS + (
+    SENSORS = ObjectNavThorMixInPPOAndGBCConfig.SENSORS + (  # type:ignore
         RGBSensorThor(
             height=ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
             width=ObjectNavRoboThorBaseConfig.SCREEN_SIZE,

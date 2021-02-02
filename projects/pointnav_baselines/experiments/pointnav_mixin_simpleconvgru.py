@@ -3,19 +3,19 @@ from abc import ABC
 import gym
 import torch.nn as nn
 
-from core.base_abstractions.sensor import DepthSensor, RGBSensor
+from allenact.base_abstractions.sensor import DepthSensor, RGBSensor
 
 # fmt: off
 try:
     # Habitat may not be installed, just create a fake class here in that case
-    from plugins.habitat_plugin.habitat_sensors import TargetCoordinatesSensorHabitat
+    from allenact_plugins.habitat_plugin.habitat_sensors import TargetCoordinatesSensorHabitat
 except ImportError:
-    class TargetCoordinatesSensorHabitat:
+    class TargetCoordinatesSensorHabitat:  #type:ignore
         pass
 # fmt: on
 
-from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
-from plugins.robothor_plugin.robothor_tasks import PointNavTask
+from allenact_plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
+from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
 from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
 from projects.pointnav_baselines.models.point_nav_models import (
     PointNavActorCriticSimpleConvRNN,

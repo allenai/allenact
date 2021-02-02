@@ -3,23 +3,30 @@ from typing import Dict, Any, List, Optional
 
 import gym
 import numpy as np
-import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from core.algorithms.onpolicy_sync.losses import PPO
-from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from core.base_abstractions.experiment_config import ExperimentConfig
-from core.base_abstractions.sensor import SensorSuite
-from core.base_abstractions.task import TaskSampler
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
-from plugins.ithor_plugin.ithor_task_samplers import ObjectNavTaskSampler
-from plugins.ithor_plugin.ithor_tasks import ObjectNaviThorGridTask
+from allenact.algorithms.onpolicy_sync.losses import PPO
+from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from allenact.base_abstractions.experiment_config import ExperimentConfig
+from allenact.base_abstractions.sensor import SensorSuite
+from allenact.base_abstractions.task import TaskSampler
+from allenact.utils.experiment_utils import (
+    Builder,
+    PipelineStage,
+    TrainingPipeline,
+    LinearDecay,
+)
+from allenact_plugins.ithor_plugin.ithor_sensors import (
+    RGBSensorThor,
+    GoalObjectTypeThorSensor,
+)
+from allenact_plugins.ithor_plugin.ithor_task_samplers import ObjectNavTaskSampler
+from allenact_plugins.ithor_plugin.ithor_tasks import ObjectNaviThorGridTask
 from projects.objectnav_baselines.models.object_nav_models import (
     ObjectNavBaselineActorCritic,
 )
-from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
 class ObjectNavThorPPOExperimentConfig(ExperimentConfig):

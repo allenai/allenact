@@ -10,7 +10,14 @@ within a realistic 3D environment.
 
 For information on how to train a PointNav Model see [this tutorial](training-a-pointnav-model.md)
 
-We will need to [install the RoboTHOR environment](../installation/installation-allenact.md) and [download the 
+We will need to [install the full AllenAct library](../installation/installation-allenact.md#full-library),
+the `robothor_plugin` requirements via
+
+```bash
+pip install -r allenact_plugins/robothor_plugin/extra_requirements.txt
+```
+
+and [download the 
 RoboTHOR Pointnav dataset](../installation/download-datasets.md) before we get started.
 
 For this tutorial we will download the weights of a model trained on the debug dataset.
@@ -27,7 +34,7 @@ Next we need to run the inference, using the PointNav experiment config from the
 We can do this with the following command:
 
 ```bash
-python main.py -o <PATH_TO_OUTPUT> -c <PATH_TO_CHECKPOINT> -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> -t <TIMESTAMP>
+PYTHONPATH=. python allenact/main.py -o <PATH_TO_OUTPUT> -c <PATH_TO_CHECKPOINT> -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> -t <TIMESTAMP>
 ```
 
 Where `<PATH_TO_OUTPUT>` is the location where the results of the test will be dumped, `<PATH_TO_CHECKPOINT>` is the 
@@ -38,7 +45,7 @@ trained.
 For our current setup the following command would work:
 
 ```bash
-python main.py \
+PYTHONPATH=. python allenact/main.py \
     training_a_pointnav_model \
     -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ \
     -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30/exp_PointNavRobothorRGBPPO__stage_00__steps_000039031200.pt \
@@ -49,7 +56,7 @@ python main.py \
 For testing on all saved checkpoints we just need to omit `<PATH_TO_CHECKPOINT>`:
 
 ```bash
-python main.py \
+PYTHONPATH=. python allenact/main.py \
     training_a_pointnav_model \
     -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ \
     -b projects/tutorials  \
@@ -63,7 +70,7 @@ is sufficient for pointnav in RoboThor.
 
 Following up on the example above, we can make a specialized pontnav `ExperimentConfig` where we instantiate
 the base visualization class, `VizSuite`, defined in
-[`utils.viz_utils`](https://github.com/allenai/allenact/tree/master/utils/viz_utils.py), when in `test` mode.
+[`allenact.utils.viz_utils`](https://github.com/allenai/allenact/tree/master/allenact/utils/viz_utils.py), when in `test` mode.
 
 Each visualization type can be thought of as a plugin to the base `VizSuite`. For example, all `episode_ids` passed to
 `VizSuite` will be processed with each of the instantiated visualization types (possibly with the exception of the
@@ -85,7 +92,7 @@ The visualization types included below are:
 * `TensorViz1D`: Evolution of a point from RolloutStorage over time.
 * `TensorViz2D`: Evolution of a vector from RolloutStorage over time.
 * `ThorViz`: Specialized 2D trajectory view
-[for RoboThor](https://github.com/allenai/allenact/tree/master/plugins/robothor_plugin/robothor_viz.py).
+[for RoboThor](https://github.com/allenai/allenact/tree/master/allenact_plugins/robothor_plugin/robothor_viz.py).
 
 Note that we need to explicitly set the `episode_ids` that we wish to visualize. For `AgentViewViz` we have the option
 of using a different (typically shorter) list of episodes or enforce the ones used for the rest of visualizations.
@@ -94,11 +101,7 @@ of using a different (typically shorter) list of episodes or enforce the ones us
 # %% hide
 from typing import Optional
 
-from plugins.robothor_plugin.robothor_viz import ThorViz
-from projects.tutorials.training_a_pointnav_model import (
-    PointNavRoboThorRGBPPOExperimentConfig,
-)
-from utils.viz_utils import (
+from allenact.utils.viz_utils import (
     VizSuite,
     TrajectoryViz,
     ActorViz,
@@ -106,6 +109,11 @@ from utils.viz_utils import (
     TensorViz1D,
     TensorViz2D,
 )
+from allenact_plugins.robothor_plugin.robothor_viz import ThorViz
+from projects.tutorials.training_a_pointnav_model import (
+    PointNavRoboThorRGBPPOExperimentConfig,
+)
+
 
 # %%
 class PointNavRoboThorRGBPPOVizExperimentConfig(PointNavRoboThorRGBPPOExperimentConfig):
@@ -174,7 +182,7 @@ class PointNavRoboThorRGBPPOVizExperimentConfig(PointNavRoboThorRGBPPOExperiment
 Running test on the same downloaded models, but using the visualization-enabled `ExperimentConfig` with
  
 ```bash
-python main.py \
+PYTHONPATH=. python allenact/main.py \
     running_inference_tutorial \
     -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ \
     -c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30/exp_PointNavRobothorRGBPPO__stage_00__steps_000039031200.pt \

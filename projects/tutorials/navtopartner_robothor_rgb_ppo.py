@@ -1,26 +1,34 @@
 from math import ceil
-from typing import Dict, Any, List, Optional, Sequence
+from typing import Dict, Any, List, Optional
 
 import gym
 import numpy as np
-import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from core.algorithms.onpolicy_sync.losses import PPO
-from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from core.base_abstractions.experiment_config import ExperimentConfig
-from core.base_abstractions.sensor import SensorSuite
-from core.base_abstractions.task import TaskSampler
-from plugins.robothor_plugin.robothor_sensors import RGBSensorMultiRoboThor
-from plugins.robothor_plugin.robothor_task_samplers import NavToPartnerTaskSampler
-from plugins.robothor_plugin.robothor_tasks import NavToPartnerTask
-from plugins.robothor_plugin.robothor_models import NavToPartnerActorCriticSimpleConvRNN
-from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
-from utils.viz_utils import VizSuite, AgentViewViz
-from utils.multi_agent_viz_utils import MultiTrajectoryViz
-from plugins.robothor_plugin.robothor_viz import ThorMultiViz
+from allenact.algorithms.onpolicy_sync.losses import PPO
+from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from allenact.base_abstractions.experiment_config import ExperimentConfig
+from allenact.base_abstractions.sensor import SensorSuite
+from allenact.base_abstractions.task import TaskSampler
+from allenact.utils.experiment_utils import (
+    Builder,
+    PipelineStage,
+    TrainingPipeline,
+    LinearDecay,
+)
+from allenact.utils.multi_agent_viz_utils import MultiTrajectoryViz
+from allenact.utils.viz_utils import VizSuite, AgentViewViz
+from allenact_plugins.robothor_plugin.robothor_models import (
+    NavToPartnerActorCriticSimpleConvRNN,
+)
+from allenact_plugins.robothor_plugin.robothor_sensors import RGBSensorMultiRoboThor
+from allenact_plugins.robothor_plugin.robothor_task_samplers import (
+    NavToPartnerTaskSampler,
+)
+from allenact_plugins.robothor_plugin.robothor_tasks import NavToPartnerTask
+from allenact_plugins.robothor_plugin.robothor_viz import ThorMultiViz
 
 
 class NavToPartnerRoboThorRGBPPOExperimentConfig(ExperimentConfig):

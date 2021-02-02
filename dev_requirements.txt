@@ -1,0 +1,12 @@
+black==19.10b0
+ruamel.yaml
+gitpython
+markdown==3.3
+mypy
+pytest
+docformatter==1.3.1
+docstr-coverage==1.2.0
+mkdocs==1.1.2
+mkdocs-material==5.5.3
+pre-commit
+pydoc-markdown==3.4.0

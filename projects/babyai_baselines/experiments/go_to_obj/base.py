@@ -1,17 +1,22 @@
 from abc import ABC
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, cast
 
 import gym
 import torch.nn as nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from core.base_abstractions.misc import Loss
-from core.base_abstractions.sensor import SensorSuite
-from plugins.babyai_plugin.babyai_models import BabyAIRecurrentACModel
-from plugins.babyai_plugin.babyai_tasks import BabyAITask
+from allenact.base_abstractions.misc import Loss
+from allenact.base_abstractions.sensor import SensorSuite
+from allenact.utils.experiment_utils import (
+    Builder,
+    LinearDecay,
+    PipelineStage,
+    TrainingPipeline,
+)
+from allenact_plugins.babyai_plugin.babyai_models import BabyAIRecurrentACModel
+from allenact_plugins.babyai_plugin.babyai_tasks import BabyAITask
 from projects.babyai_baselines.experiments.base import BaseBabyAIExperimentConfig
-from utils.experiment_utils import Builder, LinearDecay, PipelineStage, TrainingPipeline
 
 
 class BaseBabyAIGoToObjExperimentConfig(BaseBabyAIExperimentConfig, ABC):
@@ -65,7 +70,7 @@ class BaseBabyAIGoToObjExperimentConfig(BaseBabyAIExperimentConfig, ABC):
         return TrainingPipeline(
             save_interval=save_interval,
             metric_accumulate_interval=metric_accumulate_interval,
-            optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
+            optimizer_builder=Builder(cast(optim.Optimizer, optim.Adam), dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,

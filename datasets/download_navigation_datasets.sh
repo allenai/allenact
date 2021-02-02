@@ -24,7 +24,7 @@ then
     install_dataset "$1"
     cd ..
     echo "Generating RoboTHOR PointNav Debug Dataset ..."
-    PYTHONPATH=. python ./plugins/robothor_plugin/scripts/make_pointnav_debug_dataset.py
+    PYTHONPATH=. python ./allenact_plugins/robothor_plugin/scripts/make_pointnav_debug_dataset.py
 
 elif [ "$1" = "robothor-objectnav" ]
 then
@@ -32,7 +32,7 @@ then
     install_dataset "$1"
     cd ..
     echo "Generating RoboTHOR ObjectNav Debug Dataset ..."
-    PYTHONPATH=. python ./plugins/robothor_plugin/scripts/make_objectnav_debug_dataset.py
+    PYTHONPATH=. python ./allenact_plugins/robothor_plugin/scripts/make_objectnav_debug_dataset.py
 
 elif [ "$1" = "ithor-pointnav" ]
 then
@@ -40,7 +40,7 @@ then
     install_dataset "$1"
     cd ..
     echo "Generating iTHOR PointNav Debug Dataset ..."
-    PYTHONPATH=. python ./plugins/ithor_plugin/scripts/make_pointnav_debug_dataset.py
+    PYTHONPATH=. python ./allenact_plugins/ithor_plugin/scripts/make_pointnav_debug_dataset.py
 
 elif [ "$1" = "ithor-objectnav" ]
 then
@@ -48,7 +48,7 @@ then
     install_dataset "$1"
     cd ..
     echo "Generating iTHOR ObjectNav Debug Dataset ..."
-    PYTHONPATH=. python ./plugins/ithor_plugin/scripts/make_objectnav_debug_dataset.py
+    PYTHONPATH=. python ./allenact_plugins/ithor_plugin/scripts/make_objectnav_debug_dataset.py
 
 elif [ "$1" = "all-thor" ]
 then

@@ -8,16 +8,18 @@ import gym
 import numpy as np
 import torch
 
-from core.base_abstractions.experiment_config import MachineParams
-from core.base_abstractions.preprocessor import SensorPreprocessorGraph
-from core.base_abstractions.sensor import SensorSuite, ExpertActionSensor
-from core.base_abstractions.task import TaskSampler
-from plugins.robothor_plugin.robothor_sensors import DepthSensorThor
-from plugins.robothor_plugin.robothor_task_samplers import PointNavDatasetTaskSampler
-from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
+from allenact.base_abstractions.experiment_config import MachineParams
+from allenact.base_abstractions.preprocessor import SensorPreprocessorGraph
+from allenact.base_abstractions.sensor import SensorSuite, ExpertActionSensor
+from allenact.base_abstractions.task import TaskSampler
+from allenact.utils.experiment_utils import evenly_distribute_count_into_bins
+from allenact.utils.system import get_logger
+from allenact_plugins.robothor_plugin.robothor_sensors import DepthSensorThor
+from allenact_plugins.robothor_plugin.robothor_task_samplers import (
+    PointNavDatasetTaskSampler,
+)
+from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
-from utils.experiment_utils import evenly_distribute_count_into_bins
-from utils.system import get_logger
 
 
 class PointNavThorBaseConfig(PointNavBaseConfig, ABC):

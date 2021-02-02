@@ -1,5 +1,8 @@
 # Tutorial: Swapping in a new environment
 
+**Note** The provided paths in this tutorial assume you have
+[installed the full library](../installation/installation-allenact.md#full-library).
+
 ## Introduction
 This tutorial was designed as a continuation of the `Robothor PointNav Tutorial` and explains
 how to modify the experiment config created in that tutorial to work with the iTHOR and
@@ -95,7 +98,7 @@ Finally we need to replace the task sampler and its argument generating function
 
 ```python
     # Define Task Sampler
-from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
+from allenact_plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
 
 
 @classmethod

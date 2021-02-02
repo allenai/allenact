@@ -1,28 +1,32 @@
 from abc import ABC
-from typing import Dict, Any, List, Optional, Union, Sequence
+from typing import Dict, Any, List, Optional, Union, Sequence, cast
 
-import gin
 import gym
 import torch
 import torch.nn as nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from core.algorithms.onpolicy_sync.losses import PPO, A2C
-from core.algorithms.onpolicy_sync.losses.a2cacktr import A2CConfig
-from core.algorithms.onpolicy_sync.losses.imitation import Imitation
-from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from core.base_abstractions.experiment_config import ExperimentConfig, MachineParams
-from core.base_abstractions.misc import Loss
-from core.base_abstractions.sensor import SensorSuite, Sensor, ExpertActionSensor
-from core.base_abstractions.task import TaskSampler
-from plugins.babyai_plugin.babyai_models import BabyAIRecurrentACModel
-from plugins.babyai_plugin.babyai_tasks import BabyAITask, BabyAITaskSampler
-from plugins.minigrid_plugin.minigrid_sensors import (
+from allenact.algorithms.onpolicy_sync.losses import PPO, A2C
+from allenact.algorithms.onpolicy_sync.losses.a2cacktr import A2CConfig
+from allenact.algorithms.onpolicy_sync.losses.imitation import Imitation
+from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from allenact.base_abstractions.experiment_config import ExperimentConfig, MachineParams
+from allenact.base_abstractions.misc import Loss
+from allenact.base_abstractions.sensor import SensorSuite, Sensor, ExpertActionSensor
+from allenact.base_abstractions.task import TaskSampler
+from allenact.utils.experiment_utils import (
+    Builder,
+    LinearDecay,
+    PipelineStage,
+    TrainingPipeline,
+)
+from allenact_plugins.babyai_plugin.babyai_models import BabyAIRecurrentACModel
+from allenact_plugins.babyai_plugin.babyai_tasks import BabyAITask, BabyAITaskSampler
+from allenact_plugins.minigrid_plugin.minigrid_sensors import (
     EgocentricMiniGridSensor,
     MiniGridMissionSensor,
 )
-from utils.experiment_utils import Builder, LinearDecay, PipelineStage, TrainingPipeline
 
 
 class BaseBabyAIExperimentConfig(ExperimentConfig, ABC):
@@ -129,7 +133,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig, ABC):
         return TrainingPipeline(
             save_interval=save_interval,
             metric_accumulate_interval=metric_accumulate_interval,
-            optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
+            optimizer_builder=Builder(cast(optim.Optimizer, optim.Adam), dict(lr=lr)),
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
@@ -147,7 +151,6 @@ class BaseBabyAIExperimentConfig(ExperimentConfig, ABC):
         )
 
     @classmethod
-    @gin.configurable
     def machine_params(
         cls, mode="train", gpu_id="default", n_train_processes="default", **kwargs
     ):

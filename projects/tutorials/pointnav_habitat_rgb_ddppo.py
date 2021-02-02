@@ -8,38 +8,36 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 
-from core.algorithms.onpolicy_sync.losses import PPO
-from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from core.base_abstractions.experiment_config import ExperimentConfig, MachineParams
-from core.base_abstractions.preprocessor import (
-    ResNetPreprocessor,
-    SensorPreprocessorGraph,
-)
-from core.base_abstractions.sensor import SensorSuite
-from core.base_abstractions.task import TaskSampler
-from plugins.habitat_plugin.habitat_constants import (
-    HABITAT_DATASETS_DIR,
-    HABITAT_CONFIGS_DIR,
-)
-from plugins.habitat_plugin.habitat_sensors import (
-    RGBSensorHabitat,
-    TargetCoordinatesSensorHabitat,
-)
-from plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
-from plugins.habitat_plugin.habitat_utils import (
-    construct_env_configs,
-    get_habitat_config,
-)
-from plugins.robothor_plugin.robothor_tasks import PointNavTask
-from projects.pointnav_baselines.models.point_nav_models import (
-    ResnetTensorPointNavActorCritic,
-)
-from utils.experiment_utils import (
+from allenact.algorithms.onpolicy_sync.losses import PPO
+from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from allenact.base_abstractions.experiment_config import ExperimentConfig, MachineParams
+from allenact.base_abstractions.preprocessor import SensorPreprocessorGraph
+from allenact.base_abstractions.sensor import SensorSuite
+from allenact.base_abstractions.task import TaskSampler
+from allenact.embodiedai.preprocessors.resnet import ResNetPreprocessor
+from allenact.utils.experiment_utils import (
     Builder,
     PipelineStage,
     TrainingPipeline,
     LinearDecay,
     evenly_distribute_count_into_bins,
+)
+from allenact_plugins.habitat_plugin.habitat_constants import (
+    HABITAT_DATASETS_DIR,
+    HABITAT_CONFIGS_DIR,
+)
+from allenact_plugins.habitat_plugin.habitat_sensors import (
+    RGBSensorHabitat,
+    TargetCoordinatesSensorHabitat,
+)
+from allenact_plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
+from allenact_plugins.habitat_plugin.habitat_utils import (
+    construct_env_configs,
+    get_habitat_config,
+)
+from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
+from projects.pointnav_baselines.models.point_nav_models import (
+    ResnetTensorPointNavActorCritic,
 )
 
 

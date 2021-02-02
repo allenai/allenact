@@ -1,5 +1,5 @@
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor
-from plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
+from allenact_plugins.ithor_plugin.ithor_sensors import RGBSensorThor
+from allenact_plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from projects.pointnav_baselines.experiments.pointnav_mixin_simpleconvgru import (
     PointNavMixInSimpleConvGRUConfig,
 )
@@ -19,7 +19,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(
     """An PointNavigation experiment configuration in RoboThor with RGB
     input."""
 
-    SENSORS = PointNavThorMixInPPOAndGBCConfig.SENSORS + (
+    SENSORS = PointNavThorMixInPPOAndGBCConfig.SENSORS + (  # type:ignore
         RGBSensorThor(
             height=PointNavRoboThorBaseConfig.SCREEN_SIZE,
             width=PointNavRoboThorBaseConfig.SCREEN_SIZE,
