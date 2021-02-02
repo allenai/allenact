@@ -1,6 +1,5 @@
 from typing import Dict, Any
 
-import torch
 import torch.multiprocessing as mp
 from torch import nn
 

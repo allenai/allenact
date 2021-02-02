@@ -1,6 +1,6 @@
-from typing import Tuple
-from collections import OrderedDict
 import warnings
+from collections import OrderedDict
+from typing import Tuple
 
 import numpy as np
 import torch

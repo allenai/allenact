@@ -331,8 +331,9 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             unnormalized_supremum=unnormalized_supremum,
         )
 
-        assert int(PIL.__version__.split(".")[0]) < 7, (
-            "Pillow version >=7.0.0 is very broken, please downgrade" "to version 6.2.1"
+        assert int(PIL.__version__.split(".")[0]) != 7, (
+            "We found that Pillow version >=7.* has broken scaling,"
+            " please downgrade to version 6.2.1 or upgrade to >=8.0.0"
         )
 
         observation_space = self._get_observation_space()

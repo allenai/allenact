@@ -1,6 +1,5 @@
 import glob
 import os
-import subprocess
 from pathlib import Path
 
 from setuptools import find_packages, setup
@@ -49,13 +48,11 @@ if __name__ == "__main__":
         author="Allen Institute for Artificial Intelligence",
         author_email="lucaw@allenai.org",
         license="MIT",
-        packages=find_packages(
-            include=["allenact_plugins", "allenact_plugins.*"]
-        ),
+        packages=find_packages(include=["allenact_plugins", "allenact_plugins.*"]),
         install_requires=[
             "gym>=0.17.0,<0.18.0",
-            "torch<1.7.0,>=1.6.0",
-            "torchvision>=0.7.0,<0.8.0",
+            "torch>=1.6.0",
+            "torchvision>=0.7.0",
             "numpy>=1.19.1",
             f"allenact=={__version__}",
         ],

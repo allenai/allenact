@@ -1,20 +1,20 @@
 from typing import Dict, Union, Optional, Tuple, Any, Sequence, cast
 
+import gym
 import torch
 from torch import nn
-import gym
 
 from allenact.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     DistributionType,
 )
-from allenact_plugins.gym_plugin.gym_distributions import GaussianDistr
 from allenact.base_abstractions.misc import ActorCriticOutput, Memory
+from allenact_plugins.gym_plugin.gym_distributions import GaussianDistr
 
 
 class MemorylessActorCritic(ActorCriticModel[GaussianDistr]):
-    """ActorCriticModel for gym tasks with continuous control in the range [-1, 1].
-    """
+    """ActorCriticModel for gym tasks with continuous control in the range [-1,
+    1]."""
 
     def __init__(
         self,
