@@ -204,7 +204,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         # If the task is completed, we needn't (perhaps can't) find the expert
         # action from the (current) terminal state.
         if task.is_done():
-            return np.array([self._zeroed_observation, False])
+            return self._zeroed_observation
 
         action, expert_was_successful = task.query_expert(**self.expert_args)
 
