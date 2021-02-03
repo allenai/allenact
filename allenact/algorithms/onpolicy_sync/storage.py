@@ -25,9 +25,14 @@ class RolloutStorage(object):
     FLATTEN_SEPARATOR: str = "._AUTOFLATTEN_."
 
     def __init__(
-        self, num_steps: int, num_samplers: int, actor_critic: ActorCriticModel,
+        self,
+        num_steps: int,
+        num_samplers: int,
+        actor_critic: ActorCriticModel,
+        only_store_first_and_last_in_memory: bool = True,
     ):
         self.num_steps = num_steps
+        self.only_store_first_and_last_in_memory = only_store_first_and_last_in_memory
 
         self.flattened_to_unflattened: Dict[str, Dict[str, List[str]]] = {
             "memory": dict(),
@@ -41,7 +46,9 @@ class RolloutStorage(object):
         self.dim_names = ["step", "sampler", None]
 
         self.memory: Memory = self.create_memory(
-            actor_critic.recurrent_memory_specification, num_samplers
+            actor_critic.recurrent_memory_specification,
+            num_samplers,
+            first_and_last_only=only_store_first_and_last_in_memory,
         )
         self.observations: Memory = Memory()
 
@@ -67,7 +74,10 @@ class RolloutStorage(object):
         self.device = torch.device("cpu")
 
     def create_memory(
-        self, spec: Optional[FullMemorySpecType], num_samplers: int,
+        self,
+        spec: Optional[FullMemorySpecType],
+        num_samplers: int,
+        first_and_last_only: bool = False,
     ) -> Memory:
         if spec is None:
             return Memory()
@@ -79,7 +89,10 @@ class RolloutStorage(object):
             dim_names = ["step"] + [d[0] for d in dims_template]
             sampler_dim = dim_names.index("sampler")
 
-            all_dims = [self.num_steps + 1] + [d[1] for d in dims_template]
+            if first_and_last_only:
+                all_dims = [self.num_steps + 1] + [d[1] for d in dims_template]
+            else:
+                all_dims = [2] + [d[1] for d in dims_template]
             all_dims[sampler_dim] = num_samplers
 
             memory.check_append(
@@ -121,6 +134,10 @@ class RolloutStorage(object):
         if memory is None:
             assert len(self.memory) == 0
             return
+
+        if self.only_store_first_and_last_in_memory and time_step > 0:
+            time_step = 1
+
         self.insert_tensors(
             storage_name="memory", unflattened=memory, time_step=time_step
         )
@@ -275,8 +292,17 @@ class RolloutStorage(object):
             storage: Memory = getattr(self, storage_name)
             for key in storage:
                 self.unnarrow_data[storage_name][key] = storage.tensor(key)
+
+                if (
+                    storage_name == "memory"
+                    and self.only_store_first_and_last_in_memory
+                    and self.step > 0
+                ):
+                    length = 2
+                else:
+                    length = self.step + 1
                 storage[key] = (
-                    storage.tensor(key).narrow(dim=0, start=0, length=self.step + 1),
+                    storage.tensor(key).narrow(dim=0, start=0, length=length),
                     storage.sampler_dim(key),
                 )
 
@@ -467,6 +493,8 @@ class RolloutStorage(object):
         return self.unflatten_observations(self.observations.step_select(step))
 
     def pick_memory_step(self, step: int) -> Memory:
+        if self.only_store_first_and_last_in_memory and step > 0:
+            step = 1
         return self.memory.step_squeeze(step)
 
     def pick_prev_actions_step(self, step: int) -> ActionType:

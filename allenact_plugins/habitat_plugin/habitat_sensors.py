@@ -38,7 +38,9 @@ class RGBSensorHabitat(RGBSensor[HabitatEnvironment, Task[HabitatEnvironment]]):
     ):
         super().__init__(**prepare_locals_for_super(locals()))
 
-    def frame_from_env(self, env: HabitatEnvironment) -> np.ndarray:
+    def frame_from_env(
+        self, env: HabitatEnvironment, task: Optional[Task[HabitatEnvironment]]
+    ) -> np.ndarray:
         return env.current_frame["rgb"].copy()
 
 
@@ -68,7 +70,9 @@ class DepthSensorHabitat(DepthSensor[HabitatEnvironment, Task[HabitatEnvironment
 
         super().__init__(**prepare_locals_for_super(locals()))
 
-    def frame_from_env(self, env: HabitatEnvironment) -> np.ndarray:
+    def frame_from_env(
+        self, env: HabitatEnvironment, task: Optional[Task[HabitatEnvironment]]
+    ) -> np.ndarray:
         return env.current_frame["depth"].copy()
 
 

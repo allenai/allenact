@@ -195,8 +195,8 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         return su.flatten_space(self.unflattened_observation_space)
 
     @lazy_property
-    def _zeroed_action(self):
-        return self.action_space.sample().zero_()
+    def _zeroed_observation(self):
+        return np.zeros_like(self.observation_space.sample())
 
     def get_observation(
         self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
@@ -204,7 +204,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         # If the task is completed, we needn't (perhaps can't) find the expert
         # action from the (current) terminal state.
         if task.is_done():
-            return np.array([self._zeroed_action, False])
+            return np.array([self._zeroed_observation, False])
 
         action, expert_was_successful = task.query_expert(**self.expert_args)
 
@@ -406,13 +406,13 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         return self._width
 
     @abstractmethod
-    def frame_from_env(self, env: EnvType) -> np.ndarray:
+    def frame_from_env(self, env: EnvType, task: Optional[SubTaskType]) -> np.ndarray:
         raise NotImplementedError
 
     def get_observation(
         self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
     ) -> Any:
-        im = self.frame_from_env(env)
+        im = self.frame_from_env(env=env, task=task)
         assert (
             im.dtype == np.float32 and (len(im.shape) == 2 or im.shape[-1] == 1)
         ) or (im.shape[-1] == 3 and im.dtype == np.uint8), (

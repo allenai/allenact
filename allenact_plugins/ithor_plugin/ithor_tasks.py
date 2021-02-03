@@ -1,5 +1,4 @@
 import random
-import warnings
 from typing import Dict, Tuple, List, Any, Optional, Union, Sequence, cast
 
 import gym
@@ -8,6 +7,7 @@ import numpy as np
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import Sensor
 from allenact.base_abstractions.task import Task
+from allenact.utils.system import get_logger
 from allenact_plugins.ithor_plugin.ithor_constants import (
     MOVE_AHEAD,
     ROTATE_LEFT,
@@ -16,6 +16,7 @@ from allenact_plugins.ithor_plugin.ithor_constants import (
     LOOK_UP,
     END,
 )
+
 from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment
 from allenact_plugins.ithor_plugin.ithor_util import round_to_factor
 
@@ -235,7 +236,7 @@ class ObjectNaviThorGridTask(Task[IThorEnvironment]):
             shortest_path_ind = int(np.argmin([len(p) for p in paths]))
 
             if len(paths[shortest_path_ind]) == 1:
-                warnings.warn(
+                get_logger().warning(
                     "Shortest path computations suggest we are at the target but episode does not think so."
                 )
                 return 0, False

@@ -31,7 +31,12 @@ from allenact.utils.experiment_utils import (
     set_seed,
     LoggingPackage,
 )
-from allenact.utils.misc_utils import all_equal, get_git_diff_of_project
+
+from allenact.utils.misc_utils import (
+    all_equal,
+    get_git_diff_of_project,
+    NumpyJSONEncoder,
+)
 from allenact.utils.system import get_logger, find_free_port
 from allenact.utils.tensor_utils import SummaryWriter
 
@@ -327,7 +332,8 @@ class OnPolicyRunner(object):
     def start_test(
         self,
         experiment_date: str,
-        checkpoint: Optional[str] = None,
+        checkpoint_name_fragment: Optional[str] = None,
+        approx_ckpt_steps_count: Optional[Union[float, int]] = None,
         skip_checkpoints: int = 0,
         max_sampler_processes_per_worker: Optional[int] = None,
     ):
@@ -365,34 +371,40 @@ class OnPolicyRunner(object):
             "Started {} test processes".format(len(self.processes["test"]))
         )
 
-        checkpoints = self.get_checkpoint_files(
-            experiment_date, checkpoint, skip_checkpoints
+        checkpoint_paths = self.get_checkpoint_files(
+            experiment_date=experiment_date,
+            checkpoint_name_fragment=checkpoint_name_fragment,
+            approx_ckpt_steps_count=approx_ckpt_steps_count,
+            skip_checkpoints=skip_checkpoints,
         )
-        steps = [self.step_from_checkpoint(cp) for cp in checkpoints]
+        steps = [self.step_from_checkpoint(cp) for cp in checkpoint_paths]
 
         get_logger().info("Running test on {} steps {}".format(len(steps), steps))
 
-        for checkpoint in checkpoints:
+        for checkpoint_path in checkpoint_paths:
             # Make all testers work on each checkpoint
             for tester_it in range(num_testers):
-                self.queues["checkpoints"].put(("eval", checkpoint))
+                self.queues["checkpoints"].put(("eval", checkpoint_path))
         # Signal all testers to terminate cleanly
         for _ in range(num_testers):
             self.queues["checkpoints"].put(("quit", None))
 
-        metric_folder = self.metric_path(experiment_date)
-        os.makedirs(metric_folder, exist_ok=True)
+        metrics_dir = self.metric_path(experiment_date)
+        os.makedirs(metrics_dir, exist_ok=True)
         suffix = "__test_{}".format(self.local_start_time_str)
-        fname = os.path.join(metric_folder, "metrics" + suffix + ".json")
+        metrics_file_path = os.path.join(metrics_dir, "metrics" + suffix + ".json")
 
-        get_logger().info("Saving metrics in {}".format(fname))
+        get_logger().info("Saving metrics in {}".format(metrics_file_path))
 
         # Check output file can be written
-        with open(fname, "w") as f:
-            json.dump([], f, indent=4, sort_keys=True)
+        with open(metrics_file_path, "w") as f:
+            json.dump([], f, indent=4, sort_keys=True, cls=NumpyJSONEncoder)
 
         return self.log(
-            self.checkpoint_start_time_str(checkpoints[0]), num_testers, steps, fname
+            start_time_str=self.checkpoint_start_time_str(checkpoint_paths[0]),
+            nworkers=num_testers,
+            test_steps=steps,
+            metrics_file=metrics_file_path,
         )
 
     @staticmethod
@@ -411,7 +423,7 @@ class OnPolicyRunner(object):
             return "{}_{}".format(self.config.tag(), self.extra_tag)
         return self.config.tag()
 
-    def checkpoint_dir(self, start_time_str=None):
+    def checkpoint_dir(self, start_time_str=None, create_if_none: bool = True):
         folder = os.path.join(
             self.output_dir,
             "checkpoints",
@@ -420,7 +432,8 @@ class OnPolicyRunner(object):
             else os.path.join(self.config.tag(), self.extra_tag),
             start_time_str or self.local_start_time_str,
         )
-        os.makedirs(folder, exist_ok=True)
+        if create_if_none:
+            os.makedirs(folder, exist_ok=True)
         return folder
 
     def log_writer_path(self, start_time_str: str) -> str:
@@ -516,13 +529,18 @@ class OnPolicyRunner(object):
         mode = pkg.mode
 
         if log_writer is not None:
-            log_writer.add_scalar(f"{mode}/num_tasks_evaled", num_tasks, training_steps)
+            log_writer.add_scalar(
+                f"{mode}-misc/num_tasks_evaled", num_tasks, training_steps
+            )
 
         message = [f"{mode} {training_steps} steps:"]
         for k in sorted(metric_means.keys()):
             if log_writer is not None:
-                log_writer.add_scalar(f"{mode}/{k}", metric_means[k], training_steps)
+                log_writer.add_scalar(
+                    f"{mode}-metrics/{k}", metric_means[k], training_steps
+                )
             message.append(f"{k} {metric_means[k]}")
+
         message.append(f"tasks {num_tasks} checkpoint {checkpoint_file_name}")
         get_logger().info(" ".join(message))
 
@@ -550,41 +568,55 @@ class OnPolicyRunner(object):
         offpolicy_steps = pkgs[0].off_policy_steps
         if log_writer is not None:
             log_writer.add_scalar(
-                tag="train/pipeline_stage",
+                tag="train-misc/pipeline_stage",
                 scalar_value=pkgs[0].pipeline_stage,
                 global_step=training_steps,
             )
 
+        def add_prefix(d: Dict[str, Any], tag: str) -> Dict[str, Any]:
+            new_dict = {}
+            for k, v in d.items():
+                if "offpolicy" in k:
+                    pass
+                elif k.startswith("losses/"):
+                    k = f"{self.mode}-{k}"
+                else:
+                    k = f"{self.mode}-{tag}/{k}"
+                new_dict[k] = v
+            return new_dict
+
         metrics_and_train_info_tracker = ScalarMeanTracker()
         for pkg in pkgs:
             metrics_and_train_info_tracker.add_scalars(
-                scalars=pkg.metrics_tracker.means(), n=pkg.metrics_tracker.counts()
+                scalars=add_prefix(pkg.metrics_tracker.means(), "metrics"),
+                n=add_prefix(pkg.metrics_tracker.counts(), "metrics"),
             )
             metrics_and_train_info_tracker.add_scalars(
-                scalars=pkg.train_info_tracker.means(),
-                n=pkg.train_info_tracker.counts(),
+                scalars=add_prefix(pkg.train_info_tracker.means(), "misc"),
+                n=add_prefix(pkg.train_info_tracker.counts(), "misc"),
             )
 
         message = [
             "train {} steps {} offpolicy:".format(training_steps, offpolicy_steps)
         ]
         means = metrics_and_train_info_tracker.means()
-        for k in sorted(means.keys(), key=lambda mean_key: ("/" in mean_key, mean_key)):
+
+        for k in sorted(
+            means.keys(), key=lambda mean_key: (mean_key.count("/"), mean_key)
+        ):
             if log_writer is not None:
-                if "offpolicy" not in k:
-                    log_writer.add_scalar(
-                        "{}/".format(self.mode) + k, means[k], training_steps
-                    )
-                else:
-                    log_writer.add_scalar(k, means[k], training_steps)
-            message.append(k + " {:.3g}".format(means[k]))
-        message += ["elapsed_time {:.3g}s".format(current_time - last_time)]
+                log_writer.add_scalar(k, means[k], training_steps)
+            short_key = (
+                "/".join(k.split("/")[1:]) if k.startswith("train-") and "/" in k else k
+            )
+            message.append(f"{short_key} {means[k]:.3g}")
+        message += [f"elapsed_time {(current_time - last_time):.3g}s"]
 
         if last_steps > 0:
             fps = (training_steps - last_steps) / (current_time - last_time)
-            message += ["approx_fps {:.3g}".format(fps)]
+            message += [f"approx_fps {fps:.3g}"]
             if log_writer is not None:
-                log_writer.add_scalar("train/approx_fps", fps, training_steps)
+                log_writer.add_scalar("train-misc/approx_fps", fps, training_steps)
 
         if last_offpolicy_steps > 0:
             fps = (offpolicy_steps - last_offpolicy_steps) / (current_time - last_time)
@@ -625,7 +657,9 @@ class OnPolicyRunner(object):
         metric_means = all_metrics_tracker.means()
         for k in sorted(metric_means.keys()):
             if log_writer is not None:
-                log_writer.add_scalar(f"{mode}/{k}", metric_means[k], training_steps)
+                log_writer.add_scalar(
+                    f"{mode}-metrics/{k}", metric_means[k], training_steps
+                )
             message.append(k + " {:.3g}".format(metric_means[k]))
 
         if all_results is not None:
@@ -637,7 +671,9 @@ class OnPolicyRunner(object):
 
         num_tasks = sum([pkg.num_non_empty_metrics_dicts_added for pkg in pkgs])
         if log_writer is not None:
-            log_writer.add_scalar(f"{mode}/num_tasks_evaled", num_tasks, training_steps)
+            log_writer.add_scalar(
+                f"{mode}-misc/num_tasks_evaled", num_tasks, training_steps
+            )
 
         message.append(
             "tasks {} checkpoint {}".format(num_tasks, checkpoint_file_name[0])
@@ -750,12 +786,17 @@ class OnPolicyRunner(object):
                                         pkgs=collected[:nworkers],
                                         all_results=test_results,
                                     )
+
                                     collected = collected[nworkers:]
                                     with open(metrics_file, "w") as f:
                                         json.dump(
-                                            test_results, f, indent=4, sort_keys=True
+                                            test_results,
+                                            f,
+                                            indent=4,
+                                            sort_keys=True,
+                                            cls=NumpyJSONEncoder,
                                         )
-                                        get_logger().debug(
+                                        get_logger().info(
                                             "Updated {} up to checkpoint {}".format(
                                                 metrics_file,
                                                 test_steps[len(test_results) - 1],
@@ -829,29 +870,82 @@ class OnPolicyRunner(object):
     def get_checkpoint_files(
         self,
         experiment_date: str,
-        checkpoint_file_name: Optional[str] = None,
+        checkpoint_name_fragment: Optional[str] = None,
+        approx_ckpt_steps_count: Optional[int] = None,
         skip_checkpoints: int = 0,
     ):
-        if checkpoint_file_name is not None:
-            return [checkpoint_file_name]
-        files = glob.glob(
-            os.path.join(self.checkpoint_dir(experiment_date), "exp_*.pt")
+        test_checkpoints_dir = self.checkpoint_dir(
+            experiment_date, create_if_none=False
         )
-        files = sorted(files)
+        if checkpoint_name_fragment is not None and os.path.exists(
+            checkpoint_name_fragment
+        ):
+            if "*" in checkpoint_name_fragment:
+                # The fragment is a glob
+                assert "/" not in checkpoint_name_fragment
+            elif os.path.isfile(checkpoint_name_fragment):
+                # The fragment is a path to a checkpoint, use this checkpoint
+                return [checkpoint_name_fragment]
+            elif os.path.isdir(checkpoint_name_fragment):
+                # The fragment is a path to a directory, lets use this directory
+                # as the base dir to search for checkpoints
+                test_checkpoints_dir = checkpoint_name_fragment
+                checkpoint_name_fragment = None
+            else:
+                raise NotImplementedError
+
+        if checkpoint_name_fragment is not None:
+            assert (
+                skip_checkpoints == 0
+            ), "`skip_checkpoints` must be 0 (i.e. none skipped)."
+            if checkpoint_name_fragment.endswith(".pt"):
+                checkpoint_name_fragment = checkpoint_name_fragment[:-3]
+                while checkpoint_name_fragment != checkpoint_name_fragment.strip("*"):
+                    checkpoint_name_fragment = checkpoint_name_fragment.strip("*")
+
+            for_glob = os.path.join(
+                test_checkpoints_dir, f"*{checkpoint_name_fragment}*.pt",
+            )
+            paths = glob.glob(for_glob)
+            if len(paths) == 0:
+                raise FileExistsError(
+                    f"No file at path `{checkpoint_name_fragment}` nor any"
+                    f" files matching pattern {for_glob}."
+                )
+            elif len(paths) > 1:
+                raise FileExistsError(
+                    f"Too many files match the pattern {for_glob}. These files include {paths}."
+                )
+            return paths
+        elif approx_ckpt_steps_count is not None:
+            paths = glob.glob(os.path.join(test_checkpoints_dir, "exp_*.pt"))
+            if len(paths) == 0:
+                raise FileExistsError(
+                    f"No checkpoint files in directory {test_checkpoints_dir}."
+                )
+            step_diffs = [
+                abs(approx_ckpt_steps_count - self.step_from_checkpoint(p))
+                for p in paths
+            ]
+            _, path = min(*zip(step_diffs, paths))
+            paths = [path]
+        else:
+            paths = glob.glob(os.path.join(test_checkpoints_dir, "exp_*.pt"))
+        paths = sorted(paths)
         return (
-            files[:: skip_checkpoints + 1]
+            paths[:: skip_checkpoints + 1]
             + (
-                [files[-1]]
-                if skip_checkpoints > 0 and len(files) % (skip_checkpoints + 1) != 1
+                [paths[-1]]
+                if skip_checkpoints > 0 and len(paths) % (skip_checkpoints + 1) != 1
                 else []
             )
-            if len(files) > 0
-            else files
+            if len(paths) > 0
+            else paths
         )
 
     @staticmethod
-    def step_from_checkpoint(name: str):
-        parts = name.split("__")
+    def step_from_checkpoint(name: str) -> int:
+        parts = os.path.basename(name).split("__")
         for part in parts:
             if "steps_" in part:
                 possible_num = part.split("_")[-1].split(".")[0]

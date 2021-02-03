@@ -1,4 +1,5 @@
 """Defines the reinforcement learning `OnPolicyRLEngine`."""
+import datetime
 import itertools
 import logging
 import os
@@ -122,7 +123,7 @@ class OnPolicyRLEngine(object):
         self.device = torch.device("cpu") if device == -1 else torch.device(device)  # type: ignore
         self.distributed_port = distributed_port
 
-        self.mode = mode.lower()
+        self.mode = mode.lower().strip()
         assert self.mode in [
             "train",
             "valid",
@@ -206,6 +207,9 @@ class OnPolicyRLEngine(object):
                 store=self.store,
                 rank=self.worker_id,
                 world_size=self.num_workers,
+                timeout=datetime.timedelta(minutes=300)
+                if self.mode == "test"
+                else dist.default_pg_timeout,
             )
             self.is_distributed = True
 
@@ -830,7 +834,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 actions, enforce_info = self.apply_teacher_forcing(
                     actions, step_observation, approx_steps
                 )
-                empirical_enforced = enforce_info["teacher_forcing_mask"].mean().item()
+                empirical_enforced = (
+                    enforce_info["teacher_forcing_mask"].float().mean().item()
+                )
             else:
                 empirical_enforced = 0
 
@@ -868,9 +874,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     masks=batch["masks"],
                 )
 
-                info: Dict[str, float] = {
-                    "lr": self.optimizer.param_groups[0]["lr"]  # type: ignore
-                }
+                info: Dict[str, float] = {}
 
                 total_loss: Optional[torch.Tensor] = None
                 for loss_name in self.training_pipeline.current_stage_losses:
@@ -899,7 +903,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 )
 
                 info["total_loss"] = total_loss.item()
-                self.tracking_info["update"].append(("update_package", info, bsize))
+                self.tracking_info["losses"].append(("losses", info, bsize))
+                self.tracking_info["lr"].append(
+                    ("lr", {"lr": self.optimizer.param_groups[0]["lr"]}, bsize)
+                )
 
                 self.backprop_step(total_loss)
 
@@ -1122,6 +1129,13 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     f"Obtained a train_info_dict with {n} elements."
                     f" Full info: ({info_type}, {train_info_dict}, {n})."
                 )
+            elif info_type == "losses":
+                logging_pkg.add_train_info_dict(
+                    train_info_dict={
+                        f"losses/{k}": v for k, v in train_info_dict.items()
+                    },
+                    n=n,
+                )
             else:
                 logging_pkg.add_train_info_dict(train_info_dict=train_info_dict, n=n)
 
@@ -1149,7 +1163,15 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
             self.former_steps = self.step_count
             for step in range(self.training_pipeline.num_steps):
-                self.collect_rollout_step(rollouts=rollouts)
+                num_paused = self.collect_rollout_step(rollouts=rollouts)
+                if num_paused > 0:
+                    raise NotImplementedError(
+                        "When trying to get a new task from a task sampler (using the `.next_task()` method)"
+                        " the task sampler returned `None`. This is not currently supported during training"
+                        " (and almost certainly a bug in the implementation of the task sampler or in the "
+                        " initialization of the task sampler for training)."
+                    )
+
                 if self.is_distributed:
                     # Preempt stragglers
                     # Each worker will stop collecting steps for the current rollout whenever a
@@ -1175,7 +1197,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 actor_critic_output, _ = self.actor_critic(
                     observations=rollouts.pick_observation_step(-1),
                     memory=rollouts.pick_memory_step(-1),
-                    prev_actions=rollouts.prev_actions[-1:],
+                    prev_actions=su.unflatten(
+                        self.actor_critic.action_space, rollouts.prev_actions[-1:]
+                    ),
                     masks=rollouts.masks[-1:],
                 )
 
@@ -1344,14 +1368,15 @@ class OnPolicyInference(OnPolicyRLEngine):
 
     def run_eval(
         self,
-        checkpoint_file_name: str,
-        rollout_steps=100,
+        checkpoint_file_path: str,
+        rollout_steps: int = 100,
         visualizer: Optional[VizSuite] = None,
-        update_secs=20,
+        update_secs: float = 20.0,
+        verbose: bool = False,
     ) -> LoggingPackage:
         assert self.actor_critic is not None, "called run_eval with no actor_critic"
 
-        ckpt = self.checkpoint_load(checkpoint_file_name)
+        ckpt = self.checkpoint_load(checkpoint_file_path)
         total_steps = cast(int, ckpt["total_steps"])
 
         rollouts = RolloutStorage(
@@ -1366,8 +1391,10 @@ class OnPolicyInference(OnPolicyRLEngine):
         num_paused = self.initialize_rollouts(rollouts, visualizer=visualizer)
         num_tasks = sum(
             self.vector_tasks.command(
-                "sampler_attr", ["total_unique"] * (self.num_samplers - num_paused)
+                "sampler_attr", ["length"] * (self.num_samplers - num_paused)
             )
+        ) + (  # We need to add this as the first tasks have already been sampled
+            self.num_samplers - num_paused
         )
         # get_logger().debug(
         #     "worker {} number of tasks {}".format(self.worker_id, num_tasks)
@@ -1379,11 +1406,9 @@ class OnPolicyInference(OnPolicyRLEngine):
         last_time: float = time.time()
         init_time: float = last_time
         frames: int = 0
-        if self.mode == "test":
+        if verbose:
             get_logger().info(
-                "worker {}: running evaluation on {} tasks".format(
-                    self.worker_id, num_tasks,
-                )
+                f"[{self.mode}] worker {self.worker_id}: running evaluation on {num_tasks} tasks."
             )
 
         logging_pkg = LoggingPackage(mode=self.mode, training_steps=total_steps)
@@ -1399,12 +1424,12 @@ class OnPolicyInference(OnPolicyRLEngine):
             if num_paused >= self.num_samplers or cur_time - last_time >= update_secs:
                 self.aggregate_task_metrics(logging_pkg=logging_pkg)
 
-                if self.mode == "test":
+                if verbose:
                     lengths = self.vector_tasks.command(
                         "sampler_attr", ["length"] * (self.num_samplers - num_paused)
                     )
                     npending = sum(lengths)
-                    time_to_complete = (
+                    est_time_to_complete = (
                         "{:.2f}".format(
                             (
                                 (cur_time - init_time)
@@ -1416,25 +1441,19 @@ class OnPolicyInference(OnPolicyRLEngine):
                         else "???"
                     )
                     get_logger().info(
-                        "worker {}: {:.1f} fps, {}/{} tasks pending ({}). ~{} min. to complete.".format(
-                            self.worker_id,
-                            frames / (cur_time - init_time),
-                            npending,
-                            num_tasks,
-                            lengths,
-                            time_to_complete,
-                        )
+                        f"[{self.mode}] worker {self.worker_id}:"
+                        f" {frames / (cur_time - init_time):.1f} fps,"
+                        f" {npending}/{num_tasks} tasks pending ({lengths})."
+                        f" ~{est_time_to_complete} min. to complete."
                     )
                     if logging_pkg.num_non_empty_metrics_dicts_added != 0:
                         get_logger().info(
                             ", ".join(
                                 [
-                                    "worker {}: num_test_tasks_complete {}".format(
-                                        self.worker_id,
-                                        logging_pkg.num_non_empty_metrics_dicts_added,
-                                    ),
+                                    f"[{self.mode}] worker {self.worker_id}:"
+                                    f" num_{self.mode}_tasks_complete {logging_pkg.num_non_empty_metrics_dicts_added}",
                                     *[
-                                        "{} {:.3g}".format(k, v)
+                                        f"{k} {v:.3g}"
                                         for k, v in logging_pkg.metrics_tracker.means().items()
                                     ],
                                 ]
@@ -1458,7 +1477,7 @@ class OnPolicyInference(OnPolicyRLEngine):
         logging_pkg.viz_data = (
             visualizer.read_and_reset() if visualizer is not None else None
         )
-        logging_pkg.checkpoint_file_name = checkpoint_file_name
+        logging_pkg.checkpoint_file_name = checkpoint_file_path
 
         return logging_pkg
 
@@ -1513,10 +1532,10 @@ class OnPolicyInference(OnPolicyRLEngine):
         try:
             while True:
                 command: Optional[str]
-                data: Any
+                ckp_file_path: Any
                 (
                     command,
-                    data,
+                    ckp_file_path,
                 ) = self.checkpoints_queue.get()  # block until first command arrives
                 # get_logger().debug(
                 #     "{} {} command {} data {}".format(
@@ -1530,10 +1549,10 @@ class OnPolicyInference(OnPolicyRLEngine):
                             # skip to latest using
                             # 1. there's only consumer in valid
                             # 2. there's no quit/exit/close message issued by runner nor trainer
-                            data = self.skip_to_latest(
+                            ckp_file_path = self.skip_to_latest(
                                 checkpoints_queue=self.checkpoints_queue,
                                 command=command,
-                                data=data,
+                                data=ckp_file_path,
                             )
 
                         if (
@@ -1543,7 +1562,10 @@ class OnPolicyInference(OnPolicyRLEngine):
                             visualizer = self.machine_params.visualizer
 
                         eval_package = self.run_eval(
-                            checkpoint_file_name=data, visualizer=visualizer
+                            checkpoint_file_path=ckp_file_path,
+                            visualizer=visualizer,
+                            verbose=True,
+                            update_secs=20 if self.mode == "test" else 5 * 60,
                         )
 
                         self.results_queue.put(eval_package)

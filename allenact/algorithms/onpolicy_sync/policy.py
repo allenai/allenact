@@ -146,7 +146,7 @@ class LinearActorCriticHead(nn.Module):
         nn.init.orthogonal_(self.actor_and_critic.weight)
         nn.init.constant_(self.actor_and_critic.bias, 0)
 
-    def forward(self, x):
+    def forward(self, x) -> Tuple[CategoricalDistr, torch.Tensor]:
         out = self.actor_and_critic(x)
 
         logits = out[..., :-1]

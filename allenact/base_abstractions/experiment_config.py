@@ -14,6 +14,16 @@ from allenact.utils.system import get_logger
 from allenact.utils.viz_utils import VizSuite
 
 
+def split_processes_onto_devices(nprocesses: int, ndevices: int):
+    assert (
+        nprocesses == 0 or nprocesses >= ndevices
+    ), "NUM_PROCESSES {} < ndevices {}".format(nprocesses, ndevices)
+    res = [0] * ndevices
+    for it in range(nprocesses):
+        res[it % ndevices] += 1
+    return res
+
+
 class MachineParams(object):
     def __init__(
         self,
@@ -80,9 +90,10 @@ class MachineParams(object):
         if not isinstance(devices, Sequence):
             devices = (devices,) * nworkers
 
-        assert (
-            len(devices) == nworkers
-        ), f"The number of devices ({len(devices)}) must equal the number of workers ({nworkers})"
+        assert len(devices) == nworkers, (
+            f"The number of devices (len({devices})={len(devices)})"
+            f" must equal the number of workers ({nworkers})"
+        )
 
         devices = tuple(
             torch.device("cpu") if d == -1 else torch.device(d) for d in devices  # type: ignore

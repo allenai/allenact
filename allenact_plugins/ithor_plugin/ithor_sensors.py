@@ -24,7 +24,9 @@ class RGBSensorThor(
     frame corresponding to the agent's egocentric view.
     """
 
-    def frame_from_env(self, env: IThorEnvironment) -> np.ndarray:  # type:ignore
+    def frame_from_env(
+        self, env: IThorEnvironment, task: Task[IThorEnvironment]
+    ) -> np.ndarray:  # type:ignore
         return env.current_frame.copy()
 
 
