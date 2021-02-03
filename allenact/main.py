@@ -52,9 +52,9 @@ def get_args():
         "-b",
         "--experiment_base",
         required=False,
-        default="experiments",
+        default=os.getcwd(),
         type=str,
-        help="experiment configuration base folder",
+        help="experiment configuration base folder (default: working directory)",
     )
     parser.add_argument(
         "-c",
