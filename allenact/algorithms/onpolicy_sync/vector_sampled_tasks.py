@@ -305,8 +305,6 @@ class VectorSampledTasks(object):
                             )
                         )
 
-            if child_pipe is not None:
-                child_pipe.close()
         except KeyboardInterrupt as e:
             if should_log:
                 get_logger().info("Worker {} KeyboardInterrupt".format(worker_id))
@@ -315,6 +313,8 @@ class VectorSampledTasks(object):
             get_logger().error(traceback.format_exc())
             raise e
         finally:
+            if child_pipe is not None:
+                child_pipe.close()
             if should_log:
                 get_logger().info("""Worker {} closing.""".format(worker_id))
 

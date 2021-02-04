@@ -1,13 +1,15 @@
+import hashlib
+import json
+
 import copy
 import hashlib
 import math
 import random
 import subprocess
-import typing
 from collections import Counter
 from contextlib import contextmanager
 from functools import lru_cache
-from typing import Sequence, List, Optional, Tuple
+from typing import Sequence, List, Optional, Tuple, Hashable
 
 import numpy as np
 import torch
@@ -25,6 +27,28 @@ TABLEAU10_RGB = (
     (188, 189, 34),
     (23, 190, 207),
 )
+
+
+class NumpyJSONEncoder(json.JSONEncoder):
+    """JSON encoder for numpy objects.
+
+    Based off the stackoverflow answer by Jie Yang here: https://stackoverflow.com/a/57915246.
+    The license for this code is [BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+    """
+
+    def default(self, obj):
+        if isinstance(obj, np.void):
+            return None
+        elif isinstance(obj, np.bool):
+            return bool(obj)
+        elif isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NumpyJSONEncoder, self).default(obj)
 
 
 @contextmanager
@@ -91,7 +115,8 @@ class HashableDict(dict):
 
 
 def partition_sequence(seq: Sequence, parts: int) -> List:
-    assert 0 < parts <= len(seq)
+    assert 0 < parts, f"parts [{parts}] must be greater > 0"
+    assert parts <= len(seq), f"parts [{parts}] > len(seq) [{len(seq)}]"
     n = len(seq)
 
     quotient = n // parts
@@ -171,7 +196,16 @@ def rand_float(low: float, high: float, shape):
         return np.random.rand(shape) * (high - low) + low
 
 
-def all_equal(s: typing.Sequence):
+def all_unique(seq: Sequence[Hashable]):
+    seen = set()
+    for s in seq:
+        if s in seen:
+            return False
+        seen.add(s)
+    return True
+
+
+def all_equal(s: Sequence):
     if len(s) <= 1:
         return True
     return all(s[0] == ss for ss in s[1:])

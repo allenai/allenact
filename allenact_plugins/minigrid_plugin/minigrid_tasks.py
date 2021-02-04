@@ -1,5 +1,4 @@
 import random
-import warnings
 from typing import Tuple, Any, List, Dict, Optional, Union, Callable, Sequence, cast
 
 import gym
@@ -228,7 +227,7 @@ class MiniGridTask(Task[CrossingEnv]):
         if s in graph:
             return
         if attr_dict is None:
-            warnings.warn("adding a node with neighbor checks and no attributes")
+            get_logger().warning("adding a node with neighbor checks and no attributes")
         existing_nodes = set(graph.nodes())
         graph.add_node(s, **attr_dict)
 
@@ -287,7 +286,7 @@ class MiniGridTask(Task[CrossingEnv]):
 
     def query_expert(self, **kwargs) -> Tuple[int, bool]:
         if self._minigrid_done:
-            warnings.warn("Episode is completed, but expert is still queried.")
+            get_logger().warning("Episode is completed, but expert is still queried.")
             return -1, False
 
         paths = []
@@ -321,7 +320,7 @@ class MiniGridTask(Task[CrossingEnv]):
             # Since "unified_goal" is 1 step away from actual goals
             # if a path like [actual_goal, unified_goal] exists, then
             # you are already at a goal.
-            warnings.warn(
+            get_logger().warning(
                 "Shortest path computations suggest we are at"
                 " the target but episode does not think so."
             )

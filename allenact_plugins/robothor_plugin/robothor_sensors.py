@@ -9,11 +9,12 @@ from allenact.base_abstractions.task import Task
 from allenact.utils.misc_utils import prepare_locals_for_super
 from allenact.utils.system import get_logger
 from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment
+from allenact_plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from allenact_plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
 
 
-class RGBSensorRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnvironment]]):
+class RGBSensorRoboThor(RGBSensorThor):
     """Sensor for RGB images in RoboTHOR.
 
     Returns from a running RoboThorEnvironment instance, the current RGB
@@ -25,9 +26,6 @@ class RGBSensorRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnvironment]
             "`RGBSensorRoboThor` is deprecated, use `RGBSensorThor` instead."
         )
         super().__init__(*args, **kwargs)
-
-    def frame_from_env(self, env: RoboThorEnvironment) -> np.ndarray:
-        return env.current_frame.copy()
 
 
 class RGBSensorMultiRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnvironment]]):
@@ -43,7 +41,9 @@ class RGBSensorMultiRoboThor(RGBSensor[RoboThorEnvironment, Task[RoboThorEnviron
         self.agent_count = agent_count
         self.agent_id = 0
 
-    def frame_from_env(self, env: RoboThorEnvironment) -> np.ndarray:
+    def frame_from_env(
+        self, env: RoboThorEnvironment, task: Optional[Task[RoboThorEnvironment]]
+    ) -> np.ndarray:
         return env.current_frames[self.agent_id].copy()
 
     def get_observation(
@@ -73,9 +73,14 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
             dtype=np.float32,
         )
 
-    def _compute_pointgoal(self, source_position, source_rotation, goal_position):
+    @staticmethod
+    def _compute_pointgoal(
+        source_position: np.ndarray,
+        source_rotation: np.quaternion,
+        goal_position: np.ndarray,
+    ):
         direction_vector = goal_position - source_position
-        direction_vector_agent = self.quaternion_rotate_vector(
+        direction_vector_agent = GPSCompassSensorRoboThor.quaternion_rotate_vector(
             source_rotation.inverse(), direction_vector
         )
 
@@ -174,7 +179,7 @@ class DepthSensorThor(
         super().__init__(**prepare_locals_for_super(locals()))
 
     def frame_from_env(
-        self, env: Union[IThorEnvironment, RoboThorEnvironment]
+        self, env: RoboThorEnvironment, task: Optional[Task[RoboThorEnvironment]]
     ) -> np.ndarray:
         return env.controller.last_event.depth_frame
 

@@ -65,6 +65,13 @@ def get_args():
         help="optional checkpoint file name to resume training or test",
     )
     parser.add_argument(
+        "--approx_ckpt_steps_count",
+        required=False,
+        default=None,
+        type=float,
+        help="if running testing, ",
+    )
+    parser.add_argument(
         "-r",
         "--restart_pipeline",
         dest="restart_pipeline",
@@ -293,7 +300,8 @@ def main():
             disable_config_saving=args.disable_config_saving,
         ).start_test(
             experiment_date=args.test_date,
-            checkpoint=args.checkpoint,
+            checkpoint_name_fragment=args.checkpoint,
+            approx_ckpt_steps_count=args.approx_ckpt_steps_count,
             skip_checkpoints=args.skip_checkpoints,
             max_sampler_processes_per_worker=args.max_sampler_processes_per_worker,
         )
