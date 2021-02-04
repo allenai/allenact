@@ -15,7 +15,8 @@ def parse_req_file(fname, start=None):
                 continue
             if line[0] == "[":
                 cline = line[1:-1]
-                reqs[cline] = []
+                if cline not in reqs:
+                    reqs[cline] = []
             else:
                 if cline is not None:
                     reqs[cline].append(line)
