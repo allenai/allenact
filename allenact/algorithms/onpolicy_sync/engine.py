@@ -207,6 +207,8 @@ class OnPolicyRLEngine(object):
                 store=self.store,
                 rank=self.worker_id,
                 world_size=self.num_workers,
+                # During testing we sometimes found that default timeout was too short
+                # resulting in the run terminating surprisingly, we increase it here.
                 timeout=datetime.timedelta(minutes=300)
                 if self.mode == "test"
                 else dist.default_pg_timeout,

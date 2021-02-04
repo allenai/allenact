@@ -89,7 +89,7 @@ class RolloutStorage(object):
             dim_names = ["step"] + [d[0] for d in dims_template]
             sampler_dim = dim_names.index("sampler")
 
-            if first_and_last_only:
+            if not first_and_last_only:
                 all_dims = [self.num_steps + 1] + [d[1] for d in dims_template]
             else:
                 all_dims = [2] + [d[1] for d in dims_template]

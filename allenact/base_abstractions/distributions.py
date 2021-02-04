@@ -44,6 +44,24 @@ class CategoricalDistr(torch.distributions.Categorical, Distr):
     def mode(self):
         return self._param.argmax(dim=-1, keepdim=False)  # match sample()'s shape
 
+    def log_prob(self, value: torch.Tensor):
+        if value.shape == self.logits.shape[:-1]:
+            return super(CategoricalDistr, self).log_prob(value=value)
+        elif value.shape == self.logits.shape[:-1] + (1,):
+            return (
+                super(CategoricalDistr, self)
+                .log_prob(value=value.squeeze(-1))
+                .unsqueeze(-1)
+            )
+        else:
+            raise NotImplementedError(
+                "Broadcasting in categorical distribution is disabled as it often leads"
+                f" to unexpected results. We have that `value.shape == {value.shape}` but"
+                f" expected a shape of "
+                f" `self.logits.shape[:-1] == {self.logits.shape[:-1]}` or"
+                f" `self.logits.shape[:-1] + (1,) == {self.logits.shape[:-1] + (1,)}`"
+            )
+
     @lazy_property
     def log_probs_tensor(self):
         return torch.log_softmax(self.logits, dim=-1)
