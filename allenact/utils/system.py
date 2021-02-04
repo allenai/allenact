@@ -152,3 +152,16 @@ class _AllenActMessageFilter:
             or ALLENACT_INSTALL_DIR in record.pathname
             or "main" in record.pathname
         )
+
+
+class ImportChecker:
+    def __init__(self, msg=None):
+        self.msg = msg
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, value, traceback):
+        if exc_type == ModuleNotFoundError and self.msg is not None:
+            value.msg += self.msg
+        return exc_type is None

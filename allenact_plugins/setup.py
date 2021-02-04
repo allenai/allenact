@@ -49,10 +49,13 @@ if __name__ == "__main__":
             extra_reqs_path = os.path.join(plugin_path, "extra_requirements.txt")
             if os.path.exists(extra_reqs_path):
                 with open(extra_reqs_path, "r") as f:
+                    # Filter out non-PyPI dependencies
                     extras[plugin_name] = [
                         clean_dep
                         for clean_dep in (dep.strip() for dep in f.readlines())
-                        if clean_dep != "" and not clean_dep.startswith("#")
+                        if clean_dep != ""
+                        and not clean_dep.startswith("#")
+                        and "@ git+https://github.com/" not in clean_dep
                     ]
         extras["all"] = sum(extras.values(), [])
 
@@ -67,10 +70,6 @@ if __name__ == "__main__":
         )
         extras = parse_req_file(
             os.path.join(base_dir, "allenact_plugins.egg-info/requires.txt")
-        )
-        extras = parse_req_file(
-            os.path.join(base_dir, "allenact_plugins.egg-info/dependency_links.txt"),
-            extras,
         )
 
     setup(
