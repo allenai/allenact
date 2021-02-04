@@ -100,6 +100,7 @@ if __name__ == "__main__":
             "torch>=1.6.0",
             "torchvision>=0.7.0",
             "numpy>=1.19.1",
+            "wheel>=0.36.2",
             f"allenact=={__version__}",
         ],
         setup_requires=["pytest-runner"],

@@ -96,6 +96,7 @@ if __name__ == "__main__":
             "matplotlib>=3.3.1",
             "networkx",
             "opencv-python",
+            "wheel>=0.36.2",
         ],
         setup_requires=["pytest-runner"],
         tests_require=["pytest", "pytest-cov"],
