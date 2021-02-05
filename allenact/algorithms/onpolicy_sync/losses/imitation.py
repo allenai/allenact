@@ -62,12 +62,25 @@ class Imitation(AbstractActorCriticLoss):
             expert_successes = expert_actions_masks.sum()
             should_report_loss = expert_successes.item() != 0
 
-            total_loss = -(
-                expert_actions_masks
-                * actor_critic_output.distributions.log_prob(
-                    cast(torch.LongTensor, expert_actions)
-                )
-            ).sum() / torch.clamp(expert_successes, min=1)
+            log_probs = actor_critic_output.distributions.log_prob(
+                cast(torch.LongTensor, expert_actions)
+            )
+            assert (
+                log_probs.shape[: len(expert_actions_masks.shape)]
+                == expert_actions_masks.shape
+            )
+
+            # Add dimensions to `expert_actions_masks` on the right to allow for masking
+            # if necessary.
+            len_diff = len(log_probs.shape) - len(expert_actions_masks.shape)
+            assert len_diff >= 0
+            expert_actions_masks = expert_actions_masks.view(
+                *expert_actions_masks.shape, *((1,) * len_diff)
+            )
+
+            total_loss = -(expert_actions_masks * log_probs).sum() / torch.clamp(
+                expert_successes, min=1
+            )
         # # TODO fix+test for expert_policy
         # elif "expert_policy" in observations:
         #     expert_policies = cast(

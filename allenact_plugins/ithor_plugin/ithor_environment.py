@@ -4,14 +4,15 @@ import copy
 import functools
 import math
 import random
-import warnings
 from typing import Tuple, Dict, List, Set, Union, Any, Optional, Mapping, cast
 
 import ai2thor.server
 import networkx as nx
 import numpy as np
 from ai2thor.controller import Controller
+from scipy.spatial.transform import Rotation
 
+from allenact.utils.system import get_logger
 from allenact_plugins.ithor_plugin.ithor_constants import VISIBILITY_DISTANCE, FOV
 from allenact_plugins.ithor_plugin.ithor_util import round_to_factor
 
@@ -209,7 +210,7 @@ class IThorEnvironment(object):
         try:
             self.controller.stop()
         except Exception as e:
-            warnings.warn(str(e))
+            get_logger().warning(str(e))
         finally:
             self._started = False
 
@@ -255,7 +256,7 @@ class IThorEnvironment(object):
         self._initially_reachable_points_set = None
         self.controller.step({"action": "GetReachablePositions"})
         if not self.controller.last_event.metadata["lastActionSuccess"]:
-            warnings.warn(
+            get_logger().warning(
                 "Error when getting reachable points: {}".format(
                     self.controller.last_event.metadata["errorMessage"]
                 )
@@ -325,7 +326,7 @@ class IThorEnvironment(object):
                 > 1e-2
                 or min(rot_diff, 360 - rot_diff) > 1
             ):
-                warnings.warn(
+                get_logger().warning(
                     "Teleportation FAILED but agent still moved (position_dist {}, rot diff {})"
                     " (\nprevious location\n{}\ncurrent_location\n{}\n)".format(
                         new_old_dist, rot_diff, original_location, agent_location
@@ -346,7 +347,7 @@ class IThorEnvironment(object):
             if only_initially_reachable:
                 self._snap_agent_to_initially_reachable(verbose=False)
             if verbose:
-                warnings.warn(
+                get_logger().warning(
                     "Teleportation did not place agent"
                     " precisely where desired in scene {}"
                     " (\ndesired\n{}\nactual\n{}\n)"
@@ -394,7 +395,7 @@ class IThorEnvironment(object):
             k += 1
 
         if not self.last_action_success:
-            warnings.warn(
+            get_logger().warning(
                 (
                     "Randomize agent location in scene {}"
                     " with seed {} and partial position {} failed in "
@@ -621,7 +622,7 @@ class IThorEnvironment(object):
         self.last_event.metadata["errorMessage"] = saved_error_message
         new_agent_location = self.get_agent_location()
         if verbose:
-            warnings.warn(
+            get_logger().warning(
                 (
                     "In {}, at location (x,z)=({},{}) which is not in the set "
                     "of initially reachable points;"
@@ -676,7 +677,7 @@ class IThorEnvironment(object):
             metadata = self.last_event.metadata
             if self.position_dist(last_position, self.get_agent_location()) > 0.001:
                 self.teleport_agent_to(**last_position, force_action=True)  # type: ignore
-                warnings.warn(
+                get_logger().warning(
                     "In scene {}, after randomization of hide and seek objects, agent moved.".format(
                         self.scene_name
                     )
@@ -717,14 +718,24 @@ class IThorEnvironment(object):
 
     @staticmethod
     def position_dist(
-        p0: Mapping[str, Any], p1: Mapping[str, Any], ignore_y: bool = False
+        p0: Mapping[str, Any],
+        p1: Mapping[str, Any],
+        ignore_y: bool = False,
+        l1_dist: bool = False,
     ) -> float:
         """Distance between two points of the form {"x": x, "y":y, "z":z"}."""
-        return math.sqrt(
-            (p0["x"] - p1["x"]) ** 2
-            + (0 if ignore_y else (p0["y"] - p1["y"]) ** 2)
-            + (p0["z"] - p1["z"]) ** 2
-        )
+        if l1_dist:
+            return (
+                abs(p0["x"] - p1["x"])
+                + (0 if ignore_y else abs(p0["y"] - p1["y"]))
+                + abs(p0["z"] - p1["z"])
+            )
+        else:
+            return math.sqrt(
+                (p0["x"] - p1["x"]) ** 2
+                + (0 if ignore_y else (p0["y"] - p1["y"]) ** 2)
+                + (p0["z"] - p1["z"]) ** 2
+            )
 
     @staticmethod
     def rotation_dist(a: Dict[str, float], b: Dict[str, float]):
@@ -735,6 +746,16 @@ class IThorEnvironment(object):
             return min(dist, 360 - dist)
 
         return sum(deg_dist(a[k], b[k]) for k in ["x", "y", "z"])
+
+    @staticmethod
+    def angle_between_rotations(a: Dict[str, float], b: Dict[str, float]):
+        return np.abs(
+            (180 / (2 * math.pi))
+            * (
+                Rotation.from_euler("xyz", [a[k] for k in "xyz"], degrees=True)
+                * Rotation.from_euler("xyz", [b[k] for k in "xyz"], degrees=True).inv()
+            ).as_rotvec()
+        ).sum()
 
     def closest_object_with_properties(
         self, properties: Dict[str, Any]
@@ -1037,7 +1058,7 @@ class IThorEnvironment(object):
 
     def _check_contains_key(self, key: Tuple[float, float, int, int], add_if_not=True):
         if key not in self.graph:
-            warnings.warn(
+            get_logger().warning(
                 "{} was not in the graph for scene {}.".format(key, self.scene_name)
             )
             if add_if_not:

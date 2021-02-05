@@ -177,7 +177,6 @@ nav:
           - objectnav_robothor_rgb_resnetgru_dagger: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_dagger.md
           - objectnav_robothor_rgbd_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgbd_resnetgru_ddppo.md
           - objectnav_robothor_rgb_resnetgru_ddppo_and_gbc: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_ddppo_and_gbc.md
-          - objectnav_robothor_rgb_resnetgru_ddppo_wsgi: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_ddppo_wsgi.md
           - objectnav_robothor_depth_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_depth_resnetgru_ddppo.md
         - ithor:
           - objectnav_ithor_rgbd_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_rgbd_resnetgru_ddppo.md

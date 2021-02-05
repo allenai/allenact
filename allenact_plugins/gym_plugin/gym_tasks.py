@@ -8,16 +8,16 @@ from gym.utils import seeding
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import Sensor, SensorSuite
 from allenact.base_abstractions.task import Task, TaskSampler
+from allenact.utils.experiment_utils import set_seed
 from allenact.utils.system import get_logger
 from allenact_plugins.gym_plugin.gym_environment import GymEnvironment
 from allenact_plugins.gym_plugin.gym_sensors import GymBox2DSensor
-from allenact.utils.experiment_utils import set_seed
 
 
 class GymTask(Task[gym.Env]):
-    """ Abstract gym task.
+    """Abstract gym task.
 
-        Subclasses need to implement `class_action_names` and `_step`.
+    Subclasses need to implement `class_action_names` and `_step`.
     """
 
     def __init__(
@@ -71,9 +71,8 @@ class GymTask(Task[gym.Env]):
 
 
 class GymContinuousBox2DTask(GymTask):
-    """ Task for a continuous-control gym Box2D Env; it allows interfacing allenact with
-    gym tasks.
-    """
+    """Task for a continuous-control gym Box2D Env; it allows interfacing
+    allenact with gym tasks."""
 
     @classmethod
     def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
@@ -93,8 +92,7 @@ class GymContinuousBox2DTask(GymTask):
 
 
 def task_selector(env_name: str) -> type:
-    """Helper function for `GymTaskSampler`.
-    """
+    """Helper function for `GymTaskSampler`."""
     if env_name in [
         "CarRacing-v0",
         "LunarLanderContinuous-v2",
@@ -106,8 +104,7 @@ def task_selector(env_name: str) -> type:
 
 
 def sensor_selector(env_name: str) -> Sensor:
-    """Helper function for `GymTaskSampler`.
-    """
+    """Helper function for `GymTaskSampler`."""
     if env_name in [
         "CarRacing-v0",
         "LunarLanderContinuous-v2",
@@ -120,8 +117,7 @@ def sensor_selector(env_name: str) -> Sensor:
 
 
 class GymTaskSampler(TaskSampler):
-    """TaskSampler for gym environments.
-    """
+    """TaskSampler for gym environments."""
 
     def __init__(
         self,

@@ -202,10 +202,10 @@ class ScalarMeanTracker(object):
     def sums(self):
         return copy.copy(self._sums)
 
-    def counts(self):
+    def counts(self) -> Dict[str, int]:
         return copy.copy(self._counts)
 
-    def means(self):
+    def means(self) -> Dict[str, float]:
         return OrderedDict(
             [(k, float(self._sums[k] / self._counts[k])) for k in self._sums]
         )

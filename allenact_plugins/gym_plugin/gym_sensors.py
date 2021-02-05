@@ -9,8 +9,7 @@ from allenact_plugins.gym_plugin.gym_environment import GymEnvironment
 
 
 class GymBox2DSensor(Sensor[gym.Env, Task[gym.Env]]):
-    """Wrapper for gym Box2D tasks' observations.
-    """
+    """Wrapper for gym Box2D tasks' observations."""
 
     def __init__(
         self,

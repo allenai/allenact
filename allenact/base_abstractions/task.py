@@ -291,18 +291,6 @@ class TaskSampler(abc.ABC):
 
     @property
     @abstractmethod
-    def total_unique(self) -> Optional[Union[int, float]]:
-        """Total unique tasks.
-
-        # Returns
-
-        Total number of *unique* tasks that can be sampled. Can be
-            float('inf') or, if the total unique is not known, None.
-        """
-        raise NotImplementedError()
-
-    @property
-    @abstractmethod
     def last_sampled_task(self) -> Optional[Task]:
         """Get the most recently sampled Task.
 
