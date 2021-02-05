@@ -21,3 +21,8 @@ class ObjectNavRoboThorRGBPPOWSGINoObjFilterExperimentConfig(
         from ai2thor.wsgi_server import WsgiServer
 
         self.ENV_ARGS["server_class"] = WsgiServer
+
+    def training_pipeline(self, **kwargs):
+        pipeline = super(**kwargs)
+        pipeline.save_interval = 1000000
+        return pipeline
