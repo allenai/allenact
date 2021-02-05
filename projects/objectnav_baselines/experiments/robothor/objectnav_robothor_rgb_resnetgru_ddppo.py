@@ -13,7 +13,7 @@ from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base i
 )
 
 
-class ObjectNaviThorRGBPPOExperimentConfig(
+class ObjectNavThorRGBPPOExperimentConfig(
     ObjectNavRoboThorBaseConfig, ObjectNavMixInPPOConfig, ObjectNavMixInResNetGRUConfig,
 ):
     """An Object Navigation experiment configuration in RoboThor with RGB
