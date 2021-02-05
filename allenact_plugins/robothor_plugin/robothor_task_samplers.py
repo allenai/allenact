@@ -303,11 +303,13 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         loop_dataset: bool = True,
         allow_flipping=False,
         env_class=RoboThorEnvironment,
+        use_object_filter=True,
         **kwargs,
     ) -> None:
         self.rewards_config = rewards_config
         self.env_args = env_args
         self.scenes = scenes
+        self.use_object_filter = use_object_filter
         self.episodes = {
             scene: ObjectNavDatasetTaskSampler.load_dataset(
                 scene, scene_directory + "/episodes"
@@ -442,7 +444,9 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
                     scene_name=scene,
                     filtered_objects=list(
                         set([e["object_id"] for e in self.episodes[scene]])
-                    ),
+                    )
+                    if self.use_object_filter
+                    else None,
                 )
         else:
             self.env = self._create_environment()
@@ -450,7 +454,9 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
                 scene_name=scene,
                 filtered_objects=list(
                     set([e["object_id"] for e in self.episodes[scene]])
-                ),
+                )
+                if self.use_object_filter
+                else None,
             )
         task_info = {"scene": scene, "object_type": episode["object_type"]}
         if len(task_info) == 0:

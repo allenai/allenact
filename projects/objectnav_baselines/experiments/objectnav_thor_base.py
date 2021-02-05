@@ -35,6 +35,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
     VAL_DATASET_DIR: Optional[str] = None
 
     TARGET_TYPES: Optional[Sequence[str]] = None
+    USE_OBJECT_FILTER: bool = True
 
     def __init__(self):
         super().__init__()
@@ -175,6 +176,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
                     else None
                 ),
             },
+            "use_object_filter": self.USE_OBJECT_FILTER,
         }
 
     def train_task_sampler_args(

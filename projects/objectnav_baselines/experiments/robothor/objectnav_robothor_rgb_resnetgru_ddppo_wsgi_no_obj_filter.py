@@ -3,13 +3,17 @@ from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_rgb_re
 )
 
 
-class ObjectNavRoboThorRGBPPOWSGIExperimentConfig(ObjectNaviThorRGBPPOExperimentConfig):
+class ObjectNavRoboThorRGBPPOWSGINoObjFilterExperimentConfig(
+    ObjectNaviThorRGBPPOExperimentConfig
+):
     """An Object Navigation experiment configuration in RoboThor with RGB
     input using WSGI server."""
 
+    USE_OBJECT_FILTER = False
+
     @classmethod
     def tag(cls):
-        return "Objectnav-RoboTHOR-RGB-ResNetGRU-DDPPO-WSGI"
+        return "Objectnav-RoboTHOR-RGB-ResNetGRU-DDPPO-WSGI-NoObjFilter"
 
     def __init__(self):
         super().__init__()
