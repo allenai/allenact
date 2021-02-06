@@ -5,7 +5,7 @@ from subprocess import getoutput
 
 
 def make_package(name, verbose=False):
-    """Prepares sdist for allenact or allenact_plugins"""
+    """Prepares sdist for allenact or allenact_plugins."""
 
     orig_dir = os.getcwd()
     base_dir = os.path.join(os.path.abspath(os.path.dirname(Path(__file__))), "..")
