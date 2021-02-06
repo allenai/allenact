@@ -24,5 +24,5 @@ class ObjectNavRoboThorRGBPPOWSGINoObjFilterExperimentConfig(
 
     def training_pipeline(self, **kwargs):
         pipeline = super().training_pipeline(**kwargs)
-        pipeline.save_interval = 1000000
+        pipeline.save_interval = 500000
         return pipeline
