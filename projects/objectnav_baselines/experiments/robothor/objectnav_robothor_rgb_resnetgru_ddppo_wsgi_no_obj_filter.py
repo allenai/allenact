@@ -9,11 +9,11 @@ class ObjectNavRoboThorRGBPPOWSGINoObjFilterExperimentConfig(
     """An Object Navigation experiment configuration in RoboThor with RGB
     input using WSGI server."""
 
-    USE_OBJECT_FILTER = False
+    USE_OBJECT_FILTER = True
 
     @classmethod
     def tag(cls):
-        return "Objectnav-RoboTHOR-RGB-ResNetGRU-DDPPO-WSGI-NoObjFilter"
+        return "Objectnav-RoboTHOR-RGB-ResNetGRU-DDPPO-WSGI"
 
     def __init__(self):
         super().__init__()
@@ -24,5 +24,5 @@ class ObjectNavRoboThorRGBPPOWSGINoObjFilterExperimentConfig(
 
     def training_pipeline(self, **kwargs):
         pipeline = super().training_pipeline(**kwargs)
-        pipeline.save_interval = 500000
+        pipeline.save_interval = 1000000
         return pipeline
