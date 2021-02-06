@@ -40,6 +40,9 @@ AllenAct is built and backed by the [Allen Institute for AI (AI2)](https://allen
 * _First-class PyTorch support_: One of the few RL frameworks to target PyTorch.
 * _Arbitrary action spaces_: Supporting both discrete and continuous actions.
 
+|Environments|Tasks|Algorithms|
+|------------|-----|----------|
+|[iTHOR](https://ai2thor.allenai.org/ithor/), [RoboTHOR](https://ai2thor.allenai.org/robothor/), [Habitat](https://aihabitat.org/), [MiniGrid](https://github.com/maximecb/gym-minigrid), [OpenAI Gym](https://gym.openai.com/)|[PointNav](https://arxiv.org/pdf/1807.06757.pdf), [ObjectNav](https://arxiv.org/pdf/2006.13171.pdf), [MiniGrid tasks](https://github.com/maximecb/gym-minigrid), [Gym Box2D tasks](https://gym.openai.com/envs/#box2d)|[A2C](https://arxiv.org/pdf/1611.05763.pdf), [PPO](https://arxiv.org/pdf/1707.06347.pdf), [DD-PPO](https://arxiv.org/pdf/1911.00357.pdf), [DAgger](https://www.ri.cmu.edu/pub_files/2011/4/Ross-AISTATS11-NoRegret.pdf), Off-policy Imitation|
 
 ## Contributions
 We welcome contributions from the greater community. If you would like to make such a contributions we recommend first submitting an [issue](https://github.com/allenai/allenact/issues) describing your proposed improvement. Doing so can ensure we can validate your suggestions before you spend a great deal of time upon them. Improvements and bug fixes should be made via a pull request from your fork of the repository at [https://github.com/allenai/allenact](https://github.com/allenai/allenact).

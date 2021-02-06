@@ -13,62 +13,31 @@ In order to install `allenact` and/or its requirements we recommend creating a n
 [python virtual environment](https://docs.python.org/3/tutorial/venv.html) and installing all
 of the below requirements into this virtual environment.
 
-### Installing requirements with `pip`
+## Installing requirements with `pip`
 
-There are three main installation paths regarding whether you are interested in installing
+There are three main installation paths depending on how you wish to use `allenact`.
 
-1. Just the main `allenact` framework (without any plugin).
-1. The main framework and one or more of the available plugins.
-1. The entire library, e.g. for development of more advanced features like a new training algorithm.
+1. You want to use the `allenact` abstractions and training engine for your own task/environment and don't really 
+care about using any of our plugins that offer additional support (in the form of models, sensors, task samplers, etc.)
+for select tasks/environments like AI2-THOR, Habitat, and MiniGrid.
+    - If this sounds like you, install the [standalone framework](#standalone-framework).
+1. You want to use `allenact` as above but would also like to use some of our additional plugins.
+    - If this sounds like you, install the [framework and plugins](#framework-and-plugins).
+1. You want full access to everything in `allenact` (including all plugins and all of our projects and baselines)
+   and want to have the option to edit the internal implementation of `allenact` to suit your desire. 
+    - If this sounds like you, install the [full library](#full-library).   
 
-Additionally, we also provide instructions to pip install from github.
 
-#### Standalone framework
+### Standalone framework
+
+You can install `allenact` easily using pip:
 
 ```bash
 pip install allenact
 ```
 
-#### Framework and plugins
-
-To install `allenact` and all available plugins, run
-
-```bash
-pip install allenact allenact_plugins[all]
-```
-
-or, for a specific plugin, like for example `ithor_plugin`:
-
-```bash
-pip install allenact allenact_plugins[ithor]
-```
-
-#### Full library
-
-Clone the repository to your local machine and move into the top-level directory
-
-```bash
-git clone git@github.com:allenai/allenact.git
-cd allenact
-```
-
-All requirements may be installed by running the following command:
-
-```bash
-pip install -r requirements.txt; pip install -r dev_requirements.txt
-```
-
-or, alternatively, using the experimental `conda` setup described below.
-
-##### Plugins extra requirements
-
-To install the specific requirements of each plugin, we need to additionally call
-
-```bash
-pip install -r allenact_plugins/<PLUGIN_NAME>_plugin/extra_requirements.txt
-```
-
-from the top-level directory.
+If you'd like to install the latest development version of `allenact` (possibly unstable) directly from GitHub see the
+next section.
 
 #### Bleeding edge pip install
 
@@ -89,18 +58,54 @@ to install all plugins.
 Depending on your machine configuration, you may need to use `pip3` instead of `pip` in the commands
 above.
 
-### Installing requirements with `pipenv`
+### Framework and plugins
 
-If you have already installed [`pipenv`](https://pipenv.kennethreitz.org/en/latest/), you may
-run the following to install all requirements.
+To install `allenact` and all available plugins, run
 
 ```bash
-pipenv install --skip-lock -r requirements.txt
+pip install allenact allenact_plugins[all]
 ```
 
-Please see the documentation of `pipenv` to understand how to use the newly created virtual environment.
+which will install `allenact` and `allenact_plugins` packages along with the requirements for _all_
+of the plugins (when possible). If you only want to install the requirements for some subset of plugins, you can
+specify these plugins with the `allenact_plugins[plugin1,plugin2]` notation. For instance, to install requirements
+for the `ithor_plugin` and the `minigrid_plugin`, simply run:
 
-### Installing requirements with `conda`
+```bash
+pip install allenact allenact_plugins[ithor,minigrid]
+```
+
+A list of all available plugins can be found [here](https://github.com/allenai/allenact/tree/master/allenact_plugins).
+
+### Full library
+
+Clone the `allenact` repository to your local machine and move into the top-level directory
+
+```bash
+git clone git@github.com:allenai/allenact.git
+cd allenact
+```
+
+All requirements for `allenact` (not including plugin requirements) may be installed by running the following command:
+
+```bash
+pip install -r requirements.txt; pip install -r dev_requirements.txt
+```
+
+To install plugin requirements, see below.
+
+#### Plugins extra requirements
+
+To install the specific requirements of each plugin, we need to additionally call
+
+```bash
+pip install -r allenact_plugins/<PLUGIN_NAME>_plugin/extra_requirements.txt
+```
+
+from the top-level directory.
+
+<!--
+#### Installing requirements with `conda`
 
 Clone the repository to your local machine and move into the top-level directory
 
@@ -155,3 +160,4 @@ after which you can run everything as you would normally.
 ### Installing supported environments
 
 We also provide installation instructions for the environments supported in AllenAct [here](../installation/installation-framework.md).
+-->

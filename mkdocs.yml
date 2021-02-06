@@ -253,6 +253,8 @@ nav:
       - test_frozen_attribs: api/tests/multiprocessing/test_frozen_attribs.md
     - utils:
       - test_spaces: api/tests/utils/test_spaces.md
+    - vision:
+      - test_pillow_rescaling: api/tests/vision/test_pillow_rescaling.md
     - sync_algs_cpu:
       - test_to_to_obj_trains: api/tests/sync_algs_cpu/test_to_to_obj_trains.md
 markdown_extensions:
