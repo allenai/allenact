@@ -1,0 +1,7 @@
+channels:
+  - defaults
+  - pytorch
+dependencies:
+  - cpuonly
+  - pytorch >=1.6.0,<1.7.0
+  - torchvision>=0.7.0
