@@ -1,0 +1,5 @@
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - gym-box2d>=0.17.0,<0.18.0

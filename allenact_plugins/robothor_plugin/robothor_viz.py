@@ -11,6 +11,7 @@ from PIL import Image, ImageDraw
 from ai2thor.controller import Controller
 from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
+import colour as col
 
 from allenact.utils.system import get_logger
 from allenact.utils.viz_utils import TrajectoryViz
@@ -295,8 +296,6 @@ class ThorViz(TrajectoryViz):
         line_opacity: float = 1.0,
         trajectory_start_end_color_str: Tuple[str, str] = ("red", "green"),
     ) -> np.ndarray:
-        import colour as col
-
         if single_color:
             frame = ThorViz.add_lines_to_map(
                 list(map(ThorViz.position_to_tuple, positions)),

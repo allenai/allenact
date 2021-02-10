@@ -1,0 +1,5 @@
+dependencies:
+  - patsy>=0.5.1
+  - pip
+  - pip:
+      - gym-minigrid>=1.0.1

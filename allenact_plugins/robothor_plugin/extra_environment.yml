@@ -1,0 +1,11 @@
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - ai2thor>=2.5.3
+  - numba
+  - pip
+  - colour
+  - pip:
+      - numpy-quaternion
+      - pyquaternion>=0.9.9

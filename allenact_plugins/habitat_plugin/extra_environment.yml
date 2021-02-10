@@ -1,0 +1,12 @@
+channels:
+  - defaults
+  - conda-forge
+  - aihabitat
+dependencies:
+  - habitat-sim=0.1.5
+  - numba
+  - pip
+  - pip:
+      - "--editable=git+https://github.com/Lucaweihs/habitat-lab.git@99124c785bd5ca51e321ea20462f71071cd43ae2#egg=habitat"
+      - numpy-quaternion
+      - pyquaternion>=0.9.9
