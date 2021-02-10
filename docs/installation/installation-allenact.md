@@ -14,7 +14,7 @@ In order to install `allenact` and/or its requirements we recommend creating a n
 of the below requirements into this virtual environment.
 
 Alternatively, we also document how to [install a conda environment](#installing-a-conda-environment)
-with all the requirements, which is specially useful if you plan to train models in [Habitat](https://aihabitat.org/).
+with all the requirements, which is especially useful if you plan to train models in [Habitat](https://aihabitat.org/).
 
 ## Different ways to use `allenact`
 
