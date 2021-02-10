@@ -1,10 +1,8 @@
 # Installation of supported environments
 
-In general, each supported environment can be installed by just following the instructions
-to [install the full library](../installation/installation-allenact.md#full-library) and
-[the specific requirements for each used plugin](../installation/installation-allenact.md#plugins-extra-requirements).
-
-Alternatively, they can also be [installed via pip](../installation/installation-allenact.md#framework-and-plugins) or
+In general, each supported environment can be installed by just following the instructions to
+[install the full library and specific requirements of every plugin](../installation/installation-allenact.md#full-library)
+either [via pip](../installation/installation-allenact.md#installing-requirements-with-pip) or
 [via Conda](../installation/installation-allenact.md#installing-a-conda-environment).
 
 Below we provide additional installation instructions for a number of environments that we support and

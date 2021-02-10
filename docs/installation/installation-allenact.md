@@ -14,9 +14,9 @@ In order to install `allenact` and/or its requirements we recommend creating a n
 of the below requirements into this virtual environment.
 
 Alternatively, we also document how to [install a conda environment](#installing-a-conda-environment)
-with all the requirements.
+with all the requirements, which is specially useful if you plan to train models in [Habitat](https://aihabitat.org/).
 
-## Installing requirements with `pip`
+## Different ways to use `allenact`
 
 There are three main installation paths depending on how you wish to use `allenact`.
 
@@ -31,7 +31,7 @@ for select tasks/environments like AI2-THOR, Habitat, and MiniGrid.
     - If this sounds like you, install the [full library](#full-library).   
 
 
-### Standalone framework
+## Standalone framework
 
 You can install `allenact` easily using pip:
 
@@ -42,7 +42,7 @@ pip install allenact
 If you'd like to install the latest development version of `allenact` (possibly unstable) directly from GitHub see the
 next section.
 
-#### Bleeding edge pip install
+### Bleeding edge pip install
 
 To install the latest `allenact` framework, you can use
 
@@ -61,7 +61,7 @@ to install all plugins.
 Depending on your machine configuration, you may need to use `pip3` instead of `pip` in the commands
 above.
 
-### Framework and plugins
+## Framework and plugins
 
 To install `allenact` and all available plugins, run
 
@@ -80,7 +80,7 @@ pip install allenact allenact_plugins[ithor,minigrid]
 
 A list of all available plugins can be found [here](https://github.com/allenai/allenact/tree/master/allenact_plugins).
 
-### Full library
+## Full library
 
 Clone the `allenact` repository to your local machine and move into the top-level directory
 
@@ -88,6 +88,10 @@ Clone the `allenact` repository to your local machine and move into the top-leve
 git clone git@github.com:allenai/allenact.git
 cd allenact
 ```
+
+Below we describe two alternative ways to install all dependencies via `pip` or `conda`.
+
+### Installing requirements with `pip`
 
 All requirements for `allenact` (not including plugin requirements) may be installed by running the following command:
 
@@ -107,20 +111,12 @@ pip install -r allenact_plugins/<PLUGIN_NAME>_plugin/extra_requirements.txt
 
 from the top-level directory.
 
-
-## Installing a `conda` environment
+### Installing a `conda` environment
 
 _If you are unfamiliar with Conda, please familiarize yourself with their [introductory documentation](https://docs.conda.io/projects/conda/en/latest/).
 If you have not already, you will need to first [install Conda (i.e. Anaconda or Miniconda)](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
 on your machine. We suggest installing [Miniconda](https://docs.conda.io/projects/conda/en/latest/glossary.html#miniconda-glossary)
 as it's relatively lightweight._
-
-Clone the `allenact` repository to your local machine and move into the top-level directory
-
-```bash
-git clone git@github.com:allenai/allenact.git
-cd allenact
-```
 
 The `conda` folder contains YAML files specifying [Conda environments](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file)
 compatible with AllenAct. These environment files include: 
@@ -164,7 +160,7 @@ or the CPU-only version:
 conda env update --file ./conda/environment-cpu.yml --name allenact
 ```
 
-### Using the `conda` environment
+#### Using the `conda` environment
 
 Now that you've installed the conda environment as above, you can activate it by running:
 
@@ -175,7 +171,7 @@ conda activate allenact
 after which you can run everything as you would normally.
 
 
-### Installing supported environments with `conda`
+#### Installing supported environments with `conda`
 
 Each supported plugin contains a YAML environment file that can be applied upon the existing `allenact` environment. To
 install the specific requirements of each plugin, we need to additionally call
