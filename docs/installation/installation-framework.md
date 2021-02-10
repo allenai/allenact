@@ -1,10 +1,9 @@
 # Installation of supported environments
 
-In general, each supported environment can be installed by just following the instructions
-to [install the full library](../installation/installation-allenact.md#full-library) and
-[the specific requirements for each used plugin](../installation/installation-allenact.md#plugins-extra-requirements).
-
-Alternatively, they can also be [installed via pip](../installation/installation-allenact.md#framework-and-plugins).
+In general, each supported environment can be installed by just following the instructions to
+[install the full library and specific requirements of every plugin](../installation/installation-allenact.md#full-library)
+either [via pip](../installation/installation-allenact.md#installing-requirements-with-pip) or
+[via Conda](../installation/installation-allenact.md#installing-a-conda-environment).
 
 Below we provide additional installation instructions for a number of environments that we support and
 provide some guidance for problems commonly experienced when using these environments.
@@ -13,6 +12,7 @@ provide some guidance for problems commonly experienced when using these environ
 
 The first time you will run an experiment with `iTHOR` (or any script that uses `ai2thor`)
 the library will download all of the assets it requires to render the scenes automatically.
+However, the datasets must be manually downloaded as described [here](../installation/download-datasets.md).
 
 **Trying to use `iTHOR` on a machine without an attached display?** 
 
@@ -84,19 +84,25 @@ Habitat has recently released the option to install their simulator using `conda
 to manually build dependencies or use Docker. This does not guarantee that the installation process
 is completely painless (it is difficult to avoid all possible build issues) but we've found it
 to be a nice alternative to using Docker. To use this installation option please first
-install an AllenAct `conda` environment using the instructions available [below](installing-a-conda-environment).
-After installing this environment, you can then install `habitat-sim` by running:
+install an AllenAct `conda` environment using the instructions available [here](../installation/installation-allenact.md#installing-a-conda-environment).
+After installing this environment, you can then install `habitat-sim` and `habitat-lab` by running:
 
 If you are on a machine with an attached display:
 ```bash
-conda install habitat-sim=0.1.5 -c conda-forge -c aihabitat --name allenact
+export MY_ENV_NAME=allenact
+export CONDA_BASE="$(dirname $(dirname "${CONDA_EXE}"))"
+PIP_SRC="${CONDA_BASE}/envs/${MY_ENV_NAME}/pipsrc" conda env update --file allenact_plugins/habitat_plugin/extra_environment.yml --name $MY_ENV_NAME
 ```
 
-If you are on a machine without an attached display (e.g. a server):
+If you are on a machine without an attached display (e.g. a server), replace the last command by:
 ```bash
-conda install habitat-sim=0.1.5 headless -c conda-forge -c aihabitat --name allenact
+PIP_SRC="${CONDA_BASE}/envs/${MY_ENV_NAME}/pipsrc" conda env update --file allenact_plugins/habitat_plugin/extra_environment_headless.yml --name $MY_ENV_NAME
 ```
 
+After these steps, feel free to proceed to download the required scene assets and task-specific dataset files as
+described above.
+
+<!--
 #### Installing a Conda environment
 
 _If you are unfamiliar with Conda, please familiarize yourself with their [introductory documentation](https://docs.conda.io/projects/conda/en/latest/).
@@ -114,9 +120,14 @@ cd allenact
 The `conda` folder contains YAML files specifying [Conda environments](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file)
 compatible with AllenAct. These environment files include: 
 
-* `environment-base.yml` - A base environment file to be used on machines where GPU support is not needed (everything
+* `environment-base.yml` - A base environment file to be used on machines where the version of CUDA on your machine
+matches the one of the latest `cudatoolkit` in conda.
+* `environment-dev.yml` - Additional dev dependencies.
+* `environment-<CUDA_VERSION>.yml` - Additional dependencies, where `<CUDA_VERSION>` is the CUDA version used on your
+machine (if you are using linux, you might find this version by running `/usr/local/cuda/bin/nvcc --version`).
+* `environment-cpu.yml` - Additional dependencies to be used on machines where GPU support is not needed (everything
  will be run on the CPU).
-* `environment-<CUDA_VERSION>.yml` - where `<CUDA_VERSION>` is the CUDA version used on your machine (if you are using linux, you can generally find this version by running `/usr/local/cuda/bin/nvcc --version`).
+ 
 
 For the moment let's assume you're using `environment-base.yml` above. To install a conda environment with name `allenact`
  using this file you can simply run the following (*this will take a few minutes*):
@@ -137,6 +148,17 @@ PIP_SRC="${CONDA_BASE}/envs/${MY_ENV_NAME}/pipsrc" conda env create --file ./con
 These additional commands tell conda to place these dependencies under the `${CONDA_BASE}/envs/${MY_ENV_NAME}/pipsrc` directory rather
 than under `src`, this is more in line with where we'd expect dependencies to be placed when running `pip install ...`.
 
+If needed, you can use one of the `environment-<CUDA_VERSION>.yml` environment files to install the proper version of
+the `cudatoolkit` by running:
+
+```bash
+conda env update --file ./conda/environment-<CUDA_VERSION>.yml --name allenact
+```
+or the CPU-only version:
+```bash
+conda env update --file ./conda/environment-cpu.yml --name allenact
+```
+
 ##### Using the Conda environment
 
 Now that you've installed the conda environment as above, you can activate it by running:
@@ -146,3 +168,4 @@ conda activate allenact
 ```
 
 after which you can run everything as you would normally.
+-->

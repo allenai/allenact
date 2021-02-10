@@ -2,6 +2,6 @@ channels:
   - defaults
   - pytorch
 dependencies:
-  - cudatoolkit=10.1
+  - cpuonly
   - pytorch >=1.6.0,<1.7.0
   - torchvision>=0.7.0

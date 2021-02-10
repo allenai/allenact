@@ -33,6 +33,15 @@ def make_package(name, verbose=False):
     if verbose:
         print(output)
 
+    # create new source file with version
+    getoutput(
+        f"printf '__version__ = \"{__version__}\"\n' >> {name}-{__version__}/{name}/_version.py"
+    )
+    # include it in sources
+    getoutput(
+        f'printf "\n{name}/_version.py" >> {name}-{__version__}/{name}.egg-info/SOURCES.txt'
+    )
+
     # recompress tar.gz
     output = getoutput(f"tar zcvf {name}-{__version__}.tar.gz {name}-{__version__}/")
     if verbose:
