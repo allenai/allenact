@@ -3,7 +3,7 @@ from abc import ABC
 import gym
 import torch.nn as nn
 
-from allenact.base_abstractions.sensor import DepthSensor, RGBSensor
+from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 
 # fmt: off
 try:

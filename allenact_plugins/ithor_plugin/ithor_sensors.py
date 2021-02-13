@@ -3,7 +3,8 @@ from typing import Any, Dict, Optional, List, Union, Sequence
 import gym
 import numpy as np
 
-from allenact.base_abstractions.sensor import Sensor, RGBSensor
+from allenact.base_abstractions.sensor import Sensor
+from allenact.embodiedai.sensors.vision_sensors import RGBSensor
 from allenact.base_abstractions.task import Task
 from allenact.utils.misc_utils import prepare_locals_for_super
 from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment

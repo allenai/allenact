@@ -8,7 +8,8 @@ import torch
 
 from allenact.base_abstractions.experiment_config import MachineParams
 from allenact.base_abstractions.preprocessor import SensorPreprocessorGraph
-from allenact.base_abstractions.sensor import SensorSuite, DepthSensor, RGBSensor
+from allenact.base_abstractions.sensor import SensorSuite
+from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 from allenact.base_abstractions.task import TaskSampler
 from allenact.utils.experiment_utils import evenly_distribute_count_into_bins
 from allenact.utils.system import get_logger
