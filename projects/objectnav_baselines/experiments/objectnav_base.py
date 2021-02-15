@@ -10,18 +10,19 @@ from allenact.utils.experiment_utils import Builder
 class ObjectNavBaseConfig(ExperimentConfig, ABC):
     """The base object navigation configuration file."""
 
-    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
-    SENSORS: Optional[Sequence[Sensor]] = None
-
     STEP_SIZE = 0.25
     ROTATION_DEGREES = 30.0
     VISIBILITY_DISTANCE = 1.0
     STOCHASTIC = True
+    HORIZONTAL_FIELD_OF_VIEW = 79
 
     CAMERA_WIDTH = 400
     CAMERA_HEIGHT = 300
     SCREEN_SIZE = 224
     MAX_STEPS = 500
+
+    ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
+    SENSORS: Sequence[Sensor] = []
 
     def __init__(self):
         self.REWARD_CONFIG = {

@@ -224,9 +224,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self._success: Optional[bool] = False
         self.mirror = task_info["mirrored"]
 
-        self.last_geodesic_distance = self.env.distance_to_object_type(
-            self.task_info["object_type"]
-        )
+        self._all_metadata_available = env.all_metadata_available
 
         self._rewards: List[float] = []
         self._distance_to_goal: List[float] = []
@@ -240,8 +238,14 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self.task_info["taken_actions"] = []
         self.task_info["action_names"] = self.action_names()
 
-        self.optimal_distance = self.last_geodesic_distance
-        self.closest_geo_distance = self.last_geodesic_distance
+        if self._all_metadata_available:
+            self.last_geodesic_distance = self.env.distance_to_object_type(
+                self.task_info["object_type"]
+            )
+            self.optimal_distance = self.last_geodesic_distance
+            self.closest_geo_distance = self.last_geodesic_distance
+
+        self.last_expert_action: Optional[int] = None
 
     @property
     def action_space(self):
@@ -382,21 +386,23 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         if not self.is_done():
             return {}
 
-        dist2tget = self.env.distance_to_object_type(self.task_info["object_type"])
+        metrics = super(ObjectNavTask, self).metrics()
+        if self._all_metadata_available:
+            dist2tget = self.env.distance_to_object_type(self.task_info["object_type"])
 
-        spl = spl_metric(
-            success=self._success,
-            optimal_distance=self.optimal_distance,
-            travelled_distance=self.travelled_distance,
-        )
+            spl = spl_metric(
+                success=self._success,
+                optimal_distance=self.optimal_distance,
+                travelled_distance=self.travelled_distance,
+            )
 
-        metrics = {
-            **super(ObjectNavTask, self).metrics(),
-            "success": self._success,
-            "total_reward": np.sum(self._rewards),
-            "dist_to_target": dist2tget,
-            "spl": 0 if spl is None else spl,
-        }
+            metrics = {
+                **metrics,
+                "success": self._success,
+                "total_reward": np.sum(self._rewards),
+                "dist_to_target": dist2tget,
+                "spl": 0 if spl is None else spl,
+            }
         return metrics
 
     def query_expert(self, end_action_only: bool = False, **kwargs) -> Tuple[int, bool]:

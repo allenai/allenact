@@ -249,6 +249,7 @@ class ObjectNavTaskSampler(TaskSampler):
                         "z": 0.0,
                     },
                     "horizon": 0.0,
+                    "standing": True
                 }
             )
             assert self.env.last_action_success, "Failed to reset agent for {}".format(
@@ -434,24 +435,22 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             self.episode_index = 0
         scene = self.scenes[self.scene_index]
         episode = self.episodes[scene][self.episode_index]
-        if self.env is not None:
-            if scene.replace("_physics", "") != self.env.scene_name.replace(
-                "_physics", ""
-            ):
-                self.env.reset(
-                    scene_name=scene,
-                    filtered_objects=list(
-                        set([e["object_id"] for e in self.episodes[scene]])
-                    ),
-                )
-        else:
+        if self.env is None:
             self.env = self._create_environment()
-            self.env.reset(
-                scene_name=scene,
-                filtered_objects=list(
-                    set([e["object_id"] for e in self.episodes[scene]])
-                ),
-            )
+
+        if scene.replace("_physics", "") != self.env.scene_name.replace("_physics", ""):
+            self.env.reset(scene_name=scene)
+        else:
+            self.env.reset_object_filter()
+
+        self.env.set_object_filter(
+            object_ids=[
+                o["objectId"]
+                for o in self.env.last_event.metadata["objects"]
+                if o["objectType"] == episode["object_type"]
+            ]
+        )
+
         task_info = {"scene": scene, "object_type": episode["object_type"]}
         if len(task_info) == 0:
             get_logger().warning(
@@ -460,8 +459,9 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             )
         task_info["initial_position"] = episode["initial_position"]
         task_info["initial_orientation"] = episode["initial_orientation"]
-        task_info["distance_to_target"] = episode["shortest_path_length"]
-        task_info["path_to_target"] = episode["shortest_path"]
+        task_info["initial_horizon"] = episode.get("initial_horizon", 0)
+        task_info["distance_to_target"] = episode.get("shortest_path_length")
+        task_info["path_to_target"] = episode.get("shortest_path")
         task_info["object_type"] = episode["object_type"]
         task_info["id"] = episode["id"]
         if self.allow_flipping and random.random() > 0.5:
@@ -473,7 +473,9 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         if self.max_tasks is not None:
             self.max_tasks -= 1
         if not self.env.teleport(
-            episode["initial_position"], episode["initial_orientation"]
+            pose=episode["initial_position"],
+            rotation=episode["initial_orientation"],
+            horizon=episode.get("initial_horizon", 0),
         ):
             return self.next_task()
         self._last_sampled_task = ObjectNavTask(
