@@ -9,6 +9,7 @@ from typing import Dict, Tuple, List, Optional, Type
 
 from setproctitle import setproctitle as ptitle
 
+from allenact import __version__
 from allenact.algorithms.onpolicy_sync.runner import OnPolicyRunner
 from allenact.base_abstractions.experiment_config import ExperimentConfig
 from allenact.utils.system import get_logger, init_logging, HUMAN_LOG_LEVELS
@@ -166,6 +167,10 @@ def get_args():
         help="disable saving the used config in the output directory",
     )
     parser.set_defaults(disable_config_saving=False)
+
+    parser.add_argument(
+        "--version", action="version", version=f"allenact {__version__}"
+    )
 
     return parser.parse_args()
 
