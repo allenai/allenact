@@ -39,6 +39,8 @@ to `storage/pointnav-robothor-rgb`.
 
 The experiment configs found under the `projects/objectnav_baselines/experiments/robothor` directory are designed
 to conform to the requirements of the [RoboTHOR ObjectNav 2021 Challenge](https://ai2thor.allenai.org/robothor/cvpr-2021-challenge).
+
+### Training a baseline
 To train a baseline ResNet->GRU model taking RGB-D inputs, run the following command
 ```bash
 python main.py projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgbd_resnet_ddppo.py -o storage/objectnav-robothor-rgbd
@@ -48,6 +50,7 @@ across all available GPUs. See the `TRAIN_GPU_IDS` constant in `experiments/obje
 the `NUM_PROCESSES` constant in `experiments/robothor/objectnav_robothor_base.py` if you'd like to change which
 GPUs are used or how many processes are run respectively.
 
+### Downloading our pretrained model checkpoint
 We provide a pretrained model obtained allowing the above command to run for all 300M training steps and then selecting
 the model checkpoint with best validation-set performance (for us occuring at ~170M training steps). You can download 
 this model checkpoint by running
@@ -58,7 +61,10 @@ from the top-level directory. This will download the pretrained model weights an
 ```bash
 pretrained_model_ckpts/robothor-objectnav-challenge-2021/Objectnav-RoboTHOR-RGBD-ResNetGRU-DDPPO/2021-02-09_22-35-15/exp_Objectnav-RoboTHOR-RGBD-ResNetGRU-DDPPO_0.2.0a_300M__stage_00__steps_000170207237.pt
 ```
-You can then run inference on this model (on the test dataset) by running
+
+### Running inference on the pretrained model
+
+You can run inference on the above pretrained model model (on the test dataset) by running
 ```bash
 export SAVED_MODEL_PATH=pretrained_model_ckpts/robothor-objectnav-challenge-2021/Objectnav-RoboTHOR-RGBD-ResNetGRU-DDPPO/2021-02-09_22-35-15/exp_Objectnav-RoboTHOR-RGBD-ResNetGRU-DDPPO_0.2.0a_300M__stage_00__steps_000170207237.pt
 python main.py projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgbd_resnetgru_ddppo.py -c $SAVED_MODEL_PATH -t 2021-02-09_22-35-15
