@@ -141,9 +141,9 @@ class RoboThorEnvironment:
         It might return -1.0 for unreachable targets.
         """
         assert 0 <= agent_id < self.agent_count
-        assert self.all_metadata_available, (
-            "`distance_to_object_type` cannot be called when `self.all_metadata_available` is `False`."
-        )
+        assert (
+            self.all_metadata_available
+        ), "`distance_to_object_type` cannot be called when `self.all_metadata_available` is `False`."
 
         def retry_dist(position: Dict[str, float], object_type: str):
             allowed_error = 0.05
@@ -224,9 +224,9 @@ class RoboThorEnvironment:
         It might return -1.0 for unreachable targets.
         """
         assert 0 <= agent_id < self.agent_count
-        assert self.all_metadata_available, (
-            "`distance_to_object_type` cannot be called when `self.all_metadata_available` is `False`."
-        )
+        assert (
+            self.all_metadata_available
+        ), "`distance_to_object_type` cannot be called when `self.all_metadata_available` is `False`."
 
         def retry_dist(position: Dict[str, float], target: Dict[str, float]):
             allowed_error = 0.05
@@ -297,7 +297,10 @@ class RoboThorEnvironment:
             self.controller.reset(scene_name)
             assert self.last_action_success, "Could not reset to new scene"
 
-            if self.all_metadata_available and scene_name not in self.scene_to_reachable_positions:
+            if (
+                self.all_metadata_available
+                and scene_name not in self.scene_to_reachable_positions
+            ):
                 self.scene_to_reachable_positions[scene_name] = copy.deepcopy(
                     self.currently_reachable_points
                 )
@@ -311,15 +314,17 @@ class RoboThorEnvironment:
         self, seed: Optional[int] = None
     ) -> Dict[str, Union[Dict[str, float], float]]:
         """Returns a random reachable location in the scene."""
-        assert self.all_metadata_available, (
-            "`random_reachable_state` cannot be called when `self.all_metadata_available` is `False`."
-        )
+        assert (
+            self.all_metadata_available
+        ), "`random_reachable_state` cannot be called when `self.all_metadata_available` is `False`."
 
         if seed is not None:
             random.seed(seed)
         # xyz = random.choice(self.currently_reachable_points)
         assert len(self.scene_to_reachable_positions[self.scene_name]) > 10
-        xyz = copy.deepcopy(random.choice(self.scene_to_reachable_positions[self.scene_name]))
+        xyz = copy.deepcopy(
+            random.choice(self.scene_to_reachable_positions[self.scene_name])
+        )
         rotation = random.choice(
             np.arange(0.0, 360.0, self.config["rotateStepDegrees"])
         )
@@ -369,9 +374,9 @@ class RoboThorEnvironment:
         return self.agent_state(agent_id=agent_id)
 
     def known_good_locations_list(self):
-        assert self.all_metadata_available, (
-            "`known_good_locations_list` cannot be called when `self.all_metadata_available` is `False`."
-        )
+        assert (
+            self.all_metadata_available
+        ), "`known_good_locations_list` cannot be called when `self.all_metadata_available` is `False`."
         return self.scene_to_reachable_positions[self.scene_name]
 
     @property

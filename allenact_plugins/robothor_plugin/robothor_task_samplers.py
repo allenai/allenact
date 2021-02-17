@@ -249,7 +249,7 @@ class ObjectNavTaskSampler(TaskSampler):
                         "z": 0.0,
                     },
                     "horizon": 0.0,
-                    "standing": True
+                    "standing": True,
                 }
             )
             assert self.env.last_action_success, "Failed to reset agent for {}".format(

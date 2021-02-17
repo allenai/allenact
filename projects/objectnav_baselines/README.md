@@ -45,7 +45,7 @@ To train a baseline ResNet->GRU model taking RGB-D inputs, run the following com
 ```bash
 python main.py projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgbd_resnet_ddppo.py -o storage/objectnav-robothor-rgbd
 ```
-Note that, by default, when using a machine with a GPUs, the above experiment will attempt to train using 60 parallel processes
+By default, when using a machine with a GPU, the above experiment will attempt to train using 60 parallel processes
 across all available GPUs. See the `TRAIN_GPU_IDS` constant in `experiments/objectnav_thor_base.py` and
 the `NUM_PROCESSES` constant in `experiments/robothor/objectnav_robothor_base.py` if you'd like to change which
 GPUs are used or how many processes are run respectively.
