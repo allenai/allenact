@@ -273,7 +273,7 @@ class TeacherForcingDistr(Distr):
         self.num_active_samplers = None
 
     def expert_action_space(self):
-        obs_space = self.distr.action_spaces
+        obs_space = self.engine.vector_tasks.action_spaces[0]
 
         if not self.use_dag:
             return Expert.flagged_group_space(obs_space)
