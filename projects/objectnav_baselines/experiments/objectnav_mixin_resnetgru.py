@@ -23,7 +23,9 @@ class ObjectNavMixInResNetGRUConfig(ObjectNavBaseConfig):
     @classmethod
     def preprocessors(cls) -> Sequence[Union[Preprocessor, Builder[Preprocessor]]]:
         preprocessors = []
-        if any(isinstance(s, RGBSensor) for s in cls.SENSORS):
+
+        rgb_sensor = next((s for s in cls.SENSORS if isinstance(s, RGBSensor)), None)
+        if rgb_sensor is not None:
             preprocessors.append(
                 ResNetPreprocessor(
                     input_height=cls.SCREEN_SIZE,
@@ -33,12 +35,15 @@ class ObjectNavMixInResNetGRUConfig(ObjectNavBaseConfig):
                     output_dims=512,
                     pool=False,
                     torchvision_resnet_model=models.resnet18,
-                    input_uuids=["rgb_lowres"],
+                    input_uuids=[rgb_sensor.uuid],
                     output_uuid="rgb_resnet",
                 )
             )
 
-        if any(isinstance(s, DepthSensor) for s in cls.SENSORS):
+        depth_sensor = next(
+            (s for s in cls.SENSORS if isinstance(s, DepthSensor)), None
+        )
+        if depth_sensor is not None:
             preprocessors.append(
                 ResNetPreprocessor(
                     input_height=ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
@@ -48,7 +53,7 @@ class ObjectNavMixInResNetGRUConfig(ObjectNavBaseConfig):
                     output_dims=512,
                     pool=False,
                     torchvision_resnet_model=models.resnet18,
-                    input_uuids=["depth_lowres"],
+                    input_uuids=[depth_sensor.uuid],
                     output_uuid="depth_resnet",
                 )
             )

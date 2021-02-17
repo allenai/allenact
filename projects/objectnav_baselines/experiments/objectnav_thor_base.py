@@ -14,6 +14,7 @@ from allenact.base_abstractions.sensor import SensorSuite, ExpertActionSensor
 from allenact.base_abstractions.task import TaskSampler
 from allenact.utils.experiment_utils import evenly_distribute_count_into_bins
 from allenact.utils.system import get_logger
+from allenact_plugins.ithor_plugin.ithor_util import horizontal_to_vertical_fov
 from allenact_plugins.robothor_plugin.robothor_sensors import DepthSensorThor
 from allenact_plugins.robothor_plugin.robothor_task_samplers import (
     ObjectNavDatasetTaskSampler,
@@ -33,25 +34,35 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
 
     TRAIN_DATASET_DIR: Optional[str] = None
     VAL_DATASET_DIR: Optional[str] = None
+    TEST_DATASET_DIR: Optional[str] = None
 
     TARGET_TYPES: Optional[Sequence[str]] = None
 
-    def __init__(self):
-        super().__init__()
+    THOR_COMMIT_ID: Optional[str] = None
 
-        self.ENV_ARGS = dict(
-            width=self.CAMERA_WIDTH,
-            height=self.CAMERA_HEIGHT,
+    @classmethod
+    def env_args(cls):
+        assert cls.THOR_COMMIT_ID is not None
+
+        return dict(
+            width=cls.CAMERA_WIDTH,
+            height=cls.CAMERA_HEIGHT,
+            commit_id=cls.THOR_COMMIT_ID,
             continuousMode=True,
-            applyActionNoise=self.STOCHASTIC,
+            applyActionNoise=cls.STOCHASTIC,
             agentType="stochastic",
-            rotateStepDegrees=self.ROTATION_DEGREES,
-            visibilityDistance=self.VISIBILITY_DISTANCE,
-            gridSize=self.STEP_SIZE,
+            rotateStepDegrees=cls.ROTATION_DEGREES,
+            visibilityDistance=cls.VISIBILITY_DISTANCE,
+            gridSize=cls.STEP_SIZE,
             snapToGrid=False,
-            agentMode="bot",
+            agentMode="locobot",
+            fieldOfView=horizontal_to_vertical_fov(
+                horizontal_fov_in_degrees=cls.HORIZONTAL_FIELD_OF_VIEW,
+                width=cls.CAMERA_WIDTH,
+                height=cls.CAMERA_HEIGHT,
+            ),
             include_private_scenes=False,
-            renderDepthImage=any(isinstance(s, DepthSensorThor) for s in self.SENSORS),
+            renderDepthImage=any(isinstance(s, DepthSensorThor) for s in cls.SENSORS),
         )
 
     def machine_params(self, mode="train", **kwargs):
@@ -123,6 +134,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         seeds: Optional[List[int]],
         deterministic_cudnn: bool,
         include_expert_sensor: bool = True,
+        allow_oversample: bool = False,
     ) -> Dict[str, Any]:
         path = os.path.join(scenes_dir, "*.json.gz")
         scenes = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(path)]
@@ -141,6 +153,12 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
             " You can avoid this by setting a number of workers divisible by the number of scenes"
         )
         if total_processes > len(scenes):  # oversample some scenes -> bias
+            if not allow_oversample:
+                raise RuntimeError(
+                    f"Cannot have `total_processes > len(scenes)`"
+                    f" ({total_processes} > {len(scenes)}) when `allow_oversample` is `False`."
+                )
+
             if total_processes % len(scenes) != 0:
                 get_logger().warning(oversample_warning)
             scenes = scenes * int(ceil(total_processes / len(scenes)))
@@ -166,7 +184,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG,
             "env_args": {
-                **self.ENV_ARGS,
+                **self.env_args(),
                 "x_display": (
                     f"0.{devices[process_ind % len(devices)]}"
                     if devices is not None
@@ -186,12 +204,13 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            os.path.join(self.TRAIN_DATASET_DIR, "episodes"),
-            process_ind,
-            total_processes,
+            scenes_dir=os.path.join(self.TRAIN_DATASET_DIR, "episodes"),
+            process_ind=process_ind,
+            total_processes=total_processes,
             devices=devices,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
+            allow_oversample=True,
         )
         res["scene_directory"] = self.TRAIN_DATASET_DIR
         res["loop_dataset"] = True
@@ -207,13 +226,14 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            os.path.join(self.VAL_DATASET_DIR, "episodes"),
-            process_ind,
-            total_processes,
+            scenes_dir=os.path.join(self.VAL_DATASET_DIR, "episodes"),
+            process_ind=process_ind,
+            total_processes=total_processes,
             devices=devices,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
             include_expert_sensor=False,
+            allow_oversample=False,
         )
         res["scene_directory"] = self.VAL_DATASET_DIR
         res["loop_dataset"] = False
@@ -227,10 +247,31 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        return self.valid_task_sampler_args(
-            process_ind=process_ind,
-            total_processes=total_processes,
-            devices=devices,
-            seeds=seeds,
-            deterministic_cudnn=deterministic_cudnn,
-        )
+        if self.TEST_DATASET_DIR is None:
+            get_logger().warning(
+                "No test dataset dir detected, running test on validation set instead."
+            )
+            return self.valid_task_sampler_args(
+                process_ind=process_ind,
+                total_processes=total_processes,
+                devices=devices,
+                seeds=seeds,
+                deterministic_cudnn=deterministic_cudnn,
+            )
+
+        else:
+            res = self._get_sampler_args_for_scene_split(
+                scenes_dir=os.path.join(self.TEST_DATASET_DIR, "episodes"),
+                process_ind=process_ind,
+                total_processes=total_processes,
+                devices=devices,
+                seeds=seeds,
+                deterministic_cudnn=deterministic_cudnn,
+                include_expert_sensor=False,
+                allow_oversample=False,
+            )
+            res["env_args"]["all_metadata_available"] = False
+            res["rewards_config"] = {**res["rewards_config"], "shaping_weight": 0}
+            res["scene_directory"] = self.TEST_DATASET_DIR
+            res["loop_dataset"] = False
+            return res
