@@ -1,3 +1,4 @@
+import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -20,7 +21,7 @@ class ObjectNavMixInPPOConfig(ObjectNavBaseConfig):
         update_repeats = 4
         num_steps = 128
         save_interval = 5000000
-        log_interval = 10000
+        log_interval = 10000 if torch.cuda.is_available() else 1
         gamma = 0.99
         use_gae = True
         gae_lambda = 0.95
