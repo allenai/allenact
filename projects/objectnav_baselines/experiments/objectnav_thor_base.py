@@ -55,7 +55,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
             visibilityDistance=cls.VISIBILITY_DISTANCE,
             gridSize=cls.STEP_SIZE,
             snapToGrid=False,
-            agentMode="bot",
+            agentMode="locobot",
             fieldOfView=horizontal_to_vertical_fov(
                 horizontal_fov_in_degrees=cls.HORIZONTAL_FIELD_OF_VIEW,
                 width=cls.CAMERA_WIDTH,
