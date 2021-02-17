@@ -411,12 +411,12 @@ class OnPolicyRLEngine(object):
                 rollouts.masks[rollouts.step : rollouts.step + 1],
             )
 
-        # Assume actions do not contain a step dimension
-        actions = (
-            actor_critic_output.distributions.sample()
-            if not self.deterministic_agents
-            else actor_critic_output.distributions.mode()
-        )
+            # Assume actions do not contain a step dimension
+            actions = (
+                actor_critic_output.distributions.sample()
+                if not self.deterministic_agents
+                else actor_critic_output.distributions.mode()
+            )
 
         return actions, actor_critic_output, memory, step_observation
 
