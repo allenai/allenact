@@ -19,7 +19,7 @@ from gym.spaces.dict import Dict as SpaceDict
 from torch import nn
 
 from allenact.algorithms.onpolicy_sync.policy import ActorCriticModel, DistributionType
-from allenact.base_abstractions.distributions import CategoricalDistr
+from allenact.base_abstractions.distributions import CategoricalDistr, Distr
 from allenact.base_abstractions.misc import ActorCriticOutput, Memory
 from allenact.utils.model_utils import make_cnn, compute_cnn_output
 
@@ -619,7 +619,7 @@ class LinearActorCritic(ActorCriticModel[CategoricalDistr]):
         )
 
 
-class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
+class RNNActorCritic(ActorCriticModel[Distr]):
     def __init__(
         self,
         input_uuid: str,
@@ -628,9 +628,7 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
         hidden_size: int = 128,
         num_layers: int = 1,
         rnn_type: str = "GRU",
-        head_type: Callable[
-            ..., ActorCriticModel[CategoricalDistr]
-        ] = LinearActorCritic,
+        head_type: Callable[..., ActorCriticModel[Distr]] = LinearActorCritic,
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
         self.hidden_size = hidden_size
@@ -659,7 +657,7 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
 
         self.head_uuid = "{}_{}".format("rnn", input_uuid)
 
-        self.ac_nonrecurrent_head: ActorCriticModel[CategoricalDistr] = head_type(
+        self.ac_nonrecurrent_head: ActorCriticModel[Distr] = head_type(
             input_uuid=self.head_uuid,
             action_space=action_space,
             observation_space=SpaceDict(
