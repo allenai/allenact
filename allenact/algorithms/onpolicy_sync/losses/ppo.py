@@ -53,8 +53,8 @@ class PPO(AbstractActorCriticLoss):
 
         actions = cast(torch.LongTensor, batch["actions"])
         values = actor_critic_output.values
-        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy()
         action_log_probs = actor_critic_output.distributions.log_prob(actions)
+        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy()
 
         clip_param = self.clip_param * self.clip_decay(step_count)
 

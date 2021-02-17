@@ -195,11 +195,12 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
 
         super().__init__(**prepare_locals_for_super(locals()))
 
-    def _flagged_group_space(self, group_space: gym.spaces.Space) -> gym.spaces.Dict:
+    @classmethod
+    def flagged_group_space(cls, group_space: gym.spaces.Space) -> gym.spaces.Dict:
         return gym.spaces.Dict(
             [
-                (self.action_label, group_space),
-                (self.expert_success_label, gym.spaces.Discrete(2)),
+                (cls.action_label, group_space),
+                (cls.expert_success_label, gym.spaces.Discrete(2)),
             ]
         )
 
@@ -212,12 +213,12 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         only if the expert failed to generate a true expert action. The
         value `num actions in task` should be in `config["nactions"]`
         """
-        if self.use_groups:
-            return self._flagged_group_space(self.action_space)
+        if not self.use_groups:
+            return self.flagged_group_space(self.action_space)
         else:
             return gym.spaces.Tuple(
                 [
-                    self._flagged_group_space(group_space)
+                    self.flagged_group_space(group_space)
                     for group_space in self.group_spaces
                 ],
             )
@@ -233,13 +234,23 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
             self.observation_space, su.unflatten(self.observation_space, flat_zeroed)
         )
 
+    def flatten_output(self, unflattened):
+        return (
+            su.flatten(
+                self.observation_space,
+                su.torch_point(self.observation_space, unflattened),
+            )
+            .cpu()
+            .numpy()
+        )
+
     def get_observation(
         self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
     ) -> Union[OrderedDict, Tuple]:
         # If the task is completed, we needn't (perhaps can't) find the expert
         # action from the (current) terminal state.
         if task.is_done():
-            return self._zeroed_observation
+            return self.flatten_output(self._zeroed_observation)
 
         actions = []
         for group_it, group_space in enumerate(self.group_spaces):
@@ -256,13 +267,15 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
                 # TODO why not enforcing unflattened actions from the task?
 
             actions.append(
-                OrderedDict[
-                    (self.action_label, unflattened_action),
-                    (self.expert_success_label, expert_was_successful),
-                ]
+                OrderedDict(
+                    [
+                        (self.action_label, unflattened_action),
+                        (self.expert_success_label, expert_was_successful),
+                    ]
+                )
             )
 
-        return tuple(actions) if self.use_groups else actions[0]
+        return self.flatten_output(tuple(actions) if self.use_groups else actions[0])
 
 
 class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):

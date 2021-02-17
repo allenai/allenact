@@ -48,6 +48,7 @@ from allenact.algorithms.onpolicy_sync.vector_sampled_tasks import (
 )
 from allenact.base_abstractions.experiment_config import ExperimentConfig, MachineParams
 from allenact.base_abstractions.misc import RLStepResult
+from allenact.base_abstractions.distributions import TeacherForcingDistr
 from allenact.utils import spaces_utils as su
 from allenact.utils.experiment_utils import (
     set_seed,
@@ -399,7 +400,7 @@ class OnPolicyRLEngine(object):
             visualizer.collect(vector_task=self.vector_tasks, alive=keep)
         return npaused
 
-    def act(self, rollouts: RolloutStorage):
+    def act(self, rollouts: RolloutStorage, dist_wrapper_class: Optional[type] = None):
         with torch.no_grad():
             step_observation = rollouts.pick_observation_step(rollouts.step)
             memory = rollouts.pick_memory_step(rollouts.step)
@@ -411,12 +412,11 @@ class OnPolicyRLEngine(object):
                 rollouts.masks[rollouts.step : rollouts.step + 1],
             )
 
-        # Assume actions do not contain a step dimension
-        actions = (
-            actor_critic_output.distributions.sample()
-            if not self.deterministic_agents
-            else actor_critic_output.distributions.mode()
-        )
+            distr = actor_critic_output.distributions
+            if dist_wrapper_class is not None:
+                distr = dist_wrapper_class(distr, step_observation, self)
+
+            actions = distr.sample() if not self.deterministic_agents else distr.mode()
 
         return actions, actor_critic_output, memory, step_observation
 
@@ -816,43 +816,16 @@ class OnPolicyTrainer(OnPolicyRLEngine):
     def log_interval(self):
         return self.training_pipeline.metric_accumulate_interval
 
-    def act(self, rollouts: RolloutStorage):
+    def act(self, rollouts: RolloutStorage, dist_wrapper_class: Optional[type] = None):
+        dist_wrapper_class = None
+        if self.training_pipeline.current_stage.teacher_forcing is not None:
+            dist_wrapper_class = TeacherForcingDistr
+
         actions, actor_critic_output, memory, step_observation = super().act(
-            rollouts=rollouts
+            rollouts=rollouts, dist_wrapper_class=dist_wrapper_class
         )
 
-        if self.is_distributed:
-            # TODO this is inaccurate/hacky, but gets synchronized after each rollout
-            approx_steps = (
-                self.step_count - self.former_steps
-            ) * self.num_workers + self.former_steps
-        else:
-            approx_steps = self.step_count  # this is actually accurate
-
-        num_active_samplers = actor_critic_output.values.shape[1]
-
-        if self.training_pipeline.current_stage.teacher_forcing is not None:
-            if self.training_pipeline.current_stage.teacher_forcing(approx_steps) > 0:
-                actions, enforce_info = self.apply_teacher_forcing(
-                    actions, step_observation, approx_steps
-                )
-                empirical_enforced = (
-                    enforce_info["teacher_forcing_mask"].float().mean().item()
-                )
-            else:
-                empirical_enforced = 0
-
-            teacher_force_info = {
-                "teacher_ratio/sampled": empirical_enforced,
-                "teacher_ratio/enforced": self.training_pipeline.current_stage.teacher_forcing(
-                    approx_steps
-                ),
-            }
-            self.tracking_info["teacher"].append(
-                ("teacher_package", teacher_force_info, actions.nelement())
-            )
-
-        self.step_count += num_active_samplers
+        self.step_count += actor_critic_output.values.shape[1]
 
         return actions, actor_critic_output, memory, step_observation
 
@@ -1073,47 +1046,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             stage.offpolicy_steps_taken_in_stage += current_steps
 
         return data_iterator
-
-    def apply_teacher_forcing(
-        self, actions: Any, step_observation: Dict[str, torch.Tensor], step_count: int,
-    ):
-        # Recall that the last dimension of the expert action tensor has its last element equal to
-        # 0 if the expert action could not be computed and otherwise equals 1.
-        tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
-        expert_actions = step_observation["expert_action"][..., :-1]
-        expert_action_exists_mask = step_observation["expert_action"][..., -1:]
-
-        actions = su.flatten(self.actor_critic.action_space, actions)
-
-        assert (
-            expert_actions.shape == actions.shape
-        ), "expert actions shape {} doesn't match the model's {}".format(
-            expert_actions.shape, actions.shape
-        )
-
-        teacher_forcing_mask = (
-            torch.distributions.bernoulli.Bernoulli(
-                torch.tensor(
-                    self.training_pipeline.current_stage.teacher_forcing(step_count)
-                )
-            )
-            .sample(tf_mask_shape)
-            .long()
-            .to(self.device)
-        ) * expert_action_exists_mask
-
-        extended_shape = teacher_forcing_mask.shape + (1,) * (
-            len(actions.shape) - len(teacher_forcing_mask.shape)
-        )
-
-        actions = torch.where(
-            teacher_forcing_mask.byte().view(extended_shape), expert_actions, actions
-        )
-
-        return (
-            su.unflatten(self.actor_critic.action_space, actions),
-            {"teacher_forcing_mask": teacher_forcing_mask},
-        )
 
     def send_package(self, tracking_info: Dict[str, List]):
         logging_pkg = LoggingPackage(
