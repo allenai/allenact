@@ -3,3 +3,4 @@ numpy-quaternion
 pyquaternion>=0.9.9
 colour
 numba
+packaging
