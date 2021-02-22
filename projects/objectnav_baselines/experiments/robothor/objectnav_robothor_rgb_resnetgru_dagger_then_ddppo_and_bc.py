@@ -4,8 +4,8 @@ from allenact_plugins.ithor_plugin.ithor_sensors import (
     GoalObjectTypeThorSensor,
 )
 from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
-from projects.objectnav_baselines.experiments.objectnav_mixin_ddppo import (
-    ObjectNavMixInPPOConfig,
+from projects.objectnav_baselines.experiments.objectnav_mixin_dagger_then_ddppo_and_bc import (
+    ObjectNavMixInDaggerThenPPOAndBCConfig,
 )
 from projects.objectnav_baselines.experiments.objectnav_mixin_resnetgru import (
     ObjectNavMixInResNetGRUConfig,
@@ -16,7 +16,9 @@ from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base i
 
 
 class ObjectNavRoboThorRGBDaggerThenPPOAndBCExperimentConfig(
-    ObjectNavRoboThorBaseConfig, ObjectNavMixInPPOConfig, ObjectNavMixInResNetGRUConfig,
+    ObjectNavRoboThorBaseConfig,
+    ObjectNavMixInDaggerThenPPOAndBCConfig,
+    ObjectNavMixInResNetGRUConfig,
 ):
     """An Object Navigation experiment configuration in RoboThor with RGB
     input."""
