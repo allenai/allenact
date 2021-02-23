@@ -7,7 +7,7 @@ from projects.pointnav_baselines.experiments.ithor.pointnav_ithor_base import (
     PointNaviThorBaseConfig,
 )
 
-from projects.pointnav_baselines.experiments.pointnav_mixin_simpleconvgru import (
+from projects.pointnav_baselines.experiments.orbslam_pointnav_mixin_simpleconvgru import (
     PointNavMixInSimpleConvGRUConfig,
 )
 from projects.pointnav_baselines.experiments.pointnav_thor_mixin_ddppo import (
