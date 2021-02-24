@@ -641,7 +641,7 @@ class ActorViz(AbstractViz):
 
     def make_fig(self, episode_src, episode_id):
         # Concatenate along step axis (0, reused from kept sampler axis)
-        mat = np.concatenate(episode_src, axis=0).squeeze(-2)  # also removes agent axis
+        mat = np.concatenate(episode_src, axis=0)
 
         fig, ax = plt.subplots(figsize=self.figsize)
         ax.matshow(mat)
@@ -873,13 +873,22 @@ class VizSuite(AbstractViz):
                     res = res[flattened_name]
                     res, episode_dim = res
 
+                if rollout.step > 0:
+                    if rollout.step > res.shape[0]:
+                        # e.g. rnn with only latest memory saved
+                        rollout_step = res.shape[0] - 1
+                    else:
+                        rollout_step = rollout.step - 1
+                else:
+                    if rollout.num_steps - 1 < res.shape[0]:
+                        rollout_step = rollout.num_steps - 1
+                    else:
+                        # e.g. rnn with only latest memory saved
+                        rollout_step = res.shape[0] - 1
+
                 # Select latest step
                 res = res.narrow(
-                    dim=0,  # step dimension
-                    start=rollout.step - 1
-                    if rollout.step > 0
-                    else rollout.num_steps - 1,
-                    length=1,
+                    dim=0, start=rollout_step, length=1,  # step dimension
                 )  # 1 x ... x sampler x ...
 
                 # get_logger().debug("basic collect h {}".format(res[..., 0]))
