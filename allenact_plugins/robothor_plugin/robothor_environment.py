@@ -41,7 +41,7 @@ class RoboThorEnvironment:
             agentType="stochastic",
             continuousMode=True,
             snapToGrid=False,
-            agentMode="bot",
+            agentMode="locobot",
             width=640,
             height=480,
             agentCount=1,
@@ -51,7 +51,7 @@ class RoboThorEnvironment:
         if "agentCount" in kwargs:
             assert kwargs["agentCount"] > 0
 
-        recursive_update(self.config, {**kwargs, "agentMode": "bot"})
+        recursive_update(self.config, {**kwargs, "agentMode": "locobot"})
         self.controller = Controller(**self.config,)
         self.all_metadata_available = all_metadata_available
 
@@ -501,7 +501,7 @@ class RoboThorCachedEnvironment:
             # agentType="stochastic",
             continuousMode=True,
             snapToGrid=False,
-            agentMode="bot",
+            agentMode="locobot",
             width=640,
             height=480,
         )
