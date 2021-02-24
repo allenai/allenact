@@ -6,6 +6,7 @@ dependencies:
   - numba
   - pip
   - colour
+  - packaging
   - pip:
       - numpy-quaternion
       - pyquaternion>=0.9.9
