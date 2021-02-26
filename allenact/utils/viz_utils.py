@@ -12,6 +12,7 @@ from typing import (
     cast,
     Set,
 )
+import sys
 
 import numpy as np
 
@@ -804,6 +805,7 @@ class VizSuite(AbstractViz):
         }
         if len(actor_critic_data) > 0 and actor_critic is not None:
             if self.actor_critic_source:
+                # TODO this code only supports Discrete action spaces!
                 probs = (
                     actor_critic.distributions.probs
                 )  # step (=1) x sampler x agent (=1) x action
@@ -957,16 +959,37 @@ class VizSuite(AbstractViz):
     def collect(self, vector_task=None, alive=None, rollout=None, actor_critic=None):
         if actor_critic is not None:
             # in phase with last_it2epid
-            self._collect_actor_critic(actor_critic)
+            try:
+                self._collect_actor_critic(actor_critic)
+            except:
+                get_logger().debug(
+                    msg=f"Failed collect (actor_critic) for viz due to exception:",
+                    exc_info=sys.exc_info(),
+                )
+                get_logger().error(f"Failed collect (actor_critic) for viz")
 
         if alive is not None and rollout is not None:
             # in phase with last_it2epid that stay alive
-            self._collect_rollout(rollout, alive)
+            try:
+                self._collect_rollout(rollout, alive)
+            except:
+                get_logger().debug(
+                    msg=f"Failed collect (rollout) for viz due to exception:",
+                    exc_info=sys.exc_info(),
+                )
+                get_logger().error(f"Failed collect (rollout) for viz")
 
         # Always call this one last!
         if vector_task is not None:
             # in phase with identifiers of current episodes from vector_task
-            self.last_it2epid = self._collect_vector_task(vector_task)
+            try:
+                self.last_it2epid = self._collect_vector_task(vector_task)
+            except:
+                get_logger().debug(
+                    msg=f"Failed collect (vector_task) for viz due to exception:",
+                    exc_info=sys.exc_info(),
+                )
+                get_logger().error(f"Failed collect (vector_task) for viz")
 
     def read_and_reset(self) -> Dict[str, List[Dict[str, Any]]]:
         res = self.data
@@ -983,5 +1006,11 @@ class VizSuite(AbstractViz):
         num_steps: int,
     ):
         for v in self.viz:
-            # get_logger().debug("Logging {}".format(v.label))
-            v.log(log_writer, task_outputs, render, num_steps)
+            try:
+                v.log(log_writer, task_outputs, render, num_steps)
+            except:
+                get_logger().debug(
+                    msg=f"Dropped {v.label} viz due to exception:",
+                    exc_info=sys.exc_info(),
+                )
+                get_logger().error(f"Dropped {v.label} viz")
