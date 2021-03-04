@@ -521,7 +521,7 @@ class IThorEnvironment(object):
         """List of {"x": x, "y": y, "z": z} locations in the scene that are
         currently reachable."""
         self.step({"action": "GetReachablePositions"})
-        return self.last_event.metadata["reachablePositions"]  # type:ignore
+        return self.last_event.metadata["actionReturn"]  # type:ignore
 
     def get_agent_location(self) -> Dict[str, Union[float, bool]]:
         """Gets agent's location."""
@@ -685,12 +685,12 @@ class IThorEnvironment(object):
 
             sr = self.controller.step({"action": "GetReachablePositions"})
             self._initially_reachable_points = self.controller.last_event.metadata[
-                "reachablePositions"
+                "actionReturn"
             ]
             self._initially_reachable_points_set = None
             self.last_action = action
             self.last_action_success = metadata["lastActionSuccess"]
-            self.controller.last_event.metadata["reachablePositions"] = []
+            self.controller.last_event.metadata["actionReturn"] = []
         elif "RotateUniverse" in action:
             sr = self.controller.step(action_dict)
             metadata = self.last_event.metadata
@@ -698,12 +698,12 @@ class IThorEnvironment(object):
             if metadata["lastActionSuccess"]:
                 sr = self.controller.step({"action": "GetReachablePositions"})
                 self._initially_reachable_points = self.controller.last_event.metadata[
-                    "reachablePositions"
+                    "actionReturn"
                 ]
                 self._initially_reachable_points_set = None
                 self.last_action = action
                 self.last_action_success = metadata["lastActionSuccess"]
-                self.controller.last_event.metadata["reachablePositions"] = []
+                self.controller.last_event.metadata["actionReturn"] = []
         else:
             sr = self.controller.step(action_dict)
 
