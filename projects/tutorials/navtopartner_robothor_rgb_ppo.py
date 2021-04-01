@@ -3,6 +3,7 @@ from typing import Dict, Any, List, Optional
 
 import gym
 import numpy as np
+import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR

@@ -1,6 +1,7 @@
 import glob
 import os
 import shutil
+import sys
 from pathlib import Path
 from subprocess import check_output
 from threading import Thread
@@ -10,7 +11,13 @@ from git import Git
 from ruamel.yaml import YAML  # type: ignore
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
-from scripts.literate import literate_python_to_markdown
+
+# TODO: the scripts directory shouldn't be a module (as it conflicts with
+#  some local developmment workflows) but we do want to import scripts/literate.py.
+#  Temporary solution is just to modify the sys.path when this script is run.
+sys.path.append(os.path.abspath(os.path.dirname(Path(__file__))))
+
+from literate import literate_python_to_markdown
 
 
 class StringColors:

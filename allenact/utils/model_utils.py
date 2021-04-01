@@ -1,10 +1,26 @@
 """Functions used to initialize and manipulate pytorch models."""
+import hashlib
 from collections import Callable
-from typing import Sequence, Tuple, Union, Optional
+from typing import Sequence, Tuple, Union, Optional, Dict, Any
 
 import numpy as np
 import torch
 from torch import nn
+
+from allenact.utils.misc_utils import md5_hash_str_as_int
+
+
+def md5_hash_of_state_dict(state_dict: Dict[str, Any]):
+    hashables = []
+    for piece in sorted(state_dict.items()):
+        if isinstance(piece[1], (torch.Tensor, nn.Parameter)):
+            hashables.append(
+                int(hashlib.md5(piece[1].data.cpu().numpy().tobytes()).hexdigest(), 16,)
+            )
+        else:
+            md5_hash_str_as_int(str(piece))
+
+    return md5_hash_str_as_int(str(hashables))
 
 
 class Flatten(nn.Module):
