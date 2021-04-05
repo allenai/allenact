@@ -1,12 +1,15 @@
 import glob
 import os
+import platform
 from abc import ABC
 from math import ceil
 from typing import Dict, Any, List, Optional, Sequence
 
+import ai2thor
 import gym
 import numpy as np
 import torch
+from packaging import version
 
 from allenact.base_abstractions.experiment_config import MachineParams
 from allenact.base_abstractions.preprocessor import SensorPreprocessorGraph
@@ -14,12 +17,21 @@ from allenact.base_abstractions.sensor import SensorSuite, ExpertActionSensor
 from allenact.base_abstractions.task import TaskSampler
 from allenact.utils.experiment_utils import evenly_distribute_count_into_bins
 from allenact.utils.system import get_logger
+from allenact_plugins.ithor_plugin.ithor_util import get_open_x_displays
 from allenact_plugins.robothor_plugin.robothor_sensors import DepthSensorThor
 from allenact_plugins.robothor_plugin.robothor_task_samplers import (
     PointNavDatasetTaskSampler,
 )
 from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
+
+if ai2thor.__version__ not in ["0.0.1", None] and version.parse(
+    ai2thor.__version__
+) < version.parse("2.7.2"):
+    raise ImportError(
+        "To run the PointNav baseline experiments you must use"
+        " ai2thor version 2.7.1 or higher."
+    )
 
 
 class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
@@ -143,6 +155,20 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
 
         inds = self._partition_inds(len(scenes), total_processes)
 
+        x_display: Optional[str] = None
+        if platform.system() == "Linux":
+            x_displays = get_open_x_displays(throw_error_if_empty=True)
+
+            if len(devices) > len(x_displays):
+                get_logger().warning(
+                    f"More GPU devices found than X-displays (devices: `{x_displays}`, x_displays: `{x_displays}`)."
+                    f" This is not necessarily a bad thing but may mean that you're not using GPU memory as"
+                    f" efficiently as possible. Consider following the instructions here:"
+                    f" https://allenact.org/installation/installation-framework/#installation-of-ithor-ithor-plugin"
+                    f" describing how to start an X-display on every GPU."
+                )
+            x_display = x_displays[process_ind % len(x_displays)]
+
         return {
             "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
             "object_types": self.TARGET_TYPES,
@@ -158,16 +184,7 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG,
-            "env_args": {
-                **self.ENV_ARGS,
-                "x_display": (
-                    f"0.{devices[process_ind % len(devices)]}"
-                    if devices is not None
-                    and len(devices) > 0
-                    and devices[process_ind % len(devices)] >= 0
-                    else None
-                ),
-            },
+            "env_args": {**self.ENV_ARGS, "x_display": x_display,},
         }
 
     def train_task_sampler_args(

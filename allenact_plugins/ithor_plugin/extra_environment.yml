@@ -5,6 +5,9 @@ dependencies:
   - ai2thor>=2.5.3
   - numba
   - pip
+  - colour
+  - packaging
   - pip:
       - numpy-quaternion
       - pyquaternion>=0.9.9
+      - python-xlib
