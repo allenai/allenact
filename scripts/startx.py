@@ -1,12 +1,11 @@
-import subprocess
-import shlex
-import re
 import atexit
-import platform
-import tempfile
-import threading
 import os
-import sys
+import platform
+import re
+import shlex
+import subprocess
+import tempfile
+
 
 # Turning off automatic black formatting for this script as it breaks quotes.
 
@@ -93,6 +92,7 @@ def startx(display=0):
         os.unlink(path)
 
 # fmt: on
+
 
 if __name__ == "__main__":
     startx()
