@@ -73,7 +73,7 @@ If you use this work, please cite our [paper](https://arxiv.org/abs/2008.12760):
   author = {Luca Weihs and Jordi Salvador and Klemen Kotar and Unnat Jain and Kuo-Hao Zeng and Roozbeh Mottaghi and Aniruddha Kembhavi},
   title = {AllenAct: A Framework for Embodied AI Research},
   year = {2020},
-  journal = {arXiv},
+  journal = {arXiv preprint arXiv:2008.12760},
 }
 ```
 
