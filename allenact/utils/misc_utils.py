@@ -1,8 +1,8 @@
-import hashlib
-import json
-
 import copy
+import functools
 import hashlib
+import inspect
+import json
 import math
 import random
 import subprocess
@@ -14,6 +14,8 @@ from typing import Sequence, List, Optional, Tuple, Hashable
 import numpy as np
 import torch
 from scipy.special import comb
+
+from allenact.utils.system import get_logger
 
 TABLEAU10_RGB = (
     (31, 119, 180),
@@ -27,6 +29,29 @@ TABLEAU10_RGB = (
     (188, 189, 34),
     (23, 190, 207),
 )
+
+
+def experimental_api(to_decorate):
+    """Decorate a function to note that it is part of the experimental API."""
+
+    have_warned = [False]
+    name = f"{inspect.getmodule(to_decorate).__name__}.{to_decorate.__qualname__}"
+    if to_decorate.__name__ == "__init__":
+        name = name.replace(".__init__", "")
+
+    @functools.wraps(to_decorate)
+    def decorated(*args, **kwargs):
+        if not have_warned[0]:
+            get_logger().warning(
+                f"'{name}' is a part of AllenAct's experimental API."
+                f" This means: (1) there are likely bugs present and (2)"
+                f" we may remove/change this functionality without warning."
+                f" USE AT YOUR OWN RISK.",
+            )
+            have_warned[0] = True
+        return to_decorate(*args, **kwargs)
+
+    return decorated
 
 
 class NumpyJSONEncoder(json.JSONEncoder):
