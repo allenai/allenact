@@ -10,3 +10,4 @@ dependencies:
   - pip:
       - numpy-quaternion
       - pyquaternion>=0.9.9
+      - python-xlib

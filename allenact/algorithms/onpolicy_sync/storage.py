@@ -57,7 +57,7 @@ class RolloutStorage(object):
         self.rewards: Optional[torch.Tensor] = None
         self.action_log_probs: Optional[torch.Tensor] = None
 
-        self.masks = torch.ones(num_steps + 1, num_samplers, 1)
+        self.masks = torch.zeros(num_steps + 1, num_samplers, 1)
 
         self.action_space = actor_critic.action_space
 

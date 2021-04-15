@@ -22,7 +22,6 @@ from setproctitle import setproctitle as ptitle
 from allenact.algorithms.onpolicy_sync.engine import (
     OnPolicyTrainer,
     OnPolicyInference,
-    OnPolicyRLEngine,
 )
 from allenact.base_abstractions.experiment_config import ExperimentConfig, MachineParams
 from allenact.utils.experiment_utils import (
@@ -31,12 +30,12 @@ from allenact.utils.experiment_utils import (
     set_seed,
     LoggingPackage,
 )
-
 from allenact.utils.misc_utils import (
     all_equal,
     get_git_diff_of_project,
     NumpyJSONEncoder,
 )
+from allenact.utils.model_utils import md5_hash_of_state_dict
 from allenact.utils.system import get_logger, find_free_port
 from allenact.utils.tensor_utils import SummaryWriter
 
@@ -264,31 +263,50 @@ class OnPolicyRunner(object):
         if num_workers > 1:
             distributed_port = find_free_port()
 
+        model_hash = None
         for trainer_it in range(num_workers):
-            train: BaseProcess = self.mp_ctx.Process(
-                target=self.train_loop,
-                kwargs=dict(
-                    id=trainer_it,
-                    checkpoint=checkpoint,
-                    restart_pipeline=restart_pipeline,
-                    experiment_name=self.experiment_name,
-                    config=self.config,
-                    results_queue=self.queues["results"],
-                    checkpoints_queue=self.queues["checkpoints"]
-                    if self.running_validation
-                    else None,
-                    checkpoints_dir=self.checkpoint_dir(),
-                    seed=self.seed,
-                    deterministic_cudnn=self.deterministic_cudnn,
-                    mp_ctx=self.mp_ctx,
-                    num_workers=num_workers,
-                    device=devices[trainer_it],
-                    distributed_port=distributed_port,
-                    max_sampler_processes_per_worker=max_sampler_processes_per_worker,
-                    initial_model_state_dict=initial_model_state_dict,
-                ),
+            training_kwargs = dict(
+                id=trainer_it,
+                checkpoint=checkpoint,
+                restart_pipeline=restart_pipeline,
+                experiment_name=self.experiment_name,
+                config=self.config,
+                results_queue=self.queues["results"],
+                checkpoints_queue=self.queues["checkpoints"]
+                if self.running_validation
+                else None,
+                checkpoints_dir=self.checkpoint_dir(),
+                seed=self.seed,
+                deterministic_cudnn=self.deterministic_cudnn,
+                mp_ctx=self.mp_ctx,
+                num_workers=num_workers,
+                device=devices[trainer_it],
+                distributed_port=distributed_port,
+                max_sampler_processes_per_worker=max_sampler_processes_per_worker,
+                initial_model_state_dict=initial_model_state_dict
+                if model_hash is None
+                else model_hash,
             )
-            train.start()
+            train: BaseProcess = self.mp_ctx.Process(
+                target=self.train_loop, kwargs=training_kwargs,
+            )
+            try:
+                train.start()
+            except ValueError as e:
+                # If the `initial_model_state_dict` is too large we sometimes
+                # run into errors passing it with multiprocessing. In such cases
+                # we instead has the state_dict and confirm, in each engine worker, that
+                # this hash equals the model the engine worker instantiates.
+                if e.args[0] == "too many fds":
+                    model_hash = md5_hash_of_state_dict(initial_model_state_dict)
+                    training_kwargs["initial_model_state_dict"] = model_hash
+                    train = self.mp_ctx.Process(
+                        target=self.train_loop, kwargs=training_kwargs,
+                    )
+                    train.start()
+                else:
+                    raise e
+
             self.processes["train"].append(train)
 
         get_logger().info(

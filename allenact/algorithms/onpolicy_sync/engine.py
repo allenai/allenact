@@ -29,7 +29,7 @@ import torch.optim
 from torch import nn
 from torch import optim
 
-from allenact.utils.misc_utils import md5_hash_str_as_int, tensor_print_options
+from allenact.utils.model_utils import md5_hash_of_state_dict
 
 try:
     # noinspection PyProtectedMember
@@ -96,7 +96,7 @@ class OnPolicyRLEngine(object):
         distributed_port: int = 0,
         deterministic_agents: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
-        initial_model_state_dict: Optional[Dict[str, Any]] = None,
+        initial_model_state_dict: Optional[Union[Dict[str, Any], int]] = None,
         **kwargs,
     ):
         """Initializer.
@@ -176,7 +176,17 @@ class OnPolicyRLEngine(object):
             ).to(self.device)
 
         if initial_model_state_dict is not None:
-            self.actor_critic.load_state_dict(state_dict=initial_model_state_dict)
+            if isinstance(initial_model_state_dict, int):
+                assert (
+                    md5_hash_of_state_dict(self.actor_critic.state_dict())
+                    == initial_model_state_dict
+                ), (
+                    f"Could not reproduce the correct model state dict on worker {self.worker_id} despite seeding."
+                    f" Please ensure that your model's initialization is reproducable when `set_seed(...)`"
+                    f"] has been called with a fixed seed before initialization."
+                )
+            else:
+                self.actor_critic.load_state_dict(state_dict=initial_model_state_dict)
         else:
             assert mode != "train" or self.num_workers == 1, (
                 "When training with multiple workers you must pass a,"
@@ -184,13 +194,10 @@ class OnPolicyRLEngine(object):
             )
 
         if get_logger().level == logging.DEBUG:
-            with tensor_print_options(threshold=2 ** 32, edgeitems=2 ** 32):
-                model_hash = md5_hash_str_as_int(
-                    str(list(sorted(self.actor_critic.state_dict().items())))
-                )
-                get_logger().debug(
-                    f"WORKER ({self.mode}): {self.worker_id}, model weights hash: {model_hash}"
-                )
+            model_hash = md5_hash_of_state_dict(self.actor_critic.state_dict())
+            get_logger().debug(
+                f"WORKER ({self.mode}): {self.worker_id}, model weights hash: {model_hash}"
+            )
 
         self.is_distributed = False
         self.store: Optional[torch.distributed.TCPStore] = None  # type:ignore
@@ -315,7 +322,7 @@ class OnPolicyRLEngine(object):
                 )
             )
             # Map location CPU is almost always better than mapping to a CUDA device.
-            ckpt = torch.load(ckpt, map_location="cpu")
+            ckpt = torch.load(os.path.abspath(ckpt), map_location="cpu")
 
         ckpt = cast(
             Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]], ckpt,

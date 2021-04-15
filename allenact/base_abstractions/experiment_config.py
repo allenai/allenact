@@ -126,6 +126,12 @@ class MachineParams(object):
 
         return self._sensor_preprocessor_graph_cached
 
+    def set_visualizer(self, viz: VizSuite):
+        if self._visualizer_cached is None:
+            self._visualizer_maybe_builder = viz
+        else:
+            get_logger().warning("Ignoring viz (already instantiated)")
+
     @property
     def visualizer(self) -> Optional[VizSuite]:
         if self._visualizer_maybe_builder is None:

@@ -136,9 +136,13 @@ dmypy.json
 
 # Default output dir
 experiment_output
+*_out
 
 # PDFs
 *.pdf
+
+# PNGs
+*.png
 
 # Tensorboard logs
 events.out.tfevents.*
