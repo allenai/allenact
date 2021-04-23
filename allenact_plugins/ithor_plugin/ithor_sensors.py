@@ -17,9 +17,9 @@ from allenact.embodiedai.mapping.mapping_utils.map_builders import (
 from allenact.utils.misc_utils import prepare_locals_for_super, experimental_api
 from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment
 from allenact_plugins.ithor_plugin.ithor_tasks import ObjectNaviThorGridTask
-from allenact_plugins.ithor_plugin.ithor_util import include_object_data
 from allenact_plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask, ObjectNavTask
+from projects.ithor_rearrangement.rearrange.utils import include_object_data
 
 
 class RGBSensorThor(
@@ -144,14 +144,14 @@ class RelativePositionChangeTHORSensor(
         observation_space = gym.spaces.Dict(
             {
                 "last_allocentric_position": gym.spaces.Box(
-                    low=np.array([-np.inf, -np.inf, 0]),
-                    high=np.array([np.inf, np.inf, 360]),
+                    low=np.array([-np.inf, -np.inf, 0], dtype=np.float32),
+                    high=np.array([np.inf, np.inf, 360], dtype=np.float32),
                     shape=(3,),
                     dtype=np.float32,
                 ),
                 "dx_dz_dr": gym.spaces.Box(
-                    low=np.array([-np.inf, -np.inf, -360]),
-                    high=np.array([-np.inf, -np.inf, 360]),
+                    low=np.array([-np.inf, -np.inf, -360], dtype=np.float32),
+                    high=np.array([-np.inf, -np.inf, 360], dtype=np.float32),
                     shape=(3,),
                     dtype=np.float32,
                 ),
@@ -221,14 +221,14 @@ class ReachableBoundsTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnviron
         observation_space = gym.spaces.Dict(
             {
                 "x_range": gym.spaces.Box(
-                    low=np.array([-np.inf, -np.inf]),
-                    high=np.array([np.inf, np.inf]),
+                    low=np.array([-np.inf, -np.inf], dtype=np.float32),
+                    high=np.array([np.inf, np.inf], dtype=np.float32),
                     shape=(2,),
                     dtype=np.float32,
                 ),
                 "z_range": gym.spaces.Box(
-                    low=np.array([-np.inf, -np.inf]),
-                    high=np.array([np.inf, np.inf]),
+                    low=np.array([-np.inf, -np.inf], dtype=np.float32),
+                    high=np.array([np.inf, np.inf], dtype=np.float32),
                     shape=(2,),
                     dtype=np.float32,
                 ),
@@ -319,7 +319,7 @@ class BinnedPointCloudMapTHORSensor(
     def __init__(
         self,
         fov: float,
-        vision_range_in_cm: float,
+        vision_range_in_cm: int,
         map_size_in_cm: int,
         resolution_in_cm: int,
         map_range_sensor: Sensor,

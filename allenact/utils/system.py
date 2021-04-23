@@ -29,7 +29,7 @@ def get_logger() -> logging.Logger:
     logger: the `logging.Logger` object
     """
     if _new_logger():
-        _set_log_formatter()
+        init_logging("debug")
     return _LOGGER
 
 
@@ -82,6 +82,8 @@ def _new_logger(log_level: Optional[int] = None):
         if log_level is not None:
             get_logger().setLevel(log_level)
         return True
+    if log_level is not None:
+        get_logger().setLevel(log_level)
     return False
 
 

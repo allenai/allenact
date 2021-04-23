@@ -1,0 +1,3 @@
+[submodule "projects/ithor_rearrangement"]
+	path = projects/ithor_rearrangement
+	url = git@github.com:allenai/ai2thor-rearrangement.git

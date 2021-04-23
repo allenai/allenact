@@ -1,21 +1,26 @@
 import copy
-import functools
 import hashlib
-import inspect
 import json
 import math
+import os
 import random
 import subprocess
+import urllib
 from collections import Counter
 from contextlib import contextmanager
 from functools import lru_cache
 from typing import Sequence, List, Optional, Tuple, Hashable
 
+import filelock
 import numpy as np
 import torch
 from scipy.special import comb
 
 from allenact.utils.system import get_logger
+
+import functools
+import inspect
+import urllib.request
 
 TABLEAU10_RGB = (
     (31, 119, 180),
@@ -29,6 +34,17 @@ TABLEAU10_RGB = (
     (188, 189, 34),
     (23, 190, 207),
 )
+
+
+def multiprocessing_safe_download_file_from_url(url: str, save_path: str):
+    with filelock.FileLock(save_path + ".lock"):
+        if not os.path.isfile(save_path):
+            get_logger().info(f"Downloading file from {url} to {save_path}.")
+            urllib.request.urlretrieve(
+                url, save_path,
+            )
+        else:
+            get_logger().debug(f"{save_path} exists - skipping download.")
 
 
 def experimental_api(to_decorate):
