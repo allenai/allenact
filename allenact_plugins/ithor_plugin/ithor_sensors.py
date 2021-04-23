@@ -14,7 +14,7 @@ from allenact.embodiedai.mapping.mapping_utils.map_builders import (
     SemanticMapBuilder,
     ObjectHull2d,
 )
-from allenact.utils.misc_utils import prepare_locals_for_super, experimental_api
+from allenact.utils.misc_utils import prepare_locals_for_super
 from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment
 from allenact_plugins.ithor_plugin.ithor_tasks import ObjectNaviThorGridTask
 from allenact_plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
@@ -139,7 +139,6 @@ class TakeEndActionThorNavSensor(
 class RelativePositionChangeTHORSensor(
     Sensor[RoboThorEnvironment, Task[RoboThorEnvironment]]
 ):
-    @experimental_api
     def __init__(self, uuid: str = "rel_position_change", **kwargs: Any):
         observation_space = gym.spaces.Dict(
             {
@@ -216,7 +215,6 @@ class RelativePositionChangeTHORSensor(
 
 
 class ReachableBoundsTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnvironment]]):
-    @experimental_api
     def __init__(self, margin: float, uuid: str = "scene_bounds", **kwargs: Any):
         observation_space = gym.spaces.Dict(
             {
@@ -271,7 +269,6 @@ class ReachableBoundsTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnviron
 
 
 class SceneBoundsTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnvironment]]):
-    @experimental_api
     def __init__(self, uuid: str = "scene_bounds", **kwargs: Any):
         observation_space = gym.spaces.Dict(
             {
@@ -315,7 +312,6 @@ class SceneBoundsTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnvironment
 class BinnedPointCloudMapTHORSensor(
     Sensor[RoboThorEnvironment, Task[RoboThorEnvironment]]
 ):
-    @experimental_api
     def __init__(
         self,
         fov: float,
@@ -404,7 +400,6 @@ class BinnedPointCloudMapTHORSensor(
 
 
 class SemanticMapTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnvironment]]):
-    @experimental_api
     def __init__(
         self,
         fov: float,
