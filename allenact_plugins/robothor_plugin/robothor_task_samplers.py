@@ -1052,6 +1052,7 @@ class NavToPartnerTaskSampler(TaskSampler):
             pose1 = self.env.agent_state(0)
             pose2 = self.env.agent_state(1)
             dist = self.env.distance_cache.find_distance(
+                self.env.scene_name,
                 {k: pose1[k] for k in ["x", "y", "z"]},
                 {k: pose2[k] for k in ["x", "y", "z"]},
                 self.env.distance_from_point_to_point,

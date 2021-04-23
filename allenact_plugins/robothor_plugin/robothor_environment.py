@@ -172,6 +172,7 @@ class RoboThorEnvironment:
             return d
 
         return self.distance_cache.find_distance(
+            self.scene_name,
             self.controller.last_event.events[agent_id].metadata["agent"]["position"],
             object_type,
             retry_dist,
@@ -253,6 +254,7 @@ class RoboThorEnvironment:
             return d
 
         return self.distance_cache.find_distance(
+            self.scene_name,
             self.controller.last_event.events[agent_id].metadata["agent"]["position"],
             target,
             retry_dist,

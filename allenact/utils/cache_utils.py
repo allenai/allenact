@@ -141,6 +141,7 @@ class DynamicDistanceCache(object):
 
     def find_distance(
         self,
+        scene_name: str,
         position: Dict[str, Any],
         target: Union[Dict[str, Any], str],
         native_distance_function: Callable[
@@ -148,7 +149,7 @@ class DynamicDistanceCache(object):
         ],
     ) -> float:
         # Convert the position to its rounded string representation
-        position_str = self._pos_to_str(position)
+        position_str = scene_name + self._pos_to_str(position)
         # If the target is also a position, convert it to its rounded string representation
         if isinstance(target, str):
             target_str = target
