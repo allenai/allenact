@@ -28,15 +28,6 @@ from typing import Optional, Sequence, cast
 import numpy as np
 import torch
 
-from allenact.utils.system import get_logger
-
-get_logger().warning(
-    f"The 'point_cloud_utils' module is a part of AllenAct's experimental API."
-    f" This means: (1) there are likely bugs present and (2)"
-    f" we may remove/change this functionality without warning."
-    f" USE AT YOUR OWN RISK.",
-)
-
 
 def camera_space_xyz_to_world_xyz(
     camera_space_xyzs: torch.Tensor,
