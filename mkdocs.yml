@@ -65,6 +65,13 @@ nav:
   - allenact:
     - _constants: api/allenact/_constants.md
     - embodiedai:
+      - mapping:
+        - mapping_utils:
+          - map_builders: api/allenact/embodiedai/mapping/mapping_utils/map_builders.md
+          - point_cloud_utils: api/allenact/embodiedai/mapping/mapping_utils/point_cloud_utils.md
+        - mapping_losses: api/allenact/embodiedai/mapping/mapping_losses.md
+        - mapping_models:
+          - active_neural_slam: api/allenact/embodiedai/mapping/mapping_models/active_neural_slam.md
       - preprocessors:
         - resnet: api/allenact/embodiedai/preprocessors/resnet.md
       - models:
@@ -244,11 +251,12 @@ nav:
     - tutorials:
       - pointnav_habitat_rgb_ddppo: api/projects/tutorials/pointnav_habitat_rgb_ddppo.md
       - object_nav_ithor_dagger_then_ppo_one_object: api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object.md
-      - minigrid_offpolicy_tutorial: api/projects/tutorials/minigrid_offpolicy_tutorial.md
       - navtopartner_robothor_rgb_ppo: api/projects/tutorials/navtopartner_robothor_rgb_ppo.md
       - pointnav_ithor_rgb_ddppo: api/projects/tutorials/pointnav_ithor_rgb_ddppo.md
       - object_nav_ithor_ppo_one_object: api/projects/tutorials/object_nav_ithor_ppo_one_object.md
   - tests:
+    - mapping:
+      - test_ai2thor_mapping: api/tests/mapping/test_ai2thor_mapping.md
     - multiprocessing:
       - test_frozen_attribs: api/tests/multiprocessing/test_frozen_attribs.md
     - utils:
