@@ -29,7 +29,9 @@ def get_logger() -> logging.Logger:
     logger: the `logging.Logger` object
     """
     if _new_logger():
-        init_logging("debug")
+        if mp.current_process().name == "MainProcess":
+            _new_logger(logging.DEBUG)
+        _set_log_formatter()
     return _LOGGER
 
 
@@ -38,7 +40,7 @@ def init_logging(human_log_level: str = "info") -> None:
 
     It should be called only once in the app (e.g. in `main`). It sets
     the log_level to one of `HUMAN_LOG_LEVELS`. And sets up a handler
-    for stderr. The logging level is propagated to all supproceeses.
+    for stderr. The logging level is propagated to all subprocesses.
     """
     assert human_log_level in HUMAN_LOG_LEVELS, "unknown human_log_level {}".format(
         human_log_level

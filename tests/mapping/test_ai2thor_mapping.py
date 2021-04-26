@@ -6,14 +6,12 @@ import urllib
 import urllib.request
 import warnings
 from collections import defaultdict
-
 # noinspection PyUnresolvedReferences
 from tempfile import mkdtemp
 from typing import Dict, List, Tuple, cast
 
 # noinspection PyUnresolvedReferences
 import ai2thor
-
 # noinspection PyUnresolvedReferences
 import ai2thor.wsgi_server
 import compress_pickle
@@ -102,8 +100,7 @@ class TestAI2THORMapSensors(object):
                     **map_info,
                 ),
             ]
-
-            WalkthroughBaseExperimentConfig.SENSORS.extend(map_sensors)
+            all_sensors = [*WalkthroughBaseExperimentConfig.SENSORS, *map_sensors]
 
             open_x_displays = []
             try:
@@ -112,6 +109,7 @@ class TestAI2THORMapSensors(object):
                 pass
             walkthrough_task_sampler = WalkthroughBaseExperimentConfig.make_sampler_fn(
                 stage="train",
+                sensors=all_sensors,
                 scene_to_allowed_rearrange_inds={s: [0] for s in get_scenes("train")},
                 force_cache_reset=True,
                 allowed_scenes=None,
@@ -119,7 +117,6 @@ class TestAI2THORMapSensors(object):
                 x_display=open_x_displays[0] if len(open_x_displays) != 0 else None,
                 thor_controller_kwargs={
                     **RearrangeBaseExperimentConfig.THOR_CONTROLLER_KWARGS,
-                    "renderDepthImage": True,
                     # "server_class": ai2thor.wsgi_server.WsgiServer,  # Only for debugging
                 },
             )
@@ -299,7 +296,9 @@ class TestAI2THORMapSensors(object):
                 WalkthroughRGBMappingPPOExperimentConfig.training_pipeline().named_losses
             )
 
-            ckpt_path = os.path.join(tmpdir, "rearrange_mapping_examples.pkl.gz")
+            ckpt_path = os.path.join(
+                tmpdir, "pretrained_walkthrough_mapping_agent_75mil.pt"
+            )
             if not os.path.exists(ckpt_path):
                 urllib.request.urlretrieve(
                     "https://prior-model-weights.s3.us-east-2.amazonaws.com/embodied-ai/rearrangement/walkthrough/pretrained_walkthrough_mapping_agent_75mil.pt",

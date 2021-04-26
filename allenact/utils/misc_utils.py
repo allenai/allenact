@@ -1,11 +1,14 @@
 import copy
+import functools
 import hashlib
+import inspect
 import json
 import math
 import os
 import random
 import subprocess
 import urllib
+import urllib.request
 from collections import Counter
 from contextlib import contextmanager
 from functools import lru_cache
@@ -17,10 +20,6 @@ import torch
 from scipy.special import comb
 
 from allenact.utils.system import get_logger
-
-import functools
-import inspect
-import urllib.request
 
 TABLEAU10_RGB = (
     (31, 119, 180),
