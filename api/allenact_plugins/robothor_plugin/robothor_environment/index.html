@@ -4685,13 +4685,13 @@
                 
                 <p><a name="allenact_plugins.robothor_plugin.robothor_environment"></a> </p>
 <h1 id="allenact_pluginsrobothor_pluginrobothor_environment"><code>allenact_plugins.robothor_plugin.robothor_environment</code><a class="headerlink" href="#allenact_pluginsrobothor_pluginrobothor_environment" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L1">[view_source]</a></p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment"></a></p>
 <h2 id="robothorenvironment"><code>RoboThorEnvironment</code><a class="headerlink" href="#robothorenvironment" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">RoboThorEnvironment</span><span class="p">()</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L23">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L23">[view_source]</a></p>
 <p>Wrapper for the robo2thor controller providing additional functionality
 and bookkeeping.</p>
 <p>See <a href="https://ai2thor.allenai.org/robothor/documentation">here</a> for comprehensive
@@ -4706,7 +4706,7 @@ and bookkeeping.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">initialize_grid_dimensions</span><span class="p">(</span><span class="n">reachable_points</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L71">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L71">[view_source]</a></p>
 <p>Computes bounding box for reachable points quantized with the
 current gridSize.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.distance_from_point_to_object_type"></a></p>
@@ -4714,7 +4714,7 @@ current gridSize.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">distance_from_point_to_object_type</span><span class="p">(</span><span class="n">point</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">object_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">allowed_error</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L119">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L119">[view_source]</a></p>
 <p>Minimal geodesic distance from a point to an object of the given
 type.</p>
 <p>It might return -1.0 for unreachable targets.</p>
@@ -4723,7 +4723,7 @@ type.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">distance_to_object_type</span><span class="p">(</span><span class="n">object_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L137">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L137">[view_source]</a></p>
 <p>Minimal geodesic distance to object of given type from agent's
 current location.</p>
 <p>It might return -1.0 for unreachable targets.</p>
@@ -4732,7 +4732,7 @@ current location.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">distance_to_point</span><span class="p">(</span><span class="n">target</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">agent_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L221">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L221">[view_source]</a></p>
 <p>Minimal geodesic distance to end point from agent's current
 location.</p>
 <p>It might return -1.0 for unreachable targets.</p>
@@ -4741,28 +4741,28 @@ location.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">agent_state</span><span class="p">(</span><span class="n">agent_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L263">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L263">[view_source]</a></p>
 <p>Return agent position, rotation and horizon.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.reset"></a></p>
 <h3 id="robothorenvironmentreset"><code>RoboThorEnvironment.reset</code><a class="headerlink" href="#robothorenvironmentreset" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">reset</span><span class="p">(</span><span class="n">scene_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">filtered_objects</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L294">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L294">[view_source]</a></p>
 <p>Resets scene to a known initial state.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.random_reachable_state"></a></p>
 <h3 id="robothorenvironmentrandom_reachable_state"><code>RoboThorEnvironment.random_reachable_state</code><a class="headerlink" href="#robothorenvironmentrandom_reachable_state" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">random_reachable_state</span><span class="p">(</span><span class="n">seed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">]]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L315">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L315">[view_source]</a></p>
 <p>Returns a random reachable location in the scene.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.randomize_agent_location"></a></p>
 <h3 id="robothorenvironmentrandomize_agent_location"><code>RoboThorEnvironment.randomize_agent_location</code><a class="headerlink" href="#robothorenvironmentrandomize_agent_location" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">randomize_agent_location</span><span class="p">(</span><span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">partial_position</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">]]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L340">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L340">[view_source]</a></p>
 <p>Teleports the agent to a random reachable location in the scene.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.currently_reachable_points"></a></p>
 <h3 id="robothorenvironmentcurrently_reachable_points"><code>RoboThorEnvironment.currently_reachable_points</code><a class="headerlink" href="#robothorenvironmentcurrently_reachable_points" title="Permanent link">#</a></h3>
@@ -4770,7 +4770,7 @@ location.</p>
  <span class="o">|</span> <span class="n">currently_reachable_points</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L385">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L385">[view_source]</a></p>
 <p>List of {"x": x, "y": y, "z": z} locations in the scene that are
 currently reachable.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.scene_name"></a></p>
@@ -4779,7 +4779,7 @@ currently reachable.</p>
  <span class="o">|</span> <span class="n">scene_name</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L395">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L395">[view_source]</a></p>
 <p>Current ai2thor scene.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.current_frame"></a></p>
 <h3 id="robothorenvironmentcurrent_frame"><code>RoboThorEnvironment.current_frame</code><a class="headerlink" href="#robothorenvironmentcurrent_frame" title="Permanent link">#</a></h3>
@@ -4787,7 +4787,7 @@ currently reachable.</p>
  <span class="o">|</span> <span class="n">current_frame</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L400">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L400">[view_source]</a></p>
 <p>Returns rgb image corresponding to the agent's egocentric view.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.current_depth"></a></p>
 <h3 id="robothorenvironmentcurrent_depth"><code>RoboThorEnvironment.current_depth</code><a class="headerlink" href="#robothorenvironmentcurrent_depth" title="Permanent link">#</a></h3>
@@ -4795,7 +4795,7 @@ currently reachable.</p>
  <span class="o">|</span> <span class="n">current_depth</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L405">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L405">[view_source]</a></p>
 <p>Returns depth image corresponding to the agent's egocentric view.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.current_frames"></a></p>
 <h3 id="robothorenvironmentcurrent_frames"><code>RoboThorEnvironment.current_frames</code><a class="headerlink" href="#robothorenvironmentcurrent_frames" title="Permanent link">#</a></h3>
@@ -4803,7 +4803,7 @@ currently reachable.</p>
  <span class="o">|</span> <span class="n">current_frames</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L410">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L410">[view_source]</a></p>
 <p>Returns rgb images corresponding to the agents' egocentric views.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.current_depths"></a></p>
 <h3 id="robothorenvironmentcurrent_depths"><code>RoboThorEnvironment.current_depths</code><a class="headerlink" href="#robothorenvironmentcurrent_depths" title="Permanent link">#</a></h3>
@@ -4811,7 +4811,7 @@ currently reachable.</p>
  <span class="o">|</span> <span class="n">current_depths</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L418">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L418">[view_source]</a></p>
 <p>Returns depth images corresponding to the agents' egocentric
 views.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.last_event"></a></p>
@@ -4820,7 +4820,7 @@ views.</p>
  <span class="o">|</span> <span class="n">last_event</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">ai2thor</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">Event</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L427">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L427">[view_source]</a></p>
 <p>Last event returned by the controller.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.last_action"></a></p>
 <h3 id="robothorenvironmentlast_action"><code>RoboThorEnvironment.last_action</code><a class="headerlink" href="#robothorenvironmentlast_action" title="Permanent link">#</a></h3>
@@ -4828,7 +4828,7 @@ views.</p>
  <span class="o">|</span> <span class="n">last_action</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L432">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L432">[view_source]</a></p>
 <p>Last action, as a string, taken by the agent.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.last_action_success"></a></p>
 <h3 id="robothorenvironmentlast_action_success"><code>RoboThorEnvironment.last_action_success</code><a class="headerlink" href="#robothorenvironmentlast_action_success" title="Permanent link">#</a></h3>
@@ -4836,7 +4836,7 @@ views.</p>
  <span class="o">|</span> <span class="n">last_action_success</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L437">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L437">[view_source]</a></p>
 <p>Was the last action taken by the agent a success?</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.last_action_return"></a></p>
 <h3 id="robothorenvironmentlast_action_return"><code>RoboThorEnvironment.last_action_return</code><a class="headerlink" href="#robothorenvironmentlast_action_return" title="Permanent link">#</a></h3>
@@ -4844,7 +4844,7 @@ views.</p>
  <span class="o">|</span> <span class="n">last_action_return</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Any</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L442">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L442">[view_source]</a></p>
 <p>Get the value returned by the last action (if applicable).</p>
 <p>For an example of an action that returns a value, see
 <code>"GetReachablePositions"</code>.</p>
@@ -4853,42 +4853,42 @@ views.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">step</span><span class="p">(</span><span class="n">action_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ai2thor</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">Event</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L450">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L450">[view_source]</a></p>
 <p>Take a step in the ai2thor environment.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.stop"></a></p>
 <h3 id="robothorenvironmentstop"><code>RoboThorEnvironment.stop</code><a class="headerlink" href="#robothorenvironmentstop" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">stop</span><span class="p">()</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L454">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L454">[view_source]</a></p>
 <p>Stops the ai2thor controller.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.all_objects"></a></p>
 <h3 id="robothorenvironmentall_objects"><code>RoboThorEnvironment.all_objects</code><a class="headerlink" href="#robothorenvironmentall_objects" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">all_objects</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L461">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L461">[view_source]</a></p>
 <p>Return all object metadata.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.all_objects_with_properties"></a></p>
 <h3 id="robothorenvironmentall_objects_with_properties"><code>RoboThorEnvironment.all_objects_with_properties</code><a class="headerlink" href="#robothorenvironmentall_objects_with_properties" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">all_objects_with_properties</span><span class="p">(</span><span class="n">properties</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L465">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L465">[view_source]</a></p>
 <p>Find all objects with the given properties.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorEnvironment.visible_objects"></a></p>
 <h3 id="robothorenvironmentvisible_objects"><code>RoboThorEnvironment.visible_objects</code><a class="headerlink" href="#robothorenvironmentvisible_objects" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">visible_objects</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L480">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L480">[view_source]</a></p>
 <p>Return all visible objects.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorCachedEnvironment"></a></p>
 <h2 id="robothorcachedenvironment"><code>RoboThorCachedEnvironment</code><a class="headerlink" href="#robothorcachedenvironment" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">RoboThorCachedEnvironment</span><span class="p">()</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L485">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L485">[view_source]</a></p>
 <p>Wrapper for the robo2thor controller providing additional functionality
 and bookkeeping.</p>
 <p>See <a href="https://ai2thor.allenai.org/robothor/documentation">here</a> for comprehensive
@@ -4903,14 +4903,14 @@ and bookkeeping.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">agent_state</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">]]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L523">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L523">[view_source]</a></p>
 <p>Return agent position, rotation and horizon.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorCachedEnvironment.reset"></a></p>
 <h3 id="robothorcachedenvironmentreset"><code>RoboThorCachedEnvironment.reset</code><a class="headerlink" href="#robothorcachedenvironmentreset" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">reset</span><span class="p">(</span><span class="n">scene_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L540">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L540">[view_source]</a></p>
 <p>Resets scene to a known initial state.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorCachedEnvironment.currently_reachable_points"></a></p>
 <h3 id="robothorcachedenvironmentcurrently_reachable_points"><code>RoboThorCachedEnvironment.currently_reachable_points</code><a class="headerlink" href="#robothorcachedenvironmentcurrently_reachable_points" title="Permanent link">#</a></h3>
@@ -4918,7 +4918,7 @@ and bookkeeping.</p>
  <span class="o">|</span> <span class="n">currently_reachable_points</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L560">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L560">[view_source]</a></p>
 <p>List of {"x": x, "y": y, "z": z} locations in the scene that are
 currently reachable.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorCachedEnvironment.scene_name"></a></p>
@@ -4927,7 +4927,7 @@ currently reachable.</p>
  <span class="o">|</span> <span class="n">scene_name</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L566">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L566">[view_source]</a></p>
 <p>Current ai2thor scene.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorCachedEnvironment.current_frame"></a></p>
 <h3 id="robothorcachedenvironmentcurrent_frame"><code>RoboThorCachedEnvironment.current_frame</code><a class="headerlink" href="#robothorcachedenvironmentcurrent_frame" title="Permanent link">#</a></h3>
@@ -4935,7 +4935,7 @@ currently reachable.</p>
  <span class="o">|</span> <span class="n">current_frame</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L573">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L573">[view_source]</a></p>
 <p>Returns rgb image corresponding to the agent's egocentric view.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorCachedEnvironment.current_depth"></a></p>
 <h3 id="robothorcachedenvironmentcurrent_depth"><code>RoboThorCachedEnvironment.current_depth</code><a class="headerlink" href="#robothorcachedenvironmentcurrent_depth" title="Permanent link">#</a></h3>
@@ -4943,7 +4943,7 @@ currently reachable.</p>
  <span class="o">|</span> <span class="n">current_depth</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L578">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L578">[view_source]</a></p>
 <p>Returns depth image corresponding to the agent's egocentric view.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorCachedEnvironment.last_event"></a></p>
 <h3 id="robothorcachedenvironmentlast_event"><code>RoboThorCachedEnvironment.last_event</code><a class="headerlink" href="#robothorcachedenvironmentlast_event" title="Permanent link">#</a></h3>
@@ -4951,7 +4951,7 @@ currently reachable.</p>
  <span class="o">|</span> <span class="n">last_event</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">ai2thor</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">Event</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L583">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L583">[view_source]</a></p>
 <p>Last event returned by the controller.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorCachedEnvironment.last_action"></a></p>
 <h3 id="robothorcachedenvironmentlast_action"><code>RoboThorCachedEnvironment.last_action</code><a class="headerlink" href="#robothorcachedenvironmentlast_action" title="Permanent link">#</a></h3>
@@ -4959,7 +4959,7 @@ currently reachable.</p>
  <span class="o">|</span> <span class="n">last_action</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L588">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L588">[view_source]</a></p>
 <p>Last action, as a string, taken by the agent.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorCachedEnvironment.last_action_success"></a></p>
 <h3 id="robothorcachedenvironmentlast_action_success"><code>RoboThorCachedEnvironment.last_action_success</code><a class="headerlink" href="#robothorcachedenvironmentlast_action_success" title="Permanent link">#</a></h3>
@@ -4967,7 +4967,7 @@ currently reachable.</p>
  <span class="o">|</span> <span class="n">last_action_success</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L593">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L593">[view_source]</a></p>
 <p>In the cached environment, all actions succeed.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorCachedEnvironment.last_action_return"></a></p>
 <h3 id="robothorcachedenvironmentlast_action_return"><code>RoboThorCachedEnvironment.last_action_return</code><a class="headerlink" href="#robothorcachedenvironmentlast_action_return" title="Permanent link">#</a></h3>
@@ -4975,7 +4975,7 @@ currently reachable.</p>
  <span class="o">|</span> <span class="n">last_action_return</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Any</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L598">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L598">[view_source]</a></p>
 <p>Get the value returned by the last action (if applicable).</p>
 <p>For an example of an action that returns a value, see
 <code>"GetReachablePositions"</code>.</p>
@@ -4984,35 +4984,35 @@ currently reachable.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">step</span><span class="p">(</span><span class="n">action_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">ai2thor</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">Event</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L608">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L608">[view_source]</a></p>
 <p>Take a step in the ai2thor environment.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorCachedEnvironment.stop"></a></p>
 <h3 id="robothorcachedenvironmentstop"><code>RoboThorCachedEnvironment.stop</code><a class="headerlink" href="#robothorcachedenvironmentstop" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">stop</span><span class="p">()</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L633">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L633">[view_source]</a></p>
 <p>Stops the ai2thor controller.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorCachedEnvironment.all_objects"></a></p>
 <h3 id="robothorcachedenvironmentall_objects"><code>RoboThorCachedEnvironment.all_objects</code><a class="headerlink" href="#robothorcachedenvironmentall_objects" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">all_objects</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L637">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L637">[view_source]</a></p>
 <p>Return all object metadata.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorCachedEnvironment.all_objects_with_properties"></a></p>
 <h3 id="robothorcachedenvironmentall_objects_with_properties"><code>RoboThorCachedEnvironment.all_objects_with_properties</code><a class="headerlink" href="#robothorcachedenvironmentall_objects_with_properties" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">all_objects_with_properties</span><span class="p">(</span><span class="n">properties</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L643">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L643">[view_source]</a></p>
 <p>Find all objects with the given properties.</p>
 <p><a name="allenact_plugins.robothor_plugin.robothor_environment.RoboThorCachedEnvironment.visible_objects"></a></p>
 <h3 id="robothorcachedenvironmentvisible_objects"><code>RoboThorCachedEnvironment.visible_objects</code><a class="headerlink" href="#robothorcachedenvironmentvisible_objects" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">visible_objects</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/robothor_plugin/robothor_environment.py#L658">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/robothor_plugin/robothor_environment.py#L658">[view_source]</a></p>
 <p>Return all visible objects.</p>
                 
               

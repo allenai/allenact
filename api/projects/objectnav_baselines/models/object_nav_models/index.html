@@ -4375,7 +4375,7 @@
                 
                 <p><a name="projects.objectnav_baselines.models.object_nav_models"></a> </p>
 <h1 id="projectsobjectnav_baselinesmodelsobject_nav_models"><code>projects.objectnav_baselines.models.object_nav_models</code><a class="headerlink" href="#projectsobjectnav_baselinesmodelsobject_nav_models" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L1">[view_source]</a></p>
 <p>Baseline models for use in the object navigation task.</p>
 <p>Object navigation is currently available as a Task in AI2-THOR and
 Facebook's Habitat.</p>
@@ -4384,7 +4384,7 @@ Facebook's Habitat.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavBaselineActorCritic</span><span class="p">(</span><span class="n">ActorCriticModel</span><span class="p">[</span><span class="n">CategoricalDistr</span><span class="p">])</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L26">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L26">[view_source]</a></p>
 <p>Baseline recurrent actor critic model for object-navigation.</p>
 <p><strong>Attributes</strong></p>
 <ul>
@@ -4404,7 +4404,7 @@ Facebook's Habitat.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">action_space</span><span class="p">:</span> <span class="n">gym</span><span class="o">.</span><span class="n">spaces</span><span class="o">.</span><span class="n">Discrete</span><span class="p">,</span> <span class="n">observation_space</span><span class="p">:</span> <span class="n">SpaceDict</span><span class="p">,</span> <span class="n">goal_sensor_uuid</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">rgb_uuid</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">depth_uuid</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">hidden_size</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span> <span class="n">object_type_embedding_dim</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">trainable_masked_hidden_state</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">num_rnn_layers</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">rnn_type</span><span class="o">=</span><span class="s2">&quot;GRU&quot;</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L42">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L42">[view_source]</a></p>
 <p>Initializer.</p>
 <p>See class documentation for parameter definitions.</p>
 <p><a name="projects.objectnav_baselines.models.object_nav_models.ObjectNavBaselineActorCritic.recurrent_hidden_state_size"></a></p>
@@ -4413,7 +4413,7 @@ Facebook's Habitat.</p>
  <span class="o">|</span> <span class="n">recurrent_hidden_state_size</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L92">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L92">[view_source]</a></p>
 <p>The recurrent hidden state size of the model.</p>
 <p><a name="projects.objectnav_baselines.models.object_nav_models.ObjectNavBaselineActorCritic.is_blind"></a></p>
 <h3 id="objectnavbaselineactorcriticis_blind"><code>ObjectNavBaselineActorCritic.is_blind</code><a class="headerlink" href="#objectnavbaselineactorcriticis_blind" title="Permanent link">#</a></h3>
@@ -4421,7 +4421,7 @@ Facebook's Habitat.</p>
  <span class="o">|</span> <span class="n">is_blind</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L97">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L97">[view_source]</a></p>
 <p>True if the model is blind (e.g. neither 'depth' or 'rgb' is an
 input observation type).</p>
 <p><a name="projects.objectnav_baselines.models.object_nav_models.ObjectNavBaselineActorCritic.num_recurrent_layers"></a></p>
@@ -4430,21 +4430,21 @@ input observation type).</p>
  <span class="o">|</span> <span class="n">num_recurrent_layers</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L103">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L103">[view_source]</a></p>
 <p>Number of recurrent hidden layers.</p>
 <p><a name="projects.objectnav_baselines.models.object_nav_models.ObjectNavBaselineActorCritic.get_object_type_encoding"></a></p>
 <h3 id="objectnavbaselineactorcriticget_object_type_encoding"><code>ObjectNavBaselineActorCritic.get_object_type_encoding</code><a class="headerlink" href="#objectnavbaselineactorcriticget_object_type_encoding" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">get_object_type_encoding</span><span class="p">(</span><span class="n">observations</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L119">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L119">[view_source]</a></p>
 <p>Get the object type encoding from input batched observations.</p>
 <p><a name="projects.objectnav_baselines.models.object_nav_models.ObjectNavBaselineActorCritic.forward"></a></p>
 <h3 id="objectnavbaselineactorcriticforward"><code>ObjectNavBaselineActorCritic.forward</code><a class="headerlink" href="#objectnavbaselineactorcriticforward" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">forward</span><span class="p">(</span><span class="n">observations</span><span class="p">:</span> <span class="n">ObservationType</span><span class="p">,</span> <span class="n">memory</span><span class="p">:</span> <span class="n">Memory</span><span class="p">,</span> <span class="n">prev_actions</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">masks</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">ActorCriticOutput</span><span class="p">[</span><span class="n">DistributionType</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Memory</span><span class="p">]]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L128">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L128">[view_source]</a></p>
 <p>Processes input batched observations to produce new actor and critic
 values. Processes input batched observations (along with prior hidden
 states, previous actions, and masks denoting which recurrent hidden
@@ -4465,14 +4465,14 @@ evaluation of the current state (value).</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ResnetTensorObjectNavActorCritic</span><span class="p">(</span><span class="n">ActorCriticModel</span><span class="p">[</span><span class="n">CategoricalDistr</span><span class="p">])</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L172">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L172">[view_source]</a></p>
 <p><a name="projects.objectnav_baselines.models.object_nav_models.ResnetTensorObjectNavActorCritic.recurrent_hidden_state_size"></a></p>
 <h3 id="resnettensorobjectnavactorcriticrecurrent_hidden_state_size"><code>ResnetTensorObjectNavActorCritic.recurrent_hidden_state_size</code><a class="headerlink" href="#resnettensorobjectnavactorcriticrecurrent_hidden_state_size" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="nd">@property</span>
  <span class="o">|</span> <span class="n">recurrent_hidden_state_size</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L231">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L231">[view_source]</a></p>
 <p>The recurrent hidden state size of the model.</p>
 <p><a name="projects.objectnav_baselines.models.object_nav_models.ResnetTensorObjectNavActorCritic.is_blind"></a></p>
 <h3 id="resnettensorobjectnavactorcriticis_blind"><code>ResnetTensorObjectNavActorCritic.is_blind</code><a class="headerlink" href="#resnettensorobjectnavactorcriticis_blind" title="Permanent link">#</a></h3>
@@ -4480,7 +4480,7 @@ evaluation of the current state (value).</p>
  <span class="o">|</span> <span class="n">is_blind</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L236">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L236">[view_source]</a></p>
 <p>True if the model is blind (e.g. neither 'depth' or 'rgb' is an
 input observation type).</p>
 <p><a name="projects.objectnav_baselines.models.object_nav_models.ResnetTensorObjectNavActorCritic.num_recurrent_layers"></a></p>
@@ -4489,40 +4489,40 @@ input observation type).</p>
  <span class="o">|</span> <span class="n">num_recurrent_layers</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L242">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L242">[view_source]</a></p>
 <p>Number of recurrent hidden layers.</p>
 <p><a name="projects.objectnav_baselines.models.object_nav_models.ResnetTensorObjectNavActorCritic.get_object_type_encoding"></a></p>
 <h3 id="resnettensorobjectnavactorcriticget_object_type_encoding"><code>ResnetTensorObjectNavActorCritic.get_object_type_encoding</code><a class="headerlink" href="#resnettensorobjectnavactorcriticget_object_type_encoding" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">get_object_type_encoding</span><span class="p">(</span><span class="n">observations</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L258">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L258">[view_source]</a></p>
 <p>Get the object type encoding from input batched observations.</p>
 <p><a name="projects.objectnav_baselines.models.object_nav_models.ResnetTensorGoalEncoder"></a></p>
 <h2 id="resnettensorgoalencoder"><code>ResnetTensorGoalEncoder</code><a class="headerlink" href="#resnettensorgoalencoder" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ResnetTensorGoalEncoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L285">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L285">[view_source]</a></p>
 <p><a name="projects.objectnav_baselines.models.object_nav_models.ResnetTensorGoalEncoder.get_object_type_encoding"></a></p>
 <h3 id="resnettensorgoalencoderget_object_type_encoding"><code>ResnetTensorGoalEncoder.get_object_type_encoding</code><a class="headerlink" href="#resnettensorgoalencoderget_object_type_encoding" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">get_object_type_encoding</span><span class="p">(</span><span class="n">observations</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L339">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L339">[view_source]</a></p>
 <p>Get the object type encoding from input batched observations.</p>
 <p><a name="projects.objectnav_baselines.models.object_nav_models.ResnetDualTensorGoalEncoder"></a></p>
 <h2 id="resnetdualtensorgoalencoder"><code>ResnetDualTensorGoalEncoder</code><a class="headerlink" href="#resnetdualtensorgoalencoder" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ResnetDualTensorGoalEncoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L397">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L397">[view_source]</a></p>
 <p><a name="projects.objectnav_baselines.models.object_nav_models.ResnetDualTensorGoalEncoder.get_object_type_encoding"></a></p>
 <h3 id="resnetdualtensorgoalencoderget_object_type_encoding"><code>ResnetDualTensorGoalEncoder.get_object_type_encoding</code><a class="headerlink" href="#resnetdualtensorgoalencoderget_object_type_encoding" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">get_object_type_encoding</span><span class="p">(</span><span class="n">observations</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/projects/objectnav_baselines/models/object_nav_models.py#L474">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/projects/objectnav_baselines/models/object_nav_models.py#L474">[view_source]</a></p>
 <p>Get the object type encoding from input batched observations.</p>
                 
               

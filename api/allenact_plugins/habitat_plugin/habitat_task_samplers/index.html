@@ -4209,20 +4209,20 @@
                 
                 <p><a name="allenact_plugins.habitat_plugin.habitat_task_samplers"></a> </p>
 <h1 id="allenact_pluginshabitat_pluginhabitat_task_samplers"><code>allenact_plugins.habitat_plugin.habitat_task_samplers</code><a class="headerlink" href="#allenact_pluginshabitat_pluginhabitat_task_samplers" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/habitat_plugin/habitat_task_samplers.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/habitat_plugin/habitat_task_samplers.py#L1">[view_source]</a></p>
 <p><a name="allenact_plugins.habitat_plugin.habitat_task_samplers.PointNavTaskSampler"></a></p>
 <h2 id="pointnavtasksampler"><code>PointNavTaskSampler</code><a class="headerlink" href="#pointnavtasksampler" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">PointNavTaskSampler</span><span class="p">(</span><span class="n">TaskSampler</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/habitat_plugin/habitat_task_samplers.py#L13">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/habitat_plugin/habitat_task_samplers.py#L13">[view_source]</a></p>
 <p><a name="allenact_plugins.habitat_plugin.habitat_task_samplers.PointNavTaskSampler.length"></a></p>
 <h3 id="pointnavtasksamplerlength"><code>PointNavTaskSampler.length</code><a class="headerlink" href="#pointnavtasksamplerlength" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="nd">@property</span>
  <span class="o">|</span> <span class="n">length</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/habitat_plugin/habitat_task_samplers.py#L62">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/habitat_plugin/habitat_task_samplers.py#L62">[view_source]</a></p>
 <p>@return: Number of total tasks remaining that can be sampled. Can be float('inf').</p>
 <p><a name="allenact_plugins.habitat_plugin.habitat_task_samplers.PointNavTaskSampler.all_observation_spaces_equal"></a></p>
 <h3 id="pointnavtasksamplerall_observation_spaces_equal"><code>PointNavTaskSampler.all_observation_spaces_equal</code><a class="headerlink" href="#pointnavtasksamplerall_observation_spaces_equal" title="Permanent link">#</a></h3>
@@ -4230,7 +4230,7 @@
  <span class="o">|</span> <span class="n">all_observation_spaces_equal</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/habitat_plugin/habitat_task_samplers.py#L81">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/habitat_plugin/habitat_task_samplers.py#L81">[view_source]</a></p>
 <p>@return: True if all Tasks that can be sampled by this sampler have the
     same observation space. Otherwise False.</p>
 <p><a name="allenact_plugins.habitat_plugin.habitat_task_samplers.ObjectNavTaskSampler"></a></p>
@@ -4238,14 +4238,14 @@
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectNavTaskSampler</span><span class="p">(</span><span class="n">TaskSampler</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/habitat_plugin/habitat_task_samplers.py#L128">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/habitat_plugin/habitat_task_samplers.py#L128">[view_source]</a></p>
 <p><a name="allenact_plugins.habitat_plugin.habitat_task_samplers.ObjectNavTaskSampler.length"></a></p>
 <h3 id="objectnavtasksamplerlength"><code>ObjectNavTaskSampler.length</code><a class="headerlink" href="#objectnavtasksamplerlength" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="nd">@property</span>
  <span class="o">|</span> <span class="n">length</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/habitat_plugin/habitat_task_samplers.py#L163">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/habitat_plugin/habitat_task_samplers.py#L163">[view_source]</a></p>
 <p>@return: Number of total tasks remaining that can be sampled. Can be float('inf').</p>
 <p><a name="allenact_plugins.habitat_plugin.habitat_task_samplers.ObjectNavTaskSampler.all_observation_spaces_equal"></a></p>
 <h3 id="objectnavtasksamplerall_observation_spaces_equal"><code>ObjectNavTaskSampler.all_observation_spaces_equal</code><a class="headerlink" href="#objectnavtasksamplerall_observation_spaces_equal" title="Permanent link">#</a></h3>
@@ -4253,7 +4253,7 @@
  <span class="o">|</span> <span class="n">all_observation_spaces_equal</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact_plugins/habitat_plugin/habitat_task_samplers.py#L182">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact_plugins/habitat_plugin/habitat_task_samplers.py#L182">[view_source]</a></p>
 <p>@return: True if all Tasks that can be sampled by this sampler have the
     same observation space. Otherwise False.</p>
                 

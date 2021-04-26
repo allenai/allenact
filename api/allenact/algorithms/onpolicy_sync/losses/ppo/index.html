@@ -4185,14 +4185,14 @@
                 
                 <p><a name="allenact.algorithms.onpolicy_sync.losses.ppo"></a> </p>
 <h1 id="allenactalgorithmsonpolicy_synclossesppo"><code>allenact.algorithms.onpolicy_sync.losses.ppo</code><a class="headerlink" href="#allenactalgorithmsonpolicy_synclossesppo" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact/algorithms/onpolicy_sync/losses/ppo.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/algorithms/onpolicy_sync/losses/ppo.py#L1">[view_source]</a></p>
 <p>Defining the PPO loss for actor critic type models.</p>
 <p><a name="allenact.algorithms.onpolicy_sync.losses.ppo.PPO"></a></p>
 <h2 id="ppo"><code>PPO</code><a class="headerlink" href="#ppo" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">PPO</span><span class="p">(</span><span class="n">AbstractActorCriticLoss</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact/algorithms/onpolicy_sync/losses/ppo.py#L15">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/algorithms/onpolicy_sync/losses/ppo.py#L15">[view_source]</a></p>
 <p>Implementation of the Proximal Policy Optimization loss.</p>
 <p><strong>Attributes</strong></p>
 <ul>
@@ -4206,7 +4206,7 @@
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">clip_param</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">value_loss_coef</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">entropy_coef</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">use_clipped_value_loss</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">clip_decay</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact/algorithms/onpolicy_sync/losses/ppo.py#L26">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/algorithms/onpolicy_sync/losses/ppo.py#L26">[view_source]</a></p>
 <p>Initializer.</p>
 <p>See the class documentation for parameter definitions.</p>
 <p><a name="allenact.algorithms.onpolicy_sync.losses.ppo.PPOValue"></a></p>
@@ -4214,7 +4214,7 @@
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">PPOValue</span><span class="p">(</span><span class="n">AbstractActorCriticLoss</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact/algorithms/onpolicy_sync/losses/ppo.py#L124">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/algorithms/onpolicy_sync/losses/ppo.py#L124">[view_source]</a></p>
 <p>Implementation of the Proximal Policy Optimization loss.</p>
 <p><strong>Attributes</strong></p>
 <ul>
@@ -4226,7 +4226,7 @@
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">clip_param</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">use_clipped_value_loss</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">clip_decay</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact/algorithms/onpolicy_sync/losses/ppo.py#L133">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/algorithms/onpolicy_sync/losses/ppo.py#L133">[view_source]</a></p>
 <p>Initializer.</p>
 <p>See the class documentation for parameter definitions.</p>
                 

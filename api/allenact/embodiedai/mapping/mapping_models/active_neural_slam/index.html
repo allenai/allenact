@@ -4159,13 +4159,13 @@
                 
                 <p><a name="allenact.embodiedai.mapping.mapping_models.active_neural_slam"></a> </p>
 <h1 id="allenactembodiedaimappingmapping_modelsactive_neural_slam"><code>allenact.embodiedai.mapping.mapping_models.active_neural_slam</code><a class="headerlink" href="#allenactembodiedaimappingmapping_modelsactive_neural_slam" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact/embodiedai/mapping/mapping_models/active_neural_slam.py#L24">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_models/active_neural_slam.py#L24">[view_source]</a></p>
 <p><a name="allenact.embodiedai.mapping.mapping_models.active_neural_slam.ActiveNeuralSLAM"></a></p>
 <h2 id="activeneuralslam"><code>ActiveNeuralSLAM</code><a class="headerlink" href="#activeneuralslam" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ActiveNeuralSLAM</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact/embodiedai/mapping/mapping_models/active_neural_slam.py#L43">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_models/active_neural_slam.py#L43">[view_source]</a></p>
 <p>Active Neural SLAM module.</p>
 <p>This is an implementation of the Active Neural SLAM module
 from:</p>
@@ -4187,7 +4187,7 @@ ground plane of the environment.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">frame_height</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">frame_width</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_map_channels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">resolution_in_cm</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="n">map_size_in_cm</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2400</span><span class="p">,</span> <span class="n">vision_range_in_cm</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">300</span><span class="p">,</span> <span class="n">use_pose_estimation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">pretrained_resnet</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">freeze_resnet_batchnorm</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">use_resnet_layernorm</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact/embodiedai/mapping/mapping_models/active_neural_slam.py#L65">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_models/active_neural_slam.py#L65">[view_source]</a></p>
 <p>Initialize an Active Neural SLAM module.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -4222,7 +4222,7 @@ ground plane of the environment.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">forward</span><span class="p">(</span><span class="n">images</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">last_map_probs_allocentric</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">last_xzrs_allocentric</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">dx_dz_drs_egocentric</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">last_map_logits_egocentric</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">return_allocentric_maps</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">resnet_image_features</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact/embodiedai/mapping/mapping_models/active_neural_slam.py#L379">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_models/active_neural_slam.py#L379">[view_source]</a></p>
 <p>Create allocentric/egocentric maps predictions given RGB image
 inputs.</p>
 <p>Here it is assumed that <code>last_xzrs_allocentric</code> has been re-centered so that (x, z) == (0,0)
@@ -4245,8 +4245,8 @@ Note that this may seem a bit weird as:
 
 <p><strong>Parameters</strong></p>
 <ul>
-<li><strong>images </strong>: A (# batches) x 3 x height x width tensor of RGB images. These should be</li>
-<li>__normalized for use with a resnet model. See <a href="https__://pytorch.org/vision/stable/models.html">here</a>
+<li><strong>images </strong>: A (# batches) x 3 x height x width tensor of RGB images. These should be
+    normalized for use with a resnet model. See <a href="https://pytorch.org/vision/stable/models.html">here</a>
     for information (see also the <code>use_resnet_normalization</code> parameter of the
     <code>allenact.base_abstractions.sensor.RGBSensor</code> sensor).</li>
 <li><strong>last_map_probs_allocentric </strong>: A (# batches) x (map channels) x (map height) x (map width)

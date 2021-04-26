@@ -4161,13 +4161,13 @@
                 
                 <p><a name="allenact.embodiedai.mapping.mapping_utils.point_cloud_utils"></a> </p>
 <h1 id="allenactembodiedaimappingmapping_utilspoint_cloud_utils"><code>allenact.embodiedai.mapping.mapping_utils.point_cloud_utils</code><a class="headerlink" href="#allenactembodiedaimappingmapping_utilspoint_cloud_utils" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact/embodiedai/mapping/mapping_utils/point_cloud_utils.py#L25">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_utils/point_cloud_utils.py#L25">[view_source]</a></p>
 <p><a name="allenact.embodiedai.mapping.mapping_utils.point_cloud_utils.camera_space_xyz_to_world_xyz"></a></p>
 <h3 id="camera_space_xyz_to_world_xyz"><code>camera_space_xyz_to_world_xyz</code><a class="headerlink" href="#camera_space_xyz_to_world_xyz" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code><span class="n">camera_space_xyz_to_world_xyz</span><span class="p">(</span><span class="n">camera_space_xyzs</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">camera_world_xyz</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">rotation</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">horizon</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact/embodiedai/mapping/mapping_utils/point_cloud_utils.py#L32">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_utils/point_cloud_utils.py#L32">[view_source]</a></p>
 <p>Transforms xyz coordinates in the camera's coordinate frame to world-
 space (global) xyz frame.</p>
 <p>This code has been adapted from https://github.com/devendrachaplot/Neural-SLAM.</p>
@@ -4200,7 +4200,7 @@ space (global) xyz frame.</p>
 <div class="codehilite"><pre><span></span><code><span class="n">depth_frame_to_camera_space_xyz</span><span class="p">(</span><span class="n">depth_frame</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">mask</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">fov</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">90</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact/embodiedai/mapping/mapping_utils/point_cloud_utils.py#L106">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_utils/point_cloud_utils.py#L106">[view_source]</a></p>
 <p>Transforms a input depth map into a collection of xyz points (i.e. a
 point cloud) in the camera's coordinate frame.</p>
 <p><strong>Parameters</strong></p>
@@ -4221,7 +4221,7 @@ frame) of a point in the point cloud corresponding to the input depth frame.</p>
 <div class="codehilite"><pre><span></span><code><span class="n">depth_frame_to_world_space_xyz</span><span class="p">(</span><span class="n">depth_frame</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">camera_world_xyz</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">rotation</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">horizon</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">fov</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact/embodiedai/mapping/mapping_utils/point_cloud_utils.py#L161">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_utils/point_cloud_utils.py#L161">[view_source]</a></p>
 <p>Transforms a input depth map into a collection of xyz points (i.e. a
 point cloud) in the world-space coordinate frame.</p>
 <p><strong>IMPORTANT:</strong> We use the conventions from the Unity game engine. In particular:</p>
@@ -4260,7 +4260,7 @@ frame) of a point in the point cloud corresponding to the input depth frame.</p>
 <div class="codehilite"><pre><span></span><code><span class="n">project_point_cloud_to_map</span><span class="p">(</span><span class="n">xyz_points</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">bin_axis</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">bins</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">map_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">resolution_in_cm</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">flip_row_col</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/5d2f7705c57fdf50d18a3c1c90ba6fa6ce92059a/allenact/embodiedai/mapping/mapping_utils/point_cloud_utils.py#L218">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_utils/point_cloud_utils.py#L218">[view_source]</a></p>
 <p>Bins an input point cloud into a map tensor with the bins equaling the
 channels.</p>
 <p>This code has been adapted from https://github.com/devendrachaplot/Neural-SLAM.</p>
