@@ -1,0 +1,4 @@
+[submodule "projects/ithor_rearrangement"]
+	path = projects/ithor_rearrangement
+	url = https://github.com/allenai/ai2thor-rearrangement.git
+	branch = active_neural_slam

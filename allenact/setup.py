@@ -123,7 +123,7 @@ if __name__ == "__main__":
             "wheel>=0.36.2",
         ],
         setup_requires=["pytest-runner"],
-        tests_require=["pytest", "pytest-cov"],
+        tests_require=["pytest", "pytest-cov", "compress_pickle"],
         entry_points={"console_scripts": ["allenact=allenact.main:main"]},
         extras_require=extras,
     )

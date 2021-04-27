@@ -2,10 +2,26 @@ import glob
 import math
 import os
 import platform
+from contextlib import contextmanager
 from typing import Sequence
 
 import Xlib
 import Xlib.display
+import ai2thor
+
+
+@contextmanager
+def include_object_data(controller: ai2thor.controller.Controller):
+    needs_reset = len(controller.last_event.metadata["objects"]) == 0
+    try:
+        if needs_reset:
+            controller.step("ResetObjectFilter")
+            assert controller.last_event.metadata["lastActionSuccess"]
+        yield None
+    finally:
+        if needs_reset:
+            controller.step("SetObjectFilter", objectIds=[])
+            assert controller.last_event.metadata["lastActionSuccess"]
 
 
 def vertical_to_horizontal_fov(

@@ -150,9 +150,8 @@ class PointNavRoboThorRGBPPOVizExperimentConfig(PointNavRoboThorRGBPPOExperiment
 
     def machine_params(self, mode="train", **kwargs):
         res = super().machine_params(mode, **kwargs)
-        res["visualizer"] = None
         if mode == "test":
-            res["visualizer"] = self.get_viz(mode)
+            res.set_visualizer(self.get_viz(mode))
 
         return res
 ```

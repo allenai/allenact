@@ -468,6 +468,7 @@ class NavToPartnerTask(Task[RoboThorEnvironment]):
         pose1 = self.env.agent_state(0)
         pose2 = self.env.agent_state(1)
         self.last_geodesic_distance = self.env.distance_cache.find_distance(
+            self.env.scene_name,
             {k: pose1[k] for k in ["x", "y", "z"]},
             {k: pose2[k] for k in ["x", "y", "z"]},
             self.env.distance_from_point_to_point,
@@ -514,6 +515,7 @@ class NavToPartnerTask(Task[RoboThorEnvironment]):
         self.task_info["followed_path2"].append(pose2)
 
         self.last_geodesic_distance = self.env.distance_cache.find_distance(
+            self.env.scene_name,
             {k: pose1[k] for k in ["x", "y", "z"]},
             {k: pose2[k] for k in ["x", "y", "z"]},
             self.env.distance_from_point_to_point,

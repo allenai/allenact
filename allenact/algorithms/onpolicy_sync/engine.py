@@ -211,13 +211,13 @@ class OnPolicyRLEngine(object):
             cpu_device = self.device == torch.device("cpu")  # type:ignore
 
             dist.init_process_group(  # type:ignore
-                backend="gloo" if cpu_device else "nccl",
+                backend="gloo" if cpu_device or self.mode == "test" else "nccl",
                 store=self.store,
                 rank=self.worker_id,
                 world_size=self.num_workers,
                 # During testing we sometimes found that default timeout was too short
                 # resulting in the run terminating surprisingly, we increase it here.
-                timeout=datetime.timedelta(minutes=300)
+                timeout=datetime.timedelta(minutes=3000)
                 if self.mode == "test"
                 else dist.default_pg_timeout,
             )
