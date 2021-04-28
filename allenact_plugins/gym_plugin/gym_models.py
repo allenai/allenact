@@ -2,7 +2,7 @@ from typing import Dict, Union, Optional, Tuple, Any, Sequence, cast
 
 import gym
 import torch
-from torch import nn
+import torch.nn as nn
 
 from allenact.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,

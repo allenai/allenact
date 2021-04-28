@@ -1,7 +1,7 @@
 from typing import Dict, Any
 
 import torch.multiprocessing as mp
-from torch import nn
+import torch.nn as nn
 
 from allenact.base_abstractions.experiment_config import ExperimentConfig
 from allenact.base_abstractions.task import TaskSampler
@@ -89,7 +89,7 @@ class TestFrozenAttribs(object):
         failed = False
         try:
             MyConfig()
-        except:
+        except (RuntimeError, TypeError):
             failed = True
         assert failed
 

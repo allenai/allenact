@@ -65,8 +65,8 @@ from typing import Dict, Optional, List, Any, cast
 
 import gym
 from gym_minigrid.envs import EmptyRandomEnv5x5
-from torch import nn
-from torch import optim
+import torch.nn as nn
+import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
 from allenact.algorithms.onpolicy_sync.losses.ppo import PPO, PPOConfig

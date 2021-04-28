@@ -22,13 +22,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import math
-from typing import Optional, Tuple, Any
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torchvision.models as models
-from torch.nn import functional as F
+import torch.nn.functional as F
 
 from allenact.utils.model_utils import simple_conv_and_linear_weights_init
 
@@ -152,7 +152,8 @@ class ActiveNeuralSLAM(nn.Module):
         input_test = torch.randn(
             1, self.input_channels, self.frame_height, self.frame_width
         )
-        conv_output = self.conv(self.resnet_l5(input_test))
+        # Have to explicitly call .forward to get past LGTM checks as it thinks nn.Sequential isn't callable
+        conv_output = self.conv.forward(self.resnet_l5.forward(input_test))
 
         self.conv_output_size = conv_output.view(-1).size(0)
 
@@ -203,7 +204,7 @@ class ActiveNeuralSLAM(nn.Module):
         )
 
         self.pose_conv_output_dim = (
-            self.pose_conv(
+            self.pose_conv.forward(
                 torch.zeros(
                     1, 2 * self.n_map_channels, self.vision_range, self.vision_range
                 )

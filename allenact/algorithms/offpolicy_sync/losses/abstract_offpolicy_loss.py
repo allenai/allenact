@@ -1,18 +1,17 @@
 """Defining abstract loss classes for actor critic models."""
 
 import abc
-import typing
-from typing import Dict, Tuple
+from typing import Dict, Tuple, TypeVar, Generic
 
 import torch
 
 from allenact.algorithms.onpolicy_sync.policy import ObservationType
 from allenact.base_abstractions.misc import Loss, Memory
 
-ModelType = typing.TypeVar("ModelType")
+ModelType = TypeVar("ModelType")
 
 
-class AbstractOffPolicyLoss(typing.Generic[ModelType], Loss):
+class AbstractOffPolicyLoss(Generic[ModelType], Loss):
     """Abstract class representing an off-policy loss function used to train a
     model."""
 

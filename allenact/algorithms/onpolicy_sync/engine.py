@@ -25,16 +25,16 @@ import torch
 import torch.distributed as dist  # type: ignore
 import torch.distributions  # type: ignore
 import torch.multiprocessing as mp  # type: ignore
-import torch.optim
-from torch import nn
-from torch import optim
+import torch.optim as optim
+import torch.nn as nn
+
 
 from allenact.utils.model_utils import md5_hash_of_state_dict
 
 try:
     # noinspection PyProtectedMember
     from torch.optim.lr_scheduler import _LRScheduler
-except:
+except (ImportError, ModuleNotFoundError):
     raise ImportError("`_LRScheduler` was not found in `torch.optim.lr_scheduler`")
 
 from allenact.algorithms.onpolicy_sync.losses.abstract_loss import (

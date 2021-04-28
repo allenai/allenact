@@ -1,7 +1,7 @@
 """Experiment Config for MiniGrid tutorial."""
 
 import gym
-from torch import nn
+import torch.nn as nn
 
 from allenact.base_abstractions.sensor import SensorSuite
 from allenact_plugins.minigrid_plugin.minigrid_models import MiniGridSimpleConv

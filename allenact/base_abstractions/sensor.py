@@ -20,7 +20,7 @@ from typing import (
 import PIL
 import gym
 import numpy as np
-from gym import spaces as gyms
+import gym.spaces as gyms
 from torch.distributions.utils import lazy_property
 from torchvision import transforms
 
