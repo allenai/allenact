@@ -10,7 +10,7 @@ from typing import TypeVar, Generic, Tuple, Optional, Union, Dict, List, Any
 import gym
 import torch
 from gym.spaces.dict import Dict as SpaceDict
-from torch import nn
+import torch.nn as nn
 
 from allenact.base_abstractions.distributions import CategoricalDistr
 from allenact.base_abstractions.misc import ActorCriticOutput, Memory

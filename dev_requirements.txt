@@ -10,4 +10,4 @@ mkdocs==1.1.2
 mkdocs-material==5.5.3
 pre-commit
 pydoc-markdown==3.4.0
-compress_pickle
+compress-pickle==1.2.0

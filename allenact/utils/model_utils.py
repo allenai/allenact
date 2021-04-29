@@ -5,7 +5,7 @@ from typing import Sequence, Tuple, Union, Optional, Dict, Any
 
 import numpy as np
 import torch
-from torch import nn
+import torch.nn as nn
 
 from allenact.utils.misc_utils import md5_hash_str_as_int
 
@@ -165,13 +165,11 @@ def compute_cnn_output(
         6,
     ], "CNN input must have shape [STEP, SAMPLER, (AGENT,) dim1, dim2, dim3]"
 
+    nagents: Optional[int] = None
     if len(cnn_input.shape) == 6:
         nsteps, nsamplers, nagents = cnn_input.shape[:3]
-        use_agents = True
     else:
         nsteps, nsamplers = cnn_input.shape[:2]
-        nagents = 1
-        use_agents = False
 
     # Make FLAT_BATCH = nsteps * nsamplers (* nagents)
     cnn_input = cnn_input.view((-1,) + cnn_input.shape[2 + int(use_agents) :])
@@ -180,7 +178,7 @@ def compute_cnn_output(
         cnn_input = cnn_input.permute(*permute_order)
     cnn_output = cnn(cnn_input)
 
-    if use_agents:
+    if nagents is not None:
         cnn_output = cnn_output.reshape(
             (nsteps, nsamplers, nagents,) + cnn_output.shape[1:]
         )

@@ -186,9 +186,7 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
-        if not has_gpus:
-            nprocesses = 1
-        else:
+        if has_gpus:
             nprocesses = evenly_distribute_count_into_bins(nprocesses, len(gpu_ids))
 
         sensor_preprocessor_graph = (

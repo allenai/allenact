@@ -107,7 +107,7 @@ class TestAI2THORMapSensors(object):
             open_x_displays = []
             try:
                 open_x_displays = get_open_x_displays()
-            except:
+            except (AssertionError, IOError):
                 pass
             walkthrough_task_sampler = WalkthroughBaseExperimentConfig.make_sampler_fn(
                 stage="train",
@@ -261,7 +261,7 @@ class TestAI2THORMapSensors(object):
         finally:
             try:
                 walkthrough_task_sampler.close()
-            except:
+            except NameError:
                 pass
 
     def test_pretrained_rearrange_walkthrough_mapping_agent(self, tmpdir):
@@ -283,7 +283,7 @@ class TestAI2THORMapSensors(object):
             open_x_displays = []
             try:
                 open_x_displays = get_open_x_displays()
-            except:
+            except (AssertionError, IOError):
                 pass
             walkthrough_task_sampler = WalkthroughRGBMappingPPOExperimentConfig.make_sampler_fn(
                 stage="train",
@@ -393,13 +393,13 @@ class TestAI2THORMapSensors(object):
         finally:
             try:
                 walkthrough_task_sampler.close()
-            except:
+            except NameError:
                 pass
 
 
 if __name__ == "__main__":
-    # TestAI2THORMapSensors().test_binned_and_semantic_mapping(mkdtemp())  # type:ignore
+    TestAI2THORMapSensors().test_binned_and_semantic_mapping(mkdtemp())  # type:ignore
     # TestAI2THORMapSensors().test_binned_and_semantic_mapping("tmp_out")  # Used for local debugging
-    TestAI2THORMapSensors().test_pretrained_rearrange_walkthrough_mapping_agent(
-        "tmp_out"
-    )  # Used for local debugging
+    # TestAI2THORMapSensors().test_pretrained_rearrange_walkthrough_mapping_agent(
+    #     "tmp_out"
+    # )  # Used for local debugging

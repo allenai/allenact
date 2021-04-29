@@ -3,7 +3,6 @@ import abc
 import collections.abc
 import copy
 import random
-import typing
 from collections import OrderedDict, defaultdict
 from typing import (
     Callable,
@@ -17,11 +16,13 @@ from typing import (
     Tuple,
     cast,
     Sequence,
+    TypeVar,
+    Generic,
 )
 
 import numpy as np
 import torch
-from torch import optim
+import torch.optim as optim
 
 from allenact.algorithms.offpolicy_sync.losses.abstract_offpolicy_loss import (
     AbstractOffPolicyLoss,
@@ -74,10 +75,10 @@ def recursive_update(
     return original
 
 
-ToBuildType = typing.TypeVar("ToBuildType")
+ToBuildType = TypeVar("ToBuildType")
 
 
-class Builder(tuple, typing.Generic[ToBuildType]):
+class Builder(tuple, Generic[ToBuildType]):
     """Used to instantiate a given class with (default) parameters.
 
     Helper class that stores a class, default parameters for that
@@ -413,7 +414,7 @@ class OffPolicyPipelineComponent(NamedTuple):
     data_iterator_builder: Callable[..., Iterator]
     loss_names: List[str]
     updates: int
-    loss_weights: Optional[typing.Sequence[float]] = None
+    loss_weights: Optional[Sequence[float]] = None
     data_iterator_kwargs_generator: Callable[
         [int, Sequence[int], Optional[int]], Dict
     ] = lambda cur_worker, rollouts_per_worker, seed: {}
@@ -439,7 +440,7 @@ class PipelineStage(object):
         self,
         loss_names: List[str],
         max_stage_steps: Union[int, Callable],
-        loss_weights: Optional[typing.Sequence[float]] = None,
+        loss_weights: Optional[Sequence[float]] = None,
         teacher_forcing: Optional[LinearDecay] = None,
         offpolicy_component: Optional[OffPolicyPipelineComponent] = None,
     ):

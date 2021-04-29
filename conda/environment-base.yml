@@ -38,3 +38,4 @@ dependencies:
   - pip:
     - moviepy==1.0.3
     - scipy==1.5.4
+    - compress-pickle==1.2.0

@@ -4,7 +4,7 @@ from typing import Dict, Any, List, Optional, Union, Sequence, cast
 import gym
 import torch
 import torch.nn as nn
-from torch import optim
+import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
 from allenact.algorithms.onpolicy_sync.losses import PPO, A2C

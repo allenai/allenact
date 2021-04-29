@@ -100,7 +100,7 @@ def _get_shortest_path_distance_from_cache(
         return cache[pos_to_str_for_cache(position)][pos_to_str_for_cache(target)][
             "distance"
         ]
-    except:
+    except KeyError:
         return -1.0
 
 
@@ -109,7 +109,7 @@ def _get_shortest_path_distance_to_object_from_cache(
 ) -> float:
     try:
         return cache[pos_to_str_for_cache(position)][target_class]["distance"]
-    except:
+    except KeyError:
         return -1.0
 
 
