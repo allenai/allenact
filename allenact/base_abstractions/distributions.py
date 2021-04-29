@@ -154,8 +154,8 @@ class SequentialDistr(Distr):
 
     def entropy(self):
         raise NotImplementedError(
-            'Please use "conditional_entropy" instead of "entropy" with `SequentialDistr`'
-            "as the `entropy_method_name` parameter in your loss"
+            "Please use 'conditional_entropy' instead of 'entropy' as the `entropy_method_name` "
+            "parameter in your loss when using `SequentialDistr`."
         )
 
     def log_prob(self, actions: Dict[str, Any]):
