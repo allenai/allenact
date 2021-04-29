@@ -1,12 +1,10 @@
 import abc
-from typing import Any, Tuple, Optional, Sequence, Union, Callable, TypeVar, Dict, List
+from typing import Any, Union, Callable, TypeVar, Dict
 from collections import OrderedDict
 
 import torch
-from torch import nn
+import torch.nn as nn
 from torch.distributions.utils import lazy_property
-import networkx as nx
-import gym
 
 from allenact.base_abstractions.sensor import ExpertActionSensor as Expert
 from allenact.utils import spaces_utils as su
