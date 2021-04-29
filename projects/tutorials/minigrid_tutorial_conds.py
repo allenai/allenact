@@ -33,15 +33,17 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
     SENSORS = [
         EgocentricMiniGridSensor(agent_view_size=5, view_channels=3),
         ExpertActionSensor(
-            group_spaces=[gym.spaces.Discrete(2), gym.spaces.Discrete(2)]
+            action_space=gym.spaces.Dict(
+                higher=gym.spaces.Discrete(2), lower=gym.spaces.Discrete(2)
+            )
         ),
     ]
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return ConditionedMiniGridSimpleConvRNN(
-            action_space=gym.spaces.Tuple(
-                [gym.spaces.Discrete(2), gym.spaces.Discrete(2)]
+            action_space=gym.spaces.Dict(
+                higher=gym.spaces.Discrete(2), lower=gym.spaces.Discrete(2)
             ),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
             num_objects=cls.SENSORS[0].num_objects,
@@ -134,7 +136,9 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
     def training_pipeline(cls, **kwargs) -> TrainingPipeline:
         ppo_steps = int(150000)
         return TrainingPipeline(
-            named_losses=dict(ppo_loss=PPO(**PPOConfig)),  # type:ignore
+            named_losses=dict(
+                ppo_loss=PPO(**PPOConfig, entropy_method_name="conditional_entropy")
+            ),  # type:ignore
             pipeline_stages=[
                 PipelineStage(
                     teacher_forcing=LinearDecay(

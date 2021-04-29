@@ -6,12 +6,14 @@ import urllib
 import urllib.request
 import warnings
 from collections import defaultdict
+
 # noinspection PyUnresolvedReferences
 from tempfile import mkdtemp
 from typing import Dict, List, Tuple, cast
 
 # noinspection PyUnresolvedReferences
 import ai2thor
+
 # noinspection PyUnresolvedReferences
 import ai2thor.wsgi_server
 import compress_pickle

@@ -135,7 +135,7 @@ def _set_log_formatter():
     assert _LOGGER is not None
 
     if _LOGGER.getEffectiveLevel() <= logging.CRITICAL:
-        add_style_to_logs = True # In case someone wants to turn this off manually.
+        add_style_to_logs = True  # In case someone wants to turn this off manually.
 
         if add_style_to_logs:
             default_format = "$BOLD[%(asctime)s$RESET %(levelname)s$BOLD:]$RESET %(message)s\t[%(filename)s: %(lineno)d]"

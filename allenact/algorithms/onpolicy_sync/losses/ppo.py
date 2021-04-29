@@ -30,6 +30,7 @@ class PPO(AbstractActorCriticLoss):
         entropy_coef: float,
         use_clipped_value_loss=True,
         clip_decay: Optional[Callable[[int], float]] = None,
+        entropy_method_name: str = "entropy",
         *args,
         **kwargs
     ):
@@ -43,6 +44,7 @@ class PPO(AbstractActorCriticLoss):
         self.entropy_coef = entropy_coef
         self.use_clipped_value_loss = use_clipped_value_loss
         self.clip_decay = clip_decay if clip_decay is not None else (lambda x: 1.0)
+        self.entropy_method_name = entropy_method_name
 
     def loss_per_step(
         self,
@@ -54,7 +56,9 @@ class PPO(AbstractActorCriticLoss):
         actions = cast(torch.LongTensor, batch["actions"])
         values = actor_critic_output.values
         action_log_probs = actor_critic_output.distributions.log_prob(actions)
-        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy()
+        dist_entropy: torch.FloatTensor = getattr(
+            actor_critic_output.distributions, self.entropy_method_name
+        )()
 
         clip_param = self.clip_param * self.clip_decay(step_count)
 

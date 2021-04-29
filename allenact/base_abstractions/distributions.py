@@ -80,220 +80,134 @@ class CategoricalDistr(torch.distributions.Categorical, Distr):
         return torch.softmax(self.logits, dim=-1)
 
 
-class CondDistr(Distr):
-    produces: Sequence[str]
-    given: Optional[Sequence[str]] = None
-    action_space: gym.spaces.Space
+class ConditionalDistr(Distr):
+    # `action_group_name` is the identifier of the group of actions (OrderedDict) produced by this `ConditionalDistr`
+    action_group_name: str
 
     def __init__(
         self,
-        action_space: gym.spaces.Space,
-        get_subpolicy: Callable,
-        produces: Sequence[str],
-        given: Optional[Sequence[str]] = None,
-        *sub_args,
-        **kwsub_args,
+        distr_conditioned_on_input_fn_or_instance: Union[Callable, Distr],
+        action_group_name: str,
+        *distr_conditioned_on_input_args,
+        **distr_conditioned_on_input_kwargs,
     ):
-        self.action_space = action_space
-        self.get_subpolicy_fn = get_subpolicy
-        self.subpolicy = None
-        self.sub_args = sub_args
-        self.kwsub_args = kwsub_args
+        if isinstance(distr_conditioned_on_input_fn_or_instance, Distr):
+            self.distr = distr_conditioned_on_input_fn_or_instance
+        else:
+            self.distr = None
+            self.distr_conditioned_on_input_fn = (
+                distr_conditioned_on_input_fn_or_instance
+            )
+            self.distr_conditioned_on_input_args = distr_conditioned_on_input_args
+            self.distr_conditioned_on_input_kwargs = distr_conditioned_on_input_kwargs
 
-        self.produces = produces
-        self.given = given
+        self.action_group_name = action_group_name
 
     def log_prob(self, actions):
-        assert self.subpolicy is not None
-        return self.subpolicy.log_prob(actions)
+        return self.distr.log_prob(actions)
 
     def entropy(self):
-        assert self.subpolicy is not None
-        return self.subpolicy.entropy()
+        return self.distr.entropy()
 
-    def get_subpolicy(self, **kwconds):
-        assert all([key not in self.kwsub_args for key in kwconds])
-        self.subpolicy = self.get_subpolicy_fn(
-            *self.sub_args, **self.kwsub_args, **kwconds
-        )
+    def get_distr_conditioned_on_input(self, **ready_actions):
+        if self.distr is None:
+            assert all(
+                key not in self.distr_conditioned_on_input_kwargs
+                for key in ready_actions
+            )
+            self.distr = self.distr_conditioned_on_input_fn(
+                *self.distr_conditioned_on_input_args,
+                **self.distr_conditioned_on_input_kwargs,
+                **ready_actions,
+            )
 
-    def sample(self, sample_shape=torch.Size(), **kwconds):
-        self.get_subpolicy(**kwconds)
-        return self.subpolicy.sample(sample_shape)
+    def sample(self, sample_shape=torch.Size(), **parent_actions):
+        self.get_distr_conditioned_on_input(**parent_actions)
+        act = self.distr.sample(sample_shape)
+        return OrderedDict([(self.action_group_name, act)])
 
-    def mode(self, **kwconds):
-        self.get_subpolicy(**kwconds)
-        return self.subpolicy.mode()
+    def mode(self, **parent_actions):
+        self.get_distr_conditioned_on_input(**parent_actions)
+        act = self.distr.mode()
+        return OrderedDict([(self.action_group_name, act)])
 
 
-class DirectedGraphicalModel(Distr):
-    def __init__(self, cond_distrs: Sequence[CondDistr]):
-        self.partials: List[CondDistr]
-        self.deps: Dict[Tuple[str], List[Tuple[str]]]
-        self.partials, self.deps = DirectedGraphicalModel.make_ordered_partials(
-            cond_distrs
-        )
-        assert len(self.partials) == len(
-            cond_distrs
-        ), f"Inconsistent number of used ({len(self.partials)}) and given ({len(cond_distrs)}) partial distributions"
-        self.action_spaces = [partial.action_space for partial in self.partials]
+class SequentialDistr(Distr):
+    def __init__(self, *conditional_distrs: ConditionalDistr):
+        self.conditional_distrs = conditional_distrs
 
-    @staticmethod
-    def collapse_deps(
-        varnames: Sequence[str], who_produces: Dict[str, Tuple[str]]
-    ) -> List[Tuple[str, ...]]:
-        """Generates a list of produced partial distributions required by the list of varnames.
-        """
-        current_partials = set()
-        for d in varnames:
-            current_partials.add(who_produces[d])
-        return list(current_partials)
+    def sample(self, sample_shape=torch.Size()):
+        actions = OrderedDict()
+        for cd in self.conditional_distrs:
+            actions.update(cd.sample(sample_shape=sample_shape, **actions))
+        return actions
 
-    @staticmethod
-    def make_ordered_partials(
-        cond_distrs: Sequence[CondDistr],
-    ) -> Tuple[List[CondDistr], Dict[Tuple[str], List[Tuple[str]]]]:
-        """Generates a computation order given a list of `CondDistr`.
-           It also provides a dict with produced partial distributions required by the list of produced vars.
-        """
-        producer: Dict[Tuple[str, ...], CondDistr] = {
-            tuple(d.produces): d for d in cond_distrs
-        }
-        who_produces: Dict[str, Tuple[str]] = {}
-        deps: Dict[Tuple[str], List[Union[str, Tuple[str]]]] = {
-            tuple(d.produces): list(d.given) for d in cond_distrs if d.given is not None
-        }
-        for partial in cond_distrs:
-            assert (
-                partial.produces is not None
-            ), "produces must be provided for cond_distrs"
-            for varname in partial.produces:
-                assert (
-                    varname not in who_produces
-                ), "'{}' is a duplicated produced variable".format(varname)
-                who_produces[varname] = tuple(partial.produces)
+    def mode(self):
+        actions = OrderedDict()
+        for cd in self.conditional_distrs:
+            actions.update(cd.mode(**actions))
+        return actions
 
-        g = nx.DiGraph()
-        for k in deps:
-            deps[k] = DirectedGraphicalModel.collapse_deps(
-                deps[k], who_produces
-            )  # List[str] -> List[Tuple[str]]
-            for j in deps[k]:
-                g.add_edge(j, k)
-
-        assert nx.is_directed_acyclic_graph(
-            g
-        ), "partial distributions do not form a direct acyclic graph"
-
-        # ensure dependencies are precomputed
-        return [producer[n] for n in nx.dfs_postorder_nodes(g)][::-1], deps
-
-    def entropy(self):
+    def conditional_entropy(self):
         sum = 0
-        for partial in self.partials:
-            sum = sum + partial.entropy()
+        for cd in self.conditional_distrs:
+            sum = sum + cd.entropy()
         return sum
 
-    def log_prob(self, actions: Sequence[Dict[str, Any]]):
+    def entropy(self):
+        raise NotImplementedError(
+            "Please use `conditional_entropy` instead of `entropy` with SequentialDistr"
+        )
+
+    def log_prob(self, actions: Dict[str, Any]):
         assert len(actions) == len(
-            self.partials
-        ), f"{len(self.partials)} partial distributions for {len(actions)} partial actions"
+            self.conditional_distrs
+        ), f"{len(self.conditional_distrs)} conditional distributions for {len(actions)} action groups"
+
         sum = 0
-        prods = [tuple(partial.produces) for partial in self.partials]
-        for acts, partial in zip(actions, self.partials):
-            if partial.subpolicy is None:
-                deps = (
-                    [k for k in self.deps[tuple(partial.produces)]]
-                    if partial.given is not None
-                    else {}
-                )
-                if len(deps) > 0:
-                    idxs = [prods.index(dep) for dep in deps]
-                    deps = {
-                        name: actions[idx] for k, idx in zip(deps, idxs) for name in k
-                    }
-                partial.get_subpolicy(**deps)
-            sum = sum + partial.log_prob(acts)
+        for cd in self.conditional_distrs:
+            cd.get_distr_conditioned_on_input(**actions)
+            sum = sum + cd.log_prob(actions[cd.action_group_name])
         return sum
-
-    def sample(self, sample_shape=torch.Size()) -> Tuple:
-        res = OrderedDict()
-        for partial in self.partials:
-            deps = (
-                {name: res[k] for k in self.deps[tuple(partial.produces)] for name in k}
-                if partial.given is not None
-                else {}
-            )
-            res[tuple(partial.produces)] = partial.sample(sample_shape, **deps)
-        return tuple(res.values())
-
-    def mode(self) -> Tuple:
-        res = OrderedDict()
-        for partial in self.partials:
-            deps = (
-                {name: res[k] for k in self.deps[tuple(partial.produces)] for name in k}
-                if partial.given is not None
-                else {}
-            )
-            res[tuple(partial.produces)] = partial.mode(**deps)
-        return tuple(res.values())
 
 
 class TeacherForcingDistr(Distr):
-    def __init__(self, distr, obs, engine):
-        self.engine = engine  # access to action space, training steps, ...
-        self.distr = distr  # graphical model or plain Distr
-        self.use_dag = isinstance(self.distr, DirectedGraphicalModel)
+    def __init__(
+        self,
+        distr,
+        obs,
+        action_space,
+        active_samplers,
+        approx_steps,
+        teacher_forcing,
+        tracking_info,
+    ):
+        self.distr = distr
+        self.is_sequential = isinstance(self.distr, SequentialDistr)
+
+        # action_space is a gym.spaces.Dict for SequentialDistr, or any gym.Space for other Distr
+        self.action_space = action_space
+        self.active_samplers = active_samplers
+        self.approx_steps = approx_steps
+        self.teacher_forcing = teacher_forcing
+        self.tracking_info = tracking_info
 
         assert (
             "expert_action" in obs
         ), "When using teacher forcing, obs must contain an `expert_action` uuid"
 
-        # obs["expert_action] can be Tuple (if using DirectedGraphicalModel/group_spaces), or OrderedDict:
-        obs_space = self.expert_action_space()
-        self.obs = su.unflatten(obs_space, obs["expert_action"])
-
-        if self.use_dag:
-            self.group_spaces = tuple(self.distr.action_spaces)
-
-            assert isinstance(
-                self.obs, Tuple
-            ), f"received {type(self.obs)} expert observation when using DirectedGraphicalModel (expected tuple)"
-
-            assert len(self.distr.partials) == len(
-                self.obs
-            ), f"{len(self.distr.partials)} partial `CondDistr`s in distr for {len(self.obs)} expert groups"
-        else:
-            self.group_spaces = (self.engine.actor_critic.action_space,)
-
-            assert isinstance(
-                self.obs, OrderedDict
-            ), f"received {type(self.obs)} expert observation when NOT using groups (expected OrderedDict)"
-
-        self.num_active_samplers = None
-
-    def expert_action_space(self):
-        obs_space = self.engine.vector_tasks.action_spaces[0]
-
-        if not self.use_dag:
-            return Expert.flagged_group_space(obs_space)
-        else:
-            return gym.spaces.Tuple(
-                [Expert.flagged_group_space(group_space) for group_space in obs_space],
-            )
-
-    @lazy_property
-    def approx_steps(self):
-        if self.engine.is_distributed:
-            # the actual number of steps gets synchronized after each rollout
-            return (
-                self.engine.step_count - self.engine.former_steps
-            ) * self.engine.num_workers + self.engine.former_steps
-        else:
-            return self.engine.step_count  # this is actually accurate
+        obs_space = Expert.flagged_space(
+            self.action_space, use_dict_as_groups=self.is_sequential
+        )
+        self.expert = su.unflatten(obs_space, obs["expert_action"])
 
     def enforce(
-        self, sample, action_space, teacher, teacher_force_info: Dict[str, Any], step=-1
+        self,
+        sample,
+        action_space,
+        teacher,
+        teacher_force_info: Dict[str, Any],
+        action_name: str = None,
     ):
         # expert_success is 0 if the expert action could not be computed and otherwise equals 1.
         tf_mask_shape = teacher[Expert.expert_success_label].shape
@@ -304,12 +218,9 @@ class TeacherForcingDistr(Distr):
 
         assert (
             len(actions.shape) == 3
-        ), f"got flattened actions with shape {actions.shape}"
+        ), f"Got flattened actions with shape {actions.shape} (it should be [1 x `samplers` x `flatdims`])"
 
-        if self.num_active_samplers is None:
-            self.num_active_samplers = actions.shape[1]
-        else:
-            assert actions.shape[1] == self.num_active_samplers
+        assert actions.shape[1] == self.active_samplers
 
         expert_actions = su.flatten(action_space, expert_actions)
         assert (
@@ -318,11 +229,7 @@ class TeacherForcingDistr(Distr):
 
         teacher_forcing_mask = (
             torch.distributions.bernoulli.Bernoulli(
-                torch.tensor(
-                    self.engine.training_pipeline.current_stage.teacher_forcing(
-                        self.approx_steps
-                    )
-                )
+                torch.tensor(self.teacher_forcing(self.approx_steps))
             )
             .sample(tf_mask_shape)
             .long()
@@ -330,7 +237,9 @@ class TeacherForcingDistr(Distr):
         ) * expert_action_exists_mask
 
         teacher_force_info[
-            "teacher_ratio/sampled{}".format(step if step >= 0 else "")
+            "teacher_ratio/sampled{}".format(
+                f"_{action_name}" if action_name is not None else ""
+            )
         ] = (teacher_forcing_mask.float().mean().item())
 
         extended_shape = teacher_forcing_mask.shape + (1,) * (
@@ -349,48 +258,35 @@ class TeacherForcingDistr(Distr):
     def entropy(self):
         return self.distr.entropy()
 
+    def conditional_entropy(self):
+        return self.distr.conditional_entropy()
+
     def sample(self, sample_shape=torch.Size()):
         teacher_force_info = {
-            "teacher_ratio/enforced": self.engine.training_pipeline.current_stage.teacher_forcing(
-                self.approx_steps
-            ),
+            "teacher_ratio/enforced": self.teacher_forcing(self.approx_steps),
         }
 
-        if self.use_dag:
+        if self.is_sequential:
             res = OrderedDict()
-            for step, partial, aspace, expert in zip(
-                range(len(self.distr.partials)),
-                self.distr.partials,
-                self.group_spaces,
-                self.obs,
-            ):
-                deps = (
-                    {
-                        name: res[k]
-                        for k in self.distr.deps[tuple(partial.produces)]
-                        for name in k
-                    }
-                    if partial.given is not None
-                    else {}
-                )
-                res[tuple(partial.produces)] = self.enforce(
-                    partial.sample(sample_shape, **deps),
-                    aspace,
-                    expert,
+            for cd in self.distr.conditional_distrs:
+                action_group_name = cd.action_group_name
+                res[action_group_name] = self.enforce(
+                    cd.sample(sample_shape, **res)[action_group_name],
+                    self.action_space[action_group_name],
+                    self.expert[action_group_name],
                     teacher_force_info,
-                    step,
+                    action_group_name,
                 )
-            res = tuple(res.values())
         else:
             res = self.enforce(
                 self.distr.sample(sample_shape),
-                self.group_spaces[0],
-                self.obs,
+                self.action_space,
+                self.expert,
                 teacher_force_info,
             )
 
-        self.engine.tracking_info["teacher"].append(
-            ("teacher_package", teacher_force_info, self.num_active_samplers)
+        self.tracking_info["teacher"].append(
+            ("teacher_package", teacher_force_info, self.active_samplers)
         )
 
         return res

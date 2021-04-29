@@ -13,6 +13,7 @@ from typing import (
     Sequence,
     Union,
     Tuple,
+    cast,
 )
 
 import gym
@@ -138,6 +139,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
 
     action_label: str = "action"
     expert_success_label: str = "expert_success"
+    no_groups_label: str = "dummy_expert_group"
 
     def __init__(
         self,
@@ -145,7 +147,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         uuid: str = "expert_action",
         expert_args: Optional[Dict[str, Any]] = None,
         nactions: Optional[int] = None,
-        group_spaces: Optional[Sequence[gym.Space]] = None,
+        use_dict_as_groups: bool = True,
         **kwargs: Any
     ) -> None:
         """Initialize an `ExpertActionSensor`.
@@ -159,13 +161,11 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
             `query_expert` method when called.
         nactions : [DEPRECATED] The number of actions available to the agent, corresponds to an `action_space`
             of `gym.spaces.Discrete(nactions)`.
-        group_spaces: Optional groups of action spaces. If used, the observation space will be a
-            Tuple[Dict[str, Union[unflattened_action, bool]],] (i.e., each action group will include an
-            `expert_success` flag).
+        use_dict_as_groups : Whether to use the top-level action_space of type `gym.spaces.Dict` as action groups.
         """
         if isinstance(action_space, int):
             action_space = gym.spaces.Discrete(action_space)
-        elif action_space is None and group_spaces is None:
+        elif action_space is None:
             assert (
                 nactions is not None
             ), "One of `action_space` or `nactions` must be not `None`."
@@ -177,19 +177,21 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
 
         self.action_space = action_space
 
-        self.use_groups = group_spaces is not None
-        self.group_spaces = group_spaces if self.use_groups else (self.action_space,)
+        self.use_groups = (
+            isinstance(action_space, gym.spaces.Dict) and use_dict_as_groups
+        )
 
-        if not self.use_groups and isinstance(self.action_space, gym.spaces.Tuple):
-            get_logger().warning("Treating action_space tuple as a single group_space")
-        elif self.use_groups and self.action_space is not None:
-            get_logger().warning("Ignoring action_space, given group_spaces")
+        self.group_spaces = (
+            self.action_space
+            if self.use_groups
+            else OrderedDict([(self.no_groups_label, self.action_space,)])
+        )
 
         self.expert_args: Dict[str, Any] = expert_args or {}
 
         assert (
-            "expert_sensor_action_group_it" not in self.expert_args
-        ), "`expert_sensor_action_group_it` is reserved for `ExpertActionSensor`"
+            "expert_sensor_action_group_name" not in self.expert_args
+        ), "`expert_sensor_action_group_name` is reserved for `ExpertActionSensor`"
 
         observation_space = self._get_observation_space()
 
@@ -204,6 +206,22 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
             ]
         )
 
+    @classmethod
+    def flagged_space(
+        cls, action_space: gym.spaces.Space, use_dict_as_groups: bool = True
+    ) -> gym.spaces.Dict:
+        use_groups = isinstance(action_space, gym.spaces.Dict) and use_dict_as_groups
+
+        if not use_groups:
+            return cls.flagged_group_space(action_space)
+        else:
+            return gym.spaces.Dict(
+                [
+                    (group_space, cls.flagged_group_space(action_space[group_space]),)
+                    for group_space in cast(gym.spaces.Dict, action_space)
+                ]
+            )
+
     def _get_observation_space(self) -> Union[gym.spaces.Dict, gym.spaces.Tuple]:
         """The observation space of the expert action sensor.
 
@@ -213,15 +231,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         only if the expert failed to generate a true expert action. The
         value `num actions in task` should be in `config["nactions"]`
         """
-        if not self.use_groups:
-            return self.flagged_group_space(self.action_space)
-        else:
-            return gym.spaces.Tuple(
-                [
-                    self.flagged_group_space(group_space)
-                    for group_space in self.group_spaces
-                ],
-            )
+        return self.flagged_space(self.action_space, use_dict_as_groups=self.use_groups)
 
     @lazy_property
     def _zeroed_observation(self) -> Union[OrderedDict, Tuple]:
@@ -252,30 +262,32 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         if task.is_done():
             return self.flatten_output(self._zeroed_observation)
 
-        actions = []
-        for group_it, group_space in enumerate(self.group_spaces):
+        actions = OrderedDict()
+        for group_name in self.group_spaces:
             action, expert_was_successful = task.query_expert(
-                **self.expert_args, expert_sensor_action_group_it=group_it
+                **self.expert_args, expert_sensor_action_group_name=group_name
             )
 
             if isinstance(action, int):
-                assert isinstance(group_space, gym.spaces.Discrete)
+                assert isinstance(self.group_spaces[group_name], gym.spaces.Discrete)
                 unflattened_action = action
             else:
                 # Assume we receive a gym-flattened numpy action
-                unflattened_action = gyms.unflatten(group_space, action)
+                unflattened_action = gyms.unflatten(
+                    self.group_spaces[group_name], action
+                )
                 # TODO why not enforcing unflattened actions from the task?
 
-            actions.append(
-                OrderedDict(
-                    [
-                        (self.action_label, unflattened_action),
-                        (self.expert_success_label, expert_was_successful),
-                    ]
-                )
+            actions[group_name] = OrderedDict(
+                [
+                    (self.action_label, unflattened_action),
+                    (self.expert_success_label, expert_was_successful),
+                ]
             )
 
-        return self.flatten_output(tuple(actions) if self.use_groups else actions[0])
+        return self.flatten_output(
+            actions if self.use_groups else actions[self.no_groups_label]
+        )
 
 
 class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):

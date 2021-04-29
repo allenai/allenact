@@ -339,13 +339,17 @@ class MiniGridTask(Task[CrossingEnv]):
 
 class ConditionedMiniGridTask(MiniGridTask):
     @property
-    def action_space(self) -> gym.spaces.Tuple:
-        return gym.spaces.Tuple([gym.spaces.Discrete(2), gym.spaces.Discrete(2)])
+    def action_space(self) -> gym.spaces.Dict:
+        return gym.spaces.Dict(
+            higher=gym.spaces.Discrete(2), lower=gym.spaces.Discrete(2)
+        )
 
-    def _step(self, action: tuple) -> RLStepResult:
+    def _step(self, action: Dict[str, int]) -> RLStepResult:
         assert len(action) == 2, "got action={}".format(action)
         minigrid_obs, reward, self._minigrid_done, info = self.env.step(
-            action=(self._ACTION_IND_TO_MINIGRID_IND[action[1]] + 2 * action[0])
+            action=(
+                self._ACTION_IND_TO_MINIGRID_IND[action["lower"]] + 2 * action["higher"]
+            )
         )
 
         # self.env.render()
@@ -358,13 +362,13 @@ class ConditionedMiniGridTask(MiniGridTask):
         )
 
     def query_expert(self, **kwargs) -> Tuple[int, bool]:
-        if kwargs["expert_sensor_action_group_it"] == 0:
+        if kwargs["expert_sensor_action_group_name"] == "higher":
             if self._minigrid_done:
                 get_logger().warning(
                     "Episode is completed, but expert is still queried."
                 )
                 return 0, False
-            kwargs.pop("expert_sensor_action_group_it")
+            kwargs.pop("expert_sensor_action_group_name")
             self.cached_expert = super().query_expert(**kwargs)
             if self.cached_expert[1]:
                 return self.cached_expert[0] // 2, True

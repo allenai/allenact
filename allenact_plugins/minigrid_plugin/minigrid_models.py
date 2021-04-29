@@ -15,10 +15,10 @@ from allenact.algorithms.onpolicy_sync.policy import (
     ObservationType,
 )
 from allenact.base_abstractions.distributions import (
-    CategoricalDistr,
-    DirectedGraphicalModel,
-    CondDistr,
     Distr,
+    CategoricalDistr,
+    ConditionalDistr,
+    SequentialDistr,
 )
 from allenact.embodiedai.models.basic_models import (
     LinearActorCritic,
@@ -224,7 +224,7 @@ class ConditionedLinearActorCriticHead(nn.Module):
         super().__init__()
         self.input_size = input_size
         self.master_and_critic = nn.Linear(input_size, master_actions + 1)
-        self.embed_master = nn.Embedding(num_embeddings=2, embedding_dim=input_size)
+        self.embed_higher = nn.Embedding(num_embeddings=2, embedding_dim=input_size)
         self.actor = nn.Linear(2 * input_size, subpolicy_actions)
 
         nn.init.orthogonal_(self.master_and_critic.weight)
@@ -232,10 +232,10 @@ class ConditionedLinearActorCriticHead(nn.Module):
         nn.init.orthogonal_(self.actor.weight)
         nn.init.constant_(self.actor.bias, 0)
 
-    def actor_policy(self, *args, **kwargs):
-        assert "rotate_move" in kwargs
+    def lower_policy(self, *args, **kwargs):
+        assert "higher" in kwargs
         assert "state_embedding" in kwargs
-        emb = self.embed_master(kwargs["rotate_move"])
+        emb = self.embed_higher(kwargs["higher"])
         logits = self.actor(torch.cat([emb, kwargs["state_embedding"]], dim=-1))
         return CategoricalDistr(logits=logits)
 
@@ -246,34 +246,31 @@ class ConditionedLinearActorCriticHead(nn.Module):
         values = out[..., -1:]
         # noinspection PyArgumentList
 
-        cond1 = CondDistr(
-            gym.spaces.Discrete(2),
-            get_subpolicy=lambda *args, **kwargs: CategoricalDistr(
+        cond1 = ConditionalDistr(
+            distr_conditioned_on_input_fn_or_instance=CategoricalDistr(
                 logits=master_logits
             ),
-            produces=["rotate_move"],
+            action_group_name="higher",
         )
-        cond2 = CondDistr(
-            gym.spaces.Discrete(2),
-            get_subpolicy=lambda *args, **kwargs: ConditionedLinearActorCriticHead.actor_policy(
+        cond2 = ConditionalDistr(
+            distr_conditioned_on_input_fn_or_instance=lambda *args, **kwargs: ConditionedLinearActorCriticHead.lower_policy(
                 self, *args, **kwargs
             ),
-            produces=["left_right_forward_pickup"],
-            given=["rotate_move"],
+            action_group_name="lower",
             state_embedding=x,
         )
 
         return (
-            DirectedGraphicalModel([cond2, cond1]),
+            SequentialDistr(cond1, cond2),
             values.view(*values.shape[:2], -1),  # [steps, samplers, flattened]
         )
 
 
-class ConditionedLinearActorCritic(ActorCriticModel[DirectedGraphicalModel]):
+class ConditionedLinearActorCritic(ActorCriticModel[SequentialDistr]):
     def __init__(
         self,
         input_uuid: str,
-        action_space: gym.spaces.Tuple,
+        action_space: gym.spaces.Dict,
         observation_space: SpaceDict,
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
@@ -292,8 +289,8 @@ class ConditionedLinearActorCritic(ActorCriticModel[DirectedGraphicalModel]):
         self.in_dim = box_space.shape[0]
         self.head = ConditionedLinearActorCriticHead(
             input_size=self.in_dim,
-            master_actions=action_space[0].n,
-            subpolicy_actions=action_space[1].n,
+            master_actions=action_space["higher"].n,
+            subpolicy_actions=action_space["lower"].n,
         )
 
     # noinspection PyMethodMayBeStatic
@@ -310,17 +307,17 @@ class ConditionedLinearActorCritic(ActorCriticModel[DirectedGraphicalModel]):
         )
 
 
-class ConditionedRNNActorCritic(ActorCriticModel[DirectedGraphicalModel]):
+class ConditionedRNNActorCritic(ActorCriticModel[SequentialDistr]):
     def __init__(
         self,
         input_uuid: str,
-        action_space: gym.spaces.Discrete,
+        action_space: gym.spaces.Dict,
         observation_space: SpaceDict,
         hidden_size: int = 128,
         num_layers: int = 1,
         rnn_type: str = "GRU",
         head_type: Callable[
-            ..., ActorCriticModel[DirectedGraphicalModel]
+            ..., ActorCriticModel[SequentialDistr]
         ] = ConditionedLinearActorCritic,
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
@@ -415,7 +412,7 @@ class ConditionedRNNActorCritic(ActorCriticModel[DirectedGraphicalModel]):
 class ConditionedMiniGridSimpleConvRNN(MiniGridSimpleConvBase):
     def __init__(
         self,
-        action_space: gym.spaces.Discrete,
+        action_space: gym.spaces.Dict,
         observation_space: SpaceDict,
         num_objects: int,
         num_colors: int,
@@ -425,7 +422,7 @@ class ConditionedMiniGridSimpleConvRNN(MiniGridSimpleConvBase):
         num_layers=1,
         rnn_type="GRU",
         head_type: Callable[
-            ..., ActorCriticModel[DirectedGraphicalModel]
+            ..., ActorCriticModel[SequentialDistr]
         ] = ConditionedLinearActorCritic,
         **kwargs,
     ):
