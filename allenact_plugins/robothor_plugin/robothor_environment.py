@@ -190,7 +190,7 @@ class RoboThorEnvironment:
                 z=target["z"],
                 allowedError=allowedError,
             ).metadata["actionReturn"]["corners"]
-        except:
+        except Exception:
             get_logger().debug(
                 "Failed to find path for {} in {}. Start point {}, agent state {}.".format(
                     target,

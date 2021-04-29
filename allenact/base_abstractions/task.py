@@ -7,13 +7,11 @@
 environment."""
 
 import abc
-from abc import abstractmethod
 from typing import Dict, Any, Tuple, Generic, Union, Optional, TypeVar, Sequence, List
 
 import gym
 import numpy as np
 from gym.spaces.dict import Dict as SpaceDict
-import torch
 
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import Sensor, SensorSuite
@@ -68,7 +66,7 @@ class Task(Generic[EnvType]):
         return self.sensor_suite.get_observations(env=self.env, task=self, **kwargs)
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def action_space(self) -> gym.Space:
         """Task's action space.
 
@@ -78,7 +76,7 @@ class Task(Generic[EnvType]):
         """
         raise NotImplementedError()
 
-    @abstractmethod
+    @abc.abstractmethod
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         """Render the current task state.
 
@@ -141,7 +139,7 @@ class Task(Generic[EnvType]):
         #   if it relies on some aspect of the current number of steps taken.
         return sr.clone({"done": sr.done or self.is_done()})
 
-    @abstractmethod
+    @abc.abstractmethod
     def _step(self, action: Any) -> RLStepResult:
         """Helper function called by `step` to take a step by each agent in the
         environment.
@@ -171,7 +169,7 @@ class Task(Generic[EnvType]):
         """Has the agent reached the maximum number of steps."""
         return self.num_steps_taken() >= self.max_steps
 
-    @abstractmethod
+    @abc.abstractmethod
     def reached_terminal_state(self) -> bool:
         """Has the agent reached a terminal state (excluding reaching the
         maximum number of steps)."""
@@ -187,7 +185,7 @@ class Task(Generic[EnvType]):
         return self._num_steps_taken
 
     @classmethod
-    @abstractmethod
+    @abc.abstractmethod
     def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
         """A tuple of action names.
 
@@ -220,7 +218,7 @@ class Task(Generic[EnvType]):
         assert 0 <= index < self.total_actions
         return self.class_action_names()[index]
 
-    @abstractmethod
+    @abc.abstractmethod
     def close(self) -> None:
         """Closes the environment and any other files opened by the Task (if
         applicable)."""
@@ -278,7 +276,7 @@ class TaskSampler(abc.ABC):
     """Abstract class defining a how new tasks are sampled."""
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def length(self) -> Union[int, float]:
         """Length.
 
@@ -290,7 +288,7 @@ class TaskSampler(abc.ABC):
         raise NotImplementedError()
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def last_sampled_task(self) -> Optional[Task]:
         """Get the most recently sampled Task.
 
@@ -300,7 +298,7 @@ class TaskSampler(abc.ABC):
         """
         raise NotImplementedError()
 
-    @abstractmethod
+    @abc.abstractmethod
     def next_task(self, force_advance_scene: bool = False) -> Optional[Task]:
         """Get the next task in the sampler's stream.
 
@@ -317,7 +315,7 @@ class TaskSampler(abc.ABC):
         """
         raise NotImplementedError()
 
-    @abstractmethod
+    @abc.abstractmethod
     def close(self) -> None:
         """Closes any open environments or streams.
 
@@ -326,7 +324,7 @@ class TaskSampler(abc.ABC):
         raise NotImplementedError()
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def all_observation_spaces_equal(self) -> bool:
         """Checks if all observation spaces of tasks that can be sampled are
         equal.
@@ -344,12 +342,12 @@ class TaskSampler(abc.ABC):
         """
         raise NotImplementedError()
 
-    @abstractmethod
+    @abc.abstractmethod
     def reset(self) -> None:
         """Resets task sampler to its original state (except for any seed)."""
         raise NotImplementedError()
 
-    @abstractmethod
+    @abc.abstractmethod
     def set_seed(self, seed: int) -> None:
         """Sets new RNG seed.
 

@@ -3,7 +3,7 @@ from typing import List, Callable, Optional, Any, cast, Dict
 import gym
 import numpy as np
 import torch
-from torch import nn as nn
+import torch.nn as nn
 from torchvision import models
 
 from allenact.base_abstractions.preprocessor import Preprocessor

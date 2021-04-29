@@ -2,7 +2,7 @@ import abc
 from typing import Any
 
 import torch
-from torch import nn
+import torch.nn as nn
 from torch.distributions.utils import lazy_property
 
 """

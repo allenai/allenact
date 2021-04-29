@@ -16,7 +16,7 @@ import gym
 import numpy as np
 import torch
 from gym.spaces.dict import Dict as SpaceDict
-from torch import nn
+import torch.nn as nn
 
 from allenact.algorithms.onpolicy_sync.policy import ActorCriticModel, DistributionType
 from allenact.base_abstractions.distributions import CategoricalDistr

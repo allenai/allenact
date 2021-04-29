@@ -1,6 +1,15 @@
 import abc
-import typing
-from typing import Dict, Any, TypeVar, Sequence, NamedTuple, Optional, List, Union
+from typing import (
+    Dict,
+    Any,
+    TypeVar,
+    Sequence,
+    NamedTuple,
+    Optional,
+    List,
+    Union,
+    Generic,
+)
 
 import torch
 
@@ -38,7 +47,7 @@ class RLStepResult(NamedTuple):
         )
 
 
-class ActorCriticOutput(tuple, typing.Generic[DistributionType]):
+class ActorCriticOutput(tuple, Generic[DistributionType]):
     distributions: DistributionType
     values: torch.FloatTensor
     extras: Dict[str, Any]

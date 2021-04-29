@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Union, Any, cast
 import gym
 import torch
 import torch.nn as nn
-from torch import optim
+import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
 from allenact.base_abstractions.misc import Loss

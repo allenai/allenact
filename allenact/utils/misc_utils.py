@@ -11,7 +11,6 @@ import urllib
 import urllib.request
 from collections import Counter
 from contextlib import contextmanager
-from functools import lru_cache
 from typing import Sequence, List, Optional, Tuple, Hashable
 
 import filelock
@@ -178,7 +177,7 @@ def uninterleave(seq: Sequence, parts: int) -> List:
     ]
 
 
-@lru_cache(10000)
+@functools.lru_cache(10000)
 def cached_comb(n: int, m: int):
     return comb(n, m)
 
