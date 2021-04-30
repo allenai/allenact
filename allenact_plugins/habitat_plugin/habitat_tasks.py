@@ -281,6 +281,9 @@ class ObjectNavTask(HabitatTask):
     def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
         return cls._actions
 
+    def action_names(cls, **kwargs) -> Tuple[str, ...]:
+        return cls._actions
+
     def close(self) -> None:
         self.env.stop()
 
