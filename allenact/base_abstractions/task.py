@@ -105,7 +105,7 @@ class Task(Generic[EnvType]):
     def step(self, action: Any) -> RLStepResult:
         """Take an action in the environment (one per agent).
 
-        Takes the action in the environment returns
+        Takes the action in the environment and returns
         observations (& rewards and any additional information)
         corresponding to the agent's new state. Note that this function
         should not be overwritten without care (instead
@@ -144,7 +144,7 @@ class Task(Generic[EnvType]):
         """Helper function called by `step` to take a step by each agent in the
         environment.
 
-        Takes the action in the environment returns
+        Takes the action in the environment and returns
         observations (& rewards and any additional information)
         corresponding to the agent's new state. This function is called
         by the (public) `step` function and is what should be implemented
