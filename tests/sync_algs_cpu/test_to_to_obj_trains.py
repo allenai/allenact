@@ -34,7 +34,7 @@ class TestGoToObjTrains(object):
         )
         test_results = test_runner.start_test(
             checkpoint_path_dir_or_pattern=os.path.join(
-                output_dir, "checkpoints", "**", start_time_str
+                output_dir, "checkpoints", "**", start_time_str, "*.pt"
             ),
             max_sampler_processes_per_worker=1,
         )
