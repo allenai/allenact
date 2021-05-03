@@ -2,15 +2,17 @@
 name."""
 
 import argparse
+import ast
 import importlib
 import inspect
+import json
 import os
 from typing import Dict, Tuple, List, Optional, Type
 
 from setproctitle import setproctitle as ptitle
 
 from allenact import __version__
-from allenact.algorithms.onpolicy_sync.runner import OnPolicyRunner
+from allenact.algorithms.onpolicy_sync.runner import OnPolicyRunner, _CONFIG_KWARGS_STR
 from allenact.base_abstractions.experiment_config import ExperimentConfig
 from allenact.utils.system import get_logger, init_logging, HUMAN_LOG_LEVELS
 
@@ -24,7 +26,36 @@ def get_args():
     )
 
     parser.add_argument(
-        "experiment", type=str, help="experiment configuration file name",
+        "experiment",
+        type=str,
+        help="the path to experiment config file relative the 'experiment_base' directory"
+        " (see the `--experiment_base` flag).",
+    )
+
+    parser.add_argument(
+        "--eval",
+        dest="eval",
+        action="store_true",
+        required=False,
+        help="if you pass the `--eval` flag, AllenAct will run inference on your experiment configuration."
+        " You will need to specify which experiment checkpoints to run evaluation using the `--checkpoint`"
+        " flag.",
+    )
+    parser.set_defaults(eval=False)
+
+    parser.add_argument(
+        "--config_kwargs",
+        type=str,
+        default=None,
+        required=False,
+        help="sometimes it is useful to be able to pass additional key-word arguments"
+        " to `__init__` when initializing an experiment configuration. This flag can be used"
+        " to pass such key-word arugments by specifying them with json, e.g."
+        "\n\t--config_kwargs \"{'gpu_id': 0, 'my_important_variable': [1,2,3]}\""
+        "\nTo see which arguments are supported for your experiment see the experiment"
+        " config's `__init__` function. If the value passed to this function is a file path"
+        " then we will try to load this file path as a json object and use this json object"
+        " as key-word arguments.",
     )
 
     parser.add_argument(
@@ -34,7 +65,8 @@ def get_args():
         required=False,
         help="Add an extra tag to the experiment when trying out new ideas (will be used"
         "as a subdirectory of the tensorboard path so you will be able to"
-        "search tensorboard logs using this extra tag).",
+        "search tensorboard logs using this extra tag). This can also be used to add an extra"
+        " organization when running evaluation (e.g. `--extra_tag running_eval_on_great_idea_12`)",
     )
 
     parser.add_argument(
@@ -63,14 +95,28 @@ def get_args():
         required=False,
         default=None,
         type=str,
-        help="optional checkpoint file name to resume training or test",
+        help="optional checkpoint file name to resume training on or run testing with. When testing (see the `--eval` flag) this"
+        " argument can be used very flexibly as:"
+        "\n(1) the path to a particular individual checkpoint file,"
+        "\n(2) the path to a directory of checkpoint files all of which you'd like to be evaluated"
+        " (checkpoints are expected to have a `.pt` file extension),"
+        '\n(3) a "glob" pattern (https://tldp.org/LDP/abs/html/globbingref.html) that will be expanded'
+        "using python's `glob.glob` function and should return a collection of checkpoint files."
+        "\nIf you'd like to only evaluate a subset of the checkpoints specified by the above directory/glob"
+        " (e.g. every checkpoint saved after 5mil steps) you'll likely want to use the `--approx_ckpt_step_interval`"
+        " flag.",
     )
     parser.add_argument(
-        "--approx_ckpt_steps_count",
+        "--approx_ckpt_step_interval",
         required=False,
         default=None,
         type=float,
-        help="if running testing, ",
+        help="if running tests on a collection of checkpoints (see the `--checkpoint` flag) this argument can be"
+        " used to skip checkpoints. In particular, if this value is specified and equals `n` then we will"
+        " only evaluate checkpoints whose step count is closest to each of `0*n`, `1*n`, `2*n`, `3*n`, ... "
+        " n * ceil(max training steps in ckpts / n). Note that 'closest to' is important here as AllenAct does"
+        " not generally save checkpoints at exact intervals (doing so would result in performance degregation"
+        " in distributed training).",
     )
     parser.add_argument(
         "-r",
@@ -90,29 +136,9 @@ def get_args():
         dest="deterministic_cudnn",
         action="store_true",
         required=False,
-        help="sets CuDNN in deterministic mode",
+        help="sets CuDNN to deterministic mode",
     )
     parser.set_defaults(deterministic_cudnn=False)
-
-    parser.add_argument(
-        "-t",
-        "--test_date",
-        default=None,
-        type=str,
-        required=False,
-        help="tests the experiment run on specified date (formatted as %%Y-%%m-%%d_%%H-%%M-%%S), assuming it was "
-        "previously trained. If no checkpoint is specified, it will run on all checkpoints enabled by "
-        "skip_checkpoints",
-    )
-
-    parser.add_argument(
-        "-k",
-        "--skip_checkpoints",
-        required=False,
-        default=0,
-        type=int,
-        help="optional number of skipped checkpoints between runs in test if no checkpoint specified",
-    )
 
     parser.add_argument(
         "-m",
@@ -121,10 +147,6 @@ def get_args():
         default=None,
         type=int,
         help="maximal number of sampler processes to spawn for each worker",
-    )
-
-    parser.add_argument(
-        "--gp", default=None, action="append", help="values to be used by gin-config.",
     )
 
     parser.add_argument(
@@ -172,7 +194,43 @@ def get_args():
         "--version", action="version", version=f"allenact {__version__}"
     )
 
-    return parser.parse_args()
+    ### DEPRECATED FLAGS
+    parser.add_argument(
+        "-t",
+        "--test_date",
+        default=None,
+        type=str,
+        required=False,
+        help="`--test_date` has been deprecated. Please use `--eval` instead.",
+    )
+    parser.add_argument(
+        "--approx_ckpt_steps_count",
+        required=False,
+        default=None,
+        type=float,
+        help="`--approx_ckpt_steps_count` has been deprecated."
+        " Please specify the checkpoint directly using the '--checkpoint' flag.",
+    )
+    parser.add_argument(
+        "-k",
+        "--skip_checkpoints",
+        required=False,
+        default=0,
+        type=int,
+        help="`--skip_checkpoints` has been deprecated. Please use `--approx_ckpt_steps_count` instead.",
+    )
+    ### END DEPRECATED FLAGS
+
+    args = parser.parse_args()
+
+    # check for deprecated
+    deprecated_flags = ["test_date", "skip_checkpoints", "approx_ckpt_steps_count"]
+    for df in deprecated_flags:
+        df_info = parser._option_string_actions[f"--{df}"]
+        if getattr(args, df) is not df_info.default:
+            raise RuntimeError(df_info.help)
+
+    return args
 
 
 def _config_source(config_type: Type) -> Dict[str, str]:
@@ -258,8 +316,31 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, str]]:
         len(experiments) == 1
     ), "Too many or two few experiments defined in {}".format(module_path)
 
-    config = experiments[0]()
+    config_kwargs = {}
+    if args.config_kwargs is not None:
+        if os.path.exists(args.config_kwargs):
+            with open(args.config_kwargs, "r") as f:
+                config_kwargs = json.load(f)
+        else:
+            try:
+                config_kwargs = json.loads(args.config_kwargs)
+            except json.JSONDecodeError:
+                get_logger().warning(
+                    f"The input for --config_kwargs ('{args.config_kwargs}')"
+                    f" does not appear to be valid json. Often this is due to"
+                    f" json requiring very specific synax (e.g. double quoted strings)"
+                    f" we'll try to get around this by evaluating with `ast.literal_eval`"
+                    f" (a safer version of the standard `eval` function)."
+                )
+                config_kwargs = ast.literal_eval(args.config_kwargs)
+
+        assert isinstance(
+            config_kwargs, Dict
+        ), "`--config_kwargs` must be a json string (or a path to a .json file) that evaluates to a dictionary."
+
+    config = experiments[0](**config_kwargs)
     sources = _config_source(config_type=experiments[0])
+    sources[_CONFIG_KWARGS_STR] = json.dumps(config_kwargs)
     return config, sources
 
 
@@ -270,11 +351,11 @@ def main():
 
     get_logger().info("Running with args {}".format(args))
 
-    ptitle("Master: {}".format("Training" if args.test_date is None else "Testing"))
+    ptitle("Master: {}".format("Training" if args.eval is None else "Evaluation"))
 
     cfg, srcs = load_config(args)
 
-    if args.test_date is None:
+    if not args.eval:
         OnPolicyRunner(
             config=cfg,
             output_dir=args.output_dir,
@@ -304,10 +385,8 @@ def main():
             disable_tensorboard=args.disable_tensorboard,
             disable_config_saving=args.disable_config_saving,
         ).start_test(
-            experiment_date=args.test_date,
-            checkpoint_name_fragment=args.checkpoint,
-            approx_ckpt_steps_count=args.approx_ckpt_steps_count,
-            skip_checkpoints=args.skip_checkpoints,
+            checkpoint_path_dir_or_pattern=args.checkpoint,
+            approx_ckpt_step_interval=args.approx_ckpt_step_interval,
             max_sampler_processes_per_worker=args.max_sampler_processes_per_worker,
         )
 

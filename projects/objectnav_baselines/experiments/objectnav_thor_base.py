@@ -3,7 +3,7 @@ import os
 import platform
 from abc import ABC
 from math import ceil
-from typing import Dict, Any, List, Optional, Sequence
+from typing import Dict, Any, List, Optional, Sequence, Tuple, cast
 
 import gym
 import numpy as np
@@ -40,11 +40,10 @@ if ai2thor.__version__ not in ["0.0.1", None] and version.parse(
 class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
     """The base config for all iTHOR PointNav experiments."""
 
-    NUM_PROCESSES: Optional[int] = None
-    TRAIN_GPU_IDS = list(range(torch.cuda.device_count()))
-    SAMPLER_GPU_IDS = TRAIN_GPU_IDS
-    VALID_GPU_IDS = [torch.cuda.device_count() - 1]
-    TEST_GPU_IDS = [torch.cuda.device_count() - 1]
+    DEFAULT_NUM_TRAIN_PROCESSES: Optional[int] = None
+    DEFAULT_TRAIN_GPU_IDS = tuple(range(torch.cuda.device_count()))
+    DEFAULT_VALID_GPU_IDS = (torch.cuda.device_count() - 1,)
+    DEFAULT_TEST_GPU_IDS = (torch.cuda.device_count() - 1,)
 
     TRAIN_DATASET_DIR: Optional[str] = None
     VAL_DATASET_DIR: Optional[str] = None
@@ -53,6 +52,27 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
     TARGET_TYPES: Optional[Sequence[str]] = None
 
     THOR_COMMIT_ID: Optional[str] = None
+
+    def __init__(
+        self,
+        num_train_processes: Optional[int] = None,
+        train_gpu_ids: Optional[Sequence[int]] = None,
+        val_gpu_ids: Optional[Sequence[int]] = None,
+        test_gpu_ids: Optional[Sequence[int]] = None,
+    ):
+        super().__init__()
+
+        def v_or_default(v, default):
+            return v if v is not None else default
+
+        self.num_train_processes = v_or_default(
+            num_train_processes, self.DEFAULT_NUM_TRAIN_PROCESSES
+        )
+        self.train_gpu_ids = v_or_default(train_gpu_ids, self.DEFAULT_TRAIN_GPU_IDS)
+        self.val_gpu_ids = v_or_default(val_gpu_ids, self.DEFAULT_VALID_GPU_IDS)
+        self.test_gpu_ids = v_or_default(test_gpu_ids, self.DEFAULT_TEST_GPU_IDS)
+
+        self.sampler_devices = self.train_gpu_ids
 
     @classmethod
     def env_args(cls):
@@ -80,26 +100,33 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         )
 
     def machine_params(self, mode="train", **kwargs):
-        sampler_devices: Sequence[int] = []
+        sampler_devices: Sequence[torch.device] = []
+        devices: Sequence[torch.device]
         if mode == "train":
             workers_per_device = 1
-            gpu_ids = (
-                []
+            devices = (
+                [torch.device("cpu")]
                 if not torch.cuda.is_available()
-                else self.TRAIN_GPU_IDS * workers_per_device
+                else cast(Tuple, self.train_gpu_ids) * workers_per_device
             )
-            nprocesses = (
-                1
-                if not torch.cuda.is_available()
-                else evenly_distribute_count_into_bins(self.NUM_PROCESSES, len(gpu_ids))
+            nprocesses = evenly_distribute_count_into_bins(
+                self.num_train_processes, max(len(devices), 1)
             )
-            sampler_devices = self.SAMPLER_GPU_IDS
+            sampler_devices = self.sampler_devices
         elif mode == "valid":
             nprocesses = 1
-            gpu_ids = [] if not torch.cuda.is_available() else self.VALID_GPU_IDS
+            devices = (
+                [torch.device("cpu")]
+                if not torch.cuda.is_available()
+                else self.val_gpu_ids
+            )
         elif mode == "test":
             nprocesses = 10 if torch.cuda.is_available() else 1
-            gpu_ids = [] if not torch.cuda.is_available() else self.TEST_GPU_IDS
+            devices = (
+                [torch.device("cpu")]
+                if not torch.cuda.is_available()
+                else self.test_gpu_ids
+            )
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
@@ -122,10 +149,10 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
 
         return MachineParams(
             nprocesses=nprocesses,
-            devices=gpu_ids,
+            devices=devices,
             sampler_devices=sampler_devices
             if mode == "train"
-            else gpu_ids,  # ignored with > 1 gpu_ids
+            else devices,  # ignored with > 1 gpu_ids
             sensor_preprocessor_graph=sensor_preprocessor_graph,
         )
 

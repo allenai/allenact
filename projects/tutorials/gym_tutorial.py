@@ -307,16 +307,24 @@ converge to 1 and the mean reward to above 250, while the average episode length
 
 The training start date for the experiment, in `YYYY-MM-DD_HH-MM-SS` format, is used as the name of one of the
 subfolders in the path to the checkpoints, saved under the output folder.
-In order to test for a specific experiment, we need to pass its training start date with the option
-`-t EXPERIMENT_DATE`:
-
+In order to evaluate (i.e. test) a collection of checkpoints, we need to pass the `--eval` flag and specify the 
+directory containing the checkpoints with the `--checkpoint CHECKPOINT_DIR` option:
 ```bash
-PYTHONPATH=. python allenact/main.py gym_tutorial -b projects/tutorials -m 1 -o /PATH/TO/gym_output -s 54321 -e -t EXPERIMENT_DATE -k 4
+PYTHONPATH=. python allenact/main.py gym_tutorial \
+    -b projects/tutorials \
+    -m 1 \
+    -o /PATH/TO/gym_output \
+    -s 54321 \
+    -e \
+    --eval \
+    --checkpoint /PATH/TO/gym_output/checkpoints/GymTutorial/YOUR_START_DATE \
+    --approx_ckpt_step_interval 800000 # Skip some checkpoints
 ```
 
-The option `-k 4` skips four checkpoints after each run. If everything went well, the `test` success rate should
-converge to 1, the episode length below or near 300 steps, and the mean reward to above 250. The images tab in
-tensorboard will contain videos for the sampled test episodes.
+The option `--approx_ckpt_step_interval 800000` tells AllenAct that we only want to evaluate checkpoints
+which were saved every ~800000 steps, this lets us avoid evaluating every saved checkpoint. If everything went well, 
+the `test` success rate should converge to 1, the episode length below or near 300 steps, and the mean reward to above 
+250. The images tab in tensorboard will contain videos for the sampled test episodes.
 
 ![video_results](../img/lunar_lander_continuous_test.png).
 
@@ -325,6 +333,14 @@ remotely, try prepending `DISPLAY=:0.0` to the command above, assuming you have 
 available:
 
 ```bash
-DISPLAY=:0.0 PYTHONPATH=. python allenact/main.py gym_tutorial -b projects/tutorials -m 1 -o /PATH/TO/gym_output -s 54321 -e -t EXPERIMENT_DATE -k 4
+DISPLAY=:0.0 PYTHONPATH=. python allenact/main.py gym_tutorial \
+    -b projects/tutorials \
+    -m 1 \
+    -o /PATH/TO/gym_output \
+    -s 54321 \
+    -e \  
+    --eval \
+    --checkpoint /PATH/TO/gym_output/checkpoints/GymTutorial/YOUR_START_DATE \
+    --approx_ckpt_step_interval 800000 
 ```
 """

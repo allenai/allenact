@@ -3,6 +3,7 @@ import copy
 import glob
 import itertools
 import json
+import math
 import os
 import queue
 import random
@@ -15,6 +16,7 @@ from multiprocessing.context import BaseContext
 from multiprocessing.process import BaseProcess
 from typing import Optional, Dict, Union, Tuple, Sequence, List, Any
 
+import numpy as np
 import torch
 import torch.multiprocessing as mp
 from setproctitle import setproctitle as ptitle
@@ -44,6 +46,8 @@ from allenact.utils.tensor_utils import SummaryWriter
 # Logging
 # Saves configs, makes folder for trainer models
 from allenact.utils.viz_utils import VizSuite
+
+_CONFIG_KWARGS_STR = "__CONFIG_KWARGS__"
 
 
 class OnPolicyRunner(object):
@@ -349,10 +353,8 @@ class OnPolicyRunner(object):
 
     def start_test(
         self,
-        experiment_date: str,
-        checkpoint_name_fragment: Optional[str] = None,
-        approx_ckpt_steps_count: Optional[Union[float, int]] = None,
-        skip_checkpoints: int = 0,
+        checkpoint_path_dir_or_pattern: str,
+        approx_ckpt_step_interval: Optional[Union[float, int]] = None,
         max_sampler_processes_per_worker: Optional[int] = None,
     ):
         devices = self.worker_devices("test")
@@ -390,10 +392,8 @@ class OnPolicyRunner(object):
         )
 
         checkpoint_paths = self.get_checkpoint_files(
-            experiment_date=experiment_date,
-            checkpoint_name_fragment=checkpoint_name_fragment,
-            approx_ckpt_steps_count=approx_ckpt_steps_count,
-            skip_checkpoints=skip_checkpoints,
+            checkpoint_path_dir_or_pattern=checkpoint_path_dir_or_pattern,
+            approx_ckpt_step_interval=approx_ckpt_step_interval,
         )
         steps = [self.step_from_checkpoint(cp) for cp in checkpoint_paths]
 
@@ -407,7 +407,7 @@ class OnPolicyRunner(object):
         for _ in range(num_testers):
             self.queues["checkpoints"].put(("quit", None))
 
-        metrics_dir = self.metric_path(experiment_date)
+        metrics_dir = self.metric_path(self.local_start_time_str)
         os.makedirs(metrics_dir, exist_ok=True)
         suffix = "__test_{}".format(self.local_start_time_str)
         metrics_file_path = os.path.join(metrics_dir, "metrics" + suffix + ".json")
@@ -504,6 +504,17 @@ class OnPolicyRunner(object):
         # Saving configs
         if self.loaded_config_src_files is not None:
             for src_path in self.loaded_config_src_files:
+                if src_path == _CONFIG_KWARGS_STR:
+                    # We also save key-word arguments passed to to the experiment
+                    # initializer.
+                    save_path = os.path.join(base_dir, "config_kwargs.json")
+                    assert not os.path.exists(
+                        save_path
+                    ), f"{save_path} should not already exist."
+                    with open(save_path, "w") as f:
+                        json.dump(json.loads(self.loaded_config_src_files[src_path]), f)
+                    continue
+
                 assert os.path.isfile(src_path), "Config file {} not found".format(
                     src_path
                 )
@@ -887,89 +898,62 @@ class OnPolicyRunner(object):
 
     def get_checkpoint_files(
         self,
-        experiment_date: str,
-        checkpoint_name_fragment: Optional[str] = None,
-        approx_ckpt_steps_count: Optional[int] = None,
-        skip_checkpoints: int = 0,
+        checkpoint_path_dir_or_pattern: str,
+        approx_ckpt_step_interval: Optional[int] = None,
     ):
-        test_checkpoints_dir = self.checkpoint_dir(
-            experiment_date, create_if_none=False
-        )
-        if checkpoint_name_fragment is not None and os.path.exists(
-            checkpoint_name_fragment
-        ):
-            if "*" in checkpoint_name_fragment:
-                # The fragment is a glob
-                assert "/" not in checkpoint_name_fragment
-            elif os.path.isfile(checkpoint_name_fragment):
-                # The fragment is a path to a checkpoint, use this checkpoint
-                return [checkpoint_name_fragment]
-            elif os.path.isdir(checkpoint_name_fragment):
-                # The fragment is a path to a directory, lets use this directory
-                # as the base dir to search for checkpoints
-                test_checkpoints_dir = checkpoint_name_fragment
-                checkpoint_name_fragment = None
-            else:
-                raise NotImplementedError
 
-        if checkpoint_name_fragment is not None:
+        if os.path.isdir(checkpoint_path_dir_or_pattern):
+            # The fragment is a path to a directory, lets use this directory
+            # as the base dir to search for checkpoints
+            checkpoint_path_dir_or_pattern = os.path.join(
+                checkpoint_path_dir_or_pattern, "*.pt"
+            )
+
+        ckpt_paths = glob.glob(checkpoint_path_dir_or_pattern, recursive=True)
+
+        if len(ckpt_paths) == 0:
+            raise FileNotFoundError(
+                f"Could not find any checkpoints at {os.path.abspath(checkpoint_path_dir_or_pattern)}, is it possible"
+                f" the path has been mispecified?"
+            )
+
+        step_count_ckpt_pairs = [(self.step_from_checkpoint(p), p) for p in ckpt_paths]
+        step_count_ckpt_pairs.sort()
+        ckpts_paths = [p for _, p in step_count_ckpt_pairs]
+        step_counts = np.array([sc for sc, _ in step_count_ckpt_pairs])
+
+        if approx_ckpt_step_interval is not None:
             assert (
-                skip_checkpoints == 0
-            ), "`skip_checkpoints` must be 0 (i.e. none skipped)."
-            if checkpoint_name_fragment.endswith(".pt"):
-                checkpoint_name_fragment = checkpoint_name_fragment[:-3]
-                while checkpoint_name_fragment != checkpoint_name_fragment.strip("*"):
-                    checkpoint_name_fragment = checkpoint_name_fragment.strip("*")
+                approx_ckpt_step_interval > 0
+            ), "`approx_ckpt_step_interval` must be >0"
+            inds_to_eval = set()
+            for i in range(
+                math.ceil(step_count_ckpt_pairs[-1][0] / approx_ckpt_step_interval) + 1
+            ):
+                inds_to_eval.add(
+                    int(np.argmin(np.abs(step_counts - i * approx_ckpt_step_interval)))
+                )
 
-            for_glob = os.path.join(
-                test_checkpoints_dir, f"*{checkpoint_name_fragment}*.pt",
-            )
-            paths = glob.glob(for_glob)
-            if len(paths) == 0:
-                raise FileExistsError(
-                    f"No file at path `{checkpoint_name_fragment}` nor any"
-                    f" files matching pattern {for_glob}."
-                )
-            elif len(paths) > 1:
-                raise FileExistsError(
-                    f"Too many files match the pattern {for_glob}. These files include {paths}."
-                )
-            return paths
-        elif approx_ckpt_steps_count is not None:
-            paths = glob.glob(os.path.join(test_checkpoints_dir, "exp_*.pt"))
-            if len(paths) == 0:
-                raise FileExistsError(
-                    f"No checkpoint files in directory {test_checkpoints_dir}."
-                )
-            step_diffs = [
-                abs(approx_ckpt_steps_count - self.step_from_checkpoint(p))
-                for p in paths
-            ]
-            _, path = min(*zip(step_diffs, paths))
-            paths = [path]
-        else:
-            paths = glob.glob(os.path.join(test_checkpoints_dir, "exp_*.pt"))
-        paths = sorted(paths)
-        return (
-            paths[:: skip_checkpoints + 1]
-            + (
-                [paths[-1]]
-                if skip_checkpoints > 0 and len(paths) % (skip_checkpoints + 1) != 1
-                else []
-            )
-            if len(paths) > 0
-            else paths
-        )
+            ckpts_paths = [ckpts_paths[ind] for ind in sorted(list(inds_to_eval))]
+        return ckpts_paths
 
     @staticmethod
-    def step_from_checkpoint(name: str) -> int:
-        parts = os.path.basename(name).split("__")
+    def step_from_checkpoint(ckpt_path: str) -> int:
+        parts = os.path.basename(ckpt_path).split("__")
         for part in parts:
             if "steps_" in part:
                 possible_num = part.split("_")[-1].split(".")[0]
                 if possible_num.isdigit():
                     return int(possible_num)
-        return -1
+
+        get_logger().warning(
+            f"The checkpoint {os.path.basename(ckpt_path)} does not follow the checkpoint naming convention"
+            f" used by AllenAct. As a fall back we must load the checkpoint into memory to find the"
+            f" training step count, this may increase startup time if the checkpoints are large or many"
+            f" must be loaded in sequence."
+        )
+        ckpt = torch.load(ckpt_path, map_location="cpu")
+        return ckpt["total_steps"]
 
     def close(self, verbose=True):
         if self._is_closed:
