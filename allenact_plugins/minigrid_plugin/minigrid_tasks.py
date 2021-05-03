@@ -314,7 +314,10 @@ class MiniGridTask(Task[CrossingEnv]):
             and self.corrupt_expert_within_actions_of_goal
             >= self.closest_agent_has_been_to_goal
         ):
-            return int(self.env.np_random.randint(0, len(self.action_names()))), True
+            return (
+                int(self.env.np_random.randint(0, len(self.class_action_names()))),
+                True,
+            )
 
         if len(paths[shortest_path_ind]) == 2:
             # Since "unified_goal" is 1 step away from actual goals

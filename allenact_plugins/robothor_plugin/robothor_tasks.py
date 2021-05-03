@@ -90,7 +90,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         assert isinstance(action, int)
         action = cast(int, action)
 
-        action_str = self.action_names()[action]
+        action_str = self.class_action_names()[action]
 
         if action_str == END:
             self._took_end_action = True
@@ -236,7 +236,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
 
         self.task_info["followed_path"] = [self.env.agent_state()]
         self.task_info["taken_actions"] = []
-        self.task_info["action_names"] = self.action_names()
+        self.task_info["action_names"] = self.class_action_names()
 
         if self._all_metadata_available:
             self.last_geodesic_distance = self.env.distance_to_object_type(
@@ -265,7 +265,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         assert isinstance(action, int)
         action = cast(int, action)
 
-        action_str = self.action_names()[action]
+        action_str = self.class_action_names()[action]
 
         if self.mirror:
             if action_str == ROTATE_RIGHT:
@@ -438,7 +438,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                         elif expert_action == "RotateRight":
                             expert_action = "RotateLeft"
 
-                    return self.action_names().index(expert_action), True
+                    return self.class_action_names().index(expert_action), True
                 else:
                     # This should have been caught by self._is_goal_in_range()...
                     return 0, False
@@ -476,7 +476,7 @@ class NavToPartnerTask(Task[RoboThorEnvironment]):
 
         self.task_info["followed_path1"] = [pose1]
         self.task_info["followed_path2"] = [pose2]
-        self.task_info["action_names"] = self.action_names()
+        self.task_info["action_names"] = self.class_action_names()
 
     @property
     def action_space(self):
@@ -501,8 +501,8 @@ class NavToPartnerTask(Task[RoboThorEnvironment]):
 
     def _step(self, action: Tuple[int, int]) -> RLStepResult:
         assert isinstance(action, tuple)
-        action_str1 = self.action_names()[action[0]]
-        action_str2 = self.action_names()[action[1]]
+        action_str1 = self.class_action_names()[action[0]]
+        action_str2 = self.class_action_names()[action[1]]
 
         self.env.step({"action": action_str1, "agentId": 0})
         self.last_action_success1 = self.env.last_action_success

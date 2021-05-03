@@ -21,7 +21,8 @@ _LOGGER: Optional[logging.Logger] = None
 class ColoredFormatter(logging.Formatter):
     """Format a log string with colors.
 
-    This implementation taken (with modifications) from https://stackoverflow.com/a/384125.
+    This implementation taken (with modifications) from
+    https://stackoverflow.com/a/384125.
     """
 
     BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
@@ -135,7 +136,7 @@ def _set_log_formatter():
     assert _LOGGER is not None
 
     if _LOGGER.getEffectiveLevel() <= logging.CRITICAL:
-        add_style_to_logs = True # In case someone wants to turn this off manually.
+        add_style_to_logs = True  # In case someone wants to turn this off manually.
 
         if add_style_to_logs:
             default_format = "$BOLD[%(asctime)s$RESET %(levelname)s$BOLD:]$RESET %(message)s\t[%(filename)s: %(lineno)d]"

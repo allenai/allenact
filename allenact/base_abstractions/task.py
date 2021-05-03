@@ -15,6 +15,7 @@ from gym.spaces.dict import Dict as SpaceDict
 
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import Sensor, SensorSuite
+from allenact.utils.misc_utils import deprecated
 
 EnvType = TypeVar("EnvType")
 
@@ -104,8 +105,7 @@ class Task(Generic[EnvType]):
     def step(self, action: Any) -> RLStepResult:
         """Take an action in the environment (one per agent).
 
-        Takes the action in the environment corresponding to
-        `self.class_action_names()[action]` for each action if it's a Sequence and returns
+        Takes the action in the environment and returns
         observations (& rewards and any additional information)
         corresponding to the agent's new state. Note that this function
         should not be overwritten without care (instead
@@ -113,7 +113,7 @@ class Task(Generic[EnvType]):
 
         # Parameters
 
-        action : The action to take.
+        action : The action to take, should be of the same form as specified by `self.action_space`.
 
         # Returns
 
@@ -144,8 +144,7 @@ class Task(Generic[EnvType]):
         """Helper function called by `step` to take a step by each agent in the
         environment.
 
-        Takes the action in the environment corresponding to
-        `self.class_action_names()[action]` for each action in actions and returns
+        Takes the action in the environment and returns
         observations (& rewards and any additional information)
         corresponding to the agent's new state. This function is called
         by the (public) `step` function and is what should be implemented
@@ -184,39 +183,29 @@ class Task(Generic[EnvType]):
         """Number of steps taken by the agent in the task so far."""
         return self._num_steps_taken
 
-    @classmethod
-    @abc.abstractmethod
-    def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
-        """A tuple of action names.
-
-        # Parameters
-
-        kwargs : Keyword arguments.
-
-        # Returns
-
-        Tuple of (ordered) action names so that taking action
-            running `task.step(i)` corresponds to taking action task.class_action_names()[i].
-        """
-        raise NotImplementedError()
-
+    @deprecated
     def action_names(self) -> Tuple[str, ...]:
         """Action names of the Task instance.
 
-        This method should be overwritten if `class_action_names`
+        This function has been deprecated and will be removed.
+
+        This function is a hold-over from when the `Task`
+        abstraction only considered `gym.space.Discrete` action spaces (in which
+        case it makes sense name these actions).
+
+        This implementation of `action_names` requires that a `class_action_names`
+        method has been defined. This method should be overwritten if `class_action_names`
         requires key word arguments to determine the number of actions.
         """
-        return self.class_action_names()
-
-    @property
-    def total_actions(self) -> int:
-        """Total number of actions available to an agent in this Task."""
-        return len(self.class_action_names())
-
-    def index_to_action(self, index: int) -> str:
-        """Returns the action name correspond to `index`."""
-        assert 0 <= index < self.total_actions
-        return self.class_action_names()[index]
+        if hasattr(self, "class_action_names"):
+            return self.class_action_names()
+        else:
+            raise NotImplementedError(
+                "`action_names` requires that a function `class_action_names` be defined."
+                " This said, please do not use this functionality as it has been deprecated and will be removed."
+                " If you would like an `action_names` function for your task, feel free to define one"
+                " with the knowledge that the AllenAct internals will ignore it."
+            )
 
     @abc.abstractmethod
     def close(self) -> None:
