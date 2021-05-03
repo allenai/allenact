@@ -1,4 +1,5 @@
 import math
+import os
 
 from allenact.algorithms.onpolicy_sync.runner import OnPolicyRunner
 from projects.babyai_baselines.experiments.go_to_obj.ppo import (
@@ -32,8 +33,9 @@ class TestGoToObjTrains(object):
             deterministic_cudnn=True,
         )
         test_results = test_runner.start_test(
-            experiment_date=start_time_str,
-            skip_checkpoints=1,
+            checkpoint_path_dir_or_pattern=os.path.join(
+                output_dir, "checkpoints", "**", start_time_str
+            ),
             max_sampler_processes_per_worker=1,
         )
 
