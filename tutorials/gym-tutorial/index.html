@@ -4257,8 +4257,8 @@ environment, and a simple <a href="../../api/allenact_plugins/gym_plugin/gym_mod
 <div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">cast</span>
 
 <span class="kn">import</span> <span class="nn">gym</span>
-<span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">nn</span>
-<span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">optim</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">torch.optim</span> <span class="k">as</span> <span class="nn">optim</span>
 <span class="kn">from</span> <span class="nn">torch.optim.lr_scheduler</span> <span class="kn">import</span> <span class="n">LambdaLR</span>
 
 <span class="kn">from</span> <span class="nn">allenact.algorithms.onpolicy_sync.losses.ppo</span> <span class="kn">import</span> <span class="n">PPO</span>
@@ -4471,19 +4471,36 @@ converge to 1 and the mean reward to above 250, while the average episode length
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">#</a></h2>
 <p>The training start date for the experiment, in <code>YYYY-MM-DD_HH-MM-SS</code> format, is used as the name of one of the
 subfolders in the path to the checkpoints, saved under the output folder.
-In order to test for a specific experiment, we need to pass its training start date with the option
-<code>-t EXPERIMENT_DATE</code>:</p>
-<div class="codehilite"><pre><span></span><code><span class="nv">PYTHONPATH</span><span class="o">=</span>. python allenact/main.py gym_tutorial -b projects/tutorials -m <span class="m">1</span> -o /PATH/TO/gym_output -s <span class="m">54321</span> -e -t EXPERIMENT_DATE -k <span class="m">4</span>
+In order to evaluate (i.e. test) a collection of checkpoints, we need to pass the <code>--eval</code> flag and specify the
+directory containing the checkpoints with the <code>--checkpoint CHECKPOINT_DIR</code> option:</p>
+<div class="codehilite"><pre><span></span><code><span class="nv">PYTHONPATH</span><span class="o">=</span>. python allenact/main.py gym_tutorial <span class="se">\</span>
+-b projects/tutorials <span class="se">\</span>
+-m <span class="m">1</span> <span class="se">\</span>
+-o /PATH/TO/gym_output <span class="se">\</span>
+-s <span class="m">54321</span> <span class="se">\</span>
+-e <span class="se">\</span>
+--eval <span class="se">\</span>
+--checkpoint /PATH/TO/gym_output/checkpoints/GymTutorial/YOUR_START_DATE <span class="se">\</span>
+--approx_ckpt_step_interval <span class="m">800000</span> <span class="c1"># Skip some checkpoints</span>
 </code></pre></div>
 
-<p>The option <code>-k 4</code> skips four checkpoints after each run. If everything went well, the <code>test</code> success rate should
-converge to 1, the episode length below or near 300 steps, and the mean reward to above 250. The images tab in
-tensorboard will contain videos for the sampled test episodes.</p>
+<p>The option <code>--approx_ckpt_step_interval 800000</code> tells AllenAct that we only want to evaluate checkpoints
+which were saved every ~800000 steps, this lets us avoid evaluating every saved checkpoint. If everything went well,
+the <code>test</code> success rate should converge to 1, the episode length below or near 300 steps, and the mean reward to above
+250. The images tab in tensorboard will contain videos for the sampled test episodes.</p>
 <p><img alt="video_results" src="../../img/lunar_lander_continuous_test.png" />.</p>
 <p>If the test command fails with <code>pyglet.canvas.xlib.NoSuchDisplayException: Cannot connect to "None"</code>, e.g. when running
 remotely, try prepending <code>DISPLAY=:0.0</code> to the command above, assuming you have an xserver running with such display
 available:</p>
-<div class="codehilite"><pre><span></span><code><span class="nv">DISPLAY</span><span class="o">=</span>:0.0 <span class="nv">PYTHONPATH</span><span class="o">=</span>. python allenact/main.py gym_tutorial -b projects/tutorials -m <span class="m">1</span> -o /PATH/TO/gym_output -s <span class="m">54321</span> -e -t EXPERIMENT_DATE -k <span class="m">4</span>
+<div class="codehilite"><pre><span></span><code><span class="nv">DISPLAY</span><span class="o">=</span>:0.0 <span class="nv">PYTHONPATH</span><span class="o">=</span>. python allenact/main.py gym_tutorial <span class="se">\</span>
+-b projects/tutorials <span class="se">\</span>
+-m <span class="m">1</span> <span class="se">\</span>
+-o /PATH/TO/gym_output <span class="se">\</span>
+-s <span class="m">54321</span> <span class="se">\</span>
+-e <span class="se">\</span>
+--eval <span class="se">\</span>
+--checkpoint /PATH/TO/gym_output/checkpoints/GymTutorial/YOUR_START_DATE <span class="se">\</span>
+--approx_ckpt_step_interval <span class="m">800000</span>
 </code></pre></div>
                 
               

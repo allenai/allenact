@@ -4183,13 +4183,13 @@
                 
                 <p><a name="allenact.embodiedai.mapping.mapping_losses"></a> </p>
 <h1 id="allenactembodiedaimappingmapping_losses"><code>allenact.embodiedai.mapping.mapping_losses</code><a class="headerlink" href="#allenactembodiedaimappingmapping_losses" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_losses.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/embodiedai/mapping/mapping_losses.py#L1">[view_source]</a></p>
 <p><a name="allenact.embodiedai.mapping.mapping_losses.BinnedPointCloudMapLoss"></a></p>
 <h2 id="binnedpointcloudmaploss"><code>BinnedPointCloudMapLoss</code><a class="headerlink" href="#binnedpointcloudmaploss" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">BinnedPointCloudMapLoss</span><span class="p">(</span><span class="n">AbstractActorCriticLoss</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_losses.py#L12">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/embodiedai/mapping/mapping_losses.py#L12">[view_source]</a></p>
 <p>A (binary cross entropy) loss for training metric maps for free space
 prediction.</p>
 <p><a name="allenact.embodiedai.mapping.mapping_losses.BinnedPointCloudMapLoss.__init__"></a></p>
@@ -4197,7 +4197,7 @@ prediction.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">binned_pc_uuid</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">map_logits_uuid</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_losses.py#L16">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/embodiedai/mapping/mapping_losses.py#L16">[view_source]</a></p>
 <p>Initializer.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -4216,7 +4216,7 @@ prediction.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">SemanticMapFocalLoss</span><span class="p">(</span><span class="n">AbstractActorCriticLoss</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_losses.py#L79">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/embodiedai/mapping/mapping_losses.py#L79">[view_source]</a></p>
 <p>A (focal-loss based) loss for training metric maps for free space
 prediction.</p>
 <p>As semantic maps tend to be quite sparse this loss uses the focal
@@ -4229,7 +4229,7 @@ being paid to examples that are already well classified.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">semantic_map_uuid</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">map_logits_uuid</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">gamma</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_losses.py#L90">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/embodiedai/mapping/mapping_losses.py#L90">[view_source]</a></p>
 <p>Initializer.</p>
 <p><strong>Parameters</strong></p>
 <ul>

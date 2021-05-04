@@ -4217,7 +4217,7 @@ this model checkpoint by running</p>
 <h3 id="running-inference-on-the-pretrained-model">Running inference on the pretrained model<a class="headerlink" href="#running-inference-on-the-pretrained-model" title="Permanent link">#</a></h3>
 <p>You can run inference on the above pretrained model model (on the test dataset) by running</p>
 <div class="codehilite"><pre><span></span><code><span class="nb">export</span> <span class="nv">SAVED_MODEL_PATH</span><span class="o">=</span>pretrained_model_ckpts/robothor-objectnav-challenge-2021/Objectnav-RoboTHOR-RGBD-ResNetGRU-DDPPO/2021-02-09_22-35-15/exp_Objectnav-RoboTHOR-RGBD-ResNetGRU-DDPPO_0.2.0a_300M__stage_00__steps_000170207237.pt
-python main.py projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgbd_resnetgru_ddppo.py -c <span class="nv">$SAVED_MODEL_PATH</span> -t <span class="m">2021</span>-02-09_22-35-15
+python main.py projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgbd_resnetgru_ddppo.py -c <span class="nv">$SAVED_MODEL_PATH</span> --eval
 </code></pre></div>
 
 <p>To discourage "cheating", the test dataset has been scrubbed of the information needed to actually compute the success rate / SPL

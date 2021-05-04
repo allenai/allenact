@@ -4251,20 +4251,20 @@
                 
                 <p><a name="allenact.base_abstractions.distributions"></a> </p>
 <h1 id="allenactbase_abstractionsdistributions"><code>allenact.base_abstractions.distributions</code><a class="headerlink" href="#allenactbase_abstractionsdistributions" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/base_abstractions/distributions.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/base_abstractions/distributions.py#L1">[view_source]</a></p>
 <p><a name="allenact.base_abstractions.distributions.Distr"></a></p>
 <h2 id="distr"><code>Distr</code><a class="headerlink" href="#distr" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Distr</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/base_abstractions/distributions.py#L13">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/base_abstractions/distributions.py#L13">[view_source]</a></p>
 <p><a name="allenact.base_abstractions.distributions.Distr.log_prob"></a></p>
 <h3 id="distrlog_prob"><code>Distr.log_prob</code><a class="headerlink" href="#distrlog_prob" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
  <span class="o">|</span> <span class="n">log_prob</span><span class="p">(</span><span class="n">actions</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/base_abstractions/distributions.py#L15">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/base_abstractions/distributions.py#L15">[view_source]</a></p>
 <p>Return the log probability/ies of the provided action/s.</p>
 <p><a name="allenact.base_abstractions.distributions.Distr.entropy"></a></p>
 <h3 id="distrentropy"><code>Distr.entropy</code><a class="headerlink" href="#distrentropy" title="Permanent link">#</a></h3>
@@ -4272,7 +4272,7 @@
  <span class="o">|</span> <span class="n">entropy</span><span class="p">()</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/base_abstractions/distributions.py#L20">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/base_abstractions/distributions.py#L20">[view_source]</a></p>
 <p>Return the entropy or entropies.</p>
 <p><a name="allenact.base_abstractions.distributions.Distr.sample"></a></p>
 <h3 id="distrsample"><code>Distr.sample</code><a class="headerlink" href="#distrsample" title="Permanent link">#</a></h3>
@@ -4280,14 +4280,14 @@
  <span class="o">|</span> <span class="n">sample</span><span class="p">(</span><span class="n">sample_shape</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Size</span><span class="p">())</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/base_abstractions/distributions.py#L25">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/base_abstractions/distributions.py#L25">[view_source]</a></p>
 <p>Sample actions.</p>
 <p><a name="allenact.base_abstractions.distributions.Distr.mode"></a></p>
 <h3 id="distrmode"><code>Distr.mode</code><a class="headerlink" href="#distrmode" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">mode</span><span class="p">()</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/base_abstractions/distributions.py#L29">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/base_abstractions/distributions.py#L29">[view_source]</a></p>
 <p>If available, return the action(s) with highest probability.</p>
 <p>It will only be called if using deterministic agents.</p>
 <p><a name="allenact.base_abstractions.distributions.CategoricalDistr"></a></p>
@@ -4295,7 +4295,7 @@
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">CategoricalDistr</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">distributions</span><span class="o">.</span><span class="n">Categorical</span><span class="p">,</span>  <span class="n">Distr</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/base_abstractions/distributions.py#L37">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/base_abstractions/distributions.py#L37">[view_source]</a></p>
 <p>A categorical distribution extending PyTorch's Categorical.</p>
 <p>probs or logits are assumed to be passed with step and sampler
 dimensions as in: [step, samplers, ...]</p>
@@ -4304,14 +4304,14 @@ dimensions as in: [step, samplers, ...]</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">AddBias</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/base_abstractions/distributions.py#L74">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/base_abstractions/distributions.py#L74">[view_source]</a></p>
 <p>Adding bias parameters to input values.</p>
 <p><a name="allenact.base_abstractions.distributions.AddBias.__init__"></a></p>
 <h3 id="addbias__init__"><code>AddBias.__init__</code><a class="headerlink" href="#addbias__init__" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">bias</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/base_abstractions/distributions.py#L77">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/base_abstractions/distributions.py#L77">[view_source]</a></p>
 <p>Initializer.</p>
 <p><strong>Parameters</strong></p>
 <ul>
@@ -4322,7 +4322,7 @@ dimensions as in: [step, samplers, ...]</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">forward</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/base_abstractions/distributions.py#L87">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/base_abstractions/distributions.py#L87">[view_source]</a></p>
 <p>Adds the stored bias parameters to <code>x</code>.</p>
                 
               

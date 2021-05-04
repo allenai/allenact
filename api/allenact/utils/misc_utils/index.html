@@ -1496,6 +1496,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#deprecated" class="md-nav__link">
+    deprecated
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#numpyjsonencoder" class="md-nav__link">
     NumpyJSONEncoder
   </a>
@@ -4108,6 +4115,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#deprecated" class="md-nav__link">
+    deprecated
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#numpyjsonencoder" class="md-nav__link">
     NumpyJSONEncoder
   </a>
@@ -4143,20 +4157,27 @@
                 
                 <p><a name="allenact.utils.misc_utils"></a> </p>
 <h1 id="allenactutilsmisc_utils"><code>allenact.utils.misc_utils</code><a class="headerlink" href="#allenactutilsmisc_utils" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/utils/misc_utils.py#L1">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/utils/misc_utils.py#L1">[view_source]</a></p>
 <p><a name="allenact.utils.misc_utils.experimental_api"></a></p>
 <h3 id="experimental_api"><code>experimental_api</code><a class="headerlink" href="#experimental_api" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code><span class="n">experimental_api</span><span class="p">(</span><span class="n">to_decorate</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/utils/misc_utils.py#L49">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/utils/misc_utils.py#L48">[view_source]</a></p>
 <p>Decorate a function to note that it is part of the experimental API.</p>
+<p><a name="allenact.utils.misc_utils.deprecated"></a></p>
+<h3 id="deprecated"><code>deprecated</code><a class="headerlink" href="#deprecated" title="Permanent link">#</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="n">deprecated</span><span class="p">(</span><span class="n">to_decorate</span><span class="p">)</span>
+</code></pre></div>
+
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/utils/misc_utils.py#L71">[view_source]</a></p>
+<p>Decorate a function to note that it has been deprecated.</p>
 <p><a name="allenact.utils.misc_utils.NumpyJSONEncoder"></a></p>
 <h2 id="numpyjsonencoder"><code>NumpyJSONEncoder</code><a class="headerlink" href="#numpyjsonencoder" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">NumpyJSONEncoder</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONEncoder</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/utils/misc_utils.py#L72">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/utils/misc_utils.py#L92">[view_source]</a></p>
 <p>JSON encoder for numpy objects.</p>
 <p>Based off the stackoverflow answer by Jie Yang here: https://stackoverflow.com/a/57915246.
 The license for this code is <a href="https://creativecommons.org/licenses/by-sa/4.0/">BY-SA 4.0</a>.</p>
@@ -4165,7 +4186,7 @@ The license for this code is <a href="https://creativecommons.org/licenses/by-sa
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">HashableDict</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/utils/misc_utils.py#L119">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/utils/misc_utils.py#L139">[view_source]</a></p>
 <p>A dictionary which is hashable so long as all of its values are
 hashable.</p>
 <p>A HashableDict object will allow setting / deleting of items until

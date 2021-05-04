@@ -4134,28 +4134,28 @@ trained on the PointNav task in RoboTHOR to <code>pretrained_model_ckpts/robotho
 <p>Next we need to run the inference, using the PointNav experiment config from the
 <a href="../training-a-pointnav-model/">tutorial on making a PointNav experiment</a>.
 We can do this with the following command:</p>
-<div class="codehilite"><pre><span></span><code><span class="nv">PYTHONPATH</span><span class="o">=</span>. python allenact/main.py -o &lt;PATH_TO_OUTPUT&gt; -c &lt;PATH_TO_CHECKPOINT&gt; -b &lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt; -t &lt;TIMESTAMP&gt;
+<div class="codehilite"><pre><span></span><code><span class="nv">PYTHONPATH</span><span class="o">=</span>. python allenact/main.py -o &lt;PATH_TO_OUTPUT&gt; -b &lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt; -c &lt;PATH_TO_CHECKPOINT&gt; --eval
 </code></pre></div>
 
 <p>Where <code>&lt;PATH_TO_OUTPUT&gt;</code> is the location where the results of the test will be dumped, <code>&lt;PATH_TO_CHECKPOINT&gt;</code> is the
-location of the downloaded model weights, <code>&lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt;</code> is a path to the directory where
-our experiment definition is stored, and <code>&lt;TIMESTAMP&gt;</code> is the unique timestamp associated with when the model was
-trained.</p>
+location of the downloaded model weights, and <code>&lt;BASE_DIRECTORY_OF_YOUR_EXPERIMENT&gt;</code> is a path to the directory where
+our experiment definition is stored.</p>
 <p>For our current setup the following command would work:</p>
 <div class="codehilite"><pre><span></span><code><span class="nv">PYTHONPATH</span><span class="o">=</span>. python allenact/main.py <span class="se">\</span>
 training_a_pointnav_model <span class="se">\</span>
 -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ <span class="se">\</span>
--c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30/exp_PointNavRobothorRGBPPO__stage_00__steps_000039031200.pt <span class="se">\</span>
 -b projects/tutorials <span class="se">\</span>
--t <span class="m">2020</span>-08-31_12-13-30
+-c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30/exp_PointNavRobothorRGBPPO__stage_00__steps_000039031200.pt <span class="se">\</span>
+--eval
 </code></pre></div>
 
-<p>For testing on all saved checkpoints we just need to omit <code>&lt;PATH_TO_CHECKPOINT&gt;</code>:</p>
+<p>For testing on all saved checkpoints we pass a directory to <code>--checkpoint</code> rather than just a single file:</p>
 <div class="codehilite"><pre><span></span><code><span class="nv">PYTHONPATH</span><span class="o">=</span>. python allenact/main.py <span class="se">\</span>
 training_a_pointnav_model <span class="se">\</span>
 -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ <span class="se">\</span>
 -b projects/tutorials  <span class="se">\</span>
--t <span class="m">2020</span>-08-31_12-13-30
+-c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30
+--eval
 </code></pre></div>
 
 <h2 id="visualization">Visualization<a class="headerlink" href="#visualization" title="Permanent link">#</a></h2>
@@ -4252,9 +4252,9 @@ of using a different (typically shorter) list of episodes or enforce the ones us
 <div class="codehilite"><pre><span></span><code><span class="nv">PYTHONPATH</span><span class="o">=</span>. python allenact/main.py <span class="se">\</span>
 running_inference_tutorial <span class="se">\</span>
 -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ <span class="se">\</span>
--c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30/exp_PointNavRobothorRGBPPO__stage_00__steps_000039031200.pt <span class="se">\</span>
 -b projects/tutorials <span class="se">\</span>
--t <span class="m">2020</span>-08-31_12-13-30
+-c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30/exp_PointNavRobothorRGBPPO__stage_00__steps_000039031200.pt <span class="se">\</span>
+--eval
 </code></pre></div>
 
 <p>generates different types of visualization and logs them in tensorboard. If everything is properly setup and

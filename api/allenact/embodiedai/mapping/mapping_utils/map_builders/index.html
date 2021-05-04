@@ -4239,13 +4239,13 @@
                 
                 <p><a name="allenact.embodiedai.mapping.mapping_utils.map_builders"></a> </p>
 <h1 id="allenactembodiedaimappingmapping_utilsmap_builders"><code>allenact.embodiedai.mapping.mapping_utils.map_builders</code><a class="headerlink" href="#allenactembodiedaimappingmapping_utilsmap_builders" title="Permanent link">#</a></h1>
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L25">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L25">[view_source]</a></p>
 <p><a name="allenact.embodiedai.mapping.mapping_utils.map_builders.BinnedPointCloudMapBuilder"></a></p>
 <h2 id="binnedpointcloudmapbuilder"><code>BinnedPointCloudMapBuilder</code><a class="headerlink" href="#binnedpointcloudmapbuilder" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">BinnedPointCloudMapBuilder</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L39">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L39">[view_source]</a></p>
 <p>Class used to iteratively construct a map of "free space" based on input
 depth maps (i.e. pointclouds).</p>
 <p>Adapted from https://github.com/devendrachaplot/Neural-SLAM</p>
@@ -4278,7 +4278,7 @@ that region is free space.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">update</span><span class="p">(</span><span class="n">depth_frame</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">camera_xyz</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">camera_rotation</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">camera_horizon</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L100">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L100">[view_source]</a></p>
 <p>Updates the map with the input depth frame from the agent.</p>
 <p>See the <code>allenact.embodiedai.mapping.mapping_utils.point_cloud_utils.project_point_cloud_to_map</code>
 function for more information input parameter definitions. <strong>We assume that the input
@@ -4307,7 +4307,7 @@ function for more information input parameter definitions. <strong>We assume tha
  | reset(min_xyz: np.ndarray)
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L210">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L210">[view_source]</a></p>
 <p>Reset the map.</p>
 <p>Resets the internally stored map.</p>
 <p><strong>Parameters</strong></p>
@@ -4321,13 +4321,13 @@ function for more information input parameter definitions. <strong>We assume tha
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ObjectHull2d</span><span class="p">()</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L224">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L224">[view_source]</a></p>
 <p><a name="allenact.embodiedai.mapping.mapping_utils.map_builders.ObjectHull2d.__init__"></a></p>
 <h3 id="objecthull2d__init__"><code>ObjectHull2d.__init__</code><a class="headerlink" href="#objecthull2d__init__" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="fm">__init__</span><span class="p">(</span><span class="n">object_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">object_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">hull_points</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]]])</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L225">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L225">[view_source]</a></p>
 <p>A class used to represent 2d convex hulls of objects when projected
 to the ground plane.</p>
 <p><strong>Parameters</strong></p>
@@ -4342,7 +4342,7 @@ to the ground plane.</p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">SemanticMapBuilder</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L249">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L249">[view_source]</a></p>
 <p>Class used to iteratively construct a semantic map based on input depth
 maps (i.e. pointclouds).</p>
 <p>Adapted from https://github.com/devendrachaplot/Neural-SLAM</p>
@@ -4363,7 +4363,7 @@ generated by this class.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">update</span><span class="p">(</span><span class="n">depth_frame</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">camera_xyz</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">camera_rotation</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">camera_horizon</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L369">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L369">[view_source]</a></p>
 <p>Updates the map with the input depth frame from the agent.</p>
 <p>See the documentation for <code>BinnedPointCloudMapBuilder.update</code>,
 the inputs and outputs are similar except that channels are used
@@ -4378,7 +4378,7 @@ reference frames respectively.</p>
 <div class="codehilite"><pre><span></span><code> <span class="o">|</span> <span class="n">reset</span><span class="p">(</span><span class="n">min_xyz</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">object_hulls</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">ObjectHull2d</span><span class="p">])</span>
 </code></pre></div>
 
-<p><a href="https://github.com/allenai/allenact/blob/8c5201b7d4f8c36835a6f44fc5310a37acf404e2/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L516">[view_source]</a></p>
+<p><a href="https://github.com/allenai/allenact/blob/33f2f73c4f377dda0a0994e09c30fd26054b8e5a/allenact/embodiedai/mapping/mapping_utils/map_builders.py#L516">[view_source]</a></p>
 <p>Reset the map.</p>
 <p>Resets the internally stored map.</p>
 <p><strong>Parameters</strong></p>
