@@ -67,7 +67,7 @@ pretrained_model_ckpts/robothor-objectnav-challenge-2021/Objectnav-RoboTHOR-RGBD
 You can run inference on the above pretrained model model (on the test dataset) by running
 ```bash
 export SAVED_MODEL_PATH=pretrained_model_ckpts/robothor-objectnav-challenge-2021/Objectnav-RoboTHOR-RGBD-ResNetGRU-DDPPO/2021-02-09_22-35-15/exp_Objectnav-RoboTHOR-RGBD-ResNetGRU-DDPPO_0.2.0a_300M__stage_00__steps_000170207237.pt
-python main.py projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgbd_resnetgru_ddppo.py -c $SAVED_MODEL_PATH -t 2021-02-09_22-35-15
+python main.py projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgbd_resnetgru_ddppo.py -c $SAVED_MODEL_PATH --eval
 ```
 To discourage "cheating", the test dataset has been scrubbed of the information needed to actually compute the success rate / SPL
 of your model and so running the above will only save the trajectories your models take. To evaluate these

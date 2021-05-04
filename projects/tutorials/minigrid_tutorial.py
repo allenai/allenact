@@ -350,11 +350,16 @@ with a different random seed). The validation curves should look similar to:
 
 The training start date for the experiment, in `YYYY-MM-DD_HH-MM-SS` format, is used as the name of one of the
 subfolders in the path to the checkpoints, saved under the output folder.
-In order to test for a specific experiment, we need to pass its training start date with the option
-`-t EXPERIMENT_DATE`:
-
+In order to evaluate (i.e. test) a particular checkpoint, we need to pass the `--eval` flag and specify the checkpoint with the
+`--checkpoint CHECKPOINT_PATH` option:
 ```bash
-PYTHONPATH=. python allenact/main.py minigrid_tutorial -b projects/tutorials -m 1 -o /PATH/TO/minigrid_output -s 12345 -t EXPERIMENT_DATE
+PYTHONPATH=. python allenact/main.py minigrid_tutorial \
+    -b projects/tutorials \
+    -m 1 \
+    -o /PATH/TO/minigrid_output \
+    -s 12345 \
+    --eval \
+    --checkpoint /PATH/TO/minigrid_output/checkpoints/MiniGridTutorial/YOUR_START_DATE/exp_MiniGridTutorial__stage_00__steps_000000151552.pt
 ```
 
 Again, if everything went well, the `test` success rate should converge to 1 and the mean episode length to a value
