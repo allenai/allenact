@@ -155,7 +155,6 @@ def compute_cnn_output(
 
     CNN output with dimensions [STEP, SAMPLER, AGENT, CHANNEL, (HEIGHT, WIDTH)].
     """
-    use_agents: bool
     nsteps: int
     nsamplers: int
     nagents: int
@@ -172,7 +171,7 @@ def compute_cnn_output(
         nsteps, nsamplers = cnn_input.shape[:2]
 
     # Make FLAT_BATCH = nsteps * nsamplers (* nagents)
-    cnn_input = cnn_input.view((-1,) + cnn_input.shape[2 + int(use_agents) :])
+    cnn_input = cnn_input.view((-1,) + cnn_input.shape[2 + int(nagents is not None) :])
 
     if permute_order is not None:
         cnn_input = cnn_input.permute(*permute_order)
