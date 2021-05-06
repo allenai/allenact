@@ -310,11 +310,12 @@ class ThorViz(TrajectoryViz):
                 ),
             )
         else:
-            colors = list(
-                col.Color(trajectory_start_end_color_str[0]).range_to(
-                    col.Color(trajectory_start_end_color_str[1]), len(positions) - 1
+            if len(positions) > 1:
+                colors = list(
+                    col.Color(trajectory_start_end_color_str[0]).range_to(
+                        col.Color(trajectory_start_end_color_str[1]), len(positions) - 1
+                    )
                 )
-            )
             for i in range(len(positions) - 1):
                 frame = ThorViz.add_line_to_map(
                     ThorViz.position_to_tuple(positions[i]),
