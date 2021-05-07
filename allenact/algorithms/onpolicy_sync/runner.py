@@ -42,15 +42,15 @@ from allenact.utils.misc_utils import (
 from allenact.utils.model_utils import md5_hash_of_state_dict
 from allenact.utils.system import get_logger, find_free_port
 from allenact.utils.tensor_utils import SummaryWriter
-# Has results queue (aggregated per trainer), checkpoints queue and mp context
-# Instantiates train, validate, and test workers
-# Logging
-# Saves configs, makes folder for trainer models
 from allenact.utils.viz_utils import VizSuite
 
 _CONFIG_KWARGS_STR = "__CONFIG_KWARGS__"
 
 
+# Has results queue (aggregated per trainer), checkpoints queue and mp context
+# Instantiates train, validate, and test workers
+# Logging
+# Saves configs, makes folder for trainer models
 class OnPolicyRunner(object):
     def __init__(
         self,
