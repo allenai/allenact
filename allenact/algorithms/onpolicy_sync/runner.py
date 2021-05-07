@@ -5,6 +5,7 @@ import itertools
 import json
 import math
 import os
+import pathlib
 import queue
 import random
 import signal
@@ -16,6 +17,7 @@ from multiprocessing.context import BaseContext
 from multiprocessing.process import BaseProcess
 from typing import Optional, Dict, Union, Tuple, Sequence, List, Any
 
+import filelock
 import numpy as np
 import torch
 import torch.multiprocessing as mp
@@ -40,7 +42,6 @@ from allenact.utils.misc_utils import (
 from allenact.utils.model_utils import md5_hash_of_state_dict
 from allenact.utils.system import get_logger, find_free_port
 from allenact.utils.tensor_utils import SummaryWriter
-
 # Has results queue (aggregated per trainer), checkpoints queue and mp context
 # Instantiates train, validate, and test workers
 # Logging
@@ -106,9 +107,7 @@ class OnPolicyRunner(object):
 
         self.current_checkpoint = None
 
-        self.local_start_time_str = time.strftime(
-            "%Y-%m-%d_%H-%M-%S", time.localtime(time.time())
-        )
+        self.local_start_time_str = self._acquire_unique_local_start_time_string()
 
         self._is_closed: bool = False
 
@@ -143,6 +142,54 @@ class OnPolicyRunner(object):
             )
 
         return mp_ctx
+
+    def _acquire_unique_local_start_time_string(self) -> str:
+        """Creates a (unique) local start time string for this experiment.
+
+        Ensures through file locks that the local start time string
+        produced is unique. This implies that, if one has many
+        experiments starting in in parallel, at most one will be started
+        every second (as the local start time string only records the
+        time up to the current second).
+        """
+        os.makedirs(self.output_dir, exist_ok=True)
+        start_time_string_lock_path = os.path.abspath(
+            os.path.join(self.output_dir, ".allenact_start_time_string.lock")
+        )
+        try:
+            with filelock.FileLock(start_time_string_lock_path, timeout=60):
+                last_start_time_string_path = os.path.join(
+                    self.output_dir, ".allenact_last_start_time_string"
+                )
+                pathlib.Path(last_start_time_string_path).touch()
+
+                with open(last_start_time_string_path, "r") as f:
+                    last_start_time_string_list = f.readlines()
+
+                while True:
+                    candidate_str = time.strftime(
+                        "%Y-%m-%d_%H-%M-%S", time.localtime(time.time())
+                    )
+                    if (
+                        len(last_start_time_string_list) == 0
+                        or last_start_time_string_list[0].strip() != candidate_str
+                    ):
+                        break
+                    time.sleep(0.2)
+
+                with open(last_start_time_string_path, "w") as f:
+                    f.write(candidate_str)
+
+        except filelock.Timeout as e:
+            get_logger().exception(
+                f"Could not acquire the lock for {start_time_string_lock_path} for 60 seconds,"
+                " this suggests an unexpected deadlock. Please close all AllenAct training processes,"
+                " delete this lockfile, and try again."
+            )
+            raise e
+
+        assert candidate_str is not None
+        return candidate_str
 
     def worker_devices(self, mode: str):
         machine_params: MachineParams = MachineParams.instance_from(
