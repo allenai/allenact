@@ -1,6 +1,8 @@
 import os
 from abc import ABC
 
+import torch
+
 from projects.objectnav_baselines.experiments.objectnav_thor_base import (
     ObjectNavThorBaseConfig,
 )
@@ -9,7 +11,7 @@ from projects.objectnav_baselines.experiments.objectnav_thor_base import (
 class ObjectNaviThorBaseConfig(ObjectNavThorBaseConfig, ABC):
     """The base config for all iTHOR ObjectNav experiments."""
 
-    NUM_PROCESSES = 40
+    DEFAULT_NUM_TRAIN_PROCESSES = 40 if torch.cuda.is_available() else 1
 
     TRAIN_DATASET_DIR = os.path.join(os.getcwd(), "datasets/ithor-objectnav/train")
     VAL_DATASET_DIR = os.path.join(os.getcwd(), "datasets/ithor-objectnav/val")

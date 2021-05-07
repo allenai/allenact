@@ -16,8 +16,9 @@ import colour as col
 from allenact.utils.system import get_logger
 from allenact.utils.viz_utils import TrajectoryViz
 
-ROBOTHOR_VIZ_CACHED_TOPDOWN_VIEWS_DIR = os.path.join(
-    os.path.expanduser("~"), ".allenact", "robothor", "top_down_viz_cache"
+
+ITHOR_VIZ_CACHED_TOPDOWN_VIEWS_DIR = os.path.join(
+    os.path.expanduser("~"), ".allenact", "ithor", "top_down_viz_cache"
 )
 
 
@@ -53,33 +54,36 @@ class ThorViz(TrajectoryViz):
         self,
         path_to_trajectory: Sequence[str] = ("task_info", "followed_path"),
         label: str = "thor_trajectory",
-        figsize: Tuple[float, float] = (8, 4),  # width, height
+        figsize: Tuple[float, float] = (8, 8),  # width, height
         fontsize: float = 10,
-        scenes: Union[
-            Tuple[str, int, int, int, int], Sequence[Tuple[str, int, int, int, int]]
-        ] = ("FloorPlan_Val{}_{}", 1, 3, 1, 5),
+        scenes: Union[Tuple[str, int, int], Sequence[Tuple[str, int, int]]] = (
+            ("FloorPlan{}_physics", 1, 30),
+            ("FloorPlan{}_physics", 201, 230),
+            ("FloorPlan{}_physics", 301, 330),
+            ("FloorPlan{}_physics", 401, 430),
+        ),
         viz_rows_cols: Tuple[int, int] = (448, 448),
         single_color: bool = False,
         view_triangle_only_on_last: bool = True,
         disable_view_triangle: bool = False,
         line_opacity: float = 1.0,
-        **kwargs
+        path_to_rot_degrees: Sequence[str] = ("rotation",),
+        **kwargs,
     ):
         super().__init__(
             path_to_trajectory=path_to_trajectory,
             label=label,
             figsize=figsize,
             fontsize=fontsize,
-            **kwargs
+            path_to_rot_degrees=path_to_rot_degrees,
+            **kwargs,
         )
 
         if isinstance(scenes[0], str):
-            scenes = [
-                cast(Tuple[str, int, int, int, int], scenes)
-            ]  # make it list of tuples
-        self.scenes = cast(List[Tuple[str, int, int, int, int]], scenes)
+            scenes = [cast(Tuple[str, int, int], scenes)]  # make it list of tuples
+        self.scenes = cast(List[Tuple[str, int, int]], scenes)
 
-        self.room_path = ROBOTHOR_VIZ_CACHED_TOPDOWN_VIEWS_DIR
+        self.room_path = ITHOR_VIZ_CACHED_TOPDOWN_VIEWS_DIR
         os.makedirs(self.room_path, exist_ok=True)
 
         self.viz_rows_cols = viz_rows_cols
@@ -105,40 +109,42 @@ class ThorViz(TrajectoryViz):
 
     @staticmethod
     def iterate_scenes(
-        all_scenes: Sequence[Tuple[str, int, int, int, int]]
+        all_scenes: Sequence[Tuple[str, int, int]]
     ) -> Generator[str, None, None]:
         for scenes in all_scenes:
             for wall in range(scenes[1], scenes[2] + 1):
-                for furniture in range(scenes[3], scenes[4] + 1):
-                    roomname = scenes[0].format(wall, furniture)
-                    yield roomname
+                roomname = scenes[0].format(wall)
+                yield roomname
 
     def cached_map_data_path(self, roomname: str) -> str:
         return os.path.join(self.room_path, "map_data__{}.json".format(roomname))
 
     def get_translator(self) -> Dict[str, Any]:
-        roomname = list(ThorViz.iterate_scenes(self.scenes))[0]
-        json_file = self.cached_map_data_path(roomname)
-        if not os.path.exists(json_file):
-            self.make_controller()
-            self.controller.reset(roomname)
-            map_data = self.get_agent_map_data()
-            get_logger().info("Dumping {}".format(json_file))
-            with open(json_file, "w") as f:
-                json.dump(map_data, f, indent=4, sort_keys=True)
-        else:
-            with open(json_file, "r") as f:
-                map_data = json.load(f)
+        # roomname = list(ThorViz.iterate_scenes(self.scenes))[0]
+        all_map_data = {}
+        for roomname in ThorViz.iterate_scenes(self.scenes):
+            json_file = self.cached_map_data_path(roomname)
+            if not os.path.exists(json_file):
+                self.make_controller()
+                self.controller.reset(roomname)
+                map_data = self.get_agent_map_data()
+                get_logger().info("Dumping {}".format(json_file))
+                with open(json_file, "w") as f:
+                    json.dump(map_data, f, indent=4, sort_keys=True)
+            else:
+                with open(json_file, "r") as f:
+                    map_data = json.load(f)
 
-        pos_translator = ThorPositionTo2DFrameTranslator(
-            self.viz_rows_cols,
-            self.position_to_tuple(map_data["cam_position"]),
-            map_data["cam_orth_size"],
-        )
-        map_data["pos_translator"] = pos_translator
+            pos_translator = ThorPositionTo2DFrameTranslator(
+                self.viz_rows_cols,
+                self.position_to_tuple(map_data["cam_position"]),
+                map_data["cam_orth_size"],
+            )
+            map_data["pos_translator"] = pos_translator
+            all_map_data[roomname] = map_data
 
-        get_logger().debug("Using map_data {}".format(map_data))
-        return map_data
+        get_logger().debug("Using map_data {}".format(all_map_data))
+        return all_map_data
 
     def cached_image_path(self, roomname: str) -> str:
         return os.path.join(
@@ -157,9 +163,8 @@ class ThorViz(TrajectoryViz):
         return top_downs
 
     def crop_viz_image(self, viz_image: np.ndarray) -> np.ndarray:
-        # Top-down view of room spans vertically near the center of the frame in RoboTHOR:
-        y_min = int(self.viz_rows_cols[0] * 0.3)
-        y_max = int(self.viz_rows_cols[0] * 0.8)
+        y_min = int(self.viz_rows_cols[0] * 0)
+        y_max = int(self.viz_rows_cols[0] * 1)
         # But it covers approximately the entire width:
         x_min = 0
         x_max = self.viz_rows_cols[1]
@@ -254,7 +259,7 @@ class ThorViz(TrajectoryViz):
     @staticmethod
     def add_agent_view_triangle(
         position: Any,
-        rotation: Dict[str, float],
+        rotation: float,
         frame: np.ndarray,
         pos_translator: ThorPositionTo2DFrameTranslator,
         scale: float = 1.0,
@@ -264,7 +269,7 @@ class ThorViz(TrajectoryViz):
         p1 = copy.copy(p0)
         p2 = copy.copy(p0)
 
-        theta = -2 * math.pi * (rotation["y"] / 360.0)
+        theta = -2 * math.pi * (rotation / 360.0)
         rotation_mat = np.array(
             [[math.cos(theta), -math.sin(theta)], [math.sin(theta), math.cos(theta)]]
         )
@@ -360,12 +365,12 @@ class ThorViz(TrajectoryViz):
         if self.thor_top_downs is None:
             self.init_top_down_render()
 
-        roomname = "_".join(episode_id.split("_")[:3])
+        roomname = "_".join(episode_id.split("_")[:2])
 
         im = self.visualize_agent_path(
             trajectory,
             self.thor_top_downs[roomname],
-            self.map_data["pos_translator"],
+            self.map_data[roomname]["pos_translator"],
             single_color=self.single_color,
             view_triangle_only_on_last=self.view_triangle_only_on_last,
             disable_view_triangle=self.disable_view_triangle,
@@ -390,7 +395,7 @@ class ThorMultiViz(ThorViz):
             ("red", "green"),
             ("cyan", "purple"),
         ),
-        **kwargs
+        **kwargs,
     ):
         super().__init__(label=label, **kwargs)
 
@@ -402,7 +407,7 @@ class ThorMultiViz(ThorViz):
         if self.thor_top_downs is None:
             self.init_top_down_render()
 
-        roomname = "_".join(episode_id.split("_")[:3])
+        roomname = "_".join(episode_id.split("_")[:2])
         im = self.thor_top_downs[roomname]
 
         for agent, start_end_color in zip(
@@ -415,7 +420,7 @@ class ThorMultiViz(ThorViz):
             im = self.visualize_agent_path(
                 trajectory,
                 im,
-                self.map_data["pos_translator"],
+                self.map_data[roomname]["pos_translator"],
                 single_color=self.single_color,
                 view_triangle_only_on_last=self.view_triangle_only_on_last,
                 disable_view_triangle=self.disable_view_triangle,

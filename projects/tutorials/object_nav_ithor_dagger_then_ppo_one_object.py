@@ -11,8 +11,10 @@ from allenact.utils.experiment_utils import (
     TrainingPipeline,
     LinearDecay,
 )
+from allenact.base_abstractions.sensor import ExpertActionSensor
 from projects.tutorials.object_nav_ithor_ppo_one_object import (
     ObjectNavThorPPOExperimentConfig,
+    ObjectNaviThorGridTask,
 )
 
 
@@ -21,6 +23,12 @@ class ObjectNavThorDaggerThenPPOExperimentConfig(ObjectNavThorPPOExperimentConfi
 
     Training with DAgger and then PPO.
     """
+
+    SENSORS = ObjectNavThorPPOExperimentConfig.SENSORS + [
+        ExpertActionSensor(
+            action_space=len(ObjectNaviThorGridTask.class_action_names()),
+        ),
+    ]
 
     @classmethod
     def tag(cls):

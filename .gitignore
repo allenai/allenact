@@ -176,6 +176,9 @@ metrics__*.json
 # Robothor
 allenact_plugins/robothor_plugin/data/*
 
+# ithor
+allenact_plugins/ithor_plugin/data/*
+
 # Habitat
 habitat
 

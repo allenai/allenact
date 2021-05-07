@@ -32,13 +32,12 @@ Next we need to run the inference, using the PointNav experiment config from the
 We can do this with the following command:
 
 ```bash
-PYTHONPATH=. python allenact/main.py -o <PATH_TO_OUTPUT> -c <PATH_TO_CHECKPOINT> -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> -t <TIMESTAMP>
+PYTHONPATH=. python allenact/main.py -o <PATH_TO_OUTPUT> -b <BASE_DIRECTORY_OF_YOUR_EXPERIMENT> -c <PATH_TO_CHECKPOINT> --eval
 ```
 
 Where `<PATH_TO_OUTPUT>` is the location where the results of the test will be dumped, `<PATH_TO_CHECKPOINT>` is the
-location of the downloaded model weights, `<BASE_DIRECTORY_OF_YOUR_EXPERIMENT>` is a path to the directory where
-our experiment definition is stored, and `<TIMESTAMP>` is the unique timestamp associated with when the model was
-trained.
+location of the downloaded model weights, and `<BASE_DIRECTORY_OF_YOUR_EXPERIMENT>` is a path to the directory where
+our experiment definition is stored.
 
 For our current setup the following command would work:
 
@@ -46,19 +45,20 @@ For our current setup the following command would work:
 PYTHONPATH=. python allenact/main.py \
 training_a_pointnav_model \
 -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ \
--c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30/exp_PointNavRobothorRGBPPO__stage_00__steps_000039031200.pt \
 -b projects/tutorials \
--t 2020-08-31_12-13-30
+-c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30/exp_PointNavRobothorRGBPPO__stage_00__steps_000039031200.pt \
+--eval
 ```
 
-For testing on all saved checkpoints we just need to omit `<PATH_TO_CHECKPOINT>`:
+For testing on all saved checkpoints we pass a directory to `--checkpoint` rather than just a single file:
 
 ```bash
 PYTHONPATH=. python allenact/main.py \
 training_a_pointnav_model \
 -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ \
 -b projects/tutorials  \
--t 2020-08-31_12-13-30
+-c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30
+--eval
 ```
 ## Visualization
 
@@ -161,9 +161,9 @@ Running test on the same downloaded models, but using the visualization-enabled 
 PYTHONPATH=. python allenact/main.py \
 running_inference_tutorial \
 -o pretrained_model_ckpts/robothor-pointnav-rgb-resnet/ \
--c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30/exp_PointNavRobothorRGBPPO__stage_00__steps_000039031200.pt \
 -b projects/tutorials \
--t 2020-08-31_12-13-30
+-c pretrained_model_ckpts/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/2020-08-31_12-13-30/exp_PointNavRobothorRGBPPO__stage_00__steps_000039031200.pt \
+--eval
 ```
 
 generates different types of visualization and logs them in tensorboard. If everything is properly setup and

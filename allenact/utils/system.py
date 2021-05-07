@@ -21,7 +21,8 @@ _LOGGER: Optional[logging.Logger] = None
 class ColoredFormatter(logging.Formatter):
     """Format a log string with colors.
 
-    This implementation taken (with modifications) from https://stackoverflow.com/a/384125.
+    This implementation taken (with modifications) from
+    https://stackoverflow.com/a/384125.
     """
 
     BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)

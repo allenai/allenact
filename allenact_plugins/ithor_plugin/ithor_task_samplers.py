@@ -174,6 +174,9 @@ class ObjectNavTaskSampler(TaskSampler):
             )
 
         task_info["start_pose"] = copy.copy(pose)
+        task_info[
+            "id"
+        ] = f"{scene}__{'_'.join(list(map(str, self.env.get_key(pose))))}__{task_info['object_type']}"
 
         self._last_sampled_task = ObjectNaviThorGridTask(
             env=self.env,

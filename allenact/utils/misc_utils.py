@@ -68,6 +68,27 @@ def experimental_api(to_decorate):
     return decorated
 
 
+def deprecated(to_decorate):
+    """Decorate a function to note that it has been deprecated."""
+
+    have_warned = [False]
+    name = f"{inspect.getmodule(to_decorate).__name__}.{to_decorate.__qualname__}"
+    if to_decorate.__name__ == "__init__":
+        name = name.replace(".__init__", "")
+
+    @functools.wraps(to_decorate)
+    def decorated(*args, **kwargs):
+        if not have_warned[0]:
+            get_logger().warning(
+                f"'{name}' has been deprecated and will soon be removed from AllenAct's API."
+                f" Please discontinue your use of this function.",
+            )
+            have_warned[0] = True
+        return to_decorate(*args, **kwargs)
+
+    return decorated
+
+
 class NumpyJSONEncoder(json.JSONEncoder):
     """JSON encoder for numpy objects.
 
