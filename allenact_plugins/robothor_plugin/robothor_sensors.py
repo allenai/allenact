@@ -4,7 +4,8 @@ import gym
 import numpy as np
 import quaternion  # noqa # pylint: disable=unused-import
 
-from allenact.base_abstractions.sensor import Sensor, RGBSensor, DepthSensor
+from allenact.base_abstractions.sensor import Sensor
+from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 from allenact.base_abstractions.task import Task
 from allenact.utils.misc_utils import prepare_locals_for_super
 from allenact.utils.system import get_logger

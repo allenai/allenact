@@ -22,7 +22,15 @@ class A2CACKTR(AbstractActorCriticLoss):
     entropy_coef : Weight of entropy (encouraging) loss.
     """
 
-    def __init__(self, value_loss_coef, entropy_coef, acktr=False, *args, **kwargs):
+    def __init__(
+        self,
+        value_loss_coef,
+        entropy_coef,
+        acktr=False,
+        entropy_method_name: str = "entropy",
+        *args,
+        **kwargs,
+    ):
         """Initializer.
 
         See class documentation for parameter definitions.
@@ -33,6 +41,7 @@ class A2CACKTR(AbstractActorCriticLoss):
 
         self.value_loss_coef = value_loss_coef
         self.entropy_coef = entropy_coef
+        self.entropy_method_name = entropy_method_name
 
     def loss_per_step(  # type: ignore
         self,
@@ -52,7 +61,9 @@ class A2CACKTR(AbstractActorCriticLoss):
             )
         )
 
-        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy()
+        dist_entropy: torch.FloatTensor = getattr(
+            actor_critic_output.distributions, self.entropy_method_name
+        )()
         value_loss = 0.5 * (cast(torch.FloatTensor, batch["returns"]) - values).pow(2)
 
         # TODO: Decided not to use normalized advantages here,
@@ -108,11 +119,19 @@ class A2CACKTR(AbstractActorCriticLoss):
 class A2C(A2CACKTR):
     """A2C Loss."""
 
-    def __init__(self, value_loss_coef, entropy_coef, *args, **kwargs):
+    def __init__(
+        self,
+        value_loss_coef,
+        entropy_coef,
+        entropy_method_name: str = "entropy",
+        *args,
+        **kwargs,
+    ):
         super().__init__(
             value_loss_coef=value_loss_coef,
             entropy_coef=entropy_coef,
             acktr=False,
+            entropy_method_name=entropy_method_name,
             *args,
             **kwargs,
         )
@@ -125,11 +144,19 @@ class ACKTR(A2CACKTR):
     for recurrent models.
     """
 
-    def __init__(self, value_loss_coef, entropy_coef, *args, **kwargs):
+    def __init__(
+        self,
+        value_loss_coef,
+        entropy_coef,
+        entropy_method_name: str = "entropy",
+        *args,
+        **kwargs,
+    ):
         super().__init__(
             value_loss_coef=value_loss_coef,
             entropy_coef=entropy_coef,
             acktr=True,
+            entropy_method_name=entropy_method_name,
             *args,
             **kwargs,
         )

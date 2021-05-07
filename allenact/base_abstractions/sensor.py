@@ -2,7 +2,6 @@
 # Modified work Copyright (c) Allen Institute for AI
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-from abc import abstractmethod, ABC
 from collections import OrderedDict
 from typing import (
     Generic,
@@ -12,23 +11,20 @@ from typing import (
     TYPE_CHECKING,
     TypeVar,
     Sequence,
-    cast,
-    Tuple,
     Union,
+    Tuple,
+    cast,
 )
 
-import PIL
 import gym
 import numpy as np
 import gym.spaces as gyms
 from torch.distributions.utils import lazy_property
-from torchvision import transforms
 
 from allenact.base_abstractions.misc import EnvType
 from allenact.utils import spaces_utils as su
 from allenact.utils.misc_utils import prepare_locals_for_super
 from allenact.utils.system import get_logger
-from allenact.utils.tensor_utils import ScaleBothSides
 
 if TYPE_CHECKING:
     from allenact.base_abstractions.task import SubTaskType
@@ -141,12 +137,17 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
     """A sensor that obtains the expert action for a given task (if
     available)."""
 
+    action_label: str = "action"
+    expert_success_label: str = "expert_success"
+    no_groups_label: str = "dummy_expert_group"
+
     def __init__(
         self,
         action_space: Optional[Union[gym.Space, int]] = None,
         uuid: str = "expert_action",
         expert_args: Optional[Dict[str, Any]] = None,
         nactions: Optional[int] = None,
+        use_dict_as_groups: bool = True,
         **kwargs: Any
     ) -> None:
         """Initialize an `ExpertActionSensor`.
@@ -155,11 +156,12 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         action_space : The action space of the agent, this is necessary in order for this sensor
             to know what its output observation space is.
         uuid : A string specifying the unique ID of this sensor.
-        expert_args : This sensor obtains an expert action from the task by talling the `query_expert`
+        expert_args : This sensor obtains an expert action from the task by calling the `query_expert`
             method of the task. `expert_args` are any keyword arguments that should be passed to the
             `query_expert` method when called.
         nactions : [DEPRECATED] The number of actions available to the agent, corresponds to an `action_space`
             of `gym.spaces.Discrete(nactions)`.
+        use_dict_as_groups : Whether to use the top-level action_space of type `gym.spaces.Dict` as action groups.
         """
         if isinstance(action_space, int):
             action_space = gym.spaces.Discrete(action_space)
@@ -172,18 +174,55 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
                 " the `action_space` parameter instead."
             )
             action_space = gym.spaces.Discrete(nactions)
+
         self.action_space = action_space
+
+        self.use_groups = (
+            isinstance(action_space, gym.spaces.Dict) and use_dict_as_groups
+        )
+
+        self.group_spaces = (
+            self.action_space
+            if self.use_groups
+            else OrderedDict([(self.no_groups_label, self.action_space,)])
+        )
+
         self.expert_args: Dict[str, Any] = expert_args or {}
 
-        self.unflattened_observation_space = gym.spaces.Tuple(
-            (self.action_space, gym.spaces.Discrete(2))
-        )
+        assert (
+            "expert_sensor_action_group_name" not in self.expert_args
+        ), "`expert_sensor_action_group_name` is reserved for `ExpertActionSensor`"
 
         observation_space = self._get_observation_space()
 
         super().__init__(**prepare_locals_for_super(locals()))
 
-    def _get_observation_space(self) -> gym.spaces.Box:
+    @classmethod
+    def flagged_group_space(cls, group_space: gym.spaces.Space) -> gym.spaces.Dict:
+        return gym.spaces.Dict(
+            [
+                (cls.action_label, group_space),
+                (cls.expert_success_label, gym.spaces.Discrete(2)),
+            ]
+        )
+
+    @classmethod
+    def flagged_space(
+        cls, action_space: gym.spaces.Space, use_dict_as_groups: bool = True
+    ) -> gym.spaces.Dict:
+        use_groups = isinstance(action_space, gym.spaces.Dict) and use_dict_as_groups
+
+        if not use_groups:
+            return cls.flagged_group_space(action_space)
+        else:
+            return gym.spaces.Dict(
+                [
+                    (group_space, cls.flagged_group_space(action_space[group_space]),)
+                    for group_space in cast(gym.spaces.Dict, action_space)
+                ]
+            )
+
+    def _get_observation_space(self) -> Union[gym.spaces.Dict, gym.spaces.Tuple]:
         """The observation space of the expert action sensor.
 
         Will equal `gym.spaces.Tuple(gym.spaces.Discrete(num actions in
@@ -192,38 +231,63 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         only if the expert failed to generate a true expert action. The
         value `num actions in task` should be in `config["nactions"]`
         """
-        return su.flatten_space(self.unflattened_observation_space)
+        return self.flagged_space(self.action_space, use_dict_as_groups=self.use_groups)
 
     @lazy_property
-    def _zeroed_observation(self):
-        return np.zeros_like(self.observation_space.sample())
+    def _zeroed_observation(self) -> Union[OrderedDict, Tuple]:
+        # AllenAct-style flattened space (to easily generate an all-zeroes action as an array)
+        flat_space = su.flatten_space(self.observation_space)
+        # torch point to correctly unflatten `Discrete` for zeroed output
+        flat_zeroed = su.torch_point(flat_space, np.zeros_like(flat_space.sample()))
+        # unflatten zeroed output and convert to numpy
+        return su.numpy_point(
+            self.observation_space, su.unflatten(self.observation_space, flat_zeroed)
+        )
+
+    def flatten_output(self, unflattened):
+        return (
+            su.flatten(
+                self.observation_space,
+                su.torch_point(self.observation_space, unflattened),
+            )
+            .cpu()
+            .numpy()
+        )
 
     def get_observation(
         self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
-    ) -> Any:
+    ) -> Union[OrderedDict, Tuple]:
         # If the task is completed, we needn't (perhaps can't) find the expert
         # action from the (current) terminal state.
         if task.is_done():
-            return self._zeroed_observation
+            return self.flatten_output(self._zeroed_observation)
 
-        action, expert_was_successful = task.query_expert(**self.expert_args)
+        actions = OrderedDict()
+        for group_name in self.group_spaces:
+            action, expert_was_successful = task.query_expert(
+                **self.expert_args, expert_sensor_action_group_name=group_name
+            )
 
-        if isinstance(action, int):
-            assert isinstance(self.action_space, gym.spaces.Discrete)
-            unflattened_action = action
-        else:
-            # Assume we receive a gym-flattened numpy action
-            unflattened_action = gyms.unflatten(self.action_space, action)
+            if isinstance(action, int):
+                assert isinstance(self.group_spaces[group_name], gym.spaces.Discrete)
+                unflattened_action = action
+            else:
+                # Assume we receive a gym-flattened numpy action
+                unflattened_action = gyms.unflatten(
+                    self.group_spaces[group_name], action
+                )
+                # TODO why not enforcing unflattened actions from the task?
 
-        unflattened_torch = su.torch_point(
-            self.unflattened_observation_space,
-            (unflattened_action, expert_was_successful),
+            actions[group_name] = OrderedDict(
+                [
+                    (self.action_label, unflattened_action),
+                    (self.expert_success_label, expert_was_successful),
+                ]
+            )
+
+        return self.flatten_output(
+            actions if self.use_groups else actions[self.no_groups_label]
         )
-
-        flattened_torch = su.flatten(
-            self.unflattened_observation_space, unflattened_torch
-        )
-        return flattened_torch.cpu().numpy()
 
 
 class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
@@ -268,254 +332,3 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
         return np.array(
             np.concatenate((policy, [expert_was_successful]), axis=-1), dtype=np.float32
         )
-
-
-class VisionSensor(Sensor[EnvType, SubTaskType]):
-    def __init__(
-        self,
-        mean: Optional[np.ndarray] = None,
-        stdev: Optional[np.ndarray] = None,
-        height: Optional[int] = None,
-        width: Optional[int] = None,
-        uuid: str = "vision",
-        output_shape: Optional[Tuple[int, ...]] = None,
-        output_channels: Optional[int] = None,
-        unnormalized_infimum: float = -np.inf,
-        unnormalized_supremum: float = np.inf,
-        scale_first: bool = True,
-        **kwargs: Any
-    ):
-        """Initializer.
-
-        # Parameters
-
-        config : The images will be normalized
-            with means `config["mean"]` and standard deviations `config["stdev"]`. If both `config["height"]` and
-            `config["width"]` are non-negative integers then
-            the image returned from the environment will be rescaled to have
-            `config["height"]` rows and `config["width"]` columns using bilinear sampling. The universally unique
-            identifier will be set as `config["uuid"]`.
-        args : Extra args. Currently unused.
-        kwargs : Extra kwargs. Currently unused.
-        """
-
-        self._norm_means = mean
-        self._norm_sds = stdev
-        assert (self._norm_means is None) == (self._norm_sds is None), (
-            "In VisionSensor's config, "
-            "either both mean/stdev must be None or neither."
-        )
-        self._should_normalize = self._norm_means is not None
-
-        self._height = height
-        self._width = width
-        assert (self._width is None) == (self._height is None), (
-            "In VisionSensor's config, "
-            "either both height/width must be None or neither."
-        )
-
-        self._scale_first = scale_first
-
-        self.scaler: Optional[ScaleBothSides] = None
-        if self._width is not None:
-            self.scaler = ScaleBothSides(
-                width=cast(int, self._width), height=cast(int, self._height)
-            )
-
-        self.to_pil = transforms.ToPILImage()  # assumes mode="RGB" for 3 channels
-
-        self._observation_space = self._make_observation_space(
-            output_shape=output_shape,
-            output_channels=output_channels,
-            unnormalized_infimum=unnormalized_infimum,
-            unnormalized_supremum=unnormalized_supremum,
-        )
-
-        assert int(PIL.__version__.split(".")[0]) != 7, (
-            "We found that Pillow version >=7.* has broken scaling,"
-            " please downgrade to version 6.2.1 or upgrade to >=8.0.0"
-        )
-
-        observation_space = self._get_observation_space()
-
-        super().__init__(**prepare_locals_for_super(locals()))
-
-    def _make_observation_space(
-        self,
-        output_shape: Optional[Tuple[int, ...]],
-        output_channels: Optional[int],
-        unnormalized_infimum: float,
-        unnormalized_supremum: float,
-    ) -> gym.spaces.Box:
-        assert output_shape is None or output_channels is None, (
-            "In VisionSensor's config, "
-            "only one of output_shape and output_channels can be not None."
-        )
-
-        shape: Optional[Tuple[int, ...]] = None
-        if output_shape is not None:
-            shape = output_shape
-        elif self._height is not None and output_channels is not None:
-            shape = (
-                cast(int, self._height),
-                cast(int, self._width),
-                cast(int, output_channels),
-            )
-
-        if not self._should_normalize or shape is None or len(shape) == 1:
-            return gym.spaces.Box(
-                low=np.float32(unnormalized_infimum),
-                high=np.float32(unnormalized_supremum),
-                shape=shape,
-            )
-        else:
-            out_shape = shape[:-1] + (1,)
-            low = np.tile(
-                (unnormalized_infimum - cast(np.ndarray, self._norm_means))
-                / cast(np.ndarray, self._norm_sds),
-                out_shape,
-            )
-            high = np.tile(
-                (unnormalized_supremum - cast(np.ndarray, self._norm_means))
-                / cast(np.ndarray, self._norm_sds),
-                out_shape,
-            )
-            return gym.spaces.Box(low=np.float32(low), high=np.float32(high))
-
-    def _get_observation_space(self):
-        return self._observation_space
-
-    @property
-    def height(self) -> Optional[int]:
-        """Height that input image will be rescale to have.
-
-        # Returns
-
-        The height as a non-negative integer or `None` if no rescaling is done.
-        """
-        return self._height
-
-    @property
-    def width(self) -> Optional[int]:
-        """Width that input image will be rescale to have.
-
-        # Returns
-
-        The width as a non-negative integer or `None` if no rescaling is done.
-        """
-        return self._width
-
-    @abstractmethod
-    def frame_from_env(self, env: EnvType, task: Optional[SubTaskType]) -> np.ndarray:
-        raise NotImplementedError
-
-    def get_observation(
-        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
-    ) -> Any:
-        im = self.frame_from_env(env=env, task=task)
-        assert (
-            im.dtype == np.float32 and (len(im.shape) == 2 or im.shape[-1] == 1)
-        ) or (im.shape[-1] == 3 and im.dtype == np.uint8), (
-            "Input frame must either have 3 channels and be of"
-            " type np.uint8 or have one channel and be of type np.float32"
-        )
-
-        if self._scale_first:
-            if self.scaler is not None and im.shape[:2] != (self._height, self._width):
-                im = np.array(self.scaler(self.to_pil(im)), dtype=im.dtype)  # hwc
-
-        assert im.dtype in [np.uint8, np.float32]
-
-        if im.dtype == np.uint8:
-            im = im.astype(np.float32) / 255.0
-
-        if self._should_normalize:
-            im -= self._norm_means
-            im /= self._norm_sds
-
-        if not self._scale_first:
-            if self.scaler is not None and im.shape[:2] != (self._height, self._width):
-                im = np.array(self.scaler(self.to_pil(im)), dtype=np.float32)  # hwc
-
-        return im
-
-
-class RGBSensor(VisionSensor[EnvType, SubTaskType], ABC):
-    def __init__(
-        self,
-        use_resnet_normalization: bool = False,
-        mean: Optional[np.ndarray] = np.array(
-            [[[0.485, 0.456, 0.406]]], dtype=np.float32
-        ),
-        stdev: Optional[np.ndarray] = np.array(
-            [[[0.229, 0.224, 0.225]]], dtype=np.float32
-        ),
-        height: Optional[int] = None,
-        width: Optional[int] = None,
-        uuid: str = "rgb",
-        output_shape: Optional[Tuple[int, ...]] = None,
-        output_channels: int = 3,
-        unnormalized_infimum: float = 0.0,
-        unnormalized_supremum: float = 1.0,
-        scale_first: bool = True,
-        **kwargs: Any
-    ):
-        """Initializer.
-
-        # Parameters
-
-        config : If `config["use_resnet_normalization"]` is `True` then the RGB images will be normalized
-            with means `[0.485, 0.456, 0.406]` and standard deviations `[0.229, 0.224, 0.225]` (i.e. using the standard
-            resnet normalization). If both `config["height"]` and `config["width"]` are non-negative integers then
-            the RGB image returned from the environment will be rescaled to have shape
-            (config["height"], config["width"], 3) using bilinear sampling.
-        args : Extra args. Currently unused.
-        kwargs : Extra kwargs. Currently unused.
-        """
-
-        if not use_resnet_normalization:
-            mean, stdev = None, None
-
-        super().__init__(**prepare_locals_for_super(locals()))
-
-
-class DepthSensor(VisionSensor[EnvType, SubTaskType], ABC):
-    def __init__(
-        self,
-        use_normalization: bool = False,
-        mean: Optional[np.ndarray] = np.array([[0.5]], dtype=np.float32),
-        stdev: Optional[np.ndarray] = np.array([[0.25]], dtype=np.float32),
-        height: Optional[int] = None,
-        width: Optional[int] = None,
-        uuid: str = "depth",
-        output_shape: Optional[Tuple[int, ...]] = None,
-        output_channels: int = 1,
-        unnormalized_infimum: float = 0.0,
-        unnormalized_supremum: float = 5.0,
-        scale_first: bool = True,
-        **kwargs: Any
-    ):
-        """Initializer.
-
-        # Parameters
-
-        config : If `config["use_normalization"]` is `True` then the depth images will be normalized
-            with mean 0.5 and standard deviation 0.25. If both `config["height"]` and `config["width"]` are
-            non-negative integers then the depth image returned from the environment will be rescaled to have shape
-            (config["height"], config["width"]) using bilinear sampling.
-        args : Extra args. Currently unused.
-        kwargs : Extra kwargs. Currently unused.
-        """
-
-        if not use_normalization:
-            mean, stdev = None, None
-
-        super().__init__(**prepare_locals_for_super(locals()))
-
-    def get_observation(  # type: ignore
-        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
-    ) -> Any:
-        depth = super().get_observation(env, task, *args, **kwargs)
-        depth = np.expand_dims(depth, 2)
-
-        return depth

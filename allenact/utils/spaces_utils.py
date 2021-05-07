@@ -10,7 +10,7 @@ import numpy as np
 import torch
 from gym import spaces as gym
 
-from allenact.algorithms.onpolicy_sync.policy import ActionType
+ActionType = Union[torch.Tensor, OrderedDict, Tuple, int]
 
 
 def flatdim(space):
