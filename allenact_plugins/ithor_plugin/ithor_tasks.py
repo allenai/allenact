@@ -65,7 +65,7 @@ class ObjectNaviThorGridTask(Task[IThorEnvironment]):
         sensors: List[Sensor],
         task_info: Dict[str, Any],
         max_steps: int,
-        **kwargs
+        **kwargs,
     ) -> None:
         """Initializer.
 
@@ -79,6 +79,9 @@ class ObjectNaviThorGridTask(Task[IThorEnvironment]):
         self._subsampled_locations_from_which_obj_visible: Optional[
             List[Tuple[float, float, int, int]]
         ] = None
+
+        self.task_info["followed_path"] = [self.env.get_agent_location()]
+        self.task_info["action_names"] = self.class_action_names()
 
     @property
     def action_space(self):
@@ -112,6 +115,8 @@ class ObjectNaviThorGridTask(Task[IThorEnvironment]):
                 not self.last_action_success
             ) and self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE is not None:
                 self.env.update_graph_with_failed_action(failed_action=action_str)
+
+            self.task_info["followed_path"].append(self.env.get_agent_location())
 
         step_result = RLStepResult(
             observation=self.get_observations(),
