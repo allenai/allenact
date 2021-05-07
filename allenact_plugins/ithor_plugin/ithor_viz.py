@@ -16,8 +16,9 @@ import colour as col
 from allenact.utils.system import get_logger
 from allenact.utils.viz_utils import TrajectoryViz
 
-ITHOR_VIZ_CACHED_TOPDOWN_VIEWS_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(Path(__file__)), "data", "topdown")
+
+ITHOR_VIZ_CACHED_TOPDOWN_VIEWS_DIR = os.path.join(
+    os.path.expanduser("~"), ".allenact", "ithor", "top_down_viz_cache"
 )
 
 
