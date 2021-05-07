@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from allenact.algorithms.onpolicy_sync.losses import PPO
 from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from allenact.base_abstractions.experiment_config import ExperimentConfig
+from allenact.base_abstractions.experiment_config import ExperimentConfig, MachineParams
 from allenact.base_abstractions.sensor import SensorSuite
 from allenact.base_abstractions.task import TaskSampler
 from allenact.utils.experiment_utils import (
@@ -121,7 +121,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
-        return {"nprocesses": nprocesses, "gpu_ids": gpu_ids}
+        return MachineParams(nprocesses=nprocesses, devices=gpu_ids,)
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
