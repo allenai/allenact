@@ -7,7 +7,6 @@ from allenact.utils.viz_utils import (
     AgentViewViz,
     ActorViz,
     TensorViz1D,
-    TensorViz2D,
 )
 from allenact_plugins.ithor_plugin.ithor_viz import ThorViz
 

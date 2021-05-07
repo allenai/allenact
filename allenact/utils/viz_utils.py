@@ -962,7 +962,7 @@ class VizSuite(AbstractViz):
             # in phase with last_it2epid
             try:
                 self._collect_actor_critic(actor_critic)
-            except:
+            except (AssertionError, RuntimeError):
                 get_logger().debug(
                     msg=f"Failed collect (actor_critic) for viz due to exception:",
                     exc_info=sys.exc_info(),
@@ -973,7 +973,7 @@ class VizSuite(AbstractViz):
             # in phase with last_it2epid that stay alive
             try:
                 self._collect_rollout(rollout, alive)
-            except:
+            except (AssertionError, RuntimeError):
                 get_logger().debug(
                     msg=f"Failed collect (rollout) for viz due to exception:",
                     exc_info=sys.exc_info(),
@@ -985,7 +985,7 @@ class VizSuite(AbstractViz):
             # in phase with identifiers of current episodes from vector_task
             try:
                 self.last_it2epid = self._collect_vector_task(vector_task)
-            except:
+            except (AssertionError, RuntimeError):
                 get_logger().debug(
                     msg=f"Failed collect (vector_task) for viz due to exception:",
                     exc_info=sys.exc_info(),
@@ -1009,7 +1009,7 @@ class VizSuite(AbstractViz):
         for v in self.viz:
             try:
                 v.log(log_writer, task_outputs, render, num_steps)
-            except:
+            except (AssertionError, RuntimeError):
                 get_logger().debug(
                     msg=f"Dropped {v.label} viz due to exception:",
                     exc_info=sys.exc_info(),
