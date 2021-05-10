@@ -85,6 +85,7 @@ def init_logging(human_log_level: str = "info") -> None:
     the log_level to one of `HUMAN_LOG_LEVELS`. And sets up a handler
     for stderr. The logging level is propagated to all subprocesses.
     """
+    human_log_level = human_log_level.lower().strip()
     assert human_log_level in HUMAN_LOG_LEVELS, "unknown human_log_level {}".format(
         human_log_level
     )

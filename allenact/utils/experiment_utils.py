@@ -13,7 +13,6 @@ from typing import (
     Iterator,
     Optional,
     List,
-    Tuple,
     cast,
     Sequence,
     TypeVar,
@@ -32,6 +31,7 @@ from allenact.algorithms.onpolicy_sync.losses.abstract_loss import (
     AbstractActorCriticLoss,
 )
 from allenact.base_abstractions.misc import Loss
+from allenact.utils.system import get_logger
 
 
 def evenly_distribute_count_into_bins(count: int, nbins: int) -> List[int]:
@@ -356,11 +356,7 @@ class EarlyStoppingCriterion(abc.ABC):
 
     @abc.abstractmethod
     def __call__(
-        self,
-        stage_steps: int,
-        total_steps: int,
-        training_metrics: ScalarMeanTracker,
-        test_valid_metrics: List[Tuple[str, int, Union[float, np.ndarray]]],
+        self, stage_steps: int, total_steps: int, training_metrics: ScalarMeanTracker,
     ) -> bool:
         """Returns `True` if training should be stopped early.
 
@@ -372,10 +368,6 @@ class EarlyStoppingCriterion(abc.ABC):
         training_metrics: Metrics recovered over some fixed number of steps
             (see the `metric_accumulate_interval` attribute in the `TrainingPipeline` class)
             training.
-        test_valid_metrics: A tuple `(key, steps, value)` where key is the metric's name
-             prefixed by either `"valid/"` or `"test/"`, `steps` is the total number of
-             steps that the validation/test model was trained for, and value is the
-             value of the metric.
         """
         raise NotImplementedError
 
@@ -384,11 +376,7 @@ class NeverEarlyStoppingCriterion(EarlyStoppingCriterion):
     """Implementation of `EarlyStoppingCriterion` which never stops early."""
 
     def __call__(
-        self,
-        stage_steps: int,
-        total_steps: int,
-        training_metrics: ScalarMeanTracker,
-        test_valid_metrics: List[Tuple[str, int, Union[float, np.ndarray]]],
+        self, stage_steps: int, total_steps: int, training_metrics: ScalarMeanTracker,
     ) -> bool:
         return False
 
@@ -434,6 +422,13 @@ class PipelineStage(object):
         as `loss_name`. If this is `None`, all weights will be assumed to be one.
     teacher_forcing : If applicable, defines the probability an agent will take the
         expert action (as opposed to its own sampled action) at a given time point.
+    early_stopping_criterion: An `EarlyStoppingCriterion` object which determines if
+        training in this stage should be stopped early. If `None` then no early stopping
+        occurs. If `early_stopping_criterion` is not `None` then we do not guarantee
+        reproducibility when restarting a model from a checkpoint (as the
+         `EarlyStoppingCriterion` object may store internal state which is not
+         saved in the checkpoint). Currently AllenAct only supports using early stopping
+         criterion when **not** using distributed training.
     """
 
     def __init__(
@@ -443,21 +438,15 @@ class PipelineStage(object):
         loss_weights: Optional[Sequence[float]] = None,
         teacher_forcing: Optional[LinearDecay] = None,
         offpolicy_component: Optional[OffPolicyPipelineComponent] = None,
+        early_stopping_criterion: Optional[EarlyStoppingCriterion] = None,
     ):
         self.loss_names = loss_names
         self.max_stage_steps = max_stage_steps
-        # TODO: The early stopping criterion is currently disabled. Should be reenabled to work with
-        #   distributed training.
-        self.early_stopping_criterion = None
-        #     early_stopping_criterion: An `EarlyStoppingCriterion` object which determines if
-        #         training in this stage should be stopped early. If `None` then no early stopping
-        #         occurs. If `early_stopping_criterion` is not `None` then we do not guarantee
-        #         reproducibility when restarting a model from a checkpoint (as the
-        #          `EarlyStoppingCriterion` object may store internal state which is not
-        #          saved in the checkpoint).
+
         self.loss_weights = loss_weights
         self.teacher_forcing = teacher_forcing
         self.offpolicy_component = offpolicy_component
+        self.early_stopping_criterion = early_stopping_criterion
 
         self.steps_taken_in_stage: int = 0
         self.rollout_count = 0
@@ -637,16 +626,20 @@ class TrainingPipeline(object):
             return None
         return self.pipeline_stages.index(self.current_stage)
 
-    def before_rollout(self, train_valid_metrics: Optional[Dict] = None):
+    def before_rollout(self, train_metrics: Optional[ScalarMeanTracker] = None):
         if (
-            train_valid_metrics is not None
+            train_metrics is not None
             and self.current_stage.early_stopping_criterion is not None
         ):
             self.current_stage.early_stopping_criterion_met = self.current_stage.early_stopping_criterion(
                 stage_steps=self.current_stage.steps_taken_in_stage,
                 total_steps=self.total_steps,
-                training_metrics=train_valid_metrics["train"],
-                test_valid_metrics=train_valid_metrics["valid"],
+                training_metrics=train_metrics,
+            )
+        if self.current_stage.early_stopping_criterion_met:
+            get_logger().debug(
+                f"Early stopping criterion met after {self.total_steps} total steps "
+                f"({self.current_stage.steps_taken_in_stage} in current stage, stage index {self.current_stage_index})."
             )
         self._refresh_current_stage(force_stage_search_from_start=False)
 

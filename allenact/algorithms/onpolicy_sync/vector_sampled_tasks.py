@@ -33,7 +33,6 @@ from allenact.utils.misc_utils import partition_sequence
 from allenact.utils.system import get_logger
 from allenact.utils.tensor_utils import tile_images
 
-
 try:
     # Use torch.multiprocessing if we can.
     # We have yet to find a reason to not use it and
@@ -864,6 +863,8 @@ class SingleProcessVectorSampledTasks(object):
                     if current_task.is_done():
                         metrics = current_task.metrics()
                         if metrics is not None and len(metrics) != 0:
+                            if step_result.info is None:
+                                step_result = step_result.clone({"info": {}})
                             step_result.info[COMPLETE_TASK_METRICS_KEY] = metrics
 
                         if auto_resample_when_done:

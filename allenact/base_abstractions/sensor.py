@@ -19,8 +19,8 @@ from typing import (
 
 import PIL
 import gym
-import numpy as np
 import gym.spaces as gyms
+import numpy as np
 from torch.distributions.utils import lazy_property
 from torchvision import transforms
 
@@ -236,7 +236,7 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
     ) -> None:
         self.nactions = nactions
         self.expert_args: Dict[str, Any] = expert_args or {}
-
+        observation_space = self._get_observation_space()
         super().__init__(**prepare_locals_for_super(locals()))
 
     def _get_observation_space(self) -> gym.spaces.Tuple:
