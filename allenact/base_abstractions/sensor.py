@@ -137,9 +137,9 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
     """A sensor that obtains the expert action for a given task (if
     available)."""
 
-    action_label: str = "action"
-    expert_success_label: str = "expert_success"
-    no_groups_label: str = "dummy_expert_group"
+    ACTION_LABEL: str = "action"
+    EXPERT_SUCCESS_LABEL: str = "expert_success"
+    _NO_GROUPS_LABEL: str = "__dummy_expert_group__"
 
     def __init__(
         self,
@@ -184,7 +184,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
         self.group_spaces = (
             self.action_space
             if self.use_groups
-            else OrderedDict([(self.no_groups_label, self.action_space,)])
+            else OrderedDict([(self._NO_GROUPS_LABEL, self.action_space,)])
         )
 
         self.expert_args: Dict[str, Any] = expert_args or {}
@@ -201,8 +201,8 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
     def flagged_group_space(cls, group_space: gym.spaces.Space) -> gym.spaces.Dict:
         return gym.spaces.Dict(
             [
-                (cls.action_label, group_space),
-                (cls.expert_success_label, gym.spaces.Discrete(2)),
+                (cls.ACTION_LABEL, group_space),
+                (cls.EXPERT_SUCCESS_LABEL, gym.spaces.Discrete(2)),
             ]
         )
 
@@ -222,7 +222,7 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
                 ]
             )
 
-    def _get_observation_space(self) -> Union[gym.spaces.Dict, gym.spaces.Tuple]:
+    def _get_observation_space(self) -> gym.spaces.Dict:
         """The observation space of the expert action sensor.
 
         Will equal `gym.spaces.Tuple(gym.spaces.Discrete(num actions in
@@ -268,25 +268,15 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
                 **self.expert_args, expert_sensor_action_group_name=group_name
             )
 
-            if isinstance(action, int):
-                assert isinstance(self.group_spaces[group_name], gym.spaces.Discrete)
-                unflattened_action = action
-            else:
-                # Assume we receive a gym-flattened numpy action
-                unflattened_action = gyms.unflatten(
-                    self.group_spaces[group_name], action
-                )
-                # TODO why not enforcing unflattened actions from the task?
-
             actions[group_name] = OrderedDict(
                 [
-                    (self.action_label, unflattened_action),
-                    (self.expert_success_label, expert_was_successful),
+                    (self.ACTION_LABEL, action),
+                    (self.EXPERT_SUCCESS_LABEL, expert_was_successful),
                 ]
             )
 
         return self.flatten_output(
-            actions if self.use_groups else actions[self.no_groups_label]
+            actions if self.use_groups else actions[self._NO_GROUPS_LABEL]
         )
 
 
@@ -331,4 +321,28 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
         )
         return np.array(
             np.concatenate((policy, [expert_was_successful]), axis=-1), dtype=np.float32
+        )
+
+
+class VisionSensor:
+    def __init__(self, *args: Any, **kwargs: Any):
+        raise ImportError(
+            "`allenact.base_abstractions.sensor.VisionSensor` has moved!\n"
+            "Please import allenact.embodiedai.sensors.vision_sensors.VisionSensor instead."
+        )
+
+
+class RGBSensor:
+    def __init__(self, *args: Any, **kwargs: Any):
+        raise ImportError(
+            "`allenact.base_abstractions.sensor.RGBSensor` has moved!\n"
+            "Please import allenact.embodiedai.sensors.vision_sensors.RGBSensor instead."
+        )
+
+
+class DepthSensor:
+    def __init__(self, *args: Any, **kwargs: Any):
+        raise ImportError(
+            "`allenact.base_abstractions.sensor.DepthSensor` has moved!\n"
+            "Please import allenact.embodiedai.sensors.vision_sensors.DepthSensor instead."
         )

@@ -341,6 +341,11 @@ class MiniGridTask(Task[CrossingEnv]):
 
 
 class ConditionedMiniGridTask(MiniGridTask):
+    _ACTION_NAMES = ("left", "right", "forward", "pickup")
+    _ACTION_IND_TO_MINIGRID_IND = tuple(
+        MiniGridEnv.Actions.__members__[name].value for name in _ACTION_NAMES
+    )
+
     @property
     def action_space(self) -> gym.spaces.Dict:
         return gym.spaces.Dict(
@@ -351,7 +356,7 @@ class ConditionedMiniGridTask(MiniGridTask):
         assert len(action) == 2, "got action={}".format(action)
         minigrid_obs, reward, self._minigrid_done, info = self.env.step(
             action=(
-                self._ACTION_IND_TO_MINIGRID_IND[action["lower"]] + 2 * action["higher"]
+                self._ACTION_IND_TO_MINIGRID_IND[action["lower"] + 2 * action["higher"]]
             )
         )
 
@@ -371,7 +376,6 @@ class ConditionedMiniGridTask(MiniGridTask):
                     "Episode is completed, but expert is still queried."
                 )
                 return 0, False
-            kwargs.pop("expert_sensor_action_group_name")
             self.cached_expert = super().query_expert(**kwargs)
             if self.cached_expert[1]:
                 return self.cached_expert[0] // 2, True

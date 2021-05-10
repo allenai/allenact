@@ -233,8 +233,6 @@ class OnPolicyRLEngine(object):
         # Keeping track of metrics during training/inference
         self.single_process_metrics_queue: queue.Queue = queue.Queue()
 
-        self.num_paused = 0
-
     @property
     def vector_tasks(self) -> VectorSampledTasks:
         if self._vector_tasks is None and self.num_samplers > 0:
@@ -411,10 +409,10 @@ class OnPolicyRLEngine(object):
         return npaused
 
     @property
-    def active_samplers(self):
-        return self.num_samplers - self.num_paused
+    def num_active_samplers(self):
+        return self.vector_tasks.num_unpaused_tasks
 
-    def act(self, rollouts: RolloutStorage, **kwargs):
+    def act(self, rollouts: RolloutStorage, dist_wrapper_class: Optional[type] = None):
         with torch.no_grad():
             step_observation = rollouts.pick_observation_step(rollouts.step)
             memory = rollouts.pick_memory_step(rollouts.step)
@@ -427,8 +425,8 @@ class OnPolicyRLEngine(object):
             )
 
             distr = actor_critic_output.distributions
-            if "dist_wrapper_class" in kwargs:
-                distr = kwargs["dist_wrapper_class"](distr=distr, obs=step_observation)
+            if dist_wrapper_class is not None:
+                distr = dist_wrapper_class(distr=distr, obs=step_observation)
 
             actions = distr.sample() if not self.deterministic_agents else distr.mode()
 
@@ -840,22 +838,23 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         else:
             return self.step_count  # this is actually accurate
 
-    def act(self, rollouts: RolloutStorage, **kwargs):
+    def act(self, rollouts: RolloutStorage, dist_wrapper_class: Optional[type] = None):
         if self.training_pipeline.current_stage.teacher_forcing is not None:
-            kwargs["dist_wrapper_class"] = partial(
+            assert dist_wrapper_class is None
+            dist_wrapper_class = partial(
                 TeacherForcingDistr,
                 action_space=self.actor_critic.action_space,
-                active_samplers=self.active_samplers,
+                num_active_samplers=self.num_active_samplers,
                 approx_steps=self.approx_steps,
                 teacher_forcing=self.training_pipeline.current_stage.teacher_forcing,
                 tracking_info=self.tracking_info,
             )
 
         actions, actor_critic_output, memory, step_observation = super().act(
-            rollouts=rollouts, **kwargs
+            rollouts=rollouts, dist_wrapper_class=dist_wrapper_class
         )
 
-        self.step_count += self.num_samplers - self.num_paused
+        self.step_count += self.num_active_samplers
 
         return actions, actor_critic_output, memory, step_observation
 
@@ -1352,13 +1351,15 @@ class OnPolicyInference(OnPolicyRLEngine):
         if visualizer is not None:
             assert visualizer.empty()
 
-        self.num_paused += self.initialize_rollouts(rollouts, visualizer=visualizer)
+        num_paused = self.initialize_rollouts(rollouts, visualizer=visualizer)
+        assert num_paused == 0, f"{num_paused} tasks paused when initializing eval"
+
         num_tasks = sum(
             self.vector_tasks.command(
-                "sampler_attr", ["length"] * (self.num_samplers - self.num_paused)
+                "sampler_attr", ["length"] * self.num_active_samplers
             )
         ) + (  # We need to add this as the first tasks have already been sampled
-            self.num_samplers - self.num_paused
+            self.num_active_samplers
         )
         # get_logger().debug(
         #     "worker {} number of tasks {}".format(self.worker_id, num_tasks)
@@ -1376,27 +1377,21 @@ class OnPolicyInference(OnPolicyRLEngine):
             )
 
         logging_pkg = LoggingPackage(mode=self.mode, training_steps=total_steps)
-        while self.num_paused < self.num_samplers:
-            frames += self.num_samplers - self.num_paused
-            self.num_paused += self.collect_rollout_step(
-                rollouts, visualizer=visualizer
-            )
+        while self.num_active_samplers > 0:
+            frames += self.num_active_samplers
+            self.collect_rollout_step(rollouts, visualizer=visualizer)
             steps += 1
 
             if steps % rollout_steps == 0:
                 rollouts.after_update()
 
             cur_time = time.time()
-            if (
-                self.num_paused >= self.num_samplers
-                or cur_time - last_time >= update_secs
-            ):
+            if self.num_active_samplers == 0 or cur_time - last_time >= update_secs:
                 self.aggregate_task_metrics(logging_pkg=logging_pkg)
 
                 if verbose:
                     lengths = self.vector_tasks.command(
-                        "sampler_attr",
-                        ["length"] * (self.num_samplers - self.num_paused),
+                        "sampler_attr", ["length"] * self.num_active_samplers,
                     )
                     npending = sum(lengths)
                     est_time_to_complete = (
@@ -1439,7 +1434,6 @@ class OnPolicyInference(OnPolicyRLEngine):
         )
 
         self.vector_tasks.resume_all()
-        self.num_paused = 0
         self.vector_tasks.set_seeds(self.worker_seeds(self.num_samplers, self.seed))
         self.vector_tasks.reset_all()
 

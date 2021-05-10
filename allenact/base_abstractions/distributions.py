@@ -1,16 +1,17 @@
 import abc
-from typing import Any, Union, Callable, TypeVar, Dict
+from typing import Any, Union, Callable, TypeVar, Dict, Optional, cast
 from collections import OrderedDict
 
 import torch
 import torch.nn as nn
 from torch.distributions.utils import lazy_property
+import gym
 
 from allenact.base_abstractions.sensor import ExpertActionSensor as Expert
 from allenact.utils import spaces_utils as su
+from allenact.utils.misc_utils import all_unique
 
-
-SampleType = TypeVar("SampleType")
+TeacherForcingAnnealingType = TypeVar("TeacherForcingAnnealingType")
 
 """
 Modify standard PyTorch distributions so they are compatible with this code.
@@ -79,7 +80,13 @@ class CategoricalDistr(torch.distributions.Categorical, Distr):
 
 
 class ConditionalDistr(Distr):
-    # `action_group_name` is the identifier of the group of actions (OrderedDict) produced by this `ConditionalDistr`
+    """Action distribution conditional which is conditioned on other information
+       (i.e. part of a hierarchical distribution)
+
+    # Attributes
+    action_group_name : the identifier of the group of actions (`OrderedDict`) produced by this `ConditionalDistr`
+    """
+
     action_group_name: str
 
     def __init__(
@@ -89,15 +96,17 @@ class ConditionalDistr(Distr):
         *distr_conditioned_on_input_args,
         **distr_conditioned_on_input_kwargs,
     ):
+        self.distr: Optional[Distr] = None
+        self.distr_conditioned_on_input_fn: Optional[Callable] = None
+        self.distr_conditioned_on_input_args = distr_conditioned_on_input_args
+        self.distr_conditioned_on_input_kwargs = distr_conditioned_on_input_kwargs
+
         if isinstance(distr_conditioned_on_input_fn_or_instance, Distr):
             self.distr = distr_conditioned_on_input_fn_or_instance
         else:
-            self.distr = None
             self.distr_conditioned_on_input_fn = (
                 distr_conditioned_on_input_fn_or_instance
             )
-            self.distr_conditioned_on_input_args = distr_conditioned_on_input_args
-            self.distr_conditioned_on_input_kwargs = distr_conditioned_on_input_kwargs
 
         self.action_group_name = action_group_name
 
@@ -107,7 +116,7 @@ class ConditionalDistr(Distr):
     def entropy(self):
         return self.distr.entropy()
 
-    def get_distr_conditioned_on_input(self, **ready_actions):
+    def condition_on_input(self, **ready_actions):
         if self.distr is None:
             assert all(
                 key not in self.distr_conditioned_on_input_kwargs
@@ -119,31 +128,33 @@ class ConditionalDistr(Distr):
                 **ready_actions,
             )
 
-    def sample(self, sample_shape=torch.Size(), **parent_actions):
-        self.get_distr_conditioned_on_input(**parent_actions)
-        act = self.distr.sample(sample_shape)
-        return OrderedDict([(self.action_group_name, act)])
+    def sample(self, sample_shape=torch.Size()) -> OrderedDict:
+        return OrderedDict([(self.action_group_name, self.distr.sample(sample_shape))])
 
-    def mode(self, **parent_actions):
-        self.get_distr_conditioned_on_input(**parent_actions)
-        act = self.distr.mode()
-        return OrderedDict([(self.action_group_name, act)])
+    def mode(self) -> OrderedDict:
+        return OrderedDict([(self.action_group_name, self.distr.mode())])
 
 
 class SequentialDistr(Distr):
     def __init__(self, *conditional_distrs: ConditionalDistr):
+        action_group_names = [cd.action_group_name for cd in conditional_distrs]
+        assert all_unique(
+            action_group_names
+        ), f"All conditional distribution `action_group_name`, must be unique, given names {action_group_names}"
         self.conditional_distrs = conditional_distrs
 
     def sample(self, sample_shape=torch.Size()):
         actions = OrderedDict()
         for cd in self.conditional_distrs:
-            actions.update(cd.sample(sample_shape=sample_shape, **actions))
+            cd.condition_on_input(**actions)
+            actions.update(cd.sample(sample_shape=sample_shape))
         return actions
 
     def mode(self):
         actions = OrderedDict()
         for cd in self.conditional_distrs:
-            actions.update(cd.mode(**actions))
+            cd.condition_on_input(**actions)
+            actions.update(cd.mode())
         return actions
 
     def conditional_entropy(self):
@@ -165,7 +176,7 @@ class SequentialDistr(Distr):
 
         sum = 0
         for cd in self.conditional_distrs:
-            cd.get_distr_conditioned_on_input(**actions)
+            cd.condition_on_input(**actions)
             sum = sum + cd.log_prob(actions[cd.action_group_name])
         return sum
 
@@ -173,20 +184,20 @@ class SequentialDistr(Distr):
 class TeacherForcingDistr(Distr):
     def __init__(
         self,
-        distr,
-        obs,
-        action_space,
-        active_samplers,
-        approx_steps,
-        teacher_forcing,
-        tracking_info,
+        distr: Distr,
+        obs: Dict[str, Any],
+        action_space: gym.spaces.Space,
+        num_active_samplers: int,
+        approx_steps: int,
+        teacher_forcing: TeacherForcingAnnealingType,
+        tracking_info: Dict[str, Any],
     ):
         self.distr = distr
         self.is_sequential = isinstance(self.distr, SequentialDistr)
 
         # action_space is a gym.spaces.Dict for SequentialDistr, or any gym.Space for other Distr
         self.action_space = action_space
-        self.active_samplers = active_samplers
+        self.num_active_samplers = num_active_samplers
         self.approx_steps = approx_steps
         self.teacher_forcing = teacher_forcing
         self.tracking_info = tracking_info
@@ -202,35 +213,33 @@ class TeacherForcingDistr(Distr):
 
     def enforce(
         self,
-        sample,
-        action_space,
-        teacher,
+        sample: Any,
+        action_space: gym.spaces.Space,
+        teacher: OrderedDict,
         teacher_force_info: Dict[str, Any],
         action_name: str = None,
     ):
-        # expert_success is 0 if the expert action could not be computed and otherwise equals 1.
-        tf_mask_shape = teacher[Expert.expert_success_label].shape
-        expert_actions = teacher[Expert.action_label]
-        expert_action_exists_mask = teacher[Expert.expert_success_label]
-
         actions = su.flatten(action_space, sample)
 
         assert (
             len(actions.shape) == 3
         ), f"Got flattened actions with shape {actions.shape} (it should be [1 x `samplers` x `flatdims`])"
 
-        assert actions.shape[1] == self.active_samplers
+        assert actions.shape[1] == self.num_active_samplers
 
-        expert_actions = su.flatten(action_space, expert_actions)
+        expert_actions = su.flatten(action_space, teacher[Expert.ACTION_LABEL])
         assert (
             expert_actions.shape == actions.shape
         ), f"expert actions shape {expert_actions.shape} doesn't match the model's {actions.shape}"
+
+        # expert_success is 0 if the expert action could not be computed and otherwise equals 1.
+        expert_action_exists_mask = teacher[Expert.EXPERT_SUCCESS_LABEL]
 
         teacher_forcing_mask = (
             torch.distributions.bernoulli.Bernoulli(
                 torch.tensor(self.teacher_forcing(self.approx_steps))
             )
-            .sample(tf_mask_shape)
+            .sample(expert_action_exists_mask.shape)
             .long()
             .to(actions.device)
         ) * expert_action_exists_mask
@@ -267,11 +276,12 @@ class TeacherForcingDistr(Distr):
 
         if self.is_sequential:
             res = OrderedDict()
-            for cd in self.distr.conditional_distrs:
+            for cd in cast(SequentialDistr, self.distr).conditional_distrs:
+                cd.condition_on_input(**res)
                 action_group_name = cd.action_group_name
                 res[action_group_name] = self.enforce(
-                    cd.sample(sample_shape, **res)[action_group_name],
-                    self.action_space[action_group_name],
+                    cd.sample(sample_shape)[action_group_name],
+                    cast(gym.spaces.Dict, self.action_space)[action_group_name],
                     self.expert[action_group_name],
                     teacher_force_info,
                     action_group_name,
@@ -285,7 +295,7 @@ class TeacherForcingDistr(Distr):
             )
 
         self.tracking_info["teacher"].append(
-            ("teacher_package", teacher_force_info, self.active_samplers)
+            ("teacher_package", teacher_force_info, self.num_active_samplers)
         )
 
         return res
