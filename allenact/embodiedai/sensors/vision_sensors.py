@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABC
-from typing import Optional, Tuple, Any, cast
+from typing import Optional, Tuple, Any, cast, Union, Sequence
 
 import PIL
 import gym
@@ -32,13 +32,18 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
 
         # Parameters
 
-        config : The images will be normalized
-            with means `config["mean"]` and standard deviations `config["stdev"]`. If both `config["height"]` and
-            `config["width"]` are non-negative integers then
-            the image returned from the environment will be rescaled to have
-            `config["height"]` rows and `config["width"]` columns using bilinear sampling. The universally unique
-            identifier will be set as `config["uuid"]`.
-        args : Extra args. Currently unused.
+        mean : The images will be normalized with the given mean
+        stdev : The images will be normalized with the given standard deviations.
+        height : If it's a non-negative integer and `width` is also non-negative integer, the image returned from the
+                environment will be rescaled to have `height` rows and `width` columns using bilinear sampling.
+        width : If it's a non-negative integer and `height` is also non-negative integer, the image returned from the
+                environment will be rescaled to have `height` rows and `width` columns using bilinear sampling.
+        uuid : The universally unique identifier for the sensor.
+        output_shape : Optional observation space shape (alternative to `output_channels`).
+        output_channels : Optional observation space number of channels (alternative to `output_shape`).
+        unnormalized_infimum : Lower limit(s) for the observation space range.
+        unnormalized_supremum : Upper limit(s) for the observation space range.
+        scale_first : Whether to scale image before normalization (if needed).
         kwargs : Extra kwargs. Currently unused.
         """
 
@@ -187,12 +192,8 @@ class RGBSensor(VisionSensor[EnvType, SubTaskType], ABC):
     def __init__(
         self,
         use_resnet_normalization: bool = False,
-        mean: Optional[np.ndarray] = np.array(
-            [[[0.485, 0.456, 0.406]]], dtype=np.float32
-        ),
-        stdev: Optional[np.ndarray] = np.array(
-            [[[0.229, 0.224, 0.225]]], dtype=np.float32
-        ),
+        mean: Optional[Union[np.ndarray, Sequence[float]]] = (0.485, 0.456, 0.406),
+        stdev: Optional[Union[np.ndarray, Sequence[float]]] = (0.229, 0.224, 0.225),
         height: Optional[int] = None,
         width: Optional[int] = None,
         uuid: str = "rgb",
@@ -207,17 +208,31 @@ class RGBSensor(VisionSensor[EnvType, SubTaskType], ABC):
 
         # Parameters
 
-        config : If `config["use_resnet_normalization"]` is `True` then the RGB images will be normalized
-            with means `[0.485, 0.456, 0.406]` and standard deviations `[0.229, 0.224, 0.225]` (i.e. using the standard
-            resnet normalization). If both `config["height"]` and `config["width"]` are non-negative integers then
-            the RGB image returned from the environment will be rescaled to have shape
-            (config["height"], config["width"], 3) using bilinear sampling.
-        args : Extra args. Currently unused.
+        use_resnet_normalization : Whether to apply image normalization with the given `mean` and `stdev`.
+        mean : The images will be normalized with the given mean if `use_resnet_normalization` is True (default
+               `[0.485, 0.456, 0.406]`, i.e. the standard resnet normalization mean).
+        stdev : The images will be normalized with the given standard deviation if `use_resnet_normalization` is True
+                (default `[0.229, 0.224, 0.225]`, i.e. the standard resnet normalization standard deviation).
+        height: If it's a non-negative integer and `width` is also non-negative integer, the image returned from the
+                environment will be rescaled to have `height` rows and `width` columns using bilinear sampling.
+        width: If it's a non-negative integer and `height` is also non-negative integer, the image returned from the
+                environment will be rescaled to have `height` rows and `width` columns using bilinear sampling.
+        uuid: The universally unique identifier for the sensor.
+        output_shape: Optional observation space shape (alternative to `output_channels`).
+        output_channels: Optional observation space number of channels (alternative to `output_shape`).
+        unnormalized_infimum: Lower limit(s) for the observation space range.
+        unnormalized_supremum: Upper limit(s) for the observation space range.
+        scale_first: Whether to scale image before normalization (if needed).
         kwargs : Extra kwargs. Currently unused.
         """
 
         if not use_resnet_normalization:
             mean, stdev = None, None
+
+        if isinstance(mean, tuple):
+            mean = np.array(mean, dtype=np.float32).reshape(1, 1, len(mean))
+        if isinstance(stdev, tuple):
+            stdev = np.array(stdev, dtype=np.float32).reshape(1, 1, len(stdev))
 
         super().__init__(**prepare_locals_for_super(locals()))
 
@@ -226,8 +241,8 @@ class DepthSensor(VisionSensor[EnvType, SubTaskType], ABC):
     def __init__(
         self,
         use_normalization: bool = False,
-        mean: Optional[np.ndarray] = np.array([[0.5]], dtype=np.float32),
-        stdev: Optional[np.ndarray] = np.array([[0.25]], dtype=np.float32),
+        mean: Optional[Union[np.ndarray, float]] = 0.5,
+        stdev: Optional[Union[np.ndarray, float]] = 0.25,
         height: Optional[int] = None,
         width: Optional[int] = None,
         uuid: str = "depth",
@@ -246,12 +261,30 @@ class DepthSensor(VisionSensor[EnvType, SubTaskType], ABC):
             with mean 0.5 and standard deviation 0.25. If both `config["height"]` and `config["width"]` are
             non-negative integers then the depth image returned from the environment will be rescaled to have shape
             (config["height"], config["width"]) using bilinear sampling.
-        args : Extra args. Currently unused.
+        use_normalization : Whether to apply image normalization with the given `mean` and `stdev`.
+        mean : The images will be normalized with the given mean if `use_normalization` is True (default 0.5).
+        stdev : The images will be normalized with the given standard deviation if `use_normalization` is True
+                (default 0.25).
+        height: If it's a non-negative integer and `width` is also non-negative integer, the image returned from the
+                environment will be rescaled to have `height` rows and `width` columns using bilinear sampling.
+        width: If it's a non-negative integer and `height` is also non-negative integer, the image returned from the
+                environment will be rescaled to have `height` rows and `width` columns using bilinear sampling.
+        uuid: The universally unique identifier for the sensor.
+        output_shape: Optional observation space shape (alternative to `output_channels`).
+        output_channels: Optional observation space number of channels (alternative to `output_shape`).
+        unnormalized_infimum: Lower limit(s) for the observation space range.
+        unnormalized_supremum: Upper limit(s) for the observation space range.
+        scale_first: Whether to scale image before normalization (if needed).
         kwargs : Extra kwargs. Currently unused.
         """
 
         if not use_normalization:
             mean, stdev = None, None
+
+        if isinstance(mean, float):
+            mean = np.array(mean, dtype=np.float32).reshape(1, 1)
+        if isinstance(stdev, float):
+            stdev = np.array(stdev, dtype=np.float32).reshape(1, 1)
 
         super().__init__(**prepare_locals_for_super(locals()))
 
