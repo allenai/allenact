@@ -3,7 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Union, Tuple, List, cast, Iterable
+from typing import Union, Tuple, List, cast, Iterable, Callable
 from collections import OrderedDict
 
 import numpy as np
@@ -171,10 +171,15 @@ def flatten_space(space: gym.Space):
     raise NotImplementedError
 
 
-def policy_space(action_space: gym.Space):
+def policy_space(
+    action_space: gym.Space, box_space_to_policy: Callable[[gym.Box], gym.Space] = None,
+) -> gym.Space:
     if isinstance(action_space, gym.Box):
-        # policy = mean
-        return action_space
+        if box_space_to_policy is None:
+            # policy = mean (default)
+            return action_space
+        else:
+            return box_space_to_policy(action_space)
     if isinstance(action_space, gym.Discrete):
         # policy = prob of each option
         return gym.Box(
@@ -182,12 +187,13 @@ def policy_space(action_space: gym.Space):
         )
     if isinstance(action_space, gym.Tuple):
         # policy = tuple of sub-policies
-        return gym.Tuple([policy_space(s) for s in action_space.spaces])
+        spaces = [policy_space(s, box_space_to_policy) for s in action_space.spaces]
+        return gym.Tuple(spaces)
     if isinstance(action_space, gym.Dict):
         # policy = dict of sub-policies
         spaces = [
-            (name, policy_space(s))
-            for name, s in zip(action_space.spaces.keys(), action_space.spaces.values())
+            (name, policy_space(s, box_space_to_policy),)
+            for name, s in action_space.spaces.items()
         ]
         return gym.Dict(spaces)
     if isinstance(action_space, gym.MultiBinary):
