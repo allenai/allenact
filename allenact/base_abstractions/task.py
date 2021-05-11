@@ -231,7 +231,7 @@ class Task(Generic[EnvType]):
         }
 
     def query_expert(self, **kwargs) -> Tuple[Any, bool]:
-        """Query the expert policy for this task.
+        """(Deprecated) Query the expert policy for this task.
 
         # Returns
 

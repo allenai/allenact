@@ -7,7 +7,7 @@ import torch.nn as nn
 from torch.distributions.utils import lazy_property
 import gym
 
-from allenact.base_abstractions.sensor import ExpertActionSensor as Expert
+from allenact.base_abstractions.sensor import AbstractExpertActionSensor as Expert
 from allenact.utils import spaces_utils as su
 from allenact.utils.misc_utils import all_unique
 
@@ -227,7 +227,7 @@ class TeacherForcingDistr(Distr):
 
         assert actions.shape[1] == self.num_active_samplers
 
-        expert_actions = su.flatten(action_space, teacher[Expert.ACTION_LABEL])
+        expert_actions = su.flatten(action_space, teacher[Expert.ACTION_POLICY_LABEL])
         assert (
             expert_actions.shape == actions.shape
         ), f"expert actions shape {expert_actions.shape} doesn't match the model's {actions.shape}"

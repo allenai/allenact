@@ -171,6 +171,41 @@ def flatten_space(space: gym.Space):
     raise NotImplementedError
 
 
+def policy_space(action_space: gym.Space):
+    if isinstance(action_space, gym.Box):
+        # policy = mean
+        return action_space
+    if isinstance(action_space, gym.Discrete):
+        # policy = prob of each option
+        return gym.Box(
+            low=np.float32(0.0), high=np.float32(1.0), shape=(action_space.n,)
+        )
+    if isinstance(action_space, gym.Tuple):
+        # policy = tuple of sub-policies
+        return gym.Tuple([policy_space(s) for s in action_space.spaces])
+    if isinstance(action_space, gym.Dict):
+        # policy = dict of sub-policies
+        spaces = [
+            (name, policy_space(s))
+            for name, s in zip(action_space.spaces.keys(), action_space.spaces.values())
+        ]
+        return gym.Dict(spaces)
+    if isinstance(action_space, gym.MultiBinary):
+        # policy = prob of 1 in each entry
+        return gym.Box(
+            low=np.float32(0.0), high=np.float32(1.0), shape=(action_space.n,)
+        )
+    if isinstance(action_space, gym.MultiDiscrete):
+        # policy = Tuple of prob of each option for each discrete
+        return gym.Tuple(
+            [
+                gym.Box(low=np.float32(0.0), high=np.float32(1.0), shape=(n,))
+                for n in action_space.nvec
+            ]
+        )
+    raise NotImplementedError
+
+
 def action_list(
     action_space: gym.Space, flat_actions: torch.Tensor
 ) -> List[ActionType]:
