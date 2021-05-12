@@ -208,22 +208,19 @@ class ExpertActionSensor(Sensor[EnvType, SubTaskType]):
 
         action, expert_was_successful = task.query_expert(**self.expert_args)
 
-        if isinstance(action, int):
+        if isinstance(action, (int, np.integer)):
+            # Shortcut that can improve efficiency with very fast simulators
             assert isinstance(self.action_space, gym.spaces.Discrete)
-            unflattened_action = action
-        else:
-            # Assume we receive a gym-flattened numpy action
-            unflattened_action = gyms.unflatten(self.action_space, action)
+            return np.array([action, expert_was_successful], dtype=np.int64)
 
-        unflattened_torch = su.torch_point(
-            self.unflattened_observation_space,
-            (unflattened_action, expert_was_successful),
+        flattened_torch = su.flatten(self.action_space, action)
+        flattened_numpy = flattened_torch.cpu().numpy()
+        return np.concatenate(
+            [
+                flattened_torch.cpu().numpy(),
+                np.array([expert_was_successful], dtype=flattened_numpy.dtype),
+            ]
         )
-
-        flattened_torch = su.flatten(
-            self.unflattened_observation_space, unflattened_torch
-        )
-        return flattened_torch.cpu().numpy()
 
 
 class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):

@@ -44,6 +44,7 @@ from allenact.algorithms.onpolicy_sync.storage import RolloutStorage
 from allenact.algorithms.onpolicy_sync.vector_sampled_tasks import (
     VectorSampledTasks,
     COMPLETE_TASK_METRICS_KEY,
+    SingleProcessVectorSampledTasks,
 )
 from allenact.base_abstractions.experiment_config import ExperimentConfig, MachineParams
 from allenact.base_abstractions.misc import RLStepResult
@@ -159,7 +160,9 @@ class OnPolicyRLEngine(object):
         self.num_samplers_per_worker = self.machine_params.nprocesses
         self.num_samplers = self.num_samplers_per_worker[self.worker_id]
 
-        self._vector_tasks: Optional[VectorSampledTasks] = None
+        self._vector_tasks: Optional[
+            Union[VectorSampledTasks, SingleProcessVectorSampledTasks]
+        ] = None
 
         self.sensor_preprocessor_graph = None
         self.actor_critic: Optional[ActorCriticModel] = None
@@ -236,7 +239,9 @@ class OnPolicyRLEngine(object):
         self.single_process_metrics_queue: queue.Queue = queue.Queue()
 
     @property
-    def vector_tasks(self) -> VectorSampledTasks:
+    def vector_tasks(
+        self,
+    ) -> Union[VectorSampledTasks, SingleProcessVectorSampledTasks]:
         if self._vector_tasks is None and self.num_samplers > 0:
             if self.is_distributed:
                 total_processes = sum(
@@ -250,15 +255,23 @@ class OnPolicyRLEngine(object):
                 initial_seed=self.seed,  # do not update the RNG state (creation might happen after seed resetting)
             )
 
-            self._vector_tasks = VectorSampledTasks(
-                make_sampler_fn=self.config.make_sampler_fn,
-                sampler_fn_args=self.get_sampler_fn_args(seeds),
-                multiprocessing_start_method="forkserver"
-                if self.mp_ctx is None
-                else None,
-                mp_ctx=self.mp_ctx,
-                max_processes=self.max_sampler_processes_per_worker,
-            )
+            if self.max_sampler_processes_per_worker == 1:
+                # No need to instantiate a new task sampler processes if we're
+                # restricted to one sampler process for this worker.
+                self._vector_tasks = SingleProcessVectorSampledTasks(
+                    make_sampler_fn=self.config.make_sampler_fn,
+                    sampler_fn_args_list=self.get_sampler_fn_args(seeds),
+                )
+            else:
+                self._vector_tasks = VectorSampledTasks(
+                    make_sampler_fn=self.config.make_sampler_fn,
+                    sampler_fn_args=self.get_sampler_fn_args(seeds),
+                    multiprocessing_start_method="forkserver"
+                    if self.mp_ctx is None
+                    else None,
+                    mp_ctx=self.mp_ctx,
+                    max_processes=self.max_sampler_processes_per_worker,
+                )
         return self._vector_tasks
 
     @staticmethod
@@ -529,10 +542,11 @@ class OnPolicyRLEngine(object):
             raise NotImplementedError()
 
         # If done then clean the history of observations.
-        masks = torch.tensor(
-            [0.0 if done else 1.0 for done in dones],
-            dtype=torch.float32,
-            device=self.device,  # type:ignore
+        masks = (
+            1.0
+            - torch.tensor(
+                dones, dtype=torch.float32, device=self.device,  # type:ignore
+            )
         ).view(
             -1, 1
         )  # [sampler, 1]
@@ -667,7 +681,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 raise NotImplementedError(
                     "Early stopping criterions are currently only allowed when using a single training worker, i.e."
                     " no distributed (multi-GPU) training. If this is a feature you'd like please create an issue"
-                    " at https://github.com/allenai/allenact/issues."
+                    " at https://github.com/allenai/allenact/issues or (even better) create a pull request with this "
+                    " feature and we'll be happy to review it."
                 )
 
         self.optimizer: optim.optimizer.Optimizer = self.training_pipeline.optimizer_builder(
