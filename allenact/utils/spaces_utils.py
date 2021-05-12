@@ -197,9 +197,9 @@ def policy_space(
         ]
         return gym.Dict(spaces)
     if isinstance(action_space, gym.MultiBinary):
-        # policy = prob of 1 in each entry
+        # policy = prob of 0, 1 in each entry
         return gym.Box(
-            low=np.float32(0.0), high=np.float32(1.0), shape=(action_space.n,)
+            low=np.float32(0.0), high=np.float32(1.0), shape=(action_space.n, 2)
         )
     if isinstance(action_space, gym.MultiDiscrete):
         # policy = Tuple of prob of each option for each discrete

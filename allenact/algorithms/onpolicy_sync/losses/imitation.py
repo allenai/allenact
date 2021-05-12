@@ -32,10 +32,14 @@ class Imitation(AbstractActorCriticLoss):
 
     def group_loss(
         self,
-        distribution: Distr,
+        distribution: CategoricalDistr,
         expert_actions: torch.Tensor,
         expert_actions_masks: torch.Tensor,
     ):
+        assert isinstance(
+            distribution, CategoricalDistr
+        ), "This implementation only supports (groups of) `CategoricalDistr`"
+
         expert_successes = expert_actions_masks.sum()
 
         log_probs = distribution.log_prob(cast(torch.LongTensor, expert_actions))
@@ -62,7 +66,7 @@ class Imitation(AbstractActorCriticLoss):
         self,
         step_count: int,
         batch: ObservationType,
-        actor_critic_output: ActorCriticOutput[CategoricalDistr],
+        actor_critic_output: ActorCriticOutput[Distr],
         *args,
         **kwargs,
     ):
@@ -89,6 +93,8 @@ class Imitation(AbstractActorCriticLoss):
 
         losses = OrderedDict()
 
+        should_report_loss = False
+
         if "expert_action" in observations:
             if self.expert_sensor is None or not self.expert_sensor.use_groups:
                 expert_actions_and_mask = observations["expert_action"]
@@ -106,7 +112,7 @@ class Imitation(AbstractActorCriticLoss):
                 )
 
                 total_loss, expert_successes = self.group_loss(
-                    actor_critic_output.distributions,
+                    cast(CategoricalDistr, actor_critic_output.distributions),
                     expert_actions,
                     expert_actions_masks,
                 )
@@ -118,7 +124,6 @@ class Imitation(AbstractActorCriticLoss):
                 )
 
                 total_loss = 0
-                should_report_loss = False
 
                 ready_actions = OrderedDict()
 
@@ -155,31 +160,42 @@ class Imitation(AbstractActorCriticLoss):
                     if expert_successes.item() != 0:
                         losses[group_name + "_cross_entropy"] = current_loss.item()
                         total_loss = total_loss + current_loss
-        # elif "expert_policy" in observations:
-        #     expert_policies = cast(Dict[str, torch.Tensor], batch["observations"])[
-        #         "expert_policy"
-        #     ][..., :-1]
-        #     expert_actions_masks = cast(Dict[str, torch.Tensor], batch["observations"])[
-        #         "expert_policy"
-        #     ][..., -1:]
-        #
-        #     expert_successes = expert_actions_masks.sum()
-        #     if expert_successes.item() == 0:
-        #         return 0, {}
-        #     else:
-        #         should_report_loss = True
-        #
-        #     total_loss = (
-        #         -(actor_critic_output.distributions.log_probs_tensor * expert_policies)
-        #         * expert_actions_masks
-        #     ).sum() / expert_successes
+        elif "expert_policy" in observations:
+            if self.expert_sensor is None or not self.expert_sensor.use_groups:
+                assert isinstance(
+                    actor_critic_output.distributions, CategoricalDistr
+                ), "This implementation currently only supports `CategoricalDistr`"
+
+                expert_policies = cast(Dict[str, torch.Tensor], batch["observations"])[
+                    "expert_policy"
+                ][..., :-1]
+                expert_actions_masks = cast(
+                    Dict[str, torch.Tensor], batch["observations"]
+                )["expert_policy"][..., -1:]
+
+                expert_successes = expert_actions_masks.sum()
+                if expert_successes.item() == 0:
+                    return 0, {}
+                else:
+                    should_report_loss = True
+
+                total_loss = (
+                    -(
+                        cast(
+                            CategoricalDistr, actor_critic_output.distributions
+                        ).log_probs_tensor
+                        * expert_policies
+                    )
+                    * expert_actions_masks
+                ).sum() / expert_successes
+            else:
+                raise NotImplementedError(
+                    "This implementation currently only supports `CategoricalDistr`"
+                )
         else:
-            # raise NotImplementedError(
-            #     "Imitation loss requires either `expert_action` or `expert_policy`"
-            #     " sensor to be active."
-            # )
             raise NotImplementedError(
-                "Imitation loss requires either `expert_action` sensor to be active."
+                "Imitation loss requires either `expert_action` or `expert_policy`"
+                " sensor to be active."
             )
         return (
             total_loss,
