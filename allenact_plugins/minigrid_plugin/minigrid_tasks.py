@@ -370,7 +370,7 @@ class ConditionedMiniGridTask(MiniGridTask):
         )
 
     def query_expert(self, **kwargs) -> Tuple[int, bool]:
-        if kwargs["expert_sensor_action_group_name"] == "higher":
+        if kwargs["expert_sensor_group_name"] == "higher":
             if self._minigrid_done:
                 get_logger().warning(
                     "Episode is completed, but expert is still queried."

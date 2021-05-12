@@ -128,6 +128,12 @@ class ConditionalDistr(Distr):
                 **ready_actions,
             )
 
+    def reset(self):
+        if (self.distr is not None) and (
+            self.distr_conditioned_on_input_fn is not None
+        ):
+            self.distr = None
+
     def sample(self, sample_shape=torch.Size()) -> OrderedDict:
         return OrderedDict([(self.action_group_name, self.distr.sample(sample_shape))])
 
@@ -169,16 +175,27 @@ class SequentialDistr(Distr):
             "parameter in your loss when using `SequentialDistr`."
         )
 
-    def log_prob(self, actions: Dict[str, Any]):
+    def log_prob(
+        self, actions: Dict[str, Any], return_dict: bool = False
+    ) -> Union[torch.Tensor, Dict[str, torch.Tensor]]:
         assert len(actions) == len(
             self.conditional_distrs
         ), f"{len(self.conditional_distrs)} conditional distributions for {len(actions)} action groups"
 
-        sum = 0
+        res: Union[
+            int, torch.Tensor, Dict[str, torch.Tensor]
+        ] = 0 if not return_dict else OrderedDict()
+
         for cd in self.conditional_distrs:
             cd.condition_on_input(**actions)
-            sum = sum + cd.log_prob(actions[cd.action_group_name])
-        return sum
+            current_log_prob = cd.log_prob(actions[cd.action_group_name])
+
+            if not return_dict:
+                res = res + current_log_prob
+            else:
+                res[cd.action_group_name] = current_log_prob
+
+        return res
 
 
 class TeacherForcingDistr(Distr):

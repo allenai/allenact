@@ -23,6 +23,7 @@ from allenact_plugins.minigrid_plugin.minigrid_tasks import (
     MiniGridTaskSampler,
     ConditionedMiniGridTask,
 )
+from allenact.algorithms.onpolicy_sync.losses.imitation import Imitation
 
 
 class MiniGridTutorialExperimentConfig(ExperimentConfig):
@@ -98,7 +99,9 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
             task_seeds_list = None  # no predefined random seeds for training
             deterministic_sampling = False  # randomly sample tasks in training
         else:
-            max_tasks = 20 + 20 * (mode == "test")  # 20 tasks for valid, 40 for test
+            max_tasks = 20 + 20 * (
+                mode == "test"
+            )  # 20 tasks for valid, 40 for test (per sampler)
 
             # one seed for each task to sample:
             # - ensures different seeds for each sampler, and
@@ -137,14 +140,17 @@ class MiniGridTutorialExperimentConfig(ExperimentConfig):
         ppo_steps = int(150000)
         return TrainingPipeline(
             named_losses=dict(
-                ppo_loss=PPO(**PPOConfig, entropy_method_name="conditional_entropy")
+                imitation_loss=Imitation(
+                    cls.SENSORS[1]
+                ),  # 0 is Minigrid, 1 is ExpertActionSensor
+                ppo_loss=PPO(**PPOConfig, entropy_method_name="conditional_entropy"),
             ),  # type:ignore
             pipeline_stages=[
                 PipelineStage(
                     teacher_forcing=LinearDecay(
                         startp=1.0, endp=0.0, steps=ppo_steps // 2,
                     ),
-                    loss_names=["ppo_loss"],
+                    loss_names=["imitation_loss", "ppo_loss"],
                     max_stage_steps=ppo_steps,
                 )
             ],

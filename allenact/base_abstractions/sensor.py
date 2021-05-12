@@ -317,16 +317,15 @@ class AbstractExpertActionSensor(AbstractExpertSensor, abc.ABC):
         )
 
 
-class ExpertActionSensor(AbstractExpertSensor):
+class ExpertActionSensor(AbstractExpertActionSensor):
     """A sensor that obtains the expert action from a given task (if
     available)."""
 
     def query_expert(
-        self, task: SubTaskType, expert_sensor_action_group_name: Optional[str]
+        self, task: SubTaskType, expert_sensor_group_name: Optional[str]
     ) -> Tuple[Any, bool]:
         return task.query_expert(
-            **self.expert_args,
-            expert_sensor_action_group_name=expert_sensor_action_group_name,
+            **self.expert_args, expert_sensor_group_name=expert_sensor_group_name,
         )
 
 
@@ -357,11 +356,10 @@ class ExpertPolicySensor(AbstractExpertPolicySensor):
     available)."""
 
     def query_expert(
-        self, task: SubTaskType, expert_sensor_action_group_name: Optional[str]
+        self, task: SubTaskType, expert_sensor_group_name: Optional[str]
     ) -> Tuple[Any, bool]:
         return task.query_expert(
-            **self.expert_args,
-            expert_sensor_action_group_name=expert_sensor_action_group_name,
+            **self.expert_args, expert_sensor_group_name=expert_sensor_group_name,
         )
 
 
