@@ -1,10 +1,9 @@
 """Defining imitation losses for actor critic type models."""
 
-from typing import Dict, cast, Optional, Any
+from typing import Dict, cast, Optional
 from collections import OrderedDict
 
 import torch
-import gym
 
 from allenact.algorithms.onpolicy_sync.losses.abstract_loss import (
     AbstractActorCriticLoss,
@@ -179,14 +178,20 @@ class Imitation(AbstractActorCriticLoss):
                 else:
                     should_report_loss = True
 
+                log_probs = cast(
+                    CategoricalDistr, actor_critic_output.distributions
+                ).log_probs_tensor
+
+                # Add dimensions to `expert_actions_masks` on the right to allow for masking
+                # if necessary.
+                len_diff = len(log_probs.shape) - len(expert_actions_masks.shape)
+                assert len_diff >= 0
+                expert_actions_masks = expert_actions_masks.view(
+                    *expert_actions_masks.shape, *((1,) * len_diff)
+                )
+
                 total_loss = (
-                    -(
-                        cast(
-                            CategoricalDistr, actor_critic_output.distributions
-                        ).log_probs_tensor
-                        * expert_policies
-                    )
-                    * expert_actions_masks
+                    -(log_probs * expert_policies) * expert_actions_masks
                 ).sum() / expert_successes
             else:
                 raise NotImplementedError(
