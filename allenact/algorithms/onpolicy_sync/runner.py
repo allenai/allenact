@@ -223,9 +223,15 @@ class OnPolicyRunner(object):
 
             engine = _frame.f_locals["self"]
 
+            if not hasattr(engine, "terminated_lock"):
+                return
+
             engine.terminated_lock.acquire()
 
             if not engine.terminated:
+                get_logger().debug(
+                    f"{engine.mode} {engine.worker_id} not yet terminated"
+                )
                 engine.terminated = True
                 do_raise = True
 

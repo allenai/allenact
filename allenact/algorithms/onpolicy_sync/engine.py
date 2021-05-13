@@ -614,6 +614,7 @@ class OnPolicyRLEngine(object):
     def signal_termination(self):
         self.terminated_lock.acquire()
         if not self.terminated:
+            get_logger().debug(f"{self.mode} {self.worker_id} set to terminated")
             self.terminated = True
         # everything runs in the same thread - no need to actively wait for the exception
         self.terminated_lock.release()
@@ -1326,18 +1327,14 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 )
 
                 training_completed_successfully = True
-
                 self.signal_termination()
             except KeyboardInterrupt:
-                try:
-                    self.signal_termination()
-                    get_logger().info(
-                        "KeyboardInterrupt. Terminating {} worker {}".format(
-                            self.mode, self.worker_id
-                        )
+                self.signal_termination()
+                get_logger().info(
+                    "KeyboardInterrupt. Terminating {} worker {}".format(
+                        self.mode, self.worker_id
                     )
-                except KeyboardInterrupt:
-                    pass
+                )
             except Exception:
                 self.signal_termination()
                 get_logger().error(
@@ -1347,18 +1344,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 )
                 get_logger().exception(traceback.format_exc())
             finally:
-                # Wait to catch a possible second keyboard interrupt:
-                wait_seconds = 5
-                if self.worker_id == 0:
-                    while wait_seconds > 0:
-                        get_logger().info(f"Closing in {wait_seconds} seconds")
-                        time.sleep(1)
-                        wait_seconds -= 1
-                else:
-                    time.sleep(wait_seconds)
+                pass
         except KeyboardInterrupt:
             self.signal_termination()
-            get_logger().info("Caught secondary keyboard interrupt")
+            get_logger().info(
+                f"Caught secondary keyboard interrupt. Terminating {self.mode} worker {self.worker_id}"
+            )
         finally:
             if training_completed_successfully:
                 if self.worker_id == 0:
@@ -1643,18 +1634,12 @@ class OnPolicyInference(OnPolicyRLEngine):
                 )
                 get_logger().error(traceback.format_exc())
             finally:
-                # Wait to catch a possible second keyboard interrupt:
-                wait_seconds = 5
-                if self.worker_id == 0 and self.mode == "test":
-                    while wait_seconds > 0:
-                        get_logger().info(f"Closing in {wait_seconds} seconds")
-                        time.sleep(1)
-                        wait_seconds -= 1
-                else:
-                    time.sleep(wait_seconds)
+                pass
         except KeyboardInterrupt:
             self.signal_termination()
-            get_logger().info("Caught secondary keyboard interrupt")
+            get_logger().info(
+                f"Caught secondary keyboard interrupt. Terminating {self.mode} worker {self.worker_id}"
+            )
         finally:
             if finalized:
                 if self.mode == "test":
