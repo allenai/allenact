@@ -1,5 +1,3 @@
-from typing import List, Tuple, Union
-
 import numpy as np
 
 from allenact.utils.experiment_utils import EarlyStoppingCriterion, ScalarMeanTracker
@@ -15,11 +13,7 @@ class StopIfNearOptimal(EarlyStoppingCriterion):
         self.memory: np.ndarray = np.zeros(min_memory_size)
 
     def __call__(
-        self,
-        stage_steps: int,
-        total_steps: int,
-        training_metrics: ScalarMeanTracker,
-        test_valid_metrics: List[Tuple[str, int, Union[float, np.ndarray]]],
+        self, stage_steps: int, total_steps: int, training_metrics: ScalarMeanTracker,
     ) -> bool:
         sums = training_metrics.sums()
         counts = training_metrics.counts()

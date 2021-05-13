@@ -33,7 +33,6 @@ from allenact.utils.misc_utils import partition_sequence
 from allenact.utils.system import get_logger
 from allenact.utils.tensor_utils import tile_images
 
-
 try:
     # Use torch.multiprocessing if we can.
     # We have yet to find a reason to not use it and
@@ -307,7 +306,7 @@ class VectorSampledTasks(object):
 
         except KeyboardInterrupt as e:
             if should_log:
-                get_logger().info("Worker {} KeyboardInterrupt".format(worker_id))
+                get_logger().info(f"Worker {worker_id} KeyboardInterrupt")
             raise e
         except Exception as e:
             get_logger().error(traceback.format_exc())
@@ -316,7 +315,7 @@ class VectorSampledTasks(object):
             if child_pipe is not None:
                 child_pipe.close()
             if should_log:
-                get_logger().info("""Worker {} closing.""".format(worker_id))
+                get_logger().info(f"Worker {worker_id} closing.")
 
     def _spawn_workers(
         self,
@@ -864,6 +863,8 @@ class SingleProcessVectorSampledTasks(object):
                     if current_task.is_done():
                         metrics = current_task.metrics()
                         if metrics is not None and len(metrics) != 0:
+                            if step_result.info is None:
+                                step_result = step_result.clone({"info": {}})
                             step_result.info[COMPLETE_TASK_METRICS_KEY] = metrics
 
                         if auto_resample_when_done:
@@ -1085,8 +1086,11 @@ class SingleProcessVectorSampledTasks(object):
 
         for g in self._vector_task_generators:
             try:
-                g.send((CLOSE_COMMAND, None))
-            except StopIteration:
+                try:
+                    g.send((CLOSE_COMMAND, None))
+                except StopIteration:
+                    pass
+            except KeyboardInterrupt:
                 pass
 
         self._is_closed = True

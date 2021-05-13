@@ -2,8 +2,8 @@ from typing import Optional, Tuple, cast
 
 import gym
 import torch
-from gym.spaces.dict import Dict as SpaceDict
 import torch.nn as nn
+from gym.spaces.dict import Dict as SpaceDict
 
 from allenact.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
@@ -17,7 +17,7 @@ from allenact.base_abstractions.misc import ActorCriticOutput, DistributionType
 class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
     def __init__(
         self,
-        input_key: str,
+        input_uuid: str,
         action_space: gym.spaces.Discrete,
         observation_space: SpaceDict,
         ensure_same_weights: bool = True,
@@ -25,11 +25,11 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
         assert (
-            input_key in observation_space.spaces
+            input_uuid in observation_space.spaces
         ), "LinearActorCritic expects only a single observational input."
-        self.key = input_key
+        self.input_uuid = input_uuid
 
-        box_space: gym.spaces.Box = observation_space[self.key]
+        box_space: gym.spaces.Box = observation_space[self.input_uuid]
         assert isinstance(box_space, gym.spaces.Box), (
             "LinearActorCritic requires that"
             "observation space corresponding to the input key is a Box space."
@@ -48,10 +48,6 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
             ]
         nn.init.constant_(self.linear.bias, 0)
 
-    @property
-    def recurrent_hidden_state_size(self) -> int:
-        return 0
-
     # noinspection PyMethodMayBeStatic
     def _recurrent_memory_specification(self):
         return None
@@ -63,16 +59,7 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
         prev_actions: torch.Tensor,
         masks: torch.FloatTensor,
     ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
-        out = self.linear(cast(torch.Tensor, observations[self.key]))
-
-        assert len(out.shape) in [
-            3,
-            4,
-        ], "observations must be [step, sampler, data] or [step, sampler, agent, data]"
-
-        if len(out.shape) == 3:
-            # [step, sampler, data] -> [step, sampler, agent, data]
-            out = out.unsqueeze(-2)
+        out = self.linear(cast(torch.Tensor, observations[self.input_uuid]))
 
         main_logits = out[..., : self.num_actions]
         aux_logits = out[..., self.num_actions : -1]
@@ -87,9 +74,7 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
                 values=cast(
                     torch.FloatTensor, values.view(values.shape[:2] + (-1,))
                 ),  # step x sampler x flattened
-                extras={
-                    "auxiliary_distributions": CategoricalDistr(logits=aux_logits),
-                },
+                extras={"auxiliary_distributions": CategoricalDistr(logits=aux_logits)},
             ),
             None,
         )

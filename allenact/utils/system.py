@@ -78,13 +78,9 @@ def get_logger() -> logging.Logger:
     return _LOGGER
 
 
-def init_logging(human_log_level: str = "info") -> None:
-    """Init the `logging.Logger`.
+def _human_log_level_to_int(human_log_level):
 
-    It should be called only once in the app (e.g. in `main`). It sets
-    the log_level to one of `HUMAN_LOG_LEVELS`. And sets up a handler
-    for stderr. The logging level is propagated to all subprocesses.
-    """
+    human_log_level = human_log_level.lower().strip()
     assert human_log_level in HUMAN_LOG_LEVELS, "unknown human_log_level {}".format(
         human_log_level
     )
@@ -101,9 +97,22 @@ def init_logging(human_log_level: str = "info") -> None:
         log_level = logging.CRITICAL + 1
     else:
         raise NotImplementedError(f"Unknown log level {human_log_level}.")
+    return log_level
 
-    _new_logger(log_level)
+
+def init_logging(human_log_level: str = "info") -> None:
+    """Init the `logging.Logger`.
+
+    It should be called only once in the app (e.g. in `main`). It sets
+    the log_level to one of `HUMAN_LOG_LEVELS`. And sets up a handler
+    for stderr. The logging level is propagated to all subprocesses.
+    """
+    _new_logger(_human_log_level_to_int(human_log_level))
     _set_log_formatter()
+
+
+def update_log_level(logger, human_log_level: str):
+    logger.setLevel(_human_log_level_to_int(human_log_level))
 
 
 def find_free_port(address: str = "127.0.0.1") -> int:
