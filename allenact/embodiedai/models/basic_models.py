@@ -22,6 +22,7 @@ from allenact.algorithms.onpolicy_sync.policy import ActorCriticModel, Distribut
 from allenact.base_abstractions.distributions import CategoricalDistr
 from allenact.base_abstractions.misc import ActorCriticOutput, Memory
 from allenact.utils.model_utils import make_cnn, compute_cnn_output
+from allenact.utils.system import get_logger
 
 
 class SimpleCNN(nn.Module):
@@ -700,6 +701,26 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
         prev_actions: torch.Tensor,
         masks: torch.FloatTensor,
     ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
+
+        if self.memory_key not in memory:
+            get_logger().warning(
+                f"Key {self.memory_key} not found in memory,"
+                f" initializing this as all zeros."
+            )
+
+            obs = observations[self.input_uuid]
+            memory.check_append(
+                key=self.memory_key,
+                tensor=obs.new(
+                    self.num_recurrent_layers,
+                    obs.shape[1],
+                    self.recurrent_hidden_state_size,
+                )
+                .float()
+                .zero_(),
+                sampler_dim=1
+            )
+
         rnn_out, mem_return = self.state_encoder(
             x=observations[self.input_uuid],
             hidden_states=memory.tensor(self.memory_key),
