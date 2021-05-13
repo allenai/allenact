@@ -28,6 +28,14 @@ class MiniGridTask(Task[CrossingEnv]):
         MiniGridEnv.Actions.__members__[name].value for name in _ACTION_NAMES
     )
     _CACHED_GRAPHS: Dict[str, nx.DiGraph] = {}
+    _NEIGHBOR_OFFSETS = tuple(
+        [(-1, 0, 0), (0, -1, 0), (0, 0, -1), (1, 0, 0), (0, 1, 0), (0, 0, 1),]
+    )
+
+    _XY_DIFF_TO_AGENT_DIR = {
+        tuple(vec): dir_ind for dir_ind, vec in enumerate(DIR_TO_VEC)
+    }
+
     """ Task around a MiniGrid Env, allows interfacing allenact with
     MiniGrid tasks. (currently focussed towards LavaCrossing)
     """
@@ -126,8 +134,8 @@ class MiniGridTask(Task[CrossingEnv]):
     def graph(self, graph: nx.DiGraph):
         self._graph = graph
 
-    @staticmethod
-    def possible_neighbor_offsets() -> Tuple[Tuple[int, int, int], ...]:
+    @classmethod
+    def possible_neighbor_offsets(cls) -> Tuple[Tuple[int, int, int], ...]:
         # Tuples of format:
         # (X translation, Y translation, rotation by 90 degrees)
         # A constant is returned, this function can be changed if anything
@@ -144,16 +152,11 @@ class MiniGridTask(Task[CrossingEnv]):
         #
         # return tuple(valid_offsets)
 
-        return tuple(
-            [(-1, 0, 0), (0, -1, 0), (0, 0, -1), (1, 0, 0), (0, 1, 0), (0, 0, 1),]
-        )
+        return cls._NEIGHBOR_OFFSETS
 
-    @staticmethod
+    @classmethod
     def _add_from_to_edge(
-        g: nx.DiGraph,
-        s: Tuple[int, int, int],
-        t: Tuple[int, int, int],
-        valid_node_types: Tuple[str, ...],
+        cls, g: nx.DiGraph, s: Tuple[int, int, int], t: Tuple[int, int, int],
     ):
         """Adds nodes and corresponding edges to existing nodes.
         This approach avoids adding the same edge multiple times.
@@ -182,29 +185,20 @@ class MiniGridTask(Task[CrossingEnv]):
         s_x, s_y, s_rot = s
         t_x, t_y, t_rot = t
 
-        if not (
-            {g.nodes[s]["type"], g.nodes[t]["type"]}.issubset(set(valid_node_types))
-        ):
-            return
-
         x_diff = t_x - s_x
         y_diff = t_y - s_y
         angle_diff = (t_rot - s_rot) % 4
 
         # If source and target differ by more than one action, continue
-        if sum(x != 0 for x in [x_diff, y_diff, angle_diff]) != 1 or angle_diff == 2:
+        if (x_diff != 0) + (y_diff != 0) + (angle_diff != 0) != 1 or angle_diff == 2:
             return
-
-        xy_diff_to_agent_dir = {
-            tuple(vec): dir_ind for dir_ind, vec in enumerate(DIR_TO_VEC)
-        }
 
         action = None
         if angle_diff == 1:
             action = "right"
         elif angle_diff == 3:
             action = "left"
-        elif xy_diff_to_agent_dir[(x_diff, y_diff)] == s_rot:
+        elif cls._XY_DIFF_TO_AGENT_DIR[(x_diff, y_diff)] == s_rot:
             # if translation is the same direction as source
             # orientation, then it's a valid forward action
             action = "forward"
@@ -228,7 +222,6 @@ class MiniGridTask(Task[CrossingEnv]):
             return
         if attr_dict is None:
             get_logger().warning("adding a node with neighbor checks and no attributes")
-        existing_nodes = set(graph.nodes())
         graph.add_node(s, **attr_dict)
 
         if include_rotation_free_leaves:
@@ -237,11 +230,12 @@ class MiniGridTask(Task[CrossingEnv]):
                 graph.add_node(rot_free_leaf)
             graph.add_edge(s, rot_free_leaf, action="NA")
 
-        for o in self.possible_neighbor_offsets():
-            t = (s[0] + o[0], s[1] + o[1], (s[2] + o[2]) % 4)
-            if t in existing_nodes:
-                self._add_from_to_edge(graph, s, t, valid_node_types=valid_node_types)
-                self._add_from_to_edge(graph, t, s, valid_node_types=valid_node_types)
+        if attr_dict["type"] in valid_node_types:
+            for o in self.possible_neighbor_offsets():
+                t = (s[0] + o[0], s[1] + o[1], (s[2] + o[2]) % 4)
+                if t in graph and graph.nodes[t]["type"] in valid_node_types:
+                    self._add_from_to_edge(graph, s, t)
+                    self._add_from_to_edge(graph, t, s)
 
     def generate_graph(self,) -> nx.DiGraph:
         """The generated graph is based on the fully observable grid (as the
@@ -267,17 +261,18 @@ class MiniGridTask(Task[CrossingEnv]):
         for x in range(width):
             for y in range(height):
                 for rotation in range(4):
+                    type, color, state = image[x, y]
                     self._add_node_to_graph(
                         graph,
                         (x, y, rotation),
                         attr_dict={
-                            "type": IDX_TO_OBJECT[image[x, y][0]],
-                            "color": image[x, y][1],
-                            "state": image[x, y][2],
+                            "type": IDX_TO_OBJECT[type],
+                            "color": color,
+                            "state": state,
                         },
                         valid_node_types=("empty", "goal"),
                     )
-                    if IDX_TO_OBJECT[image[x, y][0]] == "goal":
+                    if IDX_TO_OBJECT[type] == "goal":
                         if not graph.has_node("unified_goal"):
                             graph.add_node("unified_goal")
                         graph.add_edge((x, y, rotation), "unified_goal")

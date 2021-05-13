@@ -216,7 +216,7 @@ class OnPolicyRunner(object):
 
     @staticmethod
     def init_process(mode: str, id: int):
-        ptitle("{}-{}".format(mode, id))
+        ptitle(f"{mode}-{id}")
 
         def sigterm_handler(_signo, _frame):
             do_raise = False
@@ -422,7 +422,7 @@ class OnPolicyRunner(object):
         checkpoint_path_dir_or_pattern: str,
         approx_ckpt_step_interval: Optional[Union[float, int]] = None,
         max_sampler_processes_per_worker: Optional[int] = None,
-    ):
+    ) -> List[Dict]:
         devices = self.worker_devices("test")
         self.init_visualizer("test")
         num_testers = len(devices)
@@ -430,6 +430,9 @@ class OnPolicyRunner(object):
         distributed_port = 0
         if num_testers > 1:
             distributed_port = find_free_port()
+
+        for k, q in self.queues.items():
+            assert q.empty(), f"{k} queue is not empty before starting test."
 
         for tester_it in range(num_testers):
             test: BaseProcess = self.mp_ctx.Process(
@@ -789,7 +792,7 @@ class OnPolicyRunner(object):
         nworkers: int,
         test_steps: Sequence[int] = (),
         metrics_file: Optional[str] = None,
-    ):
+    ) -> List[Dict]:
         finalized = False
 
         log_writer: Optional[SummaryWriter] = None
