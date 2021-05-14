@@ -10,6 +10,7 @@ import queue
 import random
 import signal
 import subprocess
+import sys
 import time
 import traceback
 from collections import defaultdict
@@ -28,6 +29,7 @@ from allenact.algorithms.onpolicy_sync.engine import (
     OnPolicyInference,
     TRAIN_MODE_STR,
     TEST_MODE_STR,
+    OnPolicyRLEngine,
 )
 from allenact.base_abstractions.experiment_config import ExperimentConfig, MachineParams
 from allenact.utils.experiment_utils import (
@@ -223,32 +225,39 @@ class OnPolicyRunner(object):
             self.visualizer = machine_params.visualizer
 
     @staticmethod
-    def init_process(mode: str, id: int):
+    def init_process(mode: str, id: int, to_close_on_termination: OnPolicyRLEngine):
         ptitle(f"{mode}-{id}")
 
-        def sigterm_handler(_signo, _frame):
-            do_raise = False
+        def create_handler(termination_type: str):
+            def handler(_signo, _frame):
+                prefix = f"{termination_type} signal sent to worker {mode}-{id}."
+                if to_close_on_termination._is_closed:
+                    get_logger().info(
+                        f"{prefix} Worker {mode}-{id} is already closed, exiting."
+                    )
+                    sys.exit(0)
+                elif not to_close_on_termination._is_closing:
+                    get_logger().info(
+                        f"{prefix} Forcing worker {mode}-{id} to close and exiting."
+                    )
+                    try:
+                        to_close_on_termination.close(True)
+                    except Exception:
+                        get_logger().error(
+                            f"Error occurred when closing the RL engine used by work {mode}-{id}."
+                            f" We cannot recover from this and will simply exit. The exception:"
+                        )
+                        get_logger().exception(traceback.format_exc())
+                        sys.exit(1)
+                    sys.exit(0)
+                else:
+                    get_logger().info(
+                        f"{prefix} Worker {mode}-{id} is already closing, ignoring this signal."
+                    )
+            return handler
 
-            engine = _frame.f_locals["self"]
-
-            if not hasattr(engine, "terminated_lock"):
-                return
-
-            engine.terminated_lock.acquire()
-
-            if not engine.terminated:
-                get_logger().debug(
-                    f"{engine.mode} {engine.worker_id} not yet terminated"
-                )
-                engine.terminated = True
-                do_raise = True
-
-            engine.terminated_lock.release()
-
-            if do_raise:
-                raise KeyboardInterrupt
-
-        signal.signal(signal.SIGTERM, sigterm_handler)
+        signal.signal(signal.SIGTERM, create_handler("Termination"))
+        signal.signal(signal.SIGINT, create_handler("Interrupt"))
 
     @staticmethod
     def init_worker(engine_class, args, kwargs):
@@ -275,7 +284,6 @@ class OnPolicyRunner(object):
         *engine_args,
         **engine_kwargs,
     ):
-        OnPolicyRunner.init_process("Train", id)
         engine_kwargs["mode"] = TRAIN_MODE_STR
         engine_kwargs["worker_id"] = id
         engine_kwargs_for_print = {
@@ -288,13 +296,13 @@ class OnPolicyRunner(object):
             engine_class=OnPolicyTrainer, args=engine_args, kwargs=engine_kwargs
         )
         if trainer is not None:
+            OnPolicyRunner.init_process("Train", id, to_close_on_termination=trainer)
             trainer.train(
                 checkpoint_file_name=checkpoint, restart_pipeline=restart_pipeline
             )
 
     @staticmethod
     def valid_loop(id: int = 0, *engine_args, **engine_kwargs):
-        OnPolicyRunner.init_process("Valid", id)
         engine_kwargs["mode"] = "valid"
         engine_kwargs["worker_id"] = id
         get_logger().info("valid {} args {}".format(id, engine_kwargs))
@@ -303,17 +311,18 @@ class OnPolicyRunner(object):
             engine_class=OnPolicyInference, args=engine_args, kwargs=engine_kwargs
         )
         if valid is not None:
+            OnPolicyRunner.init_process("Valid", id, to_close_on_termination=valid)
             valid.process_checkpoints()  # gets checkpoints via queue
 
     @staticmethod
     def test_loop(id: int = 0, *engine_args, **engine_kwargs):
-        OnPolicyRunner.init_process("Test", id)
         engine_kwargs["mode"] = TEST_MODE_STR
         engine_kwargs["worker_id"] = id
         get_logger().info("test {} args {}".format(id, engine_kwargs))
 
         test = OnPolicyRunner.init_worker(OnPolicyInference, engine_args, engine_kwargs)
         if test is not None:
+            OnPolicyRunner.init_process("Test", id, to_close_on_termination=test)
             test.process_checkpoints()  # gets checkpoints via queue
 
     def _initialize_start_train_or_start_test(self):
@@ -767,7 +776,7 @@ class OnPolicyRunner(object):
         all_results: Optional[List[Any]] = None,
     ):
         mode = pkgs[0].mode
-        assert mode == "test"
+        assert mode == TEST_MODE_STR
 
         training_steps = pkgs[0].training_steps
 
@@ -1071,12 +1080,17 @@ class OnPolicyRunner(object):
                 else:
                     raise NotImplementedError()
 
+        # First send termination signals
+        for process_type in self.processes:
+            for it, process in enumerate(self.processes[process_type]):
+                if process.is_alive():
+                    logif("Terminating {} {}".format(process_type, it))
+                    process.terminate()
+
+        # Now join processes
         for process_type in self.processes:
             for it, process in enumerate(self.processes[process_type]):
                 try:
-                    if process.is_alive():
-                        logif("Terminating {} {}".format(process_type, it))
-                        process.terminate()
                     logif("Joining {} {}".format(process_type, it))
                     process.join(1)
                     logif("Closed {} {}".format(process_type, it))

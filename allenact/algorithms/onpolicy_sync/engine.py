@@ -119,9 +119,6 @@ class OnPolicyRLEngine(object):
             deterministic behavior.
         extra_tag : An additional label to add to the experiment when saving tensorboard logs.
         """
-        self.terminated_lock = Semaphore()
-        self.terminated = False
-
         self.config = config
         self.results_queue = results_queue
         self.checkpoints_queue = checkpoints_queue
@@ -235,6 +232,7 @@ class OnPolicyRLEngine(object):
 
         self.deterministic_agents = deterministic_agents
 
+        self._is_closing: bool = False # Useful for letting the RL runner know if this is closing
         self._is_closed: bool = False
 
         self.training_pipeline: Optional[TrainingPipeline] = None
@@ -259,23 +257,27 @@ class OnPolicyRLEngine(object):
                 initial_seed=self.seed,  # do not update the RNG state (creation might happen after seed resetting)
             )
 
-            if self.max_sampler_processes_per_worker == 1:
-                # No need to instantiate a new task sampler processes if we're
-                # restricted to one sampler process for this worker.
-                self._vector_tasks = SingleProcessVectorSampledTasks(
-                    make_sampler_fn=self.config.make_sampler_fn,
-                    sampler_fn_args_list=self.get_sampler_fn_args(seeds),
-                )
-            else:
-                self._vector_tasks = VectorSampledTasks(
-                    make_sampler_fn=self.config.make_sampler_fn,
-                    sampler_fn_args=self.get_sampler_fn_args(seeds),
-                    multiprocessing_start_method="forkserver"
-                    if self.mp_ctx is None
-                    else None,
-                    mp_ctx=self.mp_ctx,
-                    max_processes=self.max_sampler_processes_per_worker,
-                )
+            # TODO: The `self.max_sampler_processes_per_worker == 1` case below would be
+            #   great to have but it does not play nicely with us wanting to kill things
+            #   using SIGTERM/SIGINT signals. Would be nice to figure out a solution to
+            #   this at some point.
+            # if self.max_sampler_processes_per_worker == 1:
+            #     # No need to instantiate a new task sampler processes if we're
+            #     # restricted to one sampler process for this worker.
+            #     self._vector_tasks = SingleProcessVectorSampledTasks(
+            #         make_sampler_fn=self.config.make_sampler_fn,
+            #         sampler_fn_args_list=self.get_sampler_fn_args(seeds),
+            #     )
+            # else:
+            self._vector_tasks = VectorSampledTasks(
+                make_sampler_fn=self.config.make_sampler_fn,
+                sampler_fn_args=self.get_sampler_fn_args(seeds),
+                multiprocessing_start_method="forkserver"
+                if self.mp_ctx is None
+                else None,
+                mp_ctx=self.mp_ctx,
+                max_processes=self.max_sampler_processes_per_worker,
+            )
         return self._vector_tasks
 
     @staticmethod
@@ -592,6 +594,8 @@ class OnPolicyRLEngine(object):
         return npaused
 
     def close(self, verbose=True):
+        self._is_closing = True
+
         if "_is_closed" in self.__dict__ and self._is_closed:
             return
 
@@ -622,6 +626,7 @@ class OnPolicyRLEngine(object):
                 logif(e)
 
         self._is_closed = True
+        self._is_closing = False
 
     def __del__(self):
         self.close(verbose=False)
@@ -631,14 +636,6 @@ class OnPolicyRLEngine(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close(verbose=False)
-
-    def signal_termination(self):
-        self.terminated_lock.acquire()
-        if not self.terminated:
-            get_logger().debug(f"{self.mode} {self.worker_id} set to terminated")
-            self.terminated = True
-        # everything runs in the same thread - no need to actively wait for the exception
-        self.terminated_lock.release()
 
 
 class OnPolicyTrainer(OnPolicyRLEngine):
@@ -1365,44 +1362,33 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         training_completed_successfully = False
         try:
-            try:
-                if checkpoint_file_name is not None:
-                    self.checkpoint_load(checkpoint_file_name, restart_pipeline)
+            if checkpoint_file_name is not None:
+                self.checkpoint_load(checkpoint_file_name, restart_pipeline)
 
-                self.run_pipeline(
-                    RolloutStorage(
-                        num_steps=self.training_pipeline.num_steps,
-                        num_samplers=self.num_samplers,
-                        actor_critic=self.actor_critic
-                        if isinstance(self.actor_critic, ActorCriticModel)
-                        else cast(ActorCriticModel, self.actor_critic.module),
-                    )
+            self.run_pipeline(
+                RolloutStorage(
+                    num_steps=self.training_pipeline.num_steps,
+                    num_samplers=self.num_samplers,
+                    actor_critic=self.actor_critic
+                    if isinstance(self.actor_critic, ActorCriticModel)
+                    else cast(ActorCriticModel, self.actor_critic.module),
                 )
-
-                training_completed_successfully = True
-                self.signal_termination()
-            except KeyboardInterrupt:
-                self.signal_termination()
-                get_logger().info(
-                    "KeyboardInterrupt. Terminating {} worker {}".format(
-                        self.mode, self.worker_id
-                    )
-                )
-            except Exception:
-                self.signal_termination()
-                get_logger().error(
-                    "Encountered Exception. Terminating {} worker {}".format(
-                        self.mode, self.worker_id
-                    )
-                )
-                get_logger().exception(traceback.format_exc())
-            finally:
-                pass
-        except KeyboardInterrupt:
-            self.signal_termination()
-            get_logger().info(
-                f"Caught secondary keyboard interrupt. Terminating {self.mode} worker {self.worker_id}"
             )
+
+            training_completed_successfully = True
+        except KeyboardInterrupt:
+            get_logger().info(
+                "KeyboardInterrupt. Terminating {} worker {}".format(
+                    self.mode, self.worker_id
+                )
+            )
+        except Exception:
+            get_logger().error(
+                "Encountered Exception. Terminating {} worker {}".format(
+                    self.mode, self.worker_id
+                )
+            )
+            get_logger().exception(traceback.format_exc())
         finally:
             if training_completed_successfully:
                 if self.worker_id == 0:
@@ -1615,86 +1601,74 @@ class OnPolicyInference(OnPolicyRLEngine):
 
         finalized = False
         try:
-            try:
-                while True:
-                    command: Optional[str]
-                    ckp_file_path: Any
-                    (
-                        command,
-                        ckp_file_path,
-                    ) = (
-                        self.checkpoints_queue.get()
-                    )  # block until first command arrives
-                    # get_logger().debug(
-                    #     "{} {} command {} data {}".format(
-                    #         self.mode, self.worker_id, command, data
-                    #     )
-                    # )
+            while True:
+                command: Optional[str]
+                ckp_file_path: Any
+                (
+                    command,
+                    ckp_file_path,
+                ) = (
+                    self.checkpoints_queue.get()
+                )  # block until first command arrives
+                # get_logger().debug(
+                #     "{} {} command {} data {}".format(
+                #         self.mode, self.worker_id, command, data
+                #     )
+                # )
 
-                    if command == "eval":
-                        if self.num_samplers > 0:
-                            if self.mode == VALID_MODE_STR:
-                                # skip to latest using
-                                # 1. there's only consumer in valid
-                                # 2. there's no quit/exit/close message issued by runner nor trainer
-                                ckp_file_path = self.skip_to_latest(
-                                    checkpoints_queue=self.checkpoints_queue,
-                                    command=command,
-                                    data=ckp_file_path,
-                                )
-
-                            if (
-                                visualizer is None
-                                and self.machine_params.visualizer is not None
-                            ):
-                                visualizer = self.machine_params.visualizer
-
-                            eval_package = self.run_eval(
-                                checkpoint_file_path=ckp_file_path,
-                                visualizer=visualizer,
-                                verbose=True,
-                                update_secs=20
-                                if self.mode == TEST_MODE_STR
-                                else 5 * 60,
+                if command == "eval":
+                    if self.num_samplers > 0:
+                        if self.mode == VALID_MODE_STR:
+                            # skip to latest using
+                            # 1. there's only consumer in valid
+                            # 2. there's no quit/exit/close message issued by runner nor trainer
+                            ckp_file_path = self.skip_to_latest(
+                                checkpoints_queue=self.checkpoints_queue,
+                                command=command,
+                                data=ckp_file_path,
                             )
 
-                            self.results_queue.put(eval_package)
+                        if (
+                            visualizer is None
+                            and self.machine_params.visualizer is not None
+                        ):
+                            visualizer = self.machine_params.visualizer
 
-                            if self.is_distributed:
-                                dist.barrier()
-                        else:
-                            self.results_queue.put(
-                                LoggingPackage(mode=self.mode, training_steps=None,)
-                            )
-                    elif command in ["quit", "exit", "close"]:
-                        finalized = True
-                        break
+                        eval_package = self.run_eval(
+                            checkpoint_file_path=ckp_file_path,
+                            visualizer=visualizer,
+                            verbose=True,
+                            update_secs=20
+                            if self.mode == TEST_MODE_STR
+                            else 5 * 60,
+                        )
+
+                        self.results_queue.put(eval_package)
+
+                        if self.is_distributed:
+                            dist.barrier()
                     else:
-                        raise NotImplementedError()
-
-                self.signal_termination()
-            except KeyboardInterrupt:
-                self.signal_termination()
-                get_logger().info(
-                    "KeyboardInterrupt. Terminating {} worker {}".format(
-                        self.mode, self.worker_id
-                    )
-                )
-            except Exception:
-                self.signal_termination()
-                get_logger().error(
-                    "Encountered Exception. Terminating {} worker {}".format(
-                        self.mode, self.worker_id
-                    )
-                )
-                get_logger().error(traceback.format_exc())
-            finally:
-                pass
+                        self.results_queue.put(
+                            LoggingPackage(mode=self.mode, training_steps=None,)
+                        )
+                elif command in ["quit", "exit", "close"]:
+                    finalized = True
+                    break
+                else:
+                    raise NotImplementedError()
         except KeyboardInterrupt:
-            self.signal_termination()
             get_logger().info(
-                f"Caught secondary keyboard interrupt. Terminating {self.mode} worker {self.worker_id}"
+                "KeyboardInterrupt. Terminating {} worker {}".format(
+                    self.mode, self.worker_id
+                )
             )
+        except Exception:
+            get_logger().error(
+                "Encountered Exception. Terminating {} worker {}".format(
+                    self.mode, self.worker_id
+                )
+            )
+            get_logger().error(traceback.format_exc())
         finally:
             if finalized:
                 if self.mode == TEST_MODE_STR:
