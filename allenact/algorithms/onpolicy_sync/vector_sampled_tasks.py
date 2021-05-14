@@ -307,7 +307,6 @@ class VectorSampledTasks(object):
         except KeyboardInterrupt as e:
             if should_log:
                 get_logger().info(f"Worker {worker_id} KeyboardInterrupt")
-            raise e
         except Exception as e:
             get_logger().error(traceback.format_exc())
             raise e

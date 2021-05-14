@@ -226,8 +226,27 @@ class OnPolicyRunner(object):
     def init_process(mode: str, id: int):
         ptitle(f"{mode}-{id}")
 
-        def sigterm_handler(_signo, _stack_frame):
-            raise KeyboardInterrupt
+        def sigterm_handler(_signo, _frame):
+            do_raise = False
+
+            engine = _frame.f_locals["self"]
+
+            if not hasattr(engine, "terminated_lock"):
+                return
+
+            engine.terminated_lock.acquire()
+
+            if not engine.terminated:
+                get_logger().debug(
+                    f"{engine.mode} {engine.worker_id} not yet terminated"
+                )
+                engine.terminated = True
+                do_raise = True
+
+            engine.terminated_lock.release()
+
+            if do_raise:
+                raise KeyboardInterrupt
 
         signal.signal(signal.SIGTERM, sigterm_handler)
 
@@ -260,7 +279,7 @@ class OnPolicyRunner(object):
         engine_kwargs["mode"] = TRAIN_MODE_STR
         engine_kwargs["worker_id"] = id
         engine_kwargs_for_print = {
-            k: (v if k != "initial_model_state_dict" else "[SUPRESSED]")
+            k: (v if k != "initial_model_state_dict" else "[SUPPRESSED]")
             for k, v in engine_kwargs.items()
         }
         get_logger().info(f"train {id} args {engine_kwargs_for_print}")

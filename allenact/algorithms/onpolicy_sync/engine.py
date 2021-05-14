@@ -20,6 +20,7 @@ from typing import (
     Iterator,
     Callable,
 )
+from threading import Semaphore
 
 import torch
 import torch.distributed as dist  # type: ignore
@@ -118,6 +119,9 @@ class OnPolicyRLEngine(object):
             deterministic behavior.
         extra_tag : An additional label to add to the experiment when saving tensorboard logs.
         """
+        self.terminated_lock = Semaphore()
+        self.terminated = False
+
         self.config = config
         self.results_queue = results_queue
         self.checkpoints_queue = checkpoints_queue
@@ -627,6 +631,14 @@ class OnPolicyRLEngine(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close(verbose=False)
+
+    def signal_termination(self):
+        self.terminated_lock.acquire()
+        if not self.terminated:
+            get_logger().debug(f"{self.mode} {self.worker_id} set to terminated")
+            self.terminated = True
+        # everything runs in the same thread - no need to actively wait for the exception
+        self.terminated_lock.release()
 
 
 class OnPolicyTrainer(OnPolicyRLEngine):
@@ -1353,33 +1365,44 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         training_completed_successfully = False
         try:
-            if checkpoint_file_name is not None:
-                self.checkpoint_load(checkpoint_file_name, restart_pipeline)
+            try:
+                if checkpoint_file_name is not None:
+                    self.checkpoint_load(checkpoint_file_name, restart_pipeline)
 
-            self.run_pipeline(
-                RolloutStorage(
-                    num_steps=self.training_pipeline.num_steps,
-                    num_samplers=self.num_samplers,
-                    actor_critic=self.actor_critic
-                    if isinstance(self.actor_critic, ActorCriticModel)
-                    else cast(ActorCriticModel, self.actor_critic.module),
+                self.run_pipeline(
+                    RolloutStorage(
+                        num_steps=self.training_pipeline.num_steps,
+                        num_samplers=self.num_samplers,
+                        actor_critic=self.actor_critic
+                        if isinstance(self.actor_critic, ActorCriticModel)
+                        else cast(ActorCriticModel, self.actor_critic.module),
+                    )
                 )
-            )
 
-            training_completed_successfully = True
+                training_completed_successfully = True
+                self.signal_termination()
+            except KeyboardInterrupt:
+                self.signal_termination()
+                get_logger().info(
+                    "KeyboardInterrupt. Terminating {} worker {}".format(
+                        self.mode, self.worker_id
+                    )
+                )
+            except Exception:
+                self.signal_termination()
+                get_logger().error(
+                    "Encountered Exception. Terminating {} worker {}".format(
+                        self.mode, self.worker_id
+                    )
+                )
+                get_logger().exception(traceback.format_exc())
+            finally:
+                pass
         except KeyboardInterrupt:
+            self.signal_termination()
             get_logger().info(
-                "KeyboardInterrupt. Terminating {} worker {}".format(
-                    self.mode, self.worker_id
-                )
+                f"Caught secondary keyboard interrupt. Terminating {self.mode} worker {self.worker_id}"
             )
-        except Exception:
-            get_logger().error(
-                "Encountered Exception. Terminating {} worker {}".format(
-                    self.mode, self.worker_id
-                )
-            )
-            get_logger().exception(traceback.format_exc())
         finally:
             if training_completed_successfully:
                 if self.worker_id == 0:
@@ -1592,70 +1615,86 @@ class OnPolicyInference(OnPolicyRLEngine):
 
         finalized = False
         try:
-            while True:
-                command: Optional[str]
-                ckp_file_path: Any
-                (
-                    command,
-                    ckp_file_path,
-                ) = self.checkpoints_queue.get()  # block until first command arrives
-                # get_logger().debug(
-                #     "{} {} command {} data {}".format(
-                #         self.mode, self.worker_id, command, data
-                #     )
-                # )
+            try:
+                while True:
+                    command: Optional[str]
+                    ckp_file_path: Any
+                    (
+                        command,
+                        ckp_file_path,
+                    ) = (
+                        self.checkpoints_queue.get()
+                    )  # block until first command arrives
+                    # get_logger().debug(
+                    #     "{} {} command {} data {}".format(
+                    #         self.mode, self.worker_id, command, data
+                    #     )
+                    # )
 
-                if command == "eval":
-                    if self.num_samplers > 0:
-                        if self.mode == VALID_MODE_STR:
-                            # skip to latest using
-                            # 1. there's only consumer in valid
-                            # 2. there's no quit/exit/close message issued by runner nor trainer
-                            ckp_file_path = self.skip_to_latest(
-                                checkpoints_queue=self.checkpoints_queue,
-                                command=command,
-                                data=ckp_file_path,
+                    if command == "eval":
+                        if self.num_samplers > 0:
+                            if self.mode == VALID_MODE_STR:
+                                # skip to latest using
+                                # 1. there's only consumer in valid
+                                # 2. there's no quit/exit/close message issued by runner nor trainer
+                                ckp_file_path = self.skip_to_latest(
+                                    checkpoints_queue=self.checkpoints_queue,
+                                    command=command,
+                                    data=ckp_file_path,
+                                )
+
+                            if (
+                                visualizer is None
+                                and self.machine_params.visualizer is not None
+                            ):
+                                visualizer = self.machine_params.visualizer
+
+                            eval_package = self.run_eval(
+                                checkpoint_file_path=ckp_file_path,
+                                visualizer=visualizer,
+                                verbose=True,
+                                update_secs=20
+                                if self.mode == TEST_MODE_STR
+                                else 5 * 60,
                             )
 
-                        if (
-                            visualizer is None
-                            and self.machine_params.visualizer is not None
-                        ):
-                            visualizer = self.machine_params.visualizer
+                            self.results_queue.put(eval_package)
 
-                        eval_package = self.run_eval(
-                            checkpoint_file_path=ckp_file_path,
-                            visualizer=visualizer,
-                            verbose=True,
-                            update_secs=20 if self.mode == TEST_MODE_STR else 5 * 60,
-                        )
-
-                        self.results_queue.put(eval_package)
-
-                        if self.is_distributed:
-                            dist.barrier()
+                            if self.is_distributed:
+                                dist.barrier()
+                        else:
+                            self.results_queue.put(
+                                LoggingPackage(mode=self.mode, training_steps=None,)
+                            )
+                    elif command in ["quit", "exit", "close"]:
+                        finalized = True
+                        break
                     else:
-                        self.results_queue.put(
-                            LoggingPackage(mode=self.mode, training_steps=None,)
-                        )
-                elif command in ["quit", "exit", "close"]:
-                    finalized = True
-                    break
-                else:
-                    raise NotImplementedError()
+                        raise NotImplementedError()
+
+                self.signal_termination()
+            except KeyboardInterrupt:
+                self.signal_termination()
+                get_logger().info(
+                    "KeyboardInterrupt. Terminating {} worker {}".format(
+                        self.mode, self.worker_id
+                    )
+                )
+            except Exception:
+                self.signal_termination()
+                get_logger().error(
+                    "Encountered Exception. Terminating {} worker {}".format(
+                        self.mode, self.worker_id
+                    )
+                )
+                get_logger().error(traceback.format_exc())
+            finally:
+                pass
         except KeyboardInterrupt:
+            self.signal_termination()
             get_logger().info(
-                "KeyboardInterrupt. Terminating {} worker {}".format(
-                    self.mode, self.worker_id
-                )
+                f"Caught secondary keyboard interrupt. Terminating {self.mode} worker {self.worker_id}"
             )
-        except Exception:
-            get_logger().error(
-                "Encountered Exception. Terminating {} worker {}".format(
-                    self.mode, self.worker_id
-                )
-            )
-            get_logger().error(traceback.format_exc())
         finally:
             if finalized:
                 if self.mode == TEST_MODE_STR:
