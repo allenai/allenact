@@ -20,7 +20,6 @@ from typing import (
     Iterator,
     Callable,
 )
-from threading import Semaphore
 
 import torch
 import torch.distributed as dist  # type: ignore
@@ -232,7 +231,7 @@ class OnPolicyRLEngine(object):
 
         self.deterministic_agents = deterministic_agents
 
-        self._is_closing: bool = False # Useful for letting the RL runner know if this is closing
+        self._is_closing: bool = False  # Useful for letting the RL runner know if this is closing
         self._is_closed: bool = False
 
         self.training_pipeline: Optional[TrainingPipeline] = None
@@ -1607,9 +1606,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                 (
                     command,
                     ckp_file_path,
-                ) = (
-                    self.checkpoints_queue.get()
-                )  # block until first command arrives
+                ) = self.checkpoints_queue.get()  # block until first command arrives
                 # get_logger().debug(
                 #     "{} {} command {} data {}".format(
                 #         self.mode, self.worker_id, command, data
@@ -1638,9 +1635,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                             checkpoint_file_path=ckp_file_path,
                             visualizer=visualizer,
                             verbose=True,
-                            update_secs=20
-                            if self.mode == TEST_MODE_STR
-                            else 5 * 60,
+                            update_secs=20 if self.mode == TEST_MODE_STR else 5 * 60,
                         )
 
                         self.results_queue.put(eval_package)

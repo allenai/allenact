@@ -254,6 +254,7 @@ class OnPolicyRunner(object):
                     get_logger().info(
                         f"{prefix} Worker {mode}-{id} is already closing, ignoring this signal."
                     )
+
             return handler
 
         signal.signal(signal.SIGTERM, create_handler("Termination"))

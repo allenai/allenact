@@ -86,6 +86,7 @@ class DelaySignalHandling:
         if self.int_signal_received:
             self.old_int_handler(*self.int_signal_received)
 
+
 class VectorSampledTasks(object):
     """Vectorized collection of tasks. Creates multiple processes where each
     process runs its own TaskSampler. Each process generates one Task from its
@@ -294,18 +295,24 @@ class VectorSampledTasks(object):
                     if len(read_input) == 3:
                         sampler_index, command, data = read_input
 
-                        assert command != CLOSE_COMMAND, "Must close all processes at once."
+                        assert (
+                            command != CLOSE_COMMAND
+                        ), "Must close all processes at once."
                         assert (
                             command != RESUME_COMMAND
                         ), "Must resume all task samplers at once."
 
                         if command == PAUSE_COMMAND:
-                            sp_vector_sampled_tasks.pause_at(sampler_index=sampler_index)
+                            sp_vector_sampled_tasks.pause_at(
+                                sampler_index=sampler_index
+                            )
                             connection_write_fn("done")
                         else:
                             connection_write_fn(
                                 sp_vector_sampled_tasks.command_at(
-                                    sampler_index=sampler_index, command=command, data=data
+                                    sampler_index=sampler_index,
+                                    command=command,
+                                    data=data,
                                 )
                             )
                     else:
