@@ -718,7 +718,7 @@ class RNNActorCritic(ActorCriticModel[CategoricalDistr]):
                 )
                 .float()
                 .zero_(),
-                sampler_dim=1
+                sampler_dim=1,
             )
 
         rnn_out, mem_return = self.state_encoder(

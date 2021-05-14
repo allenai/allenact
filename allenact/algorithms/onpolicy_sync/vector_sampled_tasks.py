@@ -535,19 +535,19 @@ class VectorSampledTasks(object):
             for read_fn in self._connection_read_fns:
                 try:
                     read_fn()
-                except:
+                except Exception:
                     pass
 
         for write_fn in self._connection_write_fns:
             try:
                 write_fn((CLOSE_COMMAND, None))
-            except:
+            except Exception:
                 pass
 
         for process in self._workers:
             try:
                 process.join(timeout=0.1)
-            except:
+            except Exception:
                 pass
 
         self._is_closed = True

@@ -66,9 +66,9 @@ from allenact.utils.tensor_utils import (
 )
 from allenact.utils.viz_utils import VizSuite
 
-_TRAIN_MODE_STR = "train"
-_VALID_MODE_STR = "valid"
-_TEST_MODE_STR = "test"
+TRAIN_MODE_STR = "train"
+VALID_MODE_STR = "valid"
+TEST_MODE_STR = "test"
 
 
 class OnPolicyRLEngine(object):
@@ -130,9 +130,9 @@ class OnPolicyRLEngine(object):
 
         self.mode = mode.lower().strip()
         assert self.mode in [
-            _TRAIN_MODE_STR,
-            _VALID_MODE_STR,
-            _TEST_MODE_STR,
+            TRAIN_MODE_STR,
+            VALID_MODE_STR,
+            TEST_MODE_STR,
         ], 'Only "train", "valid", "test" modes supported'
 
         self.deterministic_cudnn = deterministic_cudnn
@@ -194,7 +194,7 @@ class OnPolicyRLEngine(object):
             else:
                 self.actor_critic.load_state_dict(state_dict=initial_model_state_dict)
         else:
-            assert mode != _TRAIN_MODE_STR or self.num_workers == 1, (
+            assert mode != TRAIN_MODE_STR or self.num_workers == 1, (
                 "When training with multiple workers you must pass a,"
                 " non-`None` value for the `initial_model_state_dict` argument."
             )
@@ -217,14 +217,14 @@ class OnPolicyRLEngine(object):
             cpu_device = self.device == torch.device("cpu")  # type:ignore
 
             dist.init_process_group(  # type:ignore
-                backend="gloo" if cpu_device or self.mode == _TEST_MODE_STR else "nccl",
+                backend="gloo" if cpu_device or self.mode == TEST_MODE_STR else "nccl",
                 store=self.store,
                 rank=self.worker_id,
                 world_size=self.num_workers,
                 # During testing we sometimes found that default timeout was too short
                 # resulting in the run terminating surprisingly, we increase it here.
                 timeout=datetime.timedelta(minutes=3000)
-                if self.mode == _TEST_MODE_STR
+                if self.mode == TEST_MODE_STR
                 else dist.default_pg_timeout,
             )
             self.is_distributed = True
@@ -290,11 +290,11 @@ class OnPolicyRLEngine(object):
     def get_sampler_fn_args(self, seeds: Optional[List[int]] = None):
         sampler_devices = self.machine_params.sampler_devices
 
-        if self.mode == _TRAIN_MODE_STR:
+        if self.mode == TRAIN_MODE_STR:
             fn = self.config.train_task_sampler_args
-        elif self.mode == _VALID_MODE_STR:
+        elif self.mode == VALID_MODE_STR:
             fn = self.config.valid_task_sampler_args
-        elif self.mode == _TEST_MODE_STR:
+        elif self.mode == TEST_MODE_STR:
             fn = self.config.test_task_sampler_args
         else:
             raise NotImplementedError(
@@ -310,7 +310,7 @@ class OnPolicyRLEngine(object):
 
         sampler_devices_as_ints: Optional[List[int]] = None
         if (
-            self.is_distributed or self.mode == _TEST_MODE_STR
+            self.is_distributed or self.mode == TEST_MODE_STR
         ) and self.device.index is not None:
             sampler_devices_as_ints = [self.device.index]
         elif sampler_devices is not None:
@@ -463,7 +463,7 @@ class OnPolicyRLEngine(object):
         """
         sampler_id = 0
         done = dones[sampler_id]
-        if self.mode != _TRAIN_MODE_STR:
+        if self.mode != TRAIN_MODE_STR:
             setattr(
                 self, "_probe_npaused", getattr(self, "_probe_npaused", 0) + npaused
             )
@@ -649,7 +649,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         max_sampler_processes_per_worker: Optional[int] = None,
         **kwargs,
     ):
-        kwargs["mode"] = _TRAIN_MODE_STR
+        kwargs["mode"] = TRAIN_MODE_STR
         super().__init__(
             experiment_name=experiment_name,
             config=config,
@@ -735,7 +735,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         )  # same seed for all workers
 
         if (not return_same_seed_per_worker) and (
-            self.mode == _TRAIN_MODE_STR or self.mode == _TEST_MODE_STR
+            self.mode == TRAIN_MODE_STR or self.mode == TEST_MODE_STR
         ):
             return self.worker_seeds(self.num_workers, seed)[
                 self.worker_id
@@ -1169,7 +1169,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         self.aggregate_task_metrics(logging_pkg=logging_pkg)
 
-        if self.mode == _TRAIN_MODE_STR:
+        if self.mode == TRAIN_MODE_STR:
             # Technically self.mode should always be "train" here (as this is the training engine),
             # this conditional is defensive
             self._last_aggregated_train_task_metrics.add_scalars(
@@ -1348,7 +1348,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self, checkpoint_file_name: Optional[str] = None, restart_pipeline: bool = False
     ):
         assert (
-            self.mode == _TRAIN_MODE_STR
+            self.mode == TRAIN_MODE_STR
         ), "train only to be called from a train instance"
 
         training_completed_successfully = False
@@ -1581,7 +1581,7 @@ class OnPolicyInference(OnPolicyRLEngine):
 
     def process_checkpoints(self):
         assert (
-            self.mode != _TRAIN_MODE_STR
+            self.mode != TRAIN_MODE_STR
         ), "process_checkpoints only to be called from a valid or test instance"
 
         assert (
@@ -1607,7 +1607,7 @@ class OnPolicyInference(OnPolicyRLEngine):
 
                 if command == "eval":
                     if self.num_samplers > 0:
-                        if self.mode == _VALID_MODE_STR:
+                        if self.mode == VALID_MODE_STR:
                             # skip to latest using
                             # 1. there's only consumer in valid
                             # 2. there's no quit/exit/close message issued by runner nor trainer
@@ -1627,7 +1627,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                             checkpoint_file_path=ckp_file_path,
                             visualizer=visualizer,
                             verbose=True,
-                            update_secs=20 if self.mode == _TEST_MODE_STR else 5 * 60,
+                            update_secs=20 if self.mode == TEST_MODE_STR else 5 * 60,
                         )
 
                         self.results_queue.put(eval_package)
@@ -1658,12 +1658,12 @@ class OnPolicyInference(OnPolicyRLEngine):
             get_logger().error(traceback.format_exc())
         finally:
             if finalized:
-                if self.mode == _TEST_MODE_STR:
+                if self.mode == TEST_MODE_STR:
                     self.results_queue.put(("test_stopped", 0))
                 get_logger().info(
                     "{} worker {} complete".format(self.mode, self.worker_id)
                 )
             else:
-                if self.mode == _TEST_MODE_STR:
+                if self.mode == TEST_MODE_STR:
                     self.results_queue.put(("test_stopped", self.worker_id + 1))
-            self.close(verbose=self.mode == _TEST_MODE_STR)
+            self.close(verbose=self.mode == TEST_MODE_STR)
