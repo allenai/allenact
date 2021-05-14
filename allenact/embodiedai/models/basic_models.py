@@ -223,13 +223,13 @@ class SimpleCNN(nn.Module):
         use_agent: Optional[bool] = None
 
         if self.rgb_uuid is not None:
-            use_agent = check_use_agent(len(observations[self.rgb_uuid]) == 6)
+            use_agent = check_use_agent(len(observations[self.rgb_uuid].shape) == 6)
             cnn_output_list.append(
                 compute_cnn_output(self.rgb_cnn, observations[self.rgb_uuid])
             )
 
         if self.depth_uuid is not None:
-            use_agent = check_use_agent(len(observations[self.depth_uuid]) == 6)
+            use_agent = check_use_agent(len(observations[self.depth_uuid].shape) == 6)
             cnn_output_list.append(
                 compute_cnn_output(self.depth_cnn, observations[self.depth_uuid])
             )
