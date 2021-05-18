@@ -9,7 +9,10 @@ from projects.objectnav_baselines.experiments.objectnav_thor_base import (
 
 
 class ObjectNaviThorBaseConfig(ObjectNavThorBaseConfig, ABC):
-    """The base config for all iTHOR ObjectNav experiments."""
+    """The base config for all iTHOR ObjectNav experiments.
+
+    Only working in Kitchen scenes at the moment.
+    """
 
     DEFAULT_NUM_TRAIN_PROCESSES = 40 if torch.cuda.is_available() else 1
 
@@ -19,18 +22,38 @@ class ObjectNaviThorBaseConfig(ObjectNavThorBaseConfig, ABC):
     TARGET_TYPES = tuple(
         sorted(
             [
-                "AlarmClock",
                 "Apple",
-                "Book",
                 "Bowl",
-                "Box",
-                "Candle",
-                "GarbageCan",
-                "HousePlant",
-                "Laptop",
+                "Bread",
+                "ButterKnife",
+                "CoffeeMachine",
+                "Cup",
+                "DishSponge",
+                "Egg",
+                "Faucet",
+                "Fork",
+                "Fridge",
+                "Kettle",
+                "Knife",
+                "Ladle",
+                "Lettuce",
+                "LightSwitch",
+                "Microwave",
+                "Mug",
+                "Pan",
+                "PepperShaker",
+                "Plate",
+                "Pot",
+                "Potato",
+                "SaltShaker",
+                "Sink",
                 "SoapBottle",
-                "Television",
+                "Spatula",
+                "Spoon",
+                "StoveBurner",
                 "Toaster",
-            ]
+                "Tomato",
+                "WineBottle"
+            ],
         )
     )
