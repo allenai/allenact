@@ -353,6 +353,7 @@ class OnPolicyRunner(object):
         checkpoint: Optional[str] = None,
         restart_pipeline: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
+        save_ckpt_after_every_pipeline_stage: bool = True,
     ):
         self._initialize_start_train_or_start_test()
 
@@ -395,6 +396,7 @@ class OnPolicyRunner(object):
                 device=devices[trainer_it],
                 distributed_port=distributed_port,
                 max_sampler_processes_per_worker=max_sampler_processes_per_worker,
+                save_ckpt_after_every_pipeline_stage=save_ckpt_after_every_pipeline_stage,
                 initial_model_state_dict=initial_model_state_dict
                 if model_hash is None
                 else model_hash,

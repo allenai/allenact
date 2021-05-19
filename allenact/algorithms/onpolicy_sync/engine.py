@@ -655,6 +655,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         deterministic_agents: bool = False,
         distributed_preemption_threshold: float = 0.7,
         max_sampler_processes_per_worker: Optional[int] = None,
+        save_ckpt_after_every_pipeline_stage: bool = True,
         **kwargs,
     ):
         kwargs["mode"] = TRAIN_MODE_STR
@@ -675,6 +676,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             max_sampler_processes_per_worker=max_sampler_processes_per_worker,
             **kwargs,
         )
+
+        self.save_ckpt_after_every_pipeline_stage = save_ckpt_after_every_pipeline_stage
 
         self.actor_critic.train()
 
@@ -1208,7 +1211,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self.tracking_info.clear()
 
         self.last_log = self.training_pipeline.total_steps
-        self.last_save = self.training_pipeline.total_steps
+
+        if self.last_save is None:
+            self.last_save = self.training_pipeline.total_steps
 
         offpolicy_data_iterator: Optional[Iterator] = None
 
@@ -1322,14 +1327,27 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.tracking_info.clear()
                 self.last_log = self.training_pipeline.total_steps
 
-            # save for every interval-th episode or for the last epoch
+            # save for every save_interval-th step or when the stage is complete
             if (
                 self.checkpoints_dir != ""
+                and self.training_pipeline.save_interval is not None
                 and self.training_pipeline.save_interval > 0
                 and (
                     self.training_pipeline.total_steps - self.last_save
                     >= self.training_pipeline.save_interval
-                    or self.training_pipeline.current_stage.is_complete
+                    or (
+                        self.training_pipeline.current_stage.is_complete
+                        and (
+                            # We only save when the stage is complete if either:
+                            # (1) the self.save_ckpt_after_every_pipeline_stage boolean is True,
+                            # (2) we have reached the end of ALL training (i.e. all stages are complete)
+                            self.save_ckpt_after_every_pipeline_stage
+                            or all(
+                                ps.is_complete
+                                for ps in self.training_pipeline.pipeline_stages
+                            )
+                        )
+                    )
                 )
             ):
                 self.deterministic_seeds()
