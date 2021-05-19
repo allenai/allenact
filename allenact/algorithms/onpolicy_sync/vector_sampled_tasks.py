@@ -2,6 +2,7 @@
 # Modified work Copyright (c) Allen Institute for AI
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+import signal
 import time
 import traceback
 from multiprocessing.connection import Connection
@@ -59,6 +60,31 @@ RESET_COMMAND = "reset"
 SEED_COMMAND = "seed"
 PAUSE_COMMAND = "pause"
 RESUME_COMMAND = "resume"
+
+
+class DelaySignalHandling:
+    # Modified from https://stackoverflow.com/a/21919644
+    def __enter__(self):
+        self.int_signal_received: Optional[Any] = None
+        self.term_signal_received: Optional[Any] = None
+        self.old_int_handler = signal.signal(signal.SIGINT, self.int_handler)
+        self.old_term_handler = signal.signal(signal.SIGTERM, self.term_handler)
+
+    def int_handler(self, sig, frame):
+        self.int_signal_received = (sig, frame)
+        get_logger().debug("SIGINT received. Delaying KeyboardInterrupt.")
+
+    def term_handler(self, sig, frame):
+        self.term_signal_received = (sig, frame)
+        get_logger().debug("SIGTERM received. Delaying termination.")
+
+    def __exit__(self, type, value, traceback):
+        signal.signal(signal.SIGINT, self.old_int_handler)
+        signal.signal(signal.SIGTERM, self.old_term_handler)
+        if self.term_signal_received:
+            self.old_term_handler(*self.term_signal_received)
+        if self.int_signal_received:
+            self.old_int_handler(*self.int_signal_received)
 
 
 class VectorSampledTasks(object):
@@ -262,52 +288,61 @@ class VectorSampledTasks(object):
             while True:
                 read_input = connection_read_fn()
 
-                if len(read_input) == 3:
-                    sampler_index, command, data = read_input
+                with DelaySignalHandling():
+                    # Delaying signal handling here is necessary to ensure that we don't
+                    # (when processing a SIGTERM/SIGINT signal) attempt to send data to
+                    # a generator while it is already processing other data.
+                    if len(read_input) == 3:
+                        sampler_index, command, data = read_input
 
-                    assert command != CLOSE_COMMAND, "Must close all processes at once."
-                    assert (
-                        command != RESUME_COMMAND
-                    ), "Must resume all task samplers at once."
+                        assert (
+                            command != CLOSE_COMMAND
+                        ), "Must close all processes at once."
+                        assert (
+                            command != RESUME_COMMAND
+                        ), "Must resume all task samplers at once."
 
-                    if command == PAUSE_COMMAND:
-                        sp_vector_sampled_tasks.pause_at(sampler_index=sampler_index)
-                        connection_write_fn("done")
-                    else:
-                        connection_write_fn(
-                            sp_vector_sampled_tasks.command_at(
-                                sampler_index=sampler_index, command=command, data=data
+                        if command == PAUSE_COMMAND:
+                            sp_vector_sampled_tasks.pause_at(
+                                sampler_index=sampler_index
                             )
-                        )
-                else:
-                    commands, data_list = read_input
-
-                    assert (
-                        commands != PAUSE_COMMAND
-                    ), "Cannot pause all task samplers at once."
-
-                    if commands == CLOSE_COMMAND:
-                        sp_vector_sampled_tasks.close()
-                        break
-                    elif commands == RESUME_COMMAND:
-                        sp_vector_sampled_tasks.resume_all()
-                        connection_write_fn("done")
-                    else:
-                        if isinstance(commands, str):
-                            commands = [
-                                commands
-                            ] * sp_vector_sampled_tasks.num_unpaused_tasks
-
-                        connection_write_fn(
-                            sp_vector_sampled_tasks.command(
-                                commands=commands, data_list=data_list
+                            connection_write_fn("done")
+                        else:
+                            connection_write_fn(
+                                sp_vector_sampled_tasks.command_at(
+                                    sampler_index=sampler_index,
+                                    command=command,
+                                    data=data,
+                                )
                             )
-                        )
+                    else:
+                        commands, data_list = read_input
+
+                        assert (
+                            commands != PAUSE_COMMAND
+                        ), "Cannot pause all task samplers at once."
+
+                        if commands == CLOSE_COMMAND:
+                            sp_vector_sampled_tasks.close()
+                            break
+                        elif commands == RESUME_COMMAND:
+                            sp_vector_sampled_tasks.resume_all()
+                            connection_write_fn("done")
+                        else:
+                            if isinstance(commands, str):
+                                commands = [
+                                    commands
+                                ] * sp_vector_sampled_tasks.num_unpaused_tasks
+
+                            connection_write_fn(
+                                sp_vector_sampled_tasks.command(
+                                    commands=commands, data_list=data_list
+                                )
+                            )
 
         except KeyboardInterrupt as e:
             if should_log:
                 get_logger().info(f"Worker {worker_id} KeyboardInterrupt")
-            raise e
         except Exception as e:
             get_logger().error(traceback.format_exc())
             raise e
@@ -535,19 +570,19 @@ class VectorSampledTasks(object):
             for read_fn in self._connection_read_fns:
                 try:
                     read_fn()
-                except:
+                except Exception:
                     pass
 
         for write_fn in self._connection_write_fns:
             try:
                 write_fn((CLOSE_COMMAND, None))
-            except:
+            except Exception:
                 pass
 
         for process in self._workers:
             try:
                 process.join(timeout=0.1)
-            except:
+            except Exception:
                 pass
 
         self._is_closed = True

@@ -47,13 +47,13 @@ next section.
 To install the latest `allenact` framework, you can use
 
 ```bash
-pip install -e "git+https://github.com/allenai/allenact.git@master#egg=allenact&subdirectory=allenact"
+pip install -e "git+https://github.com/allenai/allenact.git@main#egg=allenact&subdirectory=allenact"
 ```
 
 and, similarly, you can also use
 
 ```bash
-pip install -e "git+https://github.com/allenai/allenact.git@master#egg=allenact_plugins[all]&subdirectory=allenact_plugins"
+pip install -e "git+https://github.com/allenai/allenact.git@main#egg=allenact_plugins[all]&subdirectory=allenact_plugins"
 ```
 
 to install all plugins.

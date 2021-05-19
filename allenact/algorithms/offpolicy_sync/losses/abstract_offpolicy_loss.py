@@ -17,7 +17,13 @@ class AbstractOffPolicyLoss(Generic[ModelType], Loss):
 
     @abc.abstractmethod
     def loss(  # type: ignore
-        self, model: ModelType, batch: ObservationType, memory: Memory, *args, **kwargs,
+        self,
+        step_count: int,
+        model: ModelType,
+        batch: ObservationType,
+        memory: Memory,
+        *args,
+        **kwargs,
     ) -> Tuple[torch.FloatTensor, Dict[str, float], Memory, int]:
         """Computes the loss.
 
