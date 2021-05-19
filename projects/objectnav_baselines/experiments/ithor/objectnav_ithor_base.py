@@ -16,7 +16,7 @@ class ObjectNaviThorBaseConfig(ObjectNavThorBaseConfig, ABC):
     TRAIN_DATASET_DIR = os.path.join(os.getcwd(), "datasets/ithor-objectnav/train")
     VAL_DATASET_DIR = os.path.join(os.getcwd(), "datasets/ithor-objectnav/val")
 
-    AGENT_MODE: str = "default"
+    AGENT_MODE = "default"
 
     TARGET_TYPES = tuple(
         sorted(

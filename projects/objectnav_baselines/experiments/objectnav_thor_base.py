@@ -49,7 +49,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
     VAL_DATASET_DIR: Optional[str] = None
     TEST_DATASET_DIR: Optional[str] = None
 
-    AGENT_MODE: str = "default"
+    AGENT_MODE = "default"
 
     TARGET_TYPES: Optional[Sequence[str]] = None
 
