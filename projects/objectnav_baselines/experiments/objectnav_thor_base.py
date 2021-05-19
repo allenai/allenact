@@ -30,15 +30,15 @@ from packaging import version
 
 if ai2thor.__version__ not in ["0.0.1", None] and version.parse(
     ai2thor.__version__
-) < version.parse("2.7.2"):
+) < version.parse("3.2.0"):
     raise ImportError(
         "To run the AI2-THOR ObjectNav baseline experiments you must use"
-        " ai2thor version 2.7.1 or higher."
+        " ai2thor version 3.2.0 or higher."
     )
 
 
 class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
-    """The base config for all iTHOR PointNav experiments."""
+    """The base config for all AI2-THOR ObjectNav experiments."""
 
     DEFAULT_NUM_TRAIN_PROCESSES: Optional[int] = None
     DEFAULT_TRAIN_GPU_IDS = tuple(range(torch.cuda.device_count()))
@@ -84,7 +84,6 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
             commit_id=cls.THOR_COMMIT_ID,
             continuousMode=True,
             applyActionNoise=cls.STOCHASTIC,
-            agentType="stochastic",
             rotateStepDegrees=cls.ROTATION_DEGREES,
             visibilityDistance=cls.VISIBILITY_DISTANCE,
             gridSize=cls.STEP_SIZE,
