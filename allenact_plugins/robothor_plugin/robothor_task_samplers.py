@@ -458,7 +458,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             else int(scene[len("FloorPlan") :])
         )
         if scene_num % 100 < 21:
-            self.env.step(action="RandomizeMaterials")
+            self.env.controller.step(action="RandomizeMaterials")
 
         task_info = {"scene": scene, "object_type": episode["object_type"]}
         if len(task_info) == 0:
