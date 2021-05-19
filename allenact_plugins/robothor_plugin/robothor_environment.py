@@ -29,8 +29,8 @@ class RoboThorEnvironment:
 
     # Attributes
 
-    controller : The AI2THOR controller.
-    config : The AI2THOR controller configuration
+    controller : The AI2-THOR controller.
+    config : The AI2-THOR controller configuration
     """
 
     def __init__(self, all_metadata_available: bool = True, **kwargs):
