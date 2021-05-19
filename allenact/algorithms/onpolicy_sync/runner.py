@@ -10,6 +10,7 @@ import queue
 import random
 import signal
 import subprocess
+import sys
 import time
 import traceback
 from collections import defaultdict
@@ -26,6 +27,9 @@ from setproctitle import setproctitle as ptitle
 from allenact.algorithms.onpolicy_sync.engine import (
     OnPolicyTrainer,
     OnPolicyInference,
+    TRAIN_MODE_STR,
+    TEST_MODE_STR,
+    OnPolicyRLEngine,
 )
 from allenact.base_abstractions.experiment_config import ExperimentConfig, MachineParams
 from allenact.utils.experiment_utils import (
@@ -80,15 +84,15 @@ class OnPolicyRunner(object):
                 multiprocessing_start_method = "spawn"
         self.mp_ctx = self.init_context(mp_ctx, multiprocessing_start_method)
         self.extra_tag = extra_tag
-        self.mode = mode
+        self.mode = mode.lower().strip()
         self.visualizer: Optional[VizSuite] = None
         self.deterministic_agents = deterministic_agents
         self.disable_tensorboard = disable_tensorboard
         self.disable_config_saving = disable_config_saving
 
         assert self.mode in [
-            "train",
-            "test",
+            TRAIN_MODE_STR,
+            TEST_MODE_STR,
         ], "Only 'train' and 'test' modes supported in runner"
 
         if self.deterministic_cudnn:
@@ -96,10 +100,7 @@ class OnPolicyRunner(object):
 
         set_seed(self.seed)
 
-        self.queues = {
-            "results": self.mp_ctx.Queue(),
-            "checkpoints": self.mp_ctx.Queue(),
-        }
+        self.queues: Optional[Dict[str, mp.Queue]] = None
 
         self.processes: Dict[str, List[Union[BaseProcess, mp.Process]]] = defaultdict(
             list
@@ -107,9 +108,18 @@ class OnPolicyRunner(object):
 
         self.current_checkpoint = None
 
-        self.local_start_time_str = self._acquire_unique_local_start_time_string()
+        self._local_start_time_str: Optional[str] = None
 
         self._is_closed: bool = False
+
+    @property
+    def local_start_time_str(self) -> str:
+        if self._local_start_time_str is None:
+            raise RuntimeError(
+                "Local start time string does not exist as neither `start_train()` or `start_test()`"
+                " has been called on this runner."
+            )
+        return self._local_start_time_str
 
     @property
     def running_validation(self):
@@ -215,32 +225,40 @@ class OnPolicyRunner(object):
             self.visualizer = machine_params.visualizer
 
     @staticmethod
-    def init_process(mode: str, id: int):
+    def init_process(mode: str, id: int, to_close_on_termination: OnPolicyRLEngine):
         ptitle(f"{mode}-{id}")
 
-        def sigterm_handler(_signo, _frame):
-            do_raise = False
+        def create_handler(termination_type: str):
+            def handler(_signo, _frame):
+                prefix = f"{termination_type} signal sent to worker {mode}-{id}."
+                if to_close_on_termination._is_closed:
+                    get_logger().info(
+                        f"{prefix} Worker {mode}-{id} is already closed, exiting."
+                    )
+                    sys.exit(0)
+                elif not to_close_on_termination._is_closing:
+                    get_logger().info(
+                        f"{prefix} Forcing worker {mode}-{id} to close and exiting."
+                    )
+                    try:
+                        to_close_on_termination.close(True)
+                    except Exception:
+                        get_logger().error(
+                            f"Error occurred when closing the RL engine used by work {mode}-{id}."
+                            f" We cannot recover from this and will simply exit. The exception:"
+                        )
+                        get_logger().exception(traceback.format_exc())
+                        sys.exit(1)
+                    sys.exit(0)
+                else:
+                    get_logger().info(
+                        f"{prefix} Worker {mode}-{id} is already closing, ignoring this signal."
+                    )
 
-            engine = _frame.f_locals["self"]
+            return handler
 
-            if not hasattr(engine, "terminated_lock"):
-                return
-
-            engine.terminated_lock.acquire()
-
-            if not engine.terminated:
-                get_logger().debug(
-                    f"{engine.mode} {engine.worker_id} not yet terminated"
-                )
-                engine.terminated = True
-                do_raise = True
-
-            engine.terminated_lock.release()
-
-            if do_raise:
-                raise KeyboardInterrupt
-
-        signal.signal(signal.SIGTERM, sigterm_handler)
+        signal.signal(signal.SIGTERM, create_handler("Termination"))
+        signal.signal(signal.SIGINT, create_handler("Interrupt"))
 
     @staticmethod
     def init_worker(engine_class, args, kwargs):
@@ -267,8 +285,7 @@ class OnPolicyRunner(object):
         *engine_args,
         **engine_kwargs,
     ):
-        OnPolicyRunner.init_process("Train", id)
-        engine_kwargs["mode"] = "train"
+        engine_kwargs["mode"] = TRAIN_MODE_STR
         engine_kwargs["worker_id"] = id
         engine_kwargs_for_print = {
             k: (v if k != "initial_model_state_dict" else "[SUPPRESSED]")
@@ -280,13 +297,13 @@ class OnPolicyRunner(object):
             engine_class=OnPolicyTrainer, args=engine_args, kwargs=engine_kwargs
         )
         if trainer is not None:
+            OnPolicyRunner.init_process("Train", id, to_close_on_termination=trainer)
             trainer.train(
                 checkpoint_file_name=checkpoint, restart_pipeline=restart_pipeline
             )
 
     @staticmethod
     def valid_loop(id: int = 0, *engine_args, **engine_kwargs):
-        OnPolicyRunner.init_process("Valid", id)
         engine_kwargs["mode"] = "valid"
         engine_kwargs["worker_id"] = id
         get_logger().info("valid {} args {}".format(id, engine_kwargs))
@@ -295,18 +312,41 @@ class OnPolicyRunner(object):
             engine_class=OnPolicyInference, args=engine_args, kwargs=engine_kwargs
         )
         if valid is not None:
+            OnPolicyRunner.init_process("Valid", id, to_close_on_termination=valid)
             valid.process_checkpoints()  # gets checkpoints via queue
 
     @staticmethod
     def test_loop(id: int = 0, *engine_args, **engine_kwargs):
-        OnPolicyRunner.init_process("Test", id)
-        engine_kwargs["mode"] = "test"
+        engine_kwargs["mode"] = TEST_MODE_STR
         engine_kwargs["worker_id"] = id
         get_logger().info("test {} args {}".format(id, engine_kwargs))
 
         test = OnPolicyRunner.init_worker(OnPolicyInference, engine_args, engine_kwargs)
         if test is not None:
+            OnPolicyRunner.init_process("Test", id, to_close_on_termination=test)
             test.process_checkpoints()  # gets checkpoints via queue
+
+    def _initialize_start_train_or_start_test(self):
+        self._is_closed = False
+
+        if self.queues is not None:
+            for k, q in self.queues.items():
+                try:
+                    out = q.get(timeout=1)
+                    raise RuntimeError(
+                        f"{k} queue was not empty before starting new training/testing (contained {out})."
+                        f" This should not happen, please report how you obtained this error"
+                        f" by creating an issue at https://github.com/allenai/allenact/issues."
+                    )
+                except queue.Empty:
+                    pass
+
+        self.queues = {
+            "results": self.mp_ctx.Queue(),
+            "checkpoints": self.mp_ctx.Queue(),
+        }
+
+        self._local_start_time_str = self._acquire_unique_local_start_time_string()
 
     def start_train(
         self,
@@ -314,10 +354,12 @@ class OnPolicyRunner(object):
         restart_pipeline: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
     ):
+        self._initialize_start_train_or_start_test()
+
         if not self.disable_config_saving:
             self.save_project_state()
 
-        devices = self.worker_devices("train")
+        devices = self.worker_devices(TRAIN_MODE_STR)
         num_workers = len(devices)
 
         # Be extra careful to ensure that all models start
@@ -377,10 +419,10 @@ class OnPolicyRunner(object):
                 else:
                     raise e
 
-            self.processes["train"].append(train)
+            self.processes[TRAIN_MODE_STR].append(train)
 
         get_logger().info(
-            "Started {} train processes".format(len(self.processes["train"]))
+            "Started {} train processes".format(len(self.processes[TRAIN_MODE_STR]))
         )
 
         # Validation
@@ -413,7 +455,7 @@ class OnPolicyRunner(object):
                 "No processes allocated to validation, no validation will be run."
             )
 
-        self.log(self.local_start_time_str, num_workers)
+        self.log_and_close(self.local_start_time_str, num_workers)
 
         return self.local_start_time_str
 
@@ -423,16 +465,15 @@ class OnPolicyRunner(object):
         approx_ckpt_step_interval: Optional[Union[float, int]] = None,
         max_sampler_processes_per_worker: Optional[int] = None,
     ) -> List[Dict]:
-        devices = self.worker_devices("test")
-        self.init_visualizer("test")
+        self._initialize_start_train_or_start_test()
+
+        devices = self.worker_devices(TEST_MODE_STR)
+        self.init_visualizer(TEST_MODE_STR)
         num_testers = len(devices)
 
         distributed_port = 0
         if num_testers > 1:
             distributed_port = find_free_port()
-
-        for k, q in self.queues.items():
-            assert q.empty(), f"{k} queue is not empty before starting test."
 
         for tester_it in range(num_testers):
             test: BaseProcess = self.mp_ctx.Process(
@@ -454,10 +495,10 @@ class OnPolicyRunner(object):
             )
 
             test.start()
-            self.processes["test"].append(test)
+            self.processes[TEST_MODE_STR].append(test)
 
         get_logger().info(
-            "Started {} test processes".format(len(self.processes["test"]))
+            "Started {} test processes".format(len(self.processes[TEST_MODE_STR]))
         )
 
         checkpoint_paths = self.get_checkpoint_files(
@@ -472,6 +513,7 @@ class OnPolicyRunner(object):
             # Make all testers work on each checkpoint
             for tester_it in range(num_testers):
                 self.queues["checkpoints"].put(("eval", checkpoint_path))
+
         # Signal all testers to terminate cleanly
         for _ in range(num_testers):
             self.queues["checkpoints"].put(("quit", None))
@@ -487,7 +529,7 @@ class OnPolicyRunner(object):
         with open(metrics_file_path, "w") as f:
             json.dump([], f, indent=4, sort_keys=True, cls=NumpyJSONEncoder)
 
-        return self.log(
+        return self.log_and_close(
             start_time_str=self.checkpoint_start_time_str(checkpoint_paths[0]),
             nworkers=num_testers,
             test_steps=steps,
@@ -510,7 +552,9 @@ class OnPolicyRunner(object):
             return "{}_{}".format(self.config.tag(), self.extra_tag)
         return self.config.tag()
 
-    def checkpoint_dir(self, start_time_str=None, create_if_none: bool = True):
+    def checkpoint_dir(
+        self, start_time_str: Optional[str] = None, create_if_none: bool = True
+    ):
         folder = os.path.join(
             self.output_dir,
             "checkpoints",
@@ -532,7 +576,7 @@ class OnPolicyRunner(object):
             else os.path.join(self.config.tag(), self.extra_tag),
             start_time_str,
         )
-        if self.mode == "test":
+        if self.mode == TEST_MODE_STR:
             path = os.path.join(path, "test", self.local_start_time_str)
         return path
 
@@ -658,7 +702,7 @@ class OnPolicyRunner(object):
         last_offpolicy_steps=0,
         last_time=0.0,
     ):
-        assert self.mode == "train"
+        assert self.mode == TRAIN_MODE_STR
 
         current_time = time.time()
 
@@ -733,7 +777,7 @@ class OnPolicyRunner(object):
         all_results: Optional[List[Any]] = None,
     ):
         mode = pkgs[0].mode
-        assert mode == "test"
+        assert mode == TEST_MODE_STR
 
         training_steps = pkgs[0].training_steps
 
@@ -786,7 +830,7 @@ class OnPolicyRunner(object):
                 num_steps=training_steps,
             )
 
-    def log(
+    def log_and_close(
         self,
         start_time_str: str,
         nworkers: int,
@@ -821,7 +865,7 @@ class OnPolicyRunner(object):
                     if isinstance(package, LoggingPackage):
                         pkg_mode = package.mode
 
-                        if pkg_mode == "train":
+                        if pkg_mode == TRAIN_MODE_STR:
                             collected.append(package)
                             if len(collected) >= nworkers:
 
@@ -869,7 +913,7 @@ class OnPolicyRunner(object):
                                 finalized and self.queues["checkpoints"].empty()
                             ):  # assume queue is actually empty after trainer finished and no checkpoints in queue
                                 break
-                        elif pkg_mode == "test":
+                        elif pkg_mode == TEST_MODE_STR:
                             collected.append(package)
                             if len(collected) >= nworkers:
                                 collected = sorted(
@@ -1037,12 +1081,17 @@ class OnPolicyRunner(object):
                 else:
                     raise NotImplementedError()
 
+        # First send termination signals
+        for process_type in self.processes:
+            for it, process in enumerate(self.processes[process_type]):
+                if process.is_alive():
+                    logif("Terminating {} {}".format(process_type, it))
+                    process.terminate()
+
+        # Now join processes
         for process_type in self.processes:
             for it, process in enumerate(self.processes[process_type]):
                 try:
-                    if process.is_alive():
-                        logif("Closing {} {}".format(process_type, it))
-                        process.terminate()
                     logif("Joining {} {}".format(process_type, it))
                     process.join(1)
                     logif("Closed {} {}".format(process_type, it))
@@ -1052,6 +1101,7 @@ class OnPolicyRunner(object):
                     )
                     logif(e)
 
+        self.processes.clear()
         self._is_closed = True
 
     def __del__(self):
