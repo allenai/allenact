@@ -451,6 +451,15 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             ]
         )
 
+        # only randomize materials in train scenes
+        scene_num = (
+            int(scene[len("FloorPlan") : -len("_physics")])
+            if scene.endswith("_physics")
+            else int(scene[len("FloorPlan") :])
+        )
+        if scene_num % 100 < 21:
+            self.env.step(action="RandomizeMaterials")
+
         task_info = {"scene": scene, "object_type": episode["object_type"]}
         if len(task_info) == 0:
             get_logger().warning(
