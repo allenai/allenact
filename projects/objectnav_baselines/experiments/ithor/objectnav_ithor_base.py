@@ -18,6 +18,8 @@ class ObjectNaviThorBaseConfig(ObjectNavThorBaseConfig, ABC):
 
     AGENT_MODE = "default"
 
+    THOR_COMMIT_ID = "9549791ce2e7f472063a10abb1fb7664159fec23"
+
     TARGET_TYPES = tuple(
         sorted(
             [
