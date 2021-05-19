@@ -49,6 +49,8 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
     VAL_DATASET_DIR: Optional[str] = None
     TEST_DATASET_DIR: Optional[str] = None
 
+    AGENT_MODE: str = "default"
+
     TARGET_TYPES: Optional[Sequence[str]] = None
 
     THOR_COMMIT_ID: Optional[str] = None
@@ -88,7 +90,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
             visibilityDistance=cls.VISIBILITY_DISTANCE,
             gridSize=cls.STEP_SIZE,
             snapToGrid=False,
-            agentMode="locobot",
+            agentMode=cls.AGENT_MODE,
             fieldOfView=horizontal_to_vertical_fov(
                 horizontal_fov_in_degrees=cls.HORIZONTAL_FIELD_OF_VIEW,
                 width=cls.CAMERA_WIDTH,
