@@ -472,13 +472,13 @@ class OnPolicyRunner(object):
                 metrics_dir, "metrics" + suffix + "{:012d}.json"
             )  # template for training steps
 
-        get_logger().info(
-            "Saving valid metrics with template {}".format(metrics_file_template)
-        )
+            get_logger().info(
+                "Saving valid metrics with template {}".format(metrics_file_template)
+            )
 
-        # Check output file can be written
-        with open(metrics_file_template.format(0), "w") as f:
-            json.dump([], f, indent=4, sort_keys=True, cls=NumpyJSONEncoder)
+            # Check output file can be written
+            with open(metrics_file_template.format(0), "w") as f:
+                json.dump([], f, indent=4, sort_keys=True, cls=NumpyJSONEncoder)
 
         valid_results = self.log_and_close(
             start_time_str=self.local_start_time_str,
