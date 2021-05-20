@@ -465,7 +465,7 @@ class MiniGridCondTestExperimentConfig(ExperimentConfig):
 
     @classmethod
     def training_pipeline(cls, **kwargs) -> TrainingPipeline:
-        ppo_steps = int(1024)
+        ppo_steps = int(512)
         return TrainingPipeline(
             named_losses=dict(
                 imitation_loss=Imitation(
@@ -511,12 +511,17 @@ class TestMiniGridCond:
             deterministic_cudnn=False,
             deterministic_agents=False,
             extra_tag="",
-            disable_tensorboard=False,
+            disable_tensorboard=True,
             disable_config_saving=True,
         )
-        runner.start_train(
-            checkpoint=None, restart_pipeline=False, max_sampler_processes_per_worker=1,
+        start_time_str, valid_results = runner.start_train(
+            checkpoint=None,
+            restart_pipeline=False,
+            max_sampler_processes_per_worker=1,
+            collect_valid_results=True,
+            inference_expert=True,
         )
+        assert valid_results[-1]["ep_length"] < 4
 
 
 if __name__ == "__main__":
