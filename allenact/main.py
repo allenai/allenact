@@ -17,8 +17,8 @@ from allenact.base_abstractions.experiment_config import ExperimentConfig
 from allenact.utils.system import get_logger, init_logging, HUMAN_LOG_LEVELS
 
 
-def get_args():
-    """Creates the argument parser and parses any input arguments."""
+def get_argument_parser():
+    """Creates the argument parser."""
 
     # noinspection PyTypeChecker
     parser = argparse.ArgumentParser(
@@ -221,6 +221,13 @@ def get_args():
     )
     ### END DEPRECATED FLAGS
 
+    return parser
+
+
+def get_args():
+    """Creates the argument parser and parses any input arguments."""
+
+    parser = get_argument_parser()
     args = parser.parse_args()
 
     # check for deprecated
@@ -301,10 +308,11 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, str]]:
             sm for sm in all_sub_modules if desired_config_name in os.path.basename(sm)
         ]
         raise ModuleNotFoundError(
-            "Could not import experiment '{}', are you sure this is the right path?"
-            " Possibly relevant files include {}.".format(
-                module_path, relevant_submodules
-            ),
+            f"Could not import experiment '{module_path}', are you sure this is the right path?"
+            f" Possibly relevant files include {relevant_submodules}."
+            f" Note that the experiment must be reachable along your `PYTHONPATH`, it might"
+            f" be helpful for you to run `export PYTHONPATH=$PYTHONPATH:$PWD` in your"
+            f" project's top level directory."
         ) from e
 
     experiments = [

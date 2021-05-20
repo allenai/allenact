@@ -14,7 +14,7 @@ from projects.objectnav_baselines.experiments.objectnav_mixin_resnetgru import (
 )
 
 
-class ObjectNavRoboThorRGBPPOExperimentConfig(
+class ObjectNaviThorRGBPPOExperimentConfig(
     ObjectNaviThorBaseConfig, ObjectNavMixInPPOConfig, ObjectNavMixInResNetGRUConfig
 ):
     """An Object Navigation experiment configuration in iThor with RGBD

@@ -68,6 +68,10 @@ class RoboThorEnvironment:
 
         self.agent_count = self.config["agentCount"]
 
+        self._extra_teleport_kwargs: Dict[
+            str, Any
+        ] = {}  # Used for backwards compatability with the teleport action
+
     def initialize_grid_dimensions(
         self, reachable_points: Collection[Dict[str, float]]
     ) -> Tuple[int, int, int, int]:
@@ -279,16 +283,25 @@ class RoboThorEnvironment:
         agent_id: int = 0,
     ):
         assert 0 <= agent_id < self.agent_count
-        e = self.controller.step(
-            action="TeleportFull",
-            x=pose["x"],
-            y=pose["y"],
-            z=pose["z"],
-            rotation=rotation,
-            horizon=horizon,
-            standing=True,
-            agentId=agent_id,
-        )
+        try:
+            e = self.controller.step(
+                action="TeleportFull",
+                x=pose["x"],
+                y=pose["y"],
+                z=pose["z"],
+                rotation=rotation,
+                horizon=horizon,
+                agentId=agent_id,
+                **self._extra_teleport_kwargs,
+            )
+        except ValueError as e:
+            if len(self._extra_teleport_kwargs) == 0:
+                self._extra_teleport_kwargs["standing"] = True
+            else:
+                raise e
+            return self.teleport(
+                pose=pose, rotation=rotation, horizon=horizon, agent_id=agent_id
+            )
         return e.metadata["lastActionSuccess"]
 
     def reset(

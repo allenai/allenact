@@ -18,8 +18,8 @@ from typing import (
 import abc
 
 import gym
-import numpy as np
 import gym.spaces as gyms
+import numpy as np
 from torch.distributions.utils import lazy_property
 
 from allenact.base_abstractions.misc import EnvType

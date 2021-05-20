@@ -153,11 +153,15 @@ class FindGoalLightHouseTask(LightHouseTask):
     def close(self) -> None:
         pass
 
-    def query_expert(self, **kwargs) -> Tuple[Any, bool]:
+    def query_expert(
+        self,
+        expert_view_radius: int,
+        return_policy: bool = False,
+        deterministic: bool = False,
+        **kwargs,
+    ) -> Tuple[Any, bool]:
         view_tuple = get_corner_observation(
-            env=self.env,
-            view_radius=kwargs["expert_view_radius"],
-            view_corner_offsets=None,
+            env=self.env, view_radius=expert_view_radius, view_corner_offsets=None,
         )
 
         goal = self.env.GOAL
@@ -168,6 +172,9 @@ class FindGoalLightHouseTask(LightHouseTask):
 
             left = 1
             right = 0
+
+            expert_action: Optional[int] = None
+            policy: Optional[np.ndarray] = None
 
             if left_view == goal:
                 expert_action = left
@@ -180,11 +187,12 @@ class FindGoalLightHouseTask(LightHouseTask):
             elif right_view == wrong:
                 expert_action = left
             elif last_action == 2 * self.env.world_dim:
-                return np.array([0.5, 0.5]), True
+                policy = np.array([0.5, 0.5])
             else:
                 expert_action = last_action
 
-            return np.array([expert_action == right, expert_action == left]), True
+            if policy is None:
+                policy = np.array([expert_action == right, expert_action == left])
 
         elif self.env.world_dim == 2:
 
@@ -276,19 +284,26 @@ class FindGoalLightHouseTask(LightHouseTask):
             else:
                 expert_action = last_action
 
-            return (
-                np.array(
-                    [
-                        expert_action == d,
-                        expert_action == r,
-                        expert_action == u,
-                        expert_action == l,
-                    ]
-                ),
-                True,
+            policy = np.array(
+                [
+                    expert_action == d,
+                    expert_action == r,
+                    expert_action == u,
+                    expert_action == l,
+                ]
             )
         else:
             raise NotImplementedError("Can only query expert for world dims of 1 or 2.")
+
+        if return_policy:
+            return policy, True
+        elif deterministic:
+            return int(np.argmax(policy)), True
+        else:
+            return (
+                int(np.argmax(np.random.multinomial(1, policy / (1.0 * policy.sum())))),
+                True,
+            )
 
 
 class FindGoalLightHouseTaskSampler(TaskSampler):

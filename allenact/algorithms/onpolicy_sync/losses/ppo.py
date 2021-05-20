@@ -55,19 +55,26 @@ class PPO(AbstractActorCriticLoss):
 
         actions = cast(torch.LongTensor, batch["actions"])
         values = actor_critic_output.values
+
         action_log_probs = actor_critic_output.distributions.log_prob(actions)
         dist_entropy: torch.FloatTensor = getattr(
             actor_critic_output.distributions, self.entropy_method_name
         )()
 
+        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy()
+
+        def add_trailing_dims(t: torch.Tensor):
+            assert len(t.shape) <= len(batch["norm_adv_targ"].shape)
+            return t.view(
+                t.shape + ((1,) * (len(batch["norm_adv_targ"].shape) - len(t.shape)))
+            )
+
+        dist_entropy = add_trailing_dims(dist_entropy)
+
         clip_param = self.clip_param * self.clip_decay(step_count)
 
         ratio = torch.exp(action_log_probs - batch["old_action_log_probs"])
-        ratio = ratio.view(
-            ratio.shape
-            + (1,)
-            * (len(cast(torch.Tensor, batch["norm_adv_targ"]).shape) - len(ratio.shape))
-        )
+        ratio = add_trailing_dims(ratio)
 
         surr1 = ratio * batch["norm_adv_targ"]
         surr2 = (
