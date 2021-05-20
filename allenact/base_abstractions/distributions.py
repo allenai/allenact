@@ -204,10 +204,11 @@ class TeacherForcingDistr(Distr):
         distr: Distr,
         obs: Dict[str, Any],
         action_space: gym.spaces.Space,
-        num_active_samplers: int,
-        approx_steps: int,
-        teacher_forcing: TeacherForcingAnnealingType,
-        tracking_info: Dict[str, Any],
+        num_active_samplers: Optional[int],
+        approx_steps: Optional[int],
+        teacher_forcing: Optional[TeacherForcingAnnealingType],
+        tracking_info: Optional[Dict[str, Any]],
+        always_enforce: bool = False,
     ):
         self.distr = distr
         self.is_sequential = isinstance(self.distr, SequentialDistr)
@@ -218,6 +219,7 @@ class TeacherForcingDistr(Distr):
         self.approx_steps = approx_steps
         self.teacher_forcing = teacher_forcing
         self.tracking_info = tracking_info
+        self.always_enforce = always_enforce
 
         assert (
             "expert_action" in obs
@@ -233,8 +235,8 @@ class TeacherForcingDistr(Distr):
         sample: Any,
         action_space: gym.spaces.Space,
         teacher: OrderedDict,
-        teacher_force_info: Dict[str, Any],
-        action_name: str = None,
+        teacher_force_info: Optional[Dict[str, Any]],
+        action_name: Optional[str] = None,
     ):
         actions = su.flatten(action_space, sample)
 
@@ -242,7 +244,8 @@ class TeacherForcingDistr(Distr):
             len(actions.shape) == 3
         ), f"Got flattened actions with shape {actions.shape} (it should be [1 x `samplers` x `flatdims`])"
 
-        assert actions.shape[1] == self.num_active_samplers
+        if self.num_active_samplers is not None:
+            assert actions.shape[1] == self.num_active_samplers
 
         expert_actions = su.flatten(action_space, teacher[Expert.ACTION_POLICY_LABEL])
         assert (
@@ -252,20 +255,24 @@ class TeacherForcingDistr(Distr):
         # expert_success is 0 if the expert action could not be computed and otherwise equals 1.
         expert_action_exists_mask = teacher[Expert.EXPERT_SUCCESS_LABEL]
 
-        teacher_forcing_mask = (
-            torch.distributions.bernoulli.Bernoulli(
-                torch.tensor(self.teacher_forcing(self.approx_steps))
-            )
-            .sample(expert_action_exists_mask.shape)
-            .long()
-            .to(actions.device)
-        ) * expert_action_exists_mask
+        if not self.always_enforce:
+            teacher_forcing_mask = (
+                torch.distributions.bernoulli.Bernoulli(
+                    torch.tensor(self.teacher_forcing(self.approx_steps))
+                )
+                .sample(expert_action_exists_mask.shape)
+                .long()
+                .to(actions.device)
+            ) * expert_action_exists_mask
+        else:
+            teacher_forcing_mask = expert_action_exists_mask
 
-        teacher_force_info[
-            "teacher_ratio/sampled{}".format(
-                f"_{action_name}" if action_name is not None else ""
-            )
-        ] = (teacher_forcing_mask.float().mean().item())
+        if teacher_force_info is not None:
+            teacher_force_info[
+                "teacher_ratio/sampled{}".format(
+                    f"_{action_name}" if action_name is not None else ""
+                )
+            ] = (teacher_forcing_mask.float().mean().item())
 
         extended_shape = teacher_forcing_mask.shape + (1,) * (
             len(actions.shape) - len(teacher_forcing_mask.shape)
@@ -287,9 +294,11 @@ class TeacherForcingDistr(Distr):
         return self.distr.conditional_entropy()
 
     def sample(self, sample_shape=torch.Size()):
-        teacher_force_info = {
-            "teacher_ratio/enforced": self.teacher_forcing(self.approx_steps),
-        }
+        teacher_force_info: Optional[Dict[str, Any]] = None
+        if self.approx_steps is not None:
+            teacher_force_info = {
+                "teacher_ratio/enforced": self.teacher_forcing(self.approx_steps),
+            }
 
         if self.is_sequential:
             res = OrderedDict()
@@ -311,9 +320,10 @@ class TeacherForcingDistr(Distr):
                 teacher_force_info,
             )
 
-        self.tracking_info["teacher"].append(
-            ("teacher_package", teacher_force_info, self.num_active_samplers)
-        )
+        if self.tracking_info is not None and self.num_active_samplers is not None:
+            self.tracking_info["teacher"].append(
+                ("teacher_package", teacher_force_info, self.num_active_samplers)
+            )
 
         return res
 

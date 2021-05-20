@@ -509,8 +509,12 @@ class OnPolicyRLEngine(object):
                 else:
                     self._probe_steps = -self._probe_steps
 
-    def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None) -> int:
-        actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
+    def collect_rollout_step(
+        self, rollouts: RolloutStorage, visualizer=None, dist_wrapper_class=None
+    ) -> int:
+        actions, actor_critic_output, memory, _ = self.act(
+            rollouts=rollouts, dist_wrapper_class=dist_wrapper_class
+        )
 
         # Flatten actions
         flat_actions = su.flatten(self.actor_critic.action_space, actions)
@@ -1370,6 +1374,7 @@ class OnPolicyInference(OnPolicyRLEngine):
         worker_id: int = 0,
         num_workers: int = 1,
         distributed_port: int = 0,
+        enforce_expert: bool = False,
         **kwargs,
     ):
         super().__init__(
@@ -1389,6 +1394,8 @@ class OnPolicyInference(OnPolicyRLEngine):
             distributed_port=distributed_port,
             **kwargs,
         )
+
+        self.enforce_expert = enforce_expert
 
     def run_eval(
         self,
@@ -1437,10 +1444,25 @@ class OnPolicyInference(OnPolicyRLEngine):
                 f"[{self.mode}] worker {self.worker_id}: running evaluation on {num_tasks} tasks."
             )
 
+        if self.enforce_expert:
+            dist_wrapper_class = partial(
+                TeacherForcingDistr,
+                action_space=self.actor_critic.action_space,
+                num_active_samplers=None,
+                approx_steps=None,
+                teacher_forcing=None,
+                tracking_info=None,
+                always_enforce=True,
+            )
+        else:
+            dist_wrapper_class = None
+
         logging_pkg = LoggingPackage(mode=self.mode, training_steps=total_steps)
         while self.num_active_samplers > 0:
             frames += self.num_active_samplers
-            self.collect_rollout_step(rollouts, visualizer=visualizer)
+            self.collect_rollout_step(
+                rollouts, visualizer=visualizer, dist_wrapper_class=dist_wrapper_class
+            )
             steps += 1
 
             if steps % rollout_steps == 0:
