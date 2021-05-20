@@ -61,8 +61,6 @@ class PPO(AbstractActorCriticLoss):
             actor_critic_output.distributions, self.entropy_method_name
         )()
 
-        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy()
-
         def add_trailing_dims(t: torch.Tensor):
             assert len(t.shape) <= len(batch["norm_adv_targ"].shape)
             return t.view(

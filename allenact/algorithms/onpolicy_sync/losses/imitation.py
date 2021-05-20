@@ -13,6 +13,7 @@ from allenact.base_abstractions.distributions import (
     Distr,
     CategoricalDistr,
     SequentialDistr,
+    ConditionalDistr,
 )
 from allenact.base_abstractions.misc import ActorCriticOutput
 from allenact.base_abstractions.sensor import AbstractExpertSensor
@@ -35,8 +36,9 @@ class Imitation(AbstractActorCriticLoss):
         expert_actions: torch.Tensor,
         expert_actions_masks: torch.Tensor,
     ):
-        assert isinstance(
-            distribution, CategoricalDistr
+        assert isinstance(distribution, CategoricalDistr) or (
+            isinstance(distribution, ConditionalDistr)
+            and isinstance(distribution.distr, CategoricalDistr)
         ), "This implementation only supports (groups of) `CategoricalDistr`"
 
         expert_successes = expert_actions_masks.sum()
