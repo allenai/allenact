@@ -335,57 +335,6 @@ class MiniGridTask(Task[CrossingEnv]):
         )
 
 
-class ConditionedMiniGridTask(MiniGridTask):
-    _ACTION_NAMES = ("left", "right", "forward", "pickup")
-    _ACTION_IND_TO_MINIGRID_IND = tuple(
-        MiniGridEnv.Actions.__members__[name].value for name in _ACTION_NAMES
-    )
-
-    @property
-    def action_space(self) -> gym.spaces.Dict:
-        return gym.spaces.Dict(
-            higher=gym.spaces.Discrete(2), lower=gym.spaces.Discrete(2)
-        )
-
-    def _step(self, action: Dict[str, int]) -> RLStepResult:
-        assert len(action) == 2, "got action={}".format(action)
-        minigrid_obs, reward, self._minigrid_done, info = self.env.step(
-            action=(
-                self._ACTION_IND_TO_MINIGRID_IND[action["lower"] + 2 * action["higher"]]
-            )
-        )
-
-        # self.env.render()
-
-        return RLStepResult(
-            observation=self.get_observations(minigrid_output_obs=minigrid_obs),
-            reward=reward,
-            done=self.is_done(),
-            info=info,
-        )
-
-    def query_expert(self, **kwargs) -> Tuple[int, bool]:
-        if kwargs["expert_sensor_group_name"] == "higher":
-            if self._minigrid_done:
-                get_logger().warning(
-                    "Episode is completed, but expert is still queried."
-                )
-                return 0, False
-            self.cached_expert = super().query_expert(**kwargs)
-            if self.cached_expert[1]:
-                return self.cached_expert[0] // 2, True
-            else:
-                return 0, False
-        else:
-            assert hasattr(self, "cached_expert")
-            if self.cached_expert[1]:
-                res = (self.cached_expert[0] % 2, True)
-            else:
-                res = (0, False)
-            del self.cached_expert
-            return res
-
-
 class AskForHelpSimpleCrossingTask(MiniGridTask):
     _ACTION_NAMES = ("left", "right", "forward", "toggle")
     _ACTION_IND_TO_MINIGRID_IND = tuple(
