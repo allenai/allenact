@@ -304,6 +304,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         loop_dataset: bool = True,
         allow_flipping=False,
         env_class=RoboThorEnvironment,
+        randomize_materials_in_training: bool = False,
         **kwargs,
     ) -> None:
         self.rewards_config = rewards_config
@@ -335,6 +336,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         self.reset_tasks = self.max_tasks
         self.scene_index = 0
         self.episode_index = 0
+        self.randomize_materials_in_training = randomize_materials_in_training
 
         self._last_sampled_task: Optional[ObjectNavTask] = None
 
@@ -450,6 +452,15 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
                 if o["objectType"] == episode["object_type"]
             ]
         )
+
+        # only randomize materials in train scenes
+        if self.randomize_materials_in_training:
+            if (
+                "Train" in scene
+                or int(scene.replace("FloorPlan", "").replace("_physics", "")) % 100
+                < 21
+            ):
+                self.env.controller.step(action="RandomizeMaterials")
 
         task_info = {"scene": scene, "object_type": episode["object_type"]}
         if len(task_info) == 0:

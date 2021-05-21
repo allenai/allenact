@@ -36,8 +36,8 @@ from projects.pointnav_baselines.models.point_nav_models import (
 )
 
 
-class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
-    """A Point Navigation experiment configuration in RoboThor."""
+class PointNaviThorRGBPPOExperimentConfig(ExperimentConfig):
+    """A Point Navigation experiment configuration in iTHOR."""
 
     # Task Parameters
     MAX_STEPS = 500

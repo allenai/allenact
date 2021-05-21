@@ -16,6 +16,10 @@ class ObjectNaviThorBaseConfig(ObjectNavThorBaseConfig, ABC):
     TRAIN_DATASET_DIR = os.path.join(os.getcwd(), "datasets/ithor-objectnav/train")
     VAL_DATASET_DIR = os.path.join(os.getcwd(), "datasets/ithor-objectnav/val")
 
+    AGENT_MODE = "default"
+
+    THOR_COMMIT_ID = "9549791ce2e7f472063a10abb1fb7664159fec23"
+
     TARGET_TYPES = tuple(
         sorted(
             [
@@ -31,6 +35,6 @@ class ObjectNaviThorBaseConfig(ObjectNavThorBaseConfig, ABC):
                 "SoapBottle",
                 "Television",
                 "Toaster",
-            ]
+            ],
         )
     )
