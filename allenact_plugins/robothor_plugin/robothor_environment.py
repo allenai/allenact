@@ -3,6 +3,7 @@ import glob
 import math
 import pickle
 import random
+import warnings
 from typing import Any, Optional, Dict, List, Union, Tuple, Collection
 
 from ai2thor.fifo_server import FifoServer
@@ -50,7 +51,14 @@ class RoboThorEnvironment:
         if "agentCount" in kwargs:
             assert kwargs["agentCount"] > 0
 
-        recursive_update(self.config, {**kwargs, "agentMode": "locobot"})
+        kwargs["agentMode"] = kwargs.get("agentMode", "locobot")
+        if kwargs["agentMode"] not in ["bot", "locobot"]:
+            warnings.warn(
+                f"The RoboTHOR environment has not been tested using"
+                f" an agent of mode '{kwargs['agentMode']}'."
+            )
+
+        recursive_update(self.config, kwargs)
         self.controller = Controller(**self.config,)
         self.all_metadata_available = all_metadata_available
 

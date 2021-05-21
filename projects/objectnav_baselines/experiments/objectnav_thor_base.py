@@ -61,6 +61,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         train_gpu_ids: Optional[Sequence[int]] = None,
         val_gpu_ids: Optional[Sequence[int]] = None,
         test_gpu_ids: Optional[Sequence[int]] = None,
+        randomize_train_materials: bool = False,
     ):
         super().__init__()
 
@@ -75,6 +76,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         self.test_gpu_ids = v_or_default(test_gpu_ids, self.DEFAULT_TEST_GPU_IDS)
 
         self.sampler_devices = self.train_gpu_ids
+        self.randomize_train_materials = randomize_train_materials
 
     @classmethod
     def env_args(cls):
@@ -262,6 +264,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         res["scene_directory"] = self.TRAIN_DATASET_DIR
         res["loop_dataset"] = True
         res["allow_flipping"] = True
+        res["randomize_materials_in_training"] = self.randomize_train_materials
         return res
 
     def valid_task_sampler_args(
