@@ -433,9 +433,11 @@ class PipelineStage(object):
 
     def __init__(
         self,
+        *,  # Disables positional arguments. Please provide arguments as keyword arguments.
         loss_names: List[str],
         max_stage_steps: Union[int, Callable],
         loss_weights: Optional[Sequence[float]] = None,
+        loss_update_repeats: Optional[Sequence[int]] = None,
         teacher_forcing: Optional[LinearDecay] = None,
         offpolicy_component: Optional[OffPolicyPipelineComponent] = None,
         early_stopping_criterion: Optional[EarlyStoppingCriterion] = None,
@@ -444,6 +446,13 @@ class PipelineStage(object):
         self.max_stage_steps = max_stage_steps
 
         self.loss_weights = loss_weights
+        self.loss_update_repeats = loss_update_repeats
+
+        assert loss_weights is None or len(loss_weights) == len(loss_names)
+        assert loss_update_repeats is None or len(loss_update_repeats) == len(
+            loss_names
+        )
+
         self.teacher_forcing = teacher_forcing
         self.offpolicy_component = offpolicy_component
         self.early_stopping_criterion = early_stopping_criterion
@@ -454,6 +463,7 @@ class PipelineStage(object):
 
         self.named_losses: Optional[Dict[str, AbstractActorCriticLoss]] = None
         self._named_loss_weights: Optional[Dict[str, float]] = None
+        self._named_loss_update_repeats: Optional[Dict[str, float]] = None
 
         self.offpolicy_memory = Memory()
         self.offpolicy_epochs: Optional[int] = None
@@ -467,6 +477,20 @@ class PipelineStage(object):
             self.early_stopping_criterion_met
             or self.steps_taken_in_stage >= self.max_stage_steps
         )
+
+    @property
+    def named_loss_update_repeats(self):
+        if self._named_loss_update_repeats is None:
+            loss_update_repeats = (
+                self.loss_update_repeats
+                if self.loss_update_repeats is not None
+                else [None] * len(self.loss_names)
+            )
+            self._named_loss_update_repeats = {
+                name: weight
+                for name, weight in zip(self.loss_names, loss_update_repeats)
+            }
+        return self._named_loss_update_repeats
 
     @property
     def named_loss_weights(self):
@@ -540,7 +564,7 @@ class TrainingPipeline(object):
         pipeline_stages: List[PipelineStage],
         optimizer_builder: Builder[optim.Optimizer],  # type: ignore
         num_mini_batch: int,
-        update_repeats: int,
+        update_repeats: Optional[int],
         max_grad_norm: float,
         num_steps: int,
         gamma: float,
@@ -563,7 +587,18 @@ class TrainingPipeline(object):
         self.lr_scheduler_builder = lr_scheduler_builder
         self.num_mini_batch = num_mini_batch
 
-        self.update_repeats = update_repeats
+        self._update_repeats = update_repeats
+        if update_repeats is not None:
+            assert all(ps.loss_update_repeats is None for ps in pipeline_stages), (
+                "if `update_repeats` is not `None` then"
+                " all pipeline stages must have their `loss_update_repeats` parameter equal to `None`."
+            )
+        else:
+            assert all(ps.loss_update_repeats is not None for ps in pipeline_stages), (
+                "if `update_repeats` is `None` then"
+                " all pipeline stages must have their `loss_update_repeats` parameter not equal to `None`."
+            )
+
         self.max_grad_norm = max_grad_norm
         self.num_steps = num_steps
         self.named_losses = named_losses
@@ -588,6 +623,13 @@ class TrainingPipeline(object):
         self.off_policy_epochs = None
 
         self._refresh_current_stage(force_stage_search_from_start=True)
+
+    @property
+    def update_repeats(self) -> int:
+        if self._update_repeats is None:
+            return max(self.current_stage.loss_update_repeats)
+        else:
+            return self._update_repeats
 
     @property
     def total_steps(self) -> int:
@@ -709,11 +751,3 @@ class TrainingPipeline(object):
             }
 
         return self.current_stage.offpolicy_named_losses
-
-    @property
-    def current_stage_loss_weights(self) -> Dict[str, float]:
-        return self.current_stage.named_loss_weights
-
-    @property
-    def current_stage_offpolicy_loss_weights(self) -> Dict[str, float]:
-        return self.current_stage.offpolicy_named_loss_weights

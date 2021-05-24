@@ -933,12 +933,17 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
                 info: Dict[str, float] = {}
 
+                current_pipeline_stage = self.training_pipeline.current_stage
                 total_loss: Optional[torch.Tensor] = None
-                for loss_name in self.training_pipeline.current_stage_losses:
-                    loss, loss_weight = (
-                        self.training_pipeline.current_stage_losses[loss_name],
-                        self.training_pipeline.current_stage_loss_weights[loss_name],
+                for loss_name in current_pipeline_stage.loss_names:
+                    loss, loss_weight, loss_update_repeats = (
+                        self.training_pipeline.named_losses[loss_name],
+                        current_pipeline_stage.named_loss_weights[loss_name],
+                        current_pipeline_stage.named_loss_update_repeats[loss_name],
                     )
+                    if loss_update_repeats is not None and e >= loss_update_repeats:
+                        # Skip losses which should not be repeated more than `loss_update_repeats` times.
+                        continue
 
                     current_loss, current_info = loss.loss(
                         step_count=self.step_count,
