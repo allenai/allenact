@@ -460,8 +460,16 @@ class RoboThorEnvironment:
         """
         return self.controller.last_event.metadata["actionReturn"]
 
-    def step(self, action_dict: Dict) -> ai2thor.server.Event:
+    def step(
+        self,
+        action_dict: Optional[Dict[str, Union[str, int, float, Dict]]] = None,
+        **kwargs: Union[str, int, float, Dict],
+    ) -> ai2thor.server.Event:
         """Take a step in the ai2thor environment."""
+        if action_dict is None:
+            action_dict = dict()
+        action_dict.update(kwargs)
+
         return self.controller.step(**action_dict)
 
     def stop(self):

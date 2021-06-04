@@ -639,9 +639,15 @@ class IThorEnvironment(object):
             )
 
     def step(
-        self, action_dict: Dict[str, Union[str, int, float]]
+        self,
+        action_dict: Optional[Dict[str, Union[str, int, float, Dict]]] = None,
+        **kwargs: Union[str, int, float, Dict],
     ) -> ai2thor.server.Event:
         """Take a step in the ai2thor environment."""
+        if action_dict is None:
+            action_dict = dict()
+        action_dict.update(kwargs)
+
         action = cast(str, action_dict["action"])
 
         skip_render = "renderImage" in action_dict and not action_dict["renderImage"]
