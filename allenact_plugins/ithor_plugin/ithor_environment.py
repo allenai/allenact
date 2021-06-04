@@ -639,7 +639,7 @@ class IThorEnvironment(object):
             )
 
     def step(
-        self, action_dict: Dict[str, Union[str, int, float]]
+        self, **action_dict: Dict[str, Union[str, int, float]]
     ) -> ai2thor.server.Event:
         """Take a step in the ai2thor environment."""
         action = cast(str, action_dict["action"])

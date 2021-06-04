@@ -460,7 +460,7 @@ class RoboThorEnvironment:
         """
         return self.controller.last_event.metadata["actionReturn"]
 
-    def step(self, action_dict: Dict) -> ai2thor.server.Event:
+    def step(self, **action_dict: Dict) -> ai2thor.server.Event:
         """Take a step in the ai2thor environment."""
         return self.controller.step(**action_dict)
 
