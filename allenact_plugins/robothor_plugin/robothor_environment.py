@@ -462,11 +462,14 @@ class RoboThorEnvironment:
 
     def step(
         self,
-        action_dict: Optional[Dict[str, Union[str, int, float]]] = dict(),
+        action_dict: Optional[Dict[str, Union[str, int, float]]] = None,
         **kwargs: Dict[str, Union[str, int, float]],
     ) -> ai2thor.server.Event:
         """Take a step in the ai2thor environment."""
+        if action_dict is None:
+            action_dict = dict()
         action_dict.update(kwargs)
+
         return self.controller.step(**action_dict)
 
     def stop(self):
