@@ -96,6 +96,16 @@ class ConditionalDistr(Distr):
         *distr_conditioned_on_input_args,
         **distr_conditioned_on_input_kwargs,
     ):
+        """Initialize an ConditionalDistr
+
+        # Parameters
+        distr_conditioned_on_input_fn_or_instance : Callable to generate `ConditionalDistr` given sampled actions,
+            or given `Distr`.
+        action_group_name : the identifier of the group of actions (`OrderedDict`) produced by this `ConditionalDistr`
+        distr_conditioned_on_input_args : positional arguments for Callable `distr_conditioned_on_input_fn_or_instance`
+        distr_conditioned_on_input_kwargs : keyword arguments for Callable `distr_conditioned_on_input_fn_or_instance`
+        """
+
         self.distr: Optional[Distr] = None
         self.distr_conditioned_on_input_fn: Optional[Callable] = None
         self.distr_conditioned_on_input_args = distr_conditioned_on_input_args

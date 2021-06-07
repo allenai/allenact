@@ -200,13 +200,13 @@ def get_argument_parser():
     parser.set_defaults(collect_valid_results=False)
 
     parser.add_argument(
-        "--inference_expert",
-        dest="inference_expert",
+        "--test_expert",
+        dest="test_expert",
         action="store_true",
         required=False,
-        help="use expert during valid or test",
+        help="use expert during test",
     )
-    parser.set_defaults(inference_expert=False)
+    parser.set_defaults(test_expert=False)
 
     parser.add_argument(
         "--version", action="version", version=f"allenact {__version__}"
@@ -398,7 +398,6 @@ def main():
             restart_pipeline=args.restart_pipeline,
             max_sampler_processes_per_worker=args.max_sampler_processes_per_worker,
             collect_valid_results=args.collect_valid_results,
-            inference_expert=args.inference_expert,
         )
     else:
         OnPolicyRunner(
@@ -416,7 +415,7 @@ def main():
             checkpoint_path_dir_or_pattern=args.checkpoint,
             approx_ckpt_step_interval=args.approx_ckpt_step_interval,
             max_sampler_processes_per_worker=args.max_sampler_processes_per_worker,
-            inference_expert=args.inference_expert,
+            inference_expert=args.test_expert,
         )
 
 

@@ -20,6 +20,8 @@ class A2CACKTR(AbstractActorCriticLoss):
     acktr : `True` if should use ACKTR loss (currently not supported), otherwise uses A2C loss.
     value_loss_coef : Weight of value loss.
     entropy_coef : Weight of entropy (encouraging) loss.
+    entropy_method_name : Name of Distr's entropy method name. Default is `entropy`,
+                          but we might use `conditional_entropy` for `SequentialDistr`.
     """
 
     def __init__(

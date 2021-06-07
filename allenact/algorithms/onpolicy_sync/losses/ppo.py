@@ -21,6 +21,9 @@ class PPO(AbstractActorCriticLoss):
     value_loss_coef : Weight of the value loss.
     entropy_coef : Weight of the entropy (encouraging) loss.
     use_clipped_value_loss : Whether or not to also clip the value loss.
+    clip_decay : Callable for clip param decay factor (function of the current number of steps)
+    entropy_method_name : Name of Distr's entropy method name. Default is `entropy`,
+                          but we might use `conditional_entropy` for `SequentialDistr`
     """
 
     def __init__(

@@ -112,7 +112,7 @@ class OnPolicyRunner(object):
 
         self._is_closed: bool = False
 
-        self.collect_valid_results: bool = False
+        self._collect_valid_results: bool = False
 
     @property
     def local_start_time_str(self) -> str:
@@ -356,11 +356,10 @@ class OnPolicyRunner(object):
         restart_pipeline: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
         collect_valid_results: bool = False,
-        inference_expert: bool = False,
     ):
         self._initialize_start_train_or_start_test()
 
-        self.collect_valid_results = collect_valid_results
+        self._collect_valid_results = collect_valid_results
 
         if not self.disable_config_saving:
             self.save_project_state()
@@ -448,7 +447,6 @@ class OnPolicyRunner(object):
                     mp_ctx=self.mp_ctx,
                     device=device,
                     max_sampler_processes_per_worker=max_sampler_processes_per_worker,
-                    enforce_expert=inference_expert,
                 ),
             )
             valid.start()
@@ -464,7 +462,7 @@ class OnPolicyRunner(object):
 
         metrics_file_template: Optional[str] = None
 
-        if self.collect_valid_results:
+        if self._collect_valid_results:
             metrics_dir = self.metric_path(self.local_start_time_str)
             os.makedirs(metrics_dir, exist_ok=True)
             suffix = "__valid_{}".format(self.local_start_time_str)
@@ -486,7 +484,7 @@ class OnPolicyRunner(object):
             metrics_file=metrics_file_template,
         )
 
-        if not self.collect_valid_results:
+        if not self._collect_valid_results:
             return self.local_start_time_str
         else:
             return self.local_start_time_str, valid_results
@@ -498,6 +496,9 @@ class OnPolicyRunner(object):
         max_sampler_processes_per_worker: Optional[int] = None,
         inference_expert: bool = False,
     ) -> List[Dict]:
+        self.extra_tag += (
+            "__" * (len(self.extra_tag) > 0) + "enforced_test_expert"
+        ) * inference_expert
         self._initialize_start_train_or_start_test()
 
         devices = self.worker_devices(TEST_MODE_STR)
@@ -952,25 +953,28 @@ class OnPolicyRunner(object):
                                     log_writer=log_writer,
                                     pkg=package,
                                     all_results=eval_results
-                                    if self.collect_valid_results
+                                    if self._collect_valid_results
                                     else None,
                                 )
 
-                                with open(
-                                    metrics_file.format(package.training_steps), "w"
-                                ) as f:
-                                    json.dump(
-                                        eval_results[-1],
-                                        f,
-                                        indent=4,
-                                        sort_keys=True,
-                                        cls=NumpyJSONEncoder,
-                                    )
-                                    get_logger().info(
-                                        "Written valid results file {}".format(
-                                            metrics_file.format(package.training_steps),
+                                if metrics_file is not None:
+                                    with open(
+                                        metrics_file.format(package.training_steps), "w"
+                                    ) as f:
+                                        json.dump(
+                                            eval_results[-1],
+                                            f,
+                                            indent=4,
+                                            sort_keys=True,
+                                            cls=NumpyJSONEncoder,
                                         )
-                                    )
+                                        get_logger().info(
+                                            "Written valid results file {}".format(
+                                                metrics_file.format(
+                                                    package.training_steps
+                                                ),
+                                            )
+                                        )
 
                             if (
                                 finalized and self.queues["checkpoints"].empty()

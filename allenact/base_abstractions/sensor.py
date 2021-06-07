@@ -149,7 +149,7 @@ class AbstractExpertSensor(Sensor[EnvType, SubTaskType], abc.ABC):
         expert_args: Optional[Dict[str, Any]] = None,
         nactions: Optional[int] = None,
         use_dict_as_groups: bool = True,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         """Initialize an `ExpertSensor`.
 
@@ -201,12 +201,26 @@ class AbstractExpertSensor(Sensor[EnvType, SubTaskType], abc.ABC):
     @classmethod
     @abc.abstractmethod
     def flagged_group_space(cls, group_space: gym.spaces.Space) -> gym.spaces.Dict:
+        """gym space resulting from wrapping the given action space (or a derived space, as in
+        `AbstractExpertPolicySensor`) together with a binary action space corresponding to an expert
+         success flag, in a Dict space.
+
+        # Parameters
+        group_space : The source action space to be (optionally used to derive a policy space,) flagged and wrapped
+        """
         raise NotImplementedError
 
     @classmethod
     def flagged_space(
         cls, action_space: gym.spaces.Space, use_dict_as_groups: bool = True
     ) -> gym.spaces.Dict:
+        """gym space resulting from wrapping the given action space (or every highest-level entry in a Dict action
+        space), together with binary action space corresponding to an expert success flag, in a Dict space.
+
+        # Parameters
+        action_space : The agent's action space (to be flagged and wrapped)
+        use_dict_as_groups : Flag enabling every highest-level entry in a Dict action space to be independently flagged.
+        """
         use_groups = isinstance(action_space, gym.spaces.Dict) and use_dict_as_groups
 
         if not use_groups:
@@ -220,13 +234,13 @@ class AbstractExpertSensor(Sensor[EnvType, SubTaskType], abc.ABC):
             )
 
     def _get_observation_space(self) -> gym.spaces.Dict:
-        """The observation space of the expert action sensor.
+        """The observation space of the expert sensor.
 
-        For the most basic discrete agent, it will equal `gym.spaces.Tuple(
-        action space, gym.spaces.Discrete(2))` where the first entry of the
-        tuple hosts the expert action index and the second equals 0 if and
-        only if the expert failed to generate a true expert action. The value
-        in `action space` is derived from the provided `action_space`.
+        For the most basic discrete agent's ExpertActionSensor, it will equal `gym.spaces.Dict([
+        (self.ACTION_POLICY_LABEL, self.action_space),
+        (self.EXPERT_SUCCESS_LABEL, gym.spaces.Discrete(2))])`,
+        where the first entry hosts the expert action index and the second equals 0 if and
+        only if the expert failed to generate a true expert action.
         """
         return self.flagged_space(self.action_space, use_dict_as_groups=self.use_groups)
 
@@ -253,9 +267,9 @@ class AbstractExpertSensor(Sensor[EnvType, SubTaskType], abc.ABC):
 
     @abc.abstractmethod
     def query_expert(
-        self, task: SubTaskType, expert_sensor_group_name: Optional[str]
+        self, task: SubTaskType, expert_sensor_group_name: Optional[str],
     ) -> Tuple[Any, bool]:
-        """Query the expert for the given task.
+        """Query the expert for the given task (and optional group name).
 
         # Returns
 
@@ -278,7 +292,7 @@ class AbstractExpertSensor(Sensor[EnvType, SubTaskType], abc.ABC):
         actions_or_policies = OrderedDict()
         for group_name in self.group_spaces:
             action_or_policy, expert_was_successful = self.query_expert(
-                task=task, expert_sensor_group_name=group_name,
+                task=task, expert_sensor_group_name=group_name
             )
 
             actions_or_policies[group_name] = OrderedDict(
@@ -303,12 +317,18 @@ class AbstractExpertActionSensor(AbstractExpertSensor, abc.ABC):
         expert_args: Optional[Dict[str, Any]] = None,
         nactions: Optional[int] = None,
         use_dict_as_groups: bool = True,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         super().__init__(**prepare_locals_for_super(locals()))
 
     @classmethod
     def flagged_group_space(cls, group_space: gym.spaces.Space) -> gym.spaces.Dict:
+        """gym space resulting from wrapping the given action space, together with a binary action space
+        corresponding to an expert success flag, in a Dict space.
+
+        # Parameters
+        group_space : The action space to be flagged and wrapped
+        """
         return gym.spaces.Dict(
             [
                 (cls.ACTION_POLICY_LABEL, group_space),
@@ -318,14 +338,14 @@ class AbstractExpertActionSensor(AbstractExpertSensor, abc.ABC):
 
 
 class ExpertActionSensor(AbstractExpertActionSensor):
-    """A sensor that obtains the expert action from a given task (if
+    """(Deprecated) A sensor that obtains the expert action from a given task (if
     available)."""
 
     def query_expert(
         self, task: SubTaskType, expert_sensor_group_name: Optional[str]
     ) -> Tuple[Any, bool]:
         return task.query_expert(
-            **self.expert_args, expert_sensor_group_name=expert_sensor_group_name,
+            **self.expert_args, expert_sensor_group_name=expert_sensor_group_name
         )
 
 
@@ -337,12 +357,20 @@ class AbstractExpertPolicySensor(AbstractExpertSensor, abc.ABC):
         expert_args: Optional[Dict[str, Any]] = None,
         nactions: Optional[int] = None,
         use_dict_as_groups: bool = True,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         super().__init__(**prepare_locals_for_super(locals()))
 
     @classmethod
     def flagged_group_space(cls, group_space: gym.spaces.Space) -> gym.spaces.Dict:
+        """gym space resulting from wrapping the policy space corresponding to
+        `allenact.utils.spaces_utils.policy_space(group_space)`
+         together with a binary action space corresponding to an expert
+         success flag, in a Dict space.
+
+        # Parameters
+        group_space : The source action space to be used to derive a policy space, flagged and wrapped
+        """
         return gym.spaces.Dict(
             [
                 (cls.ACTION_POLICY_LABEL, su.policy_space(group_space)),
@@ -352,14 +380,14 @@ class AbstractExpertPolicySensor(AbstractExpertSensor, abc.ABC):
 
 
 class ExpertPolicySensor(AbstractExpertPolicySensor):
-    """A sensor that obtains the expert policy from a given task (if
+    """(Deprecated) A sensor that obtains the expert policy from a given task (if
     available)."""
 
     def query_expert(
         self, task: SubTaskType, expert_sensor_group_name: Optional[str]
     ) -> Tuple[Any, bool]:
         return task.query_expert(
-            **self.expert_args, expert_sensor_group_name=expert_sensor_group_name,
+            **self.expert_args, expert_sensor_group_name=expert_sensor_group_name
         )
 
 

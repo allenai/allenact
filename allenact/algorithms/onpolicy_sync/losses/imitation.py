@@ -175,9 +175,7 @@ class Imitation(AbstractActorCriticLoss):
                 )["expert_policy"][..., -1:]
 
                 expert_successes = expert_actions_masks.sum()
-                if expert_successes.item() == 0:
-                    return 0, {}
-                else:
+                if expert_successes.item() > 0:
                     should_report_loss = True
 
                 log_probs = cast(
@@ -194,7 +192,7 @@ class Imitation(AbstractActorCriticLoss):
 
                 total_loss = (
                     -(log_probs * expert_policies) * expert_actions_masks
-                ).sum() / expert_successes
+                ).sum() / torch.clamp(expert_successes, min=1)
             else:
                 raise NotImplementedError(
                     "This implementation currently only supports `CategoricalDistr`"

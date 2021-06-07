@@ -1,4 +1,5 @@
 from typing import Dict, Optional, List, Any, cast, Callable, Union, Tuple
+import os
 
 import gym
 from gym_minigrid.envs import EmptyRandomEnv5x5, MiniGridEnv
@@ -502,7 +503,7 @@ class MiniGridCondTestExperimentConfig(ExperimentConfig):
 class TestMiniGridCond:
     def test_train(self, tmpdir):
         cfg = MiniGridCondTestExperimentConfig()
-        runner = OnPolicyRunner(
+        train_runner = OnPolicyRunner(
             config=cfg,
             output_dir=tmpdir,
             loaded_config_src_files=None,
@@ -514,14 +515,34 @@ class TestMiniGridCond:
             disable_tensorboard=True,
             disable_config_saving=True,
         )
-        start_time_str, valid_results = runner.start_train(
+        start_time_str, valid_results = train_runner.start_train(
             checkpoint=None,
             restart_pipeline=False,
             max_sampler_processes_per_worker=1,
             collect_valid_results=True,
+        )
+        assert len(valid_results) > 0
+
+        test_runner = OnPolicyRunner(
+            config=cfg,
+            output_dir=tmpdir,
+            loaded_config_src_files=None,
+            seed=12345,
+            mode="test",
+            deterministic_cudnn=False,
+            deterministic_agents=False,
+            extra_tag="",
+            disable_tensorboard=True,
+            disable_config_saving=True,
+        )
+        test_results = test_runner.start_test(
+            checkpoint_path_dir_or_pattern=os.path.join(
+                tmpdir, "checkpoints", "**", start_time_str, "*.pt"
+            ),
+            max_sampler_processes_per_worker=1,
             inference_expert=True,
         )
-        assert valid_results[-1]["ep_length"] < 4
+        assert test_results[-1]["ep_length"] < 4
 
 
 if __name__ == "__main__":

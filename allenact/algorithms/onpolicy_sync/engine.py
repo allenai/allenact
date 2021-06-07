@@ -1473,10 +1473,16 @@ class OnPolicyInference(OnPolicyRLEngine):
                 self.aggregate_task_metrics(logging_pkg=logging_pkg)
 
                 if verbose:
-                    lengths = self.vector_tasks.command(
-                        "sampler_attr", ["length"] * self.num_active_samplers,
-                    )
-                    npending = sum(lengths)
+                    npending: int
+                    lengths: List[int]
+                    if self.num_active_samplers > 0:
+                        lengths = self.vector_tasks.command(
+                            "sampler_attr", ["length"] * self.num_active_samplers,
+                        )
+                        npending = sum(lengths)
+                    else:
+                        lengths = []
+                        npending = 0
                     est_time_to_complete = (
                         "{:.2f}".format(
                             (
