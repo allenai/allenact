@@ -1,10 +1,11 @@
 # Running your first experiment
+hello
 
 Assuming you have [installed the full library](../installation/installation-allenact.md#full-library), you can run your
 first experiment by calling
 
 ```bash
-PYTHONPATH=. python allenact/main.py minigrid_tutorial -b projects/tutorials -m 8 -o minigrid_output -s 12345
+PYTHONPATH=. python allenact/main.py minigrid_tutorial -b projects/tutorials -m 8 -o experiment_output/minigrid -s 12345
 ```
 
 from the `allenact` root directory.
@@ -12,11 +13,11 @@ from the `allenact` root directory.
 * With `-b projects/tutorials` we tell `allenact` that `minigrid_tutorial` experiment config file 
 will be found in the `projects/tutorials` directory.
 * With `-m 8` we limit the number of subprocesses to 8 (each subprocess will run 16 of the 128 training task samplers).
-* With `-o minigrid_output` we set the output folder into which results and logs will be saved.
+* With `-o experiment_output/minigrid` we set the output folder into which results and logs will be saved.
 * With `-s 12345` we set the random seed.
 
 If everything was installed correctly, a simple model will be trained (and validated) in the MiniGrid environment and
-a new folder `minigrid_output` will be created containing:
+a new folder `experiment_output/minigrid` will be created containing:
 
 * a `checkpoints/MiniGridTutorial/LOCAL_TIME_STR/` subfolder with model weight checkpoints,
 * a `used_configs/MiniGridTutorial/LOCAL_TIME_STR/` subfolder with all used configuration files,
@@ -27,7 +28,7 @@ Here `LOCAL_TIME_STR` is a string that records the time when the experiment was 
 
 If we have Tensorboard installed, we can track training progress with
 ```bash
-tensorboard --logdir minigrid_output/tb
+tensorboard --logdir experiment_output/minigrid/tb
 ```
 which will default to the URL [http://localhost:6006/](http://localhost:6006/).
 
