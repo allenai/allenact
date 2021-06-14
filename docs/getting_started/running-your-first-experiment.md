@@ -1,5 +1,4 @@
 # Running your first experiment
-hello
 
 Assuming you have [installed the full library](../installation/installation-allenact.md#full-library), you can run your
 first experiment by calling
