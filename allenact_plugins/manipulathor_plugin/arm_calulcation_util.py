@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from scipy.spatial.transform import Rotation as R
 
-from allenact_plugins.manipulathor_plugin.manipulathor_constants import ARM_START_POSITIONS
+from allenact_plugins.manipulathor_plugin.manipulathor_constants import ARM_START_POSITIONS, ADITIONAL_ARM_ARGS
 
 
 def convert_state_to_tensor(state: Dict):

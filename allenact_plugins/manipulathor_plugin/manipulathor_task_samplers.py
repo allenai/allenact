@@ -12,7 +12,7 @@ from allenact_plugins.manipulathor_plugin.arm_calulcation_util import initialize
 from allenact_plugins.manipulathor_plugin.manipulathor_constants import transport_wrapper
 from allenact_plugins.manipulathor_plugin.manipulathor_environment import ManipulaTHOREnvironment
 from allenact_plugins.manipulathor_plugin.manipulathor_tasks import AbstractPickUpDropOffTask, ArmPointNavTask, EasyArmPointNavTask
-from allenact_plugins.manipulathor_plugin.manipulathor_viz import ImageVisualizer
+from allenact_plugins.manipulathor_plugin.manipulathor_viz import ImageVisualizer, LoggerVisualizer
 
 
 class AbstractMidLevelArmTaskSampler(TaskSampler):
