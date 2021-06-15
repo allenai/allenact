@@ -15,7 +15,7 @@ moviepy==1.0.3
 networkx==2.5
 numpy==1.19.5
 opencv-python==4.5.1.48
-Pillow==8.1.1
+Pillow==8.2.0
 proglog==0.1.9
 protobuf==3.14.0
 pyglet==1.5.0
@@ -26,7 +26,7 @@ scipy==1.5.4
 setproctitle==1.2.1
 six==1.15.0
 tensorboardX==2.1
-torch==1.6.0
-torchvision==0.7.0
+torch>=1.6.0,!=1.8.0
+torchvision>=0.7.0
 tqdm==4.56.0
-urllib3==1.26.4
+urllib3==1.26.5

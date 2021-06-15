@@ -7,7 +7,7 @@ from typing import Sequence
 
 import Xlib
 import Xlib.display
-import ai2thor
+import ai2thor.controller
 
 
 @contextmanager
