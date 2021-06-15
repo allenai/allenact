@@ -20,9 +20,19 @@ class A2CACKTR(AbstractActorCriticLoss):
     acktr : `True` if should use ACKTR loss (currently not supported), otherwise uses A2C loss.
     value_loss_coef : Weight of value loss.
     entropy_coef : Weight of entropy (encouraging) loss.
+    entropy_method_name : Name of Distr's entropy method name. Default is `entropy`,
+                          but we might use `conditional_entropy` for `SequentialDistr`.
     """
 
-    def __init__(self, value_loss_coef, entropy_coef, acktr=False, *args, **kwargs):
+    def __init__(
+        self,
+        value_loss_coef,
+        entropy_coef,
+        acktr=False,
+        entropy_method_name: str = "entropy",
+        *args,
+        **kwargs,
+    ):
         """Initializer.
 
         See class documentation for parameter definitions.
@@ -33,6 +43,7 @@ class A2CACKTR(AbstractActorCriticLoss):
 
         self.value_loss_coef = value_loss_coef
         self.entropy_coef = entropy_coef
+        self.entropy_method_name = entropy_method_name
 
     def loss_per_step(  # type: ignore
         self,
@@ -52,7 +63,9 @@ class A2CACKTR(AbstractActorCriticLoss):
             )
         )
 
-        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy()
+        dist_entropy: torch.FloatTensor = getattr(
+            actor_critic_output.distributions, self.entropy_method_name
+        )()
         dist_entropy = dist_entropy.view(
             dist_entropy.shape
             + ((1,) * (len(action_log_probs.shape) - len(dist_entropy.shape)))
@@ -113,11 +126,19 @@ class A2CACKTR(AbstractActorCriticLoss):
 class A2C(A2CACKTR):
     """A2C Loss."""
 
-    def __init__(self, value_loss_coef, entropy_coef, *args, **kwargs):
+    def __init__(
+        self,
+        value_loss_coef,
+        entropy_coef,
+        entropy_method_name: str = "entropy",
+        *args,
+        **kwargs,
+    ):
         super().__init__(
             value_loss_coef=value_loss_coef,
             entropy_coef=entropy_coef,
             acktr=False,
+            entropy_method_name=entropy_method_name,
             *args,
             **kwargs,
         )
@@ -130,11 +151,19 @@ class ACKTR(A2CACKTR):
     for recurrent models.
     """
 
-    def __init__(self, value_loss_coef, entropy_coef, *args, **kwargs):
+    def __init__(
+        self,
+        value_loss_coef,
+        entropy_coef,
+        entropy_method_name: str = "entropy",
+        *args,
+        **kwargs,
+    ):
         super().__init__(
             value_loss_coef=value_loss_coef,
             entropy_coef=entropy_coef,
             acktr=True,
+            entropy_method_name=entropy_method_name,
             *args,
             **kwargs,
         )

@@ -20,6 +20,7 @@ from typing import (
     Iterator,
     Callable,
 )
+from functools import partial
 
 import torch
 import torch.distributed as dist  # type: ignore
@@ -48,6 +49,7 @@ from allenact.algorithms.onpolicy_sync.vector_sampled_tasks import (
 )
 from allenact.base_abstractions.experiment_config import ExperimentConfig, MachineParams
 from allenact.base_abstractions.misc import RLStepResult
+from allenact.base_abstractions.distributions import TeacherForcingDistr
 from allenact.utils import spaces_utils as su
 from allenact.utils.experiment_utils import (
     set_seed,
@@ -428,7 +430,11 @@ class OnPolicyRLEngine(object):
             visualizer.collect(vector_task=self.vector_tasks, alive=keep)
         return npaused
 
-    def act(self, rollouts: RolloutStorage):
+    @property
+    def num_active_samplers(self):
+        return self.vector_tasks.num_unpaused_tasks
+
+    def act(self, rollouts: RolloutStorage, dist_wrapper_class: Optional[type] = None):
         with torch.no_grad():
             step_observation = rollouts.pick_observation_step(rollouts.step)
             memory = rollouts.pick_memory_step(rollouts.step)
@@ -440,12 +446,11 @@ class OnPolicyRLEngine(object):
                 rollouts.masks[rollouts.step : rollouts.step + 1],
             )
 
-            # Assume actions do not contain a step dimension
-            actions = (
-                actor_critic_output.distributions.sample()
-                if not self.deterministic_agents
-                else actor_critic_output.distributions.mode()
-            )
+            distr = actor_critic_output.distributions
+            if dist_wrapper_class is not None:
+                distr = dist_wrapper_class(distr=distr, obs=step_observation)
+
+            actions = distr.sample() if not self.deterministic_agents else distr.mode()
 
         return actions, actor_critic_output, memory, step_observation
 
@@ -504,8 +509,12 @@ class OnPolicyRLEngine(object):
                 else:
                     self._probe_steps = -self._probe_steps
 
-    def collect_rollout_step(self, rollouts: RolloutStorage, visualizer=None) -> int:
-        actions, actor_critic_output, memory, _ = self.act(rollouts=rollouts)
+    def collect_rollout_step(
+        self, rollouts: RolloutStorage, visualizer=None, dist_wrapper_class=None
+    ) -> int:
+        actions, actor_critic_output, memory, _ = self.act(
+            rollouts=rollouts, dist_wrapper_class=dist_wrapper_class
+        )
 
         # Flatten actions
         flat_actions = su.flatten(self.actor_critic.action_space, actions)
@@ -868,43 +877,33 @@ class OnPolicyTrainer(OnPolicyRLEngine):
     def log_interval(self):
         return self.training_pipeline.metric_accumulate_interval
 
-    def act(self, rollouts: RolloutStorage):
-        actions, actor_critic_output, memory, step_observation = super().act(
-            rollouts=rollouts
-        )
-
+    @property
+    def approx_steps(self):
         if self.is_distributed:
-            # TODO this is inaccurate/hacky, but gets synchronized after each rollout
-            approx_steps = (
+            # the actual number of steps gets synchronized after each rollout
+            return (
                 self.step_count - self.former_steps
             ) * self.num_workers + self.former_steps
         else:
-            approx_steps = self.step_count  # this is actually accurate
+            return self.step_count  # this is actually accurate
 
-        num_active_samplers = actor_critic_output.values.shape[1]
-
+    def act(self, rollouts: RolloutStorage, dist_wrapper_class: Optional[type] = None):
         if self.training_pipeline.current_stage.teacher_forcing is not None:
-            if self.training_pipeline.current_stage.teacher_forcing(approx_steps) > 0:
-                actions, enforce_info = self.apply_teacher_forcing(
-                    actions, step_observation, approx_steps
-                )
-                empirical_enforced = (
-                    enforce_info["teacher_forcing_mask"].float().mean().item()
-                )
-            else:
-                empirical_enforced = 0
-
-            teacher_force_info = {
-                "teacher_ratio/sampled": empirical_enforced,
-                "teacher_ratio/enforced": self.training_pipeline.current_stage.teacher_forcing(
-                    approx_steps
-                ),
-            }
-            self.tracking_info["teacher"].append(
-                ("teacher_package", teacher_force_info, actions.nelement())
+            assert dist_wrapper_class is None
+            dist_wrapper_class = partial(
+                TeacherForcingDistr,
+                action_space=self.actor_critic.action_space,
+                num_active_samplers=self.num_active_samplers,
+                approx_steps=self.approx_steps,
+                teacher_forcing=self.training_pipeline.current_stage.teacher_forcing,
+                tracking_info=self.tracking_info,
             )
 
-        self.step_count += num_active_samplers
+        actions, actor_critic_output, memory, step_observation = super().act(
+            rollouts=rollouts, dist_wrapper_class=dist_wrapper_class
+        )
+
+        self.step_count += self.num_active_samplers
 
         return actions, actor_critic_output, memory, step_observation
 
@@ -1125,47 +1124,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             stage.offpolicy_steps_taken_in_stage += current_steps
 
         return data_iterator
-
-    def apply_teacher_forcing(
-        self, actions: Any, step_observation: Dict[str, torch.Tensor], step_count: int,
-    ):
-        # Recall that the last dimension of the expert action tensor has its last element equal to
-        # 0 if the expert action could not be computed and otherwise equals 1.
-        tf_mask_shape = step_observation["expert_action"].shape[:-1] + (1,)
-        expert_actions = step_observation["expert_action"][..., :-1]
-        expert_action_exists_mask = step_observation["expert_action"][..., -1:]
-
-        actions = su.flatten(self.actor_critic.action_space, actions)
-
-        assert (
-            expert_actions.shape == actions.shape
-        ), "expert actions shape {} doesn't match the model's {}".format(
-            expert_actions.shape, actions.shape
-        )
-
-        teacher_forcing_mask = (
-            torch.distributions.bernoulli.Bernoulli(
-                torch.tensor(
-                    self.training_pipeline.current_stage.teacher_forcing(step_count)
-                )
-            )
-            .sample(tf_mask_shape)
-            .long()
-            .to(self.device)
-        ) * expert_action_exists_mask
-
-        extended_shape = teacher_forcing_mask.shape + (1,) * (
-            len(actions.shape) - len(teacher_forcing_mask.shape)
-        )
-
-        actions = torch.where(
-            teacher_forcing_mask.byte().view(extended_shape), expert_actions, actions
-        )
-
-        return (
-            su.unflatten(self.actor_critic.action_space, actions),
-            {"teacher_forcing_mask": teacher_forcing_mask},
-        )
 
     def aggregate_and_send_logging_package(self, tracking_info: Dict[str, List]):
         logging_pkg = LoggingPackage(
@@ -1416,6 +1374,7 @@ class OnPolicyInference(OnPolicyRLEngine):
         worker_id: int = 0,
         num_workers: int = 1,
         distributed_port: int = 0,
+        enforce_expert: bool = False,
         **kwargs,
     ):
         super().__init__(
@@ -1435,6 +1394,8 @@ class OnPolicyInference(OnPolicyRLEngine):
             distributed_port=distributed_port,
             **kwargs,
         )
+
+        self.enforce_expert = enforce_expert
 
     def run_eval(
         self,
@@ -1459,12 +1420,14 @@ class OnPolicyInference(OnPolicyRLEngine):
             assert visualizer.empty()
 
         num_paused = self.initialize_rollouts(rollouts, visualizer=visualizer)
+        assert num_paused == 0, f"{num_paused} tasks paused when initializing eval"
+
         num_tasks = sum(
             self.vector_tasks.command(
-                "sampler_attr", ["length"] * (self.num_samplers - num_paused)
+                "sampler_attr", ["length"] * self.num_active_samplers
             )
         ) + (  # We need to add this as the first tasks have already been sampled
-            self.num_samplers - num_paused
+            self.num_active_samplers
         )
         # get_logger().debug(
         #     "worker {} number of tasks {}".format(self.worker_id, num_tasks)
@@ -1481,24 +1444,45 @@ class OnPolicyInference(OnPolicyRLEngine):
                 f"[{self.mode}] worker {self.worker_id}: running evaluation on {num_tasks} tasks."
             )
 
+        if self.enforce_expert:
+            dist_wrapper_class = partial(
+                TeacherForcingDistr,
+                action_space=self.actor_critic.action_space,
+                num_active_samplers=None,
+                approx_steps=None,
+                teacher_forcing=None,
+                tracking_info=None,
+                always_enforce=True,
+            )
+        else:
+            dist_wrapper_class = None
+
         logging_pkg = LoggingPackage(mode=self.mode, training_steps=total_steps)
-        while num_paused < self.num_samplers:
-            frames += self.num_samplers - num_paused
-            num_paused += self.collect_rollout_step(rollouts, visualizer=visualizer)
+        while self.num_active_samplers > 0:
+            frames += self.num_active_samplers
+            self.collect_rollout_step(
+                rollouts, visualizer=visualizer, dist_wrapper_class=dist_wrapper_class
+            )
             steps += 1
 
             if steps % rollout_steps == 0:
                 rollouts.after_update()
 
             cur_time = time.time()
-            if num_paused >= self.num_samplers or cur_time - last_time >= update_secs:
+            if self.num_active_samplers == 0 or cur_time - last_time >= update_secs:
                 self.aggregate_task_metrics(logging_pkg=logging_pkg)
 
                 if verbose:
-                    lengths = self.vector_tasks.command(
-                        "sampler_attr", ["length"] * (self.num_samplers - num_paused)
-                    )
-                    npending = sum(lengths)
+                    npending: int
+                    lengths: List[int]
+                    if self.num_active_samplers > 0:
+                        lengths = self.vector_tasks.command(
+                            "sampler_attr", ["length"] * self.num_active_samplers,
+                        )
+                        npending = sum(lengths)
+                    else:
+                        lengths = []
+                        npending = 0
                     est_time_to_complete = (
                         "{:.2f}".format(
                             (

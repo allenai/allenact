@@ -7,7 +7,8 @@ import gym.spaces
 import numpy as np
 import torch
 
-from allenact.base_abstractions.sensor import Sensor, RGBSensor
+from allenact.base_abstractions.sensor import Sensor
+from allenact.embodiedai.sensors.vision_sensors import RGBSensor
 from allenact.base_abstractions.task import Task
 from allenact.embodiedai.mapping.mapping_utils.map_builders import (
     BinnedPointCloudMapBuilder,

@@ -231,11 +231,16 @@ class Task(Generic[EnvType]):
         }
 
     def query_expert(self, **kwargs) -> Tuple[Any, bool]:
-        """Query the expert policy for this task.
+        """(Deprecated) Query the expert policy for this task.
+
+        The new correct way to include this functionality is through the definition of a class
+        derived from `allenact.base_abstractions.sensor.AbstractExpertActionSensor` or
+        `allenact.base_abstractions.sensor.AbstractExpertPolicySensor`, where a
+        `query_expert` method must be defined.
 
         # Returns
 
-         A tuple (x, y) where x is the expert action (or policy) and y is False \
+        A tuple (x, y) where x is the expert action (or policy) and y is False \
             if the expert could not determine the optimal action (otherwise True). Here y \
             is used for masking. Even when y is False, x should still lie in the space of \
             possible values (e.g. if x is the expert policy then x should be the correct length, \

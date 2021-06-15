@@ -4,11 +4,8 @@ import gym
 import numpy as np
 from pyquaternion import Quaternion
 
-from allenact.base_abstractions.sensor import (
-    Sensor,
-    RGBSensor,
-    DepthSensor,
-)
+from allenact.base_abstractions.sensor import Sensor
+from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 from allenact.base_abstractions.task import Task
 from allenact.utils.misc_utils import prepare_locals_for_super
 from allenact_plugins.habitat_plugin.habitat_environment import HabitatEnvironment

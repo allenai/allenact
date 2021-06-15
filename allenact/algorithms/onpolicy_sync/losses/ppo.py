@@ -21,6 +21,9 @@ class PPO(AbstractActorCriticLoss):
     value_loss_coef : Weight of the value loss.
     entropy_coef : Weight of the entropy (encouraging) loss.
     use_clipped_value_loss : Whether or not to also clip the value loss.
+    clip_decay : Callable for clip param decay factor (function of the current number of steps)
+    entropy_method_name : Name of Distr's entropy method name. Default is `entropy`,
+                          but we might use `conditional_entropy` for `SequentialDistr`
     """
 
     def __init__(
@@ -30,6 +33,7 @@ class PPO(AbstractActorCriticLoss):
         entropy_coef: float,
         use_clipped_value_loss=True,
         clip_decay: Optional[Callable[[int], float]] = None,
+        entropy_method_name: str = "entropy",
         *args,
         **kwargs
     ):
@@ -43,6 +47,7 @@ class PPO(AbstractActorCriticLoss):
         self.entropy_coef = entropy_coef
         self.use_clipped_value_loss = use_clipped_value_loss
         self.clip_decay = clip_decay if clip_decay is not None else (lambda x: 1.0)
+        self.entropy_method_name = entropy_method_name
 
     def loss_per_step(
         self,
@@ -55,8 +60,9 @@ class PPO(AbstractActorCriticLoss):
         values = actor_critic_output.values
 
         action_log_probs = actor_critic_output.distributions.log_prob(actions)
-
-        dist_entropy: torch.FloatTensor = actor_critic_output.distributions.entropy()
+        dist_entropy: torch.FloatTensor = getattr(
+            actor_critic_output.distributions, self.entropy_method_name
+        )()
 
         def add_trailing_dims(t: torch.Tensor):
             assert len(t.shape) <= len(batch["norm_adv_targ"].shape)

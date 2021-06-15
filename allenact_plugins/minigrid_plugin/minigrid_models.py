@@ -14,12 +14,12 @@ from allenact.algorithms.onpolicy_sync.policy import (
     ActorCriticOutput,
     ObservationType,
 )
-from allenact.base_abstractions.distributions import CategoricalDistr
+from allenact.base_abstractions.distributions import Distr, CategoricalDistr
 from allenact.embodiedai.models.basic_models import LinearActorCritic, RNNActorCritic
 from allenact.utils.misc_utils import prepare_locals_for_super
 
 
-class MiniGridSimpleConvBase(ActorCriticModel[CategoricalDistr], abc.ABC):
+class MiniGridSimpleConvBase(ActorCriticModel[Distr], abc.ABC):
     actor_critic: ActorCriticModel
 
     def __init__(
