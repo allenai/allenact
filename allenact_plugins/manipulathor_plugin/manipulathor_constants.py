@@ -114,4 +114,3 @@ import json
 
 with open("datasets/apnd-dataset/starting_pose.json") as f:
     ARM_START_POSITIONS = json.load(f)
-    #TODO move this to somewhere else
