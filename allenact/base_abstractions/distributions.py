@@ -80,8 +80,8 @@ class CategoricalDistr(torch.distributions.Categorical, Distr):
 
 
 class ConditionalDistr(Distr):
-    """Action distribution conditional which is conditioned on other information
-       (i.e. part of a hierarchical distribution)
+    """Action distribution conditional which is conditioned on other
+    information (i.e. part of a hierarchical distribution)
 
     # Attributes
     action_group_name : the identifier of the group of actions (`OrderedDict`) produced by this `ConditionalDistr`
@@ -96,7 +96,7 @@ class ConditionalDistr(Distr):
         *distr_conditioned_on_input_args,
         **distr_conditioned_on_input_kwargs,
     ):
-        """Initialize an ConditionalDistr
+        """Initialize an ConditionalDistr.
 
         # Parameters
         distr_conditioned_on_input_fn_or_instance : Callable to generate `ConditionalDistr` given sampled actions,
