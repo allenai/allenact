@@ -80,11 +80,10 @@ class ManipulaTHOREnvironment(IThorEnvironment):
             interactions when opening drawers (when simplified, objects within a drawer do not slide around on
             their own when the drawer is opened or closed, instead they are effectively glued down).
         """
-        super(ManipulaTHOREnvironment, self).__init__(x_display=x_display, docker_enabled=docker_enabled, local_thor_build=local_thor_build, visibility_distance=visibility_distance, fov=fov, player_screen_height=player_screen_height,player_screen_width=player_screen_width, quality=quality, restrict_to_initially_reachable_points=restrict_to_initially_reachable_points, make_agents_visible=make_agents_visible, object_open_speed=object_open_speed, simplify_physics=simplify_physics)
-
-
         self._verbose = verbose
         self.env_args = env_args
+        super(ManipulaTHOREnvironment, self).__init__(x_display=x_display, docker_enabled=docker_enabled, local_thor_build=local_thor_build, visibility_distance=visibility_distance, fov=fov, player_screen_height=player_screen_height,player_screen_width=player_screen_width, quality=quality, restrict_to_initially_reachable_points=restrict_to_initially_reachable_points, make_agents_visible=make_agents_visible, object_open_speed=object_open_speed, simplify_physics=simplify_physics)
+
 
         #This happens in the parent
         # self._start_player_screen_width = player_screen_width
@@ -110,11 +109,10 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         # self.object_open_speed = object_open_speed
         # self._always_return_visible_range = False
         # self.simplify_physics = simplify_physics
-
-        self.start(None)
+        # self.start(None)
 
         # noinspection PyTypeHints
-        self.controller.docker_enabled = docker_enabled  # type: ignore
+        # self.controller.docker_enabled = docker_enabled  # type: ignore
 
 
     def create_controller(self):
