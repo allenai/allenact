@@ -152,7 +152,6 @@ class DisjointArmPointNavBaselineActorCritic(ActorCriticModel[CategoricalDistr])
         perception_embed_drop = self.visual_encoder_drop(observations)
 
         pickup_bool = observations["pickedup_object"]
-        before_pickup = pickup_bool == 0  # not used because of our initialization
         after_pickup = pickup_bool == 1
         distances = arm2obj_dist
         distances[after_pickup] = obj2goal_dist[after_pickup]

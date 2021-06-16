@@ -161,9 +161,6 @@ class BringObjImageVisualizer(LoggerVisualizer):
         object_id = task_info["object_id"]
         agent_state = task_info["agent_pose"]
         this_controller = env.controller
-        scene = this_controller.last_event.metadata[
-            "sceneName"
-        ]  # maybe we need to reset env actually]
         #We should not reset here
         # for start arm from high up as a cheating, this block is very important. never remove
         event1, event2, event3 = initialize_arm(this_controller)

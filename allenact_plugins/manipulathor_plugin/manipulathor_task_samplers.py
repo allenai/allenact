@@ -206,7 +206,7 @@ class SimpleArmPointNavGeneralSampler(AbstractMidLevelArmTaskSampler):
             scene_name=scene, agentMode="arm", agentControllerType="mid-level"
         )
 
-        event1, event2, event3 = initialize_arm(self.env.controller)
+        initialize_arm(self.env.controller)
 
         source_location = source_data_point
         target_location = dict(
@@ -223,14 +223,14 @@ class SimpleArmPointNavGeneralSampler(AbstractMidLevelArmTaskSampler):
 
         this_controller = self.env
 
-        event = transport_wrapper(
+        transport_wrapper(
             this_controller,
             source_location["object_id"],
             source_location["object_location"],
         )
         agent_state = source_location["agent_pose"]
 
-        event = this_controller.step(
+        this_controller.step(
             dict(
                 action="TeleportFull",
                 standing=True,
@@ -299,7 +299,6 @@ class SimpleArmPointNavGeneralSampler(AbstractMidLevelArmTaskSampler):
             )
         else:
             result = self.deterministic_data_list[self.sampler_index]["datapoint"]
-            # ForkedPdb().set_trace()
             self.sampler_index += 1
 
         return result
@@ -355,7 +354,7 @@ class ArmPointNavTaskSampler(SimpleArmPointNavGeneralSampler):
             scene_name=scene, agentMode="arm", agentControllerType="mid-level"
         )
 
-        event1, event2, event3 = initialize_arm(self.env.controller)
+        initialize_arm(self.env.controller)
 
         source_location = source_data_point
         target_location = dict(
@@ -366,7 +365,7 @@ class ArmPointNavTaskSampler(SimpleArmPointNavGeneralSampler):
 
         this_controller = self.env
 
-        event = transport_wrapper(
+        transport_wrapper(
             this_controller,
             source_location["object_id"],
             source_location["object_location"],
@@ -376,7 +375,7 @@ class ArmPointNavTaskSampler(SimpleArmPointNavGeneralSampler):
             "initial_agent_pose"
         ]  # THe only line different from father
 
-        event = this_controller.step(
+        this_controller.step(
             dict(
                 action="TeleportFull",
                 standing=True,
@@ -457,7 +456,7 @@ class ArmPointNavTaskSampler(SimpleArmPointNavGeneralSampler):
                 "isStanding": True,
             }
             result[0]["initial_agent_pose"] = initial_agent_pose
-        else:  # we need to fix this for test set, agent init location needs to be fixed, therefore we load a fixed valid agent init that is previously randomized
+        else:  # agent init location needs to be fixed, therefore we load a fixed valid agent init that is previously randomized
             result = self.deterministic_data_list[self.sampler_index]["datapoint"]
             scene_name = self.deterministic_data_list[self.sampler_index]["scene"]
             datapoint_original_index = self.deterministic_data_list[self.sampler_index][

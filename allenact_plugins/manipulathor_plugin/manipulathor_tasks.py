@@ -389,7 +389,7 @@ class EasyArmPointNavTask(ArmPointNavTask):
         # If the object has not been picked up yet and it was picked up in the previous step update parameters to integrate it into reward
         if not self.object_picked_up:
             if object_id in self.env.controller.last_event.metadata['arm']['pickupableObjects']:
-                event = self.env.step(dict(action="PickupObject"))
+                self.env.step(dict(action="PickupObject"))
                 #  we are doing an additional pass here, label is not right and if we fail we will do it twice
                 object_inventory = self.env.controller.last_event.metadata["arm"][
                     "heldObjects"
@@ -398,7 +398,7 @@ class EasyArmPointNavTask(ArmPointNavTask):
                         len(object_inventory) > 0
                         and object_id not in object_inventory
                 ):
-                    event = self.env.step(dict(action="ReleaseObject"))
+                    self.env.step(dict(action="ReleaseObject"))
 
             if self.env.is_object_at_low_level_hand(object_id):
                 self.object_picked_up = True

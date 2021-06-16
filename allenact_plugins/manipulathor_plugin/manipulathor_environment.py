@@ -2,9 +2,8 @@
 
 import copy
 import math
-import typing
 import warnings
-from typing import Tuple, Dict, List, Set, Union, Any, Optional
+from typing import Tuple, Dict, List, Set, Union, Any, Optional, cast
 
 import ai2thor.server
 import numpy as np
@@ -81,32 +80,36 @@ class ManipulaTHOREnvironment(IThorEnvironment):
             interactions when opening drawers (when simplified, objects within a drawer do not slide around on
             their own when the drawer is opened or closed, instead they are effectively glued down).
         """
+        super(ManipulaTHOREnvironment, self).__init__(x_display=x_display, docker_enabled=docker_enabled, local_thor_build=local_thor_build, visibility_distance=visibility_distance, fov=fov, player_screen_height=player_screen_height,player_screen_width=player_screen_width, quality=quality, restrict_to_initially_reachable_points=restrict_to_initially_reachable_points, make_agents_visible=make_agents_visible, object_open_speed=object_open_speed, simplify_physics=simplify_physics)
 
-        self._start_player_screen_width = player_screen_width
-        self._start_player_screen_height = player_screen_height
-        self._local_thor_build = local_thor_build
-        self.x_display = x_display
-        self.controller: Optional[Controller] = None
-        self._started = False
-        self._quality = quality
+
         self._verbose = verbose
         self.env_args = env_args
 
-        self._initially_reachable_points: Optional[List[Dict]] = None
-        self._initially_reachable_points_set: Optional[Set[Tuple[float, float]]] = None
-        self._move_mag: Optional[float] = None
-        self._grid_size: Optional[float] = None
-        self._visibility_distance = visibility_distance
-
-        self._fov = fov
-
-        self.restrict_to_initially_reachable_points = (
-            restrict_to_initially_reachable_points
-        )
-        self.make_agents_visible = make_agents_visible
-        self.object_open_speed = object_open_speed
-        self._always_return_visible_range = False
-        self.simplify_physics = simplify_physics
+        #This happens in the parent
+        # self._start_player_screen_width = player_screen_width
+        # self._start_player_screen_height = player_screen_height
+        # self._local_thor_build = local_thor_build
+        # self.x_display = x_display
+        # self.controller: Optional[Controller] = None
+        # self._started = False
+        # self._quality = quality
+        #
+        # self._initially_reachable_points: Optional[List[Dict]] = None
+        # self._initially_reachable_points_set: Optional[Set[Tuple[float, float]]] = None
+        # self._move_mag: Optional[float] = None
+        # self._grid_size: Optional[float] = None
+        # self._visibility_distance = visibility_distance
+        #
+        # self._fov = fov
+        #
+        # self.restrict_to_initially_reachable_points = (
+        #     restrict_to_initially_reachable_points
+        # )
+        # self.make_agents_visible = make_agents_visible
+        # self.object_open_speed = object_open_speed
+        # self._always_return_visible_range = False
+        # self.simplify_physics = simplify_physics
 
         self.start(None)
 
@@ -224,7 +227,7 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         corrected_dict = copy.deepcopy(flawed_dict)
         anything_changed = 0
         for (k, v) in corrected_dict.items():
-            if v != v or math.isinf(v):
+            if math.isnan(v) or math.isinf(v):
                 corrected_dict[k] = 0
                 anything_changed += 1
         return corrected_dict
@@ -310,7 +313,7 @@ class ManipulaTHOREnvironment(IThorEnvironment):
             self, action_dict: Dict[str, Union[str, int, float]]
     ) -> ai2thor.server.Event:
         """Take a step in the ai2thor environment."""
-        action = typing.cast(str, action_dict["action"])
+        action = cast(str, action_dict["action"])
 
         skip_render = "renderImage" in action_dict and not action_dict["renderImage"]
         last_frame: Optional[np.ndarray] = None
@@ -336,7 +339,7 @@ class ManipulaTHOREnvironment(IThorEnvironment):
                                 len(object_inventory) > 0
                                 and object_id not in object_inventory
                         ):
-                            event = self.step(dict(action="ReleaseObject"))
+                            self.step(dict(action="ReleaseObject"))
             action_dict = {
                 'action': 'Pass'
             }

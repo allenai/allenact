@@ -18,12 +18,6 @@ class ArmPointNavMixInSimpleGRUConfig(ArmPointNavBaseConfig):
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        has_rgb = any(isinstance(s, RGBSensor) for s in cls.SENSORS)
-        has_depth = any(isinstance(s, DepthSensor) for s in cls.SENSORS)
-        goal_sensor_uuid = next(
-            (s.uuid for s in cls.SENSORS if isinstance(s, GoalObjectTypeThorSensor)),
-            None,
-        )
 
         return ArmPointNavBaselineActorCritic(
             action_space=gym.spaces.Discrete(

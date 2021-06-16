@@ -148,7 +148,6 @@ class ArmPointNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         perception_embed = self.visual_encoder(observations)
 
         pickup_bool = observations["pickedup_object"]
-        before_pickup = pickup_bool == 0  # not used because of our initialization
         after_pickup = pickup_bool == 1
         distances = arm2obj_dist
         distances[after_pickup] = obj2goal_dist[after_pickup]
