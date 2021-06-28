@@ -1,9 +1,5 @@
 """Constant values and hyperparameters that are used by the environment."""
-import json
-import os
-
 import ai2thor.fifo_server
-from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 
 
 ARM_MIN_HEIGHT = 0.450998873
@@ -71,9 +67,3 @@ VALID_OBJECT_LIST = [
 ]
 
 
-dataset_json_file = os.path.join(ABS_PATH_OF_TOP_LEVEL_DIR, "datasets", "apnd-dataset", "starting_pose.json")
-try:
-    with open(dataset_json_file) as f:
-        ARM_START_POSITIONS = json.load(f)
-except Exception:
-    raise Exception('Dataset not found in {}'.format(dataset_json_file))

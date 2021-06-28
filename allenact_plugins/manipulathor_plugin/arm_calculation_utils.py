@@ -6,7 +6,9 @@ import torch
 from allenact.utils.system import get_logger
 from scipy.spatial.transform import Rotation as R
 
-from allenact_plugins.manipulathor_plugin.manipulathor_constants import ARM_START_POSITIONS, ADITIONAL_ARM_ARGS
+from allenact_plugins.manipulathor_plugin.armpointnav_constants import ARM_START_POSITIONS
+from allenact_plugins.manipulathor_plugin.manipulathor_constants import ADITIONAL_ARM_ARGS
+
 
 
 def state_dict_to_tensor(state: Dict):
