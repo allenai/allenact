@@ -1,7 +1,11 @@
 """Constant values and hyperparameters that are used by the environment."""
+import json
+import os
+
 import ai2thor
 import ai2thor.fifo_server
 from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment
+from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 
 MOVE_THR = 0.01
 ARM_MIN_HEIGHT = 0.450998873
@@ -48,6 +52,29 @@ ENV_ARGS = dict(
 TRAIN_OBJECTS = ["Apple", "Bread", "Tomato", "Lettuce", "Pot", "Mug"]
 TEST_OBJECTS = ["Potato", "SoapBottle", "Pan", "Egg", "Spatula", "Cup"]
 
+VALID_OBJECT_LIST = [
+    "Knife",
+    "Bread",
+    "Fork",
+    "Potato",
+    "SoapBottle",
+    "Pan",
+    "Plate",
+    "Tomato",
+    "Egg",
+    "Pot",
+    "Spatula",
+    "Cup",
+    "Bowl",
+    "SaltShaker",
+    "PepperShaker",
+    "Lettuce",
+    "ButterKnife",
+    "Apple",
+    "DishSponge",
+    "Spoon",
+    "Mug",
+]
 
 def make_all_objects_unbreakable(controller):
     all_breakable_objects = [
@@ -85,32 +112,9 @@ def transport_wrapper(controller, target_object, target_location):
         controller.step(**advance_detail)
     return event
 
-
-VALID_OBJECT_LIST = [
-    "Knife",
-    "Bread",
-    "Fork",
-    "Potato",
-    "SoapBottle",
-    "Pan",
-    "Plate",
-    "Tomato",
-    "Egg",
-    "Pot",
-    "Spatula",
-    "Cup",
-    "Bowl",
-    "SaltShaker",
-    "PepperShaker",
-    "Lettuce",
-    "ButterKnife",
-    "Apple",
-    "DishSponge",
-    "Spoon",
-    "Mug",
-]
-
-import json
-
-with open("datasets/apnd-dataset/starting_pose.json") as f:
-    ARM_START_POSITIONS = json.load(f)
+dataset_json_file = os.path.join(ABS_PATH_OF_TOP_LEVEL_DIR, "datasets", "apnd-dataset", "starting_pose.json")
+try:
+    with open(dataset_json_file) as f:
+        ARM_START_POSITIONS = json.load(f)
+except Exception:
+    raise Exception('Dataset not found in {}'.format(dataset_json_file))

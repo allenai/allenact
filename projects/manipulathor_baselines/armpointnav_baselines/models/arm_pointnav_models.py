@@ -1,7 +1,6 @@
-"""Baseline models for use in the object navigation task.
+"""Baseline models for use in the Arm Point Navigation task.
 
-Object navigation is currently available as a Task in AI2-THOR and
-Facebook's Habitat.
+Arm Point Navigation is currently available as a Task in ManipulaTHOR.
 """
 from typing import Tuple, Optional
 

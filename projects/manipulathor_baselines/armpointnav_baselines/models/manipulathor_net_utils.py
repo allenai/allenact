@@ -35,7 +35,7 @@ def upshufflenorelu(
     )
 
 
-def combine_block(in_planes, out_planes):
+def combine_block_w_bn(in_planes, out_planes):
     return nn.Sequential(
         nn.Conv2d(in_planes, out_planes, 1, 1),
         nn.BatchNorm2d(out_planes),

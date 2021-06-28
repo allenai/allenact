@@ -3,6 +3,7 @@ from typing import Dict
 
 import numpy as np
 import torch
+from allenact.utils.system import get_logger
 from scipy.spatial.transform import Rotation as R
 
 from allenact_plugins.manipulathor_plugin.manipulathor_constants import ARM_START_POSITIONS, ADITIONAL_ARM_ARGS
@@ -64,7 +65,7 @@ def find_closest_inverse(deg):
     rotation = R.from_euler("xyz", [0, deg, 0], degrees=True)
     result = rotation.as_matrix()
     inverse = inverse_rot_trans_mat(result)
-    print("WARNING: Had to calculate the matrix for ", deg)
+    get_logger().warning(f"Had to calculate the matrix for {deg}")
     return inverse
 
 
@@ -84,7 +85,7 @@ def convert_world_to_agent_coordinate(world_obj, agent_state):
     rotation = agent_state["rotation"]
     agent_translation = [position["x"], position["y"], position["z"]]
     # inverse_agent_rotation = inverse_rot_trans_mat(agent_rotation_matrix[:3, :3])
-    assert abs(rotation["x"] - 0) < 0.01 and abs(rotation["z"] - 0) < 0.01
+    assert abs(rotation["x"]) < 0.01 and abs(rotation["z"]) < 0.01
     inverse_agent_rotation = find_closest_inverse(rotation["y"])
     obj_matrix = make_rotation_matrix(world_obj["position"], world_obj["rotation"])
     obj_translation = np.matmul(
