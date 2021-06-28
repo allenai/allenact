@@ -6,8 +6,8 @@ import cv2
 import imageio
 import numpy as np
 
-from allenact_plugins.manipulathor_plugin.arm_calulcation_util import initialize_arm
-from allenact_plugins.manipulathor_plugin.manipulathor_constants import reset_environment_and_additional_commands, transport_wrapper
+from allenact_plugins.manipulathor_plugin.arm_calculation_utils import initialize_arm
+from allenact_plugins.manipulathor_plugin.manipulathor_utils import reset_environment_and_additional_commands, transport_wrapper
 
 
 class LoggerVisualizer:

@@ -10,16 +10,15 @@ import numpy as np
 from ai2thor.controller import Controller
 from allenact_plugins.ithor_plugin.ithor_constants import VISIBILITY_DISTANCE, FOV
 from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment
+from allenact_plugins.manipulathor_plugin.armpointnav_constants import MOVE_ARM_HEIGHT_CONSTANT, MOVE_ARM_CONSTANT, UNWANTED_MOVE_THR
 
 from allenact_plugins.manipulathor_plugin.manipulathor_constants import (
     ADITIONAL_ARM_ARGS,
     ARM_MIN_HEIGHT,
     ARM_MAX_HEIGHT,
-    MOVE_ARM_HEIGHT_CONSTANT,
-    MOVE_ARM_CONSTANT,
-    reset_environment_and_additional_commands,
-    MOVE_THR,
 )
+
+from allenact_plugins.manipulathor_plugin.manipulathor_utils import reset_environment_and_additional_commands
 
 
 class ManipulaTHOREnvironment(IThorEnvironment):
@@ -174,7 +173,7 @@ class ManipulaTHOREnvironment(IThorEnvironment):
     def randomize_agent_location(
             self, seed: int = None, partial_position: Optional[Dict[str, float]] = None
     ) -> Dict:
-        raise Exception("not used")
+        raise NotImplementedError
 
     def is_object_at_low_level_hand(self, object_id):
         current_objects_in_hand = self.controller.last_event.metadata["arm"]["heldObjects"]
@@ -270,7 +269,7 @@ class ManipulaTHOREnvironment(IThorEnvironment):
             if not self.close_enough(
                     current_object_locations[object_id],
                     initial_object_locations[object_id],
-                    threshold=MOVE_THR,
+                    threshold=UNWANTED_MOVE_THR,
             ):
                 moved_objects.append(object_id)
 

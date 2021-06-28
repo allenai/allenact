@@ -2,16 +2,13 @@
 import json
 import os
 
-import ai2thor
 import ai2thor.fifo_server
-from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 
-MOVE_THR = 0.01
+
 ARM_MIN_HEIGHT = 0.450998873
 ARM_MAX_HEIGHT = 1.8009994
-MOVE_ARM_CONSTANT = 0.05
-MOVE_ARM_HEIGHT_CONSTANT = MOVE_ARM_CONSTANT
+
 
 ADITIONAL_ARM_ARGS = {
     "disableRendering": True,
@@ -49,9 +46,6 @@ ENV_ARGS = dict(
     autoSyncTransforms=True,
 )
 
-TRAIN_OBJECTS = ["Apple", "Bread", "Tomato", "Lettuce", "Pot", "Mug"]
-TEST_OBJECTS = ["Potato", "SoapBottle", "Pan", "Egg", "Spatula", "Cup"]
-
 VALID_OBJECT_LIST = [
     "Knife",
     "Bread",
@@ -76,41 +70,6 @@ VALID_OBJECT_LIST = [
     "Mug",
 ]
 
-def make_all_objects_unbreakable(controller):
-    all_breakable_objects = [
-        o["objectType"]
-        for o in controller.last_event.metadata["objects"]
-        if o["breakable"] is True
-    ]
-    all_breakable_objects = set(all_breakable_objects)
-    for obj_type in all_breakable_objects:
-        controller.step(action="MakeObjectsOfTypeUnbreakable", objectType=obj_type)
-
-
-def reset_environment_and_additional_commands(controller, scene_name):
-    controller.reset(scene_name)
-    controller.step(action="MakeAllObjectsMoveable")
-    controller.step(action="MakeObjectsStaticKinematicMassThreshold")
-    make_all_objects_unbreakable(controller)
-    return
-
-
-def transport_wrapper(controller, target_object, target_location):
-    transport_detail = dict(
-        action="PlaceObjectAtPoint",
-        objectId=target_object,
-        position=target_location,
-        forceKinematic=True,
-    )
-    advance_detail = dict(action="AdvancePhysicsStep", simSeconds=1.0)
-
-    if issubclass(type(controller), IThorEnvironment):
-        event = controller.step(transport_detail)
-        controller.step(advance_detail)
-    elif type(controller) == ai2thor.controller.Controller:
-        event = controller.step(**transport_detail)
-        controller.step(**advance_detail)
-    return event
 
 dataset_json_file = os.path.join(ABS_PATH_OF_TOP_LEVEL_DIR, "datasets", "apnd-dataset", "starting_pose.json")
 try:

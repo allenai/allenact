@@ -1,6 +1,6 @@
 from abc import ABC
 
-from allenact_plugins.manipulathor_plugin.manipulathor_constants import TRAIN_OBJECTS, TEST_OBJECTS
+from allenact_plugins.manipulathor_plugin.armpointnav_constants import TRAIN_OBJECTS, TEST_OBJECTS
 from projects.manipulathor_baselines.armpointnav_baselines.experiments.armpointnav_thor_base import ArmPointNavThorBaseConfig
 
 

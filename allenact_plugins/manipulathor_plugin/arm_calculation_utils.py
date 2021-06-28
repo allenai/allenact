@@ -9,7 +9,7 @@ from scipy.spatial.transform import Rotation as R
 from allenact_plugins.manipulathor_plugin.manipulathor_constants import ARM_START_POSITIONS, ADITIONAL_ARM_ARGS
 
 
-def convert_state_to_tensor(state: Dict):
+def state_dict_to_tensor(state: Dict):
     result = []
     if "position" in state:
         result += [
@@ -33,7 +33,7 @@ def diff_position(state_goal, state_curr):
     return result
 
 
-def make_rotation_matrix(position, rotation):
+def position_rotation_to_matrix(position, rotation):
     result = np.zeros((4, 4))
     r = R.from_euler("xyz", [rotation["x"], rotation["y"], rotation["z"]], degrees=True)
     result[:3, :3] = r.as_matrix()
@@ -42,12 +42,12 @@ def make_rotation_matrix(position, rotation):
     return result
 
 
-def inverse_rot_trans_mat(mat):
+def inverse_rot_trans_matrix(mat):
     mat = np.linalg.inv(mat)
     return mat
 
 
-def position_rotation_from_mat(matrix):
+def matrix_to_position_rotation(matrix):
     result = {"position": None, "rotation": None}
     rotation = R.from_matrix(matrix[:3, :3]).as_euler("xyz", degrees=True)
     rotation_dict = {"x": rotation[0], "y": rotation[1], "z": rotation[2]}
@@ -58,13 +58,13 @@ def position_rotation_from_mat(matrix):
 
 
 def find_closest_inverse(deg):
-    for k in saved_inverse_rotation_mats.keys():
+    for k in _saved_inverse_rotation_mats.keys():
         if abs(k - deg) < 5:
-            return saved_inverse_rotation_mats[k]
+            return _saved_inverse_rotation_mats[k]
     # if it reaches here it means it had not calculated the degree before
     rotation = R.from_euler("xyz", [0, deg, 0], degrees=True)
     result = rotation.as_matrix()
-    inverse = inverse_rot_trans_mat(result)
+    inverse = inverse_rot_trans_matrix(result)
     get_logger().warning(f"Had to calculate the matrix for {deg}")
     return inverse
 
@@ -72,47 +72,30 @@ def find_closest_inverse(deg):
 def calc_inverse(deg):
     rotation = R.from_euler("xyz", [0, deg, 0], degrees=True)
     result = rotation.as_matrix()
-    inverse = inverse_rot_trans_mat(result)
+    inverse = inverse_rot_trans_matrix(result)
     return inverse
 
 
-saved_inverse_rotation_mats = {i: calc_inverse(i) for i in range(0, 360, 45)}
-saved_inverse_rotation_mats[360] = saved_inverse_rotation_mats[0]
+_saved_inverse_rotation_mats = {i: calc_inverse(i) for i in range(0, 360, 45)}
+_saved_inverse_rotation_mats[360] = _saved_inverse_rotation_mats[0]
 
 
-def convert_world_to_agent_coordinate(world_obj, agent_state):
+def world_coords_to_agent_coords(world_obj, agent_state):
     position = agent_state["position"]
     rotation = agent_state["rotation"]
     agent_translation = [position["x"], position["y"], position["z"]]
-    # inverse_agent_rotation = inverse_rot_trans_mat(agent_rotation_matrix[:3, :3])
     assert abs(rotation["x"]) < 0.01 and abs(rotation["z"]) < 0.01
     inverse_agent_rotation = find_closest_inverse(rotation["y"])
-    obj_matrix = make_rotation_matrix(world_obj["position"], world_obj["rotation"])
+    obj_matrix = position_rotation_to_matrix(world_obj["position"], world_obj["rotation"])
     obj_translation = np.matmul(
         inverse_agent_rotation, (obj_matrix[:3, 3] - agent_translation)
     )
     # add rotation later
     obj_matrix[:3, 3] = obj_translation
-    result = position_rotation_from_mat(obj_matrix)
+    result = matrix_to_position_rotation(obj_matrix)
     return result
 
 
-def test_translation_functions():
-    agent_coordinate = {
-        "position": {"x": 1, "y": 0, "z": 2},
-        "rotation": {"x": 0, "y": -45, "z": 0},
-    }
-    obj_coordinate = {
-        "position": {"x": 0, "y": 1, "z": 0},
-        "rotation": {"x": 0, "y": 0, "z": 0},
-    }
-    rotated = convert_world_to_agent_coordinate(obj_coordinate, agent_coordinate)
-    eps = 0.01
-    assert (
-            rotated["position"]["x"] - (-2.1) < eps
-            and rotated["position"]["x"] - (1) < eps
-            and rotated["position"]["x"] - (-0.7) < eps
-    )
 
 
 def initialize_arm(controller):

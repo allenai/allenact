@@ -8,8 +8,8 @@ from allenact.base_abstractions.sensor import Sensor
 from allenact.base_abstractions.task import Task
 from allenact.base_abstractions.task import TaskSampler
 from allenact.utils.experiment_utils import set_deterministic_cudnn, set_seed
-from allenact_plugins.manipulathor_plugin.arm_calulcation_util import initialize_arm
-from allenact_plugins.manipulathor_plugin.manipulathor_constants import transport_wrapper
+from allenact_plugins.manipulathor_plugin.arm_calculation_utils import initialize_arm
+from allenact_plugins.manipulathor_plugin.manipulathor_utils import transport_wrapper
 from allenact_plugins.manipulathor_plugin.manipulathor_environment import ManipulaTHOREnvironment
 from allenact_plugins.manipulathor_plugin.manipulathor_tasks import AbstractPickUpDropOffTask, ArmPointNavTask, EasyArmPointNavTask
 from allenact_plugins.manipulathor_plugin.manipulathor_viz import ImageVisualizer, LoggerVisualizer

@@ -7,9 +7,9 @@ import numpy as np
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import Sensor
 from allenact.base_abstractions.task import Task
+from allenact_plugins.manipulathor_plugin.armpointnav_constants import MOVE_ARM_CONSTANT
 
 from allenact_plugins.manipulathor_plugin.manipulathor_constants import (
-    MOVE_ARM_CONSTANT,
     MOVE_ARM_HEIGHT_P,
     MOVE_ARM_HEIGHT_M,
     MOVE_ARM_X_P,
