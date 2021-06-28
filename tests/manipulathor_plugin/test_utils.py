@@ -22,4 +22,4 @@ class TestArmCalculationUtils(object):
 
 
 if __name__ == "__main__":
-    TestArmCalculationUtils().test_scaler_rgb_thor()
+    TestArmCalculationUtils().test_translation_functions()

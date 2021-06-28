@@ -6,10 +6,6 @@ import torch
 from allenact.utils.system import get_logger
 from scipy.spatial.transform import Rotation as R
 
-from allenact_plugins.manipulathor_plugin.armpointnav_constants import ARM_START_POSITIONS
-from allenact_plugins.manipulathor_plugin.manipulathor_constants import ADITIONAL_ARM_ARGS
-
-
 
 def state_dict_to_tensor(state: Dict):
     result = []
@@ -100,23 +96,4 @@ def world_coords_to_agent_coords(world_obj, agent_state):
 
 
 
-def initialize_arm(controller):
-    # for start arm from high up,
-    scene = controller.last_event.metadata["sceneName"]
-    initial_pose = ARM_START_POSITIONS[scene]
-    event1 = controller.step(
-        dict(
-            action="TeleportFull",
-            standing=True,
-            x=initial_pose["x"],
-            y=initial_pose["y"],
-            z=initial_pose["z"],
-            rotation=dict(x=0, y=initial_pose["rotation"], z=0),
-            horizon=initial_pose["horizon"],
-        )
-    )
-    event2 = controller.step(
-        dict(action="MoveArm", position=dict(x=0.0, y=0, z=0.35), **ADITIONAL_ARM_ARGS)
-    )
-    event3 = controller.step(dict(action="MoveArmBase", y=0.8, **ADITIONAL_ARM_ARGS))
-    return event1, event2, event3
+
