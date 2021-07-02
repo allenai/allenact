@@ -19,7 +19,7 @@ dependencies:
   - networkx
   - numpy>=1.19.1
   - opencv
-  - pillow>=8.0.0
+  - pillow=8.2.0
   - pip
   - proglog=0.1.9
   - protobuf=3.14.0
