@@ -238,6 +238,7 @@ class OnPolicyRLEngine(object):
 
         self.training_pipeline: Optional[TrainingPipeline] = None
 
+        # Keeping track of metrics during training/inference
         self.single_process_metrics: List = []
 
     @property
