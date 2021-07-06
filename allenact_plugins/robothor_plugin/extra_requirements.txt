@@ -1,4 +1,4 @@
-ai2thor==0+7726dcae0010e8766420ead969d84615eda8dc30
+ai2thor==0+9074f84e732edbf93543c176fa0aca18cd384c17
 numpy-quaternion
 pyquaternion>=0.9.9
 colour
