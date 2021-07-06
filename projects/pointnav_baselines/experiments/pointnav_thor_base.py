@@ -25,13 +25,13 @@ from allenact_plugins.robothor_plugin.robothor_task_samplers import (
 from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
 
-if ai2thor.__version__ not in ["0.0.1", None] and version.parse(
-    ai2thor.__version__
-) < version.parse("2.7.2"):
-    raise ImportError(
-        "To run the PointNav baseline experiments you must use"
-        " ai2thor version 2.7.1 or higher."
-    )
+#if ai2thor.__version__ not in ["0.0.1", None] and version.parse(
+#    ai2thor.__version__
+#) < version.parse("2.7.2"):
+#    raise ImportError(
+#        "To run the PointNav baseline experiments you must use"
+#        " ai2thor version 2.7.1 or higher."
+#    )
 
 
 class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
