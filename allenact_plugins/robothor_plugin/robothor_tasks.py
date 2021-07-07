@@ -93,7 +93,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         action_str = self.class_action_names()[action]
 
         if action_str == END:
-            self._took_end_action = True
+            self._took_end_action = False
             self._success = self._is_goal_in_range()
             self.last_action_success = self._success
         else:
