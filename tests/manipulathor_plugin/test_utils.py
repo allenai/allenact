@@ -15,9 +15,9 @@ class TestArmCalculationUtils(object):
         rotated = world_coords_to_agent_coords(obj_coordinate, agent_coordinate)
         eps = 0.01
         assert (
-                rotated["position"]["x"] - (-2.1) < eps
-                and rotated["position"]["x"] - (1) < eps
-                and rotated["position"]["x"] - (-0.7) < eps
+                abs(rotated["position"]["x"] - (-2.12)) < eps
+                and abs(rotated["position"]["y"] - (1.0)) < eps
+                and abs(rotated["position"]["z"] - (-0.70)) < eps
         )
 
 
