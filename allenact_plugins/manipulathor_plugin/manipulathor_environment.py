@@ -3,7 +3,7 @@
 import copy
 import math
 import warnings
-from typing import Tuple, Dict, List, Set, Union, Any, Optional, cast
+from typing import Dict, Union, Any, Optional, cast
 
 import ai2thor.server
 import numpy as np
@@ -296,7 +296,7 @@ class ManipulaTHOREnvironment(IThorEnvironment):
                     #
                     if object_id in pickupable_objects:
                         # This version of the task is actually harder # consider making it easier, are we penalizing failed pickup? yes
-                        event = self.step(dict(action="PickupObject"))
+                        self.step(dict(action="PickupObject"))
                         #  we are doing an additional pass here, label is not right and if we fail we will do it twice
                         object_inventory = self.controller.last_event.metadata["arm"][
                             "heldObjects"
