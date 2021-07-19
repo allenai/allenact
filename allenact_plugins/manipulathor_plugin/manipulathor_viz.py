@@ -7,7 +7,10 @@ import imageio
 import numpy as np
 
 from allenact_plugins.manipulathor_plugin.manipulathor_utils import initialize_arm
-from allenact_plugins.manipulathor_plugin.manipulathor_utils import reset_environment_and_additional_commands, transport_wrapper
+from allenact_plugins.manipulathor_plugin.manipulathor_utils import (
+    reset_environment_and_additional_commands,
+    transport_wrapper,
+)
 
 
 class LoggerVisualizer:
@@ -95,6 +98,7 @@ class TestMetricLogger(LoggerVisualizer):
         self.action_queue.append(action_str)
         self.log_queue.append(action_str)
 
+
 class BringObjImageVisualizer(LoggerVisualizer):
     def finish_episode(self, environment, episode_info, task_info):
         now = datetime.now()
@@ -117,23 +121,21 @@ class BringObjImageVisualizer(LoggerVisualizer):
         pickup_success_offset = "succ" if pickup_success else "fail"
 
         gif_name = (
-                time_to_write
-                + "_from_"
-                + source_object_id.split("|")[0]
-                + "_to_"
-                + goal_object_id.split("|")[0]
-                + "_pickup_"
-                + pickup_success_offset
-                + "_episode_"
-                + episode_success_offset
-                + ".gif"
+            time_to_write
+            + "_from_"
+            + source_object_id.split("|")[0]
+            + "_to_"
+            + goal_object_id.split("|")[0]
+            + "_pickup_"
+            + pickup_success_offset
+            + "_episode_"
+            + episode_success_offset
+            + ".gif"
         )
         concat_all_images = np.expand_dims(np.stack(self.log_queue, axis=0), axis=1)
         save_image_list_to_gif(concat_all_images, gif_name, self.log_dir)
         this_controller = environment.controller
-        scene = this_controller.last_event.metadata[
-            "sceneName"
-        ]
+        scene = this_controller.last_event.metadata["sceneName"]
         reset_environment_and_additional_commands(this_controller, scene)
         self.log_start_goal(
             environment,
@@ -161,13 +163,13 @@ class BringObjImageVisualizer(LoggerVisualizer):
         object_id = task_info["object_id"]
         agent_state = task_info["agent_pose"]
         this_controller = env.controller
-        #We should not reset here
+        # We should not reset here
         # for start arm from high up as a cheating, this block is very important. never remove
         event1, event2, event3 = initialize_arm(this_controller)
         if not (
-                event1.metadata["lastActionSuccess"]
-                and event2.metadata["lastActionSuccess"]
-                and event3.metadata["lastActionSuccess"]
+            event1.metadata["lastActionSuccess"]
+            and event2.metadata["lastActionSuccess"]
+            and event3.metadata["lastActionSuccess"]
         ):
             print("ERROR: ARM MOVEMENT FAILED in logging! SHOULD NEVER HAPPEN")
 
@@ -195,21 +197,21 @@ class BringObjImageVisualizer(LoggerVisualizer):
 
         image_tensor = this_controller.last_event.frame
         image_dir = (
-                img_adr + "_obj_" + object_id.split("|")[0] + "_pickup_" + tag + ".png"
+            img_adr + "_obj_" + object_id.split("|")[0] + "_pickup_" + tag + ".png"
         )
         cv2.imwrite(image_dir, image_tensor[:, :, [2, 1, 0]])
 
         # Saving the mask
-        target_object_id = task_info['object_id']
+        target_object_id = task_info["object_id"]
         all_visible_masks = this_controller.last_event.instance_masks
         if target_object_id in all_visible_masks:
             mask_frame = all_visible_masks[target_object_id]
         else:
-            mask_frame =np.zeros(env.controller.last_event.frame[:,:,0].shape)
+            mask_frame = np.zeros(env.controller.last_event.frame[:, :, 0].shape)
         mask_dir = (
-                img_adr + "_obj_" + object_id.split("|")[0] + "_pickup_" + tag + "_mask.png"
+            img_adr + "_obj_" + object_id.split("|")[0] + "_pickup_" + tag + "_mask.png"
         )
-        cv2.imwrite(mask_dir, mask_frame.astype(float)*255.)
+        cv2.imwrite(mask_dir, mask_frame.astype(float) * 255.0)
 
 
 class ImageVisualizer(LoggerVisualizer):

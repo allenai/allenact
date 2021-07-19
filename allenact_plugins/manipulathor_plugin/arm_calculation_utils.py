@@ -84,7 +84,9 @@ def world_coords_to_agent_coords(world_obj, agent_state):
     agent_translation = [position["x"], position["y"], position["z"]]
     assert abs(rotation["x"]) < 0.01 and abs(rotation["z"]) < 0.01
     inverse_agent_rotation = find_closest_inverse(rotation["y"])
-    obj_matrix = position_rotation_to_matrix(world_obj["position"], world_obj["rotation"])
+    obj_matrix = position_rotation_to_matrix(
+        world_obj["position"], world_obj["rotation"]
+    )
     obj_translation = np.matmul(
         inverse_agent_rotation, (obj_matrix[:3, 3] - agent_translation)
     )
@@ -92,8 +94,3 @@ def world_coords_to_agent_coords(world_obj, agent_state):
     obj_matrix[:3, 3] = obj_translation
     result = matrix_to_position_rotation(obj_matrix)
     return result
-
-
-
-
-

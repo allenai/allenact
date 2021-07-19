@@ -58,10 +58,12 @@ class MachineParams(object):
         )
 
         self._sensor_preprocessor_graph_maybe_builder = sensor_preprocessor_graph
-        self.sampler_devices: Tuple[
-            torch.device, ...
-        ] = None if sampler_devices is None else self._standardize_devices(
-            devices=sampler_devices, nworkers=len(self.nprocesses)
+        self.sampler_devices: Tuple[torch.device, ...] = (
+            None
+            if sampler_devices is None
+            else self._standardize_devices(
+                devices=sampler_devices, nworkers=len(self.nprocesses)
+            )
         )
         self._visualizer_maybe_builder = visualizer
 

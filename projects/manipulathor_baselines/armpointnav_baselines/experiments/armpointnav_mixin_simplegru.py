@@ -4,8 +4,12 @@ import gym
 import torch.nn as nn
 from allenact.base_abstractions.preprocessor import Preprocessor
 from allenact.utils.experiment_utils import Builder
-from projects.manipulathor_baselines.armpointnav_baselines.experiments.armpointnav_base import ArmPointNavBaseConfig
-from projects.manipulathor_baselines.armpointnav_baselines.models.arm_pointnav_models import ArmPointNavBaselineActorCritic
+from projects.manipulathor_baselines.armpointnav_baselines.experiments.armpointnav_base import (
+    ArmPointNavBaseConfig,
+)
+from projects.manipulathor_baselines.armpointnav_baselines.models.arm_pointnav_models import (
+    ArmPointNavBaselineActorCritic,
+)
 
 
 class ArmPointNavMixInSimpleGRUConfig(ArmPointNavBaseConfig):

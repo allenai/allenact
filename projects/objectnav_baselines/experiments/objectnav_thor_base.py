@@ -238,7 +238,10 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG,
-            "env_args": {**self.env_args(), "x_display": x_display,},
+            "env_args": {
+                **self.env_args(),
+                "x_display": x_display,
+            },
         }
 
     def train_task_sampler_args(

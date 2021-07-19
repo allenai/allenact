@@ -112,7 +112,9 @@ class PPO(AbstractActorCriticLoss):
         **kwargs
     ):
         losses_per_step = self.loss_per_step(
-            step_count=step_count, batch=batch, actor_critic_output=actor_critic_output,
+            step_count=step_count,
+            batch=batch,
+            actor_critic_output=actor_critic_output,
         )
         losses = {
             key: (loss.mean(), weight)
@@ -184,7 +186,9 @@ class PPOValue(AbstractActorCriticLoss):
 
         return (
             value_loss,
-            {"value": value_loss.item(),},
+            {
+                "value": value_loss.item(),
+            },
         )
 
 

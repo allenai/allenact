@@ -8,10 +8,22 @@ from allenact.base_abstractions.sensor import Sensor
 from allenact.base_abstractions.task import Task
 from allenact.base_abstractions.task import TaskSampler
 from allenact.utils.experiment_utils import set_deterministic_cudnn, set_seed
-from allenact_plugins.manipulathor_plugin.manipulathor_utils import transport_wrapper, initialize_arm
-from allenact_plugins.manipulathor_plugin.manipulathor_environment import ManipulaTHOREnvironment
-from allenact_plugins.manipulathor_plugin.manipulathor_tasks import AbstractPickUpDropOffTask, ArmPointNavTask, EasyArmPointNavTask
-from allenact_plugins.manipulathor_plugin.manipulathor_viz import ImageVisualizer, LoggerVisualizer
+from allenact_plugins.manipulathor_plugin.manipulathor_utils import (
+    transport_wrapper,
+    initialize_arm,
+)
+from allenact_plugins.manipulathor_plugin.manipulathor_environment import (
+    ManipulaTHOREnvironment,
+)
+from allenact_plugins.manipulathor_plugin.manipulathor_tasks import (
+    AbstractPickUpDropOffTask,
+    ArmPointNavTask,
+    EasyArmPointNavTask,
+)
+from allenact_plugins.manipulathor_plugin.manipulathor_viz import (
+    ImageVisualizer,
+    LoggerVisualizer,
+)
 
 
 class AbstractMidLevelArmTaskSampler(TaskSampler):
@@ -361,7 +373,6 @@ class ArmPointNavTaskSampler(SimpleArmPointNavGeneralSampler):
             rotation={"x": 0, "y": 0, "z": 0},
         )
 
-
         this_controller = self.env
 
         transport_wrapper(
@@ -403,9 +414,9 @@ class ArmPointNavTaskSampler(SimpleArmPointNavGeneralSampler):
             "countertop_id": source_location["countertop_id"],
             "source_location": source_location,
             "target_location": target_location,
-            'agent_initial_state': initial_agent_location,
-            'initial_object_location':initial_object_info,
-            'initial_hand_state': initial_hand_state,
+            "agent_initial_state": initial_agent_location,
+            "initial_object_location": initial_object_info,
+            "initial_hand_state": initial_hand_state,
         }
 
         if len(should_visualize_goal_start) > 0:
@@ -484,8 +495,10 @@ class ArmPointNavTaskSampler(SimpleArmPointNavGeneralSampler):
 
         return result
 
+
 class EasyArmPointNavTaskSampler(ArmPointNavTaskSampler):
     _TASK_TYPE = EasyArmPointNavTask
+
 
 def get_all_tuples_from_list(list):
     result = []

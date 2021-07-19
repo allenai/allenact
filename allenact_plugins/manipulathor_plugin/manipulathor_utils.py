@@ -1,8 +1,12 @@
 import ai2thor
 
 from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment
-from allenact_plugins.manipulathor_plugin.armpointnav_constants import ARM_START_POSITIONS
-from allenact_plugins.manipulathor_plugin.manipulathor_constants import ADITIONAL_ARM_ARGS
+from allenact_plugins.manipulathor_plugin.armpointnav_constants import (
+    ARM_START_POSITIONS,
+)
+from allenact_plugins.manipulathor_plugin.manipulathor_constants import (
+    ADITIONAL_ARM_ARGS,
+)
 
 
 def make_all_objects_unbreakable(controller):
@@ -40,6 +44,7 @@ def transport_wrapper(controller, target_object, target_location):
         event = controller.step(**transport_detail)
         controller.step(**advance_detail)
     return event
+
 
 def initialize_arm(controller):
     # for start arm from high up,

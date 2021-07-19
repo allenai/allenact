@@ -65,5 +65,3 @@ VALID_OBJECT_LIST = [
     "Spoon",
     "Mug",
 ]
-
-

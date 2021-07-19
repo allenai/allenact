@@ -8,9 +8,15 @@ from typing import Dict, Union, Any, Optional, cast
 import ai2thor.server
 import numpy as np
 from ai2thor.controller import Controller
+from allenact.utils.misc_utils import prepare_locals_for_super
+
 from allenact_plugins.ithor_plugin.ithor_constants import VISIBILITY_DISTANCE, FOV
 from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment
-from allenact_plugins.manipulathor_plugin.armpointnav_constants import MOVE_ARM_HEIGHT_CONSTANT, MOVE_ARM_CONSTANT, UNWANTED_MOVE_THR
+from allenact_plugins.manipulathor_plugin.armpointnav_constants import (
+    MOVE_ARM_HEIGHT_CONSTANT,
+    MOVE_ARM_CONSTANT,
+    UNWANTED_MOVE_THR,
+)
 
 from allenact_plugins.manipulathor_plugin.manipulathor_constants import (
     ADITIONAL_ARM_ARGS,
@@ -18,7 +24,9 @@ from allenact_plugins.manipulathor_plugin.manipulathor_constants import (
     ARM_MAX_HEIGHT,
 )
 
-from allenact_plugins.manipulathor_plugin.manipulathor_utils import reset_environment_and_additional_commands
+from allenact_plugins.manipulathor_plugin.manipulathor_utils import (
+    reset_environment_and_additional_commands,
+)
 
 
 class ManipulaTHOREnvironment(IThorEnvironment):
@@ -34,21 +42,21 @@ class ManipulaTHOREnvironment(IThorEnvironment):
     """
 
     def __init__(
-            self,
-            x_display: Optional[str] = None,
-            docker_enabled: bool = False,
-            local_thor_build: Optional[str] = None,
-            visibility_distance: float = VISIBILITY_DISTANCE,
-            fov: float = FOV,
-            player_screen_width: int = 224,
-            player_screen_height: int = 224,
-            quality: str = "Very Low",
-            restrict_to_initially_reachable_points: bool = False,
-            make_agents_visible: bool = True,
-            object_open_speed: float = 1.0,
-            simplify_physics: bool = False,
-            verbose: bool = False,
-            env_args=None,
+        self,
+        x_display: Optional[str] = None,
+        docker_enabled: bool = False,
+        local_thor_build: Optional[str] = None,
+        visibility_distance: float = VISIBILITY_DISTANCE,
+        fov: float = FOV,
+        player_screen_width: int = 224,
+        player_screen_height: int = 224,
+        quality: str = "Very Low",
+        restrict_to_initially_reachable_points: bool = False,
+        make_agents_visible: bool = True,
+        object_open_speed: float = 1.0,
+        simplify_physics: bool = False,
+        verbose: bool = False,
+        env_args=None,
     ) -> None:
         """Initializer.
 
@@ -81,9 +89,9 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         """
         self._verbose = verbose
         self.env_args = env_args
-        super(ManipulaTHOREnvironment, self).__init__(x_display=x_display, docker_enabled=docker_enabled, local_thor_build=local_thor_build, visibility_distance=visibility_distance, fov=fov, player_screen_height=player_screen_height,player_screen_width=player_screen_width, quality=quality, restrict_to_initially_reachable_points=restrict_to_initially_reachable_points, make_agents_visible=make_agents_visible, object_open_speed=object_open_speed, simplify_physics=simplify_physics)
-
-
+        super(ManipulaTHOREnvironment, self).__init__(
+            **prepare_locals_for_super(locals())
+        )
 
     def create_controller(self):
         controller = Controller(**self.env_args)
@@ -91,10 +99,10 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         return controller
 
     def start(
-            self,
-            scene_name: Optional[str],
-            move_mag: float = 0.25,
-            **kwargs,
+        self,
+        scene_name: Optional[str],
+        move_mag: float = 0.25,
+        **kwargs,
     ) -> None:
         """Starts the ai2thor controller if it was previously stopped.
 
@@ -114,8 +122,8 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         self.controller = self.create_controller()
 
         if (
-                self._start_player_screen_height,
-                self._start_player_screen_width,
+            self._start_player_screen_height,
+            self._start_player_screen_width,
         ) != self.current_frame.shape[:2]:
             self.controller.step(
                 {
@@ -129,10 +137,10 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         self.reset(scene_name=scene_name, move_mag=move_mag, **kwargs)
 
     def reset(
-            self,
-            scene_name: Optional[str],
-            move_mag: float = 0.25,
-            **kwargs,
+        self,
+        scene_name: Optional[str],
+        move_mag: float = 0.25,
+        **kwargs,
     ):
         self._move_mag = move_mag
         self._grid_size = self._move_mag
@@ -146,10 +154,8 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         try:
             reset_environment_and_additional_commands(self.controller, scene_name)
         except Exception as e:
-            print("RESETTING THE SCENE,", scene_name, 'because of', str(e))
-            self.controller = ai2thor.controller.Controller(
-                **self.env_args
-            )
+            print("RESETTING THE SCENE,", scene_name, "because of", str(e))
+            self.controller = ai2thor.controller.Controller(**self.env_args)
             reset_environment_and_additional_commands(self.controller, scene_name)
 
         if self.object_open_speed != 1.0:
@@ -171,12 +177,14 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         self.list_of_actions_so_far = []
 
     def randomize_agent_location(
-            self, seed: int = None, partial_position: Optional[Dict[str, float]] = None
+        self, seed: int = None, partial_position: Optional[Dict[str, float]] = None
     ) -> Dict:
         raise NotImplementedError
 
     def is_object_at_low_level_hand(self, object_id):
-        current_objects_in_hand = self.controller.last_event.metadata["arm"]["heldObjects"]
+        current_objects_in_hand = self.controller.last_event.metadata["arm"][
+            "heldObjects"
+        ]
         return object_id in current_objects_in_hand
 
     def object_in_hand(self):
@@ -267,16 +275,16 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         moved_objects = []
         for object_id in current_object_locations.keys():
             if not self.close_enough(
-                    current_object_locations[object_id],
-                    initial_object_locations[object_id],
-                    threshold=UNWANTED_MOVE_THR,
+                current_object_locations[object_id],
+                initial_object_locations[object_id],
+                threshold=UNWANTED_MOVE_THR,
             ):
                 moved_objects.append(object_id)
 
         return moved_objects
 
     def step(
-            self, action_dict: Dict[str, Union[str, int, float]]
+        self, action_dict: Dict[str, Union[str, int, float]]
     ) -> ai2thor.server.Event:
         """Take a step in the ai2thor environment."""
         action = cast(str, action_dict["action"])
@@ -302,13 +310,11 @@ class ManipulaTHOREnvironment(IThorEnvironment):
                             "heldObjects"
                         ]
                         if (
-                                len(object_inventory) > 0
-                                and object_id not in object_inventory
+                            len(object_inventory) > 0
+                            and object_id not in object_inventory
                         ):
                             self.step(dict(action="ReleaseObject"))
-            action_dict = {
-                'action': 'Pass'
-            }
+            action_dict = {"action": "Pass"}
 
         elif not "MoveArm" in action:
             if "Continuous" in action:

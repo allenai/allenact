@@ -9,7 +9,9 @@ from allenact.utils.experiment_utils import (
 )
 from torch.optim.lr_scheduler import LambdaLR
 
-from projects.manipulathor_baselines.armpointnav_baselines.experiments.armpointnav_base import ArmPointNavBaseConfig
+from projects.manipulathor_baselines.armpointnav_baselines.experiments.armpointnav_base import (
+    ArmPointNavBaseConfig,
+)
 
 
 class ArmPointNavMixInPPOConfig(ArmPointNavBaseConfig):

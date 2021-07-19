@@ -13,7 +13,9 @@ from allenact_plugins.manipulathor_plugin.arm_calculation_utils import (
     state_dict_to_tensor,
     diff_position,
 )
-from allenact_plugins.manipulathor_plugin.manipulathor_environment import ManipulaTHOREnvironment
+from allenact_plugins.manipulathor_plugin.manipulathor_environment import (
+    ManipulaTHOREnvironment,
+)
 
 
 class DepthSensorThor(
@@ -28,7 +30,9 @@ class DepthSensorThor(
     frame corresponding to the agent's egocentric view.
     """
 
-    def frame_from_env(self, env: ManipulaTHOREnvironment, task: Optional[Task]) -> np.ndarray:
+    def frame_from_env(
+        self, env: ManipulaTHOREnvironment, task: Optional[Task]
+    ) -> np.ndarray:
         return env.controller.last_event.depth_frame.copy()
 
 
@@ -44,7 +48,9 @@ class NoVisionSensorThor(
     frame corresponding to the agent's egocentric view.
     """
 
-    def frame_from_env(self, env: ManipulaTHOREnvironment, task: Optional[Task]) -> np.ndarray:
+    def frame_from_env(
+        self, env: ManipulaTHOREnvironment, task: Optional[Task]
+    ) -> np.ndarray:
         return np.zeros_like(env.current_frame)
 
 
@@ -81,7 +87,7 @@ class RelativeObjectToGoalSensor(Sensor):
         super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
-            self, env: ManipulaTHOREnvironment, task: Task, *args: Any, **kwargs: Any
+        self, env: ManipulaTHOREnvironment, task: Task, *args: Any, **kwargs: Any
     ) -> Any:
         goal_obj_id = task.task_info["objectId"]
         object_info = env.get_object_by_id(goal_obj_id)
@@ -89,12 +95,8 @@ class RelativeObjectToGoalSensor(Sensor):
 
         agent_state = env.controller.last_event.metadata["agent"]
 
-        relative_current_obj = world_coords_to_agent_coords(
-            object_info, agent_state
-        )
-        relative_goal_state = world_coords_to_agent_coords(
-            target_state, agent_state
-        )
+        relative_current_obj = world_coords_to_agent_coords(object_info, agent_state)
+        relative_goal_state = world_coords_to_agent_coords(target_state, agent_state)
         relative_distance = diff_position(relative_current_obj, relative_goal_state)
         result = state_dict_to_tensor(dict(position=relative_distance))
         return result
@@ -109,18 +111,16 @@ class InitialObjectToGoalSensor(Sensor):
         super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
-            self, env: ManipulaTHOREnvironment, task: Task, *args: Any, **kwargs: Any
+        self, env: ManipulaTHOREnvironment, task: Task, *args: Any, **kwargs: Any
     ) -> Any:
-        object_source_location = task.task_info['initial_object_location']
+        object_source_location = task.task_info["initial_object_location"]
         target_state = task.task_info["target_location"]
-        agent_state = task.task_info['agent_initial_state']
+        agent_state = task.task_info["agent_initial_state"]
 
         relative_current_obj = world_coords_to_agent_coords(
             object_source_location, agent_state
         )
-        relative_goal_state = world_coords_to_agent_coords(
-            target_state, agent_state
-        )
+        relative_goal_state = world_coords_to_agent_coords(target_state, agent_state)
         relative_distance = diff_position(relative_current_obj, relative_goal_state)
         result = state_dict_to_tensor(dict(position=relative_distance))
         return result
@@ -135,7 +135,7 @@ class DistanceObjectToGoalSensor(Sensor):
         super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
-            self, env: ManipulaTHOREnvironment, task: Task, *args: Any, **kwargs: Any
+        self, env: ManipulaTHOREnvironment, task: Task, *args: Any, **kwargs: Any
     ) -> Any:
         goal_obj_id = task.task_info["objectId"]
         object_info = env.get_object_by_id(goal_obj_id)
@@ -143,16 +143,12 @@ class DistanceObjectToGoalSensor(Sensor):
 
         agent_state = env.controller.last_event.metadata["agent"]
 
-        relative_current_obj = world_coords_to_agent_coords(
-            object_info, agent_state
-        )
-        relative_goal_state = world_coords_to_agent_coords(
-            target_state, agent_state
-        )
+        relative_current_obj = world_coords_to_agent_coords(object_info, agent_state)
+        relative_goal_state = world_coords_to_agent_coords(target_state, agent_state)
         relative_distance = diff_position(relative_current_obj, relative_goal_state)
         result = state_dict_to_tensor(dict(position=relative_distance))
 
-        result = ((result ** 2).sum()**0.5).view(1)
+        result = ((result ** 2).sum() ** 0.5).view(1)
         return result
 
 
@@ -164,7 +160,7 @@ class RelativeAgentArmToObjectSensor(Sensor):
         super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
-            self, env: ManipulaTHOREnvironment, task: Task, *args: Any, **kwargs: Any
+        self, env: ManipulaTHOREnvironment, task: Task, *args: Any, **kwargs: Any
     ) -> Any:
         goal_obj_id = task.task_info["objectId"]
         object_info = env.get_object_by_id(goal_obj_id)
@@ -190,11 +186,11 @@ class InitialAgentArmToObjectSensor(Sensor):
         super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
-            self, env: ManipulaTHOREnvironment, task: Task, *args: Any, **kwargs: Any
+        self, env: ManipulaTHOREnvironment, task: Task, *args: Any, **kwargs: Any
     ) -> Any:
 
-        object_source_location = task.task_info['initial_object_location']
-        initial_hand_state = task.task_info['initial_hand_state']
+        object_source_location = task.task_info["initial_object_location"]
+        initial_hand_state = task.task_info["initial_hand_state"]
 
         relative_goal_obj = world_coords_to_agent_coords(
             object_source_location, env.controller.last_event.metadata["agent"]
@@ -207,6 +203,7 @@ class InitialAgentArmToObjectSensor(Sensor):
 
         return result
 
+
 class DistanceAgentArmToObjectSensor(Sensor):
     def __init__(self, uuid: str = "distance_agent_arm_to_obj", **kwargs: Any):
         observation_space = gym.spaces.Box(
@@ -215,7 +212,7 @@ class DistanceAgentArmToObjectSensor(Sensor):
         super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
-            self, env: ManipulaTHOREnvironment, task: Task, *args: Any, **kwargs: Any
+        self, env: ManipulaTHOREnvironment, task: Task, *args: Any, **kwargs: Any
     ) -> Any:
         goal_obj_id = task.task_info["objectId"]
         object_info = env.get_object_by_id(goal_obj_id)
@@ -230,7 +227,7 @@ class DistanceAgentArmToObjectSensor(Sensor):
         relative_distance = diff_position(relative_goal_obj, relative_hand_state)
         result = state_dict_to_tensor(dict(position=relative_distance))
 
-        result = ((result ** 2).sum()**0.5).view(1)
+        result = ((result ** 2).sum() ** 0.5).view(1)
         return result
 
 

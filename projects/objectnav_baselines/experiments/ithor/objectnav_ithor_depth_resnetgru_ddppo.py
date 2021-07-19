@@ -12,7 +12,9 @@ from projects.objectnav_baselines.experiments.objectnav_mixin_resnetgru import (
 
 
 class ObjectNaviThorRGBPPOExperimentConfig(
-    ObjectNaviThorBaseConfig, ObjectNavMixInPPOConfig, ObjectNavMixInResNetGRUConfig,
+    ObjectNaviThorBaseConfig,
+    ObjectNavMixInPPOConfig,
+    ObjectNavMixInResNetGRUConfig,
 ):
     """An Object Navigation experiment configuration in iThor with Depth
     input."""
@@ -24,7 +26,9 @@ class ObjectNaviThorRGBPPOExperimentConfig(
             use_normalization=True,
             uuid="depth_lowres",
         ),
-        GoalObjectTypeThorSensor(object_types=ObjectNaviThorBaseConfig.TARGET_TYPES,),
+        GoalObjectTypeThorSensor(
+            object_types=ObjectNaviThorBaseConfig.TARGET_TYPES,
+        ),
     )
 
     @classmethod

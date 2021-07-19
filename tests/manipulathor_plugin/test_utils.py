@@ -1,8 +1,9 @@
-from allenact_plugins.manipulathor_plugin.arm_calculation_utils import world_coords_to_agent_coords
+from allenact_plugins.manipulathor_plugin.arm_calculation_utils import (
+    world_coords_to_agent_coords,
+)
 
 
 class TestArmCalculationUtils(object):
-
     def test_translation_functions(self):
         agent_coordinate = {
             "position": {"x": 1, "y": 0, "z": 2},
@@ -15,9 +16,9 @@ class TestArmCalculationUtils(object):
         rotated = world_coords_to_agent_coords(obj_coordinate, agent_coordinate)
         eps = 0.01
         assert (
-                abs(rotated["position"]["x"] - (-2.12)) < eps
-                and abs(rotated["position"]["y"] - (1.0)) < eps
-                and abs(rotated["position"]["z"] - (-0.70)) < eps
+            abs(rotated["position"]["x"] - (-2.12)) < eps
+            and abs(rotated["position"]["y"] - (1.0)) < eps
+            and abs(rotated["position"]["z"] - (-0.70)) < eps
         )
 
 

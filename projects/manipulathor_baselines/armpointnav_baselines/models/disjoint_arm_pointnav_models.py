@@ -18,8 +18,12 @@ from allenact.base_abstractions.misc import ActorCriticOutput
 from allenact.embodiedai.models.basic_models import SimpleCNN, RNNStateEncoder
 from gym.spaces.dict import Dict as SpaceDict
 
-from projects.manipulathor_baselines.armpointnav_baselines.models.base_models import LinearActorHeadNoCategory
-from projects.manipulathor_baselines.armpointnav_baselines.models.manipulathor_net_utils import input_embedding_net
+from projects.manipulathor_baselines.armpointnav_baselines.models.base_models import (
+    LinearActorHeadNoCategory,
+)
+from projects.manipulathor_baselines.armpointnav_baselines.models.manipulathor_net_utils import (
+    input_embedding_net,
+)
 
 
 class DisjointArmPointNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):

@@ -2,14 +2,18 @@ import gym
 import torch.nn as nn
 
 from allenact_plugins.manipulathor_plugin.manipulathor_constants import ENV_ARGS
-from allenact_plugins.manipulathor_plugin.manipulathor_task_samplers import ArmPointNavTaskSampler
-from projects.manipulathor_baselines.armpointnav_baselines.experiments.ithor.armpointnav_depth import ArmPointNavDepth
-from projects.manipulathor_baselines.armpointnav_baselines.models.disjoint_arm_pointnav_models import DisjointArmPointNavBaselineActorCritic
+from allenact_plugins.manipulathor_plugin.manipulathor_task_samplers import (
+    ArmPointNavTaskSampler,
+)
+from projects.manipulathor_baselines.armpointnav_baselines.experiments.ithor.armpointnav_depth import (
+    ArmPointNavDepth,
+)
+from projects.manipulathor_baselines.armpointnav_baselines.models.disjoint_arm_pointnav_models import (
+    DisjointArmPointNavBaselineActorCritic,
+)
 
 
-class ArmPointNavDisjointDepth(
-    ArmPointNavDepth
-):
+class ArmPointNavDisjointDepth(ArmPointNavDepth):
     """An Object Navigation experiment configuration in iThor with RGB
     input."""
 

@@ -1,9 +1,22 @@
 from allenact_plugins.manipulathor_plugin.manipulathor_constants import ENV_ARGS
-from allenact_plugins.manipulathor_plugin.manipulathor_sensors import DepthSensorThor, RelativeAgentArmToObjectSensor, RelativeObjectToGoalSensor, PickedUpObjSensor
-from allenact_plugins.manipulathor_plugin.manipulathor_task_samplers import ArmPointNavTaskSampler
-from projects.manipulathor_baselines.armpointnav_baselines.experiments.armpointnav_mixin_ddppo import ArmPointNavMixInPPOConfig
-from projects.manipulathor_baselines.armpointnav_baselines.experiments.armpointnav_mixin_simplegru import ArmPointNavMixInSimpleGRUConfig
-from projects.manipulathor_baselines.armpointnav_baselines.experiments.ithor.armpointnav_ithor_base import ArmPointNaviThorBaseConfig
+from allenact_plugins.manipulathor_plugin.manipulathor_sensors import (
+    DepthSensorThor,
+    RelativeAgentArmToObjectSensor,
+    RelativeObjectToGoalSensor,
+    PickedUpObjSensor,
+)
+from allenact_plugins.manipulathor_plugin.manipulathor_task_samplers import (
+    ArmPointNavTaskSampler,
+)
+from projects.manipulathor_baselines.armpointnav_baselines.experiments.armpointnav_mixin_ddppo import (
+    ArmPointNavMixInPPOConfig,
+)
+from projects.manipulathor_baselines.armpointnav_baselines.experiments.armpointnav_mixin_simplegru import (
+    ArmPointNavMixInSimpleGRUConfig,
+)
+from projects.manipulathor_baselines.armpointnav_baselines.experiments.ithor.armpointnav_ithor_base import (
+    ArmPointNaviThorBaseConfig,
+)
 
 
 class ArmPointNavDepth(

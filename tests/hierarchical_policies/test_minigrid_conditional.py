@@ -129,7 +129,11 @@ class ConditionedLinearActorCritic(ActorCriticModel[SequentialDistr]):
 
         # noinspection PyArgumentList
         return (
-            ActorCriticOutput(distributions=dists, values=values, extras={},),
+            ActorCriticOutput(
+                distributions=dists,
+                values=values,
+                extras={},
+            ),
             None,
         )
 
@@ -477,7 +481,9 @@ class MiniGridCondTestExperimentConfig(ExperimentConfig):
             pipeline_stages=[
                 PipelineStage(
                     teacher_forcing=LinearDecay(
-                        startp=1.0, endp=0.0, steps=ppo_steps // 2,
+                        startp=1.0,
+                        endp=0.0,
+                        steps=ppo_steps // 2,
                     ),
                     loss_names=["imitation_loss", "ppo_loss"],
                     max_stage_steps=ppo_steps,

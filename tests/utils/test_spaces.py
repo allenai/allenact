@@ -20,7 +20,10 @@ class TestSpaces(object):
                 ]
             ),
             "second": gyms.Tuple(
-                [gyms.Dict({"third": gyms.Discrete(11)}), gyms.MultiBinary(8),]
+                [
+                    gyms.Dict({"third": gyms.Discrete(11)}),
+                    gyms.MultiBinary(8),
+                ]
             ),
         }
     )

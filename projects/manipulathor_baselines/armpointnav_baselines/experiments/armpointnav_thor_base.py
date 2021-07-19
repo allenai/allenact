@@ -12,9 +12,16 @@ from allenact.base_abstractions.sensor import SensorSuite, ExpertActionSensor
 from allenact.base_abstractions.task import TaskSampler
 from allenact.utils.experiment_utils import evenly_distribute_count_into_bins
 from allenact_plugins.manipulathor_plugin.manipulathor_constants import ENV_ARGS
-from allenact_plugins.manipulathor_plugin.manipulathor_task_samplers import SimpleArmPointNavGeneralSampler
-from allenact_plugins.manipulathor_plugin.manipulathor_viz import ImageVisualizer, TestMetricLogger
-from projects.manipulathor_baselines.armpointnav_baselines.experiments.armpointnav_base import ArmPointNavBaseConfig
+from allenact_plugins.manipulathor_plugin.manipulathor_task_samplers import (
+    SimpleArmPointNavGeneralSampler,
+)
+from allenact_plugins.manipulathor_plugin.manipulathor_viz import (
+    ImageVisualizer,
+    TestMetricLogger,
+)
+from projects.manipulathor_baselines.armpointnav_baselines.experiments.armpointnav_base import (
+    ArmPointNavBaseConfig,
+)
 
 
 class ArmPointNavThorBaseConfig(ArmPointNavBaseConfig, ABC):

@@ -289,7 +289,8 @@ def project_point_cloud_to_map(
 
     isvalid = torch.logical_and(
         torch.logical_and(
-            (uvw_points_binned >= 0).all(-1), (uvw_points_binned < maxes).all(-1),
+            (uvw_points_binned >= 0).all(-1),
+            (uvw_points_binned < maxes).all(-1),
         ),
         isnotnan,
     )
@@ -382,7 +383,7 @@ def _cpu_only_camera_space_xyz_to_world_xyz(
 def _cpu_only_depth_frame_to_camera_space_xyz(
     depth_frame: np.ndarray, mask: Optional[np.ndarray], fov: float = 90
 ):
-    """"""
+    """ """
     assert (
         len(depth_frame.shape) == 2 and depth_frame.shape[0] == depth_frame.shape[1]
     ), f"depth has shape {depth_frame.shape}, we only support (N, N) shapes for now."
