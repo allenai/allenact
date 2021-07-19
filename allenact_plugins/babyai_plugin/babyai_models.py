@@ -233,7 +233,9 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         }
         return (
             ActorCriticOutput(
-                distributions=CategoricalDistr(logits=self.actor(embedding),),
+                distributions=CategoricalDistr(
+                    logits=self.actor(embedding),
+                ),
                 values=self.critic(embedding),
                 extras=extra_predictions
                 if not self.include_auxiliary_head
@@ -436,7 +438,9 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         embedding = embedding.view(rollouts_len * nsamplers, -1)
 
         ac_output = ActorCriticOutput(
-            distributions=CategoricalDistr(logits=self.actor(embedding),),
+            distributions=CategoricalDistr(
+                logits=self.actor(embedding),
+            ),
             values=self.critic(embedding),
             extras=extra_predictions
             if not self.include_auxiliary_head
@@ -582,7 +586,10 @@ class BabyAIRecurrentACModel(ActorCriticModel[CategoricalDistr]):
         self.include_auxiliary_head = include_auxiliary_head
 
         self.baby_ai_model = BabyAIACModelWrapped(
-            obs_space={"image": 7 * 7 * 3, "instr": 100,},
+            obs_space={
+                "image": 7 * 7 * 3,
+                "instr": 100,
+            },
             action_space=action_space,
             image_dim=image_dim,
             memory_dim=memory_dim,

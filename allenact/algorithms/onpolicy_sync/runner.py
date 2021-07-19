@@ -405,7 +405,8 @@ class OnPolicyRunner(object):
                 else model_hash,
             )
             train: BaseProcess = self.mp_ctx.Process(
-                target=self.train_loop, kwargs=training_kwargs,
+                target=self.train_loop,
+                kwargs=training_kwargs,
             )
             try:
                 train.start()
@@ -418,7 +419,8 @@ class OnPolicyRunner(object):
                     model_hash = md5_hash_of_state_dict(initial_model_state_dict)
                     training_kwargs["initial_model_state_dict"] = model_hash
                     train = self.mp_ctx.Process(
-                        target=self.train_loop, kwargs=training_kwargs,
+                        target=self.train_loop,
+                        kwargs=training_kwargs,
                     )
                     train.start()
                 else:
@@ -676,7 +678,11 @@ class OnPolicyRunner(object):
                     prefix = "" if k == -1 else "namecollision{}__".format(k)
                     k += 1
                     dst_path = os.path.join(
-                        base_dir, "{}{}".format(prefix, os.path.basename(src_path),),
+                        base_dir,
+                        "{}{}".format(
+                            prefix,
+                            os.path.basename(src_path),
+                        ),
                     )
                     if not os.path.exists(dst_path):
                         os.makedirs(os.path.dirname(dst_path), exist_ok=True)

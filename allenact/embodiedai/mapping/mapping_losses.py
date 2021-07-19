@@ -14,7 +14,9 @@ class BinnedPointCloudMapLoss(AbstractActorCriticLoss):
     prediction."""
 
     def __init__(
-        self, binned_pc_uuid: str, map_logits_uuid: str,
+        self,
+        binned_pc_uuid: str,
+        map_logits_uuid: str,
     ):
         """Initializer.
 

@@ -66,7 +66,10 @@ def get_corner_observation(
             [on_border_value, last_action],
         ),
         axis=0,
-        out=np.zeros((seen_corner_values.shape[0] + 2,), dtype=np.float32,),
+        out=np.zeros(
+            (seen_corner_values.shape[0] + 2,),
+            dtype=np.float32,
+        ),
     )
 
 

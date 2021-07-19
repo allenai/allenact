@@ -142,7 +142,10 @@ class ActiveNeuralSLAM(nn.Module):
             ), "When using layernorm, we require that set `freeze_resnet_batchnorm` to True."
             self.resnet_normalizer = nn.Sequential(
                 nn.Conv2d(512, 512, 1),
-                nn.LayerNorm(normalized_shape=[512, 7, 7], elementwise_affine=True,),
+                nn.LayerNorm(
+                    normalized_shape=[512, 7, 7],
+                    elementwise_affine=True,
+                ),
             )
             self.resnet_normalizer.apply(simple_conv_and_linear_weights_init)
         else:
@@ -305,13 +308,18 @@ class ActiveNeuralSLAM(nn.Module):
                 1
             ).to(self.device)
             rotation_and_translate_mat = torch.cat(
-                (rot_mat, offset_to_top_of_image + offset_to_center_the_agent,), dim=-1,
+                (
+                    rot_mat,
+                    offset_to_top_of_image + offset_to_center_the_agent,
+                ),
+                dim=-1,
             )
 
             ego_map = F.grid_sample(
                 allocentric_map,
                 F.affine_grid(
-                    rotation_and_translate_mat.to(self.device), allocentric_map.shape,
+                    rotation_and_translate_mat.to(self.device),
+                    allocentric_map.shape,
                 ),
                 padding_mode=padding_mode,
                 align_corners=False,
@@ -353,7 +361,8 @@ class ActiveNeuralSLAM(nn.Module):
 
     @staticmethod
     def update_allocentric_xzrs_with_egocentric_movement(
-        last_xzrs_allocentric: torch.Tensor, dx_dz_drs_egocentric: torch.Tensor,
+        last_xzrs_allocentric: torch.Tensor,
+        dx_dz_drs_egocentric: torch.Tensor,
     ):
         new_xzrs_allocentric = last_xzrs_allocentric.clone()
 
@@ -476,14 +485,18 @@ class ActiveNeuralSLAM(nn.Module):
             )
 
         if self.use_pose_estimation:
-            updated_xzrs_allocentrc = self.update_allocentric_xzrs_with_egocentric_movement(
-                last_xzrs_allocentric=last_xzrs_allocentric,
-                dx_dz_drs_egocentric=dx_dz_dr_egocentric_preds,
+            updated_xzrs_allocentrc = (
+                self.update_allocentric_xzrs_with_egocentric_movement(
+                    last_xzrs_allocentric=last_xzrs_allocentric,
+                    dx_dz_drs_egocentric=dx_dz_dr_egocentric_preds,
+                )
             )
         elif dx_dz_drs_egocentric is not None:
-            updated_xzrs_allocentrc = self.update_allocentric_xzrs_with_egocentric_movement(
-                last_xzrs_allocentric=last_xzrs_allocentric,
-                dx_dz_drs_egocentric=dx_dz_drs_egocentric,
+            updated_xzrs_allocentrc = (
+                self.update_allocentric_xzrs_with_egocentric_movement(
+                    last_xzrs_allocentric=last_xzrs_allocentric,
+                    dx_dz_drs_egocentric=dx_dz_drs_egocentric,
+                )
             )
         else:
             updated_xzrs_allocentrc = None
@@ -495,11 +508,13 @@ class ActiveNeuralSLAM(nn.Module):
             with torch.no_grad():
                 # Rotate and translate the egocentric map view, we do this grid sampling
                 # at the level of probabilities as bad results can occur at the logit level
-                full_size_allocentric_map_probs_update = _move_egocentric_map_view_into_allocentric_position(
-                    map_probs_egocentric=map_probs_egocentric,
-                    xzrs_allocentric=updated_xzrs_allocentrc,
-                    allocentric_map_height_width=(self.map_size, self.map_size),
-                    resolution_in_cm=self.resolution_in_cm,
+                full_size_allocentric_map_probs_update = (
+                    _move_egocentric_map_view_into_allocentric_position(
+                        map_probs_egocentric=map_probs_egocentric,
+                        xzrs_allocentric=updated_xzrs_allocentrc,
+                        allocentric_map_height_width=(self.map_size, self.map_size),
+                        resolution_in_cm=self.resolution_in_cm,
+                    )
                 )
 
                 map_probs_allocentric = torch.max(

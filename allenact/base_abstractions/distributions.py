@@ -192,9 +192,9 @@ class SequentialDistr(Distr):
             self.conditional_distrs
         ), f"{len(self.conditional_distrs)} conditional distributions for {len(actions)} action groups"
 
-        res: Union[
-            int, torch.Tensor, Dict[str, torch.Tensor]
-        ] = 0 if not return_dict else OrderedDict()
+        res: Union[int, torch.Tensor, Dict[str, torch.Tensor]] = (
+            0 if not return_dict else OrderedDict()
+        )
 
         for cd in self.conditional_distrs:
             cd.condition_on_input(**actions)

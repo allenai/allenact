@@ -52,7 +52,9 @@ class RoboThorEnvironment:
             assert kwargs["agentCount"] > 0
 
         recursive_update(self.config, {**kwargs, "agentMode": "locobot"})
-        self.controller = Controller(**self.config,)
+        self.controller = Controller(
+            **self.config,
+        )
         self.all_metadata_available = all_metadata_available
 
         self.scene_to_reachable_positions: Optional[Dict[str, Any]] = None

@@ -45,7 +45,9 @@ class ObjectNavMixInDAggerConfig(ObjectNavBaseConfig):
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"imitation_loss": Imitation(),},
+            named_losses={
+                "imitation_loss": Imitation(),
+            },
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
@@ -54,17 +56,24 @@ class ObjectNavMixInDAggerConfig(ObjectNavBaseConfig):
                 PipelineStage(
                     loss_names=["imitation_loss"],
                     max_stage_steps=tf_steps,
-                    teacher_forcing=LinearDecay(startp=1.0, endp=1.0, steps=tf_steps,),
+                    teacher_forcing=LinearDecay(
+                        startp=1.0,
+                        endp=1.0,
+                        steps=tf_steps,
+                    ),
                 ),
                 PipelineStage(
                     loss_names=["imitation_loss"],
                     max_stage_steps=anneal_steps + il_no_tf_steps,
                     teacher_forcing=LinearDecay(
-                        startp=1.0, endp=0.0, steps=anneal_steps,
+                        startp=1.0,
+                        endp=0.0,
+                        steps=anneal_steps,
                     ),
                 ),
             ],
             lr_scheduler_builder=Builder(
-                LambdaLR, {"lr_lambda": LinearDecay(steps=training_steps)},
+                LambdaLR,
+                {"lr_lambda": LinearDecay(steps=training_steps)},
             ),
         )

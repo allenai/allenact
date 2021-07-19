@@ -62,8 +62,16 @@ class RolloutStorage(object):
         self.action_space = actor_critic.action_space
 
         action_flat_dim = su.flatdim(self.action_space)
-        self.actions = torch.zeros(num_steps, num_samplers, action_flat_dim,)
-        self.prev_actions = torch.zeros(num_steps + 1, num_samplers, action_flat_dim,)
+        self.actions = torch.zeros(
+            num_steps,
+            num_samplers,
+            action_flat_dim,
+        )
+        self.prev_actions = torch.zeros(
+            num_steps + 1,
+            num_samplers,
+            action_flat_dim,
+        )
 
         self.step = 0
 
@@ -122,14 +130,18 @@ class RolloutStorage(object):
         self.device = device
 
     def insert_observations(
-        self, observations: ObservationType, time_step: int = 0,
+        self,
+        observations: ObservationType,
+        time_step: int = 0,
     ):
         self.insert_tensors(
             storage_name="observations", unflattened=observations, time_step=time_step
         )
 
     def insert_memory(
-        self, memory: Optional[Memory], time_step: int,
+        self,
+        memory: Optional[Memory],
+        time_step: int,
     ):
         if memory is None:
             assert len(self.memory) == 0
