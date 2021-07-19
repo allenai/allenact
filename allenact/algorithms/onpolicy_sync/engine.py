@@ -239,7 +239,7 @@ class OnPolicyRLEngine(object):
         self.training_pipeline: Optional[TrainingPipeline] = None
 
         # Keeping track of metrics during training/inference
-        self.single_process_metrics_queue: queue.Queue = queue.Queue()
+        self.single_process_metrics: List = []
 
     @property
     def vector_tasks(
@@ -359,33 +359,28 @@ class OnPolicyRLEngine(object):
     def aggregate_task_metrics(
         self, logging_pkg: LoggingPackage, num_tasks: int = -1,
     ) -> LoggingPackage:
-        done = num_tasks == 0
-        num_empty_tasks_dequeued = 0
-        while not done:
-            try:
-                # This queue is on this process so we should be able to let the timeout be small
-                # TODO: This should be refactored so that single_process_metrics_queue is a list
-                metrics_dict = self.single_process_metrics_queue.get(timeout=0.01)
-
-                num_empty_tasks_dequeued += not logging_pkg.add_metrics_dict(
-                    single_task_metrics_dict=metrics_dict
+        if num_tasks > 0:
+            if len(self.single_process_metrics) != num_tasks:
+                error_msg = (
+                    "shorter"
+                    if len(self.single_process_metrics) < num_tasks
+                    else "longer"
+                )
+                get_logger().error(
+                    f"Metrics out is {error_msg} than expected number of tasks."
+                    " This should only happen if a positive number of `num_tasks` were"
+                    " set during testing but the queue did not contain this number of entries."
+                    " Please file an issue at https://github.com/allenai/allenact/issues."
                 )
 
-                if num_tasks > 0:
-                    num_tasks -= 1
-                done = num_tasks == 0
+        num_empty_tasks_dequeued = 0
 
-            except queue.Empty:
-                if num_tasks <= 0:
-                    break
-                else:
-                    get_logger().error(
-                        "Metrics out queue is empty after a short second wait."
-                        " This should only happen if a positive number of `num_tasks` were"
-                        " set during testing but the queue did not contain this number of entries."
-                        " Please file an issue at https://github.com/allenai/allenact/issues."
-                    )
-                    break
+        for metrics_dict in self.single_process_metrics:
+            num_empty_tasks_dequeued += not logging_pkg.add_metrics_dict(
+                single_task_metrics_dict=metrics_dict
+            )
+
+        self.single_process_metrics = []
 
         if num_empty_tasks_dequeued != 0:
             get_logger().warning(
@@ -536,7 +531,7 @@ class OnPolicyRLEngine(object):
                 step_result.info is not None
                 and COMPLETE_TASK_METRICS_KEY in step_result.info
             ):
-                self.single_process_metrics_queue.put(
+                self.single_process_metrics.append(
                     step_result.info[COMPLETE_TASK_METRICS_KEY]
                 )
                 del step_result.info[COMPLETE_TASK_METRICS_KEY]
