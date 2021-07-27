@@ -19,10 +19,7 @@ from allenact_plugins.manipulathor_plugin.manipulathor_environment import (
 
 
 class DepthSensorThor(
-    DepthSensor[
-        Union[ManipulaTHOREnvironment],
-        Union[Task[ManipulaTHOREnvironment]],
-    ]
+    DepthSensor[Union[ManipulaTHOREnvironment], Union[Task[ManipulaTHOREnvironment]],]
 ):
     """Sensor for Depth images in THOR.
 
@@ -37,10 +34,7 @@ class DepthSensorThor(
 
 
 class NoVisionSensorThor(
-    RGBSensor[
-        Union[ManipulaTHOREnvironment],
-        Union[Task[ManipulaTHOREnvironment]],
-    ]
+    RGBSensor[Union[ManipulaTHOREnvironment], Union[Task[ManipulaTHOREnvironment]],]
 ):
     """Sensor for RGB images in THOR.
 

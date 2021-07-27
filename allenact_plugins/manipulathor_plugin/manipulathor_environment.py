@@ -99,10 +99,7 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         return controller
 
     def start(
-        self,
-        scene_name: Optional[str],
-        move_mag: float = 0.25,
-        **kwargs,
+        self, scene_name: Optional[str], move_mag: float = 0.25, **kwargs,
     ) -> None:
         """Starts the ai2thor controller if it was previously stopped.
 
@@ -137,10 +134,7 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         self.reset(scene_name=scene_name, move_mag=move_mag, **kwargs)
 
     def reset(
-        self,
-        scene_name: Optional[str],
-        move_mag: float = 0.25,
-        **kwargs,
+        self, scene_name: Optional[str], move_mag: float = 0.25, **kwargs,
     ):
         self._move_mag = move_mag
         self._grid_size = self._move_mag

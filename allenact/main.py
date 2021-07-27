@@ -22,8 +22,7 @@ def get_argument_parser():
 
     # noinspection PyTypeChecker
     parser = argparse.ArgumentParser(
-        description="allenact",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description="allenact", formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     parser.add_argument(
@@ -80,12 +79,7 @@ def get_argument_parser():
     )
 
     parser.add_argument(
-        "-s",
-        "--seed",
-        required=False,
-        default=None,
-        type=int,
-        help="random seed",
+        "-s", "--seed", required=False, default=None, type=int, help="random seed",
     )
     parser.add_argument(
         "-b",
@@ -225,7 +219,7 @@ def get_argument_parser():
         type=str,
         default="127.0.0.1:-1",
         help="IP address and port of listener for distributed process with rank 0. "
-             "Port address -1 lets runner choose a free port.",
+        "Port address -1 lets runner choose a free port.",
     )
 
     parser.add_argument(

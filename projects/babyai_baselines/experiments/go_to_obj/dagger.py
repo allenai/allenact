@@ -26,9 +26,7 @@ class DaggerBabyAIGoToObjExperimentConfig(BaseBabyAIGoToObjExperimentConfig):
                 PipelineStage(
                     loss_names=["imitation_loss"],
                     teacher_forcing=LinearDecay(
-                        startp=1.0,
-                        endp=0.0,
-                        steps=total_train_steps // 2,
+                        startp=1.0, endp=0.0, steps=total_train_steps // 2,
                     ),
                     max_stage_steps=total_train_steps,
                 )

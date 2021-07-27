@@ -474,11 +474,7 @@ class SemanticMapBuilder(object):
                 1
             ).to(self.device)
             rotation_and_translate_mat = torch.cat(
-                (
-                    rot_mat,
-                    offset_to_top_of_image + offset_to_center_the_agent,
-                ),
-                dim=1,
+                (rot_mat, offset_to_top_of_image + offset_to_center_the_agent,), dim=1,
             )
 
             ego_update_and_mask = F.grid_sample(

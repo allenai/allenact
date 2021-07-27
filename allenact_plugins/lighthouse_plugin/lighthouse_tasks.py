@@ -161,9 +161,7 @@ class FindGoalLightHouseTask(LightHouseTask):
         **kwargs,
     ) -> Tuple[Any, bool]:
         view_tuple = get_corner_observation(
-            env=self.env,
-            view_radius=expert_view_radius,
-            view_corner_offsets=None,
+            env=self.env, view_radius=expert_view_radius, view_corner_offsets=None,
         )
 
         goal = self.env.GOAL

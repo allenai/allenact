@@ -13,7 +13,9 @@ class MiniGridTutorialMultiNodeExperimentConfig(MiniGridTutorialExperimentConfig
         machine_procs = 2
 
         mp = MachineParams(
-            nprocesses=[128 // (nmachines * machine_procs)] * nmachines * machine_procs if mode == "train" else 16,
+            nprocesses=[128 // (nmachines * machine_procs)] * nmachines * machine_procs
+            if mode == "train"
+            else 16,
             devices=["cpu"] * nmachines * machine_procs if mode == "train" else [],
         )
 
@@ -21,6 +23,10 @@ class MiniGridTutorialMultiNodeExperimentConfig(MiniGridTutorialExperimentConfig
             assert mode == "train"
             machine_id = kwargs["machine_id"]
             assert 0 <= machine_id < nmachines
-            mp.set_ids(list(range(machine_procs * machine_id, machine_procs * (machine_id + 1))))
+            mp.set_ids(
+                list(
+                    range(machine_procs * machine_id, machine_procs * (machine_id + 1))
+                )
+            )
 
         return mp

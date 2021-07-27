@@ -77,8 +77,9 @@ class MachineParams(object):
     def set_ids(self, ids: List[int]):
         self.ids = ids
 
-        assert all(0 <= id < len(self.devices) for id in self.ids),\
-            f"Passed {len(self.ids)} local ids {self.ids} for {len(self.devices)} total devices (workers)"
+        assert all(
+            0 <= id < len(self.devices) for id in self.ids
+        ), f"Passed {len(self.ids)} local ids {self.ids} for {len(self.devices)} total devices (workers)"
 
     @classmethod
     def instance_from(

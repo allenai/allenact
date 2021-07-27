@@ -14,9 +14,7 @@ from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base i
 
 
 class ObjectNavRoboThorRGBPPOExperimentConfig(
-    ObjectNavRoboThorBaseConfig,
-    ObjectNavMixInPPOConfig,
-    ObjectNavMixInResNetGRUConfig,
+    ObjectNavRoboThorBaseConfig, ObjectNavMixInPPOConfig, ObjectNavMixInResNetGRUConfig,
 ):
     """An Object Navigation experiment configuration in RoboThor with RGB
     input."""

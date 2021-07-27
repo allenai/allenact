@@ -230,7 +230,9 @@ class OnPolicyRunner(object):
         )
         ids = machine_params.ids
 
-        get_logger().info(f"Using worker ids {ids} ({len(ids)} workers in {self.machine_id})")
+        get_logger().info(
+            f"Using worker ids {ids} ({len(ids)} workers in {self.machine_id})"
+        )
         return ids
 
     def init_visualizer(self, mode: str):
@@ -368,7 +370,9 @@ class OnPolicyRunner(object):
     def get_port(self):
         passed_port = int(self.distributed_ip_port.split(":")[1])
         if passed_port < 0:
-            assert self.machine_id == 0, "Only runner with `machine_id` == 0 can search for a free port."
+            assert (
+                self.machine_id == 0
+            ), "Only runner with `machine_id` == 0 can search for a free port."
             distributed_port = find_free_port(self.distributed_ip_port.split(":")[0])
         else:
             distributed_port = passed_port
@@ -435,8 +439,7 @@ class OnPolicyRunner(object):
                 else model_hash,
             )
             train: BaseProcess = self.mp_ctx.Process(
-                target=self.train_loop,
-                kwargs=training_kwargs,
+                target=self.train_loop, kwargs=training_kwargs,
             )
             try:
                 train.start()
@@ -449,8 +452,7 @@ class OnPolicyRunner(object):
                     model_hash = md5_hash_of_state_dict(initial_model_state_dict)
                     training_kwargs["initial_model_state_dict"] = model_hash
                     train = self.mp_ctx.Process(
-                        target=self.train_loop,
-                        kwargs=training_kwargs,
+                        target=self.train_loop, kwargs=training_kwargs,
                     )
                     train.start()
                 else:
@@ -709,11 +711,7 @@ class OnPolicyRunner(object):
                     prefix = "" if k == -1 else "namecollision{}__".format(k)
                     k += 1
                     dst_path = os.path.join(
-                        base_dir,
-                        "{}{}".format(
-                            prefix,
-                            os.path.basename(src_path),
-                        ),
+                        base_dir, "{}{}".format(prefix, os.path.basename(src_path),),
                     )
                     if not os.path.exists(dst_path):
                         os.makedirs(os.path.dirname(dst_path), exist_ok=True)
@@ -982,7 +980,9 @@ class OnPolicyRunner(object):
                                             nworkers, len(collected)
                                         )
                                     )
-                        elif pkg_mode == VALID_MODE_STR:  # they all come from a single worker
+                        elif (
+                            pkg_mode == VALID_MODE_STR
+                        ):  # they all come from a single worker
                             if (
                                 package.training_steps is not None
                             ):  # no validation samplers

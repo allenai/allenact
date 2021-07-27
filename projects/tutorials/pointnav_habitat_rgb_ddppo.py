@@ -104,9 +104,7 @@ class PointNavHabitatRGBPPOTutorialExperimentConfig(ExperimentConfig):
 
     SENSORS = [
         RGBSensorHabitat(
-            height=SCREEN_SIZE,
-            width=SCREEN_SIZE,
-            use_resnet_normalization=True,
+            height=SCREEN_SIZE, width=SCREEN_SIZE, use_resnet_normalization=True,
         ),
         TargetCoordinatesSensorHabitat(coordinate_dims=2),
     ]
