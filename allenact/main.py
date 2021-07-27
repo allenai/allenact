@@ -218,6 +218,25 @@ def get_argument_parser():
         "--version", action="version", version=f"allenact {__version__}"
     )
 
+    parser.add_argument(
+        "--distributed_ip_port",
+        dest="distributed_ip_port",
+        required=False,
+        type=str,
+        default="127.0.0.1:-1",
+        help="IP address and port of listener for distributed process with rank 0. "
+             "Port address -1 lets runner choose a free port.",
+    )
+
+    parser.add_argument(
+        "--machine_id",
+        dest="machine_id",
+        required=False,
+        type=int,
+        default=0,
+        help="ID for machine in distributed runs",
+    )
+
     ### DEPRECATED FLAGS
     parser.add_argument(
         "-t",
@@ -399,6 +418,8 @@ def main():
             extra_tag=args.extra_tag,
             disable_tensorboard=args.disable_tensorboard,
             disable_config_saving=args.disable_config_saving,
+            distributed_ip_port=args.distributed_ip_port,
+            machine_id=args.machine_id,
         ).start_train(
             checkpoint=args.checkpoint,
             restart_pipeline=args.restart_pipeline,
@@ -417,6 +438,8 @@ def main():
             extra_tag=args.extra_tag,
             disable_tensorboard=args.disable_tensorboard,
             disable_config_saving=args.disable_config_saving,
+            distributed_ip_port=args.distributed_ip_port,
+            machine_id=args.machine_id,
         ).start_test(
             checkpoint_path_dir_or_pattern=args.checkpoint,
             approx_ckpt_step_interval=args.approx_ckpt_step_interval,

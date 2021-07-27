@@ -28,6 +28,7 @@ from allenact.algorithms.onpolicy_sync.engine import (
     OnPolicyTrainer,
     OnPolicyInference,
     TRAIN_MODE_STR,
+    VALID_MODE_STR,
     TEST_MODE_STR,
     OnPolicyRLEngine,
 )
@@ -70,6 +71,8 @@ class OnPolicyRunner(object):
         extra_tag: str = "",
         disable_tensorboard: bool = False,
         disable_config_saving: bool = False,
+        distributed_ip_port: str = "127.0.0.1:-1",
+        machine_id: int = 0,
     ):
         self.config = config
         self.output_dir = output_dir
@@ -114,6 +117,9 @@ class OnPolicyRunner(object):
 
         self._collect_valid_results: bool = False
 
+        self.distributed_ip_port = distributed_ip_port
+        self.machine_id = machine_id
+
     @property
     def local_start_time_str(self) -> str:
         if self._local_start_time_str is None:
@@ -128,11 +134,11 @@ class OnPolicyRunner(object):
         return (
             sum(
                 MachineParams.instance_from(
-                    self.config.machine_params("valid")
+                    self.config.machine_params(VALID_MODE_STR)
                 ).nprocesses
             )
             > 0
-        )
+        ) and self.machine_id == 0
 
     @staticmethod
     def init_context(
@@ -217,6 +223,15 @@ class OnPolicyRunner(object):
             "Using {} {} workers on devices {}".format(len(devices), mode, devices)
         )
         return devices
+
+    def worker_ids(self, mode: str):
+        machine_params: MachineParams = MachineParams.instance_from(
+            self.config.machine_params(mode, machine_id=self.machine_id)
+        )
+        ids = machine_params.ids
+
+        get_logger().info(f"Using worker ids {ids} ({len(ids)} workers in {self.machine_id})")
+        return ids
 
     def init_visualizer(self, mode: str):
         if not self.disable_tensorboard:
@@ -306,7 +321,7 @@ class OnPolicyRunner(object):
 
     @staticmethod
     def valid_loop(id: int = 0, *engine_args, **engine_kwargs):
-        engine_kwargs["mode"] = "valid"
+        engine_kwargs["mode"] = VALID_MODE_STR
         engine_kwargs["worker_id"] = id
         get_logger().info("valid {} args {}".format(id, engine_kwargs))
 
@@ -350,6 +365,20 @@ class OnPolicyRunner(object):
 
         self._local_start_time_str = self._acquire_unique_local_start_time_string()
 
+    def get_port(self):
+        passed_port = int(self.distributed_ip_port.split(":")[1])
+        if passed_port < 0:
+            assert self.machine_id == 0, "Only runner with `machine_id` == 0 can search for a free port."
+            distributed_port = find_free_port(self.distributed_ip_port.split(":")[0])
+        else:
+            distributed_port = passed_port
+
+        get_logger().info(
+            f"Engines on machine_id == {self.machine_id} using port {distributed_port} and seed {self.seed}"
+        )
+
+        return distributed_port
+
     def start_train(
         self,
         checkpoint: Optional[str] = None,
@@ -376,14 +405,14 @@ class OnPolicyRunner(object):
             ).sensor_preprocessor_graph
         ).state_dict()
 
-        distributed_port = 0
-        if num_workers > 1:
-            distributed_port = find_free_port()
+        distributed_port = 0 if num_workers == 1 else self.get_port()
+
+        worker_ids = self.worker_ids(TRAIN_MODE_STR)
 
         model_hash = None
-        for trainer_it in range(num_workers):
+        for trainer_id in worker_ids:
             training_kwargs = dict(
-                id=trainer_it,
+                id=trainer_id,
                 checkpoint=checkpoint,
                 restart_pipeline=restart_pipeline,
                 experiment_name=self.experiment_name,
@@ -397,7 +426,8 @@ class OnPolicyRunner(object):
                 deterministic_cudnn=self.deterministic_cudnn,
                 mp_ctx=self.mp_ctx,
                 num_workers=num_workers,
-                device=devices[trainer_it],
+                device=devices[trainer_id],
+                distributed_ip=self.distributed_ip_port.split(":")[0],
                 distributed_port=distributed_port,
                 max_sampler_processes_per_worker=max_sampler_processes_per_worker,
                 initial_model_state_dict=initial_model_state_dict
@@ -413,7 +443,7 @@ class OnPolicyRunner(object):
             except ValueError as e:
                 # If the `initial_model_state_dict` is too large we sometimes
                 # run into errors passing it with multiprocessing. In such cases
-                # we instead has the state_dict and confirm, in each engine worker, that
+                # we instead hash the state_dict and confirm, in each engine worker, that
                 # this hash equals the model the engine worker instantiates.
                 if e.args[0] == "too many fds":
                     model_hash = md5_hash_of_state_dict(initial_model_state_dict)
@@ -434,8 +464,8 @@ class OnPolicyRunner(object):
 
         # Validation
         if self.running_validation:
-            device = self.worker_devices("valid")[0]
-            self.init_visualizer("valid")
+            device = self.worker_devices(VALID_MODE_STR)[0]
+            self.init_visualizer(VALID_MODE_STR)
             valid: BaseProcess = self.mp_ctx.Process(
                 target=self.valid_loop,
                 args=(0,),
@@ -452,10 +482,10 @@ class OnPolicyRunner(object):
                 ),
             )
             valid.start()
-            self.processes["valid"].append(valid)
+            self.processes[VALID_MODE_STR].append(valid)
 
             get_logger().info(
-                "Started {} valid processes".format(len(self.processes["valid"]))
+                "Started {} valid processes".format(len(self.processes[VALID_MODE_STR]))
             )
         else:
             get_logger().info(
@@ -482,7 +512,7 @@ class OnPolicyRunner(object):
 
         valid_results = self.log_and_close(
             start_time_str=self.local_start_time_str,
-            nworkers=num_workers,
+            nworkers=len(worker_ids),  # TODO num_workers once we forward metrics,
             metrics_file=metrics_file_template,
         )
 
@@ -511,6 +541,7 @@ class OnPolicyRunner(object):
         if num_testers > 1:
             distributed_port = find_free_port()
 
+        # TODO Assume tester runs on a single machine
         for tester_it in range(num_testers):
             test: BaseProcess = self.mp_ctx.Process(
                 target=self.test_loop,
@@ -951,7 +982,7 @@ class OnPolicyRunner(object):
                                             nworkers, len(collected)
                                         )
                                     )
-                        elif pkg_mode == "valid":  # they all come from a single worker
+                        elif pkg_mode == VALID_MODE_STR:  # they all come from a single worker
                             if (
                                 package.training_steps is not None
                             ):  # no validation samplers

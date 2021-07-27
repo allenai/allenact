@@ -99,6 +99,7 @@ class OnPolicyRLEngine(object):
         worker_id: int = 0,
         num_workers: int = 1,
         device: Union[str, torch.device, int] = "cpu",
+        distributed_ip: str = "127.0.0.1",
         distributed_port: int = 0,
         deterministic_agents: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
@@ -128,6 +129,7 @@ class OnPolicyRLEngine(object):
         self.worker_id = worker_id
         self.num_workers = num_workers
         self.device = torch.device("cpu") if device == -1 else torch.device(device)  # type: ignore
+        self.distributed_ip = distributed_ip
         self.distributed_port = distributed_port
 
         self.mode = mode.lower().strip()
@@ -212,7 +214,7 @@ class OnPolicyRLEngine(object):
         self.store: Optional[torch.distributed.TCPStore] = None  # type:ignore
         if self.num_workers > 1:
             self.store = torch.distributed.TCPStore(  # type:ignore
-                "127.0.0.1",
+                self.distributed_ip,
                 self.distributed_port,
                 self.num_workers,
                 self.worker_id == 0,
@@ -665,6 +667,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         worker_id: int = 0,
         num_workers: int = 1,
         device: Union[str, torch.device, int] = "cpu",
+        distributed_ip: str = "127.0.0.1",
         distributed_port: int = 0,
         deterministic_agents: bool = False,
         distributed_preemption_threshold: float = 0.7,
@@ -684,6 +687,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             worker_id=worker_id,
             num_workers=num_workers,
             device=device,
+            distributed_ip=distributed_ip,
             distributed_port=distributed_port,
             deterministic_agents=deterministic_agents,
             max_sampler_processes_per_worker=max_sampler_processes_per_worker,
@@ -1305,7 +1309,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 )
             ):
                 self.deterministic_seeds()
-                if self.worker_id == 0:
+                if self.worker_id == 0:  # TODO save for each machine (easier restart, data multiplicity)
                     model_path = self.checkpoint_save()
                     if self.checkpoints_queue is not None:
                         self.checkpoints_queue.put(("eval", model_path))

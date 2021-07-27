@@ -39,6 +39,7 @@ class MachineParams(object):
         ] = None,
         visualizer: Optional[Union[VizSuite, Builder[VizSuite]]] = None,
         gpu_ids: Union[int, Sequence[int]] = None,
+        ids: Optional[List[int]] = None,
     ):
         assert (
             gpu_ids is None or devices is None
@@ -69,6 +70,15 @@ class MachineParams(object):
 
         self._sensor_preprocessor_graph_cached: Optional[SensorPreprocessorGraph] = None
         self._visualizer_cached: Optional[VizSuite] = None
+
+        self.ids: Optional[List[int]] = None
+        self.set_ids(ids or list(range(len(self.devices))))
+
+    def set_ids(self, ids: List[int]):
+        self.ids = ids
+
+        assert all(0 <= id < len(self.devices) for id in self.ids),\
+            f"Passed {len(self.ids)} local ids {self.ids} for {len(self.devices)} total devices (workers)"
 
     @classmethod
     def instance_from(
