@@ -224,14 +224,14 @@ class OnPolicyRunner(object):
         )
         return devices
 
-    def worker_ids(self, mode: str):
+    def local_worker_ids(self, mode: str):
         machine_params: MachineParams = MachineParams.instance_from(
             self.config.machine_params(mode, machine_id=self.machine_id)
         )
         ids = machine_params.ids
 
         get_logger().info(
-            f"Using worker ids {ids} ({len(ids)} workers in {self.machine_id})"
+            f"Using local worker ids {ids} (total {len(ids)} workers in machine {self.machine_id})"
         )
         return ids
 
@@ -411,7 +411,7 @@ class OnPolicyRunner(object):
 
         distributed_port = 0 if num_workers == 1 else self.get_port()
 
-        worker_ids = self.worker_ids(TRAIN_MODE_STR)
+        worker_ids = self.local_worker_ids(TRAIN_MODE_STR)
 
         model_hash = None
         for trainer_id in worker_ids:
@@ -437,6 +437,7 @@ class OnPolicyRunner(object):
                 initial_model_state_dict=initial_model_state_dict
                 if model_hash is None
                 else model_hash,
+                first_local_worker_id=worker_ids[0],
             )
             train: BaseProcess = self.mp_ctx.Process(
                 target=self.train_loop, kwargs=training_kwargs,

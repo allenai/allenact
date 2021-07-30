@@ -664,6 +664,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         deterministic_agents: bool = False,
         distributed_preemption_threshold: float = 0.7,
         max_sampler_processes_per_worker: Optional[int] = None,
+        first_local_worker_id: int = 0,
         **kwargs,
     ):
         kwargs["mode"] = TRAIN_MODE_STR
@@ -746,6 +747,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self._last_aggregated_train_task_metrics: ScalarMeanTracker = (
             ScalarMeanTracker()
         )
+
+        self.first_local_worker_id = first_local_worker_id
 
     def advance_seed(
         self, seed: Optional[int], return_same_seed_per_worker=False
@@ -1297,9 +1300,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 )
             ):
                 self.deterministic_seeds()
-                if (
-                    self.worker_id == 0
-                ):  # TODO save for each machine (easier restart, data multiplicity)
+                if self.worker_id == self.first_local_worker_id:
                     model_path = self.checkpoint_save()
                     if self.checkpoints_queue is not None:
                         self.checkpoints_queue.put(("eval", model_path))
