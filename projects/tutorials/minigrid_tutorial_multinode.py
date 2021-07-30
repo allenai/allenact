@@ -23,7 +23,7 @@ class MiniGridTutorialMultiNodeExperimentConfig(MiniGridTutorialExperimentConfig
             assert mode == "train"
             machine_id = kwargs["machine_id"]
             assert 0 <= machine_id < nmachines
-            mp.set_ids(
+            mp.set_local_worker_ids(
                 list(
                     range(machine_procs * machine_id, machine_procs * (machine_id + 1))
                 )

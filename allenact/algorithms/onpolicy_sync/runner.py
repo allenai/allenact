@@ -228,7 +228,7 @@ class OnPolicyRunner(object):
         machine_params: MachineParams = MachineParams.instance_from(
             self.config.machine_params(mode, machine_id=self.machine_id)
         )
-        ids = machine_params.ids
+        ids = machine_params.local_worker_ids
 
         get_logger().info(
             f"Using local worker ids {ids} (total {len(ids)} workers in machine {self.machine_id})"
