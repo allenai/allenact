@@ -1046,9 +1046,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         if self.is_distributed:
             # From https://github.com/pytorch/pytorch/issues/43135
-            reductions = []
-            all_params = self.actor_critic.parameters()
-            for p in all_params:
+            reductions, all_params = [], []
+            for p in self.actor_critic.parameters():
                 # you can also organize grads to larger buckets to make allreduce more efficient
                 if p.requires_grad:
                     if p.grad is None:
@@ -1056,6 +1055,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     reductions.append(
                         dist.all_reduce(p.grad, async_op=True,)  # sum
                     )  # synchronize
+                    all_params.append(p)
             for reduction, p in zip(reductions, all_params):
                 reduction.wait()
                 p.grad /= self.num_workers  # sum -> average
