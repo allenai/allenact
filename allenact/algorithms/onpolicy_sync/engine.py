@@ -3,7 +3,6 @@ import datetime
 import itertools
 import logging
 import os
-import queue
 import random
 import time
 import traceback
@@ -19,6 +18,7 @@ from typing import (
     cast,
     Iterator,
     Callable,
+    Tuple,
 )
 from functools import partial
 
@@ -915,12 +915,38 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         return actions, actor_critic_output, memory, step_observation
 
+    def advantage_stats(
+        self, advantages: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        r"""Computes the mean and variances of advantages (possibly over multiple workers).
+        For multiple workers, this method is equivalent to first collecting all versions of
+        advantages and then computing the mean and variance locally over that
+        :param advantages: (*,) shaped tensors to compute mean and variance over.  Assumed
+                            to be solely the workers local copy of this tensor,
+                            the resultant mean and variance will be computed
+                            over _all_ workers version of this tensor in distributed training.
+        """
+        if self.is_distributed:
+            mean = advantages.mean()
+            dist.all_reduce(mean)
+            mean = mean / self.num_workers
+
+            var = (advantages - mean).pow(2).mean()
+            dist.all_reduce(var)
+            std = (var / self.num_workers).sqrt()
+        else:
+            mean, std = advantages.mean(), advantages.std()
+
+        return mean, std
+
     def update(self, rollouts: RolloutStorage):
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
 
+        adv_mean, adv_std = self.advantage_stats(advantages)
+
         for e in range(self.training_pipeline.update_repeats):
             data_generator = rollouts.recurrent_generator(
-                advantages, self.training_pipeline.num_mini_batch
+                advantages, adv_mean, adv_std, self.training_pipeline.num_mini_batch
             )
 
             for bit, batch in enumerate(data_generator):
@@ -1021,21 +1047,24 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         if self.is_distributed:
             # From https://github.com/pytorch/pytorch/issues/43135
             reductions = []
-            for p in self.actor_critic.parameters():
+            all_params = self.actor_critic.parameters()
+            for p in all_params:
                 # you can also organize grads to larger buckets to make allreduce more efficient
                 if p.requires_grad:
                     if p.grad is None:
                         p.grad = torch.zeros_like(p.data)
                     reductions.append(
-                        dist.all_reduce(p.grad, async_op=True,)
+                        dist.all_reduce(p.grad, async_op=True,)  # sum
                     )  # synchronize
-            for reduction in reductions:
+            for reduction, p in zip(reductions, all_params):
                 reduction.wait()
+                p.grad /= self.num_workers  # sum -> average
 
         nn.utils.clip_grad_norm_(
             self.actor_critic.parameters(),
             self.training_pipeline.max_grad_norm,  # type: ignore
         )
+
         self.optimizer.step()  # type: ignore
 
     def offpolicy_update(

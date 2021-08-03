@@ -407,10 +407,14 @@ class RolloutStorage(object):
                     + extended_rewards[step]
                 )
 
-    def recurrent_generator(self, advantages: torch.Tensor, num_mini_batch: int):
-        normalized_advantages = (advantages - advantages.mean()) / (
-            advantages.std() + 1e-5
-        )
+    def recurrent_generator(
+        self,
+        advantages: torch.Tensor,
+        adv_mean: torch.Tensor,
+        adv_std: torch.Tensor,
+        num_mini_batch: int,
+    ):
+        normalized_advantages = (advantages - adv_mean) / (adv_std + 1e-5)
 
         num_samplers = self.rewards.shape[1]
         assert num_samplers >= num_mini_batch, (
