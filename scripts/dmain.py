@@ -128,7 +128,7 @@ if __name__ == "__main__":
 
         env_and_command = ws(
             f"cd {args.allenact_path} ; "
-            f"mkdir -p {args.output_dir} &>> {logfile} ; "
+            f"mkdir -p {args.output_dir} ; "
             f"source {args.env_activate_path} &>> {logfile} ; "
             # f"git apply {patch_file}.copy &>> {logfile} && "
             # f"rm {patch_file}.copy &>> {logfile} && "
