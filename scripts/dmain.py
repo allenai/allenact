@@ -88,7 +88,7 @@ def id_generator(size=4, chars=string.ascii_uppercase + string.digits):
 
 
 # Assume code is deployed in all machines and we can ssh into each of the `runs_on` machines through port 22
-# Assume we're being called from the main allenact folder (patch file)
+# Assume tool is called from allenact project's root directory
 if __name__ == "__main__":
     args = get_args()
 
@@ -106,17 +106,11 @@ if __name__ == "__main__":
 
     time_str = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime(time.time()))
 
-    # patch_file = f"{time_str}_{id_generator()}.patch"
-    # os.system(f"git diff > {patch_file}")
-    #
-    # scp_cmd_src = args.ssh_cmd.replace("ssh", "scp").replace("-f", patch_file)
-
+    code_src = "."
     for it, addr in enumerate(all_addresses):
-        # scp_cmd = (
-        #     f"{scp_cmd_src.format(addr=addr)}:{args.allenact_path}/{patch_file}.copy"
-        # )
-        # get_logger().debug(f"scp command {scp_cmd}")
-        # os.system(scp_cmd)
+        code_tget = f"{addr}:{args.allenact_path}/"
+        get_logger().info(f"rsync {code_src} to {code_tget}")
+        os.system(f"rsync -r {code_src} {code_tget}")
 
         job_id = id_generator()
 
@@ -149,9 +143,5 @@ if __name__ == "__main__":
         get_logger().debug(f"SSH command {ssh_command}")
         os.system(ssh_command)
         get_logger().info(f"{addr} {screen_name}")
-
-    # with open(patch_file, "r") as f:
-    #     get_logger().info(f"Deleting {patch_file} with {''.join(f.readlines())}")
-    # os.system(f"rm {patch_file}")
 
     print("DONE")
