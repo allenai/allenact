@@ -109,7 +109,7 @@ if __name__ == "__main__":
     os.system(f"git diff > {patch_file}")
 
     scp_cmd_src = args.ssh_cmd.replace("ssh", "scp").replace("-f", patch_file)
-    os.system(f"{scp_cmd_src} {patch_file}")
+    os.system(f"{scp_cmd_src} {patch_file}.copy")
 
     for it, addr in enumerate(all_addresses):
         job_id = id_generator()
@@ -130,8 +130,8 @@ if __name__ == "__main__":
             f"cd {args.allenact_path} && "
             f"mkdir -p {args.output_dir} &>> {logfile} && "
             f"source {args.env_activate_path} &>> {logfile} && "
-            f"git apply {patch_file} &>> {logfile} && "
-            f"rm {patch_file} &>> {logfile} && "
+            f"git apply {patch_file}.copy &>> {logfile} && "
+            # f"rm {patch_file}.copy &>> {logfile} && "
             f"{command} &>> {logfile}"
         )
 
@@ -144,8 +144,8 @@ if __name__ == "__main__":
         os.system(ssh_command)
         get_logger().info(f"{addr} {screen_name}")
 
-    with open(patch_file, "r") as f:
-        get_logger().info(f"Deleting {patch_file} with {''.join(f.readlines())}")
-    os.system(f"rm {patch_file}")
+    # with open(patch_file, "r") as f:
+    #     get_logger().info(f"Deleting {patch_file} with {''.join(f.readlines())}")
+    # os.system(f"rm {patch_file}")
 
     print("DONE")
