@@ -60,13 +60,14 @@ if __name__ == "__main__":
                 f"{args.ssh_cmd.format(addr=addr)} '"
                 f"screen -S {screen_name} -p 0 -X quit ; "
                 f"sleep 1 ; "
+                f"echo Master processes left running: ; "
                 f"ps aux | grep Master: | grep -v grep ; "
                 f"'"
             )
 
-            print(f"SSH command {ssh_command}")
+            # print(f"SSH command {ssh_command}")
             os.system(ssh_command)
-            print(f"{addr} {screen_name}")
+            print(f"Killed {addr} {screen_name}")
 
         do_delete = ""
         while do_delete not in ["y", "n"]:
