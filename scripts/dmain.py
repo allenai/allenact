@@ -138,9 +138,7 @@ if __name__ == "__main__":
                 f"mkdir -p {args.output_dir} ; "
                 f"source {args.env_activate_path} &>> {logfile} ; "
                 f"python --version &>> {logfile} ; "
-                f"{command} &>> {logfile} & ; "
-                f"$! &>> {logfile.replace('log_', 'pid_')} ; "
-                f"fg ; "
+                f"{command} &>> {logfile}"
             )
 
             screen_name = f"allenact_{time_str}_{job_id}_machine{it}"
