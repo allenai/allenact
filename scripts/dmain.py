@@ -107,41 +107,55 @@ if __name__ == "__main__":
     time_str = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime(time.time()))
 
     code_src = "."
-    for it, addr in enumerate(all_addresses):
-        code_tget = f"{addr}:{args.allenact_path}/"
-        get_logger().info(f"rsync {code_src} to {code_tget}")
-        os.system(f"rsync -r {code_src} {code_tget}")
 
-        job_id = id_generator()
+    killfilename = os.path.join(
+        os.path.expanduser("~"), ".allenact", f"{time_str}_{id_generator()}.killfile"
+    )
+    os.makedirs(os.path.dirname(killfilename))
 
-        command = " ".join(
-            ["python", "main.py"]
-            + raw_args
-            + [
-                "--extra_tag",
-                f"{args.extra_tag}{'__' if len(args.extra_tag) > 0 else ''}machine{it}",
-            ]
-            + ["--machine_id", f"{it}"]
-        )
+    with open(killfilename, "w") as killfile:
+        for it, addr in enumerate(all_addresses):
+            code_tget = f"{addr}:{args.allenact_path}/"
+            get_logger().info(f"rsync {code_src} to {code_tget}")
+            os.system(f"rsync -r {code_src} {code_tget}")
 
-        logfile = f"{args.output_dir}/log_{time_str}_{job_id}_machine{it}"
+            job_id = id_generator()
 
-        env_and_command = ws(
-            f"cd {args.allenact_path} ; "
-            f"mkdir -p {args.output_dir} ; "
-            f"source {args.env_activate_path} &>> {logfile} ; "
-            # f"git apply {patch_file}.copy &>> {logfile} && "
-            # f"rm {patch_file}.copy &>> {logfile} && "
-            f"{command} &>> {logfile}"
-        )
+            command = " ".join(
+                ["python", "main.py"]
+                + raw_args
+                + [
+                    "--extra_tag",
+                    f"{args.extra_tag}{'__' if len(args.extra_tag) > 0 else ''}machine{it}",
+                ]
+                + ["--machine_id", f"{it}"]
+            )
 
-        screen_name = f"allenact_{time_str}_{job_id}_machine{it}"
-        screen_command = wd(f"screen -S {screen_name} -dm bash -c {env_and_command}")
+            logfile = f"{args.output_dir}/log_{time_str}_{job_id}_machine{it}"
 
-        ssh_command = f"{args.ssh_cmd.format(addr=addr)} {screen_command}"
+            env_and_command = ws(
+                f"cd {args.allenact_path} ; "
+                f"mkdir -p {args.output_dir} ; "
+                f"source {args.env_activate_path} &>> {logfile} ; "
+                f"python --version &>> {logfile} ; "
+                f"{command} &>> {logfile} & ; "
+                f"$! &>> {logfile.replace('log_', 'pid_')} ; "
+                f"fg ; "
+            )
 
-        get_logger().debug(f"SSH command {ssh_command}")
-        os.system(ssh_command)
-        get_logger().info(f"{addr} {screen_name}")
+            screen_name = f"allenact_{time_str}_{job_id}_machine{it}"
+            screen_command = wd(
+                f"screen -S {screen_name} -dm bash -c {env_and_command}"
+            )
+
+            ssh_command = f"{args.ssh_cmd.format(addr=addr)} {screen_command}"
+
+            get_logger().debug(f"SSH command {ssh_command}")
+            os.system(ssh_command)
+            get_logger().info(f"{addr} {screen_name}")
+
+            killfile.write(f"{addr} {screen_name}\n")
+
+    print(f"Running screen ids written to {killfilename}")
 
     print("DONE")
