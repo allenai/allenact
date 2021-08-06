@@ -14,13 +14,6 @@ def get_argument_parser():
     parser = get_main_arg_parser()
 
     parser.add_argument(
-        "--listener_port",
-        required=True,
-        type=int,
-        help="Port of listener (for distributed process with rank 0)",
-    )
-
-    parser.add_argument(
         "--runs_on",
         required=True,
         type=str,
@@ -70,7 +63,6 @@ def get_raw_args():
         if remove is not None:
             remove = None
         elif arg in [
-            "--listener_port",
             "--runs_on",
             "--ssh_cmd",
             "--env_activate_path",
@@ -105,8 +97,6 @@ if __name__ == "__main__":
     all_addresses = args.runs_on.split(",")
     get_logger().info(f"Running on addresses {all_addresses}")
 
-    server = ["--distributed_ip_port", f"{all_addresses[0]}:{args.listener_port}"]
-
     time_str = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime(time.time()))
 
     for it, addr in enumerate(all_addresses):
@@ -117,7 +107,6 @@ if __name__ == "__main__":
         #         "--extra_tag",
         #         f"{args.extra_tag}{'__' if len(args.extra_tag) > 0 else ''}machine{it}",
         #     ]
-        #     + server
         #     + ["--machine_id", f"{it}"]
         # )
         command = "sleep 30"
