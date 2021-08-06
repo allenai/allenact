@@ -1,8 +1,6 @@
 import os
 import argparse
 
-from allenact.utils.system import init_logging, get_logger
-
 
 def get_argument_parser():
     """Creates the argument parser."""
@@ -41,12 +39,10 @@ def get_args():
 if __name__ == "__main__":
     args = get_args()
 
-    init_logging()
-
     with open(args.screen_ids_file, "r") as f:
         nodes = [tuple(line[:-1].split(" ")) for line in f.readlines()]
 
-    get_logger().info(f"Stopping processes on {nodes}")
+    print(f"Stopping processes on {nodes}")
 
     do_kill = ""
     while do_kill not in ["y", "n"]:
@@ -58,7 +54,7 @@ if __name__ == "__main__":
         for it, node in enumerate(nodes):
             addr, screen_name = node
 
-            get_logger().info(f"Killing screen {screen_name} on {addr}")
+            print(f"Killing screen {screen_name} on {addr}")
 
             ssh_command = (
                 f"{args.ssh_cmd.format(addr=addr)} '"
@@ -68,9 +64,9 @@ if __name__ == "__main__":
                 f"'"
             )
 
-            get_logger().debug(f"SSH command {ssh_command}")
+            print(f"SSH command {ssh_command}")
             os.system(ssh_command)
-            get_logger().info(f"{addr} {screen_name}")
+            print(f"{addr} {screen_name}")
 
         do_delete = ""
         while do_delete not in ["y", "n"]:
@@ -80,6 +76,6 @@ if __name__ == "__main__":
 
         if do_delete == "y":
             os.system(f"rm {args.screen_ids_file}")
-            get_logger().info(f"Deleted {args.screen_ids_file}")
+            print(f"Deleted {args.screen_ids_file}")
 
     print("DONE")
