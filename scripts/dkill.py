@@ -58,9 +58,9 @@ if __name__ == "__main__":
 
             ssh_command = (
                 f"{args.ssh_cmd.format(addr=addr)} '"
-                f"screen -S {screen_name} -p 0 -X quit ;"
-                f"sleep 1 ;"
-                f"ps aux | grep Master: ;"
+                f"screen -S {screen_name} -p 0 -X quit ; "
+                f"sleep 1 ; "
+                f"ps aux | grep Master: | grep -v grep ; "
                 f"'"
             )
 
