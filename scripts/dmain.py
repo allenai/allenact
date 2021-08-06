@@ -25,7 +25,8 @@ def get_argument_parser():
         required=False,
         type=str,
         default="ssh -f {addr}",
-        help="SSH command. Useful to utilize a pre-shared key with 'ssh -i mykey.pem -f ubuntu@{addr}'",
+        help="SSH command. Useful to utilize a pre-shared key with 'ssh -i mykey.pem -f ubuntu@{addr}'. "
+        "The option `-f` should be used for non-interactive session",
     )
 
     parser.add_argument(
@@ -105,13 +106,18 @@ if __name__ == "__main__":
 
     time_str = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime(time.time()))
 
-    patch_file = f"{time_str}_{id_generator()}.patch"
-    os.system(f"git diff > {patch_file}")
-
-    scp_cmd_src = args.ssh_cmd.replace("ssh", "scp").replace("-f", patch_file)
-    os.system(f"{scp_cmd_src} {patch_file}.copy")
+    # patch_file = f"{time_str}_{id_generator()}.patch"
+    # os.system(f"git diff > {patch_file}")
+    #
+    # scp_cmd_src = args.ssh_cmd.replace("ssh", "scp").replace("-f", patch_file)
 
     for it, addr in enumerate(all_addresses):
+        # scp_cmd = (
+        #     f"{scp_cmd_src.format(addr=addr)}:{args.allenact_path}/{patch_file}.copy"
+        # )
+        # get_logger().debug(f"scp command {scp_cmd}")
+        # os.system(scp_cmd)
+
         job_id = id_generator()
 
         command = " ".join(
@@ -127,10 +133,10 @@ if __name__ == "__main__":
         logfile = f"{args.output_dir}/log_{time_str}_{job_id}_machine{it}"
 
         env_and_command = ws(
-            f"cd {args.allenact_path} && "
-            f"mkdir -p {args.output_dir} &>> {logfile} && "
-            f"source {args.env_activate_path} &>> {logfile} && "
-            f"git apply {patch_file}.copy &>> {logfile} && "
+            f"cd {args.allenact_path} ; "
+            f"mkdir -p {args.output_dir} &>> {logfile} ; "
+            f"source {args.env_activate_path} &>> {logfile} ; "
+            # f"git apply {patch_file}.copy &>> {logfile} && "
             # f"rm {patch_file}.copy &>> {logfile} && "
             f"{command} &>> {logfile}"
         )
