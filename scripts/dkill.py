@@ -41,7 +41,7 @@ def get_args():
 if __name__ == "__main__":
     args = get_args()
 
-    init_logging(args.log_level)
+    init_logging()
 
     with open(args.screen_ids_file, "r") as f:
         nodes = [tuple(line[:-1].split(" ")) for line in f.readlines()]
@@ -57,6 +57,8 @@ if __name__ == "__main__":
     if do_kill == "y":
         for it, node in enumerate(nodes):
             addr, screen_name = node
+
+            get_logger().info(f"Killing screen {screen_name} on {addr}")
 
             ssh_command = (
                 f"{args.ssh_cmd.format(addr=addr)} '"
