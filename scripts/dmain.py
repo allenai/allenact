@@ -106,12 +106,12 @@ if __name__ == "__main__":
 
     time_str = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime(time.time()))
 
-    code_src = "."
-
     killfilename = os.path.join(
         os.path.expanduser("~"), ".allenact", f"{time_str}_{id_generator()}.killfile"
     )
     os.makedirs(os.path.dirname(killfilename))
+
+    code_src = "."
 
     with open(killfilename, "w") as killfile:
         for it, addr in enumerate(all_addresses):
@@ -156,6 +156,6 @@ if __name__ == "__main__":
 
             killfile.write(f"{addr} {screen_name}\n")
 
-    print(f"Running screen ids written to {killfilename}")
+    print(f"Running screen ids saved to {killfilename}")
 
     print("DONE")
