@@ -109,7 +109,7 @@ if __name__ == "__main__":
     killfilename = os.path.join(
         os.path.expanduser("~"), ".allenact", f"{time_str}_{id_generator()}.killfile"
     )
-    os.makedirs(os.path.dirname(killfilename))
+    os.makedirs(os.path.dirname(killfilename), exist_ok=True)
 
     code_src = "."
 
