@@ -138,6 +138,7 @@ if __name__ == "__main__":
                 f"mkdir -p {args.output_dir} ; "
                 f"source {args.env_activate_path} &>> {logfile} ; "
                 f"python --version &>> {logfile} ; "
+                f"which python &>> {logfile} ; "
                 f"{command} &>> {logfile}"
             )
 
