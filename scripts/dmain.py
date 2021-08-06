@@ -25,14 +25,14 @@ def get_argument_parser():
         required=False,
         type=str,
         default="ssh -f {addr}",
-        help="SSH command. Useful to utilize a pre-shared key like 'ssh -i mykey.pem -f ubuntu@{addr}'",
+        help="SSH command. Useful to utilize a pre-shared key with 'ssh -i mykey.pem -f ubuntu@{addr}'",
     )
 
     parser.add_argument(
         "--env_activate_path",
         required=True,
         type=str,
-        help="Path to virtualenv's `activate` script. It must be the same across all machines",
+        help="Path to the virtual environment's `activate` script. It must be the same across all machines",
     )
 
     parser.add_argument(
@@ -40,7 +40,7 @@ def get_argument_parser():
         required=False,
         type=str,
         default="allenact",
-        help="Path to allenact top directory",
+        help="Path to allenact top directory. It must be the same across all machines",
     )
 
     return parser
@@ -87,6 +87,7 @@ def id_generator(size=4, chars=string.ascii_uppercase + string.digits):
 
 
 # Assume code is deployed in all machines and we can ssh into each of the `runs_on` machines through port 22
+# Assume we're being called from the main allenact folder (patch file)
 if __name__ == "__main__":
     args = get_args()
 
@@ -97,32 +98,54 @@ if __name__ == "__main__":
     all_addresses = args.runs_on.split(",")
     get_logger().info(f"Running on addresses {all_addresses}")
 
+    assert args.distributed_ip_port.split(":")[0] in all_addresses, (
+        f"Missing listener IP address {args.distributed_ip_port.split(':')[0]} "
+        f"in list of worker addresses {all_addresses}"
+    )
+
     time_str = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime(time.time()))
 
+    patch_file = f"{time_str}_{id_generator()}.patch"
+    os.system(f"git diff > {patch_file}")
+
+    scp_cmd_src = args.ssh_cmd.replace("ssh", "scp").replace("-f", patch_file)
+    os.system(f"{scp_cmd_src} {patch_file}")
+
     for it, addr in enumerate(all_addresses):
-        # command = " ".join(
-        #     ["python", "main.py"]
-        #     + raw_args
-        #     + [
-        #         "--extra_tag",
-        #         f"{args.extra_tag}{'__' if len(args.extra_tag) > 0 else ''}machine{it}",
-        #     ]
-        #     + ["--machine_id", f"{it}"]
-        # )
-        command = "sleep 30"
+        job_id = id_generator()
+
+        command = " ".join(
+            ["python", "main.py"]
+            + raw_args
+            + [
+                "--extra_tag",
+                f"{args.extra_tag}{'__' if len(args.extra_tag) > 0 else ''}machine{it}",
+            ]
+            + ["--machine_id", f"{it}"]
+        )
+
+        logfile = f"{args.output_dir}/log_{time_str}_{job_id}_machine{it}"
+
         env_and_command = ws(
-            f"source {args.env_activate_path} ; "
-            f"cd {args.allenact_path} ; "
-            f"mkdir -p {args.output_dir} ; "
-            f"{command} &> {args.output_dir}/log_{time_str}_{id_generator()}_machine{it}"
+            f"cd {args.allenact_path} && "
+            f"mkdir -p {args.output_dir} &>> {logfile} && "
+            f"source {args.env_activate_path} &>> {logfile} && "
+            f"git apply {patch_file} &>> {logfile} && "
+            f"rm {patch_file} &>> {logfile} && "
+            f"{command} &>> {logfile}"
         )
-        screen_command = wd(
-            f"screen -S allenact_{time_str}_{id_generator()}_machine{it} -dm "
-            f"bash -c {env_and_command}"
-        )
+
+        screen_name = f"allenact_{time_str}_{job_id}_machine{it}"
+        screen_command = wd(f"screen -S {screen_name} -dm bash -c {env_and_command}")
+
         ssh_command = f"{args.ssh_cmd.format(addr=addr)} {screen_command}"
-        get_logger().debug(f"Running {ssh_command}")
+
+        get_logger().debug(f"SSH command {ssh_command}")
         os.system(ssh_command)
-        get_logger().info(f"Executed ssh command for {addr}")
+        get_logger().info(f"{addr} {screen_name}")
+
+    with open(patch_file, "r") as f:
+        get_logger().info(f"Deleting {patch_file} with {''.join(f.readlines())}")
+    os.system(f"rm {patch_file}")
 
     print("DONE")
