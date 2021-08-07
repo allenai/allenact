@@ -144,14 +144,16 @@ if __name__ == "__main__":
             logfile = f"{args.output_dir}/log_{time_str}_{job_id}_machine{it}"
 
             env_and_command = wrap_single_nested(
-                f"cd {args.allenact_path} ; "
-                f"mkdir -p {args.output_dir} ; "
-                f"source {args.env_activate_path} &>> {logfile} ; "
-                f"for NCCL_SOCKET_IFNAME in $(route | grep default) ; do : ; done ; export NCCL_SOCKET_IFNAME ; "
-                f"python --version &>> {logfile} ; "
-                f"which python &>> {logfile} ; "
-                f"echo NCCL_SOCKET_IFNAME=$NCCL_SOCKET_IFNAME &>> {logfile} ; "
-                f"echo &>> {logfile} ; "
+                f"for NCCL_SOCKET_IFNAME in $(route | grep default) ; do : ; done && export NCCL_SOCKET_IFNAME && "
+                f"cd {args.allenact_path} && "
+                f"mkdir -p {args.output_dir} && "
+                f"source {args.env_activate_path} &>> {logfile} && "
+                f"echo pwd=$(pwd) &>> {logfile} && "
+                f"echo output_dir={args.output_dir} &>> {logfile} && "
+                f"echo python_version=$(python --version) &>> {logfile} && "
+                f"echo python_path=$(which python) &>> {logfile} && "
+                f"set | grep NCCL_SOCKET_IFNAME &>> {logfile} && "
+                f"echo &>> {logfile} && "
                 f"{command} &>> {logfile}"
             )
 

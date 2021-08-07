@@ -82,12 +82,12 @@ if __name__ == "__main__":
                     f"sleep 1 ; "
                     f"echo Master processes left running: ; "
                     f"ps aux | grep Master: | grep -v grep ; "
+                    f"echo ; "
                     f"'"
                 )
 
                 # print(f"SSH command {ssh_command}")
                 os.system(ssh_command)
-                print(f"Killed {addr} {screen_name}")
 
             do_delete = ""
             while do_delete not in ["y", "n"]:
