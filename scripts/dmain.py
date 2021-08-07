@@ -145,6 +145,8 @@ if __name__ == "__main__":
                 f"source {args.env_activate_path} &>> {logfile} ; "
                 f"python --version &>> {logfile} ; "
                 f"which python &>> {logfile} ; "
+                f"for NCCL_SOCKET_IFNAME in $(route | grep default) ; do : ; done ; export NCCL_SOCKET_IFNAME ; "
+                f"echo NCCL_SOCKET_IFNAME=$NCCL_SOCKET_IFNAME &>> {logfile} ; "
                 f"{command} &>> {logfile}"
             )
 
