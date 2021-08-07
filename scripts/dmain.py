@@ -85,6 +85,10 @@ def ws(text):
     return f"'{text}'"
 
 
+def wsn(text, quote=r"'\''"):
+    return f"{quote}{text}{quote}"
+
+
 def wd(text):
     return f'"{text}"'
 
@@ -139,7 +143,7 @@ if __name__ == "__main__":
 
             logfile = f"{args.output_dir}/log_{time_str}_{job_id}_machine{it}"
 
-            env_and_command = ws(
+            env_and_command = wsn(
                 f"cd {args.allenact_path} ; "
                 f"mkdir -p {args.output_dir} ; "
                 f"source {args.env_activate_path} &>> {logfile} ; "
@@ -151,7 +155,7 @@ if __name__ == "__main__":
             )
 
             screen_name = f"allenact_{time_str}_{job_id}_machine{it}"
-            screen_command = wd(
+            screen_command = ws(
                 f"screen -S {screen_name} -dm bash -c {env_and_command}"
             )
 
