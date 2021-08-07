@@ -155,6 +155,8 @@ if __name__ == "__main__":
 
             killfile.write(f"{addr} {screen_name}\n")
 
-    get_logger().info(f"\nRunning screen ids saved to {killfilename}\n")
+    get_logger().info("")
+    get_logger().info(f"Running screen ids saved to {killfilename}")
+    get_logger().info("")
 
     get_logger().info("DONE")
