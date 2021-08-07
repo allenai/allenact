@@ -5,6 +5,10 @@ import os
 import time
 import random
 import string
+from pathlib import Path
+
+# Add to PYTHONPATH the path of the parent directory of the current's file directory
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(Path(__file__)))))
 
 from allenact.main import get_argument_parser as get_main_arg_parser
 from allenact.utils.system import init_logging, get_logger
