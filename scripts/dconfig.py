@@ -77,7 +77,7 @@ if __name__ == "__main__":
             f"source {remote_config_script} &>> log_allenact_distributed_config"
         )
         screen_command = wrap_single(
-            f"screen -S {screen_name} -dm bash -c < {bash_command}"
+            f"screen -S {screen_name} -dm bash -c {bash_command}"
         )
 
         ssh_command = f"{args.ssh_cmd.format(addr=addr)} {screen_command}"
