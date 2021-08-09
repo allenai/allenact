@@ -32,9 +32,20 @@ def get_argument_parser():
         required=False,
         type=str,
         default="ssh -f {addr}",
-        help="SSH command. Useful to utilize a pre-shared key with 'ssh -i mykey.pem -f ubuntu@{addr}'. "
-        "The option `-f` should be used for non-interactive session",
+        help="SSH command. Useful to utilize a pre-shared key with 'ssh -i path/to/mykey.pem -f ubuntu@{addr}'. "
+        "The option `-f` should be used, since we want a non-interactive session",
     )
+
+    parser.add_argument(
+        "--distribute_public_rsa_key",
+        dest="distribute_public_rsa_key",
+        action="store_true",
+        required=False,
+        help="if you pass the `--distribute_public_rsa_key` flag, the manager node's public key will be added to the "
+        "authorized keys of all workers (this is necessary in default-configured EC2 instances to use "
+        "`scripts/dmain.py`)",
+    )
+    parser.set_defaults(distribute_public_rsa_key=False)
 
     return parser
 
@@ -46,6 +57,10 @@ def get_args():
     args = parser.parse_args()
 
     return args
+
+
+def wrap_double(text):
+    return f'"{text}"'
 
 
 def wrap_single(text):
@@ -64,6 +79,14 @@ if __name__ == "__main__":
 
     remote_config_script = f"{args.config_script}.distributed"
     for it, addr in enumerate(all_addresses):
+        if args.distribute_public_rsa_key:
+            key_command = (
+                f"{args.ssh_cmd.format(addr=addr)} "
+                f"{wrap_double('echo $(cat ~/.ssh/id_rsa.pub) >> ~/.ssh/authorized_keys')}"
+            )
+            print(f"Key command {key_command}")
+            os.system(f"{key_command}")
+
         scp_cmd = (
             args.ssh_cmd.replace("ssh ", "scp ")
             .replace("-f", args.config_script)
