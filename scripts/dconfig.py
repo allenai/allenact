@@ -69,7 +69,7 @@ if __name__ == "__main__":
             .replace("-f", args.config_script)
             .format(addr=addr)
         )
-        print(f"scp {args.config_script} to {remote_config_script}")
+        print(f"SCP command {scp_cmd}:{remote_config_script}")
         os.system(f"{scp_cmd}:{remote_config_script}")
 
         screen_name = f"allenact_config_machine{it}"
