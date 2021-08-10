@@ -2,7 +2,6 @@
 
 import os
 import argparse
-import glob
 
 
 def get_argument_parser():
