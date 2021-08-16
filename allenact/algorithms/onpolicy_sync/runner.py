@@ -148,15 +148,15 @@ class OnPolicyRunner(object):
     ):
         if mp_ctx is None:
             assert multiprocessing_start_method in valid_start_methods, (
-                "multiprocessing_start_method must be one of {}. Got '{}'"
-            ).format(valid_start_methods, multiprocessing_start_method)
+                f"multiprocessing_start_method must be one of {valid_start_methods}."
+                f" Got '{multiprocessing_start_method}'"
+            )
 
             mp_ctx = mp.get_context(multiprocessing_start_method)
         elif multiprocessing_start_method != mp_ctx.get_start_method():
             get_logger().warning(
-                "ignoring multiprocessing_start_method '{}' and using given context with '{}'".format(
-                    multiprocessing_start_method, mp_ctx.get_start_method()
-                )
+                f"ignoring multiprocessing_start_method '{multiprocessing_start_method}'"
+                f" and using given context with '{mp_ctx.get_start_method()}'"
             )
 
         return mp_ctx
@@ -219,9 +219,7 @@ class OnPolicyRunner(object):
             d.index >= 0 for d in devices
         ), f"Cannot have a mix of CPU and GPU devices (`devices == {devices}`)"
 
-        get_logger().info(
-            "Using {} {} workers on devices {}".format(len(devices), mode, devices)
-        )
+        get_logger().info(f"Using {len(devices)} {mode} workers on devices {devices}")
         return devices
 
     def local_worker_ids(self, mode: str):
@@ -288,11 +286,9 @@ class OnPolicyRunner(object):
         try:
             worker = engine_class(*args, **kwargs)
         except Exception:
-            get_logger().error(
-                "Encountered Exception. Terminating {} worker {}".format(mode, id)
-            )
+            get_logger().error(f"Encountered Exception. Terminating {mode} worker {id}")
             get_logger().exception(traceback.format_exc())
-            kwargs["results_queue"].put(("{}_stopped".format(mode), 1 + id))
+            kwargs["results_queue"].put((f"{mode}_stopped", 1 + id))
         finally:
             return worker
 
@@ -325,7 +321,7 @@ class OnPolicyRunner(object):
     def valid_loop(id: int = 0, *engine_args, **engine_kwargs):
         engine_kwargs["mode"] = VALID_MODE_STR
         engine_kwargs["worker_id"] = id
-        get_logger().info("valid {} args {}".format(id, engine_kwargs))
+        get_logger().info(f"valid {id} args {engine_kwargs}")
 
         valid = OnPolicyRunner.init_worker(
             engine_class=OnPolicyInference, args=engine_args, kwargs=engine_kwargs
@@ -338,7 +334,7 @@ class OnPolicyRunner(object):
     def test_loop(id: int = 0, *engine_args, **engine_kwargs):
         engine_kwargs["mode"] = TEST_MODE_STR
         engine_kwargs["worker_id"] = id
-        get_logger().info("test {} args {}".format(id, engine_kwargs))
+        get_logger().info(f"test {id} args {engine_kwargs}")
 
         test = OnPolicyRunner.init_worker(OnPolicyInference, engine_args, engine_kwargs)
         if test is not None:
@@ -464,7 +460,7 @@ class OnPolicyRunner(object):
             self.processes[TRAIN_MODE_STR].append(train)
 
         get_logger().info(
-            "Started {} train processes".format(len(self.processes[TRAIN_MODE_STR]))
+            f"Started {len(self.processes[TRAIN_MODE_STR])} train processes"
         )
 
         # Validation
@@ -490,7 +486,7 @@ class OnPolicyRunner(object):
             self.processes[VALID_MODE_STR].append(valid)
 
             get_logger().info(
-                "Started {} valid processes".format(len(self.processes[VALID_MODE_STR]))
+                f"Started {len(self.processes[VALID_MODE_STR])} valid processes"
             )
         else:
             get_logger().info(
@@ -502,13 +498,13 @@ class OnPolicyRunner(object):
         if self._collect_valid_results:
             metrics_dir = self.metric_path(self.local_start_time_str)
             os.makedirs(metrics_dir, exist_ok=True)
-            suffix = "__valid_{}".format(self.local_start_time_str)
+            suffix = f"__valid_{self.local_start_time_str}"
             metrics_file_template = os.path.join(
                 metrics_dir, "metrics" + suffix + "{:012d}.json"
             )  # template for training steps
 
             get_logger().info(
-                "Saving valid metrics with template {}".format(metrics_file_template)
+                f"Saving valid metrics with template {metrics_file_template}"
             )
 
             # Check output file can be written
@@ -533,6 +529,11 @@ class OnPolicyRunner(object):
         max_sampler_processes_per_worker: Optional[int] = None,
         inference_expert: bool = False,
     ) -> List[Dict]:
+        # Tester always runs on a single machine
+        assert (
+            self.machine_id == 0
+        ), f"Received `machine_id={self.machine_id} for test. Only one machine supported."
+
         self.extra_tag += (
             "__" * (len(self.extra_tag) > 0) + "enforced_test_expert"
         ) * inference_expert
@@ -546,7 +547,7 @@ class OnPolicyRunner(object):
         if num_testers > 1:
             distributed_port = find_free_port()
 
-        # TODO Assume tester runs on a single machine
+        # Tester always runs on a single machine
         for tester_it in range(num_testers):
             test: BaseProcess = self.mp_ctx.Process(
                 target=self.test_loop,
@@ -571,7 +572,7 @@ class OnPolicyRunner(object):
             self.processes[TEST_MODE_STR].append(test)
 
         get_logger().info(
-            "Started {} test processes".format(len(self.processes[TEST_MODE_STR]))
+            f"Started {len(self.processes[TEST_MODE_STR])} test processes"
         )
 
         checkpoint_paths = self.get_checkpoint_files(
@@ -580,7 +581,7 @@ class OnPolicyRunner(object):
         )
         steps = [self.step_from_checkpoint(cp) for cp in checkpoint_paths]
 
-        get_logger().info("Running test on {} steps {}".format(len(steps), steps))
+        get_logger().info(f"Running test on {len(steps)} steps {steps}")
 
         for checkpoint_path in checkpoint_paths:
             # Make all testers work on each checkpoint
@@ -593,10 +594,10 @@ class OnPolicyRunner(object):
 
         metrics_dir = self.metric_path(self.local_start_time_str)
         os.makedirs(metrics_dir, exist_ok=True)
-        suffix = "__test_{}".format(self.local_start_time_str)
+        suffix = f"__test_{self.local_start_time_str}"
         metrics_file_path = os.path.join(metrics_dir, "metrics" + suffix + ".json")
 
-        get_logger().info("Saving test metrics in {}".format(metrics_file_path))
+        get_logger().info(f"Saving test metrics in {metrics_file_path}")
 
         # Check output file can be written
         with open(metrics_file_path, "w") as f:
@@ -612,17 +613,15 @@ class OnPolicyRunner(object):
     @staticmethod
     def checkpoint_start_time_str(checkpoint_file_name):
         parts = checkpoint_file_name.split(os.path.sep)
-        assert len(parts) > 1, "{} is not a valid checkpoint path".format(
-            checkpoint_file_name
-        )
+        assert len(parts) > 1, f"{checkpoint_file_name} is not a valid checkpoint path"
         start_time_str = parts[-2]
-        get_logger().info("Using checkpoint start time {}".format(start_time_str))
+        get_logger().info(f"Using checkpoint start time {start_time_str}")
         return start_time_str
 
     @property
     def experiment_name(self):
         if len(self.extra_tag) > 0:
-            return "{}_{}".format(self.config.tag(), self.extra_tag)
+            return f"{self.config.tag()}_{self.extra_tag}"
         return self.config.tag()
 
     def checkpoint_dir(
@@ -677,10 +676,10 @@ class OnPolicyRunner(object):
         # Saving current git diff
         try:
             sha, diff_str = get_git_diff_of_project()
-            with open(os.path.join(base_dir, "{}.patch".format(sha)), "w") as f:
+            with open(os.path.join(base_dir, f"{sha}.patch"), "w") as f:
                 f.write(diff_str)
 
-            get_logger().info("Git diff saved to {}".format(base_dir))
+            get_logger().info(f"Git diff saved to {base_dir}")
         except subprocess.CalledProcessError:
             get_logger().warning(
                 "Failed to get a git diff of the current project."
@@ -701,9 +700,7 @@ class OnPolicyRunner(object):
                         json.dump(json.loads(self.loaded_config_src_files[src_path]), f)
                     continue
 
-                assert os.path.isfile(src_path), "Config file {} not found".format(
-                    src_path
-                )
+                assert os.path.isfile(src_path), f"Config file {src_path} not found"
                 src_path = os.path.abspath(src_path)
 
                 # To prevent overwriting files with the same name, we loop
@@ -711,10 +708,10 @@ class OnPolicyRunner(object):
                 # name collisions.
                 k = -1
                 while True:
-                    prefix = "" if k == -1 else "namecollision{}__".format(k)
+                    prefix = "" if k == -1 else f"namecollision{k}__"
                     k += 1
                     dst_path = os.path.join(
-                        base_dir, "{}{}".format(prefix, os.path.basename(src_path),),
+                        base_dir, f"{prefix}{os.path.basename(src_path)}"
                     )
                     if not os.path.exists(dst_path):
                         os.makedirs(os.path.dirname(dst_path), exist_ok=True)
@@ -722,13 +719,11 @@ class OnPolicyRunner(object):
                             file_contents = f.read()
                         with open(dst_path, "w") as f:
                             f.write(
-                                "### THIS FILE ORIGINALLY LOCATED AT '{}'\n\n{}".format(
-                                    src_path, file_contents
-                                )
+                                f"### THIS FILE ORIGINALLY LOCATED AT '{src_path}'\n\n{file_contents}"
                             )
                         break
 
-        get_logger().info("Config files saved to {}".format(base_dir))
+        get_logger().info(f"Config files saved to {base_dir}")
 
     def process_eval_package(
         self,
@@ -819,9 +814,7 @@ class OnPolicyRunner(object):
                 n=add_prefix(pkg.train_info_tracker.counts(), "misc"),
             )
 
-        message = [
-            "train {} steps {} offpolicy:".format(training_steps, offpolicy_steps)
-        ]
+        message = [f"train {training_steps} steps {offpolicy_steps} offpolicy:"]
         means = metrics_and_train_info_tracker.means()
 
         for k in sorted(
@@ -843,7 +836,7 @@ class OnPolicyRunner(object):
 
         if last_offpolicy_steps > 0:
             fps = (offpolicy_steps - last_offpolicy_steps) / (current_time - last_time)
-            message += ["offpolicy/approx_fps {:.3g}".format(fps)]
+            message += [f"offpolicy/approx_fps {fps:.3g}"]
             if log_writer is not None:
                 log_writer.add_scalar("offpolicy/approx_fps", fps, training_steps)
 
@@ -883,7 +876,7 @@ class OnPolicyRunner(object):
                 log_writer.add_scalar(
                     f"{mode}-metrics/{k}", metric_means[k], training_steps
                 )
-            message.append(k + " {:.3g}".format(metric_means[k]))
+            message.append(k + f" {metric_means[k]:.3g}")
 
         if all_results is not None:
             results = copy.deepcopy(metric_means)
@@ -898,9 +891,7 @@ class OnPolicyRunner(object):
                 f"{mode}-misc/num_tasks_evaled", num_tasks, training_steps
             )
 
-        message.append(
-            "tasks {} checkpoint {}".format(num_tasks, checkpoint_file_name[0])
-        )
+        message.append(f"tasks {num_tasks} checkpoint {checkpoint_file_name[0]}")
         get_logger().info(" ".join(message))
 
         if self.visualizer is not None:
@@ -924,7 +915,7 @@ class OnPolicyRunner(object):
         if not self.disable_tensorboard:
             log_writer = SummaryWriter(
                 log_dir=self.log_writer_path(start_time_str),
-                filename_suffix="__{}_{}".format(self.mode, self.local_start_time_str),
+                filename_suffix=f"__{self.mode}_{self.local_start_time_str}",
             )
 
         # To aggregate/buffer metrics from trainers/testers
@@ -978,10 +969,8 @@ class OnPolicyRunner(object):
                                     collected = collected[nworkers:]
                                 elif len(collected) > 2 * nworkers:
                                     get_logger().warning(
-                                        "Unable to aggregate train packages from all {} workers"
-                                        "after {} packages collected".format(
-                                            nworkers, len(collected)
-                                        )
+                                        f"Unable to aggregate train packages from all {nworkers} workers"
+                                        f"after {len(collected)} packages collected"
                                     )
                         elif (
                             pkg_mode == VALID_MODE_STR
@@ -1068,15 +1057,11 @@ class OnPolicyRunner(object):
                                     break
                             else:
                                 raise Exception(
-                                    "Train worker {} abnormally terminated".format(
-                                        package[1] - 1
-                                    )
+                                    f"Train worker {package[1] - 1} abnormally terminated"
                                 )
                         elif pkg_mode == "valid_stopped":
                             raise Exception(
-                                "Valid worker {} abnormally terminated".format(
-                                    package[1] - 1
-                                )
+                                f"Valid worker {package[1] - 1} abnormally terminated"
                             )
                         elif pkg_mode == "test_stopped":
                             if package[1] == 0:
@@ -1089,9 +1074,7 @@ class OnPolicyRunner(object):
                                     break
                             else:
                                 raise RuntimeError(
-                                    "Test worker {} abnormally terminated".format(
-                                        package[1] - 1
-                                    )
+                                    f"Test worker {package[1] - 1} abnormally terminated"
                                 )
                         else:
                             get_logger().error(
@@ -1192,20 +1175,18 @@ class OnPolicyRunner(object):
         for process_type in self.processes:
             for it, process in enumerate(self.processes[process_type]):
                 if process.is_alive():
-                    logif("Terminating {} {}".format(process_type, it))
+                    logif(f"Terminating {process_type} {it}")
                     process.terminate()
 
         # Now join processes
         for process_type in self.processes:
             for it, process in enumerate(self.processes[process_type]):
                 try:
-                    logif("Joining {} {}".format(process_type, it))
+                    logif(f"Joining {process_type} {it}")
                     process.join(1)
-                    logif("Closed {} {}".format(process_type, it))
+                    logif(f"Closed {process_type} {it}")
                 except Exception as e:
-                    logif(
-                        "Exception raised when closing {} {}".format(process_type, it)
-                    )
+                    logif(f"Exception raised when closing {process_type} {it}")
                     logif(e)
 
         self.processes.clear()
