@@ -64,8 +64,8 @@ def get_argument_parser():
         default="",
         required=False,
         help="Add an extra tag to the experiment when trying out new ideas (will be used"
-        "as a subdirectory of the tensorboard path so you will be able to"
-        "search tensorboard logs using this extra tag). This can also be used to add an extra"
+        " as a subdirectory of the tensorboard path so you will be able to"
+        " search tensorboard logs using this extra tag). This can also be used to add an extra"
         " organization when running evaluation (e.g. `--extra_tag running_eval_on_great_idea_12`)",
     )
 
@@ -101,7 +101,7 @@ def get_argument_parser():
         "\n(2) the path to a directory of checkpoint files all of which you'd like to be evaluated"
         " (checkpoints are expected to have a `.pt` file extension),"
         '\n(3) a "glob" pattern (https://tldp.org/LDP/abs/html/globbingref.html) that will be expanded'
-        "using python's `glob.glob` function and should return a collection of checkpoint files."
+        " using python's `glob.glob` function and should return a collection of checkpoint files."
         "\nIf you'd like to only evaluate a subset of the checkpoints specified by the above directory/glob"
         " (e.g. every checkpoint saved after 5mil steps) you'll likely want to use the `--approx_ckpt_step_interval`"
         " flag.",
@@ -125,8 +125,8 @@ def get_argument_parser():
         action="store_true",
         required=False,
         help="for training, if checkpoint is specified, DO NOT continue the training pipeline from where"
-        "training had previously ended. Instead restart the training pipeline from scratch but"
-        "with the model weights from the checkpoint.",
+        " training had previously ended. Instead restart the training pipeline from scratch but"
+        " with the model weights from the checkpoint.",
     )
     parser.set_defaults(restart_pipeline=False)
 
@@ -218,8 +218,9 @@ def get_argument_parser():
         required=False,
         type=str,
         default="127.0.0.1:0",
-        help="IP address and port of listener for distributed process with rank 0. "
-        "Port number 0 lets runner choose a free port.",
+        help="IP address and port of listener for distributed process with rank 0."
+        " Port number 0 lets runner choose a free port. For more details, please follow the"
+        " tutorial TODO_URL.",
     )
 
     parser.add_argument(
