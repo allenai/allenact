@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Entry point to multi-node (distributed) training for a user given experiment name."""
+
 import sys
 import os
 import time
@@ -12,6 +14,7 @@ sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(Path(__file__)))
 
 from allenact.main import get_argument_parser as get_main_arg_parser
 from allenact.utils.system import init_logging, get_logger
+from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 
 
 def get_argument_parser():
@@ -49,6 +52,10 @@ def get_argument_parser():
         default="allenact",
         help="Path to allenact top directory. It must be the same across all machines",
     )
+
+    # Required distributed_ip_and_port
+    idx = [a.dest for a in parser._actions].index("distributed_ip_and_port")
+    parser._actions[idx].required = True
 
     return parser
 
@@ -98,8 +105,14 @@ def id_generator(size=4, chars=string.ascii_uppercase + string.digits):
 
 
 # Assume code is deployed in all machines and we can ssh into each of the `runs_on` machines through port 22
-# Assume tool is called from allenact project's root directory
 if __name__ == "__main__":
+    # Tool must be called from AllenAct project's root directory
+    cwd = os.path.abspath(os.getcwd())
+    assert cwd == ABS_PATH_OF_TOP_LEVEL_DIR, (
+        f"`dmain.py` called from {cwd}."
+        f"\nIt should be called from AllenAct's top level directory {ABS_PATH_OF_TOP_LEVEL_DIR}."
+    )
+
     args = get_args()
 
     init_logging(args.log_level)
@@ -107,7 +120,7 @@ if __name__ == "__main__":
     raw_args = get_raw_args()
 
     all_addresses = args.runs_on.split(",")
-    get_logger().info(f"Running on addresses {all_addresses}")
+    get_logger().info(f"Running on IP addresses {all_addresses}")
 
     assert args.distributed_ip_and_port.split(":")[0] in all_addresses, (
         f"Missing listener IP address {args.distributed_ip_and_port.split(':')[0]} "
@@ -127,7 +140,7 @@ if __name__ == "__main__":
         for it, addr in enumerate(all_addresses):
             code_tget = f"{addr}:{args.allenact_path}/"
             get_logger().info(f"rsync {code_src} to {code_tget}")
-            os.system(f"rsync -r {code_src} {code_tget}")
+            os.system(f"rsync -rz {code_src} {code_tget}")
 
             job_id = id_generator()
 
@@ -144,17 +157,17 @@ if __name__ == "__main__":
             logfile = f"{args.output_dir}/log_{time_str}_{job_id}_machine{it}"
 
             env_and_command = wrap_single_nested(
-                f"for NCCL_SOCKET_IFNAME in $(route | grep default) ; do : ; done && export NCCL_SOCKET_IFNAME && "
-                f"cd {args.allenact_path} && "
-                f"mkdir -p {args.output_dir} && "
-                f"source {args.env_activate_path} &>> {logfile} && "
-                f"echo pwd=$(pwd) &>> {logfile} && "
-                f"echo output_dir={args.output_dir} &>> {logfile} && "
-                f"echo python_version=$(python --version) &>> {logfile} && "
-                f"echo python_path=$(which python) &>> {logfile} && "
-                f"set | grep NCCL_SOCKET_IFNAME &>> {logfile} && "
-                f"echo &>> {logfile} && "
-                f"{command} &>> {logfile}"
+                f"for NCCL_SOCKET_IFNAME in $(route | grep default) ; do : ; done && export NCCL_SOCKET_IFNAME"
+                f" && cd {args.allenact_path}"
+                f" && mkdir -p {args.output_dir}"
+                f" && source {args.env_activate_path} &>> {logfile}"
+                f" && echo pwd=$(pwd) &>> {logfile}"
+                f" && echo output_dir={args.output_dir} &>> {logfile}"
+                f" && echo python_version=$(python --version) &>> {logfile}"
+                f" && echo python_path=$(which python) &>> {logfile}"
+                f" && set | grep NCCL_SOCKET_IFNAME &>> {logfile}"
+                f" && echo &>> {logfile}"
+                f" && {command} &>> {logfile}"
             )
 
             screen_name = f"allenact_{time_str}_{job_id}_machine{it}"
