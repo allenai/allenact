@@ -109,8 +109,8 @@ if __name__ == "__main__":
     all_addresses = args.runs_on.split(",")
     get_logger().info(f"Running on addresses {all_addresses}")
 
-    assert args.distributed_ip_port.split(":")[0] in all_addresses, (
-        f"Missing listener IP address {args.distributed_ip_port.split(':')[0]} "
+    assert args.distributed_ip_and_port.split(":")[0] in all_addresses, (
+        f"Missing listener IP address {args.distributed_ip_and_port.split(':')[0]} "
         f"in list of worker addresses {all_addresses}"
     )
 

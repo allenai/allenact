@@ -71,7 +71,7 @@ class OnPolicyRunner(object):
         extra_tag: str = "",
         disable_tensorboard: bool = False,
         disable_config_saving: bool = False,
-        distributed_ip_port: str = "127.0.0.1:-1",
+        distributed_ip_and_port: str = "127.0.0.1:0",
         machine_id: int = 0,
     ):
         self.config = config
@@ -117,7 +117,7 @@ class OnPolicyRunner(object):
 
         self._collect_valid_results: bool = False
 
-        self.distributed_ip_port = distributed_ip_port
+        self.distributed_ip_and_port = distributed_ip_and_port
         self.machine_id = machine_id
 
     @property
@@ -368,12 +368,14 @@ class OnPolicyRunner(object):
         self._local_start_time_str = self._acquire_unique_local_start_time_string()
 
     def get_port(self):
-        passed_port = int(self.distributed_ip_port.split(":")[1])
-        if passed_port < 0:
+        passed_port = int(self.distributed_ip_and_port.split(":")[1])
+        if passed_port == 0:
             assert (
                 self.machine_id == 0
             ), "Only runner with `machine_id` == 0 can search for a free port."
-            distributed_port = find_free_port(self.distributed_ip_port.split(":")[0])
+            distributed_port = find_free_port(
+                self.distributed_ip_and_port.split(":")[0]
+            )
         else:
             distributed_port = passed_port
 
@@ -431,7 +433,7 @@ class OnPolicyRunner(object):
                 mp_ctx=self.mp_ctx,
                 num_workers=num_workers,
                 device=devices[trainer_id],
-                distributed_ip=self.distributed_ip_port.split(":")[0],
+                distributed_ip=self.distributed_ip_and_port.split(":")[0],
                 distributed_port=distributed_port,
                 max_sampler_processes_per_worker=max_sampler_processes_per_worker,
                 initial_model_state_dict=initial_model_state_dict

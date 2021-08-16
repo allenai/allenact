@@ -213,13 +213,13 @@ def get_argument_parser():
     )
 
     parser.add_argument(
-        "--distributed_ip_port",
-        dest="distributed_ip_port",
+        "--distributed_ip_and_port",
+        dest="distributed_ip_and_port",
         required=False,
         type=str,
-        default="127.0.0.1:-1",
+        default="127.0.0.1:0",
         help="IP address and port of listener for distributed process with rank 0. "
-        "Port address -1 lets runner choose a free port.",
+        "Port number 0 lets runner choose a free port.",
     )
 
     parser.add_argument(
@@ -412,7 +412,7 @@ def main():
             extra_tag=args.extra_tag,
             disable_tensorboard=args.disable_tensorboard,
             disable_config_saving=args.disable_config_saving,
-            distributed_ip_port=args.distributed_ip_port,
+            distributed_ip_and_port=args.distributed_ip_and_port,
             machine_id=args.machine_id,
         ).start_train(
             checkpoint=args.checkpoint,
@@ -432,7 +432,7 @@ def main():
             extra_tag=args.extra_tag,
             disable_tensorboard=args.disable_tensorboard,
             disable_config_saving=args.disable_config_saving,
-            distributed_ip_port=args.distributed_ip_port,
+            distributed_ip_and_port=args.distributed_ip_and_port,
             machine_id=args.machine_id,
         ).start_test(
             checkpoint_path_dir_or_pattern=args.checkpoint,
