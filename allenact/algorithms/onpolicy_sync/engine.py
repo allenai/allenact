@@ -953,7 +953,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         for e in range(self.training_pipeline.update_repeats):
             data_generator = rollouts.recurrent_generator(
-                advantages, adv_mean, adv_std, self.training_pipeline.num_mini_batch
+                advantages=advantages,
+                adv_mean=adv_mean,
+                adv_std=adv_std,
+                num_mini_batch=self.training_pipeline.num_mini_batch,
             )
 
             for bit, batch in enumerate(data_generator):
