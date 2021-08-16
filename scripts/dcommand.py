@@ -71,15 +71,9 @@ if __name__ == "__main__":
     if args.runs_on is not None:
         all_addresses = args.runs_on.split(",")
     else:
-        all_files = (
-            [args.screen_ids_file]
-            if args.screen_ids_file is not None
-            else sorted(
-                glob.glob(
-                    os.path.join(os.path.expanduser("~"), ".allenact", "*.killfile")
-                ),
-                reverse=True,
-            )
+        all_files = sorted(
+            glob.glob(os.path.join(os.path.expanduser("~"), ".allenact", "*.killfile")),
+            reverse=True,
         )
         if len(all_files) == 0:
             print(
