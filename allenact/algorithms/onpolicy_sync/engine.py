@@ -920,20 +920,26 @@ class OnPolicyTrainer(OnPolicyRLEngine):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Computes the mean and variances of advantages (possibly over multiple workers).
         For multiple workers, this method is equivalent to first collecting all versions of
-        advantages and then computing the mean and variance locally over that
-        :param advantages: (*,) shaped tensors to compute mean and variance over.  Assumed
-                            to be solely the workers local copy of this tensor,
-                            the resultant mean and variance will be computed
-                            over _all_ workers version of this tensor in distributed training.
-        """
-        if self.is_distributed:
-            mean = advantages.mean()
-            dist.all_reduce(mean)
-            mean = mean / self.num_workers
+        advantages and then computing the mean and variance locally over that.
 
-            var = (advantages - mean).pow(2).mean()
-            dist.all_reduce(var)
-            std = (var / self.num_workers).sqrt()
+        # Parameters
+
+        advantages: tensors to compute mean and variance over. Assumed to be solely the
+         workers' local copy of this tensor, the resultant mean and variance will be computed
+         over _all_ workers in distributed training.
+        """
+
+        # Step count has already been updated with the steps from all workers
+        global_rollout_steps = self.step_count - self.former_steps
+
+        if self.is_distributed:
+            mean = advantages.sum()
+            dist.all_reduce(mean)
+            mean = mean / global_rollout_steps
+
+            std = (advantages - mean).pow(2).sum()
+            dist.all_reduce(std)
+            std = (std / (global_rollout_steps - 1)).sqrt()
         else:
             mean, std = advantages.mean(), advantages.std()
 
