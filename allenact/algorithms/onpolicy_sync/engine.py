@@ -924,9 +924,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         # Parameters
 
-        advantages: tensors to compute mean and variance over. Assumed to be solely the
-         workers' local copy of this tensor, the resultant mean and variance will be computed
-         over _all_ workers in distributed training.
+        advantages: Tensors to compute mean and variance over. Assumed to be solely the
+         worker's local copy of this tensor, the resultant mean and variance will be computed
+         as though _all_ workers' versions of this tensor were concatenated together in
+         distributed training.
         """
 
         # Step count has already been updated with the steps from all workers
