@@ -643,7 +643,7 @@ class VectorSampledTasks(object):
     def command(
         self, commands: Union[List[str], str], data_list: Optional[List]
     ) -> List[Any]:
-        """ """
+        """"""
         self._is_waiting = True
 
         if isinstance(commands, str):
@@ -1171,7 +1171,7 @@ class SingleProcessVectorSampledTasks(object):
     def command(
         self, commands: Union[List[str], str], data_list: Optional[List]
     ) -> List[Any]:
-        """ """
+        """"""
         if isinstance(commands, str):
             commands = [commands] * self.num_unpaused_tasks
 

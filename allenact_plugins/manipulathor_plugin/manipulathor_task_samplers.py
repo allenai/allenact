@@ -1,4 +1,4 @@
-"""Task Samplers for the task of ArmPointNav"""
+"""Task Samplers for the task of ArmPointNav."""
 import json
 import random
 from typing import List, Dict, Optional, Any, Union

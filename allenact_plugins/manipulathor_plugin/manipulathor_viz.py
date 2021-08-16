@@ -1,4 +1,4 @@
-"""Utility functions and classes for visualization and logging"""
+"""Utility functions and classes for visualization and logging."""
 import os
 from datetime import datetime
 
