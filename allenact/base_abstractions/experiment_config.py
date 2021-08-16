@@ -78,8 +78,8 @@ class MachineParams(object):
         self.local_worker_ids = local_worker_ids
 
         assert all(0 <= id < len(self.devices) for id in self.local_worker_ids), (
-            f"Passed {len(self.local_worker_ids)} local worker ids {self.local_worker_ids} "
-            f"for {len(self.devices)} total devices (workers)"
+            f"Passed {len(self.local_worker_ids)} local worker ids {self.local_worker_ids}"
+            f" for {len(self.devices)} total devices (workers)"
         )
 
     @classmethod
@@ -177,7 +177,7 @@ class FrozenClassVariables(abc.ABCMeta):
                 "Changing the values of class-level attributes is disabled in ExperimentConfig classes.\n"
                 "This is to prevent problems that can occur otherwise when using multiprocessing.\n"
                 "If you wish to change the value of a configuration, please do so for an instance of that"
-                "configuration.\nTriggered by attempting to modify {}".format(
+                " configuration.\nTriggered by attempting to modify {}".format(
                     cls.__name__
                 )
             )
