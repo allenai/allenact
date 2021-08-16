@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
+"""Tool to run command on multiple nodes through SSH."""
+
 import os
 import argparse
+import glob
 
 
 def get_argument_parser():
@@ -14,9 +17,11 @@ def get_argument_parser():
 
     parser.add_argument(
         "--runs_on",
-        required=True,
+        required=False,
         type=str,
-        help="Comma-separated IP addresses of machines",
+        default=None,
+        help="Comma-separated IP addresses of machines. If empty, the tool will scan for lists of IP addresses"
+        " in `screen_ids_file`s in the `~/.allenact` directory.",
     )
 
     parser.add_argument(
@@ -62,8 +67,46 @@ def wrap_single_nested(text, quote=r"'\''"):
 if __name__ == "__main__":
     args = get_args()
 
-    all_addresses = args.runs_on.split(",")
-    print(f"Running on addresses {all_addresses}")
+    all_addresses = []
+    if args.runs_on is not None:
+        all_addresses = args.runs_on.split(",")
+    else:
+        all_files = (
+            [args.screen_ids_file]
+            if args.screen_ids_file is not None
+            else sorted(
+                glob.glob(
+                    os.path.join(os.path.expanduser("~"), ".allenact", "*.killfile")
+                ),
+                reverse=True,
+            )
+        )
+        if len(all_files) == 0:
+            print(
+                f"No screen_ids_file found under {os.path.join(os.path.expanduser('~'), '.allenact')}"
+            )
+
+        for killfile in all_files:
+            with open(killfile, "r") as f:
+                # Each line contains 'IP_address screen_ID'
+                nodes = [tuple(line[:-1].split(" ")) for line in f.readlines()]
+
+            all_addresses = [node[0] for node in nodes]
+
+            use_addresses = ""
+            while use_addresses not in ["y", "n"]:
+                use_addresses = input(
+                    f"Run on {all_addresses} from {killfile}? [Y/n] "
+                ).lower()
+                if use_addresses == "":
+                    use_addresses = "y"
+
+            if use_addresses == "n":
+                all_addresses = []
+            else:
+                break
+
+    print(f"Running on IP addresses {all_addresses}")
 
     for it, addr in enumerate(all_addresses):
         ssh_command = f"{args.ssh_cmd.format(addr=addr)} {wrap_single(args.command)}"
