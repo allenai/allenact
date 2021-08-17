@@ -72,10 +72,10 @@ class MachineParams(object):
         self._visualizer_cached: Optional[VizSuite] = None
 
         self.local_worker_ids: Optional[List[int]] = None
-        self.set_local_worker_ids(local_worker_ids or list(range(len(self.devices))))
+        self.set_local_worker_ids(local_worker_ids)
 
     def set_local_worker_ids(self, local_worker_ids: List[int]):
-        self.local_worker_ids = local_worker_ids
+        self.local_worker_ids = local_worker_ids or list(range(len(self.devices)))
 
         assert all(0 <= id < len(self.devices) for id in self.local_worker_ids), (
             f"Passed {len(self.local_worker_ids)} local worker ids {self.local_worker_ids}"
