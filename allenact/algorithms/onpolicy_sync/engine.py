@@ -171,8 +171,8 @@ class OnPolicyRLEngine(object):
         if self.num_samplers > 0:
             create_model_kwargs = {}
             if self.machine_params.sensor_preprocessor_graph is not None:
-                self.sensor_preprocessor_graph = self.machine_params.sensor_preprocessor_graph.to(
-                    self.device
+                self.sensor_preprocessor_graph = (
+                    self.machine_params.sensor_preprocessor_graph.to(self.device)
                 )
                 create_model_kwargs[
                     "sensor_preprocessor_graph"
@@ -180,7 +180,8 @@ class OnPolicyRLEngine(object):
 
             set_seed(self.seed)
             self.actor_critic = cast(
-                ActorCriticModel, self.config.create_model(**create_model_kwargs),
+                ActorCriticModel,
+                self.config.create_model(**create_model_kwargs),
             ).to(self.device)
 
         if initial_model_state_dict is not None:
@@ -233,13 +234,15 @@ class OnPolicyRLEngine(object):
 
         self.deterministic_agents = deterministic_agents
 
-        self._is_closing: bool = False  # Useful for letting the RL runner know if this is closing
+        self._is_closing: bool = (
+            False  # Useful for letting the RL runner know if this is closing
+        )
         self._is_closed: bool = False
 
         self.training_pipeline: Optional[TrainingPipeline] = None
 
         # Keeping track of metrics during training/inference
-        self.single_process_metrics_queue: queue.Queue = queue.Queue()
+        self.single_process_metrics: List = []
 
     @property
     def vector_tasks(
@@ -348,7 +351,8 @@ class OnPolicyRLEngine(object):
             ckpt = torch.load(os.path.abspath(ckpt), map_location="cpu")
 
         ckpt = cast(
-            Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]], ckpt,
+            Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]],
+            ckpt,
         )
 
         self.actor_critic.load_state_dict(ckpt["model_state_dict"])  # type:ignore
@@ -357,35 +361,32 @@ class OnPolicyRLEngine(object):
 
     # aggregates task metrics currently in queue
     def aggregate_task_metrics(
-        self, logging_pkg: LoggingPackage, num_tasks: int = -1,
+        self,
+        logging_pkg: LoggingPackage,
+        num_tasks: int = -1,
     ) -> LoggingPackage:
-        done = num_tasks == 0
-        num_empty_tasks_dequeued = 0
-        while not done:
-            try:
-                # This queue is on this process so we should be able to let the timeout be small
-                # TODO: This should be refactored so that single_process_metrics_queue is a list
-                metrics_dict = self.single_process_metrics_queue.get(timeout=0.01)
-
-                num_empty_tasks_dequeued += not logging_pkg.add_metrics_dict(
-                    single_task_metrics_dict=metrics_dict
+        if num_tasks > 0:
+            if len(self.single_process_metrics) != num_tasks:
+                error_msg = (
+                    "shorter"
+                    if len(self.single_process_metrics) < num_tasks
+                    else "longer"
+                )
+                get_logger().error(
+                    f"Metrics out is {error_msg} than expected number of tasks."
+                    " This should only happen if a positive number of `num_tasks` were"
+                    " set during testing but the queue did not contain this number of entries."
+                    " Please file an issue at https://github.com/allenai/allenact/issues."
                 )
 
-                if num_tasks > 0:
-                    num_tasks -= 1
-                done = num_tasks == 0
+        num_empty_tasks_dequeued = 0
 
-            except queue.Empty:
-                if num_tasks <= 0:
-                    break
-                else:
-                    get_logger().error(
-                        "Metrics out queue is empty after a short second wait."
-                        " This should only happen if a positive number of `num_tasks` were"
-                        " set during testing but the queue did not contain this number of entries."
-                        " Please file an issue at https://github.com/allenai/allenact/issues."
-                    )
-                    break
+        for metrics_dict in self.single_process_metrics:
+            num_empty_tasks_dequeued += not logging_pkg.add_metrics_dict(
+                single_task_metrics_dict=metrics_dict
+            )
+
+        self.single_process_metrics = []
 
         if num_empty_tasks_dequeued != 0:
             get_logger().warning(
@@ -536,7 +537,7 @@ class OnPolicyRLEngine(object):
                 step_result.info is not None
                 and COMPLETE_TASK_METRICS_KEY in step_result.info
             ):
-                self.single_process_metrics_queue.put(
+                self.single_process_metrics.append(
                     step_result.info[COMPLETE_TASK_METRICS_KEY]
                 )
                 del step_result.info[COMPLETE_TASK_METRICS_KEY]
@@ -545,7 +546,9 @@ class OnPolicyRLEngine(object):
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
 
         rewards = torch.tensor(
-            rewards, dtype=torch.float, device=self.device,  # type:ignore
+            rewards,
+            dtype=torch.float,
+            device=self.device,  # type:ignore
         )
 
         # We want rewards to have dimensions [sampler, reward]
@@ -559,7 +562,9 @@ class OnPolicyRLEngine(object):
         masks = (
             1.0
             - torch.tensor(
-                dones, dtype=torch.float32, device=self.device,  # type:ignore
+                dones,
+                dtype=torch.float32,
+                device=self.device,  # type:ignore
             )
         ).view(
             -1, 1
@@ -702,8 +707,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     " feature and we'll be happy to review it."
                 )
 
-        self.optimizer: optim.optimizer.Optimizer = self.training_pipeline.optimizer_builder(
-            params=[p for p in self.actor_critic.parameters() if p.requires_grad]
+        self.optimizer: optim.optimizer.Optimizer = (
+            self.training_pipeline.optimizer_builder(
+                params=[p for p in self.actor_critic.parameters() if p.requires_grad]
+            )
         )
 
         # noinspection PyProtectedMember
@@ -740,7 +747,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self.last_save: Optional[int] = None
         # The `self._last_aggregated_train_task_metrics` attribute defined
         # below is used for early stopping criterion computations
-        self._last_aggregated_train_task_metrics: ScalarMeanTracker = ScalarMeanTracker()
+        self._last_aggregated_train_task_metrics: ScalarMeanTracker = (
+            ScalarMeanTracker()
+        )
 
     def advance_seed(
         self, seed: Optional[int], return_same_seed_per_worker=False
@@ -975,7 +984,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         # )
 
     def make_offpolicy_iterator(
-        self, data_iterator_builder: Callable[..., Iterator],
+        self,
+        data_iterator_builder: Callable[..., Iterator],
     ):
         stage = self.training_pipeline.current_stage
 
@@ -1019,13 +1029,17 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     if p.grad is None:
                         p.grad = torch.zeros_like(p.data)
                     reductions.append(
-                        dist.all_reduce(p.grad, async_op=True,)
+                        dist.all_reduce(
+                            p.grad,
+                            async_op=True,
+                        )
                     )  # synchronize
             for reduction in reductions:
                 reduction.wait()
 
         nn.utils.clip_grad_norm_(
-            self.actor_critic.parameters(), self.training_pipeline.max_grad_norm,  # type: ignore
+            self.actor_critic.parameters(),
+            self.training_pipeline.max_grad_norm,  # type: ignore
         )
         self.optimizer.step()  # type: ignore
 
@@ -1477,7 +1491,8 @@ class OnPolicyInference(OnPolicyRLEngine):
                     lengths: List[int]
                     if self.num_active_samplers > 0:
                         lengths = self.vector_tasks.command(
-                            "sampler_attr", ["length"] * self.num_active_samplers,
+                            "sampler_attr",
+                            ["length"] * self.num_active_samplers,
                         )
                         npending = sum(lengths)
                     else:
@@ -1628,7 +1643,10 @@ class OnPolicyInference(OnPolicyRLEngine):
                             dist.barrier()
                     else:
                         self.results_queue.put(
-                            LoggingPackage(mode=self.mode, training_steps=None,)
+                            LoggingPackage(
+                                mode=self.mode,
+                                training_steps=None,
+                            )
                         )
                 elif command in ["quit", "exit", "close"]:
                     finalized = True

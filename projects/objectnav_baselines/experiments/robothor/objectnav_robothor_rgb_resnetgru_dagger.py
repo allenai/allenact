@@ -33,7 +33,9 @@ class ObjectNaviThorRGBDAggerExperimentConfig(
         GoalObjectTypeThorSensor(
             object_types=ObjectNavRoboThorBaseConfig.TARGET_TYPES,
         ),
-        ExpertActionSensor(nactions=len(ObjectNavTask.class_action_names()),),
+        ExpertActionSensor(
+            nactions=len(ObjectNavTask.class_action_names()),
+        ),
     ]
 
     @classmethod

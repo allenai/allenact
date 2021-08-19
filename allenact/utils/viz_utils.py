@@ -318,7 +318,9 @@ class AgentViewViz(AbstractViz):
         **other_base_kwargs,
     ):
         super().__init__(
-            label, vector_task_sources=[vector_task_source], **other_base_kwargs,
+            label,
+            vector_task_sources=[vector_task_source],
+            **other_base_kwargs,
         )
         self.max_clip_length = max_clip_length
         self.max_video_length = max_video_length
@@ -891,7 +893,9 @@ class VizSuite(AbstractViz):
 
                 # Select latest step
                 res = res.narrow(
-                    dim=0, start=rollout_step, length=1,  # step dimension
+                    dim=0,
+                    start=rollout_step,
+                    length=1,  # step dimension
                 )  # 1 x ... x sampler x ...
 
                 # get_logger().debug("basic collect h {}".format(res[..., 0]))

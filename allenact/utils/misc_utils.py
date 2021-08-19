@@ -39,7 +39,8 @@ def multiprocessing_safe_download_file_from_url(url: str, save_path: str):
         if not os.path.isfile(save_path):
             get_logger().info(f"Downloading file from {url} to {save_path}.")
             urllib.request.urlretrieve(
-                url, save_path,
+                url,
+                save_path,
             )
         else:
             get_logger().debug(f"{save_path} exists - skipping download.")
@@ -125,7 +126,10 @@ def tensor_print_options(**print_opts):
 
 
 def md5_hash_str_as_int(to_hash: str):
-    return int(hashlib.md5(to_hash.encode()).hexdigest(), 16,)
+    return int(
+        hashlib.md5(to_hash.encode()).hexdigest(),
+        16,
+    )
 
 
 def get_git_diff_of_project() -> Tuple[str, str]:

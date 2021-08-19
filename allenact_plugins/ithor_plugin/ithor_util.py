@@ -7,7 +7,7 @@ from typing import Sequence
 
 import Xlib
 import Xlib.display
-import ai2thor
+import ai2thor.controller
 
 
 @contextmanager
@@ -41,7 +41,9 @@ def horizontal_to_vertical_fov(
     horizontal_fov_in_degrees: float, height: float, width: float
 ):
     return vertical_to_horizontal_fov(
-        vertical_fov_in_degrees=horizontal_fov_in_degrees, height=width, width=height,
+        vertical_fov_in_degrees=horizontal_fov_in_degrees,
+        height=width,
+        width=height,
     )
 
 

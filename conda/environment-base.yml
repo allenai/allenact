@@ -19,7 +19,7 @@ dependencies:
   - networkx
   - numpy>=1.19.1
   - opencv
-  - pillow>=8.0.0
+  - pillow=8.2.0
   - pip
   - proglog=0.1.9
   - protobuf=3.14.0
@@ -27,12 +27,12 @@ dependencies:
   - pyparsing=2.4.7
   - python=3.6.12
   - python-dateutil=2.8.1
-  - pytorch>=1.6.0,<1.7.0
+  - pytorch>=1.6.0,!=1.8.0
+  - torchvision>=0.7.0
   - requests=2.25.1
   - setproctitle
   - six=1.15.0
   - tensorboardx=2.1
-  - torchvision>=0.7.0
   - tqdm
   - urllib3=1.26.2
   - pip:
