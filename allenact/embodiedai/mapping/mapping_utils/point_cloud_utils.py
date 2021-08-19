@@ -383,7 +383,7 @@ def _cpu_only_camera_space_xyz_to_world_xyz(
 def _cpu_only_depth_frame_to_camera_space_xyz(
     depth_frame: np.ndarray, mask: Optional[np.ndarray], fov: float = 90
 ):
-    """ """
+    """"""
     assert (
         len(depth_frame.shape) == 2 and depth_frame.shape[0] == depth_frame.shape[1]
     ), f"depth has shape {depth_frame.shape}, we only support (N, N) shapes for now."

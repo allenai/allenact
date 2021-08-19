@@ -11,7 +11,7 @@ from allenact.base_abstractions.task import Task, TaskSampler
 from allenact.utils.experiment_utils import set_seed
 from allenact.utils.system import get_logger
 from allenact_plugins.gym_plugin.gym_environment import GymEnvironment
-from allenact_plugins.gym_plugin.gym_sensors import GymBox2DSensor
+from allenact_plugins.gym_plugin.gym_sensors import GymBox2DSensor, GymMuJoCoSensor
 
 
 class GymTask(Task[gym.Env]):
@@ -91,6 +91,33 @@ class GymContinuousBox2DTask(GymTask):
         )
 
 
+"""
+@Note: As this is the same as `GymContinuousBox2DTask`, it can be modified as something 
+like `GymContinuousTask` for both tasks.
+"""
+
+
+class GymContinuousMoJoCoTask(GymTask):
+    """Task for a continuous-control gym Mujoco Env; it allows interfacing
+    allenact with gym tasks."""
+
+    @classmethod
+    def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
+        return tuple()
+
+    def _step(self, action: Sequence[float]) -> RLStepResult:
+        action = np.array(action)
+
+        gym_obs, reward, self._gym_done, info = self.env.step(action=action)
+
+        return RLStepResult(
+            observation=self.get_observations(gym_obs=gym_obs),
+            reward=reward,
+            done=self.is_done(),
+            info=info,
+        )
+
+
 def task_selector(env_name: str) -> type:
     """Helper function for `GymTaskSampler`."""
     if env_name in [
@@ -100,6 +127,18 @@ def task_selector(env_name: str) -> type:
         "BipedalWalkerHardcore-v2",
     ]:
         return GymContinuousBox2DTask
+    elif env_name in [
+        "InvertedPendulum-v2",
+        "Ant-v2",
+        "InvertedDoublePendulum-v2",
+        "Humanoid-v2",
+        "Reacher-v2",
+        "Hopper-v2",
+        "HalfCheetah-v2",
+        "Swimmer-v2",
+        "Walker2d-v2",
+    ]:
+        return GymContinuousMoJoCoTask
     raise NotImplementedError()
 
 
@@ -113,6 +152,18 @@ def sensor_selector(env_name: str) -> Sensor:
         "LunarLander-v2",
     ]:
         return GymBox2DSensor(env_name)
+    elif env_name in [
+        "InvertedPendulum-v2",
+        "Ant-v2",
+        "InvertedDoublePendulum-v2",
+        "Humanoid-v2",
+        "Reacher-v2",
+        "Hopper-v2",
+        "HalfCheetah-v2",
+        "Swimmer-v2",
+        "Walker2d-v2",
+    ]:
+        return GymMuJoCoSensor(env_name=env_name, uuid="gym_mujoco_data")
     raise NotImplementedError()
 
 

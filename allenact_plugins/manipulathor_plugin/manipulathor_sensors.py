@@ -26,8 +26,8 @@ class DepthSensorThor(
 ):
     """Sensor for Depth images in THOR.
 
-    Returns from a running ManipulaTHOREnvironment instance, the current RGB
-    frame corresponding to the agent's egocentric view.
+    Returns from a running ManipulaTHOREnvironment instance, the current
+    RGB frame corresponding to the agent's egocentric view.
     """
 
     def frame_from_env(
@@ -44,8 +44,8 @@ class NoVisionSensorThor(
 ):
     """Sensor for RGB images in THOR.
 
-    Returns from a running ManipulaTHOREnvironment instance, the current RGB
-    frame corresponding to the agent's egocentric view.
+    Returns from a running ManipulaTHOREnvironment instance, the current
+    RGB frame corresponding to the agent's egocentric view.
     """
 
     def frame_from_env(

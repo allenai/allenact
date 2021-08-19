@@ -1,3 +1,14 @@
+"""
+Note: I add this file just for the format consistence with other baselines in the project, so it is just the same as
+`allenact_plugins.gym_models.py` so far. However, if it is in the Gym Robotics, some modification is need.
+For example, for `state_dim`:
+        if input_uuid == 'gym_robotics_data':
+            # consider that the observation space is Dict for robotics env
+            state_dim = observation_space[self.input_uuid]['observation'].shape[0]
+        else:
+            assert len(observation_space[self.input_uuid].shape) == 1
+            state_dim = observation_space[self.input_uuid].shape[0]
+"""
 from typing import Dict, Union, Optional, Tuple, Any, Sequence, cast
 
 import gym
@@ -27,6 +38,7 @@ class MemorylessActorCritic(ActorCriticModel[GaussianDistr]):
         super().__init__(action_space, observation_space)
 
         self.input_uuid = input_uuid
+
         assert len(observation_space[self.input_uuid].shape) == 1
         state_dim = observation_space[self.input_uuid].shape[0]
         assert len(action_space.shape) == 1
