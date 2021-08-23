@@ -81,8 +81,8 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         "player_screen_width": CAMERA_HEIGHT,
         "quality": "Very Low",
         "rotateStepDegrees": 30,
-        "visibilityDistance"=1.0,
-        "gridSize" =0.25,    
+        "visibilityDistance": 1.0,
+        "gridSize": 0.25,    
     }
 
     MAX_STEPS = 128
