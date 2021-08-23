@@ -1,6 +1,8 @@
 from math import ceil
 from typing import Dict, Any, List, Optional
 
+import glob
+import os
 import gym
 import numpy as np
 import torch
@@ -147,13 +149,13 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         if mode == "train":
             nprocesses = 40
             workers_per_device = 1
-            devices = (
+            gpu_ids = (
                 [torch.device("cpu")]
                 if not torch.cuda.is_available()
                 else cls.DEFAULT_TRAIN_GPU_IDS * workers_per_device
             )
             nprocesses = evenly_distribute_count_into_bins(
-                nprocesses, max(len(devices), 1)
+                nprocesses, max(len(gpu_ids), 1)
             )
             sampler_devices = cls.DEFAULT_TRAIN_GPU_IDS
         elif mode == "valid":

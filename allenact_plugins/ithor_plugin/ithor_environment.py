@@ -38,11 +38,15 @@ class IThorEnvironment(object):
         fov: float = FOV,
         player_screen_width: int = 300,
         player_screen_height: int = 300,
+        gridSize: float = 0.15,
+        rotateStepDegrees: int = 30,
+        visibilityDistance: float = 1.0,
         quality: str = "Very Low",
         restrict_to_initially_reachable_points: bool = False,
         make_agents_visible: bool = True,
         object_open_speed: float = 1.0,
         simplify_physics: bool = False,
+
         **kwargs
     ) -> None:
         """Initializer.
@@ -86,8 +90,10 @@ class IThorEnvironment(object):
         self._initially_reachable_points: Optional[List[Dict]] = None
         self._initially_reachable_points_set: Optional[Set[Tuple[float, float]]] = None
         self._move_mag: Optional[float] = None
-        self._grid_size: Optional[float] = None
-        self._visibility_distance = visibility_distance
+        self._grid_size: Optional[float] = gridSize
+        print("grid size is ",self._grid_size )
+        self._rotate_step_degrees = rotateStepDegrees
+        self._visibility_distance = visibilityDistance
         self._fov = fov
         self.restrict_to_initially_reachable_points = (
             restrict_to_initially_reachable_points
@@ -97,7 +103,7 @@ class IThorEnvironment(object):
         self._always_return_visible_range = False
         self.simplify_physics = simplify_physics
 
-        self.start(**kwargs)
+        self.start(None)
         # noinspection PyTypeHints
         self.controller.docker_enabled = docker_enabled  # type: ignore
 
@@ -192,6 +198,9 @@ class IThorEnvironment(object):
             local_executable_path=self._local_thor_build,
             quality=self._quality,
             server_class=ai2thor.fifo_server.FifoServer,
+            gridSize = self._grid_size,
+            rotateStepDegrees = self._rotate_step_degrees,
+            visibilityDistance = self._visibility_distance ,
         )
 
         if (
