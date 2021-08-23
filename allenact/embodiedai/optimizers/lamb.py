@@ -52,6 +52,7 @@ class Lamb(Optimizer):
             look_ahead_k=look_ahead_k,
         )
         super().__init__(params, defaults)
+        self.never_called_not_resuming = True  # TODO hack
 
     def zero_grad(self):
         for group in self.param_groups:
@@ -122,6 +123,18 @@ class Lamb(Optimizer):
                 weight_norm = torch.norm(p.data.detach()).item()
                 step_norm = torch.norm(adam_step.detach()).item()
 
+                if self.never_called_not_resuming:
+                    # Make weights be in the working range (e.g. weight_norm = step_norm)
+                    assert weight_norm > 0 and step_norm > 0
+                    p.data = p.data * step_norm / weight_norm
+
+                    # recompute everything
+                    adam_step = self._compute_adam_step(
+                        group, p, weight_decay, use_look_ahead
+                    )
+                    weight_norm = torch.norm(p.data.detach()).item()
+                    step_norm = torch.norm(adam_step.detach()).item()
+
                 if weight_norm == 0 or step_norm == 0 or min_trust == 1.0:
                     trust_ratio = 1
                 else:
@@ -139,6 +152,8 @@ class Lamb(Optimizer):
                 p.data.copy_(state["slow_param"])
 
             state["step"] += 1
+
+        self.never_called_not_resuming = False
 
     def _step_flat_params(self, group):
         min_trust = group["min_trust"]
