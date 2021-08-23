@@ -43,6 +43,7 @@ class IThorEnvironment(object):
         make_agents_visible: bool = True,
         object_open_speed: float = 1.0,
         simplify_physics: bool = False,
+        **kwargs
     ) -> None:
         """Initializer.
 
@@ -96,7 +97,7 @@ class IThorEnvironment(object):
         self._always_return_visible_range = False
         self.simplify_physics = simplify_physics
 
-        self.start(None)
+        self.start(**kwargs)
         # noinspection PyTypeHints
         self.controller.docker_enabled = docker_enabled  # type: ignore
 
