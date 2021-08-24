@@ -39,14 +39,13 @@ class IThorEnvironment(object):
         player_screen_width: int = 300,
         player_screen_height: int = 300,
         gridSize: float = 0.25,
-        rotateStepDegrees: int = 90,
-        visibilityDistance: float = 1.25,
+        rotate_step_degrees: int = 90,
         quality: str = "Very Low",
         restrict_to_initially_reachable_points: bool = False,
         make_agents_visible: bool = True,
         object_open_speed: float = 1.0,
         simplify_physics: bool = False,
-        snap_to_grid: bool = False,
+        snap_to_grid: bool = True,
         **kwargs,
     ) -> None:
         """Initializer.
@@ -91,9 +90,9 @@ class IThorEnvironment(object):
         self._initially_reachable_points: Optional[List[Dict]] = None
         self._initially_reachable_points_set: Optional[Set[Tuple[float, float]]] = None
         self._move_mag: Optional[float] = None
-        self._grid_size: Optional[float] = gridSize
-        self._rotate_step_degrees = rotateStepDegrees
-        self._visibility_distance = visibilityDistance
+        self._grid_size: Optional[float] = grid_size
+        self._rotate_step_degrees = rotate_step_degrees
+        self._visibility_distance = visibility_distance
         self._fov = fov
         self.restrict_to_initially_reachable_points = (
             restrict_to_initially_reachable_points
