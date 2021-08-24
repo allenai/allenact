@@ -964,6 +964,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 num_rollout_steps, num_samplers = batch["masks"].shape[:2]
                 bsize = num_rollout_steps * num_samplers
 
+                aggregate_bsize = None
+                if self.is_distributed:
+                    aggregate_bsize = torch.tensor(bsize)
+                    dist.all_reduce(aggregate_bsize)
+                    aggregate_bsize = aggregate_bsize.item()
+
                 actor_critic_output, memory = self.actor_critic(
                     observations=batch["observations"],
                     memory=batch["memory"],
@@ -991,7 +997,16 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         total_loss = total_loss + loss_weight * current_loss
 
                     for key in current_info:
-                        info[loss_name + "/" + key] = current_info[key]
+                        if not self.is_distributed:
+                            info[loss_name + "/" + key] = current_info[key]
+                        else:
+                            aggregate_key_value = torch.tensor(
+                                current_info[key] * bsize
+                            )
+                            dist.all_reduce(aggregate_key_value)
+                            info[loss_name + "/" + key] = (
+                                aggregate_key_value.item() / aggregate_bsize * bsize
+                            )  # rescale by bsize to be consistent with averaging
 
                 assert (
                     total_loss is not None
@@ -999,7 +1014,15 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     self.training_pipeline.current_stage_index
                 )
 
-                info["total_loss"] = total_loss.item()
+                if not self.is_distributed:
+                    info["total_loss"] = total_loss.item()
+                else:
+                    aggregate_total_loss = total_loss.detach() * bsize
+                    dist.all_reduce(aggregate_total_loss)
+                    info["total_loss"] = (
+                        aggregate_total_loss.item() / aggregate_bsize * bsize
+                    )
+
                 self.tracking_info["losses"].append(("losses", info, bsize))
                 self.tracking_info["lr"].append(
                     ("lr", {"lr": self.optimizer.param_groups[0]["lr"]}, bsize)
