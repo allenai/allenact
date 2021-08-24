@@ -125,7 +125,7 @@ class Lamb(Optimizer):
 
                 if self.never_called_not_resuming:
                     # Make weights be in the working range (e.g. weight_norm = step_norm)
-                    assert weight_norm > 0 and step_norm > 0
+                    # assert weight_norm > 0 and step_norm > 0
                     if weight_norm == 0:
                         weight_norm = 1
                     if step_norm == 0:
