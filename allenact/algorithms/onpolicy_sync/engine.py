@@ -966,7 +966,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
                 aggregate_bsize = None
                 if self.is_distributed:
-                    aggregate_bsize = torch.tensor(bsize)
+                    aggregate_bsize = torch.tensor(bsize).to(self.device)
                     dist.all_reduce(aggregate_bsize)
                     aggregate_bsize = aggregate_bsize.item()
 
@@ -1002,7 +1002,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         else:
                             aggregate_key_value = torch.tensor(
                                 current_info[key] * bsize
-                            )
+                            ).to(self.device)
                             dist.all_reduce(aggregate_key_value)
                             info[loss_name + "/" + key] = (
                                 aggregate_key_value.item() / aggregate_bsize * bsize
