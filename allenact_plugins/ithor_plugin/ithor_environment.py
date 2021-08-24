@@ -47,7 +47,7 @@ class IThorEnvironment(object):
         object_open_speed: float = 1.0,
         simplify_physics: bool = False,
         snap_to_grid: bool = False,
-        **kwargs
+        **kwargs,
     ) -> None:
         """Initializer.
 
@@ -92,7 +92,7 @@ class IThorEnvironment(object):
         self._initially_reachable_points_set: Optional[Set[Tuple[float, float]]] = None
         self._move_mag: Optional[float] = None
         self._grid_size: Optional[float] = gridSize
-        print("grid size is ",self._grid_size )
+        print("grid size is ", self._grid_size)
         self._rotate_step_degrees = rotateStepDegrees
         self._visibility_distance = visibilityDistance
         self._fov = fov
@@ -203,9 +203,9 @@ class IThorEnvironment(object):
             snapToGrid=self._snap_to_grid,
             quality=self._quality,
             server_class=ai2thor.fifo_server.FifoServer,
-            gridSize = self._grid_size,
-            rotateStepDegrees = self._rotate_step_degrees,
-            visibilityDistance = self._visibility_distance ,
+            gridSize=self._grid_size,
+            rotateStepDegrees=self._rotate_step_degrees,
+            visibilityDistance=self._visibility_distance,
         )
 
         if (
@@ -749,7 +749,6 @@ class IThorEnvironment(object):
     def reset_object_filter(self):
         self.controller.step("ResetObjectFilter", renderImage=False)
 
-
     def teleport(
         self,
         pose: Dict[str, float],
@@ -771,11 +770,8 @@ class IThorEnvironment(object):
                 self._extra_teleport_kwargs["standing"] = True
             else:
                 raise e
-            return self.teleport(
-                pose=pose, rotation=rotation, horizon=horizon
-            )
+            return self.teleport(pose=pose, rotation=rotation, horizon=horizon)
         return e.metadata["lastActionSuccess"]
-
 
     @staticmethod
     def position_dist(

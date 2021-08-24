@@ -10,7 +10,10 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 
-from allenact.base_abstractions.preprocessor import Preprocessor, SensorPreprocessorGraph
+from allenact.base_abstractions.preprocessor import (
+    Preprocessor,
+    SensorPreprocessorGraph,
+)
 from allenact.embodiedai.preprocessors.resnet import ResNetPreprocessor
 from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 from allenact.embodiedai.preprocessors.resnet import ResNetPreprocessor
@@ -31,11 +34,14 @@ from allenact_plugins.ithor_plugin.ithor_sensors import (
     RGBSensorThor,
     GoalObjectTypeThorSensor,
 )
-from allenact_plugins.ithor_plugin.ithor_task_samplers import ObjectNavTaskSampler,ObjectNavDatasetTaskSampler
+from allenact_plugins.ithor_plugin.ithor_task_samplers import (
+    ObjectNavTaskSampler,
+    ObjectNavDatasetTaskSampler,
+)
 from allenact_plugins.ithor_plugin.ithor_tasks import ObjectNaviThorGridTask
 from projects.objectnav_baselines.models.object_nav_models import (
     ObjectNavBaselineActorCritic,
-    ResnetTensorObjectNavActorCritic
+    ResnetTensorObjectNavActorCritic,
 )
 
 
@@ -48,26 +54,34 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     # A simple setting, train/valid/test are all the same single scene
     # and we're looking for a single object
     OBJECT_TYPES = sorted(
-            [
-                "AlarmClock",
-                "Apple",
-                "Book",
-                "Bowl",
-                "Box",
-                "Candle",
-                "GarbageCan",
-                "HousePlant",
-                "Laptop",
-                "SoapBottle",
-                "Television",
-                "Toaster",
-            ]
-        )
-    train_path = os.path.join(os.getcwd(), "datasets/ithor-objectnav/train/episodes", "*.json.gz")
-    val_path = os.path.join(os.getcwd(), "datasets/ithor-objectnav/val/episodes", "*.json.gz")
-    test_path = os.path.join(os.getcwd(), "datasets/ithor-objectnav/val/episodes", "*.json.gz")
+        [
+            "AlarmClock",
+            "Apple",
+            "Book",
+            "Bowl",
+            "Box",
+            "Candle",
+            "GarbageCan",
+            "HousePlant",
+            "Laptop",
+            "SoapBottle",
+            "Television",
+            "Toaster",
+        ]
+    )
+    train_path = os.path.join(
+        os.getcwd(), "datasets/ithor-objectnav/train/episodes", "*.json.gz"
+    )
+    val_path = os.path.join(
+        os.getcwd(), "datasets/ithor-objectnav/val/episodes", "*.json.gz"
+    )
+    test_path = os.path.join(
+        os.getcwd(), "datasets/ithor-objectnav/val/episodes", "*.json.gz"
+    )
 
-    TRAIN_SCENES = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(train_path)]
+    TRAIN_SCENES = [
+        scene.split("/")[-1].split(".")[0] for scene in glob.glob(train_path)
+    ]
     VALID_SCENES = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(val_path)]
     TEST_SCENES = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(test_path)]
 
@@ -102,21 +116,19 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         ),
     ]
 
-
     ENV_ARGS = {
         "player_screen_height": CAMERA_WIDTH,
         "player_screen_width": CAMERA_HEIGHT,
         "quality": "Very Low",
         "rotateStepDegrees": 30,
         "visibilityDistance": 1.0,
-        "gridSize": 0.25,    
+        "gridSize": 0.25,
     }
 
     MAX_STEPS = 128
     ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
     VALID_SAMPLES_IN_SCENE = 10
     TEST_SAMPLES_IN_SCENE = 100
-
 
     DEFAULT_TRAIN_GPU_IDS = tuple(range(torch.cuda.device_count()))
     DEFAULT_VALID_GPU_IDS = (torch.cuda.device_count() - 1,)
@@ -133,7 +145,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         num_mini_batch = 1 if not torch.cuda.is_available() else 6
         update_repeats = 4
         num_steps = 128
-        metric_accumulate_interval = 10000 # Log every 10 max length tasks
+        metric_accumulate_interval = 10000  # Log every 10 max length tasks
         save_interval = 5000000
         gamma = 0.99
         use_gae = True
@@ -192,7 +204,6 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
-
         sensor_preprocessor_graph = (
             SensorPreprocessorGraph(
                 source_observation_spaces=SensorSuite(cls.SENSORS).observation_spaces,
@@ -212,11 +223,8 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             sampler_devices=sampler_devices
             if mode == "train"
             else gpu_ids,  # ignored with > 1 gpu_ids
-            sensor_preprocessor_graph=sensor_preprocessor_graph
+            sensor_preprocessor_graph=sensor_preprocessor_graph,
         )
-
-
-    
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
@@ -228,7 +236,9 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         )
 
         return ResnetTensorObjectNavActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNaviThorGridTask.class_action_names())),
+            action_space=gym.spaces.Discrete(
+                len(ObjectNaviThorGridTask.class_action_names())
+            ),
             observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             goal_sensor_uuid=goal_sensor_uuid,
             rgb_resnet_preprocessor_uuid="rgb_resnet" if has_rgb else None,
@@ -299,7 +309,9 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = os.path.join(os.getcwd(), "datasets/ithor-objectnav/train/episodes")
+        res["scene_directory"] = os.path.join(
+            os.getcwd(), "datasets/ithor-objectnav/train/episodes"
+        )
         res["scene_period"] = "manual"
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
@@ -325,7 +337,9 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = os.path.join(os.getcwd(), "datasets/ithor-objectnav/val/episodes")
+        res["scene_directory"] = os.path.join(
+            os.getcwd(), "datasets/ithor-objectnav/val/episodes"
+        )
         res["scene_period"] = self.VALID_SAMPLES_IN_SCENE
         res["max_tasks"] = self.VALID_SAMPLES_IN_SCENE * len(res["scenes"])
         res["env_args"] = {}
@@ -352,7 +366,9 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
-        res["scene_directory"] = os.path.join(os.getcwd(), "datasets/ithor-objectnav/val/episodes")
+        res["scene_directory"] = os.path.join(
+            os.getcwd(), "datasets/ithor-objectnav/val/episodes"
+        )
         res["scene_period"] = self.TEST_SAMPLES_IN_SCENE
         res["max_tasks"] = self.TEST_SAMPLES_IN_SCENE * len(res["scenes"])
         res["env_args"] = {}

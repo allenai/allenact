@@ -201,6 +201,7 @@ class ObjectNavTaskSampler(TaskSampler):
         if seed is not None:
             set_seed(seed)
 
+
 class ObjectNavDatasetTaskSampler(TaskSampler):
     def __init__(
         self,
@@ -210,7 +211,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         max_steps: int,
         env_args: Dict[str, Any],
         action_space: gym.Space,
-        #rewards_config: Dict,
+        # rewards_config: Dict,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
         loop_dataset: bool = True,
@@ -218,13 +219,11 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         env_class=IThorEnvironment,
         **kwargs,
     ) -> None:
-        #self.rewards_config = rewards_config
+        # self.rewards_config = rewards_config
         self.env_args = env_args
         self.scenes = scenes
         self.episodes = {
-            scene: ObjectNavDatasetTaskSampler.load_dataset(
-                scene, scene_directory
-            )
+            scene: ObjectNavDatasetTaskSampler.load_dataset(scene, scene_directory)
             for scene in scenes
         }
         self.env_class = env_class
@@ -259,10 +258,12 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         self.reset()
 
     def _create_environment(self) -> IThorEnvironment:
-        env = self.env_class( make_agents_visible=False,
+        env = self.env_class(
+            make_agents_visible=False,
             object_open_speed=0.05,
             restrict_to_initially_reachable_points=False,
-            **self.env_args)
+            **self.env_args,
+        )
         return env
 
     @staticmethod
@@ -339,7 +340,9 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         """
         return float("inf") if self.max_tasks is None else self.max_tasks
 
-    def next_task(self, force_advance_scene: bool = False) -> Optional[ObjectNaviThorGridTask]:
+    def next_task(
+        self, force_advance_scene: bool = False
+    ) -> Optional[ObjectNaviThorGridTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
 
@@ -400,7 +403,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             max_steps=self.max_steps,
             action_space=self._action_space,
         )
-    
+
         return self._last_sampled_task
 
     def reset(self):
