@@ -1,6 +1,5 @@
 from math import ceil
-from typing import Dict, Any, List, Optional
-
+from typing import Dict, Any, List, Optional, Sequence, Union
 import glob
 import os
 import gym
@@ -9,7 +8,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
+from torchvision import models
 
+from allenact.base_abstractions.preprocessor import Preprocessor, SensorPreprocessorGraph
+from allenact.embodiedai.preprocessors.resnet import ResNetPreprocessor
+from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
+from allenact.embodiedai.preprocessors.resnet import ResNetPreprocessor
+from allenact.utils.experiment_utils import Builder
 from allenact.utils.experiment_utils import evenly_distribute_count_into_bins
 from allenact.algorithms.onpolicy_sync.losses import PPO
 from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
@@ -30,6 +35,7 @@ from allenact_plugins.ithor_plugin.ithor_task_samplers import ObjectNavTaskSampl
 from allenact_plugins.ithor_plugin.ithor_tasks import ObjectNaviThorGridTask
 from projects.objectnav_baselines.models.object_nav_models import (
     ObjectNavBaselineActorCritic,
+    ResnetTensorObjectNavActorCritic
 )
 
 
@@ -74,9 +80,28 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             height=SCREEN_SIZE,
             width=SCREEN_SIZE,
             use_resnet_normalization=True,
+            uuid="rgb_lowres",
         ),
         GoalObjectTypeThorSensor(object_types=OBJECT_TYPES),
     ]
+
+    PREPROCESSORS = [
+        Builder(
+            ResNetPreprocessor,
+            {
+                "input_height": SCREEN_SIZE,
+                "input_width": SCREEN_SIZE,
+                "output_width": 7,
+                "output_height": 7,
+                "output_dims": 512,
+                "pool": False,
+                "torchvision_resnet_model": models.resnet18,
+                "input_uuids": ["rgb_lowres"],
+                "output_uuid": "rgb_resnet",
+            },
+        ),
+    ]
+
 
     ENV_ARGS = {
         "player_screen_height": CAMERA_WIDTH,
@@ -99,7 +124,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def tag(cls):
-        return "ObjectNavThorPPO"
+        return "ObjectNavThorPPOResnetGRU"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
@@ -167,23 +192,49 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
+
+        sensor_preprocessor_graph = (
+            SensorPreprocessorGraph(
+                source_observation_spaces=SensorSuite(cls.SENSORS).observation_spaces,
+                preprocessors=cls.PREPROCESSORS,
+            )
+            if mode == "train"
+            or (
+                (isinstance(nprocesses, int) and nprocesses > 0)
+                or (isinstance(nprocesses, Sequence) and sum(nprocesses) > 0)
+            )
+            else None
+        )
+
         return MachineParams(
             nprocesses=nprocesses,
             devices=gpu_ids,
+            sampler_devices=sampler_devices
+            if mode == "train"
+            else gpu_ids,  # ignored with > 1 gpu_ids
+            sensor_preprocessor_graph=sensor_preprocessor_graph
         )
+
+
+    
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ObjectNavBaselineActorCritic(
-            action_space=gym.spaces.Discrete(
-                len(ObjectNaviThorGridTask.class_action_names())
-            ),
-            observation_space=SensorSuite(cls.SENSORS).observation_spaces,
-            rgb_uuid=cls.SENSORS[0].uuid,
-            depth_uuid=None,
-            goal_sensor_uuid="goal_object_type_ind",
+        has_rgb = any(isinstance(s, RGBSensor) for s in cls.SENSORS)
+        has_depth = any(isinstance(s, DepthSensor) for s in cls.SENSORS)
+        goal_sensor_uuid = next(
+            (s.uuid for s in cls.SENSORS if isinstance(s, GoalObjectTypeThorSensor)),
+            None,
+        )
+
+        return ResnetTensorObjectNavActorCritic(
+            action_space=gym.spaces.Discrete(len(ObjectNaviThorGridTask.class_action_names())),
+            observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
+            goal_sensor_uuid=goal_sensor_uuid,
+            rgb_resnet_preprocessor_uuid="rgb_resnet" if has_rgb else None,
+            depth_resnet_preprocessor_uuid="depth_resnet" if has_depth else None,
             hidden_size=512,
-            object_type_embedding_dim=8,
+            goal_dims=32,
         )
 
     @classmethod
