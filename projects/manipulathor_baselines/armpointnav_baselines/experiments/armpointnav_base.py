@@ -27,7 +27,7 @@ class ArmPointNavBaseConfig(ExperimentConfig, ABC):
         self.REWARD_CONFIG = {
             "step_penalty": -0.01,
             "goal_success_reward": 10.0,
-            "pickup_success_reward": 10.0,
+            "pickup_success_reward": 5.0,
             "failed_stop_reward": 0.0,
             "shaping_weight": 1.0,  # we are not using this
             "failed_action_penalty": -0.03,
