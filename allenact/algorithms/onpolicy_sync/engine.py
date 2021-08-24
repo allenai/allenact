@@ -962,13 +962,13 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             for bit, batch in enumerate(data_generator):
                 # masks is always [steps, samplers, 1]:
                 num_rollout_steps, num_samplers = batch["masks"].shape[:2]
-                bsize = num_rollout_steps * num_samplers
+                bsize = int(num_rollout_steps * num_samplers)
 
                 aggregate_bsize = None
                 if self.is_distributed:
                     aggregate_bsize = torch.tensor(bsize).to(self.device)
                     dist.all_reduce(aggregate_bsize)
-                    aggregate_bsize = aggregate_bsize.item()
+                    aggregate_bsize = int(aggregate_bsize.item())
 
                 actor_critic_output, memory = self.actor_critic(
                     observations=batch["observations"],
@@ -1026,7 +1026,14 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     ("lr", {"lr": self.optimizer.param_groups[0]["lr"]}, bsize)
                 )
 
-                self.backprop_step(total_loss)
+                local_global_batch_size_tuple = None
+                if self.is_distributed:
+                    local_global_batch_size_tuple = (bsize, aggregate_bsize)
+
+                self.backprop_step(
+                    total_loss=total_loss,
+                    local_global_batch_size_tuple=local_global_batch_size_tuple,
+                )
 
         # # TODO Unit test to ensure correctness of distributed infrastructure
         state_dict = self.actor_critic.state_dict()
@@ -1070,7 +1077,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         return offpolicy_iterator
 
-    def backprop_step(self, total_loss):
+    def backprop_step(
+        self,
+        total_loss: torch.Tensor,
+        local_global_batch_size_tuple: Optional[Tuple[int, int]] = None,
+    ):
         self.optimizer.zero_grad()  # type: ignore
         if isinstance(total_loss, torch.Tensor):
             total_loss.backward()
@@ -1079,17 +1090,22 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             # From https://github.com/pytorch/pytorch/issues/43135
             reductions, all_params = [], []
             for p in self.actor_critic.parameters():
-                # you can also organize grads to larger buckets to make allreduce more efficient
+                # you can also organize grads to larger buckets to make all_reduce more efficient
                 if p.requires_grad:
                     if p.grad is None:
                         p.grad = torch.zeros_like(p.data)
+                    elif local_global_batch_size_tuple is not None:
+                        p.grad = p.grad * local_global_batch_size_tuple[0]
                     reductions.append(
                         dist.all_reduce(p.grad, async_op=True,)  # sum
                     )  # synchronize
                     all_params.append(p)
             for reduction, p in zip(reductions, all_params):
                 reduction.wait()
-                p.grad /= self.num_workers  # sum -> average
+                if local_global_batch_size_tuple is None:
+                    p.grad /= self.num_workers  # sum -> average
+                else:
+                    p.grad /= local_global_batch_size_tuple[1]
 
         nn.utils.clip_grad_norm_(
             self.actor_critic.parameters(),
