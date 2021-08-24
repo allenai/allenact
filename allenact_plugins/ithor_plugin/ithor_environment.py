@@ -46,7 +46,7 @@ class IThorEnvironment(object):
         make_agents_visible: bool = True,
         object_open_speed: float = 1.0,
         simplify_physics: bool = False,
-
+        snap_to_grid: bool = False,
         **kwargs
     ) -> None:
         """Initializer.
@@ -86,6 +86,7 @@ class IThorEnvironment(object):
         self.controller: Optional[Controller] = None
         self._started = False
         self._quality = quality
+        self._snap_to_grid = snap_to_grid
 
         self._initially_reachable_points: Optional[List[Dict]] = None
         self._initially_reachable_points_set: Optional[Set[Tuple[float, float]]] = None
@@ -106,6 +107,9 @@ class IThorEnvironment(object):
         self.start(None)
         # noinspection PyTypeHints
         self.controller.docker_enabled = docker_enabled  # type: ignore
+        self._extra_teleport_kwargs: Dict[
+            str, Any
+        ] = {}  # Used for backwards compatability with the teleport action
 
     @property
     def scene_name(self) -> str:
@@ -196,6 +200,7 @@ class IThorEnvironment(object):
             width=self._start_player_screen_width,
             height=self._start_player_screen_height,
             local_executable_path=self._local_thor_build,
+            snapToGrid=self._snap_to_grid,
             quality=self._quality,
             server_class=ai2thor.fifo_server.FifoServer,
             gridSize = self._grid_size,
@@ -737,6 +742,40 @@ class IThorEnvironment(object):
             self.last_event.frame = last_frame
 
         return sr
+
+    def set_object_filter(self, object_ids: List[str]):
+        self.controller.step("SetObjectFilter", objectIds=object_ids, renderImage=False)
+
+    def reset_object_filter(self):
+        self.controller.step("ResetObjectFilter", renderImage=False)
+
+
+    def teleport(
+        self,
+        pose: Dict[str, float],
+        rotation: Dict[str, float],
+        horizon: float = 0.0,
+    ):
+        try:
+            e = self.controller.step(
+                action="TeleportFull",
+                x=pose["x"],
+                y=pose["y"],
+                z=pose["z"],
+                rotation=rotation,
+                horizon=horizon,
+                **self._extra_teleport_kwargs,
+            )
+        except ValueError as e:
+            if len(self._extra_teleport_kwargs) == 0:
+                self._extra_teleport_kwargs["standing"] = True
+            else:
+                raise e
+            return self.teleport(
+                pose=pose, rotation=rotation, horizon=horizon
+            )
+        return e.metadata["lastActionSuccess"]
+
 
     @staticmethod
     def position_dist(

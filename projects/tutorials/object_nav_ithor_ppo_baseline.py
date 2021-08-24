@@ -26,7 +26,7 @@ from allenact_plugins.ithor_plugin.ithor_sensors import (
     RGBSensorThor,
     GoalObjectTypeThorSensor,
 )
-from allenact_plugins.ithor_plugin.ithor_task_samplers import ObjectNavTaskSampler
+from allenact_plugins.ithor_plugin.ithor_task_samplers import ObjectNavTaskSampler,ObjectNavDatasetTaskSampler
 from allenact_plugins.ithor_plugin.ithor_tasks import ObjectNaviThorGridTask
 from projects.objectnav_baselines.models.object_nav_models import (
     ObjectNavBaselineActorCritic,
@@ -188,7 +188,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return ObjectNavTaskSampler(**kwargs)
+        return ObjectNavDatasetTaskSampler(**kwargs)
 
     @staticmethod
     def _partition_inds(n: int, num_parts: int):
@@ -248,6 +248,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
+        res["scene_directory"] = os.path.join(os.getcwd(), "datasets/ithor-objectnav/train/episodes")
         res["scene_period"] = "manual"
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
@@ -273,6 +274,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
+        res["scene_directory"] = os.path.join(os.getcwd(), "datasets/ithor-objectnav/val/episodes")
         res["scene_period"] = self.VALID_SAMPLES_IN_SCENE
         res["max_tasks"] = self.VALID_SAMPLES_IN_SCENE * len(res["scenes"])
         res["env_args"] = {}
@@ -299,6 +301,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
+        res["scene_directory"] = os.path.join(os.getcwd(), "datasets/ithor-objectnav/val/episodes")
         res["scene_period"] = self.TEST_SAMPLES_IN_SCENE
         res["max_tasks"] = self.TEST_SAMPLES_IN_SCENE * len(res["scenes"])
         res["env_args"] = {}
