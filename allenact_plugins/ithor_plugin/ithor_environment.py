@@ -38,7 +38,7 @@ class IThorEnvironment(object):
         fov: float = FOV,
         player_screen_width: int = 300,
         player_screen_height: int = 300,
-        gridSize: float = 0.25,
+        grid_size: float = 0.25,
         rotate_step_degrees: int = 90,
         quality: str = "Very Low",
         restrict_to_initially_reachable_points: bool = False,

@@ -117,8 +117,8 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     ]
 
     ENV_ARGS = {
-        "player_screen_height": CAMERA_WIDTH,
-        "player_screen_width": CAMERA_HEIGHT,
+        "player_screen_height": CAMERA_HEIGHT,
+        "player_screen_width": CAMERA_WIDTH,
         "quality": "Very Low",
         "rotate_step_degrees": 30,
         "visibility_distance": 1.0,
