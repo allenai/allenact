@@ -1031,15 +1031,15 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.backprop_step(total_loss)
 
         # # TODO Unit test to ensure correctness of distributed infrastructure
-        # state_dict = self.actor_critic.state_dict()
-        # keys = sorted(list(state_dict.keys()))
-        # get_logger().debug(
-        #     "worker {} param 0 {} param -1 {}".format(
-        #         self.worker_id,
-        #         state_dict[keys[0]].flatten()[0],
-        #         state_dict[keys[-1]].flatten()[-1],
-        #     )
-        # )
+        state_dict = self.actor_critic.state_dict()
+        keys = sorted(list(state_dict.keys()))
+        get_logger().info(
+            "worker {} param 0 {} param -1 {}".format(
+                self.worker_id,
+                state_dict[keys[0]].flatten()[0],
+                state_dict[keys[-1]].flatten()[-1],
+            )
+        )
 
     def make_offpolicy_iterator(
         self, data_iterator_builder: Callable[..., Iterator],
