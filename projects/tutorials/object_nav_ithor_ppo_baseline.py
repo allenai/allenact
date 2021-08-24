@@ -313,6 +313,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         res["scene_directory"] = os.path.join(
             os.getcwd(), "datasets/ithor-objectnav/train/episodes"
         )
+        res["loop_dataset"] = True
         res["scene_period"] = "manual"
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
@@ -338,11 +339,10 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
         )
+        res["loop_dataset"] = False
         res["scene_directory"] = os.path.join(
             os.getcwd(), "datasets/ithor-objectnav/val/episodes"
         )
-        res["scene_period"] = self.VALID_SAMPLES_IN_SCENE
-        res["max_tasks"] = self.VALID_SAMPLES_IN_SCENE * len(res["scenes"])
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
@@ -370,8 +370,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         res["scene_directory"] = os.path.join(
             os.getcwd(), "datasets/ithor-objectnav/val/episodes"
         )
-        res["scene_period"] = self.TEST_SAMPLES_IN_SCENE
-        res["max_tasks"] = self.TEST_SAMPLES_IN_SCENE * len(res["scenes"])
+        res["loop_dataset"] = False
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
