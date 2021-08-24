@@ -38,9 +38,9 @@ class IThorEnvironment(object):
         fov: float = FOV,
         player_screen_width: int = 300,
         player_screen_height: int = 300,
-        gridSize: float = 0.15,
-        rotateStepDegrees: int = 30,
-        visibilityDistance: float = 1.0,
+        gridSize: float = 0.25,
+        rotateStepDegrees: int = 90,
+        visibilityDistance: float = 1.25,
         quality: str = "Very Low",
         restrict_to_initially_reachable_points: bool = False,
         make_agents_visible: bool = True,
@@ -92,7 +92,6 @@ class IThorEnvironment(object):
         self._initially_reachable_points_set: Optional[Set[Tuple[float, float]]] = None
         self._move_mag: Optional[float] = None
         self._grid_size: Optional[float] = gridSize
-        print("grid size is ", self._grid_size)
         self._rotate_step_degrees = rotateStepDegrees
         self._visibility_distance = visibilityDistance
         self._fov = fov
