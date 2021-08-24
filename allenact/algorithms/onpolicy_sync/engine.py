@@ -1005,8 +1005,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                             ).to(self.device)
                             dist.all_reduce(aggregate_key_value)
                             info[loss_name + "/" + key] = (
-                                aggregate_key_value.item() / aggregate_bsize * bsize
-                            )  # rescale by bsize to be consistent with averaging
+                                aggregate_key_value.item() / aggregate_bsize
+                            )
 
                 assert (
                     total_loss is not None
@@ -1019,9 +1019,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 else:
                     aggregate_total_loss = total_loss.detach() * bsize
                     dist.all_reduce(aggregate_total_loss)
-                    info["total_loss"] = (
-                        aggregate_total_loss.item() / aggregate_bsize * bsize
-                    )
+                    info["total_loss"] = aggregate_total_loss.item() / aggregate_bsize
 
                 self.tracking_info["losses"].append(("losses", info, bsize))
                 self.tracking_info["lr"].append(
