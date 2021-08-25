@@ -15,6 +15,12 @@ from scipy.spatial.transform import Rotation
 from allenact.utils.system import get_logger
 from allenact_plugins.ithor_plugin.ithor_constants import VISIBILITY_DISTANCE, FOV
 from allenact_plugins.ithor_plugin.ithor_util import round_to_factor
+from ai2thor.util import metrics
+from allenact.utils.cache_utils import (
+    DynamicDistanceCache,
+    pos_to_str_for_cache,
+    str_to_pos_for_cache,
+)
 
 
 class IThorEnvironment(object):
@@ -31,6 +37,7 @@ class IThorEnvironment(object):
 
     def __init__(
         self,
+        all_metadata_available: bool = True,
         x_display: Optional[str] = None,
         docker_enabled: bool = False,
         local_thor_build: Optional[str] = None,
@@ -46,6 +53,7 @@ class IThorEnvironment(object):
         object_open_speed: float = 1.0,
         simplify_physics: bool = False,
         snap_to_grid: bool = True,
+        agent_count: int = 1,
         **kwargs,
     ) -> None:
         """Initializer.
@@ -86,6 +94,7 @@ class IThorEnvironment(object):
         self._started = False
         self._quality = quality
         self._snap_to_grid = snap_to_grid
+        self.agent_count = agent_count
 
         self._initially_reachable_points: Optional[List[Dict]] = None
         self._initially_reachable_points_set: Optional[Set[Tuple[float, float]]] = None
@@ -101,13 +110,118 @@ class IThorEnvironment(object):
         self.object_open_speed = object_open_speed
         self._always_return_visible_range = False
         self.simplify_physics = simplify_physics
+        self.all_metadata_available = all_metadata_available
+
+
+
+        self.scene_to_reachable_positions: Optional[Dict[str, Any]] = None
+        self.distance_cache: Optional[DynamicDistanceCache] = None
+
+        
 
         self.start(None)
         # noinspection PyTypeHints
+        if self.all_metadata_available:
+            self.scene_to_reachable_positions = {
+                self.scene_name: copy.deepcopy(self.currently_reachable_points)
+            }
+            assert len(self.scene_to_reachable_positions[self.scene_name]) > 10
+
+            self.distance_cache = DynamicDistanceCache(rounding=1)
         self.controller.docker_enabled = docker_enabled  # type: ignore
         self._extra_teleport_kwargs: Dict[
             str, Any
         ] = {}  # Used for backwards compatability with the teleport action
+
+    def path_from_point_to_object_type(
+        self, point: Dict[str, float], object_type: str, allowed_error: float
+    ) -> Optional[List[Dict[str, float]]]:
+        event = self.controller.step(
+            action="GetShortestPath",
+            objectType=object_type,
+            position=point,
+            allowedError=allowed_error,
+        )
+        if event.metadata["lastActionSuccess"]:
+            return event.metadata["actionReturn"]["corners"]
+        else:
+            get_logger().debug(
+                "Failed to find path for {} in {}. Start point {}, agent state {}.".format(
+                    object_type,
+                    self.controller.last_event.metadata["sceneName"],
+                    point,
+                    self.agent_state(),
+                )
+            )
+            return None
+
+    def distance_from_point_to_object_type(
+        self, point: Dict[str, float], object_type: str, allowed_error: float
+    ) -> float:
+        """Minimal geodesic distance from a point to an object of the given
+        type.
+        It might return -1.0 for unreachable targets.
+        """
+        path = self.path_from_point_to_object_type(point, object_type, allowed_error)
+        if path:
+            # Because `allowed_error != 0` means that the path returned above might not start
+            # at `point`, we explicitly add any offset there is.
+            s_dist = math.sqrt(
+                (point["x"] - path[0]["x"]) ** 2 + (point["z"] - path[0]["z"]) ** 2
+            )
+            return metrics.path_distance(path) + s_dist
+        return -1.0
+
+    def distance_to_object_type(self, object_type: str, agent_id: int = 0) -> float:
+        """Minimal geodesic distance to object of given type from agent's
+        current location.
+        It might return -1.0 for unreachable targets.
+        """
+        assert 0 <= agent_id < self.agent_count
+        assert (
+            self.all_metadata_available
+        ), "`distance_to_object_type` cannot be called when `self.all_metadata_available` is `False`."
+
+        def retry_dist(position: Dict[str, float], object_type: str):
+            allowed_error = 0.05
+            debug_log = ""
+            d = -1.0
+            while allowed_error < 2.5:
+                d = self.distance_from_point_to_object_type(
+                    position, object_type, allowed_error
+                )
+                if d < 0:
+                    debug_log = (
+                        f"In scene {self.scene_name}, could not find a path from {position} to {object_type} with"
+                        f" {allowed_error} error tolerance. Increasing this tolerance to"
+                        f" {2 * allowed_error} any trying again."
+                    )
+                    allowed_error *= 2
+                else:
+                    break
+            if d < 0:
+                get_logger().warning(
+                    f"In scene {self.scene_name}, could not find a path from {position} to {object_type}"
+                    f" with {allowed_error} error tolerance. Returning a distance of -1."
+                )
+            elif debug_log != "":
+                get_logger().debug(debug_log)
+            return d
+
+        return self.distance_cache.find_distance(
+            self.scene_name,
+            self.controller.last_event.events[agent_id].metadata["agent"]["position"],
+            object_type,
+            retry_dist,
+        )
+
+
+    @property
+    def currently_reachable_points(self) -> List[Dict[str, float]]:
+        """List of {"x": x, "y": y, "z": z} locations in the scene that are
+        currently reachable."""
+        self.step({"action": "GetReachablePositions"})
+        return self.last_event.metadata["actionReturn"]  # type:ignore
 
     @property
     def scene_name(self) -> str:
@@ -541,6 +655,18 @@ class IThorEnvironment(object):
         currently reachable."""
         self.step({"action": "GetReachablePositions"})
         return self.last_event.metadata["actionReturn"]  # type:ignore
+        
+    def agent_state(self, agent_id: int = 0) -> Dict:
+        """Return agent position, rotation and horizon."""
+        assert 0 <= agent_id < self.agent_count
+
+        agent_meta = self.last_event.events[agent_id].metadata["agent"]
+        return {
+            **{k: float(v) for k, v in agent_meta["position"].items()},
+            "rotation": {k: float(v) for k, v in agent_meta["rotation"].items()},
+            "horizon": round(float(agent_meta["cameraHorizon"]), 1),
+        }
+
 
     def get_agent_location(self) -> Dict[str, Union[float, bool]]:
         """Gets agent's location."""
