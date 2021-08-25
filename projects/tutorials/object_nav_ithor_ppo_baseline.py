@@ -36,7 +36,7 @@ from allenact_plugins.ithor_plugin.ithor_sensors import (
 )
 from allenact_plugins.ithor_plugin.ithor_task_samplers import (
     ObjectNavTaskSampler,
-    ObjectNavDatasetTaskSampler,
+    ObjectNaviThorDatasetTaskSampler,
 )
 from allenact_plugins.ithor_plugin.ithor_tasks import ObjectNaviThorGridTask
 from projects.objectnav_baselines.models.object_nav_models import (
@@ -250,7 +250,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return ObjectNavDatasetTaskSampler(**kwargs)
+        return ObjectNaviThorDatasetTaskSampler(**kwargs)
 
     @staticmethod
     def _partition_inds(n: int, num_parts: int):

@@ -202,7 +202,7 @@ class ObjectNavTaskSampler(TaskSampler):
             set_seed(seed)
 
 
-class ObjectNavDatasetTaskSampler(TaskSampler):
+class ObjectNaviThorDatasetTaskSampler(TaskSampler):
     def __init__(
         self,
         scenes: List[str],
@@ -223,7 +223,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         self.env_args = env_args
         self.scenes = scenes
         self.episodes = {
-            scene: ObjectNavDatasetTaskSampler.load_dataset(scene, scene_directory)
+            scene: ObjectNaviThorDatasetTaskSampler.load_dataset(scene, scene_directory)
             for scene in scenes
         }
         self.env_class = env_class
