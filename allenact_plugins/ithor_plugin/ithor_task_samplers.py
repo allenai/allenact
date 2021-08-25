@@ -391,7 +391,7 @@ class ObjectNaviThorDatasetTaskSampler(TaskSampler):
         if self.max_tasks is not None:
             self.max_tasks -= 1
         if not self.env.teleport(
-            pose=episode["initial_position"],
+            position=episode["initial_position"],
             rotation=episode["initial_orientation"],
             horizon=episode.get("initial_horizon", 0),
         ):

@@ -749,16 +749,16 @@ class IThorEnvironment(object):
 
     def teleport(
         self,
-        pose: Dict[str, float],
+        position: Dict[str, float],
         rotation: Dict[str, float],
         horizon: float = 0.0,
     ):
         try:
             e = self.controller.step(
                 action="TeleportFull",
-                x=pose["x"],
-                y=pose["y"],
-                z=pose["z"],
+                x=position["x"],
+                y=position["y"],
+                z=position["z"],
                 rotation=rotation,
                 horizon=horizon,
                 **self._extra_teleport_kwargs,
@@ -768,7 +768,7 @@ class IThorEnvironment(object):
                 self._extra_teleport_kwargs["standing"] = True
             else:
                 raise e
-            return self.teleport(pose=pose, rotation=rotation, horizon=horizon)
+            return self.teleport(position=position, rotation=rotation, horizon=horizon)
         return e.metadata["lastActionSuccess"]
 
     @staticmethod
