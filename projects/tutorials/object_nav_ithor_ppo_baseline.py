@@ -126,7 +126,13 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         "snap_to_grid": False
     }
 
-    MAX_STEPS = 128
+    MAX_STEPS = 500
+    REWARD_CONFIG = {
+        "step_penalty": -0.01,
+        "goal_success_reward": 10.0,
+        "failed_stop_reward": 0.0,
+        "shaping_weight": 1.0,
+    }
     ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
     VALID_SAMPLES_IN_SCENE = 10
     TEST_SAMPLES_IN_SCENE = 100
@@ -137,7 +143,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def tag(cls):
-        return "ObjectNavThorPPOResnetGRU"
+        return "ObjectNaviThorPPOResnetGRU"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
@@ -293,6 +299,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             ),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
+            "rewards_config": self.REWARD_CONFIG,
         }
 
     def train_task_sampler_args(

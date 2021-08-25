@@ -211,7 +211,7 @@ class ObjectNaviThorDatasetTaskSampler(TaskSampler):
         max_steps: int,
         env_args: Dict[str, Any],
         action_space: gym.Space,
-        # rewards_config: Dict,
+        rewards_config: Dict,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
         loop_dataset: bool = True,
@@ -219,7 +219,7 @@ class ObjectNaviThorDatasetTaskSampler(TaskSampler):
         env_class=IThorEnvironment,
         **kwargs,
     ) -> None:
-        # self.rewards_config = rewards_config
+        self.rewards_config = rewards_config
         self.env_args = env_args
         self.scenes = scenes
         self.episodes = {
@@ -402,6 +402,7 @@ class ObjectNaviThorDatasetTaskSampler(TaskSampler):
             task_info=task_info,
             max_steps=self.max_steps,
             action_space=self._action_space,
+            reward_configs=self.rewards_config,
         )
 
         return self._last_sampled_task

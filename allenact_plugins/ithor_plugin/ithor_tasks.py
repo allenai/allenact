@@ -3,6 +3,7 @@ from typing import Dict, Tuple, List, Any, Optional, Union, Sequence, cast
 
 import gym
 import numpy as np
+import math
 
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import Sensor
@@ -65,6 +66,7 @@ class ObjectNaviThorGridTask(Task[IThorEnvironment]):
         sensors: List[Sensor],
         task_info: Dict[str, Any],
         max_steps: int,
+        reward_configs: Dict[str, Any],
         **kwargs,
     ) -> None:
         """Initializer.
@@ -74,6 +76,9 @@ class ObjectNaviThorGridTask(Task[IThorEnvironment]):
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
+
+        self._rewards: List[float] = []
+        self.reward_configs = reward_configs
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible: Optional[
@@ -137,15 +142,36 @@ class ObjectNaviThorGridTask(Task[IThorEnvironment]):
             for o in self.env.visible_objects()
         )
 
+    def dist_to_target(self):
+        return self.env.distance_to_point(self.task_info["target"])
+
+
     def judge(self) -> float:
+        """Judge the last event."""
+        reward = self.reward_configs["step_penalty"]
+
+        #reward += self.shaping()
+
+        if self._took_end_action:
+            if self._success:
+                reward += self.reward_configs["goal_success_reward"]
+            else:
+                reward += self.reward_configs["failed_stop_reward"]
+        elif self.num_steps_taken() + 1 >= self.max_steps:
+            reward += self.reward_configs.get("reached_max_steps_reward", 0.0)
+
+        self._rewards.append(float(reward))
+        return float(reward)
+
+    def judge_old(self) -> float:
         """Compute the reward after having taken a step."""
         reward = -0.01
 
         if not self.last_action_success:
-            reward += -0.03
+            reward += -0.00
 
         if self._took_end_action:
-            reward += 1.0 if self._success else -1.0
+            reward += 10.0 if self._success else -0.0
 
         return float(reward)
 
