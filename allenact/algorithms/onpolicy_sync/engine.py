@@ -946,6 +946,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         return mean, std
 
+    def aggregate_scalar(self, to_share, weight, total_weight):
+        aggregate = torch.tensor(to_share * weight).to(self.device)
+        dist.all_reduce(aggregate)
+        return aggregate.item() / total_weight
+
     def update(self, rollouts: RolloutStorage):
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
 
@@ -964,11 +969,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 num_rollout_steps, num_samplers = batch["masks"].shape[:2]
                 bsize = int(num_rollout_steps * num_samplers)
 
-                aggregate_bsize = None
-                if self.is_distributed:
-                    aggregate_bsize = torch.tensor(bsize).to(self.device)
-                    dist.all_reduce(aggregate_bsize)
-                    aggregate_bsize = int(aggregate_bsize.item())
+                aggregate_bsize = (
+                    self.aggregate_scalar(bsize, 1, 1) if self.is_distributed else bsize
+                )
 
                 actor_critic_output, memory = self.actor_critic(
                     observations=batch["observations"],
@@ -986,27 +989,38 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         self.training_pipeline.current_stage_loss_weights[loss_name],
                     )
 
-                    current_loss, current_info = loss.loss(
+                    loss_return = loss.loss(
                         step_count=self.step_count,
                         batch=batch,
                         actor_critic_output=actor_critic_output,
                     )
+
+                    fine_info = {}
+                    if len(loss_return) == 2:
+                        current_loss, current_info = loss_return
+                    elif len(loss_return) == 3:
+                        current_loss, current_info, fine_info = loss_return
+                    else:
+                        raise NotImplementedError
+
                     if total_loss is None:
                         total_loss = loss_weight * current_loss
                     else:
                         total_loss = total_loss + loss_weight * current_loss
 
-                    for key in current_info:
-                        if not self.is_distributed:
-                            info[loss_name + "/" + key] = current_info[key]
+                    for key, value in current_info.items():
+                        if self.is_distributed:
+                            value = self.aggregate_scalar(value, bsize, aggregate_bsize)
+                        info[f"{loss_name}/{key}"] = value
+
+                    for key, value in fine_info.items():
+                        if self.is_distributed:
+                            value = self.aggregate_scalar(value, bsize, aggregate_bsize)
+                        if self.training_pipeline.update_repeats > 1:
+                            info[f"{loss_name}/{key}_epoch{e:02d}"] = value
+                            info[f"{loss_name}/{key}_combined"] = value
                         else:
-                            aggregate_key_value = torch.tensor(
-                                current_info[key] * bsize
-                            ).to(self.device)
-                            dist.all_reduce(aggregate_key_value)
-                            info[loss_name + "/" + key] = (
-                                aggregate_key_value.item() / aggregate_bsize
-                            )
+                            info[f"{loss_name}/{key}"] = value
 
                 assert (
                     total_loss is not None
@@ -1014,12 +1028,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     self.training_pipeline.current_stage_index
                 )
 
-                if not self.is_distributed:
-                    info["total_loss"] = total_loss.item()
-                else:
-                    aggregate_total_loss = total_loss.detach() * bsize
-                    dist.all_reduce(aggregate_total_loss)
-                    info["total_loss"] = aggregate_total_loss.item() / aggregate_bsize
+                total_loss_scalar = total_loss.item()
+                if self.is_distributed:
+                    info["total_loss"] = self.aggregate_scalar(
+                        total_loss_scalar, bsize, aggregate_bsize
+                    )
+                info["total_loss"] = total_loss_scalar
 
                 self.tracking_info["losses"].append(("losses", info, bsize))
                 self.tracking_info["lr"].append(
