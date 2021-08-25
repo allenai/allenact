@@ -141,13 +141,16 @@ class ObjectNaviThorGridTask(Task[IThorEnvironment]):
                 self.travelled_distance += IThorEnvironment.position_dist(
                     p0=self.path[-1], p1=self.path[-2], ignore_y=True
                 )
-            #self.task_info["followed_path"].append(self.env.get_agent_location())
+            # self.task_info["followed_path"].append(self.env.get_agent_location())
 
         step_result = RLStepResult(
             observation=self.get_observations(),
             reward=self.judge(),
             done=self.is_done(),
-            info={"last_action_success": self.last_action_success, "action": action_str},
+            info={
+                "last_action_success": self.last_action_success,
+                "action": action_str,
+            },
         )
         return step_result
 
@@ -161,7 +164,6 @@ class ObjectNaviThorGridTask(Task[IThorEnvironment]):
             o["objectType"] == self.task_info["object_type"]
             for o in self.env.visible_objects()
         )
-
 
     def shaping(self) -> float:
         rew = 0.0
@@ -200,7 +202,6 @@ class ObjectNaviThorGridTask(Task[IThorEnvironment]):
             )
             * self.reward_configs["shaping_weight"]
         )
-
 
     def judge(self) -> float:
         """Judge the last event."""

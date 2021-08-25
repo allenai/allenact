@@ -112,12 +112,8 @@ class IThorEnvironment(object):
         self.simplify_physics = simplify_physics
         self.all_metadata_available = all_metadata_available
 
-
-
         self.scene_to_reachable_positions: Optional[Dict[str, Any]] = None
         self.distance_cache: Optional[DynamicDistanceCache] = None
-
-        
 
         self.start(None)
         # noinspection PyTypeHints
@@ -214,7 +210,6 @@ class IThorEnvironment(object):
             object_type,
             retry_dist,
         )
-
 
     @property
     def currently_reachable_points(self) -> List[Dict[str, float]]:
@@ -655,7 +650,7 @@ class IThorEnvironment(object):
         currently reachable."""
         self.step({"action": "GetReachablePositions"})
         return self.last_event.metadata["actionReturn"]  # type:ignore
-        
+
     def agent_state(self, agent_id: int = 0) -> Dict:
         """Return agent position, rotation and horizon."""
         assert 0 <= agent_id < self.agent_count
@@ -666,7 +661,6 @@ class IThorEnvironment(object):
             "rotation": {k: float(v) for k, v in agent_meta["rotation"].items()},
             "horizon": round(float(agent_meta["cameraHorizon"]), 1),
         }
-
 
     def get_agent_location(self) -> Dict[str, Union[float, bool]]:
         """Gets agent's location."""

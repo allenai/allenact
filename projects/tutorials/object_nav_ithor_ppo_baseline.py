@@ -80,10 +80,14 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     )
 
     TRAIN_SCENES = [
-        scene.split("/")[-1].split(".")[0] for scene in glob.glob(train_path)
+        os.path.basename(scene).split(".")[0] for scene in glob.glob(train_path)
     ]
-    VALID_SCENES = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(val_path)]
-    TEST_SCENES = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(test_path)]
+    VALID_SCENES = [
+        os.path.basename(scene).split(".")[0] for scene in glob.glob(val_path)
+    ]
+    TEST_SCENES = [
+        os.path.basename(scene).split(".")[0] for scene in glob.glob(test_path)
+    ]
 
     # Setting up sensors and basic environment details
     CAMERA_WIDTH = 400
@@ -123,7 +127,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         "rotate_step_degrees": 30,
         "visibility_distance": 1.0,
         "grid_size": 0.25,
-        "snap_to_grid": False
+        "snap_to_grid": False,
     }
 
     MAX_STEPS = 500
