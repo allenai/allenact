@@ -53,12 +53,7 @@ class GymBox2DSensor(Sensor[gym.Env, Task[gym.Env]]):
 class GymMuJoCoSensor(Sensor[gym.Env, Task[gym.Env]]):
     """Wrapper for gym MuJoCo and Robotics tasks observations."""
 
-    def __init__(
-        self,
-        gym_env_name: str = "InvertedPendulum-v2",
-        uuid: str = "gym_mujoco_data",
-        **kwargs: Any
-    ):
+    def __init__(self, gym_env_name: str, uuid: str, **kwargs: Any):
         self.gym_env_name = gym_env_name
 
         observation_space = self._get_observation_space()
@@ -67,8 +62,6 @@ class GymMuJoCoSensor(Sensor[gym.Env, Task[gym.Env]]):
 
     def _get_observation_space(self) -> gym.Space:
         # observation space for gym MoJoCo
-        print(self.gym_env_name)
-        print(self.gym_env_name == "InvertedPendulum-v2")
         if self.gym_env_name == "InvertedPendulum-v2":
             return gym.spaces.Box(-np.inf, np.inf, shape=(4,), dtype="float32")
         elif self.gym_env_name == "Ant-v2":

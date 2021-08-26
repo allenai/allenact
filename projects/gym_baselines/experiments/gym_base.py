@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Dict, Sequence, Optional, List, Any, cast
+from typing import Dict, Sequence, Optional, List, Any
 
 from allenact.base_abstractions.experiment_config import ExperimentConfig
 from allenact.base_abstractions.sensor import Sensor

@@ -70,36 +70,9 @@ class GymTask(Task[gym.Env]):
         }
 
 
-class GymContinuousBox2DTask(GymTask):
-    """Task for a continuous-control gym Box2D Env; it allows interfacing
-    allenact with gym tasks."""
-
-    @classmethod
-    def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
-        return tuple()
-
-    def _step(self, action: Sequence[float]) -> RLStepResult:
-        action = np.array(action)
-
-        gym_obs, reward, self._gym_done, info = self.env.step(action=action)
-
-        return RLStepResult(
-            observation=self.get_observations(gym_obs=gym_obs),
-            reward=reward,
-            done=self.is_done(),
-            info=info,
-        )
-
-
-"""
-@Note: As this is the same as `GymContinuousBox2DTask`, it can be modified as something 
-like `GymContinuousTask` for both tasks.
-"""
-
-
-class GymContinuousMoJoCoTask(GymTask):
-    """Task for a continuous-control gym Mujoco Env; it allows interfacing
-    allenact with gym tasks."""
+class GymContinuousTask(GymTask):
+    """Task for a continuous-control gym Box2D & MuJoCo Env; it allows
+    interfacing allenact with gym tasks."""
 
     @classmethod
     def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
@@ -121,13 +94,12 @@ class GymContinuousMoJoCoTask(GymTask):
 def task_selector(env_name: str) -> type:
     """Helper function for `GymTaskSampler`."""
     if env_name in [
+        # Box2d Env
         "CarRacing-v0",
         "LunarLanderContinuous-v2",
         "BipedalWalker-v2",
         "BipedalWalkerHardcore-v2",
-    ]:
-        return GymContinuousBox2DTask
-    elif env_name in [
+        # MuJoCo Env
         "InvertedPendulum-v2",
         "Ant-v2",
         "InvertedDoublePendulum-v2",
@@ -138,7 +110,7 @@ def task_selector(env_name: str) -> type:
         "Swimmer-v2",
         "Walker2d-v2",
     ]:
-        return GymContinuousMoJoCoTask
+        return GymContinuousTask
     raise NotImplementedError()
 
 
