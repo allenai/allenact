@@ -115,7 +115,9 @@ class PPO(AbstractActorCriticLoss):
                     .mean()
                     .item()
                 ),
-            },
+            }
+            if self.show_ratios
+            else {},
         )
 
     def loss(  # type: ignore
@@ -206,4 +208,4 @@ class PPOValue(AbstractActorCriticLoss):
         )
 
 
-PPOConfig = dict(clip_param=0.2, value_loss_coef=0.5, entropy_coef=0.01)
+PPOConfig = dict(clip_param=0.1, value_loss_coef=0.5, entropy_coef=0.01)
