@@ -1287,6 +1287,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.former_steps = self.step_count
             for step in range(self.training_pipeline.num_steps):
                 num_paused = self.collect_rollout_step(rollouts=rollouts)
+
+                # Make sure we've collected the entire set of tensors (including memory))
+                if rollouts.num_steps != self.training_pipeline.num_steps:
+                    rollouts.unnarrow(self.training_pipeline.max_num_steps)
+                    rollouts.narrow(self.training_pipeline.num_steps)
+
                 if num_paused > 0:
                     raise NotImplementedError(
                         "When trying to get a new task from a task sampler (using the `.next_task()` method)"
@@ -1423,7 +1429,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
             self.run_pipeline(
                 RolloutStorage(
-                    num_steps=self.training_pipeline.num_steps,
+                    num_steps=self.training_pipeline.max_num_steps,
                     num_samplers=self.num_samplers,
                     actor_critic=self.actor_critic
                     if isinstance(self.actor_critic, ActorCriticModel)

@@ -426,9 +426,11 @@ class PipelineStage(object):
         training in this stage should be stopped early. If `None` then no early stopping
         occurs. If `early_stopping_criterion` is not `None` then we do not guarantee
         reproducibility when restarting a model from a checkpoint (as the
-         `EarlyStoppingCriterion` object may store internal state which is not
-         saved in the checkpoint). Currently AllenAct only supports using early stopping
-         criterion when **not** using distributed training.
+        `EarlyStoppingCriterion` object may store internal state which is not
+        saved in the checkpoint). Currently AllenAct only supports using early stopping
+        criterion when **not** using distributed training.
+    horizon: Horizon override for current stage, if given. It must be less or equal to
+        the `num_steps` passed to `TrainingPipeline`
     """
 
     def __init__(
@@ -439,6 +441,7 @@ class PipelineStage(object):
         teacher_forcing: Optional[LinearDecay] = None,
         offpolicy_component: Optional[OffPolicyPipelineComponent] = None,
         early_stopping_criterion: Optional[EarlyStoppingCriterion] = None,
+        horizon: Optional[int] = None,
     ):
         self.loss_names = loss_names
         self.max_stage_steps = max_stage_steps
@@ -460,6 +463,7 @@ class PipelineStage(object):
         self.offpolicy_named_losses: Optional[Dict[str, AbstractOffPolicyLoss]] = None
         self._offpolicy_named_loss_weights: Optional[Dict[str, float]] = None
         self.offpolicy_steps_taken_in_stage: int = 0
+        self.horizon = horizon
 
     @property
     def is_complete(self):
@@ -565,7 +569,7 @@ class TrainingPipeline(object):
 
         self.update_repeats = update_repeats
         self.max_grad_norm = max_grad_norm
-        self.num_steps = num_steps
+        self._num_steps = num_steps
         self.named_losses = named_losses
         self.gamma = gamma
         self.use_gae = use_gae
@@ -583,11 +587,24 @@ class TrainingPipeline(object):
             )
 
         self._current_stage: Optional[PipelineStage] = None
+        for sit, stage in enumerate(self.pipeline_stages):
+            if stage.horizon is not None:
+                assert (
+                    stage.horizon <= self._num_steps
+                ), f"Stage {sit} has horizon {stage.horizon} > {self._num_steps} num_steps in pipeline."
 
         self.rollout_count = 0
         self.off_policy_epochs = None
 
         self._refresh_current_stage(force_stage_search_from_start=True)
+
+    @property
+    def num_steps(self) -> int:
+        return self._current_stage.horizon or self._num_steps
+
+    @property
+    def max_num_steps(self) -> int:
+        return self._num_steps
 
     @property
     def total_steps(self) -> int:
