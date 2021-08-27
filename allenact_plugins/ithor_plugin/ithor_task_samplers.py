@@ -2,7 +2,7 @@ import copy
 import random
 import gzip
 import json
-from typing import List, Optional, Union, Dict, Any, cast, Tuple
+from typing import List, Optional, Union, Dict, Any, cast
 
 import gym
 

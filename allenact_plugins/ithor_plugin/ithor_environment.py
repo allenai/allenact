@@ -16,11 +16,7 @@ from allenact.utils.system import get_logger
 from allenact_plugins.ithor_plugin.ithor_constants import VISIBILITY_DISTANCE, FOV
 from allenact_plugins.ithor_plugin.ithor_util import round_to_factor
 from ai2thor.util import metrics
-from allenact.utils.cache_utils import (
-    DynamicDistanceCache,
-    pos_to_str_for_cache,
-    str_to_pos_for_cache,
-)
+from allenact.utils.cache_utils import DynamicDistanceCache
 
 
 class IThorEnvironment(object):
@@ -282,10 +278,7 @@ class IThorEnvironment(object):
         self.controller.last_event.metadata["actionReturn"] = value
 
     def start(
-        self,
-        scene_name: Optional[str],
-        move_mag: float = 0.25,
-        **kwargs,
+        self, scene_name: Optional[str], move_mag: float = 0.25, **kwargs,
     ) -> None:
         """Starts the ai2thor controller if it was previously stopped.
 
@@ -340,10 +333,7 @@ class IThorEnvironment(object):
             self._started = False
 
     def reset(
-        self,
-        scene_name: Optional[str],
-        move_mag: float = 0.25,
-        **kwargs,
+        self, scene_name: Optional[str], move_mag: float = 0.25, **kwargs,
     ):
         """Resets the ai2thor in a new scene.
 

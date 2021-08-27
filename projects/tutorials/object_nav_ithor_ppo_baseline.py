@@ -1,5 +1,5 @@
 from math import ceil
-from typing import Dict, Any, List, Optional, Sequence, Union
+from typing import Dict, Any, List, Optional, Sequence
 import glob
 import os
 import gym
@@ -10,10 +10,8 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 
-from allenact.base_abstractions.preprocessor import (
-    Preprocessor,
-    SensorPreprocessorGraph,
-)
+from allenact.base_abstractions.preprocessor import SensorPreprocessorGraph
+
 from allenact.embodiedai.preprocessors.resnet import ResNetPreprocessor
 from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 from allenact.embodiedai.preprocessors.resnet import ResNetPreprocessor
@@ -35,12 +33,10 @@ from allenact_plugins.ithor_plugin.ithor_sensors import (
     GoalObjectTypeThorSensor,
 )
 from allenact_plugins.ithor_plugin.ithor_task_samplers import (
-    ObjectNavTaskSampler,
     ObjectNaviThorDatasetTaskSampler,
 )
 from allenact_plugins.ithor_plugin.ithor_tasks import ObjectNaviThorGridTask
 from projects.objectnav_baselines.models.object_nav_models import (
-    ObjectNavBaselineActorCritic,
     ResnetTensorObjectNavActorCritic,
 )
 
@@ -179,10 +175,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             gae_lambda=gae_lambda,
             advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
-                PipelineStage(
-                    loss_names=["ppo_loss"],
-                    max_stage_steps=ppo_steps,
-                ),
+                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps,),
             ],
             lr_scheduler_builder=Builder(
                 LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
@@ -191,8 +184,6 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def machine_params(cls, mode="train", **kwargs):
-        num_gpus = torch.cuda.device_count()
-        has_gpu = num_gpus != 0
 
         if mode == "train":
             nprocesses = 40
