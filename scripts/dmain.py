@@ -81,6 +81,8 @@ def get_raw_args():
             "--ssh_cmd",
             "--env_activate_path",
             "--allenact_path",
+            "--extra_tag",
+            "--machine_id",
         ]:
             remove = arg
         else:
@@ -119,18 +121,24 @@ if __name__ == "__main__":
 
     raw_args = get_raw_args()
 
+    if args.seed is None:
+        seed = random.randint(0, 2 ** 31 - 1)
+        raw_args.extend(["-s", f"{seed}"])
+        get_logger().info(f"Using random seed {seed} in all workers (none was given)")
+
     all_addresses = args.runs_on.split(",")
     get_logger().info(f"Running on IP addresses {all_addresses}")
 
     assert args.distributed_ip_and_port.split(":")[0] in all_addresses, (
-        f"Missing listener IP address {args.distributed_ip_and_port.split(':')[0]} "
-        f"in list of worker addresses {all_addresses}"
+        f"Missing listener IP address {args.distributed_ip_and_port.split(':')[0]}"
+        f" in list of worker addresses {all_addresses}"
     )
 
     time_str = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime(time.time()))
 
+    global_job_id = id_generator()
     killfilename = os.path.join(
-        os.path.expanduser("~"), ".allenact", f"{time_str}_{id_generator()}.killfile"
+        os.path.expanduser("~"), ".allenact", f"{time_str}_{global_job_id}.killfile"
     )
     os.makedirs(os.path.dirname(killfilename), exist_ok=True)
 
@@ -154,7 +162,9 @@ if __name__ == "__main__":
                 + ["--machine_id", f"{it}"]
             )
 
-            logfile = f"{args.output_dir}/log_{time_str}_{job_id}_machine{it}"
+            logfile = (
+                f"{args.output_dir}/log_{time_str}_{global_job_id}_{job_id}_machine{it}"
+            )
 
             env_and_command = wrap_single_nested(
                 f"for NCCL_SOCKET_IFNAME in $(route | grep default) ; do : ; done && export NCCL_SOCKET_IFNAME"
@@ -170,7 +180,7 @@ if __name__ == "__main__":
                 f" && {command} &>> {logfile}"
             )
 
-            screen_name = f"allenact_{time_str}_{job_id}_machine{it}"
+            screen_name = f"allenact_{time_str}_{global_job_id}_{job_id}_machine{it}"
             screen_command = wrap_single(
                 f"screen -S {screen_name} -dm bash -c {env_and_command}"
             )
