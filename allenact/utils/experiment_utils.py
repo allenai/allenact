@@ -322,6 +322,48 @@ class LinearDecay(object):
         return self.startp + (self.endp - self.startp) * (epoch / float(self.steps))
 
 
+class MultiLinearDecay(object):
+    """Container for multiple stages of LinearDecay.
+
+    Obtain the value corresponding to the `i`th step by calling
+    an instantiation of this object with the value `i`.
+
+    # Parameters
+
+    stages: List of `LinearDecay` objects to be sequentially applied
+        for the number of steps in each stage.
+    """
+
+    def __init__(self, stages: Sequence[LinearDecay]) -> None:
+        """Initializer.
+
+        See class documentation for parameter definitions.
+        """
+        self.stages = stages
+        self.steps = np.cumsum([stage.steps for stage in self.stages])
+        self.total_steps = self.steps[-1]
+
+    def __call__(self, epoch: int) -> float:
+        """Get the decayed value factor for `epoch` number of steps.
+
+        # Parameters
+
+        epoch : The number of steps.
+
+        # Returns
+
+        Decayed value for `epoch` number of steps.
+        """
+        epoch = max(min(epoch, self.total_steps), 0)
+        min_steps = 0
+
+        for max_steps, stage in zip(self.steps, self.stages):
+            if epoch < max_steps or max_steps == self.total_steps:
+                return stage(epoch - min_steps)
+            else:
+                min_steps = max_steps
+
+
 # noinspection PyTypeHints,PyUnresolvedReferences
 def set_deterministic_cudnn() -> None:
     """Makes cudnn deterministic.
