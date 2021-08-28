@@ -1039,6 +1039,32 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.tracking_info["lr"].append(
                     ("lr", {"lr": self.optimizer.param_groups[0]["lr"]}, bsize)
                 )
+                self.tracking_info["rollout_num_mini_batch"].append(
+                    (
+                        "rollout_num_mini_batch",
+                        {
+                            "rollout_num_mini_batch": self.training_pipeline.num_mini_batch
+                        },
+                        bsize,
+                    )
+                )
+                self.tracking_info["rollout_epochs"].append(
+                    (
+                        "rollout_epochs",
+                        {"rollout_epochs": self.training_pipeline.update_repeats},
+                        bsize,
+                    )
+                )
+                self.tracking_info["global_batch_size"].append(
+                    (
+                        "global_batch_size",
+                        {"global_batch_size": aggregate_bsize},
+                        bsize,
+                    )
+                )
+                self.tracking_info["worker_batch_size"].append(
+                    ("worker_batch_size", {"worker_batch_size": bsize}, bsize,)
+                )
 
                 local_global_batch_size_tuple = None
                 if self.is_distributed:
