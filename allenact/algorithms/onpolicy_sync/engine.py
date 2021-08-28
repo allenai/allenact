@@ -1290,7 +1290,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
                 # Make sure we've collected the entire set of tensors (including memory))
                 if rollouts.num_steps != self.training_pipeline.num_steps:
-                    rollouts.unnarrow(self.training_pipeline.max_num_steps)
+                    rollouts.unnarrow(self.training_pipeline.global_num_steps)
                     rollouts.narrow(self.training_pipeline.num_steps)
 
                 if num_paused > 0:
@@ -1429,7 +1429,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
             self.run_pipeline(
                 RolloutStorage(
-                    num_steps=self.training_pipeline.max_num_steps,
+                    num_steps=self.training_pipeline.global_num_steps,
                     num_samplers=self.num_samplers,
                     actor_critic=self.actor_critic
                     if isinstance(self.actor_critic, ActorCriticModel)
