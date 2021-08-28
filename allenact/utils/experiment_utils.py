@@ -496,45 +496,19 @@ class TrainingSettings(object):
         for key, value in all_vars.items():
             setattr(self, f"{self._VAR_PREFIX}{key}", value)
 
-    @property
-    def num_mini_batch(self):
-        return getattr(self, f"{self._VAR_PREFIX}num_mini_batch")
-
-    @property
-    def update_repeats(self):
-        return getattr(self, f"{self._VAR_PREFIX}update_repeats")
-
-    @property
-    def max_grad_norm(self):
-        return getattr(self, f"{self._VAR_PREFIX}max_grad_norm")
-
-    @property
-    def num_steps(self):
-        return getattr(self, f"{self._VAR_PREFIX}num_steps")
-
-    @property
-    def gamma(self):
-        return getattr(self, f"{self._VAR_PREFIX}gamma")
-
-    @property
-    def use_gae(self):
-        return getattr(self, f"{self._VAR_PREFIX}use_gae")
-
-    @property
-    def gae_lambda(self):
-        return getattr(self, f"{self._VAR_PREFIX}gae_lambda")
-
-    @property
-    def advance_scene_rollout_period(self):
-        return getattr(self, f"{self._VAR_PREFIX}advance_scene_rollout_period")
-
-    @property
-    def save_interval(self):
-        return getattr(self, f"{self._VAR_PREFIX}save_interval")
-
-    @property
-    def metric_accumulate_interval(self):
-        return getattr(self, f"{self._VAR_PREFIX}metric_accumulate_interval")
+    def __getattr__(self, name: str):
+        """Attribute/property getter.
+        """
+        try:
+            return (
+                self.__dict__[name]
+                if name in self.__dict__
+                else self.__dict__[f"{self._VAR_PREFIX}{name}"]
+            )
+        except KeyError:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute with suffix '{name}'"
+            )
 
 
 class PipelineStage(TrainingSettings):
@@ -762,11 +736,16 @@ class TrainingPipeline(TrainingSettings):
         """
         try:
             if name.startswith(self.GLOBAL_SETTING_PREFIX):
-                return getattr(super(), name[len(self.GLOBAL_SETTING_PREFIX) :])
+                return self.__dict__[
+                    f"{self._VAR_PREFIX}{name[len(self.GLOBAL_SETTING_PREFIX) :]}"
+                ]
             elif self.current_stage is not None:
-                return getattr(self.current_stage, name, None) or getattr(super(), name)
+                return (
+                    self.current_stage.__dict__[f"{self._VAR_PREFIX}{name}"]
+                    or self.__dict__[f"{self._VAR_PREFIX}{name}"]
+                )
             else:
-                return getattr(super(), name)
+                return self.__dict__[f"{self._VAR_PREFIX}{name}"]
         except KeyError:
             raise AttributeError(
                 f"'{type(self).__name__}' object has no attribute with suffix '{name}'"
