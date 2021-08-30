@@ -343,6 +343,10 @@ class MultiLinearDecay(object):
         self.stages = stages
         self.steps = np.cumsum([stage.steps for stage in self.stages])
         self.total_steps = self.steps[-1]
+        self.stage_idx = -1
+        self.min_steps = 0
+        self.max_steps = 0
+        self.stage = None
 
     def __call__(self, epoch: int) -> float:
         """Get the decayed value factor for `epoch` number of steps.
@@ -356,13 +360,16 @@ class MultiLinearDecay(object):
         Decayed value for `epoch` number of steps.
         """
         epoch = max(min(epoch, self.total_steps), 0)
-        min_steps = 0
 
-        for max_steps, stage in zip(self.steps, self.stages):
-            if epoch < max_steps or max_steps == self.total_steps:
-                return stage(epoch - min_steps)
-            else:
-                min_steps = max_steps
+        while epoch >= self.max_steps and self.max_steps < self.total_steps:
+            self.stage_idx += 1
+            assert self.stage_idx < len(self.stages)
+
+            self.min_steps = self.max_steps
+            self.max_steps = self.steps[self.stage_idx]
+            self.stage = self.stages[self.stage_idx]
+
+        return self.stage(epoch - self.min_steps)
 
 
 # noinspection PyTypeHints,PyUnresolvedReferences
