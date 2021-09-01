@@ -119,11 +119,6 @@ if __name__ == "__main__":
         license="MIT",
         packages=find_packages(include=["allenact_plugins", "allenact_plugins.*"]),
         install_requires=[
-            "gym>=0.17.0,<0.18.0",
-            "torch>=1.6.0,!=1.8.0",
-            "torchvision>=0.7.0",
-            "numpy>=1.19.1",
-            "wheel>=0.36.2",
             f"allenact=={__version__}",
         ],
         setup_requires=["pytest-runner"],
