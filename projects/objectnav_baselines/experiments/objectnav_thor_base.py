@@ -58,6 +58,8 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
     def __init__(
         self,
         num_train_processes: Optional[int] = None,
+        num_test_processes: Optional[int] = None,
+        test_on_validation: bool = False,
         train_gpu_ids: Optional[Sequence[int]] = None,
         val_gpu_ids: Optional[Sequence[int]] = None,
         test_gpu_ids: Optional[Sequence[int]] = None,
@@ -71,6 +73,10 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         self.num_train_processes = v_or_default(
             num_train_processes, self.DEFAULT_NUM_TRAIN_PROCESSES
         )
+        self.num_test_processes = v_or_default(
+            num_test_processes, (10 if torch.cuda.is_available() else 1)
+        )
+        self.test_on_validation = test_on_validation
         self.train_gpu_ids = v_or_default(train_gpu_ids, self.DEFAULT_TRAIN_GPU_IDS)
         self.val_gpu_ids = v_or_default(val_gpu_ids, self.DEFAULT_VALID_GPU_IDS)
         self.test_gpu_ids = v_or_default(test_gpu_ids, self.DEFAULT_TEST_GPU_IDS)
@@ -124,11 +130,13 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
                 else self.val_gpu_ids
             )
         elif mode == "test":
-            nprocesses = 10 if torch.cuda.is_available() else 1
             devices = (
                 [torch.device("cpu")]
                 if not torch.cuda.is_available()
                 else self.test_gpu_ids
+            )
+            nprocesses = evenly_distribute_count_into_bins(
+                self.num_test_processes, max(len(devices), 1)
             )
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
@@ -297,10 +305,15 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        if self.TEST_DATASET_DIR is None:
-            get_logger().warning(
-                "No test dataset dir detected, running test on validation set instead."
-            )
+        if self.test_on_validation or self.TEST_DATASET_DIR is None:
+            if not self.test_on_validation:
+                get_logger().warning(
+                    "No test dataset dir detected, running test on validation set instead."
+                )
+            else:
+                get_logger().info(
+                    "`test_on_validation` was `True``, running test on validation set."
+                )
             return self.valid_task_sampler_args(
                 process_ind=process_ind,
                 total_processes=total_processes,

@@ -762,12 +762,14 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             )  # use latest seed for workers and update rng state
             self.vector_tasks.set_seeds(seeds)
 
-    def checkpoint_save(self) -> str:
+    def checkpoint_save(self, pipeline_stage_index: Optional[int] = None) -> str:
         model_path = os.path.join(
             self.checkpoints_dir,
             "exp_{}__stage_{:02d}__steps_{:012d}.pt".format(
                 self.experiment_name,
-                self.training_pipeline.current_stage_index,
+                self.training_pipeline.current_stage_index
+                if pipeline_stage_index is None
+                else pipeline_stage_index,
                 self.training_pipeline.total_steps,
             ),
         )
@@ -1222,13 +1224,54 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         offpolicy_data_iterator: Optional[Iterator] = None
 
+        should_save_checkpoints = (
+            self.checkpoints_dir != ""
+            and self.training_pipeline.save_interval is not None
+            and self.training_pipeline.save_interval > 0
+        )
+        already_saved_checkpoint = False
+
         while True:
-            self.training_pipeline.before_rollout(
+            pipeline_stage_changed = self.training_pipeline.before_rollout(
                 train_metrics=self._last_aggregated_train_task_metrics
             )
             self._last_aggregated_train_task_metrics.reset()
 
-            if self.training_pipeline.current_stage is None:
+            # Here we handle saving a checkpoint after a pipeline stage ends. We
+            # do this when
+            # (1) after every pipeline stage if the `self.save_ckpt_after_every_pipeline_stage`
+            #   boolean is True,
+            # (2) we have reached the end of ALL training (i.e. all stages are complete)
+            # We handle saving every `save_interval` steps
+            training_is_complete = self.training_pipeline.current_stage is None
+            if (
+                should_save_checkpoints
+                and (  # Might happen if the `save_interval` was hit
+                    not already_saved_checkpoint
+                )
+                and pipeline_stage_changed
+                and (  # Don't save at start
+                    self.training_pipeline.current_stage_index != 0
+                )
+                and (self.save_ckpt_after_every_pipeline_stage or training_is_complete)
+            ):
+                # TODO: For the moment these lines are repeated verbatim below, this should
+                #    be abstracted into a method
+                self.deterministic_seeds()
+                if self.worker_id == 0:
+                    model_path = self.checkpoint_save(
+                        pipeline_stage_index=self.training_pipeline.current_stage_index
+                        - 1
+                        if not training_is_complete
+                        else len(self.training_pipeline.pipeline_stages) - 1
+                    )
+                    if self.checkpoints_queue is not None:
+                        self.checkpoints_queue.put(("eval", model_path))
+                self.last_save = self.training_pipeline.total_steps
+
+            already_saved_checkpoint = False
+
+            if training_is_complete:
                 break
 
             if self.is_distributed:
@@ -1332,28 +1375,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.tracking_info.clear()
                 self.last_log = self.training_pipeline.total_steps
 
-            # save for every save_interval-th step or when the stage is complete
-            if (
-                self.checkpoints_dir != ""
-                and self.training_pipeline.save_interval is not None
-                and self.training_pipeline.save_interval > 0
-                and (
-                    self.training_pipeline.total_steps - self.last_save
-                    >= self.training_pipeline.save_interval
-                    or (
-                        self.training_pipeline.current_stage.is_complete
-                        and (
-                            # We only save when the stage is complete if either:
-                            # (1) the self.save_ckpt_after_every_pipeline_stage boolean is True,
-                            # (2) we have reached the end of ALL training (i.e. all stages are complete)
-                            self.save_ckpt_after_every_pipeline_stage
-                            or all(
-                                ps.is_complete
-                                for ps in self.training_pipeline.pipeline_stages
-                            )
-                        )
-                    )
-                )
+            # Here we handle saving a checkpoint every `save_interval` steps, saving after
+            # a pipeline stage completes is controlled above
+            if should_save_checkpoints and (
+                self.training_pipeline.total_steps - self.last_save
+                >= self.training_pipeline.save_interval
             ):
                 self.deterministic_seeds()
                 if self.worker_id == 0:
@@ -1361,6 +1387,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     if self.checkpoints_queue is not None:
                         self.checkpoints_queue.put(("eval", model_path))
                 self.last_save = self.training_pipeline.total_steps
+                already_saved_checkpoint = True
 
             if (self.training_pipeline.advance_scene_rollout_period is not None) and (
                 self.training_pipeline.rollout_count

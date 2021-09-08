@@ -668,7 +668,7 @@ class TrainingPipeline(object):
             return None
         return self.pipeline_stages.index(self.current_stage)
 
-    def before_rollout(self, train_metrics: Optional[ScalarMeanTracker] = None):
+    def before_rollout(self, train_metrics: Optional[ScalarMeanTracker] = None) -> bool:
         if (
             train_metrics is not None
             and self.current_stage.early_stopping_criterion is not None
@@ -683,7 +683,7 @@ class TrainingPipeline(object):
                 f"Early stopping criterion met after {self.total_steps} total steps "
                 f"({self.current_stage.steps_taken_in_stage} in current stage, stage index {self.current_stage_index})."
             )
-        self._refresh_current_stage(force_stage_search_from_start=False)
+        return self.current_stage is not self._refresh_current_stage(force_stage_search_from_start=False)
 
     def restart_pipeline(self):
         for ps in self.pipeline_stages:
