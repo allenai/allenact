@@ -4,7 +4,8 @@ import gym
 import numpy as np
 import quaternion  # noqa # pylint: disable=unused-import
 
-from allenact.base_abstractions.sensor import Sensor, RGBSensor, DepthSensor
+from allenact.base_abstractions.sensor import Sensor
+from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 from allenact.base_abstractions.task import Task
 from allenact.utils.misc_utils import prepare_locals_for_super
 from allenact.utils.system import get_logger
@@ -91,8 +92,7 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
 
     @staticmethod
     def quaternion_from_y_angle(angle: float) -> np.quaternion:
-        r"""Creates a quaternion from rotation angle around y axis
-        """
+        r"""Creates a quaternion from rotation angle around y axis"""
         return GPSCompassSensorRoboThor.quaternion_from_coeff(
             np.array(
                 [0.0, np.sin(np.pi * angle / 360.0), 0.0, np.cos(np.pi * angle / 360.0)]
@@ -101,8 +101,7 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
 
     @staticmethod
     def quaternion_from_coeff(coeffs: np.ndarray) -> np.quaternion:
-        r"""Creates a quaternions from coeffs in [x, y, z, w] format
-        """
+        r"""Creates a quaternions from coeffs in [x, y, z, w] format"""
         quat = np.quaternion(0, 0, 0, 0)
         quat.real = coeffs[3]
         quat.imag = coeffs[0:3]

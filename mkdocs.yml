@@ -74,6 +74,8 @@ nav:
           - active_neural_slam: api/allenact/embodiedai/mapping/mapping_models/active_neural_slam.md
       - preprocessors:
         - resnet: api/allenact/embodiedai/preprocessors/resnet.md
+      - sensors:
+        - vision_sensors: api/allenact/embodiedai/sensors/vision_sensors.md
       - models:
         - basic_models: api/allenact/embodiedai/models/basic_models.md
     - base_abstractions:
@@ -146,6 +148,7 @@ nav:
       - scripts:
         - make_objectnav_debug_dataset: api/allenact_plugins/ithor_plugin/scripts/make_objectnav_debug_dataset.md
         - make_pointnav_debug_dataset: api/allenact_plugins/ithor_plugin/scripts/make_pointnav_debug_dataset.md
+      - ithor_viz: api/allenact_plugins/ithor_plugin/ithor_viz.md
       - ithor_task_samplers: api/allenact_plugins/ithor_plugin/ithor_task_samplers.md
     - robothor_plugin:
       - robothor_preprocessors: api/allenact_plugins/robothor_plugin/robothor_preprocessors.md
@@ -253,7 +256,9 @@ nav:
       - object_nav_ithor_dagger_then_ppo_one_object: api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object.md
       - navtopartner_robothor_rgb_ppo: api/projects/tutorials/navtopartner_robothor_rgb_ppo.md
       - pointnav_ithor_rgb_ddppo: api/projects/tutorials/pointnav_ithor_rgb_ddppo.md
+      - object_nav_ithor_dagger_then_ppo_one_object_viz: api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object_viz.md
       - object_nav_ithor_ppo_one_object: api/projects/tutorials/object_nav_ithor_ppo_one_object.md
+      - minigrid_tutorial_conds: api/projects/tutorials/minigrid_tutorial_conds.md
   - tests:
     - mapping:
       - test_ai2thor_mapping: api/tests/mapping/test_ai2thor_mapping.md
@@ -265,6 +270,8 @@ nav:
       - test_pillow_rescaling: api/tests/vision/test_pillow_rescaling.md
     - sync_algs_cpu:
       - test_to_to_obj_trains: api/tests/sync_algs_cpu/test_to_to_obj_trains.md
+    - hierarchical_policies:
+      - test_minigrid_conditional: api/tests/hierarchical_policies/test_minigrid_conditional.md
 markdown_extensions:
 - toc:
     permalink: '#'

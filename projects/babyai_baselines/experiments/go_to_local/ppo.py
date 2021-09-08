@@ -9,7 +9,11 @@ from projects.babyai_baselines.experiments.go_to_local.base import (
 class PPOBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentConfig):
     """PPO only."""
 
-    NUM_TRAIN_SAMPLERS: int = 128 * 12 if torch.cuda.is_available() else BaseBabyAIGoToLocalExperimentConfig.NUM_TRAIN_SAMPLERS
+    NUM_TRAIN_SAMPLERS: int = (
+        128 * 12
+        if torch.cuda.is_available()
+        else BaseBabyAIGoToLocalExperimentConfig.NUM_TRAIN_SAMPLERS
+    )
     ROLLOUT_STEPS: int = 32
     USE_LR_DECAY = False
     DEFAULT_LR = 1e-4

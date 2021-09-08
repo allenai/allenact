@@ -683,7 +683,9 @@ class TrainingPipeline(object):
                 f"Early stopping criterion met after {self.total_steps} total steps "
                 f"({self.current_stage.steps_taken_in_stage} in current stage, stage index {self.current_stage_index})."
             )
-        return self.current_stage is not self._refresh_current_stage(force_stage_search_from_start=False)
+        return self.current_stage is not self._refresh_current_stage(
+            force_stage_search_from_start=False
+        )
 
     def restart_pipeline(self):
         for ps in self.pipeline_stages:

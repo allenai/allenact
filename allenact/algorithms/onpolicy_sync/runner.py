@@ -112,6 +112,8 @@ class OnPolicyRunner(object):
 
         self._is_closed: bool = False
 
+        self._collect_valid_results: bool = False
+
     @property
     def local_start_time_str(self) -> str:
         if self._local_start_time_str is None:
@@ -354,8 +356,11 @@ class OnPolicyRunner(object):
         restart_pipeline: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
         save_ckpt_after_every_pipeline_stage: bool = True,
+        collect_valid_results: bool = False,
     ):
         self._initialize_start_train_or_start_test()
+
+        self._collect_valid_results = collect_valid_results
 
         if not self.disable_config_saving:
             self.save_project_state()
@@ -402,7 +407,8 @@ class OnPolicyRunner(object):
                 else model_hash,
             )
             train: BaseProcess = self.mp_ctx.Process(
-                target=self.train_loop, kwargs=training_kwargs,
+                target=self.train_loop,
+                kwargs=training_kwargs,
             )
             try:
                 train.start()
@@ -415,7 +421,8 @@ class OnPolicyRunner(object):
                     model_hash = md5_hash_of_state_dict(initial_model_state_dict)
                     training_kwargs["initial_model_state_dict"] = model_hash
                     train = self.mp_ctx.Process(
-                        target=self.train_loop, kwargs=training_kwargs,
+                        target=self.train_loop,
+                        kwargs=training_kwargs,
                     )
                     train.start()
                 else:
@@ -457,16 +464,45 @@ class OnPolicyRunner(object):
                 "No processes allocated to validation, no validation will be run."
             )
 
-        self.log_and_close(self.local_start_time_str, num_workers)
+        metrics_file_template: Optional[str] = None
 
-        return self.local_start_time_str
+        if self._collect_valid_results:
+            metrics_dir = self.metric_path(self.local_start_time_str)
+            os.makedirs(metrics_dir, exist_ok=True)
+            suffix = "__valid_{}".format(self.local_start_time_str)
+            metrics_file_template = os.path.join(
+                metrics_dir, "metrics" + suffix + "{:012d}.json"
+            )  # template for training steps
+
+            get_logger().info(
+                "Saving valid metrics with template {}".format(metrics_file_template)
+            )
+
+            # Check output file can be written
+            with open(metrics_file_template.format(0), "w") as f:
+                json.dump([], f, indent=4, sort_keys=True, cls=NumpyJSONEncoder)
+
+        valid_results = self.log_and_close(
+            start_time_str=self.local_start_time_str,
+            nworkers=num_workers,
+            metrics_file=metrics_file_template,
+        )
+
+        if not self._collect_valid_results:
+            return self.local_start_time_str
+        else:
+            return self.local_start_time_str, valid_results
 
     def start_test(
         self,
         checkpoint_path_dir_or_pattern: str,
         approx_ckpt_step_interval: Optional[Union[float, int]] = None,
         max_sampler_processes_per_worker: Optional[int] = None,
+        inference_expert: bool = False,
     ) -> List[Dict]:
+        self.extra_tag += (
+            "__" * (len(self.extra_tag) > 0) + "enforced_test_expert"
+        ) * inference_expert
         self._initialize_start_train_or_start_test()
 
         devices = self.worker_devices(TEST_MODE_STR)
@@ -493,6 +529,7 @@ class OnPolicyRunner(object):
                     device=devices[tester_it],
                     max_sampler_processes_per_worker=max_sampler_processes_per_worker,
                     distributed_port=distributed_port,
+                    enforce_expert=inference_expert,
                 ),
             )
 
@@ -525,7 +562,7 @@ class OnPolicyRunner(object):
         suffix = "__test_{}".format(self.local_start_time_str)
         metrics_file_path = os.path.join(metrics_dir, "metrics" + suffix + ".json")
 
-        get_logger().info("Saving metrics in {}".format(metrics_file_path))
+        get_logger().info("Saving test metrics in {}".format(metrics_file_path))
 
         # Check output file can be written
         with open(metrics_file_path, "w") as f:
@@ -643,7 +680,11 @@ class OnPolicyRunner(object):
                     prefix = "" if k == -1 else "namecollision{}__".format(k)
                     k += 1
                     dst_path = os.path.join(
-                        base_dir, "{}{}".format(prefix, os.path.basename(src_path),),
+                        base_dir,
+                        "{}{}".format(
+                            prefix,
+                            os.path.basename(src_path),
+                        ),
                     )
                     if not os.path.exists(dst_path):
                         os.makedirs(os.path.dirname(dst_path), exist_ok=True)
@@ -660,7 +701,10 @@ class OnPolicyRunner(object):
         get_logger().info("Config files saved to {}".format(base_dir))
 
     def process_eval_package(
-        self, log_writer: Optional[SummaryWriter], pkg: LoggingPackage
+        self,
+        log_writer: Optional[SummaryWriter],
+        pkg: LoggingPackage,
+        all_results: Optional[List[Any]] = None,
     ):
         training_steps = pkg.training_steps
         checkpoint_file_name = pkg.checkpoint_file_name
@@ -684,6 +728,11 @@ class OnPolicyRunner(object):
                     f"{mode}-metrics/{k}", metric_means[k], training_steps
                 )
             message.append(f"{k} {metric_means[k]}")
+
+        if all_results is not None:
+            results = copy.deepcopy(metric_means)
+            results.update({"training_steps": training_steps, "tasks": task_outputs})
+            all_results.append(results)
 
         message.append(f"tasks {num_tasks} checkpoint {checkpoint_file_name}")
         get_logger().info(" ".join(message))
@@ -854,7 +903,7 @@ class OnPolicyRunner(object):
         last_offpolicy_steps = 0
         last_train_time = time.time()
         # test_steps = sorted(test_steps, reverse=True)
-        test_results: List[Dict] = []
+        eval_results: List[Dict] = []
         unfinished_workers = nworkers
 
         try:
@@ -909,8 +958,32 @@ class OnPolicyRunner(object):
                                 package.training_steps is not None
                             ):  # no validation samplers
                                 self.process_eval_package(
-                                    log_writer=log_writer, pkg=package
+                                    log_writer=log_writer,
+                                    pkg=package,
+                                    all_results=eval_results
+                                    if self._collect_valid_results
+                                    else None,
                                 )
+
+                                if metrics_file is not None:
+                                    with open(
+                                        metrics_file.format(package.training_steps), "w"
+                                    ) as f:
+                                        json.dump(
+                                            eval_results[-1],
+                                            f,
+                                            indent=4,
+                                            sort_keys=True,
+                                            cls=NumpyJSONEncoder,
+                                        )
+                                        get_logger().info(
+                                            "Written valid results file {}".format(
+                                                metrics_file.format(
+                                                    package.training_steps
+                                                ),
+                                            )
+                                        )
+
                             if (
                                 finalized and self.queues["checkpoints"].empty()
                             ):  # assume queue is actually empty after trainer finished and no checkpoints in queue
@@ -928,13 +1001,13 @@ class OnPolicyRunner(object):
                                     self.process_test_packages(
                                         log_writer=log_writer,
                                         pkgs=collected[:nworkers],
-                                        all_results=test_results,
+                                        all_results=eval_results,
                                     )
 
                                     collected = collected[nworkers:]
                                     with open(metrics_file, "w") as f:
                                         json.dump(
-                                            test_results,
+                                            eval_results,
                                             f,
                                             indent=4,
                                             sort_keys=True,
@@ -943,7 +1016,7 @@ class OnPolicyRunner(object):
                                         get_logger().info(
                                             "Updated {} up to checkpoint {}".format(
                                                 metrics_file,
-                                                test_steps[len(test_results) - 1],
+                                                test_steps[len(eval_results) - 1],
                                             )
                                         )
                         else:
@@ -1009,7 +1082,7 @@ class OnPolicyRunner(object):
             if log_writer is not None:
                 log_writer.close()
             self.close()
-            return test_results
+            return eval_results
 
     def get_checkpoint_files(
         self,
