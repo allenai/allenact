@@ -82,9 +82,7 @@ class AbstractMidLevelArmTaskSampler(TaskSampler):
 
     def _create_environment(self, **kwargs) -> ManipulaTHOREnvironment:
         env = ManipulaTHOREnvironment(
-            make_agents_visible=False,
-            object_open_speed=0.05,
-            env_args=self.env_args,
+            make_agents_visible=False, object_open_speed=0.05, env_args=self.env_args,
         )
 
         return env

@@ -428,9 +428,7 @@ class VectorSampledTasks(object):
 
         List of observations for each of the unpaused tasks.
         """
-        return self.call(
-            ["get_observations"] * self.num_unpaused_tasks,
-        )
+        return self.call(["get_observations"] * self.num_unpaused_tasks,)
 
     def command_at(
         self, sampler_index: int, command: str, data: Optional[Any] = None
@@ -614,9 +612,9 @@ class VectorSampledTasks(object):
         for i in range(
             sampler_index + 1, len(self.sampler_index_to_process_ind_and_subprocess_ind)
         ):
-            other_process_and_sub_process_inds = (
-                self.sampler_index_to_process_ind_and_subprocess_ind[i]
-            )
+            other_process_and_sub_process_inds = self.sampler_index_to_process_ind_and_subprocess_ind[
+                i
+            ]
             if other_process_and_sub_process_inds[0] == process_ind:
                 other_process_and_sub_process_inds[1] -= 1
             else:
@@ -1052,9 +1050,7 @@ class SingleProcessVectorSampledTasks(object):
 
         List of observations for each of the unpaused tasks.
         """
-        return self.call(
-            ["get_observations"] * self.num_unpaused_tasks,
-        )
+        return self.call(["get_observations"] * self.num_unpaused_tasks,)
 
     def next_task_at(self, index_process: int) -> List[RLStepResult]:
         """Move to the the next Task from the TaskSampler in index_process

@@ -33,9 +33,7 @@ class ObjectNaviThorRGBPPOExperimentConfig(
             use_normalization=True,
             uuid="depth_lowres",
         ),
-        GoalObjectTypeThorSensor(
-            object_types=ObjectNaviThorBaseConfig.TARGET_TYPES,
-        ),
+        GoalObjectTypeThorSensor(object_types=ObjectNaviThorBaseConfig.TARGET_TYPES,),
     ]
 
     @classmethod

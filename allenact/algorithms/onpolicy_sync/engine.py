@@ -171,8 +171,8 @@ class OnPolicyRLEngine(object):
         if self.num_samplers > 0:
             create_model_kwargs = {}
             if self.machine_params.sensor_preprocessor_graph is not None:
-                self.sensor_preprocessor_graph = (
-                    self.machine_params.sensor_preprocessor_graph.to(self.device)
+                self.sensor_preprocessor_graph = self.machine_params.sensor_preprocessor_graph.to(
+                    self.device
                 )
                 create_model_kwargs[
                     "sensor_preprocessor_graph"
@@ -180,8 +180,7 @@ class OnPolicyRLEngine(object):
 
             set_seed(self.seed)
             self.actor_critic = cast(
-                ActorCriticModel,
-                self.config.create_model(**create_model_kwargs),
+                ActorCriticModel, self.config.create_model(**create_model_kwargs),
             ).to(self.device)
 
         if initial_model_state_dict is not None:
@@ -351,8 +350,7 @@ class OnPolicyRLEngine(object):
             ckpt = torch.load(os.path.abspath(ckpt), map_location="cpu")
 
         ckpt = cast(
-            Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]],
-            ckpt,
+            Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]], ckpt,
         )
 
         self.actor_critic.load_state_dict(ckpt["model_state_dict"])  # type:ignore
@@ -361,9 +359,7 @@ class OnPolicyRLEngine(object):
 
     # aggregates task metrics currently in queue
     def aggregate_task_metrics(
-        self,
-        logging_pkg: LoggingPackage,
-        num_tasks: int = -1,
+        self, logging_pkg: LoggingPackage, num_tasks: int = -1,
     ) -> LoggingPackage:
         if num_tasks > 0:
             if len(self.single_process_metrics) != num_tasks:
@@ -546,9 +542,7 @@ class OnPolicyRLEngine(object):
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
 
         rewards = torch.tensor(
-            rewards,
-            dtype=torch.float,
-            device=self.device,  # type:ignore
+            rewards, dtype=torch.float, device=self.device,  # type:ignore
         )
 
         # We want rewards to have dimensions [sampler, reward]
@@ -562,9 +556,7 @@ class OnPolicyRLEngine(object):
         masks = (
             1.0
             - torch.tensor(
-                dones,
-                dtype=torch.float32,
-                device=self.device,  # type:ignore
+                dones, dtype=torch.float32, device=self.device,  # type:ignore
             )
         ).view(
             -1, 1
@@ -984,8 +976,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         # )
 
     def make_offpolicy_iterator(
-        self,
-        data_iterator_builder: Callable[..., Iterator],
+        self, data_iterator_builder: Callable[..., Iterator],
     ):
         stage = self.training_pipeline.current_stage
 
@@ -1029,10 +1020,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     if p.grad is None:
                         p.grad = torch.zeros_like(p.data)
                     reductions.append(
-                        dist.all_reduce(
-                            p.grad,
-                            async_op=True,
-                        )
+                        dist.all_reduce(p.grad, async_op=True,)
                     )  # synchronize
             for reduction in reductions:
                 reduction.wait()
@@ -1491,8 +1479,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                     lengths: List[int]
                     if self.num_active_samplers > 0:
                         lengths = self.vector_tasks.command(
-                            "sampler_attr",
-                            ["length"] * self.num_active_samplers,
+                            "sampler_attr", ["length"] * self.num_active_samplers,
                         )
                         npending = sum(lengths)
                     else:
@@ -1643,10 +1630,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                             dist.barrier()
                     else:
                         self.results_queue.put(
-                            LoggingPackage(
-                                mode=self.mode,
-                                training_steps=None,
-                            )
+                            LoggingPackage(mode=self.mode, training_steps=None,)
                         )
                 elif command in ["quit", "exit", "close"]:
                     finalized = True

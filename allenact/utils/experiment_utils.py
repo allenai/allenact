@@ -356,10 +356,7 @@ class EarlyStoppingCriterion(abc.ABC):
 
     @abc.abstractmethod
     def __call__(
-        self,
-        stage_steps: int,
-        total_steps: int,
-        training_metrics: ScalarMeanTracker,
+        self, stage_steps: int, total_steps: int, training_metrics: ScalarMeanTracker,
     ) -> bool:
         """Returns `True` if training should be stopped early.
 
@@ -379,10 +376,7 @@ class NeverEarlyStoppingCriterion(EarlyStoppingCriterion):
     """Implementation of `EarlyStoppingCriterion` which never stops early."""
 
     def __call__(
-        self,
-        stage_steps: int,
-        total_steps: int,
-        training_metrics: ScalarMeanTracker,
+        self, stage_steps: int, total_steps: int, training_metrics: ScalarMeanTracker,
     ) -> bool:
         return False
 
@@ -637,12 +631,10 @@ class TrainingPipeline(object):
             train_metrics is not None
             and self.current_stage.early_stopping_criterion is not None
         ):
-            self.current_stage.early_stopping_criterion_met = (
-                self.current_stage.early_stopping_criterion(
-                    stage_steps=self.current_stage.steps_taken_in_stage,
-                    total_steps=self.total_steps,
-                    training_metrics=train_metrics,
-                )
+            self.current_stage.early_stopping_criterion_met = self.current_stage.early_stopping_criterion(
+                stage_steps=self.current_stage.steps_taken_in_stage,
+                total_steps=self.total_steps,
+                training_metrics=train_metrics,
             )
         if self.current_stage.early_stopping_criterion_met:
             get_logger().debug(
@@ -708,8 +700,7 @@ class TrainingPipeline(object):
             for loss_name in self.current_stage.offpolicy_component.loss_names:
                 if isinstance(self.named_losses[loss_name], Builder):
                     self.named_losses[loss_name] = cast(
-                        Builder["AbstractOffPolicyLoss"],
-                        self.named_losses[loss_name],
+                        Builder["AbstractOffPolicyLoss"], self.named_losses[loss_name],
                     )()
 
             self.current_stage.offpolicy_named_losses = {

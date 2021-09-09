@@ -474,17 +474,16 @@ class RNNStateEncoder(nn.Module):
         nsteps: int,
         nsamplers: int,
         nagents: int,
-    ) -> Tuple[torch.FloatTensor, torch.FloatTensor,]:
+    ) -> Tuple[
+        torch.FloatTensor, torch.FloatTensor,
+    ]:
         output_dims = (nsteps, nsamplers) + ((nagents, -1) if obs_agent else (-1,))
         hidden_dims = (self.num_recurrent_layers, nsamplers) + (
             (nagents, -1) if mem_agent else (-1,)
         )
 
         outputs = cast(torch.FloatTensor, outputs.view(*output_dims))
-        hidden_states = cast(
-            torch.FloatTensor,
-            hidden_states.view(*hidden_dims),
-        )
+        hidden_states = cast(torch.FloatTensor, hidden_states.view(*hidden_dims),)
 
         return outputs, hidden_states
 

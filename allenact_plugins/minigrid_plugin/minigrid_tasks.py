@@ -29,14 +29,7 @@ class MiniGridTask(Task[CrossingEnv]):
     )
     _CACHED_GRAPHS: Dict[str, nx.DiGraph] = {}
     _NEIGHBOR_OFFSETS = tuple(
-        [
-            (-1, 0, 0),
-            (0, -1, 0),
-            (0, 0, -1),
-            (1, 0, 0),
-            (0, 1, 0),
-            (0, 0, 1),
-        ]
+        [(-1, 0, 0), (0, -1, 0), (0, 0, -1), (1, 0, 0), (0, 1, 0), (0, 0, 1),]
     )
 
     _XY_DIFF_TO_AGENT_DIR = {
@@ -163,10 +156,7 @@ class MiniGridTask(Task[CrossingEnv]):
 
     @classmethod
     def _add_from_to_edge(
-        cls,
-        g: nx.DiGraph,
-        s: Tuple[int, int, int],
-        t: Tuple[int, int, int],
+        cls, g: nx.DiGraph, s: Tuple[int, int, int], t: Tuple[int, int, int],
     ):
         """Adds nodes and corresponding edges to existing nodes.
         This approach avoids adding the same edge multiple times.
@@ -247,9 +237,7 @@ class MiniGridTask(Task[CrossingEnv]):
                     self._add_from_to_edge(graph, s, t)
                     self._add_from_to_edge(graph, t, s)
 
-    def generate_graph(
-        self,
-    ) -> nx.DiGraph:
+    def generate_graph(self,) -> nx.DiGraph:
         """The generated graph is based on the fully observable grid (as the
         expert sees it all).
 
