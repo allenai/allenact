@@ -393,27 +393,3 @@ class ExpertPolicySensor(AbstractExpertPolicySensor):
         return task.query_expert(
             **self.expert_args, expert_sensor_group_name=expert_sensor_group_name
         )
-
-
-class VisionSensor:
-    def __init__(self, *args: Any, **kwargs: Any):
-        raise ImportError(
-            "`allenact.base_abstractions.sensor.VisionSensor` has moved!\n"
-            "Please import allenact.embodiedai.sensors.vision_sensors.VisionSensor instead."
-        )
-
-
-class RGBSensor:
-    def __init__(self, *args: Any, **kwargs: Any):
-        raise ImportError(
-            "`allenact.base_abstractions.sensor.RGBSensor` has moved!\n"
-            "Please import allenact.embodiedai.sensors.vision_sensors.RGBSensor instead."
-        )
-
-
-class DepthSensor:
-    def __init__(self, *args: Any, **kwargs: Any):
-        raise ImportError(
-            "`allenact.base_abstractions.sensor.DepthSensor` has moved!\n"
-            "Please import allenact.embodiedai.sensors.vision_sensors.DepthSensor instead."
-        )

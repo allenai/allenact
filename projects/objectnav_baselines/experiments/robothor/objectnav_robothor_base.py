@@ -54,5 +54,6 @@ class ObjectNavRoboThorBaseConfig(ObjectNavThorBaseConfig, ABC):
         kwargs = super(ObjectNavRoboThorBaseConfig, self).train_task_sampler_args(
             **prepare_locals_for_super(locals())
         )
-        kwargs["env_args"]["commit_id"] = self.THOR_COMMIT_ID_FOR_RAND_MATERIALS
+        if self.randomize_train_materials:
+            kwargs["env_args"]["commit_id"] = self.THOR_COMMIT_ID_FOR_RAND_MATERIALS
         return kwargs
