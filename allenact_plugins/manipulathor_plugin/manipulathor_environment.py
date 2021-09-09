@@ -30,8 +30,8 @@ from allenact_plugins.manipulathor_plugin.manipulathor_utils import (
 
 
 class ManipulaTHOREnvironment(IThorEnvironment):
-    """Wrapper for the manipulathor controller providing arm functionality
-    and bookkeeping.
+    """Wrapper for the manipulathor controller providing arm functionality and
+    bookkeeping.
 
     See [here](https://ai2thor.allenai.org/documentation/installation) for comprehensive
      documentation on AI2-THOR.
