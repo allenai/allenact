@@ -27,7 +27,6 @@ class MemorylessActorCritic(ActorCriticModel[GaussianDistr]):
         super().__init__(action_space, observation_space)
 
         self.input_uuid = input_uuid
-
         assert len(observation_space[self.input_uuid].shape) == 1
         state_dim = observation_space[self.input_uuid].shape[0]
         assert len(action_space.shape) == 1
