@@ -136,12 +136,7 @@ class ResnetTensorGoalEncoder(nn.Module):
             self.distribute_target(observations),
         ]
 
-        x = self.target_obs_combiner(
-            torch.cat(
-                embs,
-                dim=-3,
-            )
-        )
+        x = self.target_obs_combiner(torch.cat(embs, dim=-3,))
         x = x.reshape(x.size(0), -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
@@ -160,8 +155,7 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
     ):
         super().__init__(
-            action_space=action_space,
-            observation_space=observation_space,
+            action_space=action_space, observation_space=observation_space,
         )
 
         self.hidden_size = rnn_hidden_size
@@ -176,8 +170,7 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         )
 
         self.state_encoder = RNNStateEncoder(
-            self.goal_visual_encoder.output_dims,
-            rnn_hidden_size,
+            self.goal_visual_encoder.output_dims, rnn_hidden_size,
         )
 
         self.actor_critic = LinearActorCriticHead(self.hidden_size, action_space.n)
@@ -234,11 +227,7 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         dists, vals = self.actor_critic(x)
 
         return (
-            ActorCriticOutput(
-                distributions=dists,
-                values=vals,
-                extras={},
-            ),
+            ActorCriticOutput(distributions=dists, values=vals, extras={},),
             memory.set_tensor("rnn_hidden", rnn_hidden_states),
         )
 
@@ -425,12 +414,7 @@ class ResnetFasterRCNNTensorsGoalEncoder(nn.Module):
             self.distribute_target(observations),
         ]
 
-        x = self.target_obs_combiner(
-            torch.cat(
-                embs,
-                dim=-3,
-            )
-        )
+        x = self.target_obs_combiner(torch.cat(embs, dim=-3,))
 
         x = x.reshape(x.size(0), -1)  # flatten
 
@@ -454,8 +438,7 @@ class ResnetFasterRCNNTensorsObjectNavActorCritic(ActorCriticModel[CategoricalDi
         combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
     ):
         super().__init__(
-            action_space=action_space,
-            observation_space=observation_space,
+            action_space=action_space, observation_space=observation_space,
         )
 
         self.hidden_size = rnn_hidden_size
@@ -474,8 +457,7 @@ class ResnetFasterRCNNTensorsObjectNavActorCritic(ActorCriticModel[CategoricalDi
         )
 
         self.state_encoder = RNNStateEncoder(
-            self.goal_visual_encoder.output_dims,
-            rnn_hidden_size,
+            self.goal_visual_encoder.output_dims, rnn_hidden_size,
         )
 
         self.actor_critic = LinearActorCriticHead(self.hidden_size, action_space.n)
@@ -530,11 +512,7 @@ class ResnetFasterRCNNTensorsObjectNavActorCritic(ActorCriticModel[CategoricalDi
         dists, vals = self.actor_critic(x)
 
         return (
-            ActorCriticOutput(
-                distributions=dists,
-                values=vals,
-                extras={},
-            ),
+            ActorCriticOutput(distributions=dists, values=vals, extras={},),
             memory.set_tensor("rnn_hidden", rnn_hidden_states),
         )
 
@@ -642,10 +620,6 @@ class NavToPartnerActorCriticSimpleConvRNN(ActorCriticModel[TupleCategoricalDist
         dists, vals = self.actor_critic(x)
 
         return (
-            ActorCriticOutput(
-                distributions=dists,
-                values=vals,
-                extras={},
-            ),
+            ActorCriticOutput(distributions=dists, values=vals, extras={},),
             memory.set_tensor("rnn", rnn_hidden_states),
         )

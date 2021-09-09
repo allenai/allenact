@@ -164,10 +164,7 @@ class IThorEnvironment(object):
         self.controller.last_event.metadata["actionReturn"] = value
 
     def start(
-        self,
-        scene_name: Optional[str],
-        move_mag: float = 0.25,
-        **kwargs,
+        self, scene_name: Optional[str], move_mag: float = 0.25, **kwargs,
     ) -> None:
         """Starts the ai2thor controller if it was previously stopped.
 
@@ -218,10 +215,7 @@ class IThorEnvironment(object):
             self._started = False
 
     def reset(
-        self,
-        scene_name: Optional[str],
-        move_mag: float = 0.25,
-        **kwargs,
+        self, scene_name: Optional[str], move_mag: float = 0.25, **kwargs,
     ):
         """Resets the ai2thor in a new scene.
 

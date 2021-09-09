@@ -21,13 +21,10 @@ class PPOBabyAIGoToObjExperimentConfig(BaseBabyAIGoToObjExperimentConfig):
         imitation_info = cls.rl_loss_default("imitation")
 
         return cls._training_pipeline(
-            named_losses={
-                "imitation_loss": imitation_info["loss"],
-            },
+            named_losses={"imitation_loss": imitation_info["loss"],},
             pipeline_stages=[
                 PipelineStage(
-                    loss_names=["imitation_loss"],
-                    max_stage_steps=total_train_steps,
+                    loss_names=["imitation_loss"], max_stage_steps=total_train_steps,
                 ),
             ],
             num_mini_batch=min(

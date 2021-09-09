@@ -289,8 +289,7 @@ def project_point_cloud_to_map(
 
     isvalid = torch.logical_and(
         torch.logical_and(
-            (uvw_points_binned >= 0).all(-1),
-            (uvw_points_binned < maxes).all(-1),
+            (uvw_points_binned >= 0).all(-1), (uvw_points_binned < maxes).all(-1),
         ),
         isnotnan,
     )

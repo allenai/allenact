@@ -99,9 +99,7 @@ class A2CACKTR(AbstractActorCriticLoss):
         **kwargs,
     ):
         losses_per_step = self.loss_per_step(
-            step_count=step_count,
-            batch=batch,
-            actor_critic_output=actor_critic_output,
+            step_count=step_count, batch=batch, actor_critic_output=actor_critic_output,
         )
         losses = {
             key: (loss.mean(), weight)
@@ -171,7 +169,4 @@ class ACKTR(A2CACKTR):
         )
 
 
-A2CConfig = dict(
-    value_loss_coef=0.5,
-    entropy_coef=0.01,
-)
+A2CConfig = dict(value_loss_coef=0.5, entropy_coef=0.01,)

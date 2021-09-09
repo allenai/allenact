@@ -69,16 +69,11 @@ class ObjectNavThorDaggerThenPPOExperimentConfig(ObjectNavThorPPOExperimentConfi
                 PipelineStage(
                     loss_names=["imitation_loss"],
                     teacher_forcing=LinearDecay(
-                        startp=1.0,
-                        endp=0.0,
-                        steps=dagger_steos,
+                        startp=1.0, endp=0.0, steps=dagger_steos,
                     ),
                     max_stage_steps=dagger_steos,
                 ),
-                PipelineStage(
-                    loss_names=["ppo_loss"],
-                    max_stage_steps=ppo_steps,
-                ),
+                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps,),
             ],
             lr_scheduler_builder=Builder(
                 LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
