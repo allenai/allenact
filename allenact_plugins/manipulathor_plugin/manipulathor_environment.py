@@ -89,6 +89,8 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         """
         self._verbose = verbose
         self.env_args = env_args
+        del verbose
+        del env_args
         super(ManipulaTHOREnvironment, self).__init__(
             **prepare_locals_for_super(locals())
         )
