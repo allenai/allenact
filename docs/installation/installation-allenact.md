@@ -143,7 +143,8 @@ run the commands:
 ```bash
 export MY_ENV_NAME=allenact
 export CONDA_BASE="$(dirname $(dirname "${CONDA_EXE}"))"
-PIP_SRC="${CONDA_BASE}/envs/${MY_ENV_NAME}/pipsrc" conda env create --file ./conda/environment-base.yml --name $MY_ENV_NAME
+export PIP_SRC="${CONDA_BASE}/envs/${MY_ENV_NAME}/pipsrc"
+conda env create --file ./conda/environment-base.yml --name $MY_ENV_NAME
 ``` 
 
 These additional commands tell conda to place these dependencies under the `${CONDA_BASE}/envs/${MY_ENV_NAME}/pipsrc` directory rather
@@ -177,7 +178,7 @@ Each supported plugin contains a YAML environment file that can be applied upon 
 install the specific requirements of each plugin, we need to additionally call
 
 ```bash
-PIP_SRC="${CONDA_BASE}/envs/${MY_ENV_NAME}/pipsrc" conda env update --file allenact_plugins/<PLUGIN_NAME>_plugin/extra_environment.yml --name $MY_ENV_NAME
+conda env update --file allenact_plugins/<PLUGIN_NAME>_plugin/extra_environment.yml --name $MY_ENV_NAME
 ```
 
 from the top-level directory.
