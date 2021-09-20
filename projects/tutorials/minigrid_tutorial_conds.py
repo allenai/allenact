@@ -3,10 +3,10 @@ from typing import Dict, Optional, List, Any, cast, Callable, Union, Tuple
 import gym
 import numpy as np
 import torch
+import torch.nn as nn
+import torch.optim as optim
 from gym_minigrid.envs import EmptyRandomEnv5x5
 from gym_minigrid.minigrid import MiniGridEnv
-from torch import nn
-from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
 from allenact.algorithms.onpolicy_sync.losses.imitation import Imitation
