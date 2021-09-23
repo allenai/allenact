@@ -82,7 +82,10 @@ class DelaySignalHandling:
         signal.signal(signal.SIGINT, self.old_int_handler)
         signal.signal(signal.SIGTERM, self.old_term_handler)
         if self.term_signal_received:
-            self.old_term_handler(*self.term_signal_received)
+            if callable(self.old_term_handler):
+                self.old_term_handler(*self.term_signal_received)
+            else:
+                signal.default_int_handler(*self.term_signal_received)
         if self.int_signal_received:
             self.old_int_handler(*self.int_signal_received)
 
