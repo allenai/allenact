@@ -28,9 +28,11 @@ from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBas
 import ai2thor
 from packaging import version
 
-if ai2thor.__version__ not in ["0.0.1", None] and version.parse(
-    ai2thor.__version__
-) < version.parse("2.7.2"):
+if (
+    ai2thor.__version__ not in ["0.0.1", None]
+    and len(ai2thor.__version__.split(".")) == 3
+    and version.parse(ai2thor.__version__) < version.parse("2.7.2")
+):
     raise ImportError(
         "To run the AI2-THOR ObjectNav baseline experiments you must use"
         " ai2thor version 2.7.1 or higher."

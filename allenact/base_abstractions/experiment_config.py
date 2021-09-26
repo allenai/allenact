@@ -74,7 +74,7 @@ class MachineParams(object):
         self.local_worker_ids: Optional[List[int]] = None
         self.set_local_worker_ids(local_worker_ids)
 
-    def set_local_worker_ids(self, local_worker_ids: List[int]):
+    def set_local_worker_ids(self, local_worker_ids: Optional[List[int]]):
         self.local_worker_ids = local_worker_ids or list(range(len(self.devices)))
 
         assert all(0 <= id < len(self.devices) for id in self.local_worker_ids), (

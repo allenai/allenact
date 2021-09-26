@@ -25,6 +25,7 @@ try:
     # Tensorflow not installed for testing
     from tensorflow.core.util import event_pb2
     from tensorflow.python.lib.io import tf_record
+
     _TF_AVAILABLE = True
 except ImportError as _:
     _TF_AVAILABLE = False
@@ -1028,6 +1029,7 @@ class VizSuite(AbstractViz):
 
 
 if _TF_AVAILABLE:
+
     class TensorboardSummarizer:
         """Assumption: tensorboard tags/labels include a valid/test/train substr indicating the data modality"""
 
@@ -1039,11 +1041,18 @@ if _TF_AVAILABLE:
             tensorboard_tags_to_labels_map: Optional[Dict[str, str]] = None,
             tensorboard_output_summary_folder: str = "tensorboard_plotter_output",
         ):
-            self.experiment_to_train_events_paths_map = experiment_to_train_events_paths_map
-            self.experiment_to_test_events_paths_map = experiment_to_test_events_paths_map
+            self.experiment_to_train_events_paths_map = (
+                experiment_to_train_events_paths_map
+            )
+            self.experiment_to_test_events_paths_map = (
+                experiment_to_test_events_paths_map
+            )
             train_experiments = set(list(experiment_to_train_events_paths_map.keys()))
             test_experiments = set(list(experiment_to_test_events_paths_map.keys()))
-            assert (train_experiments - test_experiments) in [set(), train_experiments], (
+            assert (train_experiments - test_experiments) in [
+                set(),
+                train_experiments,
+            ], (
                 f"`experiment_to_test_events_paths_map` must have identical keys (experiment names) to those"
                 f" in `experiment_to_train_events_paths_map`, or be empty."
                 f" Got {train_experiments} train keys and {test_experiments} test keys."
@@ -1068,7 +1077,9 @@ if _TF_AVAILABLE:
                 self.experiment_to_test_events_paths_map
             )
 
-        def _read_tensorflow_experiment_events(self, experiment_to_events_paths_map, skip_map=False):
+        def _read_tensorflow_experiment_events(
+            self, experiment_to_events_paths_map, skip_map=False
+        ):
             def my_summary_iterator(path):
                 try:
                     for r in tf_record.tf_record_iterator(path):
@@ -1157,7 +1168,9 @@ if _TF_AVAILABLE:
 
             for experiment_name in all_experiments:
                 summary_writer = SummaryWriter(
-                    os.path.join(self.tensorboard_output_summary_folder, experiment_name)
+                    os.path.join(
+                        self.tensorboard_output_summary_folder, experiment_name
+                    )
                 )
 
                 test_labels = (

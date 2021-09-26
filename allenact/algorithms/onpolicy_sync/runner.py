@@ -231,6 +231,7 @@ class OnPolicyRunner(object):
         get_logger().info(
             f"Using local worker ids {ids} (total {len(ids)} workers in machine {self.machine_id})"
         )
+
         return ids
 
     def init_visualizer(self, mode: str):

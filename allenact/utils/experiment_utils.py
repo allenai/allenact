@@ -504,8 +504,7 @@ class TrainingSettings(object):
             setattr(self, f"{self._VAR_PREFIX}{key}", value)
 
     def __getattr__(self, name: str):
-        """Attribute/property getter.
-        """
+        """Attribute/property getter."""
         try:
             return (
                 self.__dict__[name]
@@ -735,6 +734,7 @@ class TrainingPipeline(TrainingSettings):
 
     def __getattr__(self, name: str):
         """Attribute/property getter.
+
         It covers a double function:
         1. Enables access to the requested `TrainingSetting` in the current stage (if defined).
         2. Enables access to the global TrainingSetting (i.e. the one assigned to this class) by means of the `global_`

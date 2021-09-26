@@ -22,6 +22,7 @@ def get_argument_parser():
     """Creates the argument parser."""
 
     parser = get_main_arg_parser()
+    parser.description = f"distributed {parser.description}"
 
     parser.add_argument(
         "--runs_on",

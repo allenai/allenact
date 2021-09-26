@@ -1422,6 +1422,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 )
             ):
                 self.deterministic_seeds()
+
                 if self.worker_id == self.first_local_worker_id:
                     model_path = self.checkpoint_save()
                     if self.checkpoints_queue is not None:

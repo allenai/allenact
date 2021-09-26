@@ -280,11 +280,12 @@ class RolloutStorage(object):
 
     def narrow(self, num_steps=None):
         """This function is used by the training engine (in decentralized
-        distributed settings) to temporarily or permanently narrow the step dimension in the
-        storage.
+        distributed settings) to temporarily or permanently narrow the step
+        dimension in the storage.
 
         The reverse operation, `unnarrow`, is automatically called by
-        `after_update` or when the rollout length varies in the training pipeline.
+        `after_update` or when the rollout length varies in the training
+        pipeline.
         """
         unnarrow_data = (
             self.unnarrow_data if num_steps is None else self.permanent_unnarrow_data
