@@ -161,7 +161,7 @@ class TrajectoryViz(AbstractViz):
         label: str = "trajectory",
         figsize: Tuple[float, float] = (2, 2),
         fontsize: float = 5,
-        start_marker_shape: str = "$\spadesuit$",
+        start_marker_shape: str = r"$\spadesuit$",
         start_marker_scale: int = 100,
         **other_base_kwargs,
     ):
