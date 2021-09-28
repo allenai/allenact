@@ -289,8 +289,8 @@ class LoggingPackage(object):
 class LinearDecay(object):
     """Linearly decay between two values over some number of steps.
 
-    Obtain the value corresponding to the `i`th step by calling
-    an instantiation of this object with the value `i`.
+    Obtain the value corresponding to the `i`-th step by calling
+    an instance of this class with the value `i`.
 
     # Parameters
 
@@ -326,8 +326,8 @@ class LinearDecay(object):
 class MultiLinearDecay(object):
     """Container for multiple stages of LinearDecay.
 
-    Obtain the value corresponding to the `i`th step by calling
-    an instantiation of this object with the value `i`.
+    Obtain the value corresponding to the `i`-th step by calling
+    an instance of this class with the value `i`.
 
     # Parameters
 
