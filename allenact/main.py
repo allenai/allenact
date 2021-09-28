@@ -220,7 +220,7 @@ def get_argument_parser():
         default="127.0.0.1:0",
         help="IP address and port of listener for distributed process with rank 0."
         " Port number 0 lets runner choose a free port. For more details, please follow the"
-        " tutorial TODO_URL.",
+        " tutorial https://allenact.org/tutorials/distributed-objectnav-tutorial/.",
     )
 
     parser.add_argument(
@@ -229,7 +229,8 @@ def get_argument_parser():
         required=False,
         type=int,
         default=0,
-        help="ID for machine in distributed runs",
+        help="ID for machine in distributed runs. For more details, please follow the"
+        " tutorial https://allenact.org/tutorials/distributed-objectnav-tutorial/",
     )
 
     ### DEPRECATED FLAGS

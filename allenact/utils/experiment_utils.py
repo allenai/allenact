@@ -459,7 +459,8 @@ class OffPolicyPipelineComponent(NamedTuple):
 
 
 class TrainingSettings(object):
-    """Class defining parameters used for training.
+    """Class defining parameters used for training (within a stage or the
+    entire pipeline).
 
     # Attributes
 
@@ -471,7 +472,7 @@ class TrainingSettings(object):
     gamma : Discount factor applied to rewards (should be in [0, 1]).
     use_gae : Whether or not to use generalized advantage estimation (GAE).
     gae_lambda : The additional parameter used in GAE.
-    advance_scene_rollout_period: TODO
+    advance_scene_rollout_period: Optional number of rollouts before enforcing an advance scene in all samplers.
     save_interval : The frequency with which to save (in total agent steps taken). If `None` then *no*
         checkpoints will be saved. Otherwise, in addition to the checkpoints being saved every
         `save_interval` steps, a checkpoint will *always* be saved at the end of each pipeline stage.
@@ -480,8 +481,6 @@ class TrainingSettings(object):
         (in total agent steps). Metrics accumulated in an interval are logged (if `should_log` is `True`)
         and used by the stage's early stopping criterion (if any).
     """
-
-    _VAR_PREFIX = "_TrainingSettings_"
 
     # noinspection PyUnresolvedReferences
     def __init__(
@@ -498,27 +497,18 @@ class TrainingSettings(object):
         metric_accumulate_interval: Optional[int] = None,
         **kwargs: Any,
     ):
-        all_vars = prepare_locals_for_super(locals())
+        all_vars = prepare_locals_for_super(locals(), ignore_kwargs=True)
 
         for key, value in all_vars.items():
-            setattr(self, f"{self._VAR_PREFIX}{key}", value)
+            setattr(self, key, value)
 
-    def __getattr__(self, name: str):
-        """Attribute/property getter."""
-        try:
-            return (
-                self.__dict__[name]
-                if name in self.__dict__
-                else self.__dict__[f"{self._VAR_PREFIX}{name}"]
-            )
-        except KeyError:
-            raise AttributeError(
-                f"'{type(self).__name__}' object has no attribute with suffix '{name}'"
-            )
+
+_TRAINING_SETTINGS_NAMES: List[str] = list(TrainingSettings().__dict__.keys())
 
 
 class PipelineStage(TrainingSettings):
-    """A single stage in a training pipeline.
+    """A single stage in a training pipeline, possibly including overrides to
+    the global `TrainingSettings` in `TrainingPipeline`.
 
     # Attributes
 
@@ -538,22 +528,16 @@ class PipelineStage(TrainingSettings):
         `EarlyStoppingCriterion` object may store internal state which is not
         saved in the checkpoint). Currently AllenAct only supports using early stopping
         criterion when **not** using distributed training.
-    num_mini_batch : The number of mini-batches to break a rollout into.
-    update_repeats : The number of times we will cycle through the mini-batches corresponding
-        to a single rollout doing gradient updates.
-    max_grad_norm : The maximum "inf" norm of any gradient step (gradients are clipped to not exceed this).
-    num_steps : Total number of steps a single agent takes in a rollout (<= `num_steps` in `TrainingPipeline`).
-    gamma : Discount factor applied to rewards (should be in [0, 1]).
-    use_gae : Whether or not to use generalized advantage estimation (GAE).
-    gae_lambda : The additional parameter used in GAE.
-    advance_scene_rollout_period: TODO
-    save_interval : The frequency with which to save (in total agent steps taken). If `None` then *no*
-        checkpoints will be saved. Otherwise, in addition to the checkpoints being saved every
-        `save_interval` steps, a checkpoint will *always* be saved at the end of each pipeline stage.
-        If `save_interval <= 0` then checkpoints will only be saved at the end of each pipeline stage.
-    metric_accumulate_interval : The frequency with which training/validation metrics are accumulated
-        (in total agent steps). Metrics accumulated in an interval are logged (if `should_log` is `True`)
-        and used by the stage's early stopping criterion (if any).
+    num_mini_batch : See docs for `TrainingSettings`.
+    update_repeats : See docs for `TrainingSettings`.
+    max_grad_norm : See docs for `TrainingSettings`.
+    num_steps : See docs for `TrainingSettings`.
+    gamma : See docs for `TrainingSettings`.
+    use_gae : See docs for `TrainingSettings`.
+    gae_lambda : See docs for `TrainingSettings`.
+    advance_scene_rollout_period: See docs for `TrainingSettings`.
+    save_interval : See docs for `TrainingSettings`.
+    metric_accumulate_interval : See docs for `TrainingSettings`.
     """
 
     def __init__(
@@ -577,7 +561,9 @@ class PipelineStage(TrainingSettings):
     ):
         all_vars = prepare_locals_for_super(locals())
 
-        # First, pop vars to be set locally
+        # Populate TrainingSettings members
+        super().__init__(**all_vars)
+
         self.loss_names = all_vars.pop("loss_names")
         self.max_stage_steps = all_vars.pop("max_stage_steps")
 
@@ -585,9 +571,6 @@ class PipelineStage(TrainingSettings):
         self.teacher_forcing = all_vars.pop("teacher_forcing")
         self.offpolicy_component = all_vars.pop("offpolicy_component")
         self.early_stopping_criterion = all_vars.pop("early_stopping_criterion")
-
-        # Then, set TrainingSettings vars
-        super().__init__(**all_vars)
 
         self.steps_taken_in_stage: int = 0
         self.rollout_count = 0
@@ -640,7 +623,7 @@ class PipelineStage(TrainingSettings):
 
 
 class TrainingPipeline(TrainingSettings):
-    """Class defining the stages (and global parameters) in a training
+    """Class defining the stages (and global training settings) in a training
     pipeline.
 
     The training pipeline can be used as an iterator to go through the pipeline
@@ -653,28 +636,21 @@ class TrainingPipeline(TrainingSettings):
     pipeline_stages : A list of PipelineStages. Each of these define how the agent
         will be trained and are executed sequentially.
     optimizer_builder : Builder object to instantiate the optimizer to use during training.
-    num_mini_batch : The number of mini-batches to break a rollout into.
-    update_repeats : The number of times we will cycle through the mini-batches corresponding
-        to a single rollout doing gradient updates.
-    max_grad_norm : The maximum "inf" norm of any gradient step (gradients are clipped to not exceed this).
-    num_steps : Total number of steps a single agent takes in a rollout.
-    gamma : Discount factor applied to rewards (should be in [0, 1]).
-    use_gae : Whether or not to use generalized advantage estimation (GAE).
-    gae_lambda : The additional parameter used in GAE.
-    save_interval : The frequency with which to save (in total agent steps taken). If `None` then *no*
-        checkpoints will be saved. Otherwise, in addition to the checkpoints being saved every
-        `save_interval` steps, a checkpoint will *always* be saved at the end of each pipeline stage.
-        If `save_interval <= 0` then checkpoints will only be saved at the end of each pipeline stage.
-    metric_accumulate_interval : The frequency with which training/validation metrics are accumulated
-        (in total agent steps). Metrics accumulated in an interval are logged (if `should_log` is `True`)
-        and used by the stage's early stopping criterion (if any).
+    num_mini_batch : See docs for `TrainingSettings`.
+    update_repeats : See docs for `TrainingSettings`.
+    max_grad_norm : See docs for `TrainingSettings`.
+    num_steps : See docs for `TrainingSettings`.
+    gamma : See docs for `TrainingSettings`.
+    use_gae : See docs for `TrainingSettings`.
+    gae_lambda : See docs for `TrainingSettings`.
+    advance_scene_rollout_period: See docs for `TrainingSettings`.
+    save_interval : See docs for `TrainingSettings`.
+    metric_accumulate_interval : See docs for `TrainingSettings`.
     should_log: `True` if metrics accumulated during training should be logged to the console as well
         as to a tensorboard file.
     lr_scheduler_builder : Optional builder object to instantiate the learning rate scheduler used
         through the pipeline.
     """
-
-    GLOBAL_SETTING_PREFIX = "global_"
 
     # noinspection PyUnresolvedReferences
     def __init__(
@@ -701,14 +677,16 @@ class TrainingPipeline(TrainingSettings):
         """
         all_vars = prepare_locals_for_super(locals())
 
-        # First, pop vars to be set locally
-        self.optimizer_builder = all_vars.pop("optimizer_builder")
-        self.lr_scheduler_builder = all_vars.pop("lr_scheduler_builder")
+        # Populate TrainingSettings members
+        super().__init__(**all_vars)
 
-        self.named_losses = all_vars.pop("named_losses")
-        self.should_log = all_vars.pop("should_log")
+        self.optimizer_builder = optimizer_builder
+        self.lr_scheduler_builder = lr_scheduler_builder
 
-        self.pipeline_stages = all_vars.pop("pipeline_stages")
+        self.named_losses = named_losses
+        self.should_log = should_log
+
+        self.pipeline_stages = pipeline_stages
         if len(self.pipeline_stages) > len(set(id(ps) for ps in pipeline_stages)):
             raise RuntimeError(
                 "Duplicate `PipelineStage` object instances found in the pipeline stages input"
@@ -717,46 +695,21 @@ class TrainingPipeline(TrainingSettings):
                 " multiple separate instances."
             )
 
-        # Then, set TrainingSettings vars
-        super().__init__(**all_vars)
-
         self._current_stage: Optional[PipelineStage] = None
         for sit, stage in enumerate(self.pipeline_stages):
-            if stage.num_steps is not None:
-                assert (
-                    stage.num_steps <= self.global_num_steps
-                ), f"Stage {sit} has `num_steps` {stage.num_steps} > {self.global_num_steps} `num_steps` in pipeline."
+            # Forward all global `TrainingSettings` to all `PipelineStage`s unless overridden:
+            for var in _TRAINING_SETTINGS_NAMES:
+                if getattr(stage, var) is None:
+                    setattr(stage, var, getattr(self, var))
+
+            assert (
+                stage.num_steps <= self.num_steps
+            ), f"Stage {sit} has `num_steps` {stage.num_steps} > {self.num_steps} in pipeline."
 
         self.rollout_count = 0
         self.off_policy_epochs = None
 
         self._refresh_current_stage(force_stage_search_from_start=True)
-
-    def __getattr__(self, name: str):
-        """Attribute/property getter.
-
-        It covers a double function:
-        1. Enables access to the requested `TrainingSetting` in the current stage (if defined).
-        2. Enables access to the global TrainingSetting (i.e. the one assigned to this class) by means of the `global_`
-            prefix to the attribute/property name. This is not IDE friendly, so we might perhaps explicitly define all
-            properties?
-        """
-        try:
-            if name.startswith(self.GLOBAL_SETTING_PREFIX):
-                return self.__dict__[
-                    f"{self._VAR_PREFIX}{name[len(self.GLOBAL_SETTING_PREFIX) :]}"
-                ]
-            elif self.current_stage is not None:
-                return (
-                    self.current_stage.__dict__[f"{self._VAR_PREFIX}{name}"]
-                    or self.__dict__[f"{self._VAR_PREFIX}{name}"]
-                )
-            else:
-                return self.__dict__[f"{self._VAR_PREFIX}{name}"]
-        except KeyError:
-            raise AttributeError(
-                f"'{type(self).__name__}' object has no attribute with suffix '{name}'"
-            )
 
     @property
     def total_steps(self) -> int:

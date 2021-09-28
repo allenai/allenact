@@ -956,12 +956,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         adv_mean, adv_std = self.advantage_stats(advantages)
 
-        for e in range(self.training_pipeline.update_repeats):
+        for e in range(self.training_pipeline.current_stage.update_repeats):
             data_generator = rollouts.recurrent_generator(
                 advantages=advantages,
                 adv_mean=adv_mean,
                 adv_std=adv_std,
-                num_mini_batch=self.training_pipeline.num_mini_batch,
+                num_mini_batch=self.training_pipeline.current_stage.num_mini_batch,
             )
 
             for bit, batch in enumerate(data_generator):
@@ -1016,7 +1016,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     for key, value in fine_info.items():
                         if self.is_distributed:
                             value = self.aggregate_scalar(value, bsize, aggregate_bsize)
-                        if self.training_pipeline.update_repeats > 1:
+                        if self.training_pipeline.current_stage.update_repeats > 1:
                             info[f"{loss_name}/{key}_epoch{e:02d}"] = value
                             info[f"{loss_name}/{key}_combined"] = value
                         else:
@@ -1043,7 +1043,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     (
                         "rollout_num_mini_batch",
                         {
-                            "rollout_num_mini_batch": self.training_pipeline.num_mini_batch
+                            "rollout_num_mini_batch": self.training_pipeline.current_stage.num_mini_batch
                         },
                         bsize,
                     )
@@ -1051,7 +1051,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.tracking_info["rollout_epochs"].append(
                     (
                         "rollout_epochs",
-                        {"rollout_epochs": self.training_pipeline.update_repeats},
+                        {
+                            "rollout_epochs": self.training_pipeline.current_stage.update_repeats
+                        },
                         bsize,
                     )
                 )
@@ -1078,7 +1080,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         # # TODO Unit test to ensure correctness of distributed infrastructure
         state_dict = self.actor_critic.state_dict()
         keys = sorted(list(state_dict.keys()))
-        get_logger().info(
+        get_logger().debug(
             "worker {} param 0 {} param -1 {}".format(
                 self.worker_id,
                 state_dict[keys[0]].flatten()[0],
@@ -1149,7 +1151,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         nn.utils.clip_grad_norm_(
             self.actor_critic.parameters(),
-            self.training_pipeline.max_grad_norm,  # type: ignore
+            self.training_pipeline.current_stage.max_grad_norm,  # type: ignore
         )
 
         self.optimizer.step()  # type: ignore
@@ -1311,13 +1313,13 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 dist.barrier()
 
             self.former_steps = self.step_count
-            for step in range(self.training_pipeline.num_steps):
+            for step in range(self.training_pipeline.current_stage.num_steps):
                 num_paused = self.collect_rollout_step(rollouts=rollouts)
 
                 # Make sure we've collected the entire set of tensors (including memory))
-                if rollouts.num_steps != self.training_pipeline.num_steps:
-                    rollouts.unnarrow(self.training_pipeline.global_num_steps)
-                    rollouts.narrow(self.training_pipeline.num_steps)
+                if rollouts.num_steps != self.training_pipeline.current_stage.num_steps:
+                    rollouts.unnarrow(self.training_pipeline.num_steps)
+                    rollouts.narrow(self.training_pipeline.current_stage.num_steps)
 
                 if num_paused > 0:
                     raise NotImplementedError(
@@ -1336,9 +1338,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     if (
                         num_done
                         > self.distributed_preemption_threshold * self.num_workers
-                        and 0.25 * self.training_pipeline.num_steps
+                        and 0.25 * self.training_pipeline.current_stage.num_steps
                         <= step
-                        < 0.9 * self.training_pipeline.num_steps
+                        < 0.9 * self.training_pipeline.current_stage.num_steps
                     ):
                         get_logger().debug(
                             "{} worker {} narrowed rollouts after {} steps (out of {}) with {} workers done".format(
@@ -1378,9 +1380,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
             rollouts.compute_returns(
                 next_value=actor_critic_output.values.detach(),
-                use_gae=self.training_pipeline.use_gae,
-                gamma=self.training_pipeline.gamma,
-                tau=self.training_pipeline.gae_lambda,
+                use_gae=self.training_pipeline.current_stage.use_gae,
+                gamma=self.training_pipeline.current_stage.gamma,
+                tau=self.training_pipeline.current_stage.gae_lambda,
             )
 
             self.update(rollouts=rollouts)  # here we synchronize
@@ -1414,10 +1416,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             # save for every interval-th episode or for the last epoch
             if (
                 self.checkpoints_dir != ""
-                and self.training_pipeline.save_interval > 0
+                and self.training_pipeline.current_stage.save_interval > 0
                 and (
                     self.training_pipeline.total_steps - self.last_save
-                    >= self.training_pipeline.save_interval
+                    >= self.training_pipeline.current_stage.save_interval
                     or self.training_pipeline.current_stage.is_complete
                 )
             ):
@@ -1429,9 +1431,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         self.checkpoints_queue.put(("eval", model_path))
                 self.last_save = self.training_pipeline.total_steps
 
-            if (self.training_pipeline.advance_scene_rollout_period is not None) and (
+            if (
+                self.training_pipeline.current_stage.advance_scene_rollout_period
+                is not None
+            ) and (
                 self.training_pipeline.rollout_count
-                % self.training_pipeline.advance_scene_rollout_period
+                % self.training_pipeline.current_stage.advance_scene_rollout_period
                 == 0
             ):
                 get_logger().info(
@@ -1456,7 +1461,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
             self.run_pipeline(
                 RolloutStorage(
-                    num_steps=self.training_pipeline.global_num_steps,
+                    num_steps=self.training_pipeline.num_steps,
                     num_samplers=self.num_samplers,
                     actor_critic=self.actor_critic
                     if isinstance(self.actor_critic, ActorCriticModel)
