@@ -16,13 +16,19 @@ In this tutorial, we:
 
 1. Introduce the available API for training across multiple nodes, as well as experimental scripts for distributed
  configuration, training start and termination, and remote command execution.
-1. Introduce the headless mode for [AI2-THOR](https://ai2thor.allenai.org/) in `AllenAct`.
+1. Introduce the headless mode for [AI2-THOR](https://ai2thor.allenai.org/) in `AllenAct`. Note that, in contrast with
+previous tutorials using AI2-THOR, this time we don't require an xserver (in Linux) to be active.
 1. Show a training example for RoboTHOR ObjectNav on 3 nodes, each with N GPUs where 60 samplers collect rollout data.
 
 Thanks to the massive parallelization of data collection and model training enabled by
 [DD-PPO](https://arxiv.org/abs/1911.00357), we can greatly speed up training by scaling across multiple nodes:
 
 ![training speedup](../img/multinode_training.jpg)
+
+## The task: ObjectNav
+
+In ObjectNav (also known as SemanticNav), the goal for the agent is to navigate to an object (possibly unseen during
+training) of a known given class and signal task completion when it determines it has reached the goal.
 
 ## Implementation
 
