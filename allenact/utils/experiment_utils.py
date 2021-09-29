@@ -482,6 +482,17 @@ class TrainingSettings(object):
         and used by the stage's early stopping criterion (if any).
     """
 
+    num_mini_batch: Optional[int]
+    update_repeats: Optional[int]
+    max_grad_norm: Optional[float]
+    num_steps: Optional[int]
+    gamma: Optional[float]
+    use_gae: Optional[bool]
+    gae_lambda: Optional[float]
+    advance_scene_rollout_period: Optional[int]
+    save_interval: Optional[int]
+    metric_accumulate_interval: Optional[int]
+
     # noinspection PyUnresolvedReferences
     def __init__(
         self,

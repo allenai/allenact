@@ -18,8 +18,8 @@ In this tutorial, we:
  configuration, training start and termination, and remote command execution.
 1. Introduce the headless mode for [AI2-THOR](https://ai2thor.allenai.org/) in `AllenAct`. Note that, in contrast with
 previous tutorials using AI2-THOR, this time we don't require an xserver (in Linux) to be active.
-1. Show a training example for RoboTHOR ObjectNav on a cluster, each with sufficient GPUs and GPU memory to host 60
-experience samplers collecting rollout data.
+1. Show a training example for RoboTHOR ObjectNav on a cluster, with each node having sufficient GPUs and GPU memory to
+host 60 experience samplers collecting rollout data.
 
 Thanks to the massive parallelization of experience collection and model training enabled by
 [DD-PPO](https://arxiv.org/abs/1911.00357), we can greatly speed up training by scaling across multiple nodes:
@@ -186,36 +186,30 @@ class DistributedObjectNavRoboThorRGBPPOExperimentConfig(BaseConfig):
     1. In the second stage we'll switch to a configuration with larger learning rate and batch size to be
     used up to the grand total of 300 million experience steps.
     
-    We first define a helper method to generate a learning curve with learning rate decay for each stage:
+    We first define a helper method to generate a learning rate curve with decay for each stage:
     """
 
     # %%
     @staticmethod
     def lr_scheduler(small_batch_steps, transition_steps, ppo_steps, lr_scaling):
         safe_small_batch_steps = int(small_batch_steps * 1.02)
-        large_batch_steps = ppo_steps - safe_small_batch_steps
+        large_batch_and_lr_steps = ppo_steps - safe_small_batch_steps - transition_steps
+
+        # Learning rate after small batch steps (assuming decay to 0)
+        break1 = 1.0 - safe_small_batch_steps / ppo_steps
+
+        # Initial learning rate for large batch (after transition from initial to large learning rate)
+        break2 = lr_scaling * (
+            1.0 - (safe_small_batch_steps + transition_steps) / ppo_steps
+        )
         return MultiLinearDecay(
             [
                 # Base learning rate phase for small batch (with linear decay towards 0)
-                LinearDecay(
-                    steps=safe_small_batch_steps,
-                    startp=1.0,
-                    endp=1.0 - safe_small_batch_steps / ppo_steps,
-                ),
+                LinearDecay(steps=safe_small_batch_steps, startp=1.0, endp=break1,),
                 # Allow the optimizer to adapt its statistics to the changes with a larger learning rate
-                LinearDecay(
-                    steps=transition_steps,
-                    startp=1.0 - safe_small_batch_steps / ppo_steps,
-                    endp=lr_scaling
-                    * (1.0 - (safe_small_batch_steps + transition_steps) / ppo_steps),
-                ),
+                LinearDecay(steps=transition_steps, startp=break1, endp=break2,),
                 # Scaled learning rate phase for large batch (with linear decay towards 0)
-                LinearDecay(
-                    steps=large_batch_steps - transition_steps,
-                    startp=lr_scaling
-                    * (1.0 - (safe_small_batch_steps + transition_steps) / ppo_steps),
-                    endp=0,
-                ),
+                LinearDecay(steps=large_batch_and_lr_steps, startp=break2, endp=0,),
             ]
         )
 
@@ -420,7 +414,7 @@ assigning `--machine_id` parameters required for multi-node training, and redire
 under the output results folder.
 
 Note that by changing the value associated with the `distributed_nodes` key in the `config_kwargs` map and the `runs_on`
-list of IPs, we can easily scale our training to e.g. 1, 3 or 8 nodes as shown in the chart above. Note that for this
+list of IPs, we can easily scale our training to e.g. 1, 3, or 8 nodes as shown in the chart above. Note that for this
 call to work unmodified, you should have sufficient GPUs/GPU memory to host 60 samplers per node.
 
 ## Track and stop your experiment

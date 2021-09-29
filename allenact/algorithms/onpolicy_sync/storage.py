@@ -342,10 +342,12 @@ class RolloutStorage(object):
         if num_steps is None:
             self.step = 0  # we just finished a rollout, so we reset it for the next one
 
-    def unnarrow(self, num_steps=None):
+    def unnarrow(self, unnarrow_to_maximum_size=False):
         """See doc string for the `narrow` method."""
         unnarrow_data = (
-            self.unnarrow_data if num_steps is None else self.permanent_unnarrow_data
+            self.permanent_unnarrow_data
+            if unnarrow_to_maximum_size
+            else self.unnarrow_data
         )
 
         if len(unnarrow_data) == 0:

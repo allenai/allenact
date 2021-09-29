@@ -24,6 +24,8 @@ class PPO(AbstractActorCriticLoss):
     clip_decay : Callable for clip param decay factor (function of the current number of steps)
     entropy_method_name : Name of Distr's entropy method name. Default is `entropy`,
                           but we might use `conditional_entropy` for `SequentialDistr`
+    show_ratios : If True, adds tracking for the PPO ratio (linear, clamped, and used) in each
+                  epoch to be logged by the engine.
     """
 
     def __init__(
@@ -57,7 +59,7 @@ class PPO(AbstractActorCriticLoss):
         batch: ObservationType,
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
     ) -> Tuple[
-        Dict[str, Tuple[torch.Tensor, Optional[float]]], Dict[str, float]
+        Dict[str, Tuple[torch.Tensor, Optional[float]]], Dict[str, torch.Tensor]
     ]:  # TODO tuple output
 
         actions = cast(torch.LongTensor, batch["actions"])
@@ -108,12 +110,10 @@ class PPO(AbstractActorCriticLoss):
                 "entropy": (dist_entropy.mul_(-1.0), self.entropy_coef),  # type: ignore
             },
             {
-                "ratio": float(ratio.mean().item()),
-                "ratio_clamped": float(clamped_ratio.mean().item()),
-                "ratio_used": float(
-                    torch.where(cast(torch.Tensor, use_clamped), clamped_ratio, ratio)
-                    .mean()
-                    .item()
+                "ratio": ratio,
+                "ratio_clamped": clamped_ratio,
+                "ratio_used": torch.where(
+                    cast(torch.Tensor, use_clamped), clamped_ratio, ratio
                 ),
             }
             if self.show_ratios
@@ -147,7 +147,7 @@ class PPO(AbstractActorCriticLoss):
                 "ppo_total": cast(torch.Tensor, total_loss).item(),
                 **{key: loss.item() for key, (loss, _) in losses.items()},
             },
-            ratio_info,
+            {key: float(value.mean().item()) for key, value in ratio_info.items()},
         )
 
         return result if self.show_ratios else result[:2]
