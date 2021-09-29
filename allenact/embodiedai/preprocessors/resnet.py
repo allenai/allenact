@@ -1,4 +1,4 @@
-from typing import List, Callable, Optional, Any, cast, Dict
+from typing import List, Callable, Optional, Any, cast, Dict, Tuple
 
 import gym
 import numpy as np
@@ -147,6 +147,7 @@ class ClipResNetPreprocessor(Preprocessor):
         rgb_input_uuid: str,
         clip_model_type: str,
         pool: bool,
+        output_shape: Tuple[int, int, int],
         device: Optional[torch.device] = None,
         device_ids: Optional[List[torch.device]] = None,
         **kwargs: Any
@@ -173,7 +174,7 @@ class ClipResNetPreprocessor(Preprocessor):
 
         low = -np.inf
         high = np.inf
-        shape = (2048, 7, 7)
+        shape = output_shape
 
         input_uuids = [rgb_input_uuid]
         assert (

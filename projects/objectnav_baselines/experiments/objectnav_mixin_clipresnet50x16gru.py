@@ -5,23 +5,22 @@ import numpy as np
 import torch.nn as nn
 
 from allenact.base_abstractions.preprocessor import Preprocessor
-from allenact.embodiedai.preprocessors.resnet import (
-    ClipResNetPreprocessor,
-)
+from allenact.embodiedai.preprocessors.resnet import ClipResNetPreprocessor
 from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 from allenact.utils.experiment_utils import Builder
 from allenact_plugins.ithor_plugin.ithor_sensors import GoalObjectTypeThorSensor
 from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
+from projects.objectnav_baselines.experiments.objectnav_mixin_clipresnet50gru import (
+    CLIP_RGB_MEANS,
+    CLIP_RGB_STDS,
+)
 from projects.objectnav_baselines.models.object_nav_models import (
     ResnetTensorObjectNavActorCritic,
 )
 
-CLIP_RGB_MEANS = (0.48145466, 0.4578275, 0.40821073)
-CLIP_RGB_STDS = (0.26862954, 0.26130258, 0.27577711)
 
-
-class ObjectNavMixInClipResNetGRUConfig(ObjectNavBaseConfig):
+class ObjectNavMixInClipResNet50x16GRUConfig(ObjectNavBaseConfig):
     @classmethod
     def preprocessors(cls) -> Sequence[Union[Preprocessor, Builder[Preprocessor]]]:
         preprocessors = []
@@ -40,9 +39,10 @@ class ObjectNavMixInClipResNetGRUConfig(ObjectNavBaseConfig):
             preprocessors.append(
                 ClipResNetPreprocessor(
                     rgb_input_uuid=rgb_sensor.uuid,
-                    clip_model_type="RN50",
+                    clip_model_type="RN50x16",
                     pool=False,
                     output_uuid="rgb_clip_resnet",
+                    output_shape=(3072, 7, 7)
                 )
             )
 
