@@ -94,8 +94,8 @@ In this tutorial, we train a four-legged creature,
 
 ![training speedup](../img/multinode_training.jpg)
 
-We train an agent to navigate to an object in almost one third of the time
-required for training in one node by just distributing training across three
+We train an agent to navigate to an object in a fraction of the time
+required for training in one node by distributing training across multiple
 nodes. 
 
 This tutorial presents:

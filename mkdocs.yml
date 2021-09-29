@@ -288,8 +288,8 @@ nav:
       - navtopartner_robothor_rgb_ppo: api/projects/tutorials/navtopartner_robothor_rgb_ppo.md
       - pointnav_ithor_rgb_ddppo: api/projects/tutorials/pointnav_ithor_rgb_ddppo.md
       - object_nav_ithor_dagger_then_ppo_one_object_viz: api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object_viz.md
-      - minigrid_tutorial_multinode: api/projects/tutorials/minigrid_tutorial_multinode.md
       - object_nav_ithor_ppo_one_object: api/projects/tutorials/object_nav_ithor_ppo_one_object.md
+      - distributed_objectnav_tutorial: api/projects/tutorials/distributed_objectnav_tutorial.md
       - minigrid_tutorial_conds: api/projects/tutorials/minigrid_tutorial_conds.md
     - manipulathor_baselines:
       - armpointnav_baselines:

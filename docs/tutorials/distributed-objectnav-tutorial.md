@@ -5,7 +5,7 @@
 **Note** The provided commands to execute in this tutorial assume include a configuration script to
 [clone the full library](../installation/installation-allenact.md#full-library). Setting up headless THOR might
 require superuser privileges. We also assume [NCCL](https://developer.nvidia.com/nccl) is available for communication
-across computation nodes and all nodes have a running ssh server.
+across computation nodes and all nodes have a running `ssh` server.
 
 The below introduced experimental tools and commands for distributed training assume a Linux OS (tested on Ubuntu
 18.04).
@@ -14,23 +14,31 @@ In this tutorial, we:
 
 1. Introduce the available API for training across multiple nodes, as well as experimental scripts for distributed
 configuration, training start and termination, and remote command execution.
-1. Introduce the headless mode for [AI2-THOR](https://ai2thor.allenai.org/) in `AllenAct`.
-1. Show a training example for RoboTHOR ObjectNav on 3 nodes, each with N GPUs where 60 samplers collect rollout data.
+1. Introduce the headless mode for [AI2-THOR](https://ai2thor.allenai.org/) in `AllenAct`. Note that, in contrast with
+previous tutorials using AI2-THOR, this time we don't require an xserver (in Linux) to be active.
+1. Show a training example for RoboTHOR ObjectNav on a cluster, each with sufficient GPUs and GPU memory to host 60
+experience samplers collecting rollout data.
 
-Thanks to the massive parallelization of data collection and model training enabled by
+Thanks to the massive parallelization of experience collection and model training enabled by
 [DD-PPO](https://arxiv.org/abs/1911.00357), we can greatly speed up training by scaling across multiple nodes:
 
 ![training speedup](../img/multinode_training.jpg)
+
+## The task: ObjectNav
+
+In ObjectNav, the goal for the agent is to navigate to an object (possibly unseen during training) of a known given
+class and signal task completion when it determines it has reached the goal.
+
 
 ## Implementation
 
 For this tutorial, we'll use the readily available `objectnav_baselines` project, which includes configurations for
 a wide variety of object navigation experiments for both iTHOR and RoboTHOR. Since those configuration files are
-defined for a single-node setup, we will focus on the minimal amount of changes required in the `machine_params` and
+defined for a single-node setup, we will mainly focus on the changes required in the `machine_params` and
 `training_pipeline` methods.
 
-Note that, in order to use the headless version of AI2-THOR, we currently need to install a version of special THOR
-commit, different from the one in `robothor_plugin`. Note that this command is included in the configuration script
+Note that, in order to use the headless version of AI2-THOR, we currently need to install a specific THOR commit,
+different from the default one in `robothor_plugin`. Note that this command is included in the configuration script
 below, so **we don't need to run this**:
 
 ```bash
@@ -41,6 +49,7 @@ The experiment config starts as follows:
 
 ```python
 import math
+from typing import Optional, Sequence
 
 import torch
 import torch.optim as optim
@@ -79,10 +88,20 @@ Also indicate that we're using headless THOR (for `task_sampler_args` methods):
         res.pop("commit_id", None)
         return res
 ```
-And, of course, define the number of nodes. This will be used by `machine_params` and `training_pipeline` below:
+And, of course, define the number of nodes. This will be used by `machine_params` and `training_pipeline` below.
+We override the existing `ExperimentConfig`'s `init` method to include control on the number of nodes:
 
 ```python
-    DISTRIBUTED_NODES = 3
+    def __init__(
+        self,
+        distributed_nodes: int = 1,
+        num_train_processes: Optional[int] = None,
+        train_gpu_ids: Optional[Sequence[int]] = None,
+        val_gpu_ids: Optional[Sequence[int]] = None,
+        test_gpu_ids: Optional[Sequence[int]] = None,
+    ):
+        super().__init__(num_train_processes, train_gpu_ids, val_gpu_ids, test_gpu_ids)
+        self.distributed_nodes = distributed_nodes
 ```
 ### Machine parameters
 
@@ -100,15 +119,15 @@ which will be used to define the training parameters as follows:
         params = super().machine_params(mode, **kwargs)
 
         if mode == "train":
-            params.devices = params.devices * self.DISTRIBUTED_NODES
-            params.nprocesses = params.nprocesses * self.DISTRIBUTED_NODES
-            params.sampler_devices = params.sampler_devices * self.DISTRIBUTED_NODES
+            params.devices = params.devices * self.distributed_nodes
+            params.nprocesses = params.nprocesses * self.distributed_nodes
+            params.sampler_devices = params.sampler_devices * self.distributed_nodes
 
             if "machine_id" in kwargs:
                 machine_id = kwargs["machine_id"]
                 assert (
-                    0 <= machine_id < self.DISTRIBUTED_NODES
-                ), f"machine_id {machine_id} out of range [0, {self.DISTRIBUTED_NODES - 1}]"
+                    0 <= machine_id < self.distributed_nodes
+                ), f"machine_id {machine_id} out of range [0, {self.distributed_nodes - 1}]"
 
                 local_worker_ids = list(
                     range(
@@ -119,7 +138,7 @@ which will be used to define the training parameters as follows:
 
                 params.set_local_worker_ids(local_worker_ids)
 
-            # Make sure we're setting up train params nicely:
+            # Confirm we're setting up train params nicely:
             print(
                 f"devices {params.devices}"
                 f"\nnprocesses {params.nprocesses}"
@@ -134,20 +153,21 @@ which will be used to define the training parameters as follows:
         return params
 ```
 In summary, we need to specify which indices in `devices`, `nprocesses` and `sampler_devices` correspond to the
-local `machine-id` node (whenever a `machine_id` is given as a keyword argument), otherwise we specify the global
+local `machine_id` node (whenever a `machine_id` is given as a keyword argument), otherwise we specify the global
 configuration.
 
 ### Training pipeline
 
-In preliminary ObjectNav experiments, we observe small batches are useful during the initial training steps in
+In preliminary ObjectNav experiments, we observe that small batches are useful during the initial training steps in
 terms of sample efficiency, whereas large batches are preferred during the rest of training.
 
 In order to scale to the larger amount of collected data in multi-node settings, we will proceed with a two-stage
 pipeline:
+
 1. In the first stage, we'll enforce a number of updates per amount of collected data similar to the
-configuration with a single node by enforcing more batches per rollout (for about 30 million steps);
-1. in the second stage we'll switch to a configuration with larger learning rate and batch size to be
-used up to a grand total of 300 million steps.
+configuration with a single node by enforcing more batches per rollout (for about 30 million steps).
+1. In the second stage we'll switch to a configuration with larger learning rate and batch size to be
+used up to the grand total of 300 million experience steps.
 
 We first define a helper method to generate a learning curve with learning rate decay for each stage:
 
@@ -201,8 +221,30 @@ The training pipeline looks like:
         # We add 30 million steps for small batch learning
         small_batch_steps = int(30e6)
         # And a short transition phase towards large learning rate
-        # (see comment in the helper `lr_scheduler` method
-        transition_steps = int(2e6)
+        # (see comment in the `lr_scheduler` helper method
+        transition_steps = int(2 / 3 * self.distributed_nodes * 1e6)
+
+        # Find exact number of samplers per GPU
+        assert (
+            self.num_train_processes % len(self.train_gpu_ids) == 0
+        ), "Expected uniform number of samplers per GPU"
+        samplers_per_gpu = self.num_train_processes // len(self.train_gpu_ids)
+
+        # Multiply num_mini_batch by the largest divisor of
+        # samplers_per_gpu to keep all batches of same size:
+        num_mini_batch_multiplier = [
+            i
+            for i in reversed(
+                range(1, min(samplers_per_gpu // 2, self.distributed_nodes) + 1)
+            )
+            if samplers_per_gpu % i == 0
+        ][0]
+
+        # Multiply update_repeats so that the product of this factor and
+        # num_mini_batch_multiplier is >= self.distributed_nodes:
+        update_repeats_multiplier = int(
+            math.ceil(self.distributed_nodes / num_mini_batch_multiplier)
+        )
 
         return TrainingPipeline(
             save_interval=save_interval,
@@ -224,7 +266,8 @@ The training pipeline looks like:
                 PipelineStage(
                     loss_names=["ppo_loss"],
                     max_stage_steps=small_batch_steps,
-                    num_mini_batch=num_mini_batch * self.DISTRIBUTED_NODES,
+                    num_mini_batch=num_mini_batch * num_mini_batch_multiplier,
+                    update_repeats=update_repeats * update_repeats_multiplier,
                 ),
                 # The we proceed with the base configuration (leading to larger
                 # batches due to the increased number of samplers)
@@ -244,7 +287,7 @@ The training pipeline looks like:
                         small_batch_steps=small_batch_steps,
                         transition_steps=transition_steps,
                         ppo_steps=ppo_steps,
-                        lr_scaling=math.sqrt(self.DISTRIBUTED_NODES),
+                        lr_scaling=math.sqrt(self.distributed_nodes),
                     )
                 },
             ),
@@ -257,7 +300,8 @@ The training pipeline looks like:
 distributed processes, we encourage you to use that. The experimental distributed tools included here are intended for
 a rather basic usage pattern that might not suit your needs.
 
-If we haven't already set up AllenAct with RoboTHOR on our nodes, we can define a configuration script like:
+If we haven't set up AllenAct with the headless version of Ai2-THOR in our nodes, we can define a configuration script
+similar to:
 
 ```bash
 #!/bin/bash
@@ -290,10 +334,10 @@ python -c "from ai2thor.controller import Controller; c=Controller(); c.stop()"
 echo DONE
 ```
 
-and save it as `headless_robothor_config.sh`. Note that some of the configuration steps above assume you have
+and save it as `headless_robothor_config.sh`. Note that some of the configuration steps in the script assume you have
 superuser privileges.
 
-Then, we can just copy this file to the first node and run it with:
+Then, we can just copy this file to the first node in our cluster and run it with:
 
 ```bash
 source <PATH/TO/headless_robothor_config.sh>
@@ -305,12 +349,12 @@ If everything went well, we should be able to
 cd ~/allenact && source ~/allenact_venv/bin/activate
 ```
 
-To finalize our local setup to run our experiment. Note that, even if we use a shared filesystem through all nodes, we
-still need to install `libvulkan1` in each node (if it's not available).
+Note that we might need to install `libvulkan1` in each node (even if the AllenAct setup is shared across nodes) if it
+is not already available.
 
 ### Local filesystems
 
-If our nodes are not using a shared filesystem, we'll need to propagate the setup to the rest of nodes. Assuming
+If our cluster does not use a shared filesystem, we'll need to propagate the setup to the rest of nodes. Assuming
 we can just `ssh` with the current user to all nodes, we can propagate our config with
 
 ```bash
@@ -327,7 +371,7 @@ scripts/dcommand.py --runs_on <COMMA_SEPARATED_LIST_OF_IP_ADDRESSES> \
 
 If everything went fine, all requirements are ready to start running our experiment.
 
-## Run you experiment
+## Run your experiment
 
 **Note:** In this section, we again assume you don't have an available setup for distributed execution, such as
 [slurm](https://slurm.schedmd.com/documentation.html). If you do have access to a better alternative to setup/run
@@ -339,16 +383,21 @@ used in a single-node setup to start our experiments. From the root `allenact` d
 
 ```bash
 scripts/dmain.py projects/tutorials/distributed_objectnav_tutorial.py \
+--config_kwargs '{"distributed_nodes":3}' \
 --runs_on <COMMA_SEPARATED_LIST_OF_IP_ADDRESSES> \
 --env_activate_path ~/allenact_venv/bin/activate \
 --allenact_path ~/allenact \
---distributed_ip_and_port <FIRST_IP_ADDRESS_IN_RUNS_ON_LIST>:<FREE_PORT_NUMBER>
+--distributed_ip_and_port <FIRST_IP_ADDRESS_IN_RUNS_ON_LIST>:<FREE_PORT_NUMBER_FOR_THIS_IP_ADDRESS>
 ```
 
-This script will do several things for you, including synchronization of the changes in the `alleanct` directory
+This script will do several things for you, including synchronization of the changes in the `allenact` directory
 to all machines, enabling virtual environments in each node, sharing the same random seed for all `main.py` instances,
 assigning `--machine_id` parameters required for multi-node training, and redirecting the process output to a log file
 under the output results folder.
+
+Note that by changing the value associated with the `distributed_nodes` key in the `config_kwargs` map and the `runs_on`
+list of IPs, we can easily scale our training to e.g. 1, 3 or 8 nodes as shown in the chart above. Note that for this
+call to work unmodified, you should have sufficient GPUs/GPU memory to host 60 samplers per node.
 
 ## Track and stop your experiment
 
@@ -360,15 +409,15 @@ our training processes.
 
 ### Experiment tracking
 
-A simple way to check all machines are training, assuming you have `nvidia-smi` installed, is to just call
+A simple way to check all machines are training, assuming you have `nvidia-smi` installed in all nodes, is to just call
 
 ```bash
 scripts/dcommand.py
 ```
 
-from the root `allenact` directory. If everything is working well, nvidia-smi will be run on each machine and the GPU
-usage stats should reflect ongoing activity. You can also add different commands to be executed by each node. It is of
-course also possible to run tensorboard on any of the nodes if that's your preference.
+from the root `allenact` directory. If everything is working well, the GPU usage stats from `nvidia-smi` should reflect
+ongoing activity. You can also add different commands to be executed by each node. It is of course also possible to run
+tensorboard on any of the nodes, if that's your preference.
 
 ### Experiment termination
 
@@ -381,5 +430,7 @@ scripts/dkill.py
 After killing all involved screen sessions, you will be asked about whether you also want to delete the "killfile"
 stored under the `~/.allenact` directory (which might be your preferred option once all processes are terminated).
 
-We can now quickly assess whether our next great idea is really working!
+We hope this tutorial will help you start quickly testing new ideas! Even if we've only explored moderates settings of
+up to 480 experience samplers, you might want to consider some additional changes (like the
+[choice for the optimizer](https://arxiv.org/abs/2103.07013)) if you plan to run at larger scale.
 

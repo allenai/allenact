@@ -51,7 +51,7 @@ def get_argument_parser():
         help="sometimes it is useful to be able to pass additional key-word arguments"
         " to `__init__` when initializing an experiment configuration. This flag can be used"
         " to pass such key-word arugments by specifying them with json, e.g."
-        "\n\t--config_kwargs \"{'gpu_id': 0, 'my_important_variable': [1,2,3]}\""
+        '\n\t--config_kwargs \'{"gpu_id": 0, "my_important_variable": [1,2,3]}\''
         "\nTo see which arguments are supported for your experiment see the experiment"
         " config's `__init__` function. If the value passed to this function is a file path"
         " then we will try to load this file path as a json object and use this json object"
@@ -375,7 +375,7 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, str]]:
                 get_logger().warning(
                     f"The input for --config_kwargs ('{args.config_kwargs}')"
                     f" does not appear to be valid json. Often this is due to"
-                    f" json requiring very specific synax (e.g. double quoted strings)"
+                    f" json requiring very specific syntax (e.g. double quoted strings)"
                     f" we'll try to get around this by evaluating with `ast.literal_eval`"
                     f" (a safer version of the standard `eval` function)."
                 )
