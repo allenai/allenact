@@ -788,10 +788,6 @@
      <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
-     <loc>https://allenact.org/api/projects/tutorials/minigrid_offpolicy_tutorial/</loc>
-     <lastmod>2021-09-30</lastmod>
-     <changefreq>daily</changefreq>
-    </url><url>
      <loc>https://allenact.org/api/projects/tutorials/navtopartner_robothor_rgb_ppo/</loc>
      <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
@@ -805,10 +801,6 @@
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/tutorials/object_nav_ithor_ppo_one_object/</loc>
-     <lastmod>2021-09-30</lastmod>
-     <changefreq>daily</changefreq>
-    </url><url>
-     <loc>https://allenact.org/api/projects/tutorials/distributed_objectnav_tutorial/</loc>
      <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
