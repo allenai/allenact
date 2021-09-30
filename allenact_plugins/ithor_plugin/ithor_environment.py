@@ -240,7 +240,7 @@ class IThorEnvironment(object):
                 "action": "Initialize",
                 "gridSize": self._grid_size,
                 "visibilityDistance": self._visibility_distance,
-                "fov": self._fov,
+                "fieldOfView": self._fov,
                 "makeAgentsVisible": self.make_agents_visible,
                 "alwaysReturnVisibleRange": self._always_return_visible_range,
                 **kwargs,

@@ -55,7 +55,7 @@ class TestAI2THORMapSensors(object):
             wrn_msg = (
                 "Could not import `rearrange`. Is it possible you have"
                 " not initialized the submodules (i.e. by running"
-                "`git submodule init; git submodule update;`)?"
+                " `git submodule init; git submodule update;`)?"
             )
             warnings.warn(wrn_msg)
             get_logger().warning(wrn_msg)

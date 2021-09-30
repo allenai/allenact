@@ -1,7 +1,7 @@
 """Defining abstract loss classes for actor critic models."""
 
 import abc
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
 
 import torch
 
@@ -22,7 +22,10 @@ class AbstractActorCriticLoss(Loss):
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
         **kwargs,
-    ) -> Tuple[torch.FloatTensor, Dict[str, float]]:
+    ) -> Union[
+        Tuple[torch.FloatTensor, Dict[str, float]],
+        Tuple[torch.FloatTensor, Dict[str, float], Dict[str, float]],
+    ]:
         """Computes the loss.
 
         # Parameters
@@ -38,6 +41,9 @@ class AbstractActorCriticLoss(Loss):
 
         A (0-dimensional) torch.FloatTensor corresponding to the computed loss. `.backward()` will be called on this
         tensor in order to compute a gradient update to the ActorCriticModel's parameters.
+        A Dict[str, float] with scalar values corresponding to sub-losses.
+        An optional Dict[str, float] with scalar values corresponding to extra info to be processed per epoch and
+        combined across epochs by the engine.
         """
         # TODO: The above documentation is missing what the batch dimensions are.
 
