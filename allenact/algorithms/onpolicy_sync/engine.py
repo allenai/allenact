@@ -3,7 +3,6 @@ import datetime
 import itertools
 import logging
 import os
-import queue
 import random
 import time
 import traceback
@@ -19,6 +18,7 @@ from typing import (
     cast,
     Iterator,
     Callable,
+    Tuple,
 )
 from functools import partial
 
@@ -99,6 +99,7 @@ class OnPolicyRLEngine(object):
         worker_id: int = 0,
         num_workers: int = 1,
         device: Union[str, torch.device, int] = "cpu",
+        distributed_ip: str = "127.0.0.1",
         distributed_port: int = 0,
         deterministic_agents: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
@@ -128,6 +129,7 @@ class OnPolicyRLEngine(object):
         self.worker_id = worker_id
         self.num_workers = num_workers
         self.device = torch.device("cpu") if device == -1 else torch.device(device)  # type: ignore
+        self.distributed_ip = distributed_ip
         self.distributed_port = distributed_port
 
         self.mode = mode.lower().strip()
@@ -211,7 +213,7 @@ class OnPolicyRLEngine(object):
         self.store: Optional[torch.distributed.TCPStore] = None  # type:ignore
         if self.num_workers > 1:
             self.store = torch.distributed.TCPStore(  # type:ignore
-                "127.0.0.1",
+                self.distributed_ip,
                 self.distributed_port,
                 self.num_workers,
                 self.worker_id == 0,
@@ -657,11 +659,13 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         worker_id: int = 0,
         num_workers: int = 1,
         device: Union[str, torch.device, int] = "cpu",
+        distributed_ip: str = "127.0.0.1",
         distributed_port: int = 0,
         deterministic_agents: bool = False,
         distributed_preemption_threshold: float = 0.7,
         max_sampler_processes_per_worker: Optional[int] = None,
         save_ckpt_after_every_pipeline_stage: bool = True,
+        first_local_worker_id: int = 0,
         **kwargs,
     ):
         kwargs["mode"] = TRAIN_MODE_STR
@@ -677,6 +681,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             worker_id=worker_id,
             num_workers=num_workers,
             device=device,
+            distributed_ip=distributed_ip,
             distributed_port=distributed_port,
             deterministic_agents=deterministic_agents,
             max_sampler_processes_per_worker=max_sampler_processes_per_worker,
@@ -745,6 +750,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self._last_aggregated_train_task_metrics: ScalarMeanTracker = (
             ScalarMeanTracker()
         )
+
+        self.first_local_worker_id = first_local_worker_id
 
     def advance_seed(
         self, seed: Optional[int], return_same_seed_per_worker=False
@@ -913,18 +920,72 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         return actions, actor_critic_output, memory, step_observation
 
+    def advantage_stats(
+        self, advantages: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        r"""Computes the mean and variances of advantages (possibly over multiple workers).
+        For multiple workers, this method is equivalent to first collecting all versions of
+        advantages and then computing the mean and variance locally over that.
+
+        # Parameters
+
+        advantages: Tensors to compute mean and variance over. Assumed to be solely the
+         worker's local copy of this tensor, the resultant mean and variance will be computed
+         as though _all_ workers' versions of this tensor were concatenated together in
+         distributed training.
+        """
+
+        # Step count has already been updated with the steps from all workers
+        global_rollout_steps = self.step_count - self.former_steps
+
+        if self.is_distributed:
+            summed_advantages = advantages.sum()
+            dist.all_reduce(summed_advantages)
+            mean = summed_advantages / global_rollout_steps
+
+            summed_squares = (advantages - mean).pow(2).sum()
+            dist.all_reduce(summed_squares)
+            std = (summed_squares / (global_rollout_steps - 1)).sqrt()
+        else:
+            mean, std = advantages.mean(), advantages.std()
+
+        return mean, std
+
+    def distributed_weighted_sum(
+        self,
+        to_share: Union[torch.Tensor, float, int],
+        weight: Union[torch.Tensor, float, int],
+    ):
+        """Weighted sum of scalar across distributed workers."""
+        if self.is_distributed:
+            aggregate = torch.tensor(to_share * weight).to(self.device)
+            dist.all_reduce(aggregate)
+            return aggregate.item()
+        else:
+            if abs(1 - weight) > 1e-5:
+                get_logger().warning(
+                    f"Scaling non-distributed value with weight {weight}"
+                )
+            return torch.tensor(to_share * weight).item()
+
     def update(self, rollouts: RolloutStorage):
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
 
-        for e in range(self.training_pipeline.update_repeats):
+        adv_mean, adv_std = self.advantage_stats(advantages)
+
+        for e in range(self.training_pipeline.current_stage.update_repeats):
             data_generator = rollouts.recurrent_generator(
-                advantages, self.training_pipeline.num_mini_batch
+                advantages=advantages,
+                adv_mean=adv_mean,
+                adv_std=adv_std,
+                num_mini_batch=self.training_pipeline.current_stage.num_mini_batch,
             )
 
             for bit, batch in enumerate(data_generator):
                 # masks is always [steps, samplers, 1]:
                 num_rollout_steps, num_samplers = batch["masks"].shape[:2]
-                bsize = num_rollout_steps * num_samplers
+                bsize = int(num_rollout_steps * num_samplers)
+                aggregate_bsize = self.distributed_weighted_sum(bsize, 1)
 
                 actor_critic_output, memory = self.actor_critic(
                     observations=batch["observations"],
@@ -947,18 +1008,39 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         # Skip losses which should not be repeated more than `loss_update_repeats` times.
                         continue
 
-                    current_loss, current_info = loss.loss(
+                    loss_return = loss.loss(
                         step_count=self.step_count,
                         batch=batch,
                         actor_critic_output=actor_critic_output,
                     )
+
+                    per_epoch_info = {}
+                    if len(loss_return) == 2:
+                        current_loss, current_info = loss_return
+                    elif len(loss_return) == 3:
+                        current_loss, current_info, per_epoch_info = loss_return
+                    else:
+                        raise NotImplementedError
+
                     if total_loss is None:
                         total_loss = loss_weight * current_loss
                     else:
                         total_loss = total_loss + loss_weight * current_loss
 
-                    for key in current_info:
-                        info[loss_name + "/" + key] = current_info[key]
+                    for key, value in current_info.items():
+                        info[f"{loss_name}/{key}"] = self.distributed_weighted_sum(
+                            value, bsize / aggregate_bsize
+                        )
+
+                    for key, value in per_epoch_info.items():
+                        value = self.distributed_weighted_sum(
+                            value, bsize / aggregate_bsize
+                        )
+                        if self.training_pipeline.current_stage.update_repeats > 1:
+                            info[f"{loss_name}/{key}_epoch{e:02d}"] = value
+                            info[f"{loss_name}/{key}_combined"] = value
+                        else:
+                            info[f"{loss_name}/{key}"] = value
 
                 assert (
                     total_loss is not None
@@ -966,13 +1048,30 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     self.training_pipeline.current_stage_index
                 )
 
-                info["total_loss"] = total_loss.item()
-                self.tracking_info["losses"].append(("losses", info, bsize))
-                self.tracking_info["lr"].append(
-                    ("lr", {"lr": self.optimizer.param_groups[0]["lr"]}, bsize)
-                )
+                total_loss_scalar = total_loss.item()
+                if self.is_distributed:
+                    info["total_loss"] = self.distributed_weighted_sum(
+                        total_loss_scalar, bsize / aggregate_bsize
+                    )
+                info["total_loss"] = total_loss_scalar
 
-                self.backprop_step(total_loss)
+                self.tracking_info["losses"].append(("losses", info, bsize))
+
+                to_track = {
+                    "lr": self.optimizer.param_groups[0]["lr"],
+                    "rollout_num_mini_batch": self.training_pipeline.current_stage.num_mini_batch,
+                    "rollout_epochs": self.training_pipeline.current_stage.update_repeats,
+                    "global_batch_size": aggregate_bsize,
+                    "worker_batch_size": bsize,
+                }
+
+                for k, v in to_track.items():
+                    self.tracking_info[k].append((k, {k: v}, bsize))
+
+                self.backprop_step(
+                    total_loss=total_loss,
+                    local_to_global_batch_size_ratio=bsize / aggregate_bsize,
+                )
 
         # # TODO Unit test to ensure correctness of distributed infrastructure
         # state_dict = self.actor_critic.state_dict()
@@ -1016,29 +1115,35 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         return offpolicy_iterator
 
-    def backprop_step(self, total_loss):
+    def backprop_step(
+        self, total_loss: torch.Tensor, local_to_global_batch_size_ratio: float = 1.0,
+    ):
         self.optimizer.zero_grad()  # type: ignore
         if isinstance(total_loss, torch.Tensor):
             total_loss.backward()
 
         if self.is_distributed:
             # From https://github.com/pytorch/pytorch/issues/43135
-            reductions = []
+            reductions, all_params = [], []
             for p in self.actor_critic.parameters():
-                # you can also organize grads to larger buckets to make allreduce more efficient
+                # you can also organize grads to larger buckets to make all_reduce more efficient
                 if p.requires_grad:
                     if p.grad is None:
                         p.grad = torch.zeros_like(p.data)
+                    else:  # local_global_batch_size_tuple is not None, since we're distributed:
+                        p.grad = p.grad * local_to_global_batch_size_ratio
                     reductions.append(
-                        dist.all_reduce(p.grad, async_op=True,)
+                        dist.all_reduce(p.grad, async_op=True,)  # sum
                     )  # synchronize
-            for reduction in reductions:
+                    all_params.append(p)
+            for reduction, p in zip(reductions, all_params):
                 reduction.wait()
 
         nn.utils.clip_grad_norm_(
             self.actor_critic.parameters(),
-            self.training_pipeline.max_grad_norm,  # type: ignore
+            self.training_pipeline.current_stage.max_grad_norm,  # type: ignore
         )
+
         self.optimizer.step()  # type: ignore
 
     def offpolicy_update(
@@ -1115,7 +1220,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 ("offpolicy_update_package", info, bsize)
             )
 
-            self.backprop_step(total_loss)
+            aggregate_bsize = self.distributed_weighted_sum(bsize, 1)
+
+            self.backprop_step(
+                total_loss=total_loss,
+                local_to_global_batch_size_ratio=bsize / aggregate_bsize,
+            )
 
             stage.offpolicy_memory = detach_recursively(
                 input=stage.offpolicy_memory, inplace=True
@@ -1186,8 +1296,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         should_save_checkpoints = (
             self.checkpoints_dir != ""
-            and self.training_pipeline.save_interval is not None
-            and self.training_pipeline.save_interval > 0
+            and self.training_pipeline.current_stage.save_interval is not None
+            and self.training_pipeline.current_stage.save_interval > 0
         )
         already_saved_checkpoint = False
 
@@ -1241,8 +1351,15 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 dist.barrier()
 
             self.former_steps = self.step_count
-            for step in range(self.training_pipeline.num_steps):
+            for step in range(self.training_pipeline.current_stage.num_steps):
                 num_paused = self.collect_rollout_step(rollouts=rollouts)
+
+                # Make sure we've collected the entire set of tensors (including memory)
+                if rollouts.num_steps != self.training_pipeline.current_stage.num_steps:
+                    rollouts.unnarrow(unnarrow_to_maximum_size=True)
+                    assert rollouts.num_steps == self.training_pipeline.num_steps
+                    rollouts.narrow(self.training_pipeline.current_stage.num_steps)
+
                 if num_paused > 0:
                     raise NotImplementedError(
                         "When trying to get a new task from a task sampler (using the `.next_task()` method)"
@@ -1260,9 +1377,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     if (
                         num_done
                         > self.distributed_preemption_threshold * self.num_workers
-                        and 0.25 * self.training_pipeline.num_steps
+                        and 0.25 * self.training_pipeline.current_stage.num_steps
                         <= step
-                        < 0.9 * self.training_pipeline.num_steps
+                        < 0.9 * self.training_pipeline.current_stage.num_steps
                     ):
                         get_logger().debug(
                             "{} worker {} narrowed rollouts after {} steps (out of {}) with {} workers done".format(
@@ -1302,9 +1419,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
             rollouts.compute_returns(
                 next_value=actor_critic_output.values.detach(),
-                use_gae=self.training_pipeline.use_gae,
-                gamma=self.training_pipeline.gamma,
-                tau=self.training_pipeline.gae_lambda,
+                use_gae=self.training_pipeline.current_stage.use_gae,
+                gamma=self.training_pipeline.current_stage.gamma,
+                tau=self.training_pipeline.current_stage.gae_lambda,
             )
 
             self.update(rollouts=rollouts)  # here we synchronize
@@ -1339,19 +1456,23 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             # a pipeline stage completes is controlled above
             if should_save_checkpoints and (
                 self.training_pipeline.total_steps - self.last_save
-                >= self.training_pipeline.save_interval
+                >= self.training_pipeline.current_stage.save_interval
             ):
                 self.deterministic_seeds()
-                if self.worker_id == 0:
+
+                if self.worker_id == self.first_local_worker_id:
                     model_path = self.checkpoint_save()
                     if self.checkpoints_queue is not None:
                         self.checkpoints_queue.put(("eval", model_path))
                 self.last_save = self.training_pipeline.total_steps
                 already_saved_checkpoint = True
 
-            if (self.training_pipeline.advance_scene_rollout_period is not None) and (
+            if (
+                self.training_pipeline.current_stage.advance_scene_rollout_period
+                is not None
+            ) and (
                 self.training_pipeline.rollout_count
-                % self.training_pipeline.advance_scene_rollout_period
+                % self.training_pipeline.current_stage.advance_scene_rollout_period
                 == 0
             ):
                 get_logger().info(

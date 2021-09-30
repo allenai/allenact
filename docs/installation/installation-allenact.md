@@ -178,7 +178,7 @@ Each supported plugin contains a YAML environment file that can be applied upon 
 install the specific requirements of each plugin, we need to additionally call
 
 ```bash
-PIP_SRC="${CONDA_BASE}/envs/${MY_ENV_NAME}/pipsrc" conda env update --file allenact_plugins/<PLUGIN_NAME>_plugin/extra_environment.yml --name $MY_ENV_NAME
+conda env update --file allenact_plugins/<PLUGIN_NAME>_plugin/extra_environment.yml --name $MY_ENV_NAME
 ```
 
 from the top-level directory.

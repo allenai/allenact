@@ -28,6 +28,7 @@ from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBas
 import ai2thor
 from packaging import version
 
+
 if ai2thor.__version__ not in ["0.0.1", None] and version.parse(
     ai2thor.__version__
 ) < version.parse("3.2.0"):
@@ -54,6 +55,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
     TARGET_TYPES: Optional[Sequence[str]] = None
 
     THOR_COMMIT_ID: Optional[str] = None
+    THOR_IS_HEADLESS: bool = False
 
     def __init__(
         self,
@@ -220,19 +222,26 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
 
         inds = self._partition_inds(len(scenes), total_processes)
 
-        x_display: Optional[str] = None
-        if platform.system() == "Linux":
-            x_displays = get_open_x_displays(throw_error_if_empty=True)
+        if not self.THOR_IS_HEADLESS:
+            x_display: Optional[str] = None
+            if platform.system() == "Linux":
+                x_displays = get_open_x_displays(throw_error_if_empty=True)
 
-            if len([d for d in devices if d != torch.device("cpu")]) > len(x_displays):
-                get_logger().warning(
-                    f"More GPU devices found than X-displays (devices: `{x_displays}`, x_displays: `{x_displays}`)."
-                    f" This is not necessarily a bad thing but may mean that you're not using GPU memory as"
-                    f" efficiently as possible. Consider following the instructions here:"
-                    f" https://allenact.org/installation/installation-framework/#installation-of-ithor-ithor-plugin"
-                    f" describing how to start an X-display on every GPU."
-                )
-            x_display = x_displays[process_ind % len(x_displays)]
+                if len([d for d in devices if d != torch.device("cpu")]) > len(
+                    x_displays
+                ):
+                    get_logger().warning(
+                        f"More GPU devices found than X-displays (devices: `{x_displays}`, x_displays: `{x_displays}`)."
+                        f" This is not necessarily a bad thing but may mean that you're not using GPU memory as"
+                        f" efficiently as possible. Consider following the instructions here:"
+                        f" https://allenact.org/installation/installation-framework/#installation-of-ithor-ithor-plugin"
+                        f" describing how to start an X-display on every GPU."
+                    )
+                x_display = x_displays[process_ind % len(x_displays)]
+
+            device_dict = dict(x_display=x_display)
+        else:
+            device_dict = dict(gpu_device=devices[process_ind % len(devices)])
 
         return {
             "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
@@ -249,7 +258,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG,
-            "env_args": {**self.env_args(), "x_display": x_display,},
+            "env_args": {**self.env_args(), **device_dict},
         }
 
     def train_task_sampler_args(

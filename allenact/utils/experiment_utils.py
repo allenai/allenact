@@ -32,6 +32,7 @@ from allenact.algorithms.onpolicy_sync.losses.abstract_loss import (
 )
 from allenact.base_abstractions.misc import Loss
 from allenact.utils.system import get_logger
+from allenact.utils.misc_utils import prepare_locals_for_super
 
 
 def evenly_distribute_count_into_bins(count: int, nbins: int) -> List[int]:
@@ -288,8 +289,8 @@ class LoggingPackage(object):
 class LinearDecay(object):
     """Linearly decay between two values over some number of steps.
 
-    Obtain the value corresponding to the `i`th step by calling
-    an instantiation of this object with the value `i`.
+    Obtain the value corresponding to the `i`-th step by calling
+    an instance of this class with the value `i`.
 
     # Parameters
 
@@ -320,6 +321,55 @@ class LinearDecay(object):
         """
         epoch = max(min(epoch, self.steps), 0)
         return self.startp + (self.endp - self.startp) * (epoch / float(self.steps))
+
+
+class MultiLinearDecay(object):
+    """Container for multiple stages of LinearDecay.
+
+    Obtain the value corresponding to the `i`-th step by calling
+    an instance of this class with the value `i`.
+
+    # Parameters
+
+    stages: List of `LinearDecay` objects to be sequentially applied
+        for the number of steps in each stage.
+    """
+
+    def __init__(self, stages: Sequence[LinearDecay]) -> None:
+        """Initializer.
+
+        See class documentation for parameter definitions.
+        """
+        self.stages = stages
+        self.steps = np.cumsum([stage.steps for stage in self.stages])
+        self.total_steps = self.steps[-1]
+        self.stage_idx = -1
+        self.min_steps = 0
+        self.max_steps = 0
+        self.stage = None
+
+    def __call__(self, epoch: int) -> float:
+        """Get the decayed value factor for `epoch` number of steps.
+
+        # Parameters
+
+        epoch : The number of steps.
+
+        # Returns
+
+        Decayed value for `epoch` number of steps.
+        """
+        epoch = max(min(epoch, self.total_steps), 0)
+
+        while epoch >= self.max_steps and self.max_steps < self.total_steps:
+            self.stage_idx += 1
+            assert self.stage_idx < len(self.stages)
+
+            self.min_steps = self.max_steps
+            self.max_steps = self.steps[self.stage_idx]
+            self.stage = self.stages[self.stage_idx]
+
+        return self.stage(epoch - self.min_steps)
 
 
 # noinspection PyTypeHints,PyUnresolvedReferences
@@ -408,8 +458,68 @@ class OffPolicyPipelineComponent(NamedTuple):
     ] = lambda cur_worker, rollouts_per_worker, seed: {}
 
 
-class PipelineStage(object):
-    """A single stage in a training pipeline.
+class TrainingSettings(object):
+    """Class defining parameters used for training (within a stage or the
+    entire pipeline).
+
+    # Attributes
+
+    num_mini_batch : The number of mini-batches to break a rollout into.
+    update_repeats : The number of times we will cycle through the mini-batches corresponding
+        to a single rollout doing gradient updates.
+    max_grad_norm : The maximum "inf" norm of any gradient step (gradients are clipped to not exceed this).
+    num_steps : Total number of steps a single agent takes in a rollout.
+    gamma : Discount factor applied to rewards (should be in [0, 1]).
+    use_gae : Whether or not to use generalized advantage estimation (GAE).
+    gae_lambda : The additional parameter used in GAE.
+    advance_scene_rollout_period: Optional number of rollouts before enforcing an advance scene in all samplers.
+    save_interval : The frequency with which to save (in total agent steps taken). If `None` then *no*
+        checkpoints will be saved. Otherwise, in addition to the checkpoints being saved every
+        `save_interval` steps, a checkpoint will *always* be saved at the end of each pipeline stage.
+        If `save_interval <= 0` then checkpoints will only be saved at the end of each pipeline stage.
+    metric_accumulate_interval : The frequency with which training/validation metrics are accumulated
+        (in total agent steps). Metrics accumulated in an interval are logged (if `should_log` is `True`)
+        and used by the stage's early stopping criterion (if any).
+    """
+
+    num_mini_batch: Optional[int]
+    update_repeats: Optional[int]
+    max_grad_norm: Optional[float]
+    num_steps: Optional[int]
+    gamma: Optional[float]
+    use_gae: Optional[bool]
+    gae_lambda: Optional[float]
+    advance_scene_rollout_period: Optional[int]
+    save_interval: Optional[int]
+    metric_accumulate_interval: Optional[int]
+
+    # noinspection PyUnresolvedReferences
+    def __init__(
+        self,
+        num_mini_batch: Optional[int] = None,
+        update_repeats: Optional[int] = None,
+        max_grad_norm: Optional[float] = None,
+        num_steps: Optional[int] = None,
+        gamma: Optional[float] = None,
+        use_gae: Optional[bool] = None,
+        gae_lambda: Optional[float] = None,
+        advance_scene_rollout_period: Optional[int] = None,
+        save_interval: Optional[int] = None,
+        metric_accumulate_interval: Optional[int] = None,
+        **kwargs: Any,
+    ):
+        all_vars = prepare_locals_for_super(locals(), ignore_kwargs=True)
+
+        for key, value in all_vars.items():
+            setattr(self, key, value)
+
+
+_TRAINING_SETTINGS_NAMES: List[str] = list(TrainingSettings().__dict__.keys())
+
+
+class PipelineStage(TrainingSettings):
+    """A single stage in a training pipeline, possibly including overrides to
+    the global `TrainingSettings` in `TrainingPipeline`.
 
     # Attributes
 
@@ -426,9 +536,19 @@ class PipelineStage(object):
         training in this stage should be stopped early. If `None` then no early stopping
         occurs. If `early_stopping_criterion` is not `None` then we do not guarantee
         reproducibility when restarting a model from a checkpoint (as the
-         `EarlyStoppingCriterion` object may store internal state which is not
-         saved in the checkpoint). Currently AllenAct only supports using early stopping
-         criterion when **not** using distributed training.
+        `EarlyStoppingCriterion` object may store internal state which is not
+        saved in the checkpoint). Currently AllenAct only supports using early stopping
+        criterion when **not** using distributed training.
+    num_mini_batch : See docs for `TrainingSettings`.
+    update_repeats : See docs for `TrainingSettings`.
+    max_grad_norm : See docs for `TrainingSettings`.
+    num_steps : See docs for `TrainingSettings`.
+    gamma : See docs for `TrainingSettings`.
+    use_gae : See docs for `TrainingSettings`.
+    gae_lambda : See docs for `TrainingSettings`.
+    advance_scene_rollout_period: See docs for `TrainingSettings`.
+    save_interval : See docs for `TrainingSettings`.
+    metric_accumulate_interval : See docs for `TrainingSettings`.
     """
 
     def __init__(
@@ -441,16 +561,34 @@ class PipelineStage(object):
         teacher_forcing: Optional[LinearDecay] = None,
         offpolicy_component: Optional[OffPolicyPipelineComponent] = None,
         early_stopping_criterion: Optional[EarlyStoppingCriterion] = None,
+        num_mini_batch: Optional[int] = None,
+        update_repeats: Optional[int] = None,
+        max_grad_norm: Optional[float] = None,
+        num_steps: Optional[int] = None,
+        gamma: Optional[float] = None,
+        use_gae: Optional[bool] = None,
+        gae_lambda: Optional[float] = None,
+        advance_scene_rollout_period: Optional[int] = None,
+        save_interval: Optional[int] = None,
+        metric_accumulate_interval: Optional[int] = None,
     ):
+        self._update_repeats: Optional[int] = None
+
+        # Populate TrainingSettings members
+        super().__init__(**prepare_locals_for_super(locals()))
+
         self.loss_names = loss_names
         self.max_stage_steps = max_stage_steps
 
         self.loss_weights = loss_weights
         self.loss_update_repeats = loss_update_repeats
 
-        assert loss_weights is None or len(loss_weights) == len(loss_names)
-        assert loss_update_repeats is None or len(loss_update_repeats) == len(
-            loss_names
+        assert self.loss_weights is None or len(self.loss_weights) == len(
+            self.loss_names
+        )
+        assert self.loss_update_repeats is None or (
+            len(self.loss_update_repeats) == len(self.loss_names)
+            and self._update_repeats is None
         )
 
         self.teacher_forcing = teacher_forcing
@@ -470,6 +608,17 @@ class PipelineStage(object):
         self.offpolicy_named_losses: Optional[Dict[str, AbstractOffPolicyLoss]] = None
         self._offpolicy_named_loss_weights: Optional[Dict[str, float]] = None
         self.offpolicy_steps_taken_in_stage: int = 0
+
+    @property
+    def update_repeats(self) -> int:
+        if self._update_repeats is None:
+            return max(self.loss_update_repeats)
+        else:
+            return self._update_repeats
+
+    @update_repeats.setter
+    def update_repeats(self, val: Optional[int]):
+        self._update_repeats = val
 
     @property
     def is_complete(self):
@@ -522,8 +671,8 @@ class PipelineStage(object):
         return self._offpolicy_named_loss_weights
 
 
-class TrainingPipeline(object):
-    """Class defining the stages (and global parameters) in a training
+class TrainingPipeline(TrainingSettings):
+    """Class defining the stages (and global training settings) in a training
     pipeline.
 
     The training pipeline can be used as an iterator to go through the pipeline
@@ -536,21 +685,16 @@ class TrainingPipeline(object):
     pipeline_stages : A list of PipelineStages. Each of these define how the agent
         will be trained and are executed sequentially.
     optimizer_builder : Builder object to instantiate the optimizer to use during training.
-    num_mini_batch : The number of mini-batches to break a rollout into.
-    update_repeats : The number of times we will cycle through the mini-batches corresponding
-        to a single rollout doing gradient updates.
-    max_grad_norm : The maximum "inf" norm of any gradient step (gradients are clipped to not exceed this).
-    num_steps : Total number of steps a single agent takes in a rollout.
-    gamma : Discount factor applied to rewards (should be in [0, 1]).
-    use_gae : Whether or not to use generalized advantage estimation (GAE).
-    gae_lambda : The additional parameter used in GAE.
-    save_interval : The frequency with which to save (in total agent steps taken). If `None` then *no*
-        checkpoints will be saved. Otherwise, in addition to the checkpoints being saved every
-        `save_interval` steps, a checkpoint will *always* be saved at the end of each pipeline stage.
-        If `save_interval <= 0` then checkpoints will only be saved at the end of each pipeline stage.
-    metric_accumulate_interval : The frequency with which training/validation metrics are accumulated
-        (in total agent steps). Metrics accumulated in an interval are logged (if `should_log` is `True`)
-        and used by the stage's early stopping criterion (if any).
+    num_mini_batch : See docs for `TrainingSettings`.
+    update_repeats : See docs for `TrainingSettings`.
+    max_grad_norm : See docs for `TrainingSettings`.
+    num_steps : See docs for `TrainingSettings`.
+    gamma : See docs for `TrainingSettings`.
+    use_gae : See docs for `TrainingSettings`.
+    gae_lambda : See docs for `TrainingSettings`.
+    advance_scene_rollout_period: See docs for `TrainingSettings`.
+    save_interval : See docs for `TrainingSettings`.
+    metric_accumulate_interval : See docs for `TrainingSettings`.
     should_log: `True` if metrics accumulated during training should be logged to the console as well
         as to a tensorboard file.
     lr_scheduler_builder : Optional builder object to instantiate the learning rate scheduler used
@@ -580,32 +724,15 @@ class TrainingPipeline(object):
 
         See class docstring for parameter definitions.
         """
-        self.save_interval = save_interval
-        self.metric_accumulate_interval = metric_accumulate_interval
+        all_vars = prepare_locals_for_super(locals())
+
+        # Populate TrainingSettings members
+        super().__init__(**all_vars)
 
         self.optimizer_builder = optimizer_builder
         self.lr_scheduler_builder = lr_scheduler_builder
-        self.num_mini_batch = num_mini_batch
 
-        self._update_repeats = update_repeats
-        if update_repeats is not None:
-            assert all(ps.loss_update_repeats is None for ps in pipeline_stages), (
-                "if `update_repeats` is not `None` then"
-                " all pipeline stages must have their `loss_update_repeats` parameter equal to `None`."
-            )
-        else:
-            assert all(ps.loss_update_repeats is not None for ps in pipeline_stages), (
-                "if `update_repeats` is `None` then"
-                " all pipeline stages must have their `loss_update_repeats` parameter not equal to `None`."
-            )
-
-        self.max_grad_norm = max_grad_norm
-        self.num_steps = num_steps
         self.named_losses = named_losses
-        self.gamma = gamma
-        self.use_gae = use_gae
-        self.gae_lambda = gae_lambda
-        self.advance_scene_rollout_period = advance_scene_rollout_period
         self.should_log = should_log
 
         self.pipeline_stages = pipeline_stages
@@ -618,18 +745,20 @@ class TrainingPipeline(object):
             )
 
         self._current_stage: Optional[PipelineStage] = None
+        for sit, stage in enumerate(self.pipeline_stages):
+            # Forward all global `TrainingSettings` to all `PipelineStage`s unless overridden:
+            for var in _TRAINING_SETTINGS_NAMES:
+                if getattr(stage, var) is None:
+                    setattr(stage, var, getattr(self, var))
+
+            assert (
+                stage.num_steps <= self.num_steps
+            ), f"Stage {sit} has `num_steps` {stage.num_steps} > {self.num_steps} in pipeline."
 
         self.rollout_count = 0
         self.off_policy_epochs = None
 
         self._refresh_current_stage(force_stage_search_from_start=True)
-
-    @property
-    def update_repeats(self) -> int:
-        if self._update_repeats is None:
-            return max(self.current_stage.loss_update_repeats)
-        else:
-            return self._update_repeats
 
     @property
     def total_steps(self) -> int:
