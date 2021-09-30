@@ -155,6 +155,7 @@ tmp/
 
 # Pickle files
 *.pkl
+*.pkl.gz
 
 # Zip files
 *.zip
@@ -193,3 +194,8 @@ src
 # Package building
 *.egg_info
 *.egg-info
+
+# Additional allenact-specific locks and hidden files
+*.allenact_last_start_time_string
+*.allenact_start_time_string.lock
+*.lock

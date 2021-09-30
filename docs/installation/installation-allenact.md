@@ -143,7 +143,8 @@ run the commands:
 ```bash
 export MY_ENV_NAME=allenact
 export CONDA_BASE="$(dirname $(dirname "${CONDA_EXE}"))"
-PIP_SRC="${CONDA_BASE}/envs/${MY_ENV_NAME}/pipsrc" conda env create --file ./conda/environment-base.yml --name $MY_ENV_NAME
+export PIP_SRC="${CONDA_BASE}/envs/${MY_ENV_NAME}/pipsrc"
+conda env create --file ./conda/environment-base.yml --name $MY_ENV_NAME
 ``` 
 
 These additional commands tell conda to place these dependencies under the `${CONDA_BASE}/envs/${MY_ENV_NAME}/pipsrc` directory rather
