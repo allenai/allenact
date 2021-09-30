@@ -610,8 +610,10 @@ class PipelineStage(TrainingSettings):
         self.offpolicy_steps_taken_in_stage: int = 0
 
     @property
-    def update_repeats(self) -> int:
+    def update_repeats(self) -> Optional[int]:
         if self._update_repeats is None:
+            if self.loss_update_repeats is None:
+                return None
             return max(self.loss_update_repeats)
         else:
             return self._update_repeats
