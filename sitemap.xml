@@ -1,735 +1,903 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url>
      <loc>https://allenact.org/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/installation/installation-allenact/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/installation/installation-framework/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/installation/download-datasets/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/getting_started/running-your-first-experiment/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/getting_started/abstractions/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/getting_started/structure/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/tutorials/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/tutorials/minigrid-tutorial/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/tutorials/training-a-pointnav-model/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/tutorials/transfering-to-a-different-environment-framework/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/tutorials/running-inference-on-a-pretrained-model/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/tutorials/offpolicy-tutorial/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/tutorials/gym-tutorial/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/tutorials/distributed-objectnav-tutorial/</loc>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/howtos/defining-an-experiment/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/howtos/changing-rewards-and-losses/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/howtos/defining-a-new-model/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/howtos/defining-a-new-task/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/howtos/defining-a-new-training-pipeline/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/projects/babyai_baselines/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/projects/pointnav_baselines/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/projects/objectnav_baselines/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/FAQ/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/CONTRIBUTING/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/LICENSE/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/_constants/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/embodiedai/mapping/mapping_utils/map_builders/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/embodiedai/mapping/mapping_utils/point_cloud_utils/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/embodiedai/mapping/mapping_losses/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/embodiedai/mapping/mapping_models/active_neural_slam/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/embodiedai/preprocessors/resnet/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/embodiedai/sensors/vision_sensors/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/embodiedai/models/basic_models/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/base_abstractions/experiment_config/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/base_abstractions/misc/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/base_abstractions/task/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/base_abstractions/sensor/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/base_abstractions/preprocessor/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/base_abstractions/distributions/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/algorithms/onpolicy_sync/losses/grouped_action_imitation/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/algorithms/onpolicy_sync/losses/imitation/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/algorithms/onpolicy_sync/losses/abstract_loss/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/algorithms/onpolicy_sync/losses/ppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/algorithms/onpolicy_sync/losses/kfac/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/algorithms/onpolicy_sync/losses/a2cacktr/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/algorithms/onpolicy_sync/runner/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/algorithms/onpolicy_sync/policy/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/algorithms/onpolicy_sync/engine/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/algorithms/onpolicy_sync/vector_sampled_tasks/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/algorithms/onpolicy_sync/storage/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/algorithms/offpolicy_sync/losses/abstract_offpolicy_loss/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/utils/model_utils/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/utils/experiment_utils/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/utils/spaces_utils/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/utils/system/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/utils/cacheless_frcnn/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/utils/misc_utils/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/utils/multi_agent_viz_utils/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/utils/viz_utils/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/utils/tensor_utils/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact/utils/cache_utils/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/habitat_plugin/habitat_constants/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/habitat_plugin/habitat_tasks/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/habitat_plugin/habitat_sensors/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/habitat_plugin/habitat_environment/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/habitat_plugin/habitat_preprocessors/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/habitat_plugin/habitat_task_samplers/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/habitat_plugin/scripts/agent_demo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/habitat_plugin/scripts/make_map/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/habitat_plugin/habitat_utils/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/lighthouse_plugin/lighthouse_models/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/lighthouse_plugin/lighthouse_environment/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/lighthouse_plugin/lighthouse_tasks/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/lighthouse_plugin/lighthouse_sensors/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/lighthouse_plugin/lighthouse_util/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/babyai_plugin/babyai_constants/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/babyai_plugin/babyai_models/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/babyai_plugin/scripts/truncate_expert_demos/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/babyai_plugin/scripts/get_instr_length_percentiles/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/babyai_plugin/scripts/download_babyai_expert_demos/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/babyai_plugin/babyai_tasks/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/ithor_plugin/ithor_tasks/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/ithor_plugin/ithor_environment/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/ithor_plugin/ithor_constants/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/ithor_plugin/ithor_util/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/ithor_plugin/ithor_sensors/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/ithor_plugin/scripts/make_objectnav_debug_dataset/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/ithor_plugin/scripts/make_pointnav_debug_dataset/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/ithor_plugin/ithor_viz/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/ithor_plugin/ithor_task_samplers/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/robothor_plugin/robothor_preprocessors/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/robothor_plugin/robothor_task_samplers/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/robothor_plugin/robothor_environment/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/robothor_plugin/robothor_constants/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/robothor_plugin/robothor_distributions/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/robothor_plugin/robothor_models/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/robothor_plugin/robothor_tasks/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/robothor_plugin/scripts/make_objectnav_debug_dataset/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/robothor_plugin/scripts/make_pointnav_debug_dataset/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/robothor_plugin/robothor_sensors/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/robothor_plugin/robothor_viz/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/minigrid_plugin/minigrid_tasks/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/minigrid_plugin/minigrid_environments/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/minigrid_plugin/minigrid_offpolicy/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/minigrid_plugin/minigrid_sensors/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/minigrid_plugin/configs/minigrid_nomemory/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/minigrid_plugin/minigrid_models/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/allenact_plugins/manipulathor_plugin/manipulathor_viz/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/allenact_plugins/manipulathor_plugin/manipulathor_tasks/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/allenact_plugins/manipulathor_plugin/manipulathor_task_samplers/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/allenact_plugins/manipulathor_plugin/manipulathor_constants/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/allenact_plugins/manipulathor_plugin/armpointnav_constants/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/allenact_plugins/manipulathor_plugin/manipulathor_sensors/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/allenact_plugins/manipulathor_plugin/arm_calculation_utils/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/allenact_plugins/manipulathor_plugin/manipulathor_utils/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/allenact_plugins/manipulathor_plugin/manipulathor_environment/</loc>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/gym_plugin/gym_environment/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/gym_plugin/gym_sensors/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/gym_plugin/gym_distributions/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/gym_plugin/gym_models/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/allenact_plugins/gym_plugin/gym_tasks/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/constants/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/gym_baselines/experiments/gym_base/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/gym_baselines/experiments/gym_humanoid_base/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/gym_baselines/experiments/gym_mujoco_base/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/gym_baselines/experiments/gym_humanoid_ddppo/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/gym_baselines/experiments/mujoco/gym_mujoco_swimmer_ddppo/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/gym_baselines/experiments/mujoco/gym_mujoco_reacher_ddppo/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/gym_baselines/experiments/mujoco/gym_mujoco_walker2d_ddppo/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/gym_baselines/experiments/mujoco/gym_mujoco_halfcheetah_ddppo/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/gym_baselines/experiments/mujoco/gym_mujoco_humanoid_ddppo/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/gym_baselines/experiments/mujoco/gym_mujoco_inverteddoublependulum_ddppo/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/gym_baselines/experiments/mujoco/gym_mujoco_ant_ddppo/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/gym_baselines/experiments/mujoco/gym_mujoco_hopper_ddppo/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/gym_baselines/experiments/mujoco/gym_mujoco_invertedpendulum_ddppo/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/gym_baselines/experiments/gym_mujoco_ddppo/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/gym_baselines/models/gym_models/</loc>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_base/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_dagger/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgbd_resnetgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_ddppo_and_gbc/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_depth_resnetgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_rgbd_resnetgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_depth_resnetgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_rgb_resnetgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_base/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/experiments/objectnav_thor_mixin_ddppo_and_gbc/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/experiments/objectnav_thor_base/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/experiments/objectnav_mixin_resnetgru/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/experiments/objectnav_base/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/experiments/objectnav_mixin_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/experiments/objectnav_mixin_dagger/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/objectnav_baselines/models/object_nav_models/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/babyai_baselines/experiments/go_to_local/bc/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/babyai_baselines/experiments/go_to_local/distributed_bc_offpolicy/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/babyai_baselines/experiments/go_to_local/dagger/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/babyai_baselines/experiments/go_to_local/bc_teacher_forcing/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/babyai_baselines/experiments/go_to_local/distributed_bc_teacher_forcing/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/babyai_baselines/experiments/go_to_local/ppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/babyai_baselines/experiments/go_to_local/a2c/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/babyai_baselines/experiments/go_to_local/base/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/babyai_baselines/experiments/go_to_obj/bc/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/babyai_baselines/experiments/go_to_obj/dagger/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/babyai_baselines/experiments/go_to_obj/bc_teacher_forcing/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/babyai_baselines/experiments/go_to_obj/ppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/babyai_baselines/experiments/go_to_obj/a2c/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/babyai_baselines/experiments/go_to_obj/base/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/babyai_baselines/experiments/base/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgbd_simpleconvgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_depth_simpleconvgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_simpleconvgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_simpleconvgru_ddppo_and_gbc/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_base/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgb_simpleconvgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgbd_simpleconvgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_base/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/pointnav_base/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/pointnav_habitat_mixin_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_rgbd_simpleconvgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_depth_simpleconvgru_ddppo_and_gbc/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_rgb_simpleconvgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_base/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_depth_simpleconvgru_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/pointnav_mixin_simpleconvgru/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/pointnav_thor_mixin_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/pointnav_thor_mixin_ddppo_and_gbc/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/experiments/pointnav_thor_base/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/pointnav_baselines/models/point_nav_models/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/tutorials/pointnav_habitat_rgb_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/tutorials/minigrid_offpolicy_tutorial/</loc>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/tutorials/navtopartner_robothor_rgb_ppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/tutorials/pointnav_ithor_rgb_ddppo/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object_viz/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/tutorials/object_nav_ithor_ppo_one_object/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/tutorials/distributed_objectnav_tutorial/</loc>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/projects/tutorials/minigrid_tutorial_conds/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/manipulathor_baselines/armpointnav_baselines/experiments/armpointnav_thor_base/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/manipulathor_baselines/armpointnav_baselines/experiments/armpointnav_base/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/manipulathor_baselines/armpointnav_baselines/experiments/armpointnav_mixin_ddppo/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_no_vision/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_ithor_base/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_depth/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_rgb/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_rgbdepth/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_disjoint_depth/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/manipulathor_baselines/armpointnav_baselines/experiments/armpointnav_mixin_simplegru/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/manipulathor_baselines/armpointnav_baselines/models/arm_pointnav_models/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/manipulathor_baselines/armpointnav_baselines/models/base_models/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/manipulathor_baselines/armpointnav_baselines/models/disjoint_arm_pointnav_models/</loc>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/projects/manipulathor_baselines/armpointnav_baselines/models/manipulathor_net_utils/</loc>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/tests/mapping/test_ai2thor_mapping/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/tests/multiprocessing/test_frozen_attribs/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/tests/utils/test_spaces/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/tests/vision/test_pillow_rescaling/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/tests/sync_algs_cpu/test_to_to_obj_trains/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
+     <changefreq>daily</changefreq>
+    </url><url>
+     <loc>https://allenact.org/api/tests/manipulathor_plugin/test_utils/</loc>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url><url>
      <loc>https://allenact.org/api/tests/hierarchical_policies/test_minigrid_conditional/</loc>
-     <lastmod>2021-06-15</lastmod>
+     <lastmod>2021-09-30</lastmod>
      <changefreq>daily</changefreq>
     </url>
 </urlset>
