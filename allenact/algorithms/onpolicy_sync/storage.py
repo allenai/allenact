@@ -71,6 +71,10 @@ class RolloutStorage(object):
             str, Union[int, torch.Tensor, Dict]
         ] = defaultdict(dict)
 
+        self.permanent_unnarrow_data: DefaultDict[
+            str, Union[int, torch.Tensor, Dict]
+        ] = defaultdict(dict)
+
         self.device = torch.device("cpu")
 
     def create_memory(
@@ -274,33 +278,44 @@ class RolloutStorage(object):
             self.rewards = self.rewards[:, keep_list]
             self.returns = self.returns[:, keep_list]
 
-    def narrow(self):
-        """This function is used by the training engine (in decentralized
-        distributed settings) to temporarily narrow the step dimension in the
-        storage.
+    def narrow(self, num_steps=None):
+        """This function is used by the training engine to temporarily (after
+        one interrupted rollout in decentralized distributed settings, without
+        arguments) or permanently (for a training stage with shorter horizon,
+        with arguments) narrow the step dimension in the storage.
 
         The reverse operation, `unnarrow`, is automatically called by
-        `after_update`.
+        `after_update` (without arguments) or when the rollout length
+        varies in the training pipeline (with arguments).
         """
-        assert len(self.unnarrow_data) == 0, "attempting to narrow narrowed rollouts"
+        unnarrow_data = (
+            self.unnarrow_data if num_steps is None else self.permanent_unnarrow_data
+        )
 
-        if self.step == 0:  # we're actually done
+        assert len(unnarrow_data) == 0, "attempting to narrow narrowed rollouts"
+
+        # Check if we're done
+        if self.step == 0 and num_steps is None:
             get_logger().warning("Called narrow with self.step == 0")
             return
+        elif num_steps is not None and num_steps == self.num_steps:
+            return
+
+        base_length = self.step if num_steps is None else num_steps
 
         for storage_name in ["observations", "memory"]:
             storage: Memory = getattr(self, storage_name)
             for key in storage:
-                self.unnarrow_data[storage_name][key] = storage.tensor(key)
+                unnarrow_data[storage_name][key] = storage.tensor(key)
 
                 if (
                     storage_name == "memory"
                     and self.only_store_first_and_last_in_memory
-                    and self.step > 0
+                    and (self.step > 0 or num_steps is not None)
                 ):
                     length = 2
                 else:
-                    length = self.step + 1
+                    length = base_length + 1
                 storage[key] = (
                     storage.tensor(key).narrow(dim=0, start=0, length=length),
                     storage.sampler_dim(key),
@@ -310,41 +325,51 @@ class RolloutStorage(object):
         to_narrow_to_step_plus_1 = ["prev_actions", "value_preds", "returns", "masks"]
         for name in to_narrow_to_step + to_narrow_to_step_plus_1:
             if getattr(self, name) is not None:
-                self.unnarrow_data[name] = getattr(self, name)
+                unnarrow_data[name] = getattr(self, name)
                 setattr(
                     self,
                     name,
-                    self.unnarrow_data[name].narrow(
+                    unnarrow_data[name].narrow(
                         dim=0,
                         start=0,
-                        length=self.step + (name in to_narrow_to_step_plus_1),
+                        length=base_length + (name in to_narrow_to_step_plus_1),
                     ),
                 )
 
-        self.unnarrow_data["num_steps"] = self.num_steps
-        self.num_steps = self.step
-        self.step = 0  # we just finished a rollout, so we reset it for the next one
+        unnarrow_data["num_steps"] = self.num_steps
+        self.num_steps = base_length
 
-    def unnarrow(self):
-        assert len(self.unnarrow_data) > 0, "attempting to unnarrow unnarrowed rollouts"
+        if num_steps is None:
+            self.step = 0  # we just finished a rollout, so we reset it for the next one
+
+    def unnarrow(self, unnarrow_to_maximum_size=False):
+        """See doc string for the `narrow` method."""
+        unnarrow_data = (
+            self.permanent_unnarrow_data
+            if unnarrow_to_maximum_size
+            else self.unnarrow_data
+        )
+
+        if len(unnarrow_data) == 0:
+            return
 
         for storage_name in ["observations", "memory"]:
             storage: Memory = getattr(self, storage_name)
             for key in storage:
                 storage[key] = (
-                    self.unnarrow_data[storage_name][key],
+                    unnarrow_data[storage_name][key],
                     storage.sampler_dim(key),
                 )
-                self.unnarrow_data[storage_name].pop(key)
+                unnarrow_data[storage_name].pop(key)
 
             # Note that memory can be empty
             assert (
-                storage_name not in self.unnarrow_data
-                or len(self.unnarrow_data[storage_name]) == 0
+                storage_name not in unnarrow_data
+                or len(unnarrow_data[storage_name]) == 0
             ), "unnarrow_data contains {} {}".format(
-                storage_name, self.unnarrow_data[storage_name]
+                storage_name, unnarrow_data[storage_name]
             )
-            self.unnarrow_data.pop(storage_name, None)
+            unnarrow_data.pop(storage_name, None)
 
         for name in [
             "prev_actions",
@@ -355,14 +380,17 @@ class RolloutStorage(object):
             "action_log_probs",
             "rewards",
         ]:
-            if name in self.unnarrow_data:
-                setattr(self, name, self.unnarrow_data[name])
-                self.unnarrow_data.pop(name)
+            if name in unnarrow_data:
+                setattr(self, name, unnarrow_data[name])
+                unnarrow_data.pop(name)
 
-        self.num_steps = self.unnarrow_data["num_steps"]
-        self.unnarrow_data.pop("num_steps")
+        self.num_steps = unnarrow_data["num_steps"]
+        unnarrow_data.pop("num_steps")
 
-        assert len(self.unnarrow_data) == 0
+        assert len(unnarrow_data) == 0
+
+        if num_steps is not None:
+            assert self.num_steps == num_steps
 
     def after_update(self):
         for storage in [self.observations, self.memory]:
@@ -407,10 +435,14 @@ class RolloutStorage(object):
                     + extended_rewards[step]
                 )
 
-    def recurrent_generator(self, advantages: torch.Tensor, num_mini_batch: int):
-        normalized_advantages = (advantages - advantages.mean()) / (
-            advantages.std() + 1e-5
-        )
+    def recurrent_generator(
+        self,
+        advantages: torch.Tensor,
+        adv_mean: torch.Tensor,
+        adv_std: torch.Tensor,
+        num_mini_batch: int,
+    ):
+        normalized_advantages = (advantages - adv_mean) / (adv_std + 1e-5)
 
         num_samplers = self.rewards.shape[1]
         assert num_samplers >= num_mini_batch, (

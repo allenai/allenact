@@ -54,7 +54,6 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
             height=self.CAMERA_HEIGHT,
             continuousMode=True,
             applyActionNoise=self.STOCHASTIC,
-            agentType="stochastic",
             rotateStepDegrees=self.ROTATION_DEGREES,
             gridSize=self.STEP_SIZE,
             snapToGrid=False,

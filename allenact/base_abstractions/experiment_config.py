@@ -39,6 +39,7 @@ class MachineParams(object):
         ] = None,
         visualizer: Optional[Union[VizSuite, Builder[VizSuite]]] = None,
         gpu_ids: Union[int, Sequence[int]] = None,
+        local_worker_ids: Optional[List[int]] = None,
     ):
         assert (
             gpu_ids is None or devices is None
@@ -69,6 +70,17 @@ class MachineParams(object):
 
         self._sensor_preprocessor_graph_cached: Optional[SensorPreprocessorGraph] = None
         self._visualizer_cached: Optional[VizSuite] = None
+
+        self.local_worker_ids: Optional[List[int]] = None
+        self.set_local_worker_ids(local_worker_ids)
+
+    def set_local_worker_ids(self, local_worker_ids: Optional[List[int]]):
+        self.local_worker_ids = local_worker_ids or list(range(len(self.devices)))
+
+        assert all(0 <= id < len(self.devices) for id in self.local_worker_ids), (
+            f"Passed {len(self.local_worker_ids)} local worker ids {self.local_worker_ids}"
+            f" for {len(self.devices)} total devices (workers)"
+        )
 
     @classmethod
     def instance_from(
@@ -165,7 +177,7 @@ class FrozenClassVariables(abc.ABCMeta):
                 "Changing the values of class-level attributes is disabled in ExperimentConfig classes.\n"
                 "This is to prevent problems that can occur otherwise when using multiprocessing.\n"
                 "If you wish to change the value of a configuration, please do so for an instance of that"
-                "configuration.\nTriggered by attempting to modify {}".format(
+                " configuration.\nTriggered by attempting to modify {}".format(
                     cls.__name__
                 )
             )

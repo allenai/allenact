@@ -1,3 +1,5 @@
+import os
+from collections import defaultdict
 import abc
 import json
 from typing import (
@@ -18,6 +20,15 @@ import numpy as np
 
 from allenact.utils.experiment_utils import Builder
 from allenact.utils.tensor_utils import SummaryWriter, tile_images, process_video
+
+try:
+    # Tensorflow not installed for testing
+    from tensorflow.core.util import event_pb2
+    from tensorflow.python.lib.io import tf_record
+
+    _TF_AVAILABLE = True
+except ImportError as _:
+    _TF_AVAILABLE = False
 
 try:
     # When debugging we don't want to use the interactive version of matplotlib
@@ -150,7 +161,7 @@ class TrajectoryViz(AbstractViz):
         label: str = "trajectory",
         figsize: Tuple[float, float] = (2, 2),
         fontsize: float = 5,
-        start_marker_shape: str = "$\spadesuit$",
+        start_marker_shape: str = r"$\spadesuit$",
         start_marker_scale: int = 100,
         **other_base_kwargs,
     ):
@@ -1015,3 +1026,208 @@ class VizSuite(AbstractViz):
                     exc_info=sys.exc_info(),
                 )
                 get_logger().error(f"Dropped {v.label} viz")
+
+
+class TensorboardSummarizer:
+    """Assumption: tensorboard tags/labels include a valid/test/train substr indicating the data modality"""
+
+    def __init__(
+        self,
+        experiment_to_train_events_paths_map: Dict[str, Sequence[str]],
+        experiment_to_test_events_paths_map: Dict[str, Sequence[str]],
+        eval_min_mega_steps: Optional[Sequence[float]] = None,
+        tensorboard_tags_to_labels_map: Optional[Dict[str, str]] = None,
+        tensorboard_output_summary_folder: str = "tensorboard_plotter_output",
+    ):
+        if not _TF_AVAILABLE:
+            raise ImportError(
+                "Please install tensorflow e.g. with `pip install tensorflow` to enable TensorboardSummarizer"
+            )
+
+        self.experiment_to_train_events_paths_map = experiment_to_train_events_paths_map
+        self.experiment_to_test_events_paths_map = experiment_to_test_events_paths_map
+        train_experiments = set(list(experiment_to_train_events_paths_map.keys()))
+        test_experiments = set(list(experiment_to_test_events_paths_map.keys()))
+        assert (train_experiments - test_experiments) in [set(), train_experiments,], (
+            f"`experiment_to_test_events_paths_map` must have identical keys (experiment names) to those"
+            f" in `experiment_to_train_events_paths_map`, or be empty."
+            f" Got {train_experiments} train keys and {test_experiments} test keys."
+        )
+
+        self.eval_min_mega_steps = eval_min_mega_steps
+        self.tensorboard_tags_to_labels_map = tensorboard_tags_to_labels_map
+        if self.tensorboard_tags_to_labels_map is not None:
+            for tag, label in self.tensorboard_tags_to_labels_map.items():
+                assert ("valid" in label) + ("train" in label) + (
+                    "test" in label
+                ) == 1, (
+                    f"One (and only one) of {'train', 'valid', 'test'} must be part of the label for"
+                    f" tag {tag} ({label} given)."
+                )
+        self.tensorboard_output_summary_folder = tensorboard_output_summary_folder
+
+        self.train_data = self._read_tensorflow_experiment_events(
+            self.experiment_to_train_events_paths_map
+        )
+        self.test_data = self._read_tensorflow_experiment_events(
+            self.experiment_to_test_events_paths_map
+        )
+
+    def _read_tensorflow_experiment_events(
+        self, experiment_to_events_paths_map, skip_map=False
+    ):
+        def my_summary_iterator(path):
+            try:
+                for r in tf_record.tf_record_iterator(path):
+                    yield event_pb2.Event.FromString(r)
+            except IOError:
+                get_logger().debug(f"IOError for path {path}")
+                return None
+
+        collected_data = {}
+        for experiment_name, path_list in experiment_to_events_paths_map.items():
+            experiment_data = defaultdict(list)
+            for filename_path in path_list:
+                for event in my_summary_iterator(filename_path):
+                    if event is None:
+                        break
+                    for value in event.summary.value:
+                        if self.tensorboard_tags_to_labels_map is None or skip_map:
+                            label = value.tag
+                        elif value.tag in self.tensorboard_tags_to_labels_map:
+                            label = self.tensorboard_tags_to_labels_map[value.tag]
+                        else:
+                            continue
+                        experiment_data[label].append(
+                            dict(
+                                score=value.simple_value,
+                                time=event.wall_time,
+                                steps=event.step,
+                            )
+                        )
+            collected_data[experiment_name] = experiment_data
+
+        return collected_data
+
+    def _eval_vs_train_time_steps(self, eval_data, train_data):
+        min_mega_steps = self.eval_min_mega_steps
+        if min_mega_steps is None:
+            min_mega_steps = [(item["steps"] - 1) / 1e6 for item in eval_data]
+
+        scores, times, steps = [], [], []
+
+        i, t, last_i = 0, 0, -1
+        while len(times) < len(min_mega_steps):
+            while eval_data[i]["steps"] / min_mega_steps[len(times)] / 1e6 < 1:
+                i += 1
+            while train_data[t]["steps"] / min_mega_steps[len(times)] / 1e6 < 1:
+                t += 1
+
+            # step might be missing in valid! (and would duplicate future value at previous steps!)
+            # solution: move forward last entry's time if no change in i (instead of new entry)
+            if i == last_i:
+                times[-1] = train_data[t]["time"]
+            else:
+                scores.append(eval_data[i]["score"])
+                times.append(train_data[t]["time"])
+                steps.append(eval_data[i]["steps"])
+
+            last_i = i
+
+        scores.insert(0, train_data[0]["score"])
+        times.insert(0, train_data[0]["time"])
+        steps.insert(0, 0)
+
+        return scores, times, steps
+
+    def _train_vs_time_steps(self, train_data):
+        last_eval_step = (
+            self.eval_min_mega_steps[-1] * 1e6
+            if self.eval_min_mega_steps is not None
+            else float("inf")
+        )
+
+        scores = [train_data[0]["score"]]
+        times = [train_data[0]["time"]]
+        steps = [train_data[0]["steps"]]
+
+        t = 1
+        while steps[-1] < last_eval_step and t < len(train_data):
+            scores.append(train_data[t]["score"])
+            times.append(train_data[t]["time"])
+            steps.append(train_data[t]["steps"])
+            t += 1
+
+        return scores, times, steps
+
+    def make_tensorboard_summary(self):
+        all_experiments = list(self.experiment_to_train_events_paths_map.keys())
+
+        for experiment_name in all_experiments:
+            summary_writer = SummaryWriter(
+                os.path.join(self.tensorboard_output_summary_folder, experiment_name)
+            )
+
+            test_labels = (
+                sorted(list(self.test_data[experiment_name].keys()))
+                if len(self.test_data) > 0
+                else []
+            )
+            for test_label in test_labels:
+                train_label = test_label.replace("valid", "test").replace(
+                    "test", "train"
+                )
+                if train_label not in self.train_data[experiment_name]:
+                    print(
+                        f"Missing matching 'train' label {train_label} for eval label {test_label}. Skipping"
+                    )
+                    continue
+                train_data = self.train_data[experiment_name][train_label]
+                test_data = self.test_data[experiment_name][test_label]
+                scores, times, steps = self._eval_vs_train_time_steps(
+                    test_data, train_data
+                )
+                for score, t, step in zip(scores, times, steps):
+                    summary_writer.add_scalar(
+                        test_label, score, global_step=step, walltime=t
+                    )
+
+            valid_labels = sorted(
+                [
+                    key
+                    for key in list(self.train_data[experiment_name].keys())
+                    if "valid" in key
+                ]
+            )
+            for valid_label in valid_labels:
+                train_label = valid_label.replace("valid", "train")
+                assert (
+                    train_label in self.train_data[experiment_name]
+                ), f"Missing matching 'train' label {train_label} for valid label {valid_label}"
+                train_data = self.train_data[experiment_name][train_label]
+                valid_data = self.train_data[experiment_name][valid_label]
+                scores, times, steps = self._eval_vs_train_time_steps(
+                    valid_data, train_data
+                )
+                for score, t, step in zip(scores, times, steps):
+                    summary_writer.add_scalar(
+                        valid_label, score, global_step=step, walltime=t
+                    )
+
+            train_labels = sorted(
+                [
+                    key
+                    for key in list(self.train_data[experiment_name].keys())
+                    if "train" in key
+                ]
+            )
+            for train_label in train_labels:
+                scores, times, steps = self._train_vs_time_steps(
+                    self.train_data[experiment_name][train_label]
+                )
+                for score, t, step in zip(scores, times, steps):
+                    summary_writer.add_scalar(
+                        train_label, score, global_step=step, walltime=t
+                    )
+
+            summary_writer.close()

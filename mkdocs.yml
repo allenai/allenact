@@ -43,6 +43,7 @@ nav:
   - Using a pre-trained model: tutorials/running-inference-on-a-pretrained-model.md
   - Off-policy training: tutorials/offpolicy-tutorial.md
   - OpenAI gym for continuous control: tutorials/gym-tutorial.md
+  - Multi-node ObjectNav training: tutorials/distributed-objectnav-tutorial.md
 #  - IL to RL with pipelines: tutorials/training-pipelines.md
 - HowTos:
   - Define an experiment: howtos/defining-an-experiment.md
@@ -171,6 +172,16 @@ nav:
       - configs:
         - minigrid_nomemory: api/allenact_plugins/minigrid_plugin/configs/minigrid_nomemory.md
       - minigrid_models: api/allenact_plugins/minigrid_plugin/minigrid_models.md
+    - manipulathor_plugin:
+      - manipulathor_viz: api/allenact_plugins/manipulathor_plugin/manipulathor_viz.md
+      - manipulathor_tasks: api/allenact_plugins/manipulathor_plugin/manipulathor_tasks.md
+      - manipulathor_task_samplers: api/allenact_plugins/manipulathor_plugin/manipulathor_task_samplers.md
+      - manipulathor_constants: api/allenact_plugins/manipulathor_plugin/manipulathor_constants.md
+      - armpointnav_constants: api/allenact_plugins/manipulathor_plugin/armpointnav_constants.md
+      - manipulathor_sensors: api/allenact_plugins/manipulathor_plugin/manipulathor_sensors.md
+      - arm_calculation_utils: api/allenact_plugins/manipulathor_plugin/arm_calculation_utils.md
+      - manipulathor_utils: api/allenact_plugins/manipulathor_plugin/manipulathor_utils.md
+      - manipulathor_environment: api/allenact_plugins/manipulathor_plugin/manipulathor_environment.md
     - gym_plugin:
       - gym_environment: api/allenact_plugins/gym_plugin/gym_environment.md
       - gym_sensors: api/allenact_plugins/gym_plugin/gym_sensors.md
@@ -179,6 +190,25 @@ nav:
       - gym_tasks: api/allenact_plugins/gym_plugin/gym_tasks.md
   - constants: api/constants.md
   - projects:
+    - gym_baselines:
+      - experiments:
+        - gym_base: api/projects/gym_baselines/experiments/gym_base.md
+        - gym_humanoid_base: api/projects/gym_baselines/experiments/gym_humanoid_base.md
+        - gym_mujoco_base: api/projects/gym_baselines/experiments/gym_mujoco_base.md
+        - gym_humanoid_ddppo: api/projects/gym_baselines/experiments/gym_humanoid_ddppo.md
+        - mujoco:
+          - gym_mujoco_swimmer_ddppo: api/projects/gym_baselines/experiments/mujoco/gym_mujoco_swimmer_ddppo.md
+          - gym_mujoco_reacher_ddppo: api/projects/gym_baselines/experiments/mujoco/gym_mujoco_reacher_ddppo.md
+          - gym_mujoco_walker2d_ddppo: api/projects/gym_baselines/experiments/mujoco/gym_mujoco_walker2d_ddppo.md
+          - gym_mujoco_halfcheetah_ddppo: api/projects/gym_baselines/experiments/mujoco/gym_mujoco_halfcheetah_ddppo.md
+          - gym_mujoco_humanoid_ddppo: api/projects/gym_baselines/experiments/mujoco/gym_mujoco_humanoid_ddppo.md
+          - gym_mujoco_inverteddoublependulum_ddppo: api/projects/gym_baselines/experiments/mujoco/gym_mujoco_inverteddoublependulum_ddppo.md
+          - gym_mujoco_ant_ddppo: api/projects/gym_baselines/experiments/mujoco/gym_mujoco_ant_ddppo.md
+          - gym_mujoco_hopper_ddppo: api/projects/gym_baselines/experiments/mujoco/gym_mujoco_hopper_ddppo.md
+          - gym_mujoco_invertedpendulum_ddppo: api/projects/gym_baselines/experiments/mujoco/gym_mujoco_invertedpendulum_ddppo.md
+        - gym_mujoco_ddppo: api/projects/gym_baselines/experiments/gym_mujoco_ddppo.md
+      - models:
+        - gym_models: api/projects/gym_baselines/models/gym_models.md
     - objectnav_baselines:
       - experiments:
         - robothor:
@@ -259,6 +289,25 @@ nav:
       - object_nav_ithor_dagger_then_ppo_one_object_viz: api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object_viz.md
       - object_nav_ithor_ppo_one_object: api/projects/tutorials/object_nav_ithor_ppo_one_object.md
       - minigrid_tutorial_conds: api/projects/tutorials/minigrid_tutorial_conds.md
+    - manipulathor_baselines:
+      - armpointnav_baselines:
+        - experiments:
+          - armpointnav_thor_base: api/projects/manipulathor_baselines/armpointnav_baselines/experiments/armpointnav_thor_base.md
+          - armpointnav_base: api/projects/manipulathor_baselines/armpointnav_baselines/experiments/armpointnav_base.md
+          - armpointnav_mixin_ddppo: api/projects/manipulathor_baselines/armpointnav_baselines/experiments/armpointnav_mixin_ddppo.md
+          - ithor:
+            - armpointnav_no_vision: api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_no_vision.md
+            - armpointnav_ithor_base: api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_ithor_base.md
+            - armpointnav_depth: api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_depth.md
+            - armpointnav_rgb: api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_rgb.md
+            - armpointnav_rgbdepth: api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_rgbdepth.md
+            - armpointnav_disjoint_depth: api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_disjoint_depth.md
+          - armpointnav_mixin_simplegru: api/projects/manipulathor_baselines/armpointnav_baselines/experiments/armpointnav_mixin_simplegru.md
+        - models:
+          - arm_pointnav_models: api/projects/manipulathor_baselines/armpointnav_baselines/models/arm_pointnav_models.md
+          - base_models: api/projects/manipulathor_baselines/armpointnav_baselines/models/base_models.md
+          - disjoint_arm_pointnav_models: api/projects/manipulathor_baselines/armpointnav_baselines/models/disjoint_arm_pointnav_models.md
+          - manipulathor_net_utils: api/projects/manipulathor_baselines/armpointnav_baselines/models/manipulathor_net_utils.md
   - tests:
     - mapping:
       - test_ai2thor_mapping: api/tests/mapping/test_ai2thor_mapping.md
@@ -270,6 +319,8 @@ nav:
       - test_pillow_rescaling: api/tests/vision/test_pillow_rescaling.md
     - sync_algs_cpu:
       - test_to_to_obj_trains: api/tests/sync_algs_cpu/test_to_to_obj_trains.md
+    - manipulathor_plugin:
+      - test_utils: api/tests/manipulathor_plugin/test_utils.md
     - hierarchical_policies:
       - test_minigrid_conditional: api/tests/hierarchical_policies/test_minigrid_conditional.md
 markdown_extensions:

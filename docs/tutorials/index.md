@@ -78,3 +78,31 @@ This tutorial presents:
 * A continuous control example with multiple actors using PPO.
 
 [Follow the tutorial here.](../tutorials/gym-tutorial.md)
+
+
+<!---
+## [OpenAI gym for MuJoCo](../tutorials/gym-mujoco-tutorial.md)
+
+In this tutorial, we train a four-legged creature,
+"ant", to walk forward as fast as possible in [MuJoCo](http://www.mujoco.org/).
+
+[Follow the tutorial here.](../tutorials/gym-mujoco-tutorial.md)
+--->
+
+
+## [Multi-node training for RoboTHOR ObjectNav](../tutorials/distributed-objectnav-tutorial.md)
+
+![training speedup](../img/multinode_training.jpg)
+
+We train an agent to navigate to an object in a fraction of the time
+required for training in one node by distributing training across multiple
+nodes. 
+
+This tutorial presents:
+
+1. The AllenAct API for training across multiple nodes, as well as
+experimental scripts for distributed configuration, training start
+and termination, and remote command execution.
+2. The introduction of the headless mode for [AI2-THOR](https://ai2thor.allenai.org/) in `AllenaAct`.
+
+[Follow the tutorial here.](../tutorials/distributed-objectnav-tutorial.md)

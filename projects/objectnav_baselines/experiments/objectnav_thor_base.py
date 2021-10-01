@@ -28,17 +28,18 @@ from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBas
 import ai2thor
 from packaging import version
 
+
 if ai2thor.__version__ not in ["0.0.1", None] and version.parse(
     ai2thor.__version__
-) < version.parse("2.7.2"):
+) < version.parse("3.2.0"):
     raise ImportError(
         "To run the AI2-THOR ObjectNav baseline experiments you must use"
-        " ai2thor version 2.7.1 or higher."
+        " ai2thor version 3.2.0 or higher."
     )
 
 
 class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
-    """The base config for all iTHOR PointNav experiments."""
+    """The base config for all AI2-THOR ObjectNav experiments."""
 
     DEFAULT_NUM_TRAIN_PROCESSES: Optional[int] = None
     DEFAULT_TRAIN_GPU_IDS = tuple(range(torch.cuda.device_count()))
@@ -49,17 +50,22 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
     VAL_DATASET_DIR: Optional[str] = None
     TEST_DATASET_DIR: Optional[str] = None
 
+    AGENT_MODE = "default"
+
     TARGET_TYPES: Optional[Sequence[str]] = None
 
     THOR_COMMIT_ID: Optional[str] = None
+    THOR_IS_HEADLESS: bool = False
 
     def __init__(
         self,
         num_train_processes: Optional[int] = None,
+        num_test_processes: Optional[int] = None,
+        test_on_validation: bool = False,
         train_gpu_ids: Optional[Sequence[int]] = None,
         val_gpu_ids: Optional[Sequence[int]] = None,
         test_gpu_ids: Optional[Sequence[int]] = None,
-        eval_on_val_set: bool = False,
+        randomize_train_materials: bool = False,
     ):
         super().__init__()
 
@@ -69,12 +75,16 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         self.num_train_processes = v_or_default(
             num_train_processes, self.DEFAULT_NUM_TRAIN_PROCESSES
         )
+        self.num_test_processes = v_or_default(
+            num_test_processes, (10 if torch.cuda.is_available() else 1)
+        )
+        self.test_on_validation = test_on_validation
         self.train_gpu_ids = v_or_default(train_gpu_ids, self.DEFAULT_TRAIN_GPU_IDS)
         self.val_gpu_ids = v_or_default(val_gpu_ids, self.DEFAULT_VALID_GPU_IDS)
         self.test_gpu_ids = v_or_default(test_gpu_ids, self.DEFAULT_TEST_GPU_IDS)
-        self.eval_on_val_set = eval_on_val_set
 
         self.sampler_devices = self.train_gpu_ids
+        self.randomize_train_materials = randomize_train_materials
 
     @classmethod
     def env_args(cls):
@@ -86,12 +96,11 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
             commit_id=cls.THOR_COMMIT_ID,
             continuousMode=True,
             applyActionNoise=cls.STOCHASTIC,
-            agentType="stochastic",
             rotateStepDegrees=cls.ROTATION_DEGREES,
             visibilityDistance=cls.VISIBILITY_DISTANCE,
             gridSize=cls.STEP_SIZE,
             snapToGrid=False,
-            agentMode="locobot",
+            agentMode=cls.AGENT_MODE,
             fieldOfView=horizontal_to_vertical_fov(
                 horizontal_fov_in_degrees=cls.HORIZONTAL_FIELD_OF_VIEW,
                 width=cls.CAMERA_WIDTH,
@@ -129,7 +138,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
                 else self.test_gpu_ids
             )
             nprocesses = evenly_distribute_count_into_bins(
-                (10 if torch.cuda.is_available() else 1), max(len(devices), 1)
+                self.num_test_processes, max(len(devices), 1)
             )
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
@@ -213,19 +222,26 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
 
         inds = self._partition_inds(len(scenes), total_processes)
 
-        x_display: Optional[str] = None
-        if platform.system() == "Linux":
-            x_displays = get_open_x_displays(throw_error_if_empty=True)
+        if not self.THOR_IS_HEADLESS:
+            x_display: Optional[str] = None
+            if platform.system() == "Linux":
+                x_displays = get_open_x_displays(throw_error_if_empty=True)
 
-            if len([d for d in devices if d != torch.device("cpu")]) > len(x_displays):
-                get_logger().warning(
-                    f"More GPU devices found than X-displays (devices: `{x_displays}`, x_displays: `{x_displays}`)."
-                    f" This is not necessarily a bad thing but may mean that you're not using GPU memory as"
-                    f" efficiently as possible. Consider following the instructions here:"
-                    f" https://allenact.org/installation/installation-framework/#installation-of-ithor-ithor-plugin"
-                    f" describing how to start an X-display on every GPU."
-                )
-            x_display = x_displays[process_ind % len(x_displays)]
+                if len([d for d in devices if d != torch.device("cpu")]) > len(
+                    x_displays
+                ):
+                    get_logger().warning(
+                        f"More GPU devices found than X-displays (devices: `{x_displays}`, x_displays: `{x_displays}`)."
+                        f" This is not necessarily a bad thing but may mean that you're not using GPU memory as"
+                        f" efficiently as possible. Consider following the instructions here:"
+                        f" https://allenact.org/installation/installation-framework/#installation-of-ithor-ithor-plugin"
+                        f" describing how to start an X-display on every GPU."
+                    )
+                x_display = x_displays[process_ind % len(x_displays)]
+
+            device_dict = dict(x_display=x_display)
+        else:
+            device_dict = dict(gpu_device=devices[process_ind % len(devices)])
 
         return {
             "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],
@@ -242,7 +258,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG,
-            "env_args": {**self.env_args(), "x_display": x_display,},
+            "env_args": {**self.env_args(), **device_dict},
         }
 
     def train_task_sampler_args(
@@ -265,6 +281,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         res["scene_directory"] = self.TRAIN_DATASET_DIR
         res["loop_dataset"] = True
         res["allow_flipping"] = True
+        res["randomize_materials_in_training"] = self.randomize_train_materials
         return res
 
     def valid_task_sampler_args(
@@ -297,10 +314,11 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        if self.eval_on_val_set or self.TEST_DATASET_DIR is None:
-            if self.eval_on_val_set:
+
+        if self.test_on_validation or self.TEST_DATASET_DIR is None:
+            if not self.test_on_validation:
                 get_logger().warning(
-                    "`eval_on_val_set` is set to `True` and thus we will run evaluation on the validation set instead."
+                    "`test_on_validation` is set to `True` and thus we will run evaluation on the validation set instead."
                     " Be careful as the saved metrics json and tensorboard files **will still be labeled as"
                     " 'test' rather than 'valid'**."
                 )
