@@ -11,7 +11,7 @@ from projects.objectnav_baselines.experiments.objectnav_mixin_resnetgru import (
 )
 
 
-class ObjectNaviThorRGBPPOExperimentConfig(
+class ObjectNaviThorDepthPPOExperimentConfig(
     ObjectNaviThorBaseConfig, ObjectNavMixInPPOConfig, ObjectNavMixInResNetGRUConfig,
 ):
     """An Object Navigation experiment configuration in iThor with Depth

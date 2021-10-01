@@ -3,6 +3,7 @@ import glob
 import math
 import pickle
 import random
+import warnings
 from typing import Any, Optional, Dict, List, Union, Tuple, Collection
 
 from ai2thor.fifo_server import FifoServer
@@ -29,8 +30,8 @@ class RoboThorEnvironment:
 
     # Attributes
 
-    controller : The AI2THOR controller.
-    config : The AI2THOR controller configuration
+    controller : The AI2-THOR controller.
+    config : The AI2-THOR controller configuration
     """
 
     def __init__(self, all_metadata_available: bool = True, **kwargs):
@@ -38,7 +39,6 @@ class RoboThorEnvironment:
             rotateStepDegrees=30.0,
             visibilityDistance=1.0,
             gridSize=0.25,
-            agentType="stochastic",
             continuousMode=True,
             snapToGrid=False,
             agentMode="locobot",
@@ -51,8 +51,16 @@ class RoboThorEnvironment:
         if "agentCount" in kwargs:
             assert kwargs["agentCount"] > 0
 
-        recursive_update(self.config, {**kwargs, "agentMode": "locobot"})
+        kwargs["agentMode"] = kwargs.get("agentMode", "locobot")
+        if kwargs["agentMode"] not in ["bot", "locobot"]:
+            warnings.warn(
+                f"The RoboTHOR environment has not been tested using"
+                f" an agent of mode '{kwargs['agentMode']}'."
+            )
+
+        recursive_update(self.config, kwargs)
         self.controller = Controller(**self.config,)
+
         self.all_metadata_available = all_metadata_available
 
         self.scene_to_reachable_positions: Optional[Dict[str, Any]] = None
@@ -521,7 +529,6 @@ class RoboThorCachedEnvironment:
             rotateStepDegrees=30.0,
             visibilityDistance=1.0,
             gridSize=0.25,
-            # agentType="stochastic",
             continuousMode=True,
             snapToGrid=False,
             agentMode="locobot",

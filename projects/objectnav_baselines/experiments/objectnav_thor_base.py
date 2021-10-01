@@ -28,19 +28,18 @@ from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBas
 import ai2thor
 from packaging import version
 
-if (
-    ai2thor.__version__ not in ["0.0.1", None]
-    and len(ai2thor.__version__.split(".")) == 3
-    and version.parse(ai2thor.__version__) < version.parse("2.7.2")
-):
+
+if ai2thor.__version__ not in ["0.0.1", None] and version.parse(
+    ai2thor.__version__
+) < version.parse("3.2.0"):
     raise ImportError(
         "To run the AI2-THOR ObjectNav baseline experiments you must use"
-        " ai2thor version 2.7.1 or higher."
+        " ai2thor version 3.2.0 or higher."
     )
 
 
 class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
-    """The base config for all iTHOR PointNav experiments."""
+    """The base config for all AI2-THOR ObjectNav experiments."""
 
     DEFAULT_NUM_TRAIN_PROCESSES: Optional[int] = None
     DEFAULT_TRAIN_GPU_IDS = tuple(range(torch.cuda.device_count()))
@@ -51,6 +50,8 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
     VAL_DATASET_DIR: Optional[str] = None
     TEST_DATASET_DIR: Optional[str] = None
 
+    AGENT_MODE = "default"
+
     TARGET_TYPES: Optional[Sequence[str]] = None
 
     THOR_COMMIT_ID: Optional[str] = None
@@ -59,9 +60,12 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
     def __init__(
         self,
         num_train_processes: Optional[int] = None,
+        num_test_processes: Optional[int] = None,
+        test_on_validation: bool = False,
         train_gpu_ids: Optional[Sequence[int]] = None,
         val_gpu_ids: Optional[Sequence[int]] = None,
         test_gpu_ids: Optional[Sequence[int]] = None,
+        randomize_train_materials: bool = False,
     ):
         super().__init__()
 
@@ -71,11 +75,16 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         self.num_train_processes = v_or_default(
             num_train_processes, self.DEFAULT_NUM_TRAIN_PROCESSES
         )
+        self.num_test_processes = v_or_default(
+            num_test_processes, (10 if torch.cuda.is_available() else 1)
+        )
+        self.test_on_validation = test_on_validation
         self.train_gpu_ids = v_or_default(train_gpu_ids, self.DEFAULT_TRAIN_GPU_IDS)
         self.val_gpu_ids = v_or_default(val_gpu_ids, self.DEFAULT_VALID_GPU_IDS)
         self.test_gpu_ids = v_or_default(test_gpu_ids, self.DEFAULT_TEST_GPU_IDS)
 
         self.sampler_devices = self.train_gpu_ids
+        self.randomize_train_materials = randomize_train_materials
 
     @classmethod
     def env_args(cls):
@@ -87,12 +96,11 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
             commit_id=cls.THOR_COMMIT_ID,
             continuousMode=True,
             applyActionNoise=cls.STOCHASTIC,
-            agentType="stochastic",
             rotateStepDegrees=cls.ROTATION_DEGREES,
             visibilityDistance=cls.VISIBILITY_DISTANCE,
             gridSize=cls.STEP_SIZE,
             snapToGrid=False,
-            agentMode="locobot",
+            agentMode=cls.AGENT_MODE,
             fieldOfView=horizontal_to_vertical_fov(
                 horizontal_fov_in_degrees=cls.HORIZONTAL_FIELD_OF_VIEW,
                 width=cls.CAMERA_WIDTH,
@@ -124,11 +132,13 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
                 else self.val_gpu_ids
             )
         elif mode == "test":
-            nprocesses = 10 if torch.cuda.is_available() else 1
             devices = (
                 [torch.device("cpu")]
                 if not torch.cuda.is_available()
                 else self.test_gpu_ids
+            )
+            nprocesses = evenly_distribute_count_into_bins(
+                self.num_test_processes, max(len(devices), 1)
             )
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
@@ -271,6 +281,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         res["scene_directory"] = self.TRAIN_DATASET_DIR
         res["loop_dataset"] = True
         res["allow_flipping"] = True
+        res["randomize_materials_in_training"] = self.randomize_train_materials
         return res
 
     def valid_task_sampler_args(
@@ -303,10 +314,15 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        if self.TEST_DATASET_DIR is None:
-            get_logger().warning(
-                "No test dataset dir detected, running test on validation set instead."
-            )
+        if self.test_on_validation or self.TEST_DATASET_DIR is None:
+            if not self.test_on_validation:
+                get_logger().warning(
+                    "No test dataset dir detected, running test on validation set instead."
+                )
+            else:
+                get_logger().info(
+                    "`test_on_validation` was `True``, running test on validation set."
+                )
             return self.valid_task_sampler_args(
                 process_ind=process_ind,
                 total_processes=total_processes,

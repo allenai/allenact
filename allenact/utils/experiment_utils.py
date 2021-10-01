@@ -553,9 +553,11 @@ class PipelineStage(TrainingSettings):
 
     def __init__(
         self,
+        *,  # Disables positional arguments. Please provide arguments as keyword arguments.
         loss_names: List[str],
         max_stage_steps: Union[int, Callable],
         loss_weights: Optional[Sequence[float]] = None,
+        loss_update_repeats: Optional[Sequence[int]] = None,
         teacher_forcing: Optional[LinearDecay] = None,
         offpolicy_component: Optional[OffPolicyPipelineComponent] = None,
         early_stopping_criterion: Optional[EarlyStoppingCriterion] = None,
@@ -570,18 +572,28 @@ class PipelineStage(TrainingSettings):
         save_interval: Optional[int] = None,
         metric_accumulate_interval: Optional[int] = None,
     ):
-        all_vars = prepare_locals_for_super(locals())
+        self._update_repeats: Optional[int] = None
 
         # Populate TrainingSettings members
-        super().__init__(**all_vars)
+        super().__init__(**prepare_locals_for_super(locals()))
 
-        self.loss_names = all_vars.pop("loss_names")
-        self.max_stage_steps = all_vars.pop("max_stage_steps")
+        self.loss_names = loss_names
+        self.max_stage_steps = max_stage_steps
 
-        self.loss_weights = all_vars.pop("loss_weights")
-        self.teacher_forcing = all_vars.pop("teacher_forcing")
-        self.offpolicy_component = all_vars.pop("offpolicy_component")
-        self.early_stopping_criterion = all_vars.pop("early_stopping_criterion")
+        self.loss_weights = loss_weights
+        self.loss_update_repeats = loss_update_repeats
+
+        assert self.loss_weights is None or len(self.loss_weights) == len(
+            self.loss_names
+        )
+        assert self.loss_update_repeats is None or (
+            len(self.loss_update_repeats) == len(self.loss_names)
+            and self._update_repeats is None
+        )
+
+        self.teacher_forcing = teacher_forcing
+        self.offpolicy_component = offpolicy_component
+        self.early_stopping_criterion = early_stopping_criterion
 
         self.steps_taken_in_stage: int = 0
         self.rollout_count = 0
@@ -589,6 +601,7 @@ class PipelineStage(TrainingSettings):
 
         self.named_losses: Optional[Dict[str, AbstractActorCriticLoss]] = None
         self._named_loss_weights: Optional[Dict[str, float]] = None
+        self._named_loss_update_repeats: Optional[Dict[str, float]] = None
 
         self.offpolicy_memory = Memory()
         self.offpolicy_epochs: Optional[int] = None
@@ -597,11 +610,38 @@ class PipelineStage(TrainingSettings):
         self.offpolicy_steps_taken_in_stage: int = 0
 
     @property
+    def update_repeats(self) -> Optional[int]:
+        if self._update_repeats is None:
+            if self.loss_update_repeats is None:
+                return None
+            return max(self.loss_update_repeats)
+        else:
+            return self._update_repeats
+
+    @update_repeats.setter
+    def update_repeats(self, val: Optional[int]):
+        self._update_repeats = val
+
+    @property
     def is_complete(self):
         return (
             self.early_stopping_criterion_met
             or self.steps_taken_in_stage >= self.max_stage_steps
         )
+
+    @property
+    def named_loss_update_repeats(self):
+        if self._named_loss_update_repeats is None:
+            loss_update_repeats = (
+                self.loss_update_repeats
+                if self.loss_update_repeats is not None
+                else [None] * len(self.loss_names)
+            )
+            self._named_loss_update_repeats = {
+                name: weight
+                for name, weight in zip(self.loss_names, loss_update_repeats)
+            }
+        return self._named_loss_update_repeats
 
     @property
     def named_loss_weights(self):
@@ -670,7 +710,7 @@ class TrainingPipeline(TrainingSettings):
         pipeline_stages: List[PipelineStage],
         optimizer_builder: Builder[optim.Optimizer],  # type: ignore
         num_mini_batch: int,
-        update_repeats: int,
+        update_repeats: Optional[int],
         max_grad_norm: float,
         num_steps: int,
         gamma: float,
@@ -759,7 +799,7 @@ class TrainingPipeline(TrainingSettings):
             return None
         return self.pipeline_stages.index(self.current_stage)
 
-    def before_rollout(self, train_metrics: Optional[ScalarMeanTracker] = None):
+    def before_rollout(self, train_metrics: Optional[ScalarMeanTracker] = None) -> bool:
         if (
             train_metrics is not None
             and self.current_stage.early_stopping_criterion is not None
@@ -774,7 +814,9 @@ class TrainingPipeline(TrainingSettings):
                 f"Early stopping criterion met after {self.total_steps} total steps "
                 f"({self.current_stage.steps_taken_in_stage} in current stage, stage index {self.current_stage_index})."
             )
-        self._refresh_current_stage(force_stage_search_from_start=False)
+        return self.current_stage is not self._refresh_current_stage(
+            force_stage_search_from_start=False
+        )
 
     def restart_pipeline(self):
         for ps in self.pipeline_stages:
@@ -842,11 +884,3 @@ class TrainingPipeline(TrainingSettings):
             }
 
         return self.current_stage.offpolicy_named_losses
-
-    @property
-    def current_stage_loss_weights(self) -> Dict[str, float]:
-        return self.current_stage.named_loss_weights
-
-    @property
-    def current_stage_offpolicy_loss_weights(self) -> Dict[str, float]:
-        return self.current_stage.offpolicy_named_loss_weights

@@ -664,6 +664,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         deterministic_agents: bool = False,
         distributed_preemption_threshold: float = 0.7,
         max_sampler_processes_per_worker: Optional[int] = None,
+        save_ckpt_after_every_pipeline_stage: bool = True,
         first_local_worker_id: int = 0,
         **kwargs,
     ):
@@ -686,6 +687,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             max_sampler_processes_per_worker=max_sampler_processes_per_worker,
             **kwargs,
         )
+
+        self.save_ckpt_after_every_pipeline_stage = save_ckpt_after_every_pipeline_stage
 
         self.actor_critic.train()
 
@@ -776,12 +779,14 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             )  # use latest seed for workers and update rng state
             self.vector_tasks.set_seeds(seeds)
 
-    def checkpoint_save(self) -> str:
+    def checkpoint_save(self, pipeline_stage_index: Optional[int] = None) -> str:
         model_path = os.path.join(
             self.checkpoints_dir,
             "exp_{}__stage_{:02d}__steps_{:012d}.pt".format(
                 self.experiment_name,
-                self.training_pipeline.current_stage_index,
+                self.training_pipeline.current_stage_index
+                if pipeline_stage_index is None
+                else pipeline_stage_index,
                 self.training_pipeline.total_steps,
             ),
         )
@@ -951,7 +956,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         to_share: Union[torch.Tensor, float, int],
         weight: Union[torch.Tensor, float, int],
     ):
-        """Weighted sum of scalar across distributed workers"""
+        """Weighted sum of scalar across distributed workers."""
         if self.is_distributed:
             aggregate = torch.tensor(to_share * weight).to(self.device)
             dist.all_reduce(aggregate)
@@ -991,12 +996,17 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
                 info: Dict[str, float] = {}
 
+                current_pipeline_stage = self.training_pipeline.current_stage
                 total_loss: Optional[torch.Tensor] = None
                 for loss_name in self.training_pipeline.current_stage_losses:
-                    loss, loss_weight = (
+                    loss, loss_weight, loss_update_repeats = (
                         self.training_pipeline.current_stage_losses[loss_name],
-                        self.training_pipeline.current_stage_loss_weights[loss_name],
+                        current_pipeline_stage.named_loss_weights[loss_name],
+                        current_pipeline_stage.named_loss_update_repeats[loss_name],
                     )
+                    if loss_update_repeats is not None and e >= loss_update_repeats:
+                        # Skip losses which should not be repeated more than `loss_update_repeats` times.
+                        continue
 
                     loss_return = loss.loss(
                         step_count=self.step_count,
@@ -1273,22 +1283,67 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         self.results_queue.put(logging_pkg)
 
+    def _save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter(
+        self, pipeline_stage_index: Optional[int] = None
+    ):
+        self.deterministic_seeds()
+        if self.worker_id == self.first_local_worker_id:
+            model_path = self.checkpoint_save(pipeline_stage_index=pipeline_stage_index)
+            if self.checkpoints_queue is not None:
+                self.checkpoints_queue.put(("eval", model_path))
+        self.last_save = self.training_pipeline.total_steps
+
     def run_pipeline(self, rollouts: RolloutStorage):
         self.initialize_rollouts(rollouts)
         self.tracking_info.clear()
 
         self.last_log = self.training_pipeline.total_steps
-        self.last_save = self.training_pipeline.total_steps
+
+        if self.last_save is None:
+            self.last_save = self.training_pipeline.total_steps
 
         offpolicy_data_iterator: Optional[Iterator] = None
 
+        should_save_checkpoints = (
+            self.checkpoints_dir != ""
+            and self.training_pipeline.current_stage.save_interval is not None
+            and self.training_pipeline.current_stage.save_interval > 0
+        )
+        already_saved_checkpoint = False
+
         while True:
-            self.training_pipeline.before_rollout(
+            pipeline_stage_changed = self.training_pipeline.before_rollout(
                 train_metrics=self._last_aggregated_train_task_metrics
             )
             self._last_aggregated_train_task_metrics.reset()
 
-            if self.training_pipeline.current_stage is None:
+            # Here we handle saving a checkpoint after a pipeline stage ends. We
+            # do this when
+            # (1) after every pipeline stage if the `self.save_ckpt_after_every_pipeline_stage`
+            #   boolean is True,
+            # (2) we have reached the end of ALL training (i.e. all stages are complete)
+            # We handle saving every `save_interval` steps
+            training_is_complete = self.training_pipeline.current_stage is None
+            if (
+                should_save_checkpoints
+                and (  # Might happen if the `save_interval` was hit just previously, see below
+                    not already_saved_checkpoint
+                )
+                and pipeline_stage_changed
+                and (  # Don't save at start
+                    self.training_pipeline.current_stage_index != 0
+                )
+                and (self.save_ckpt_after_every_pipeline_stage or training_is_complete)
+            ):
+                self._save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter(
+                    pipeline_stage_index=self.training_pipeline.current_stage_index - 1
+                    if not training_is_complete
+                    else len(self.training_pipeline.pipeline_stages) - 1
+                )
+
+            already_saved_checkpoint = False
+
+            if training_is_complete:
                 break
 
             if self.is_distributed:
@@ -1399,23 +1454,14 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.tracking_info.clear()
                 self.last_log = self.training_pipeline.total_steps
 
-            # save for every interval-th episode or for the last epoch
-            if (
-                self.checkpoints_dir != ""
-                and self.training_pipeline.current_stage.save_interval > 0
-                and (
-                    self.training_pipeline.total_steps - self.last_save
-                    >= self.training_pipeline.current_stage.save_interval
-                    or self.training_pipeline.current_stage.is_complete
-                )
+            # Here we handle saving a checkpoint every `save_interval` steps, saving after
+            # a pipeline stage completes is controlled above
+            if should_save_checkpoints and (
+                self.training_pipeline.total_steps - self.last_save
+                >= self.training_pipeline.current_stage.save_interval
             ):
-                self.deterministic_seeds()
-
-                if self.worker_id == self.first_local_worker_id:
-                    model_path = self.checkpoint_save()
-                    if self.checkpoints_queue is not None:
-                        self.checkpoints_queue.put(("eval", model_path))
-                self.last_save = self.training_pipeline.total_steps
+                self._save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter()
+                already_saved_checkpoint = True
 
             if (
                 self.training_pipeline.current_stage.advance_scene_rollout_period

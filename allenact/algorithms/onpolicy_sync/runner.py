@@ -387,6 +387,7 @@ class OnPolicyRunner(object):
         checkpoint: Optional[str] = None,
         restart_pipeline: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
+        save_ckpt_after_every_pipeline_stage: bool = True,
         collect_valid_results: bool = False,
     ):
         self._initialize_start_train_or_start_test()
@@ -433,6 +434,7 @@ class OnPolicyRunner(object):
                 distributed_ip=self.distributed_ip_and_port.split(":")[0],
                 distributed_port=distributed_port,
                 max_sampler_processes_per_worker=max_sampler_processes_per_worker,
+                save_ckpt_after_every_pipeline_stage=save_ckpt_after_every_pipeline_stage,
                 initial_model_state_dict=initial_model_state_dict
                 if model_hash is None
                 else model_hash,
@@ -712,7 +714,7 @@ class OnPolicyRunner(object):
                     prefix = "" if k == -1 else f"namecollision{k}__"
                     k += 1
                     dst_path = os.path.join(
-                        base_dir, f"{prefix}{os.path.basename(src_path)}"
+                        base_dir, f"{prefix}{os.path.basename(src_path)}",
                     )
                     if not os.path.exists(dst_path):
                         os.makedirs(os.path.dirname(dst_path), exist_ok=True)
