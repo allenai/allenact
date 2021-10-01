@@ -1283,6 +1283,16 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         self.results_queue.put(logging_pkg)
 
+    def _save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter(
+        self, pipeline_stage_index: Optional[int] = None
+    ):
+        self.deterministic_seeds()
+        if self.worker_id == self.first_local_worker_id:
+            model_path = self.checkpoint_save(pipeline_stage_index=pipeline_stage_index)
+            if self.checkpoints_queue is not None:
+                self.checkpoints_queue.put(("eval", model_path))
+        self.last_save = self.training_pipeline.total_steps
+
     def run_pipeline(self, rollouts: RolloutStorage):
         self.initialize_rollouts(rollouts)
         self.tracking_info.clear()
@@ -1316,7 +1326,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             training_is_complete = self.training_pipeline.current_stage is None
             if (
                 should_save_checkpoints
-                and (  # Might happen if the `save_interval` was hit
+                and (  # Might happen if the `save_interval` was hit just previously, see below
                     not already_saved_checkpoint
                 )
                 and pipeline_stage_changed
@@ -1325,19 +1335,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 )
                 and (self.save_ckpt_after_every_pipeline_stage or training_is_complete)
             ):
-                # TODO: For the moment these lines are repeated verbatim below, this should
-                #    be abstracted into a method
-                self.deterministic_seeds()
-                if self.worker_id == 0:
-                    model_path = self.checkpoint_save(
-                        pipeline_stage_index=self.training_pipeline.current_stage_index
-                        - 1
-                        if not training_is_complete
-                        else len(self.training_pipeline.pipeline_stages) - 1
-                    )
-                    if self.checkpoints_queue is not None:
-                        self.checkpoints_queue.put(("eval", model_path))
-                self.last_save = self.training_pipeline.total_steps
+                self._save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter(
+                    pipeline_stage_index=self.training_pipeline.current_stage_index - 1
+                    if not training_is_complete
+                    else len(self.training_pipeline.pipeline_stages) - 1
+                )
 
             already_saved_checkpoint = False
 
@@ -1458,13 +1460,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.training_pipeline.total_steps - self.last_save
                 >= self.training_pipeline.current_stage.save_interval
             ):
-                self.deterministic_seeds()
-
-                if self.worker_id == self.first_local_worker_id:
-                    model_path = self.checkpoint_save()
-                    if self.checkpoints_queue is not None:
-                        self.checkpoints_queue.put(("eval", model_path))
-                self.last_save = self.training_pipeline.total_steps
+                self._save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter()
                 already_saved_checkpoint = True
 
             if (

@@ -83,6 +83,12 @@ class DelaySignalHandling:
         signal.signal(signal.SIGINT, self.old_int_handler)
         signal.signal(signal.SIGTERM, self.old_term_handler)
         if self.term_signal_received:
+            # For some reason there appear to be cases where the original termination
+            # handler is not callable. It is unclear to me exactly why this is the case
+            # but here we add a guard to double check that the handler is callable and,
+            # if it's not, we re-send the termination signal to the process and let
+            # the python internals handle it (note that we've already reset the termination
+            # handler to what it was originaly above in the signal.signal(...) code).
             if callable(self.old_term_handler):
                 self.old_term_handler(*self.term_signal_received)
             else:

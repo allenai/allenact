@@ -454,15 +454,21 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         )
 
         # only randomize materials in train scenes
+        were_materials_randomized = False
         if self.randomize_materials_in_training:
             if (
                 "Train" in scene
                 or int(scene.replace("FloorPlan", "").replace("_physics", "")) % 100
                 < 21
             ):
+                were_materials_randomized = True
                 self.env.controller.step(action="RandomizeMaterials")
 
-        task_info = {"scene": scene, "object_type": episode["object_type"]}
+        task_info = {
+            "scene": scene,
+            "object_type": episode["object_type"],
+            "materials_randomized": were_materials_randomized,
+        }
         if len(task_info) == 0:
             get_logger().warning(
                 "Scene {} does not contain any"
