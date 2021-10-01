@@ -1,4 +1,4 @@
-from typing import List, Callable, Optional, Any, cast, Dict, Tuple
+from typing import List, Callable, Optional, Any, cast, Dict
 
 import gym
 import numpy as np
@@ -53,7 +53,7 @@ class ResNetPreprocessor(Preprocessor):
         torchvision_resnet_model: Callable[..., models.ResNet] = models.resnet18,
         device: Optional[torch.device] = None,
         device_ids: Optional[List[torch.device]] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         def f(x, k):
             assert k in x, "{} must be set in ResNetPreprocessor".format(k)
@@ -140,17 +140,20 @@ class ClipResNetEmbedder(nn.Module):
 
 
 class ClipResNetPreprocessor(Preprocessor):
-    """Preprocess RGB or depth image using a ResNet model."""
+    """Preprocess RGB or depth image using a ResNet model with CLIP model
+    weights."""
+
+    CLIP_RGB_MEANS = (0.48145466, 0.4578275, 0.40821073)
+    CLIP_RGB_STDS = (0.26862954, 0.26130258, 0.27577711)
 
     def __init__(
         self,
         rgb_input_uuid: str,
         clip_model_type: str,
         pool: bool,
-        output_shape: Tuple[int, int, int],
         device: Optional[torch.device] = None,
         device_ids: Optional[List[torch.device]] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         try:
             import clip
@@ -162,6 +165,19 @@ class ClipResNetPreprocessor(Preprocessor):
             )
 
         assert clip_model_type in clip.available_models()
+
+        if clip_model_type == "RN50":
+            output_shape = (2048, 7, 7)
+        elif clip_model_type == "RN50x16":
+            output_shape = (3072, 7, 7)
+        else:
+            raise NotImplementedError(
+                f"Currently `clip_model_type` must be one of 'RN50' or 'RN50x16'"
+            )
+
+        if pool:
+            output_shape = output_shape[:1]
+
         self.clip_model_type = clip_model_type
 
         self.pool = pool

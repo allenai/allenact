@@ -5,8 +5,8 @@ from allenact_plugins.ithor_plugin.ithor_sensors import (
 from projects.objectnav_baselines.experiments.objectnav_mixin_ddppo import (
     ObjectNavMixInPPOConfig,
 )
-from projects.objectnav_baselines.experiments.objectnav_mixin_resnet50gru import (
-    ObjectNavMixInResNet50GRUConfig,
+from projects.objectnav_baselines.experiments.objectnav_mixin_resnetgru import (
+    ObjectNavMixInResNetGRUConfig,
 )
 from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base import (
     ObjectNavRoboThorBaseConfig,
@@ -14,12 +14,12 @@ from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base i
 
 
 class ObjectNavRoboThorRGBPPOExperimentConfig(
-    ObjectNavRoboThorBaseConfig,
-    ObjectNavMixInPPOConfig,
-    ObjectNavMixInResNet50GRUConfig,
+    ObjectNavRoboThorBaseConfig, ObjectNavMixInPPOConfig, ObjectNavMixInResNetGRUConfig,
 ):
     """An Object Navigation experiment configuration in RoboThor with RGB
     input."""
+
+    RESNET_TYPE = "RN50"
 
     SENSORS = [
         RGBSensorThor(

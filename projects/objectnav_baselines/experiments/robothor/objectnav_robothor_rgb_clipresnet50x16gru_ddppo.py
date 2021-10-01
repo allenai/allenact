@@ -1,13 +1,10 @@
+from allenact.embodiedai.preprocessors.resnet import ClipResNetPreprocessor
 from allenact_plugins.ithor_plugin.ithor_sensors import (
     RGBSensorThor,
     GoalObjectTypeThorSensor,
 )
-from projects.objectnav_baselines.experiments.objectnav_mixin_clipresnet50gru import (
-    CLIP_RGB_MEANS,
-    CLIP_RGB_STDS,
-)
-from projects.objectnav_baselines.experiments.objectnav_mixin_clipresnet50x16gru import (
-    ObjectNavMixInClipResNet50x16GRUConfig,
+from projects.objectnav_baselines.experiments.objectnav_mixin_clipresnetgru import (
+    ObjectNavMixInClipResNetGRUConfig,
 )
 from projects.objectnav_baselines.experiments.objectnav_mixin_ddppo import (
     ObjectNavMixInPPOConfig,
@@ -20,10 +17,12 @@ from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base i
 class ObjectNavRoboThorRGBPPOExperimentConfig(
     ObjectNavRoboThorBaseConfig,
     ObjectNavMixInPPOConfig,
-    ObjectNavMixInClipResNet50x16GRUConfig,
+    ObjectNavMixInClipResNetGRUConfig,
 ):
     """An Object Navigation experiment configuration in RoboThor with RGB
     input."""
+
+    CLIP_MODEL_TYPE = "RN50x16"
 
     SENSORS = [
         RGBSensorThor(
@@ -31,8 +30,8 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(
             width=ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
             use_resnet_normalization=True,
             uuid="rgb_lowres",
-            mean=CLIP_RGB_MEANS,
-            stdev=CLIP_RGB_STDS,
+            mean=ClipResNetPreprocessor.CLIP_RGB_MEANS,
+            stdev=ClipResNetPreprocessor.CLIP_RGB_STDS,
         ),
         GoalObjectTypeThorSensor(
             object_types=ObjectNavRoboThorBaseConfig.TARGET_TYPES,
