@@ -59,6 +59,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         train_gpu_ids: Optional[Sequence[int]] = None,
         val_gpu_ids: Optional[Sequence[int]] = None,
         test_gpu_ids: Optional[Sequence[int]] = None,
+        eval_on_val_set: bool = False,
     ):
         super().__init__()
 
@@ -71,6 +72,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         self.train_gpu_ids = v_or_default(train_gpu_ids, self.DEFAULT_TRAIN_GPU_IDS)
         self.val_gpu_ids = v_or_default(val_gpu_ids, self.DEFAULT_VALID_GPU_IDS)
         self.test_gpu_ids = v_or_default(test_gpu_ids, self.DEFAULT_TEST_GPU_IDS)
+        self.eval_on_val_set = eval_on_val_set
 
         self.sampler_devices = self.train_gpu_ids
 
@@ -121,11 +123,13 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
                 else self.val_gpu_ids
             )
         elif mode == "test":
-            nprocesses = 10 if torch.cuda.is_available() else 1
             devices = (
                 [torch.device("cpu")]
                 if not torch.cuda.is_available()
                 else self.test_gpu_ids
+            )
+            nprocesses = evenly_distribute_count_into_bins(
+                (10 if torch.cuda.is_available() else 1), max(len(devices), 1)
             )
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
@@ -293,10 +297,20 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        if self.TEST_DATASET_DIR is None:
-            get_logger().warning(
-                "No test dataset dir detected, running test on validation set instead."
-            )
+        if self.eval_on_val_set or self.TEST_DATASET_DIR is None:
+            if self.eval_on_val_set:
+                get_logger().warning(
+                    "`eval_on_val_set` is set to `True` and thus we will run evaluation on the validation set instead."
+                    " Be careful as the saved metrics json and tensorboard files **will still be labeled as"
+                    " 'test' rather than 'valid'**."
+                )
+            else:
+                get_logger().warning(
+                    "No test dataset dir detected, running test on validation set instead."
+                    " Be careful as the saved metrics json and tensorboard files *will still be labeled as"
+                    " 'test' rather than 'valid'**."
+                )
+
             return self.valid_task_sampler_args(
                 process_ind=process_ind,
                 total_processes=total_processes,
