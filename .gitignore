@@ -142,7 +142,7 @@ experiment_output
 *.pdf
 
 # PNGs
-*.png
+# *.png
 
 # Tensorboard logs
 events.out.tfevents.*
