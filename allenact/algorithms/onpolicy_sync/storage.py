@@ -389,9 +389,6 @@ class RolloutStorage(object):
 
         assert len(unnarrow_data) == 0
 
-        if num_steps is not None:
-            assert self.num_steps == num_steps
-
     def after_update(self):
         for storage in [self.observations, self.memory]:
             for key in storage:
