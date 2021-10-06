@@ -91,12 +91,13 @@ If you are on a machine with an attached display:
 ```bash
 export MY_ENV_NAME=allenact
 export CONDA_BASE="$(dirname $(dirname "${CONDA_EXE}"))"
-PIP_SRC="${CONDA_BASE}/envs/${MY_ENV_NAME}/pipsrc" conda env update --file allenact_plugins/habitat_plugin/extra_environment.yml --name $MY_ENV_NAME
+export PIP_SRC="${CONDA_BASE}/envs/${MY_ENV_NAME}/pipsrc"
+conda env update --file allenact_plugins/habitat_plugin/extra_environment.yml --name $MY_ENV_NAME
 ```
 
 If you are on a machine without an attached display (e.g. a server), replace the last command by:
 ```bash
-PIP_SRC="${CONDA_BASE}/envs/${MY_ENV_NAME}/pipsrc" conda env update --file allenact_plugins/habitat_plugin/extra_environment_headless.yml --name $MY_ENV_NAME
+conda env update --file allenact_plugins/habitat_plugin/extra_environment_headless.yml --name $MY_ENV_NAME
 ```
 
 After these steps, feel free to proceed to download the required scene assets and task-specific dataset files as

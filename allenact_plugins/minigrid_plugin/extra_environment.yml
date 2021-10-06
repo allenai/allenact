@@ -3,3 +3,4 @@ dependencies:
   - pip
   - pip:
       - gym-minigrid>=1.0.1
+      - pickle5

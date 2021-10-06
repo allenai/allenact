@@ -54,7 +54,6 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
             height=self.CAMERA_HEIGHT,
             continuousMode=True,
             applyActionNoise=self.STOCHASTIC,
-            agentType="stochastic",
             rotateStepDegrees=self.ROTATION_DEGREES,
             gridSize=self.STEP_SIZE,
             snapToGrid=False,
@@ -184,10 +183,7 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG,
-            "env_args": {
-                **self.ENV_ARGS,
-                "x_display": x_display,
-            },
+            "env_args": {**self.ENV_ARGS, "x_display": x_display,},
         }
 
     def train_task_sampler_args(

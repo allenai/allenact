@@ -2,6 +2,7 @@
 # Modified work Copyright (c) Allen Institute for AI
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+import os
 import signal
 import time
 import traceback
@@ -82,9 +83,26 @@ class DelaySignalHandling:
         signal.signal(signal.SIGINT, self.old_int_handler)
         signal.signal(signal.SIGTERM, self.old_term_handler)
         if self.term_signal_received:
-            self.old_term_handler(*self.term_signal_received)
+            # For some reason there appear to be cases where the original termination
+            # handler is not callable. It is unclear to me exactly why this is the case
+            # but here we add a guard to double check that the handler is callable and,
+            # if it's not, we re-send the termination signal to the process and let
+            # the python internals handle it (note that we've already reset the termination
+            # handler to what it was originaly above in the signal.signal(...) code).
+            if callable(self.old_term_handler):
+                self.old_term_handler(*self.term_signal_received)
+            else:
+                get_logger().warning(
+                    "Termination handler could not be called after delaying signal handling."
+                    f" Resending the SIGTERM signal. Last (sig, frame) == ({self.term_signal_received})."
+                )
+                os.kill(os.getpid(), signal.SIGTERM)
+
         if self.int_signal_received:
-            self.old_int_handler(*self.int_signal_received)
+            if callable(self.old_int_handler):
+                self.old_int_handler(*self.int_signal_received)
+            else:
+                signal.default_int_handler(*self.int_signal_received)
 
 
 class VectorSampledTasks(object):
@@ -428,9 +446,7 @@ class VectorSampledTasks(object):
 
         List of observations for each of the unpaused tasks.
         """
-        return self.call(
-            ["get_observations"] * self.num_unpaused_tasks,
-        )
+        return self.call(["get_observations"] * self.num_unpaused_tasks,)
 
     def command_at(
         self, sampler_index: int, command: str, data: Optional[Any] = None
@@ -614,9 +630,9 @@ class VectorSampledTasks(object):
         for i in range(
             sampler_index + 1, len(self.sampler_index_to_process_ind_and_subprocess_ind)
         ):
-            other_process_and_sub_process_inds = (
-                self.sampler_index_to_process_ind_and_subprocess_ind[i]
-            )
+            other_process_and_sub_process_inds = self.sampler_index_to_process_ind_and_subprocess_ind[
+                i
+            ]
             if other_process_and_sub_process_inds[0] == process_ind:
                 other_process_and_sub_process_inds[1] -= 1
             else:
@@ -1052,9 +1068,7 @@ class SingleProcessVectorSampledTasks(object):
 
         List of observations for each of the unpaused tasks.
         """
-        return self.call(
-            ["get_observations"] * self.num_unpaused_tasks,
-        )
+        return self.call(["get_observations"] * self.num_unpaused_tasks,)
 
     def next_task_at(self, index_process: int) -> List[RLStepResult]:
         """Move to the the next Task from the TaskSampler in index_process

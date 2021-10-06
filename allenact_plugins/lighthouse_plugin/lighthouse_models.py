@@ -20,7 +20,7 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
         input_uuid: str,
         action_space: gym.spaces.Discrete,
         observation_space: SpaceDict,
-        ensure_same_weights: bool = True,
+        ensure_same_init_aux_weights: bool = True,
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
 
@@ -41,7 +41,7 @@ class LinearAdvisorActorCritic(ActorCriticModel[CategoricalDistr]):
         self.linear = nn.Linear(self.in_dim, 2 * self.num_actions + 1)
 
         nn.init.orthogonal_(self.linear.weight)
-        if ensure_same_weights:
+        if ensure_same_init_aux_weights:
             # Ensure main actor / auxiliary actor start with the same weights
             self.linear.weight.data[self.num_actions : -1, :] = self.linear.weight[
                 : self.num_actions, :

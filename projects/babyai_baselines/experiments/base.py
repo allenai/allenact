@@ -87,9 +87,7 @@ class BaseBabyAIExperimentConfig(ExperimentConfig, ABC):
             assert steps is not None
             return {
                 "loss": Builder(
-                    PPO,
-                    kwargs={"clip_decay": LinearDecay(steps)},
-                    default=PPOConfig,
+                    PPO, kwargs={"clip_decay": LinearDecay(steps)}, default=PPOConfig,
                 ),
                 "num_mini_batch": cls.PPO_NUM_MINI_BATCH,
                 "update_repeats": 4,

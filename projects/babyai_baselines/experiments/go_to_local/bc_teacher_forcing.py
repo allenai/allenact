@@ -31,16 +31,12 @@ class BCTeacherForcingBabyAIGoToLocalExperimentConfig(
         imitation_info = cls.rl_loss_default("imitation")
 
         return cls._training_pipeline(
-            named_losses={
-                "imitation_loss": imitation_info["loss"],
-            },
+            named_losses={"imitation_loss": imitation_info["loss"],},
             pipeline_stages=[
                 PipelineStage(
                     loss_names=["imitation_loss"],
                     teacher_forcing=LinearDecay(
-                        startp=1.0,
-                        endp=1.0,
-                        steps=total_train_steps,
+                        startp=1.0, endp=1.0, steps=total_train_steps,
                     ),
                     max_stage_steps=total_train_steps,
                 ),

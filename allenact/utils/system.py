@@ -170,10 +170,7 @@ def _set_log_formatter():
             datefmt = short_date_format
 
         if add_style_to_logs:
-            formatter = ColoredFormatter(
-                fmt=fmt,
-                datefmt=datefmt,
-            )
+            formatter = ColoredFormatter(fmt=fmt, datefmt=datefmt,)
         else:
             formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
 

@@ -68,6 +68,4 @@ class GroupedActionImitation(AbstractActorCriticLoss):
             torch.log((probs_tensor * expert_group_actions_mask).sum(-1))
         ).mean()
 
-        return total_loss, {
-            "grouped_action_cross_entropy": total_loss.item(),
-        }
+        return total_loss, {"grouped_action_cross_entropy": total_loss.item(),}

@@ -109,9 +109,9 @@ if __name__ == "__main__":
         packages=find_packages(include=["allenact", "allenact.*"]),
         install_requires=[
             "gym>=0.17.0,<0.18.0",
-            "torch>=1.6.0,!=1.8.0",
+            "torch>=1.6.0,!=1.8.0,<1.9.0",
             "tensorboardx>=2.1",
-            "torchvision>=0.7.0",
+            "torchvision>=0.7.0,<0.10.0",
             "setproctitle",
             "moviepy>=1.0.3",
             "filelock",

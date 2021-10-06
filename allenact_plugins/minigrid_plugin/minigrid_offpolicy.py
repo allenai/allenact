@@ -5,7 +5,9 @@ from collections import defaultdict
 from typing import Dict, Tuple, Any, cast, Iterator, List, Union, Optional
 
 import babyai
+import blosc
 import numpy as np
+import pickle5 as pickle
 import torch
 from gym_minigrid.minigrid import MiniGridEnv
 
@@ -86,6 +88,40 @@ class MiniGridOffPolicyExpertCELoss(AbstractOffPolicyLoss[ActorCriticModel]):
             )
 
         return expert_ce_loss, info, memory, rollout_len * nrollouts
+
+
+def transform_demos(demos):
+    # A modified version of babyai.utils.demos.transform_demos
+    # where we use pickle 5 instead of standard pickle
+    new_demos = []
+    for demo in demos:
+        new_demo = []
+
+        mission = demo[0]
+        all_images = demo[1]
+        directions = demo[2]
+        actions = demo[3]
+
+        # First decompress the pickle
+        pickled_array = blosc.blosc_extension.decompress(all_images, False)
+        # ... and unpickle
+        all_images = pickle.loads(pickled_array)
+
+        n_observations = all_images.shape[0]
+        assert (
+            len(directions) == len(actions) == n_observations
+        ), "error transforming demos"
+        for i in range(n_observations):
+            obs = {
+                "image": all_images[i],
+                "direction": directions[i],
+                "mission": mission,
+            }
+            action = actions[i]
+            done = i == n_observations - 1
+            new_demo.append((obs, action, done))
+        new_demos.append(new_demo)
+    return new_demos
 
 
 class ExpertTrajectoryIterator(Iterator):
@@ -176,7 +212,7 @@ class ExpertTrajectoryIterator(Iterator):
             return False
 
         for i, step in enumerate(
-            babyai.utils.demos.transform_demos(
+            transform_demos(
                 [
                     self.data[
                         self.trajectory_inds[self.current_data_length[sampler]].pop()

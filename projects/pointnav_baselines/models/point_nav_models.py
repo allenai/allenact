@@ -155,8 +155,7 @@ class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
     ):
 
         super().__init__(
-            action_space=action_space,
-            observation_space=observation_space,
+            action_space=action_space, observation_space=observation_space,
         )
 
         self._hidden_size = hidden_size
@@ -188,8 +187,7 @@ class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
                 combiner_hidden_out_dims,
             )
         self.state_encoder = RNNStateEncoder(
-            self.goal_visual_encoder.output_dims,
-            self._hidden_size,
+            self.goal_visual_encoder.output_dims, self._hidden_size,
         )
         self.actor = LinearActorHead(self._hidden_size, action_space.n)
         self.critic = LinearCriticHead(self._hidden_size)
@@ -346,12 +344,7 @@ class ResnetTensorGoalEncoder(nn.Module):
             self.compress_resnet(observations),
             self.distribute_target(observations),
         ]
-        x = self.target_obs_combiner(
-            torch.cat(
-                embs,
-                dim=1,
-            )
-        )
+        x = self.target_obs_combiner(torch.cat(embs, dim=1,))
         x = x.reshape(x.size(0), -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
@@ -488,22 +481,12 @@ class ResnetDualTensorGoalEncoder(nn.Module):
             self.compress_rgb_resnet(observations),
             self.distribute_target(observations),
         ]
-        rgb_x = self.rgb_target_obs_combiner(
-            torch.cat(
-                rgb_embs,
-                dim=1,
-            )
-        )
+        rgb_x = self.rgb_target_obs_combiner(torch.cat(rgb_embs, dim=1,))
         depth_embs = [
             self.compress_depth_resnet(observations),
             self.distribute_target(observations),
         ]
-        depth_x = self.depth_target_obs_combiner(
-            torch.cat(
-                depth_embs,
-                dim=1,
-            )
-        )
+        depth_x = self.depth_target_obs_combiner(torch.cat(depth_embs, dim=1,))
         x = torch.cat([rgb_x, depth_x], dim=1)
         x = x.reshape(x.size(0), -1)  # flatten
 
