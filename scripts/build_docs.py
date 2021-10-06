@@ -107,6 +107,7 @@ def render_file(
             # mdlink = "[[source]]({})".format(path)
             mdlink = ""  # Removing the above source link for now.
             call_result = "\n".join([doc_split[0] + " " + mdlink] + doc_split[1:])
+            call_result = call_result.replace("_DOC_COLON_", ":")
             f.write(call_result)
         print(
             f"{StringColors.OKGREEN}[SUCCESS]{StringColors.ENDC} built docs for {src_file} -> {to_file}."

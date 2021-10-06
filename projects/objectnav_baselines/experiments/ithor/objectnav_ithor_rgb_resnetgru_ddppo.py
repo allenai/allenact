@@ -14,9 +14,7 @@ from projects.objectnav_baselines.experiments.objectnav_mixin_resnetgru import (
 
 
 class ObjectNaviThorRGBPPOExperimentConfig(
-    ObjectNaviThorBaseConfig,
-    ObjectNavMixInPPOConfig,
-    ObjectNavMixInResNetGRUConfig,
+    ObjectNaviThorBaseConfig, ObjectNavMixInPPOConfig, ObjectNavMixInResNetGRUConfig,
 ):
     """An Object Navigation experiment configuration in iThor with RGB
     input."""
@@ -28,9 +26,7 @@ class ObjectNaviThorRGBPPOExperimentConfig(
             use_resnet_normalization=True,
             uuid="rgb_lowres",
         ),
-        GoalObjectTypeThorSensor(
-            object_types=ObjectNaviThorBaseConfig.TARGET_TYPES,
-        ),
+        GoalObjectTypeThorSensor(object_types=ObjectNaviThorBaseConfig.TARGET_TYPES,),
     ]
 
     @classmethod

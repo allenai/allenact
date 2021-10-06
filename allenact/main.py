@@ -22,8 +22,7 @@ def get_argument_parser():
 
     # noinspection PyTypeChecker
     parser = argparse.ArgumentParser(
-        description="allenact",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description="allenact", formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     parser.add_argument(
@@ -52,7 +51,7 @@ def get_argument_parser():
         help="sometimes it is useful to be able to pass additional key-word arguments"
         " to `__init__` when initializing an experiment configuration. This flag can be used"
         " to pass such key-word arugments by specifying them with json, e.g."
-        "\n\t--config_kwargs \"{'gpu_id': 0, 'my_important_variable': [1,2,3]}\""
+        '\n\t--config_kwargs \'{"gpu_id": 0, "my_important_variable": [1,2,3]}\''
         "\nTo see which arguments are supported for your experiment see the experiment"
         " config's `__init__` function. If the value passed to this function is a file path"
         " then we will try to load this file path as a json object and use this json object"
@@ -65,8 +64,8 @@ def get_argument_parser():
         default="",
         required=False,
         help="Add an extra tag to the experiment when trying out new ideas (will be used"
-        "as a subdirectory of the tensorboard path so you will be able to"
-        "search tensorboard logs using this extra tag). This can also be used to add an extra"
+        " as a subdirectory of the tensorboard path so you will be able to"
+        " search tensorboard logs using this extra tag). This can also be used to add an extra"
         " organization when running evaluation (e.g. `--extra_tag running_eval_on_great_idea_12`)",
     )
 
@@ -80,12 +79,7 @@ def get_argument_parser():
     )
 
     parser.add_argument(
-        "-s",
-        "--seed",
-        required=False,
-        default=None,
-        type=int,
-        help="random seed",
+        "-s", "--seed", required=False, default=None, type=int, help="random seed",
     )
     parser.add_argument(
         "-b",
@@ -107,7 +101,7 @@ def get_argument_parser():
         "\n(2) the path to a directory of checkpoint files all of which you'd like to be evaluated"
         " (checkpoints are expected to have a `.pt` file extension),"
         '\n(3) a "glob" pattern (https://tldp.org/LDP/abs/html/globbingref.html) that will be expanded'
-        "using python's `glob.glob` function and should return a collection of checkpoint files."
+        " using python's `glob.glob` function and should return a collection of checkpoint files."
         "\nIf you'd like to only evaluate a subset of the checkpoints specified by the above directory/glob"
         " (e.g. every checkpoint saved after 5mil steps) you'll likely want to use the `--approx_ckpt_step_interval`"
         " flag.",
@@ -131,8 +125,8 @@ def get_argument_parser():
         action="store_true",
         required=False,
         help="for training, if checkpoint is specified, DO NOT continue the training pipeline from where"
-        "training had previously ended. Instead restart the training pipeline from scratch but"
-        "with the model weights from the checkpoint.",
+        " training had previously ended. Instead restart the training pipeline from scratch but"
+        " with the model weights from the checkpoint.",
     )
     parser.set_defaults(restart_pipeline=False)
 
@@ -216,6 +210,27 @@ def get_argument_parser():
 
     parser.add_argument(
         "--version", action="version", version=f"allenact {__version__}"
+    )
+
+    parser.add_argument(
+        "--distributed_ip_and_port",
+        dest="distributed_ip_and_port",
+        required=False,
+        type=str,
+        default="127.0.0.1:0",
+        help="IP address and port of listener for distributed process with rank 0."
+        " Port number 0 lets runner choose a free port. For more details, please follow the"
+        " tutorial https://allenact.org/tutorials/distributed-objectnav-tutorial/.",
+    )
+
+    parser.add_argument(
+        "--machine_id",
+        dest="machine_id",
+        required=False,
+        type=int,
+        default=0,
+        help="ID for machine in distributed runs. For more details, please follow the"
+        " tutorial https://allenact.org/tutorials/distributed-objectnav-tutorial/",
     )
 
     ### DEPRECATED FLAGS
@@ -360,7 +375,7 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, str]]:
                 get_logger().warning(
                     f"The input for --config_kwargs ('{args.config_kwargs}')"
                     f" does not appear to be valid json. Often this is due to"
-                    f" json requiring very specific synax (e.g. double quoted strings)"
+                    f" json requiring very specific syntax (e.g. double quoted strings)"
                     f" we'll try to get around this by evaluating with `ast.literal_eval`"
                     f" (a safer version of the standard `eval` function)."
                 )
@@ -399,6 +414,8 @@ def main():
             extra_tag=args.extra_tag,
             disable_tensorboard=args.disable_tensorboard,
             disable_config_saving=args.disable_config_saving,
+            distributed_ip_and_port=args.distributed_ip_and_port,
+            machine_id=args.machine_id,
         ).start_train(
             checkpoint=args.checkpoint,
             restart_pipeline=args.restart_pipeline,
@@ -417,6 +434,8 @@ def main():
             extra_tag=args.extra_tag,
             disable_tensorboard=args.disable_tensorboard,
             disable_config_saving=args.disable_config_saving,
+            distributed_ip_and_port=args.distributed_ip_and_port,
+            machine_id=args.machine_id,
         ).start_test(
             checkpoint_path_dir_or_pattern=args.checkpoint,
             approx_ckpt_step_interval=args.approx_ckpt_step_interval,

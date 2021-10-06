@@ -185,14 +185,7 @@ class AbstractExpertSensor(Sensor[EnvType, SubTaskType], abc.ABC):
         self.group_spaces = (
             self.action_space
             if self.use_groups
-            else OrderedDict(
-                [
-                    (
-                        self._NO_GROUPS_LABEL,
-                        self.action_space,
-                    )
-                ]
-            )
+            else OrderedDict([(self._NO_GROUPS_LABEL, self.action_space,)])
         )
 
         self.expert_args: Dict[str, Any] = expert_args or {}
@@ -237,10 +230,7 @@ class AbstractExpertSensor(Sensor[EnvType, SubTaskType], abc.ABC):
         else:
             return gym.spaces.Dict(
                 [
-                    (
-                        group_space,
-                        cls.flagged_group_space(action_space[group_space]),
-                    )
+                    (group_space, cls.flagged_group_space(action_space[group_space]),)
                     for group_space in cast(gym.spaces.Dict, action_space)
                 ]
             )
@@ -280,9 +270,7 @@ class AbstractExpertSensor(Sensor[EnvType, SubTaskType], abc.ABC):
 
     @abc.abstractmethod
     def query_expert(
-        self,
-        task: SubTaskType,
-        expert_sensor_group_name: Optional[str],
+        self, task: SubTaskType, expert_sensor_group_name: Optional[str],
     ) -> Tuple[Any, bool]:
         """Query the expert for the given task (and optional group name).
 
@@ -404,28 +392,4 @@ class ExpertPolicySensor(AbstractExpertPolicySensor):
     ) -> Tuple[Any, bool]:
         return task.query_expert(
             **self.expert_args, expert_sensor_group_name=expert_sensor_group_name
-        )
-
-
-class VisionSensor:
-    def __init__(self, *args: Any, **kwargs: Any):
-        raise ImportError(
-            "`allenact.base_abstractions.sensor.VisionSensor` has moved!\n"
-            "Please import allenact.embodiedai.sensors.vision_sensors.VisionSensor instead."
-        )
-
-
-class RGBSensor:
-    def __init__(self, *args: Any, **kwargs: Any):
-        raise ImportError(
-            "`allenact.base_abstractions.sensor.RGBSensor` has moved!\n"
-            "Please import allenact.embodiedai.sensors.vision_sensors.RGBSensor instead."
-        )
-
-
-class DepthSensor:
-    def __init__(self, *args: Any, **kwargs: Any):
-        raise ImportError(
-            "`allenact.base_abstractions.sensor.DepthSensor` has moved!\n"
-            "Please import allenact.embodiedai.sensors.vision_sensors.DepthSensor instead."
         )

@@ -5,11 +5,7 @@ if os.path.exists(os.path.join(os.getcwd(), "habitat", "habitat-lab")):
     HABITAT_DATA_BASE = os.path.join(os.getcwd(), "habitat/habitat-lab/data")
 else:
     # New directory structure
-    HABITAT_DATA_BASE = os.path.join(
-        os.getcwd(),
-        "datasets",
-        "habitat",
-    )
+    HABITAT_DATA_BASE = os.path.join(os.getcwd(), "datasets", "habitat",)
 
 HABITAT_DATASETS_DIR = os.path.join(HABITAT_DATA_BASE, "datasets")
 HABITAT_SCENE_DATASETS_DIR = os.path.join(HABITAT_DATA_BASE, "scene_datasets")

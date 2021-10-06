@@ -164,10 +164,7 @@ class IThorEnvironment(object):
         self.controller.last_event.metadata["actionReturn"] = value
 
     def start(
-        self,
-        scene_name: Optional[str],
-        move_mag: float = 0.25,
-        **kwargs,
+        self, scene_name: Optional[str], move_mag: float = 0.25, **kwargs,
     ) -> None:
         """Starts the ai2thor controller if it was previously stopped.
 
@@ -218,10 +215,7 @@ class IThorEnvironment(object):
             self._started = False
 
     def reset(
-        self,
-        scene_name: Optional[str],
-        move_mag: float = 0.25,
-        **kwargs,
+        self, scene_name: Optional[str], move_mag: float = 0.25, **kwargs,
     ):
         """Resets the ai2thor in a new scene.
 
@@ -246,7 +240,7 @@ class IThorEnvironment(object):
                 "action": "Initialize",
                 "gridSize": self._grid_size,
                 "visibilityDistance": self._visibility_distance,
-                "fov": self._fov,
+                "fieldOfView": self._fov,
                 "makeAgentsVisible": self.make_agents_visible,
                 "alwaysReturnVisibleRange": self._always_return_visible_range,
                 **kwargs,
