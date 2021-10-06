@@ -22,7 +22,7 @@ For this tutorial, we'll focus on one of the continuous-control environments und
 environments: [Ant-v2](https://gym.openai.com/envs/Ant-v2/). In this task, the goal
 is to make a four-legged creature, "ant", walk forward as fast as possible. A random agent of "Ant-v2" is shown below.
 
-![The Ant-v2 task](https://ai2-prior-allenact-public-assets.s3.us-west-2.amazonaws.com/tutorials/gym-mujoco/ant_random.mp4).
+![The Ant-v2 task](https://ai2-prior-allenact-public-assets.s3.us-west-2.amazonaws.com/tutorials/gym-mujoco/ant_random.gif).
 
 To achieve the goal, we need to provide continuous control for the agent moving forward with four legs with the 
 `x` velocity as high as possible for at most 1000 episodes steps. The agent is failed, or done, if the `z` position 
@@ -355,7 +355,7 @@ The output should be something like this:
 
 And the `gif` results can be seen in the image tab of Tensorboard while testing.
 
-![mp4 demo](https://ai2-prior-allenact-public-assets.s3.us-west-2.amazonaws.com/tutorials/gym-mujoco/ant_test.mp4)
+![mp4 demo](https://ai2-prior-allenact-public-assets.s3.us-west-2.amazonaws.com/tutorials/gym-mujoco/ant_test.gif)
 
 If the test command fails with `pyglet.canvas.xlib.NoSuchDisplayException: Cannot connect to "None"`, e.g. when running
 remotely, try prepending `DISPLAY=:0.0` to the command above, assuming you have an xserver running with such display
