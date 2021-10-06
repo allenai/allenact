@@ -44,6 +44,7 @@ nav:
   - Off-policy training: tutorials/offpolicy-tutorial.md
   - OpenAI gym for continuous control: tutorials/gym-tutorial.md
   - Multi-node ObjectNav training: tutorials/distributed-objectnav-tutorial.md
+  - OpenAI gym for MuJoCo tasks: tutorials/gym-mujoco-tutorial.md
 #  - IL to RL with pipelines: tutorials/training-pipelines.md
 - HowTos:
   - Define an experiment: howtos/defining-an-experiment.md
