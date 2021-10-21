@@ -22,7 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import math
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any
 
 import numpy as np
 import torch
@@ -142,10 +142,7 @@ class ActiveNeuralSLAM(nn.Module):
             ), "When using layernorm, we require that set `freeze_resnet_batchnorm` to True."
             self.resnet_normalizer = nn.Sequential(
                 nn.Conv2d(512, 512, 1),
-                nn.LayerNorm(
-                    normalized_shape=[512, 7, 7],
-                    elementwise_affine=True,
-                ),
+                nn.LayerNorm(normalized_shape=[512, 7, 7], elementwise_affine=True,),
             )
             self.resnet_normalizer.apply(simple_conv_and_linear_weights_init)
         else:
@@ -308,18 +305,13 @@ class ActiveNeuralSLAM(nn.Module):
                 1
             ).to(self.device)
             rotation_and_translate_mat = torch.cat(
-                (
-                    rot_mat,
-                    offset_to_top_of_image + offset_to_center_the_agent,
-                ),
-                dim=-1,
+                (rot_mat, offset_to_top_of_image + offset_to_center_the_agent,), dim=-1,
             )
 
             ego_map = F.grid_sample(
                 allocentric_map,
                 F.affine_grid(
-                    rotation_and_translate_mat.to(self.device),
-                    allocentric_map.shape,
+                    rotation_and_translate_mat.to(self.device), allocentric_map.shape,
                 ),
                 padding_mode=padding_mode,
                 align_corners=False,
@@ -361,8 +353,7 @@ class ActiveNeuralSLAM(nn.Module):
 
     @staticmethod
     def update_allocentric_xzrs_with_egocentric_movement(
-        last_xzrs_allocentric: torch.Tensor,
-        dx_dz_drs_egocentric: torch.Tensor,
+        last_xzrs_allocentric: torch.Tensor, dx_dz_drs_egocentric: torch.Tensor,
     ):
         new_xzrs_allocentric = last_xzrs_allocentric.clone()
 
@@ -395,7 +386,7 @@ class ActiveNeuralSLAM(nn.Module):
         last_map_logits_egocentric: Optional[torch.Tensor],
         return_allocentric_maps=True,
         resnet_image_features: Optional[torch.Tensor] = None,
-    ):
+    ) -> Dict[str, Any]:
         """Create allocentric/egocentric maps predictions given RGB image
         inputs.
 
@@ -419,19 +410,19 @@ class ActiveNeuralSLAM(nn.Module):
 
         # Parameters
         images : A (# batches) x 3 x height x width tensor of RGB images. These should be
-            normalized for use with a resnet model. See [here](https://pytorch.org/vision/stable/models.html)
+            normalized for use with a resnet model. See [here](https_DOC_COLON_//pytorch.org/vision/stable/models.html)
             for information (see also the `use_resnet_normalization` parameter of the
             `allenact.base_abstractions.sensor.RGBSensor` sensor).
         last_map_probs_allocentric : A (# batches) x (map channels) x (map height) x (map width)
             tensor representing the colllection of allocentric maps to be updated.
-        last_xzrs_allocentric : A (# batches) x 3 tensor where `last_xzrs_allocentric[:, 0]`
+        last_xzrs_allocentric : A (# batches) x 3 tensor where `last_xzrs_allocentric[_DOC_COLON_, 0]`
             are the agent's (allocentric) x-coordinates on the previous step,
-            `last_xzrs_allocentric[:, 1]` are the agent's (allocentric) z-coordinates from the previous
-            step, and `last_xzrs_allocentric[:, 2]` are the agent's rotations (allocentric, in degrees)
+            `last_xzrs_allocentric[_DOC_COLON_, 1]` are the agent's (allocentric) z-coordinates from the previous
+            step, and `last_xzrs_allocentric[_DOC_COLON_, 2]` are the agent's rotations (allocentric, in degrees)
             from the prevoius step.
-        dx_dz_drs_egocentric : A (# batches) x 3 tensor representing the agent's change in x (in meters), z (in meters), and rotation (in degrees)
-            from the previous step. Note that these changes are "egocentric" so that if the agent moved
-            1 meter ahead from it's perspective this should correspond to a dz of +1.0 regardless of
+        dx_dz_drs_egocentric : A (# batches) x 3 tensor representing the agent's change in x (in meters), z (in meters),
+            and rotation (in degrees) from the previous step. Note that these changes are "egocentric" so that if the
+            agent moved 1 meter ahead from it's perspective this should correspond to a dz of +1.0 regardless of
             the agent's orientation (similarly moving right would result in a dx of +1.0). This
             is ignored (and thus can be `None`) if you are using pose estimation
             (i.e. `self.use_pose_estimation` is `True`) or if `return_allocentric_maps` is `False`.
@@ -485,18 +476,14 @@ class ActiveNeuralSLAM(nn.Module):
             )
 
         if self.use_pose_estimation:
-            updated_xzrs_allocentrc = (
-                self.update_allocentric_xzrs_with_egocentric_movement(
-                    last_xzrs_allocentric=last_xzrs_allocentric,
-                    dx_dz_drs_egocentric=dx_dz_dr_egocentric_preds,
-                )
+            updated_xzrs_allocentrc = self.update_allocentric_xzrs_with_egocentric_movement(
+                last_xzrs_allocentric=last_xzrs_allocentric,
+                dx_dz_drs_egocentric=dx_dz_dr_egocentric_preds,
             )
         elif dx_dz_drs_egocentric is not None:
-            updated_xzrs_allocentrc = (
-                self.update_allocentric_xzrs_with_egocentric_movement(
-                    last_xzrs_allocentric=last_xzrs_allocentric,
-                    dx_dz_drs_egocentric=dx_dz_drs_egocentric,
-                )
+            updated_xzrs_allocentrc = self.update_allocentric_xzrs_with_egocentric_movement(
+                last_xzrs_allocentric=last_xzrs_allocentric,
+                dx_dz_drs_egocentric=dx_dz_drs_egocentric,
             )
         else:
             updated_xzrs_allocentrc = None
@@ -508,13 +495,11 @@ class ActiveNeuralSLAM(nn.Module):
             with torch.no_grad():
                 # Rotate and translate the egocentric map view, we do this grid sampling
                 # at the level of probabilities as bad results can occur at the logit level
-                full_size_allocentric_map_probs_update = (
-                    _move_egocentric_map_view_into_allocentric_position(
-                        map_probs_egocentric=map_probs_egocentric,
-                        xzrs_allocentric=updated_xzrs_allocentrc,
-                        allocentric_map_height_width=(self.map_size, self.map_size),
-                        resolution_in_cm=self.resolution_in_cm,
-                    )
+                full_size_allocentric_map_probs_update = _move_egocentric_map_view_into_allocentric_position(
+                    map_probs_egocentric=map_probs_egocentric,
+                    xzrs_allocentric=updated_xzrs_allocentrc,
+                    allocentric_map_height_width=(self.map_size, self.map_size),
+                    resolution_in_cm=self.resolution_in_cm,
                 )
 
                 map_probs_allocentric = torch.max(

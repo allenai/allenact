@@ -14,10 +14,10 @@ from projects.objectnav_baselines.experiments.objectnav_mixin_resnetgru import (
 )
 
 
-class ObjectNaviThorRGBPPOExperimentConfig(
+class ObjectNaviThorRGBDPPOExperimentConfig(
     ObjectNaviThorBaseConfig, ObjectNavMixInPPOConfig, ObjectNavMixInResNetGRUConfig
 ):
-    """An Object Navigation experiment configuration in iThor with RGBD
+    """An Object Navigation experiment configuration in iTHOR with RGBD
     input."""
 
     SENSORS = [
@@ -33,9 +33,7 @@ class ObjectNaviThorRGBPPOExperimentConfig(
             use_normalization=True,
             uuid="depth_lowres",
         ),
-        GoalObjectTypeThorSensor(
-            object_types=ObjectNaviThorBaseConfig.TARGET_TYPES,
-        ),
+        GoalObjectTypeThorSensor(object_types=ObjectNaviThorBaseConfig.TARGET_TYPES,),
     ]
 
     @classmethod

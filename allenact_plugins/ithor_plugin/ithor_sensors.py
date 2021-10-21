@@ -240,8 +240,7 @@ class ReachableBoundsTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnviron
 
     @staticmethod
     def get_bounds(
-        controller: ai2thor.controller.Controller,
-        margin: float,
+        controller: ai2thor.controller.Controller, margin: float,
     ) -> Dict[str, np.ndarray]:
         positions = controller.step("GetReachablePositions").metadata["actionReturn"]
         min_x = min(p["x"] for p in positions)
@@ -434,10 +433,7 @@ class SemanticMapTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnvironment
 
         def get_map_space(nchannels: int, size: int):
             return gym.spaces.Box(
-                low=0,
-                high=1,
-                shape=(size, size, nchannels),
-                dtype=np.bool,
+                low=0, high=1, shape=(size, size, nchannels), dtype=np.bool,
             )
 
         n = len(self.ordered_object_types)
@@ -445,24 +441,12 @@ class SemanticMapTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnvironment
         big = self.semantic_map_builder.ground_truth_semantic_map.shape[0]
 
         space_dict = {
-            "egocentric_update": get_map_space(
-                nchannels=n,
-                size=small,
-            ),
-            "egocentric_mask": get_map_space(
-                nchannels=1,
-                size=small,
-            ),
+            "egocentric_update": get_map_space(nchannels=n, size=small,),
+            "egocentric_mask": get_map_space(nchannels=1, size=small,),
         }
         if not ego_only:
-            space_dict["explored_mask"] = get_map_space(
-                nchannels=1,
-                size=big,
-            )
-            space_dict["map"] = get_map_space(
-                nchannels=n,
-                size=big,
-            )
+            space_dict["explored_mask"] = get_map_space(nchannels=1, size=big,)
+            space_dict["map"] = get_map_space(nchannels=n, size=big,)
 
         observation_space = gym.spaces.Dict(space_dict)
         super().__init__(**prepare_locals_for_super(locals()))

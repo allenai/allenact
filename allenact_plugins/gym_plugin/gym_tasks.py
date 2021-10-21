@@ -11,7 +11,7 @@ from allenact.base_abstractions.task import Task, TaskSampler
 from allenact.utils.experiment_utils import set_seed
 from allenact.utils.system import get_logger
 from allenact_plugins.gym_plugin.gym_environment import GymEnvironment
-from allenact_plugins.gym_plugin.gym_sensors import GymBox2DSensor
+from allenact_plugins.gym_plugin.gym_sensors import GymBox2DSensor, GymMuJoCoSensor
 
 
 class GymTask(Task[gym.Env]):
@@ -70,9 +70,9 @@ class GymTask(Task[gym.Env]):
         }
 
 
-class GymContinuousBox2DTask(GymTask):
-    """Task for a continuous-control gym Box2D Env; it allows interfacing
-    allenact with gym tasks."""
+class GymContinuousTask(GymTask):
+    """Task for a continuous-control gym Box2D & MuJoCo Env; it allows
+    interfacing allenact with gym tasks."""
 
     @classmethod
     def class_action_names(cls, **kwargs) -> Tuple[str, ...]:
@@ -94,12 +94,23 @@ class GymContinuousBox2DTask(GymTask):
 def task_selector(env_name: str) -> type:
     """Helper function for `GymTaskSampler`."""
     if env_name in [
+        # Box2d Env
         "CarRacing-v0",
         "LunarLanderContinuous-v2",
         "BipedalWalker-v2",
         "BipedalWalkerHardcore-v2",
+        # MuJoCo Env
+        "InvertedPendulum-v2",
+        "Ant-v2",
+        "InvertedDoublePendulum-v2",
+        "Humanoid-v2",
+        "Reacher-v2",
+        "Hopper-v2",
+        "HalfCheetah-v2",
+        "Swimmer-v2",
+        "Walker2d-v2",
     ]:
-        return GymContinuousBox2DTask
+        return GymContinuousTask
     raise NotImplementedError()
 
 
@@ -113,6 +124,18 @@ def sensor_selector(env_name: str) -> Sensor:
         "LunarLander-v2",
     ]:
         return GymBox2DSensor(env_name)
+    elif env_name in [
+        "InvertedPendulum-v2",
+        "Ant-v2",
+        "InvertedDoublePendulum-v2",
+        "Humanoid-v2",
+        "Reacher-v2",
+        "Hopper-v2",
+        "HalfCheetah-v2",
+        "Swimmer-v2",
+        "Walker2d-v2",
+    ]:
+        return GymMuJoCoSensor(env_name=env_name, uuid="gym_mujoco_data")
     raise NotImplementedError()
 
 

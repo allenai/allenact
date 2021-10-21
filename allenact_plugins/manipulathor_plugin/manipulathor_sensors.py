@@ -19,15 +19,12 @@ from allenact_plugins.manipulathor_plugin.manipulathor_environment import (
 
 
 class DepthSensorThor(
-    DepthSensor[
-        Union[ManipulaTHOREnvironment],
-        Union[Task[ManipulaTHOREnvironment]],
-    ]
+    DepthSensor[Union[ManipulaTHOREnvironment], Union[Task[ManipulaTHOREnvironment]],]
 ):
     """Sensor for Depth images in THOR.
 
-    Returns from a running ManipulaTHOREnvironment instance, the current RGB
-    frame corresponding to the agent's egocentric view.
+    Returns from a running ManipulaTHOREnvironment instance, the current
+    RGB frame corresponding to the agent's egocentric view.
     """
 
     def frame_from_env(
@@ -37,15 +34,12 @@ class DepthSensorThor(
 
 
 class NoVisionSensorThor(
-    RGBSensor[
-        Union[ManipulaTHOREnvironment],
-        Union[Task[ManipulaTHOREnvironment]],
-    ]
+    RGBSensor[Union[ManipulaTHOREnvironment], Union[Task[ManipulaTHOREnvironment]],]
 ):
     """Sensor for RGB images in THOR.
 
-    Returns from a running ManipulaTHOREnvironment instance, the current RGB
-    frame corresponding to the agent's egocentric view.
+    Returns from a running ManipulaTHOREnvironment instance, the current
+    RGB frame corresponding to the agent's egocentric view.
     """
 
     def frame_from_env(

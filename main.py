@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Entry point to training/validating/testing for a user given experiment
 name."""
 import allenact.main

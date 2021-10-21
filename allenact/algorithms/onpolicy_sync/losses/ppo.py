@@ -24,6 +24,8 @@ class PPO(AbstractActorCriticLoss):
     clip_decay : Callable for clip param decay factor (function of the current number of steps)
     entropy_method_name : Name of Distr's entropy method name. Default is `entropy`,
                           but we might use `conditional_entropy` for `SequentialDistr`
+    show_ratios : If True, adds tracking for the PPO ratio (linear, clamped, and used) in each
+                  epoch to be logged by the engine.
     """
 
     def __init__(
@@ -34,6 +36,7 @@ class PPO(AbstractActorCriticLoss):
         use_clipped_value_loss=True,
         clip_decay: Optional[Callable[[int], float]] = None,
         entropy_method_name: str = "entropy",
+        show_ratios: bool = False,
         *args,
         **kwargs
     ):
@@ -48,13 +51,16 @@ class PPO(AbstractActorCriticLoss):
         self.use_clipped_value_loss = use_clipped_value_loss
         self.clip_decay = clip_decay if clip_decay is not None else (lambda x: 1.0)
         self.entropy_method_name = entropy_method_name
+        self.show_ratios = show_ratios
 
     def loss_per_step(
         self,
         step_count: int,
         batch: ObservationType,
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
-    ) -> Dict[str, Tuple[torch.Tensor, Optional[float]]]:
+    ) -> Tuple[
+        Dict[str, Tuple[torch.Tensor, Optional[float]]], Dict[str, torch.Tensor]
+    ]:  # TODO tuple output
 
         actions = cast(torch.LongTensor, batch["actions"])
         values = actor_critic_output.values
@@ -76,13 +82,13 @@ class PPO(AbstractActorCriticLoss):
 
         ratio = torch.exp(action_log_probs - batch["old_action_log_probs"])
         ratio = add_trailing_dims(ratio)
+        clamped_ratio = torch.clamp(ratio, 1.0 - clip_param, 1.0 + clip_param)
 
         surr1 = ratio * batch["norm_adv_targ"]
-        surr2 = (
-            torch.clamp(ratio, 1.0 - clip_param, 1.0 + clip_param)
-            * batch["norm_adv_targ"]
-        )
-        action_loss = -torch.min(surr1, surr2)
+        surr2 = clamped_ratio * batch["norm_adv_targ"]
+
+        use_clamped = surr2 < surr1
+        action_loss = -torch.where(cast(torch.Tensor, use_clamped), surr2, surr1)
 
         if self.use_clipped_value_loss:
             value_pred_clipped = batch["values"] + (values - batch["values"]).clamp(
@@ -97,11 +103,22 @@ class PPO(AbstractActorCriticLoss):
             )
 
         # noinspection PyUnresolvedReferences
-        return {
-            "value": (value_loss, self.value_loss_coef),
-            "action": (action_loss, None),
-            "entropy": (dist_entropy.mul_(-1.0), self.entropy_coef),  # type: ignore
-        }
+        return (
+            {
+                "value": (value_loss, self.value_loss_coef),
+                "action": (action_loss, None),
+                "entropy": (dist_entropy.mul_(-1.0), self.entropy_coef),  # type: ignore
+            },
+            {
+                "ratio": ratio,
+                "ratio_clamped": clamped_ratio,
+                "ratio_used": torch.where(
+                    cast(torch.Tensor, use_clamped), clamped_ratio, ratio
+                ),
+            }
+            if self.show_ratios
+            else {},
+        )
 
     def loss(  # type: ignore
         self,
@@ -111,10 +128,8 @@ class PPO(AbstractActorCriticLoss):
         *args,
         **kwargs
     ):
-        losses_per_step = self.loss_per_step(
-            step_count=step_count,
-            batch=batch,
-            actor_critic_output=actor_critic_output,
+        losses_per_step, ratio_info = self.loss_per_step(
+            step_count=step_count, batch=batch, actor_critic_output=actor_critic_output,
         )
         losses = {
             key: (loss.mean(), weight)
@@ -126,13 +141,16 @@ class PPO(AbstractActorCriticLoss):
             for loss, weight in losses.values()
         )
 
-        return (
+        result = (
             total_loss,
             {
                 "ppo_total": cast(torch.Tensor, total_loss).item(),
                 **{key: loss.item() for key, (loss, _) in losses.items()},
             },
+            {key: float(value.mean().item()) for key, value in ratio_info.items()},
         )
+
+        return result if self.show_ratios else result[:2]
 
 
 class PPOValue(AbstractActorCriticLoss):
@@ -186,9 +204,7 @@ class PPOValue(AbstractActorCriticLoss):
 
         return (
             value_loss,
-            {
-                "value": value_loss.item(),
-            },
+            {"value": value_loss.item(),},
         )
 
 

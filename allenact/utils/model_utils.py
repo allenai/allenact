@@ -15,10 +15,7 @@ def md5_hash_of_state_dict(state_dict: Dict[str, Any]):
     for piece in sorted(state_dict.items()):
         if isinstance(piece[1], (torch.Tensor, nn.Parameter)):
             hashables.append(
-                int(
-                    hashlib.md5(piece[1].data.cpu().numpy().tobytes()).hexdigest(),
-                    16,
-                )
+                int(hashlib.md5(piece[1].data.cpu().numpy().tobytes()).hexdigest(), 16,)
             )
         else:
             md5_hash_str_as_int(str(piece))
@@ -182,21 +179,10 @@ def compute_cnn_output(
 
     if nagents is not None:
         cnn_output = cnn_output.reshape(
-            (
-                nsteps,
-                nsamplers,
-                nagents,
-            )
-            + cnn_output.shape[1:]
+            (nsteps, nsamplers, nagents,) + cnn_output.shape[1:]
         )
     else:
-        cnn_output = cnn_output.reshape(
-            (
-                nsteps,
-                nsamplers,
-            )
-            + cnn_output.shape[1:]
-        )
+        cnn_output = cnn_output.reshape((nsteps, nsamplers,) + cnn_output.shape[1:])
 
     return cnn_output
 

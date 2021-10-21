@@ -27,7 +27,6 @@ class MemorylessActorCritic(ActorCriticModel[GaussianDistr]):
         super().__init__(action_space, observation_space)
 
         self.input_uuid = input_uuid
-
         assert len(observation_space[self.input_uuid].shape) == 1
         state_dim = observation_space[self.input_uuid].shape[0]
         assert len(action_space.shape) == 1
@@ -44,8 +43,7 @@ class MemorylessActorCritic(ActorCriticModel[GaussianDistr]):
 
         # critic
         self.critic = nn.Sequential(
-            *self.make_mlp_hidden(nn.Tanh, *mlp_hidden_dims),
-            nn.Linear(32, 1),
+            *self.make_mlp_hidden(nn.Tanh, *mlp_hidden_dims), nn.Linear(32, 1),
         )
 
         # maximum standard deviation
@@ -59,9 +57,7 @@ class MemorylessActorCritic(ActorCriticModel[GaussianDistr]):
     def make_mlp_hidden(nl, *dims):
         res = []
         for it, dim in enumerate(dims[:-1]):
-            res.append(
-                nn.Linear(dim, dims[it + 1]),
-            )
+            res.append(nn.Linear(dim, dims[it + 1]),)
             res.append(nl())
         return res
 
