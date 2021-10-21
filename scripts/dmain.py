@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Optional
 import subprocess
 
-# Add to PYTHONPATH the path of the parent directory of the current's file directory
+# Add to PYTHONPATH the path of the parent directory of the current file's directory
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(Path(__file__)))))
 
 from allenact.main import get_argument_parser as get_main_arg_parser
