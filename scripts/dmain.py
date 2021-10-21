@@ -83,7 +83,6 @@ def get_raw_args():
         if remove is not None:
             remove = None
         elif enclose_in_quotes is not None:
-            # Assumption: no spaces inside of config_kwargs
             # Within backslash expansion: close former single, open double, create single, close double, reopen single
             inner_quote = r"\'\"\'\"\'"
             # Convert double quotes into backslash double for later expansion
