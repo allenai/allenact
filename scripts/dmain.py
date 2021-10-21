@@ -125,7 +125,7 @@ def id_generator(size=4, chars=string.ascii_uppercase + string.digits):
     return "".join(random.choice(chars) for _ in range(size))
 
 
-# Assume code is deployed in all machines and we can ssh into each of the `runs_on` machines through port 22
+# Assume we can ssh into each of the `runs_on` machines through port 22
 if __name__ == "__main__":
     # Tool must be called from AllenAct project's root directory
     cwd = os.path.abspath(os.getcwd())
