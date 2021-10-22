@@ -86,7 +86,9 @@ def get_raw_args():
             # Within backslash expansion: close former single, open double, create single, close double, reopen single
             inner_quote = r"\'\"\'\"\'"
             # Convert double quotes into backslash double for later expansion
-            filtered_args.append(inner_quote + arg.replace('"', r"\"") + inner_quote)
+            filtered_args.append(
+                inner_quote + arg.replace('"', r"\"").replace("'", r"\"") + inner_quote
+            )
             enclose_in_quotes = None
         elif arg in [
             "--runs_on",
