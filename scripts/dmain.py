@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-"""Entry point to multi-node (distributed) training for a user given experiment
-name."""
+"""
+Entry point to multi-node (distributed) training for a user given experiment name.
+"""
 
 import sys
 import os
@@ -9,8 +10,10 @@ import time
 import random
 import string
 from pathlib import Path
+from typing import Optional
+import subprocess
 
-# Add to PYTHONPATH the path of the parent directory of the current's file directory
+# Add to PYTHONPATH the path of the parent directory of the current file's directory
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(Path(__file__)))))
 
 from allenact.main import get_argument_parser as get_main_arg_parser
@@ -74,10 +77,19 @@ def get_args():
 def get_raw_args():
     raw_args = sys.argv[1:]
     filtered_args = []
-    remove = None
+    remove: Optional[str] = None
+    enclose_in_quotes: Optional[str] = None
     for arg in raw_args:
         if remove is not None:
             remove = None
+        elif enclose_in_quotes is not None:
+            # Within backslash expansion: close former single, open double, create single, close double, reopen single
+            inner_quote = r"\'\"\'\"\'"
+            # Convert double quotes into backslash double for later expansion
+            filtered_args.append(
+                inner_quote + arg.replace('"', r"\"").replace("'", r"\"") + inner_quote
+            )
+            enclose_in_quotes = None
         elif arg in [
             "--runs_on",
             "--ssh_cmd",
@@ -87,6 +99,9 @@ def get_raw_args():
             "--machine_id",
         ]:
             remove = arg
+        elif arg == "--config_kwargs":
+            enclose_in_quotes = arg
+            filtered_args.append(arg)
         else:
             filtered_args.append(arg)
     return filtered_args
@@ -96,8 +111,12 @@ def wrap_single(text):
     return f"'{text}'"
 
 
-def wrap_single_nested(text, quote=r"'\''"):
-    return f"{quote}{text}{quote}"
+def wrap_single_nested(text):
+    # Close former single, start backslash expansion (via $), create new single quote for expansion:
+    quote_enter = r"'$'\'"
+    # New closing single quote for expansion, close backslash expansion, reopen former single:
+    quote_leave = r"\'''"
+    return f"{quote_enter}{text}{quote_leave}"
 
 
 def wrap_double(text):
@@ -108,7 +127,7 @@ def id_generator(size=4, chars=string.ascii_uppercase + string.digits):
     return "".join(random.choice(chars) for _ in range(size))
 
 
-# Assume code is deployed in all machines and we can ssh into each of the `runs_on` machines through port 22
+# Assume we can ssh into each of the `runs_on` machines through port 22
 if __name__ == "__main__":
     # Tool must be called from AllenAct project's root directory
     cwd = os.path.abspath(os.getcwd())
@@ -190,7 +209,7 @@ if __name__ == "__main__":
             ssh_command = f"{args.ssh_cmd.format(addr=addr)} {screen_command}"
 
             get_logger().debug(f"SSH command {ssh_command}")
-            os.system(ssh_command)
+            subprocess.run(ssh_command, shell=True, executable="/bin/bash")
             get_logger().info(f"{addr} {screen_name}")
 
             killfile.write(f"{addr} {screen_name}\n")
