@@ -6,6 +6,8 @@ import torch
 import torch.nn as nn
 from torchvision import models
 
+import torch.nn.functional as F
+
 from allenact.base_abstractions.preprocessor import Preprocessor
 from allenact.utils.misc_utils import prepare_locals_for_super
 
@@ -134,7 +136,7 @@ class ClipResNetEmbedder(nn.Module):
             x = m.layer3(x)
             x = m.layer4(x)
             if self.pool:
-                x = m.avgpool(x)
+                x = F.adaptive_avg_pool2d(x, (1, 1))
                 x = torch.flatten(x, 1)
             return x
 
