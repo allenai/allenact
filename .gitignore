@@ -199,3 +199,4 @@ src
 *.allenact_last_start_time_string
 *.allenact_start_time_string.lock
 *.lock
+rsync-*

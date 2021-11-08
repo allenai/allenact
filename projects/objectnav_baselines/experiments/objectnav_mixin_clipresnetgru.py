@@ -68,7 +68,6 @@ class ObjectNavMixInClipResNetGRUConfig(ObjectNavBaseConfig):
     def create_model(cls, **kwargs) -> nn.Module:
         has_rgb = any(isinstance(s, RGBSensor) for s in cls.SENSORS)
         has_depth = any(isinstance(s, DepthSensor) for s in cls.SENSORS)
-        assert not has_depth
 
         goal_sensor_uuid = next(
             (s.uuid for s in cls.SENSORS if isinstance(s, GoalObjectTypeThorSensor)),
@@ -80,7 +79,7 @@ class ObjectNavMixInClipResNetGRUConfig(ObjectNavBaseConfig):
             observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             goal_sensor_uuid=goal_sensor_uuid,
             rgb_resnet_preprocessor_uuid="rgb_clip_resnet" if has_rgb else None,
-            depth_resnet_preprocessor_uuid="rgb_clip_resnet" if has_depth else None,
+            depth_resnet_preprocessor_uuid="depth_clip_resnet" if has_depth else None,
             hidden_size=512,
             goal_dims=32,
         )

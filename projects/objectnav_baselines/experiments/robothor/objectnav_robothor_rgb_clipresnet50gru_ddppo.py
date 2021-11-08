@@ -14,7 +14,7 @@ from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base i
 )
 
 
-class ObjectNavRoboThorRGBPPOExperimentConfig(
+class ObjectNavRoboThorClipRGBPPOExperimentConfig(
     ObjectNavRoboThorBaseConfig,
     ObjectNavMixInPPOConfig,
     ObjectNavMixInClipResNetGRUConfig,

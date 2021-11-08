@@ -54,7 +54,9 @@ class ObjectNavMixInResNetGRUConfig(ObjectNavBaseConfig):
                     output_height=output_shape[1],
                     output_dims=output_shape[0],
                     pool=False,
-                    torchvision_resnet_model=models.resnet18,
+                    torchvision_resnet_model=getattr(
+                        models, f"resnet{cls.RESNET_TYPE.replace('RN', '')}"
+                    ),
                     input_uuids=[rgb_sensor.uuid],
                     output_uuid="rgb_resnet_imagenet",
                 )
@@ -66,13 +68,15 @@ class ObjectNavMixInResNetGRUConfig(ObjectNavBaseConfig):
         if depth_sensor is not None:
             preprocessors.append(
                 ResNetPreprocessor(
-                    input_height=ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
-                    input_width=ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
-                    output_width=7,
-                    output_height=7,
-                    output_dims=512,
+                    input_height=cls.SCREEN_SIZE,
+                    input_width=cls.SCREEN_SIZE,
+                    output_width=output_shape[2],
+                    output_height=output_shape[1],
+                    output_dims=output_shape[0],
                     pool=False,
-                    torchvision_resnet_model=models.resnet18,
+                    torchvision_resnet_model=getattr(
+                        models, f"resnet{cls.RESNET_TYPE.replace('RN', '')}"
+                    ),
                     input_uuids=[depth_sensor.uuid],
                     output_uuid="depth_resnet_imagenet",
                 )
