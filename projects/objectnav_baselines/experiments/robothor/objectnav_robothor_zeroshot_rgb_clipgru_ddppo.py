@@ -3,8 +3,8 @@ from allenact_plugins.ithor_plugin.ithor_sensors import (
     RGBSensorThor,
     GoalObjectTypeThorSensor,
 )
-from projects.objectnav_baselines.experiments.objectnav_mixin_clipgru import (
-    ObjectNavMixInClipGRUConfig,
+from projects.objectnav_baselines.experiments.objectnav_zeroshot_mixin_clip_gru import (
+    ObjectNavZeroShotMixInClipGRUConfig,
 )
 from projects.objectnav_baselines.experiments.objectnav_mixin_ddppo import (
     ObjectNavMixInPPOConfig,
@@ -17,7 +17,7 @@ from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base i
 class ObjectNavRoboThorClipRGBPPOExperimentConfig(
     ObjectNavRoboThorBaseConfig,
     ObjectNavMixInPPOConfig,
-    ObjectNavMixInClipGRUConfig,
+    ObjectNavZeroShotMixInClipGRUConfig,
 ):
     """An Object Navigation experiment configuration in RoboThor with RGB
     input."""

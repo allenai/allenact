@@ -299,13 +299,10 @@ class ResnetTensorGoalEncoder(nn.Module):
         self.resnet_hid_out_dims = resnet_compressor_hidden_out_dims
         self.combine_hid_out_dims = combiner_hidden_out_dims
 
-        if observation_spaces.spaces[self.goal_uuid].shape == (1024,):
-            self.embed_class = nn.Linear(1024, self.class_dims)
-        else:
-            self.embed_class = nn.Embedding(
-                num_embeddings=observation_spaces.spaces[self.goal_uuid].n,
-                embedding_dim=self.class_dims,
-            )
+        self.embed_class = nn.Embedding(
+            num_embeddings=observation_spaces.spaces[self.goal_uuid].n,
+            embedding_dim=self.class_dims,
+        )
 
         self.blind = self.resnet_uuid not in observation_spaces.spaces
         if not self.blind:
