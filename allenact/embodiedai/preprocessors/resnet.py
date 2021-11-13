@@ -223,4 +223,5 @@ class ClipResNetPreprocessor(Preprocessor):
         # If the input is depth, repeat it across all 3 channels
         if x.shape[1] == 1:
             x = x.repeat(1, 3, 1, 1)
-        return self.resnet(x).float()
+        x = self.resnet(x).float()
+        return x
