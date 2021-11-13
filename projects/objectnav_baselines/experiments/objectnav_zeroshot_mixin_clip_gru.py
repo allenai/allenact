@@ -81,5 +81,4 @@ class ObjectNavZeroShotMixInClipGRUConfig(ObjectNavBaseConfig):
             goal_sensor_uuid=goal_uuid,
             rgb_resnet_preprocessor_uuid="rgb_clip_resnet" if has_rgb else None,
             hidden_size=512,
-            goal_dims=32,
         )

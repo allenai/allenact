@@ -31,28 +31,18 @@ class CLIPObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         goal_sensor_uuid: str,
         rgb_resnet_preprocessor_uuid: str,
         hidden_size: int = 512,
-        goal_dims: int = 32,
-        resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
-        combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
         include_auxiliary_head: bool = False,
     ):
 
-        super().__init__(
-            action_space=action_space, observation_space=observation_space,
-        )
+        super().__init__(action_space=action_space, observation_space=observation_space,)
 
         self._hidden_size = hidden_size
         self.include_auxiliary_head = include_auxiliary_head
 
-        resnet_preprocessor_uuid = rgb_resnet_preprocessor_uuid
-
         self.encoder = CLIPActorCriticEncoder(
             self.observation_space,
             goal_sensor_uuid,
-            resnet_preprocessor_uuid,
-            goal_dims,
-            resnet_compressor_hidden_out_dims,
-            combiner_hidden_out_dims,
+            rgb_resnet_preprocessor_uuid,
             self._hidden_size
         )
 
@@ -123,35 +113,30 @@ class CLIPActorCriticEncoder(nn.Module):
         observation_spaces: SpaceDict,
         goal_sensor_uuid: str,
         resnet_preprocessor_uuid: str,
-        class_dims: int = 32,
-        resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
-        combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
         rnn_hidden_size: int = 512
     ) -> None:
         super().__init__()
         self.goal_uuid = goal_sensor_uuid
         self.resnet_uuid = resnet_preprocessor_uuid
-        self.class_dims = class_dims
-        self.resnet_hid_out_dims = resnet_compressor_hidden_out_dims
-        self.combine_hid_out_dims = combiner_hidden_out_dims
 
-        self.embed_class = nn.Linear(1024, self.class_dims)
-
-        self.resnet_tensor_shape = observation_spaces.spaces[self.resnet_uuid].shape
-        self.resnet_compressor = nn.Sequential(
-            nn.Conv2d(self.resnet_tensor_shape[0], self.resnet_hid_out_dims[0], 1),
-            nn.ReLU(),
-            nn.Conv2d(*self.resnet_hid_out_dims[0:2], 1),
-            nn.ReLU(),
+        self.v_proj = nn.Sequential(
+            nn.Conv2d(2048, 1024, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.ReLU(True)
         )
-        self.target_obs_combiner = nn.Sequential(
-            nn.Conv2d(
-                self.resnet_hid_out_dims[1] + self.class_dims,
-                self.combine_hid_out_dims[0],
-                1,
-            ),
-            nn.ReLU(),
-            nn.Conv2d(*self.combine_hid_out_dims[0:2], 1),
+
+        self.l_proj = nn.Linear(1024, 1024)
+
+        self.fusion = nn.Sequential(
+            nn.Conv2d(1024, 512, kernel_size=3, stride=1, padding=0, bias=False),
+            nn.GroupNorm(32, 512),
+            nn.LeakyReLU(negative_slope=0.2, inplace=True),
+            #
+            nn.Conv2d(512, 512, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.GroupNorm(32, 512),
+            nn.LeakyReLU(negative_slope=0.2, inplace=True),
+            #
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten()
         )
 
         self.state_encoder = RNNStateEncoder(self.output_dims, rnn_hidden_size,)
@@ -162,29 +147,13 @@ class CLIPActorCriticEncoder(nn.Module):
 
     @property
     def output_dims(self):
-        return (
-            self.combine_hid_out_dims[-1]
-            * self.resnet_tensor_shape[1]
-            * self.resnet_tensor_shape[2]
-        )
+        return (512)
 
     def get_object_type_encoding(
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
-        return cast(
-            torch.FloatTensor,
-            self.embed_class(observations[self.goal_uuid].to(torch.int64)),
-        )
-
-    def compress_resnet(self, observations):
-        return self.resnet_compressor(observations[self.resnet_uuid])
-
-    def distribute_target(self, observations):
-        target_emb = self.embed_class(observations[self.goal_uuid])
-        return target_emb.view(-1, self.class_dims, 1, 1).expand(
-            -1, -1, self.resnet_tensor_shape[-2], self.resnet_tensor_shape[-1]
-        )
+        return observations[self.goal_uuid]
 
     def adapt_input(self, observations):
         resnet = observations[self.resnet_uuid]
@@ -215,15 +184,14 @@ class CLIPActorCriticEncoder(nn.Module):
             observations
         )
 
-        embs = [
-            self.compress_resnet(observations),
-            self.distribute_target(observations),
-        ]
-        x = self.target_obs_combiner(torch.cat(embs, dim=1,))
-        x = x.reshape(x.size(0), -1)  # flatten
+        x = self.v_proj(observations[self.resnet_uuid])
 
-        x = self.adapt_output(x, use_agent, nstep, nsampler, nagent)
+        l = self.l_proj(observations[self.goal_uuid])
+        l = l.unsqueeze(-1).unsqueeze(-1)
+        l = l.repeat(1, 1, x.shape[-2], x.shape[-1])
 
-        x, rnn_hidden_states = self.state_encoder(x, memory.tensor("rnn"), masks)
+        fused = self.fusion(x * l)
+        output = self.adapt_output(fused, use_agent, nstep, nsampler, nagent)
 
-        return x, rnn_hidden_states
+        output, rnn_hidden_states = self.state_encoder(output, memory.tensor("rnn"), masks)
+        return output, rnn_hidden_states
