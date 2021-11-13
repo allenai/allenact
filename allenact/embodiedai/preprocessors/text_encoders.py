@@ -61,8 +61,6 @@ class ClipTextPreprocessor(Preprocessor):
 
     def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:
         object_inds = obs[self.input_uuids[0]]
-        if len(object_inds.shape) == 1:
-            object_inds = object_inds.unsqueeze(0)
         object_types = [self.object_types[ind] for ind in object_inds]
         x = self.clip.tokenize([f"navigate to the {obj}" for obj in object_types]).to(self.device)
         with torch.no_grad():

@@ -22,7 +22,7 @@ class ObjectNavRoboThorClipRGBPPOExperimentConfig(
     """An Object Navigation experiment configuration in RoboThor with RGB
     input."""
 
-    DEFAULT_NUM_TRAIN_PROCESSES = 2
+    DEFAULT_NUM_TRAIN_PROCESSES = 20
 
     CLIP_MODEL_TYPE = "RN50"
 
