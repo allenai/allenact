@@ -26,22 +26,22 @@ class ObjectNavRoboThorClipRGBPPOExperimentConfig(
 
     CLIP_MODEL_TYPE = "RN50"
 
-    TARGET_TYPES = tuple(
-        sorted(
-            [
-                "AlarmClock",
-                "BaseballBat",
-                "Bowl",
-                "GarbageCan",
-                "Laptop",
-                "Mug",
-                "SprayBottle",
-                "Vase",
-            ]
-        )
-    )
+    # SEEN_TARGET_TYPES = tuple(
+    #     sorted(
+    #         [
+    #             "AlarmClock",
+    #             "BaseballBat",
+    #             "Bowl",
+    #             "GarbageCan",
+    #             "Laptop",
+    #             "Mug",
+    #             "SprayBottle",
+    #             "Vase",
+    #         ]
+    #     )
+    # )
 
-    # EVAL_TARGET_TYPES = tuple(
+    # UNSEEN_TARGET_TYPES = tuple(
     #     sorted(
     #         [
     #             "Apple",
@@ -51,6 +51,17 @@ class ObjectNavRoboThorClipRGBPPOExperimentConfig(
     #         ]
     #     )
     # )
+
+    TARGET_TYPES = tuple(
+        sorted(
+            [
+                "Apple",
+                "BasketBall",
+                "HousePlant",
+                "Television",
+            ]
+        )
+    )
 
     SENSORS = [
         RGBSensorThor(
@@ -68,4 +79,4 @@ class ObjectNavRoboThorClipRGBPPOExperimentConfig(
 
     @classmethod
     def tag(cls):
-        return "Objectnav-RoboTHOR-RGB-ClipResNet50GRU-DDPPO"
+        return "ObjectNavRoboThorRGBPPO_CLIP_zeroshot"

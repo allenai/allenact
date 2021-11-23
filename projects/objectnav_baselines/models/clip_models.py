@@ -119,26 +119,6 @@ class CLIPActorCriticEncoder(nn.Module):
         self.goal_uuid = goal_sensor_uuid
         self.resnet_uuid = resnet_preprocessor_uuid
 
-        self.v_proj = nn.Sequential(
-            nn.Conv2d(2048, 1024, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.ReLU(True)
-        )
-
-        self.l_proj = nn.Linear(1024, 1024)
-
-        self.fusion = nn.Sequential(
-            nn.Conv2d(1024, 512, kernel_size=3, stride=1, padding=0, bias=False),
-            nn.GroupNorm(32, 512),
-            nn.LeakyReLU(negative_slope=0.2, inplace=True),
-            #
-            nn.Conv2d(512, 512, kernel_size=1, stride=1, padding=0, bias=False),
-            nn.GroupNorm(32, 512),
-            nn.LeakyReLU(negative_slope=0.2, inplace=True),
-            #
-            nn.AdaptiveAvgPool2d((1, 1)),
-            nn.Flatten()
-        )
-
         self.state_encoder = RNNStateEncoder(self.output_dims, rnn_hidden_size,)
 
     @property
@@ -147,7 +127,7 @@ class CLIPActorCriticEncoder(nn.Module):
 
     @property
     def output_dims(self):
-        return (512)
+        return (1024)
 
     def get_object_type_encoding(
         self, observations: Dict[str, torch.FloatTensor]
@@ -155,43 +135,29 @@ class CLIPActorCriticEncoder(nn.Module):
         """Get the object type encoding from input batched observations."""
         return observations[self.goal_uuid]
 
-    def adapt_input(self, observations):
-        resnet = observations[self.resnet_uuid]
-        goal = observations[self.goal_uuid]
-
-        use_agent = False
-        nagent = 1
-
-        if len(resnet.shape) == 6:
-            use_agent = True
-            nstep, nsampler, nagent = resnet.shape[:3]
-        else:
-            nstep, nsampler = resnet.shape[:2]
-
-        observations[self.resnet_uuid] = resnet.view(-1, *resnet.shape[-3:])
-        observations[self.goal_uuid] = goal.view(-1, goal.shape[-1])
-
-        return observations, use_agent, nstep, nsampler, nagent
-
-    @staticmethod
-    def adapt_output(x, use_agent, nstep, nsampler, nagent):
-        if use_agent:
-            return x.view(nstep, nsampler, nagent, -1)
-        return x.view(nstep, nsampler * nagent, -1)
-
     def forward(self, observations, memory: Memory, masks: torch.FloatTensor):
-        observations, use_agent, nstep, nsampler, nagent = self.adapt_input(
-            observations
+        # observations are (nstep, nsampler, nagent, *features) or (nstep, nsampler, *features)
+        # rnn encoder input should be (*n..., vector)
+        # function output should be (*n..., vector)
+
+        nstep, nsampler = observations[self.resnet_uuid].shape[:2]
+
+        x, rnn_hidden_states = self.state_encoder(
+            observations[self.resnet_uuid],
+            memory.tensor("rnn"),
+            masks
         )
 
-        x = self.v_proj(observations[self.resnet_uuid])
+        x = x.view(nstep * nsampler, -1)
 
-        l = self.l_proj(observations[self.goal_uuid])
-        l = l.unsqueeze(-1).unsqueeze(-1)
-        l = l.repeat(1, 1, x.shape[-2], x.shape[-1])
+        # adapt input
+        resnet_obs = observations[self.resnet_uuid].view(nstep * nsampler, -1)
+        goal_obs = observations[self.goal_uuid].view(nstep * nsampler, -1)
 
-        fused = self.fusion(x * l)
-        output = self.adapt_output(fused, use_agent, nstep, nsampler, nagent)
+        # nn layers
+        output = (resnet_obs + x) * goal_obs
 
-        output, rnn_hidden_states = self.state_encoder(output, memory.tensor("rnn"), masks)
+        # adapt output
+        output = output.view(nstep, nsampler, -1)
+
         return output, rnn_hidden_states

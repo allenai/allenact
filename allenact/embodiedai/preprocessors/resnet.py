@@ -122,23 +122,7 @@ class ClipResNetEmbedder(nn.Module):
     def forward(self, x):
         m = self.model.visual
         with torch.no_grad():
-
-            def stem(x):
-                for conv, bn in [(m.conv1, m.bn1), (m.conv2, m.bn2), (m.conv3, m.bn3)]:
-                    x = m.relu(bn(conv(x)))
-                x = m.avgpool(x)
-                return x
-
-            x = x.type(m.conv1.weight.dtype)
-            x = stem(x)
-            x = m.layer1(x)
-            x = m.layer2(x)
-            x = m.layer3(x)
-            x = m.layer4(x)
-            if self.pool:
-                x = F.adaptive_avg_pool2d(x, (1, 1))
-                x = torch.flatten(x, 1)
-            return x
+            return m(x)
 
 
 class ClipResNetPreprocessor(Preprocessor):

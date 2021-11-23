@@ -21,7 +21,7 @@ from allenact.utils.experiment_utils import (
 
 class DistributedObjectNavRoboThorRGBPPOExperimentConfig(BaseConfig):
     def tag(self) -> str:
-        return "DistributedObjectNavRoboThorRGBPPO_CLIP_0"
+        return "ObjectNavRoboThorRGBPPO_CLIP_zeroshot"
 
     THOR_COMMIT_ID = "91139c909576f3bf95a187c5b02c6fd455d06b48"
 
