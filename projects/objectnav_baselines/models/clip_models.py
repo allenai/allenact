@@ -46,10 +46,10 @@ class CLIPObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
             self._hidden_size
         )
 
-        self.actor = LinearActorHead(self._hidden_size, action_space.n)
-        self.critic = LinearCriticHead(self._hidden_size)
+        self.actor = LinearActorHead(self.encoder.output_dims, action_space.n)
+        self.critic = LinearCriticHead(self.encoder.output_dims)
         if self.include_auxiliary_head:
-            self.auxiliary_actor = LinearActorHead(self._hidden_size, action_space.n)
+            self.auxiliary_actor = LinearActorHead(self.encoder.output_dims, action_space.n)
 
         self.train()
 
