@@ -56,6 +56,8 @@ _CONFIG_KWARGS_STR = "__CONFIG_KWARGS__"
 # Instantiates train, validate, and test workers
 # Logging
 # Saves configs, makes folder for trainer models
+# if logging_in_one_folder is True, only make one folder for each experiment,
+# and then record all the information (ckpt, tb, metrics) in that folder
 class OnPolicyRunner(object):
     def __init__(
         self,
@@ -73,6 +75,7 @@ class OnPolicyRunner(object):
         disable_config_saving: bool = False,
         distributed_ip_and_port: str = "127.0.0.1:0",
         machine_id: int = 0,
+        logging_in_one_folder: bool = True,
     ):
         self.config = config
         self.output_dir = output_dir
@@ -119,6 +122,8 @@ class OnPolicyRunner(object):
 
         self.distributed_ip_and_port = distributed_ip_and_port
         self.machine_id = machine_id
+
+        self.logging_in_one_folder = logging_in_one_folder
 
     @property
     def local_start_time_str(self) -> str:
@@ -595,9 +600,15 @@ class OnPolicyRunner(object):
         for _ in range(num_testers):
             self.queues["checkpoints"].put(("quit", None))
 
-        metrics_dir = self.metric_path(self.local_start_time_str)
+        if self.logging_in_one_folder:
+            checkpoint_parts = self.checkpoint_start_time_str(checkpoint_paths[0])
+            metrics_dir = self.metric_path(self.local_start_time_str, checkpoint_parts,)
+            suffix = ""
+        else:
+            metrics_dir = self.metric_path(self.local_start_time_str)
+            suffix = f"__test_{self.local_start_time_str}"
+
         os.makedirs(metrics_dir, exist_ok=True)
-        suffix = f"__test_{self.local_start_time_str}"
         metrics_file_path = os.path.join(metrics_dir, "metrics" + suffix + ".json")
 
         get_logger().info(f"Saving test metrics in {metrics_file_path}")
@@ -607,17 +618,21 @@ class OnPolicyRunner(object):
             json.dump([], f, indent=4, sort_keys=True, cls=NumpyJSONEncoder)
 
         return self.log_and_close(
-            start_time_str=self.checkpoint_start_time_str(checkpoint_paths[0]),
+            start_time_str=checkpoint_parts
+            if self.logging_in_one_folder
+            else self.checkpoint_start_time_str(checkpoint_paths[0]),
             nworkers=num_testers,
             test_steps=steps,
             metrics_file=metrics_file_path,
         )
 
-    @staticmethod
-    def checkpoint_start_time_str(checkpoint_file_name):
+    def checkpoint_start_time_str(self, checkpoint_file_name):
         parts = checkpoint_file_name.split(os.path.sep)
         assert len(parts) > 1, f"{checkpoint_file_name} is not a valid checkpoint path"
-        start_time_str = parts[-2]
+        if self.logging_in_one_folder:
+            start_time_str = parts[:-2]  # remove checkpoints/*.pt
+        else:
+            start_time_str = parts[-2]
         get_logger().info(f"Using checkpoint start time {start_time_str}")
         return start_time_str
 
@@ -630,50 +645,94 @@ class OnPolicyRunner(object):
     def checkpoint_dir(
         self, start_time_str: Optional[str] = None, create_if_none: bool = True
     ):
-        folder = os.path.join(
-            self.output_dir,
-            "checkpoints",
-            self.config.tag()
-            if self.extra_tag == ""
-            else os.path.join(self.config.tag(), self.extra_tag),
-            start_time_str or self.local_start_time_str,
-        )
+        if self.logging_in_one_folder:
+            folder = os.path.join(
+                self.output_dir,
+                self.config.tag()
+                if self.extra_tag == ""
+                else os.path.join(self.config.tag(), self.extra_tag),
+                start_time_str or self.local_start_time_str,
+                "checkpoints",
+            )
+        else:
+            folder = os.path.join(
+                self.output_dir,
+                "checkpoints",
+                self.config.tag()
+                if self.extra_tag == ""
+                else os.path.join(self.config.tag(), self.extra_tag),
+                start_time_str or self.local_start_time_str,
+            )
         if create_if_none:
             os.makedirs(folder, exist_ok=True)
         return folder
 
     def log_writer_path(self, start_time_str: str) -> str:
-        path = os.path.join(
-            self.output_dir,
-            "tb",
-            self.config.tag()
-            if self.extra_tag == ""
-            else os.path.join(self.config.tag(), self.extra_tag),
-            start_time_str,
-        )
-        if self.mode == TEST_MODE_STR:
-            path = os.path.join(path, "test", self.local_start_time_str)
-        return path
+        if self.logging_in_one_folder:
+            if self.mode == TEST_MODE_STR:
+                checkpoint_parts = start_time_str
+                return os.path.join(
+                    *checkpoint_parts,
+                    "test",
+                    self.config.tag(),
+                    self.local_start_time_str,
+                )
+            path = os.path.join(
+                self.output_dir,
+                self.config.tag()
+                if self.extra_tag == ""
+                else os.path.join(self.config.tag(), self.extra_tag),
+                start_time_str,
+                "train_tb",
+            )
+            return path
+        else:
+            path = os.path.join(
+                self.output_dir,
+                "tb",
+                self.config.tag()
+                if self.extra_tag == ""
+                else os.path.join(self.config.tag(), self.extra_tag),
+                start_time_str,
+            )
+            if self.mode == TEST_MODE_STR:
+                path = os.path.join(path, "test", self.local_start_time_str)
+            return path
 
-    def metric_path(self, start_time_str: str) -> str:
-        return os.path.join(
-            self.output_dir,
-            "metrics",
-            self.config.tag()
-            if self.extra_tag == ""
-            else os.path.join(self.config.tag(), self.extra_tag),
-            start_time_str,
-        )
+    def metric_path(self, start_time_str: str, checkpoint_parts: List = []) -> str:
+        if self.logging_in_one_folder:
+            return os.path.join(
+                *checkpoint_parts, "test", self.config.tag(), start_time_str,
+            )
+        else:
+            return os.path.join(
+                self.output_dir,
+                "metrics",
+                self.config.tag()
+                if self.extra_tag == ""
+                else os.path.join(self.config.tag(), self.extra_tag),
+                start_time_str,
+            )
 
     def save_project_state(self):
-        base_dir = os.path.join(
-            self.output_dir,
-            "used_configs",
-            self.config.tag()
-            if self.extra_tag == ""
-            else os.path.join(self.config.tag(), self.extra_tag),
-            self.local_start_time_str,
-        )
+        if self.logging_in_one_folder:
+            base_dir = os.path.join(
+                self.output_dir,
+                self.config.tag()
+                if self.extra_tag == ""
+                else os.path.join(self.config.tag(), self.extra_tag),
+                self.local_start_time_str,
+                "used_configs",
+            )
+        else:
+            base_dir = os.path.join(
+                self.output_dir,
+                "used_configs",
+                self.config.tag()
+                if self.extra_tag == ""
+                else os.path.join(self.config.tag(), self.extra_tag),
+                self.local_start_time_str,
+            )
         os.makedirs(base_dir, exist_ok=True)
 
         # Saving current git diff
