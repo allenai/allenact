@@ -77,7 +77,6 @@ class AuxiliaryLoss(AbstractActorCriticLoss):
             observations=batch["observations"],
             actions=batch["actions"],
             masks=batch["masks"],
-            rewards=batch["rewards"],
         )
 
     @abc.abstractmethod
@@ -89,7 +88,6 @@ class AuxiliaryLoss(AbstractActorCriticLoss):
         actions: torch.FloatTensor,
         beliefs: torch.FloatTensor,
         masks: torch.FloatTensor,
-        rewards: torch.FloatTensor,
         *args,
         **kwargs
     ):
