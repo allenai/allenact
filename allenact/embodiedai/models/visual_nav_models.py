@@ -22,6 +22,7 @@ from allenact.embodiedai.models.aux_models import AuxiliaryModel
 from allenact.embodiedai.models.fusion_models import FusionModels
 from allenact.embodiedai.aux_losses.losses import TaskWeightsLoss
 
+
 class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
     def __init__(
         self,
@@ -29,7 +30,7 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
         observation_space: SpaceDict,
         hidden_size=512,
         multiple_beliefs=False,
-        beliefs_fusion: Optional[str]=None,
+        beliefs_fusion: Optional[str] = None,
         auxiliary_uuids: Optional[List[str]] = None,
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
@@ -41,24 +42,24 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
             self.auxiliary_uuids = None
 
     def create_state_encoders(
-        self, 
-        obs_embed_size: int, 
+        self,
+        obs_embed_size: int,
         prev_action_embed_size: int,
-        num_rnn_layers: int, 
+        num_rnn_layers: int,
         rnn_type: str,
         add_prev_actions: bool,
         trainable_masked_hidden_state=False,
     ):
         rnn_input_size = obs_embed_size
         self.prev_action_embedder = FeatureEmbedding(
-                                            input_size = self.action_space.n, 
-                                            output_size = prev_action_embed_size if add_prev_actions else 0,
-                                    )
+            input_size=self.action_space.n,
+            output_size=prev_action_embed_size if add_prev_actions else 0,
+        )
         if add_prev_actions:
             rnn_input_size += prev_action_embed_size
 
-        state_encoders = OrderedDict() # perserve insertion order in py3.6
-        if self.multiple_beliefs: # multiple belief model
+        state_encoders = OrderedDict()  # perserve insertion order in py3.6
+        if self.multiple_beliefs:  # multiple belief model
             for aux_uuid in self.auxiliary_uuids:
                 state_encoders[aux_uuid] = RNNStateEncoder(
                     rnn_input_size,
@@ -74,23 +75,24 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
                 num_tasks=len(self.auxiliary_uuids),
             )
 
-        else: # single belief model 
-            state_encoders['single_belief'] = RNNStateEncoder(
+        else:  # single belief model
+            state_encoders["single_belief"] = RNNStateEncoder(
                 rnn_input_size,
                 self._hidden_size,
                 num_layers=num_rnn_layers,
                 rnn_type=rnn_type,
                 trainable_masked_hidden_state=trainable_masked_hidden_state,
             )
-        
+
         self.state_encoders = nn.ModuleDict(state_encoders)
 
         self.belief_names = list(self.state_encoders.keys())
 
-        get_logger().info("there are {} belief models: {}".format(
+        get_logger().info(
+            "there are {} belief models: {}".format(
                 len(self.belief_names), self.belief_names
-        ))
-        
+            )
+        )
 
     def create_actorcritic_head(self):
         self.actor = LinearActorHead(self._hidden_size, self.action_space.n)
@@ -131,25 +133,22 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
                     ("hidden", self.recurrent_hidden_state_size),
                 ),
                 torch.float32,
-            ) for memory_key in self.belief_names
+            )
+            for memory_key in self.belief_names
         }
 
-    def forward_encoder(self, observations: ObservationType)-> torch.FloatTensor:
+    def forward_encoder(self, observations: ObservationType) -> torch.FloatTensor:
         raise NotImplementedError("Obs Encoder Not Implemented")
 
-    def fuse_beliefs(self, 
-        beliefs_dict: Dict[str, torch.FloatTensor],
-        obs_embeds: torch.FloatTensor,
-    )-> Tuple[torch.FloatTensor, Optional[torch.FloatTensor]]:
-        total_beliefs = torch.stack(list(beliefs_dict.values()), dim=-1) # (T, N, H, k)
-        
-        if self.multiple_beliefs: # call the fusion model
-            return self.fusion_model(
-                    total_beliefs=total_beliefs,
-                    obs_embeds=obs_embeds
-                    )
+    def fuse_beliefs(
+        self, beliefs_dict: Dict[str, torch.FloatTensor], obs_embeds: torch.FloatTensor,
+    ) -> Tuple[torch.FloatTensor, Optional[torch.FloatTensor]]:
+        total_beliefs = torch.stack(list(beliefs_dict.values()), dim=-1)  # (T, N, H, k)
+
+        if self.multiple_beliefs:  # call the fusion model
+            return self.fusion_model(total_beliefs=total_beliefs, obs_embeds=obs_embeds)
         # single belief
-        beliefs = total_beliefs.squeeze(-1) # (T,N,H)
+        beliefs = total_beliefs.squeeze(-1)  # (T,N,H)
         return beliefs, None
 
     def forward(  # type:ignore
@@ -160,11 +159,11 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
         masks: torch.FloatTensor,
     ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
 
-        # 1.1 use perception model (i.e. encoder) to get observation embeddings 
+        # 1.1 use perception model (i.e. encoder) to get observation embeddings
         obs_embeds = self.forward_encoder(observations)
         # 1.2 use embedding model to get prev_action embeddings
         prev_actions_embeds = self.prev_action_embedder(prev_actions).to(obs_embeds)
-        joint_embeds = torch.cat((obs_embeds, prev_actions_embeds), dim=-1) # (T, N, *)
+        joint_embeds = torch.cat((obs_embeds, prev_actions_embeds), dim=-1)  # (T, N, *)
 
         # 2. use RNNs to get single/multiple beliefs
         beliefs_dict = {}
@@ -172,31 +171,40 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
             beliefs_dict[key], rnn_hidden_states = model(
                 joint_embeds, memory.tensor(key), masks
             )
-            memory.set_tensor(key, rnn_hidden_states) # update memory here
+            memory.set_tensor(key, rnn_hidden_states)  # update memory here
 
         # 3. fuse beliefs for multiple belief models
-        beliefs, task_weights = self.fuse_beliefs(beliefs_dict, obs_embeds) # fused beliefs
+        beliefs, task_weights = self.fuse_beliefs(
+            beliefs_dict, obs_embeds
+        )  # fused beliefs
 
         # 4. prepare output
-        extras = {
-            aux_uuid: {
-                "beliefs": (beliefs_dict[aux_uuid] 
-                    if self.multiple_beliefs else beliefs),
-                "obs_embeds": obs_embeds,
-                "aux_model": (self.aux_models[aux_uuid]
-                     if aux_uuid in self.aux_models else None),
-            } 
-            for aux_uuid in self.auxiliary_uuids
-        } if self.auxiliary_uuids is not None else {}
+        extras = (
+            {
+                aux_uuid: {
+                    "beliefs": (
+                        beliefs_dict[aux_uuid] if self.multiple_beliefs else beliefs
+                    ),
+                    "obs_embeds": obs_embeds,
+                    "aux_model": (
+                        self.aux_models[aux_uuid]
+                        if aux_uuid in self.aux_models
+                        else None
+                    ),
+                }
+                for aux_uuid in self.auxiliary_uuids
+            }
+            if self.auxiliary_uuids is not None
+            else {}
+        )
 
         if self.multiple_beliefs:
             extras[TaskWeightsLoss.UUID] = task_weights
 
         actor_critic_output = ActorCriticOutput(
-                distributions=self.actor(beliefs),
-                values=self.critic(beliefs),
-                extras=extras,
-            )
-        
-        return actor_critic_output, memory
+            distributions=self.actor(beliefs),
+            values=self.critic(beliefs),
+            extras=extras,
+        )
 
+        return actor_critic_output, memory

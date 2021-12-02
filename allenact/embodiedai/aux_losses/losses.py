@@ -15,11 +15,13 @@ from allenact.algorithms.onpolicy_sync.losses.abstract_loss import (
 from allenact.base_abstractions.distributions import CategoricalDistr
 from allenact.base_abstractions.misc import ActorCriticOutput
 
+
 def subsampled_masks(masks, p=0.1):
     return (torch.rand_like(masks) <= p).float()
 
+
 class TaskWeightsLoss(AbstractActorCriticLoss):
-    UUID = 'task_weights' # make sure its uniqueness
+    UUID = "task_weights"  # make sure its uniqueness
 
     def __init__(self, task_names: List[str], *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -39,19 +41,19 @@ class TaskWeightsLoss(AbstractActorCriticLoss):
         entropy = CategoricalDistr(task_weights).entropy()
 
         avg_loss = (-entropy).mean()
-        avg_task_weights = task_weights.mean(dim=0) # (K)
+        avg_task_weights = task_weights.mean(dim=0)  # (K)
 
         outputs = dict()
         outputs["entropy_loss"] = cast(torch.Tensor, avg_loss).item()
         for i in range(self.num_tasks):
             outputs["weight_" + self.task_names[i]] = cast(
-                    torch.Tensor, avg_task_weights[i]).item()
-        
+                torch.Tensor, avg_task_weights[i]
+            ).item()
+
         return (
             avg_loss,
             outputs,
         )
-
 
 
 class AuxiliaryLoss(AbstractActorCriticLoss):
@@ -129,7 +131,7 @@ class InverseDynamicsLoss(AuxiliaryLoss):
         for i in range(num_sampler):
             # right shift: to locate the 1 before 0 and ignore the 1st element
             end_locs = torch.where(masks[1:, i] == 0)[0]  # maybe [], dtype=torch.Long
-            
+
             start_locs = torch.cat(
                 [torch.tensor([0]).to(end_locs), end_locs + 1]
             )  # add the first element
@@ -139,7 +141,7 @@ class InverseDynamicsLoss(AuxiliaryLoss):
             )  # add the last element
 
             for st, ed in zip(start_locs, end_locs):
-                final_beliefs[st: ed + 1, i] = beliefs[ed, i]
+                final_beliefs[st : ed + 1, i] = beliefs[ed, i]
 
         ## compute CE loss
         decoder_in = torch.cat(
@@ -152,7 +154,7 @@ class InverseDynamicsLoss(AuxiliaryLoss):
             preds.view((num_steps - 1) * num_sampler, -1),  # ((T-1)*B, A)
             actions.flatten(),  #  ((T-1)*B,)
         )
-        loss = loss.view(num_steps - 1, num_sampler) # (T-1, B)
+        loss = loss.view(num_steps - 1, num_sampler)  # (T-1, B)
 
         def vanilla_valid_losses(loss, num_sampler, end_locs_batch):
             ##  this is just used to verify the vectorized version works correctly.
@@ -195,12 +197,11 @@ class InverseDynamicsLoss(AuxiliaryLoss):
             {"total": cast(torch.Tensor, avg_loss).item(),},
         )
 
+
 class TemporalDistanceLoss(AuxiliaryLoss):
     UUID = "TempDist"
 
-    def __init__(
-        self, num_pairs: int = 8, epsiode_len_min: int = 5, *args, **kwargs
-    ):
+    def __init__(self, num_pairs: int = 8, epsiode_len_min: int = 5, *args, **kwargs):
         super().__init__(auxiliary_uuid=self.UUID, *args, **kwargs)
         self.num_pairs = num_pairs
         self.epsiode_len_min = float(epsiode_len_min)
@@ -236,7 +237,7 @@ class TemporalDistanceLoss(AuxiliaryLoss):
         for i in range(num_sampler):
             # right shift: to locate the 1 before 0 and ignore the 1st element
             end_locs = torch.where(masks[1:, i] == 0)[0]  # maybe [], dtype=torch.Long
-            
+
             start_locs = torch.cat(
                 [torch.tensor([0]).to(end_locs), end_locs + 1]
             )  # add the first element
@@ -245,40 +246,67 @@ class TemporalDistanceLoss(AuxiliaryLoss):
                 [end_locs, torch.tensor([num_steps - 1]).to(end_locs)]
             )  # add the last element
 
-            locs_batch.append(torch.stack([
-                i * torch.ones_like(start_locs), start_locs, end_locs
-            ], dim=-1)) # shape (M[i], 3)
+            locs_batch.append(
+                torch.stack(
+                    [i * torch.ones_like(start_locs), start_locs, end_locs], dim=-1
+                )
+            )  # shape (M[i], 3)
 
             for st, ed in zip(start_locs, end_locs):
-                final_beliefs[st: ed + 1, i] = beliefs[ed, i]
-        
-        locs_batch = torch.cat(locs_batch) # shape (M, 3)
-        temporal_dist_max = (locs_batch[:, 2] - locs_batch[:, 1]).float() # end - start, (M)
+                final_beliefs[st : ed + 1, i] = beliefs[ed, i]
+
+        locs_batch = torch.cat(locs_batch)  # shape (M, 3)
+        temporal_dist_max = (
+            locs_batch[:, 2] - locs_batch[:, 1]
+        ).float()  # end - start, (M)
         # create normalizer that ignores too short episode, otherwise 1/T
-        normalizer = torch.where(temporal_dist_max > self.epsiode_len_min,
-                        1.0 / temporal_dist_max, torch.tensor([0]).to(temporal_dist_max)) # (M)
+        normalizer = torch.where(
+            temporal_dist_max > self.epsiode_len_min,
+            1.0 / temporal_dist_max,
+            torch.tensor([0]).to(temporal_dist_max),
+        )  # (M)
 
         # sample validpairs: sampled_pairs shape (M, num_pairs, 3)
         # where M is the num of total episodes in the batch
-        locs = locs_batch.cpu().numpy() # cuz torch.randint only support int, not tensor
+        locs = (
+            locs_batch.cpu().numpy()
+        )  # cuz torch.randint only support int, not tensor
         sampled_pairs = np.random.randint(
-            np.repeat(locs[:,[1]],     2*self.num_pairs, axis=-1), # (M, 2*k)
-            np.repeat(locs[:,[2]] + 1, 2*self.num_pairs, axis=-1), # (M, 2*k)
-        ).reshape(-1, self.num_pairs, 2) # (M, k, 2)
-        sampled_pairs_batch = torch.from_numpy(sampled_pairs).to(locs_batch) # (M, k, 2)
+            np.repeat(locs[:, [1]], 2 * self.num_pairs, axis=-1),  # (M, 2*k)
+            np.repeat(locs[:, [2]] + 1, 2 * self.num_pairs, axis=-1),  # (M, 2*k)
+        ).reshape(
+            -1, self.num_pairs, 2
+        )  # (M, k, 2)
+        sampled_pairs_batch = torch.from_numpy(sampled_pairs).to(
+            locs_batch
+        )  # (M, k, 2)
 
-        num_sampler_batch = locs_batch[:, [0]].expand(-1, 2*self.num_pairs) # (M, 1) -> (M, 2*k)
-        num_sampler_batch = num_sampler_batch.reshape(-1, self.num_pairs, 2) # (M, k, 2)
+        num_sampler_batch = locs_batch[:, [0]].expand(
+            -1, 2 * self.num_pairs
+        )  # (M, 1) -> (M, 2*k)
+        num_sampler_batch = num_sampler_batch.reshape(
+            -1, self.num_pairs, 2
+        )  # (M, k, 2)
 
-        sampled_obs_embeds = obs_embeds[sampled_pairs_batch, num_sampler_batch] # (M, k, 2, H1)
-        sampled_final_beliefs = final_beliefs[sampled_pairs_batch, num_sampler_batch] # (M, k, 2, H2)
-        features = torch.cat([
-            sampled_obs_embeds[:, :, 0], sampled_obs_embeds[:, :, 1], 
-            sampled_final_beliefs[:, :, 0]
-        ], dim=-1) # (M, k, 2*H1 + H2)
-        
-        pred_temp_dist = aux_model(features).squeeze(-1) # (M, k)
-        true_temp_dist = (sampled_pairs_batch[:, :, 1] - sampled_pairs_batch[:, :, 0]).float() # (M, k)
+        sampled_obs_embeds = obs_embeds[
+            sampled_pairs_batch, num_sampler_batch
+        ]  # (M, k, 2, H1)
+        sampled_final_beliefs = final_beliefs[
+            sampled_pairs_batch, num_sampler_batch
+        ]  # (M, k, 2, H2)
+        features = torch.cat(
+            [
+                sampled_obs_embeds[:, :, 0],
+                sampled_obs_embeds[:, :, 1],
+                sampled_final_beliefs[:, :, 0],
+            ],
+            dim=-1,
+        )  # (M, k, 2*H1 + H2)
+
+        pred_temp_dist = aux_model(features).squeeze(-1)  # (M, k)
+        true_temp_dist = (
+            sampled_pairs_batch[:, :, 1] - sampled_pairs_batch[:, :, 0]
+        ).float()  # (M, k)
 
         pred_error = (pred_temp_dist - true_temp_dist) * normalizer.unsqueeze(1)
         loss = 0.5 * (pred_error).pow(2)
@@ -289,6 +317,7 @@ class TemporalDistanceLoss(AuxiliaryLoss):
             {"total": cast(torch.Tensor, avg_loss).item(),},
         )
 
+
 class CPCALoss(AuxiliaryLoss):
     UUID = "CPCA"
 
@@ -297,7 +326,7 @@ class CPCALoss(AuxiliaryLoss):
     ):
         super().__init__(auxiliary_uuid=self.UUID, *args, **kwargs)
         self.planning_steps = planning_steps
-        self.subsample_rate= subsample_rate
+        self.subsample_rate = subsample_rate
         self.cross_entropy_loss = nn.BCEWithLogitsLoss(reduction="none")
 
     def get_aux_loss(
@@ -315,44 +344,90 @@ class CPCALoss(AuxiliaryLoss):
         ## where b_t = RNN(b_{t-1}, z_t, a_{t-1}), prev action is optional
         num_steps, num_sampler, obs_embed_size = obs_embeds.shape  # T, N, H_O
         assert 0 < self.planning_steps <= num_steps
-        
+
         ## prepare positive and negatives that sample from all the batch
-        positives = obs_embeds # (T, N, -1)
-        negative_inds = torch.randperm(num_steps*num_sampler).to(positives.device)
-        negatives = torch.gather( # input[index[i,j]][j]
-            positives.view(num_steps*num_sampler, -1),
+        positives = obs_embeds  # (T, N, -1)
+        negative_inds = torch.randperm(num_steps * num_sampler).to(positives.device)
+        negatives = torch.gather(  # input[index[i,j]][j]
+            positives.view(num_steps * num_sampler, -1),
             dim=0,
-            index=negative_inds.view(num_steps*num_sampler, 1).expand(num_steps*num_sampler, positives.size(-1)),
-        ).view(num_steps, num_sampler, -1) # (T, N, -1)
+            index=negative_inds.view(num_steps * num_sampler, 1).expand(
+                num_steps * num_sampler, positives.size(-1)
+            ),
+        ).view(
+            num_steps, num_sampler, -1
+        )  # (T, N, -1)
 
         ## prepare action sequences and initial beliefs
-        action_embedding = aux_model.action_embedder(actions) # (T, N, -1)
+        action_embedding = aux_model.action_embedder(actions)  # (T, N, -1)
         action_embed_size = action_embedding.size(-1)
-        action_padding = torch.zeros(self.planning_steps - 1, num_sampler, action_embed_size).to(action_embedding) # (k-1, N, -1)
-        action_padded = torch.cat((action_embedding, action_padding), dim=0) # (T+k-1, N, -1)
+        action_padding = torch.zeros(
+            self.planning_steps - 1, num_sampler, action_embed_size
+        ).to(
+            action_embedding
+        )  # (k-1, N, -1)
+        action_padded = torch.cat(
+            (action_embedding, action_padding), dim=0
+        )  # (T+k-1, N, -1)
         ## unfold function will create consecutive action sequences
-        action_seq = action_padded.unfold(dimension=0, size=self.planning_steps, step=1).permute(3, 0, 1, 2).view(
-                                self.planning_steps, num_steps*num_sampler, action_embed_size) # (k, T*N, -1)
-        beliefs = beliefs.view(num_steps*num_sampler, -1).unsqueeze(0) # (1, T*N, -1)
+        action_seq = (
+            action_padded.unfold(dimension=0, size=self.planning_steps, step=1)
+            .permute(3, 0, 1, 2)
+            .view(self.planning_steps, num_steps * num_sampler, action_embed_size)
+        )  # (k, T*N, -1)
+        beliefs = beliefs.view(num_steps * num_sampler, -1).unsqueeze(0)  # (1, T*N, -1)
 
         # get future contexts c_{t+1:t+k} = GRU(b_t, a_{t:t+k-1})
-        future_contexts_all, _ = aux_model.context_model(action_seq, beliefs) # (k, T*N, -1) 
+        future_contexts_all, _ = aux_model.context_model(
+            action_seq, beliefs
+        )  # (k, T*N, -1)
         ## NOTE: future_contexts_all starting from next step t+1 to t+k, not t to t+k-1
         future_contexts_all = future_contexts_all.view(
-                                self.planning_steps, num_steps, num_sampler, -1).permute(1, 0, 2, 3) # (k, T, N, -1) 
+            self.planning_steps, num_steps, num_sampler, -1
+        ).permute(
+            1, 0, 2, 3
+        )  # (k, T, N, -1)
 
         # get all the classifier scores I(c_{t+1:t+k}; z_{t+1:t+k})
-        positives_padding = torch.zeros(self.planning_steps, num_sampler, obs_embed_size).to(positives) # (k, N, -1)
-        positives_padded = torch.cat((positives[1:], positives_padding), dim=0) # (T+k-1, N, -1)
-        positives_expanded = positives_padded.unfold(dimension=0, size=self.planning_steps, step=1).permute(0, 3, 1, 2) # (T, k, N, -1)
-        positives_logits = aux_model.classifier(torch.cat([positives_expanded, future_contexts_all], -1)) # (T, k, N, 1)
-        positive_loss = self.cross_entropy_loss(positives_logits, torch.ones_like(positives_logits)) # (T, k, N, 1)
+        positives_padding = torch.zeros(
+            self.planning_steps, num_sampler, obs_embed_size
+        ).to(
+            positives
+        )  # (k, N, -1)
+        positives_padded = torch.cat(
+            (positives[1:], positives_padding), dim=0
+        )  # (T+k-1, N, -1)
+        positives_expanded = positives_padded.unfold(
+            dimension=0, size=self.planning_steps, step=1
+        ).permute(
+            0, 3, 1, 2
+        )  # (T, k, N, -1)
+        positives_logits = aux_model.classifier(
+            torch.cat([positives_expanded, future_contexts_all], -1)
+        )  # (T, k, N, 1)
+        positive_loss = self.cross_entropy_loss(
+            positives_logits, torch.ones_like(positives_logits)
+        )  # (T, k, N, 1)
 
-        negatives_padding = torch.zeros(self.planning_steps, num_sampler, obs_embed_size).to(negatives) # (k, N, -1)
-        negatives_padded = torch.cat((negatives[1:], negatives_padding), dim=0) # (T+k-1, N, -1)
-        negatives_expanded = negatives_padded.unfold(dimension=0, size=self.planning_steps, step=1).permute(0, 3, 1, 2) # (T, k, N, -1)
-        negatives_logits = aux_model.classifier(torch.cat([negatives_expanded, future_contexts_all], -1)) # (T, k, N, 1)
-        negative_loss = self.cross_entropy_loss(negatives_logits, torch.zeros_like(negatives_logits)) # (T, k, N, 1)
+        negatives_padding = torch.zeros(
+            self.planning_steps, num_sampler, obs_embed_size
+        ).to(
+            negatives
+        )  # (k, N, -1)
+        negatives_padded = torch.cat(
+            (negatives[1:], negatives_padding), dim=0
+        )  # (T+k-1, N, -1)
+        negatives_expanded = negatives_padded.unfold(
+            dimension=0, size=self.planning_steps, step=1
+        ).permute(
+            0, 3, 1, 2
+        )  # (T, k, N, -1)
+        negatives_logits = aux_model.classifier(
+            torch.cat([negatives_expanded, future_contexts_all], -1)
+        )  # (T, k, N, 1)
+        negative_loss = self.cross_entropy_loss(
+            negatives_logits, torch.zeros_like(negatives_logits)
+        )  # (T, k, N, 1)
 
         # Masking to get valid scores
         ## masks: Note which timesteps [1, T+k+1] could have valid queries, at distance (k) (note offset by 1)
@@ -370,86 +445,104 @@ class CPCALoss(AuxiliaryLoss):
         ## | - - - - - |
         masks = masks.squeeze(-1)  # (T, N)
         pred_masks = torch.ones(
-            num_steps + self.planning_steps, self.planning_steps, num_sampler, 1, dtype=torch.bool
-        ).to(beliefs.device) # (T+k, k, N, 1)
+            num_steps + self.planning_steps,
+            self.planning_steps,
+            num_sampler,
+            1,
+            dtype=torch.bool,
+        ).to(
+            beliefs.device
+        )  # (T+k, k, N, 1)
 
-        pred_masks[num_steps - 1:] = False # GRU(b_t, a_{t:t+k-1}) is invalid when t >= T, cuz we don't have real z_{t+1}
-        for j in range(1, self.planning_steps + 1): # for j-step predictions
-            pred_masks[:j - 1, j - 1] = False # Remove the upper triangle above the diagnonal (but I think this is unnecessary for valid_masks)
+        pred_masks[
+            num_steps - 1 :
+        ] = False  # GRU(b_t, a_{t:t+k-1}) is invalid when t >= T, cuz we don't have real z_{t+1}
+        for j in range(1, self.planning_steps + 1):  # for j-step predictions
+            pred_masks[
+                : j - 1, j - 1
+            ] = False  # Remove the upper triangle above the diagnonal (but I think this is unnecessary for valid_masks)
             for n in range(num_sampler):
                 has_zeros_batch = torch.where(masks[:, n] == 0)[0]
                 # in j-step prediction, timesteps z -> z + j are disallowed as those are the first j timesteps of a new episode
                 # z-> z-1 because of pred_masks being offset by 1
                 for z in has_zeros_batch:
-                    pred_masks[z-1: z-1 + j, j - 1, n] = False # can affect j timesteps
+                    pred_masks[
+                        z - 1 : z - 1 + j, j - 1, n
+                    ] = False  # can affect j timesteps
 
         # instead of the whole range, we actually are only comparing a window i:i+k for each query/target i - for each, select the appropriate k
         # we essentially gather diagonals from this full mask, t of them, k long
-        valid_diagonals = [torch.diagonal(pred_masks, offset=-i) for i in range(num_steps)] # pull the appropriate k per timestep
-        valid_masks = torch.stack(valid_diagonals, dim=0).permute(0, 3, 1, 2).float() # (T, N, 1, k) -> (T, k, N, 1)
+        valid_diagonals = [
+            torch.diagonal(pred_masks, offset=-i) for i in range(num_steps)
+        ]  # pull the appropriate k per timestep
+        valid_masks = (
+            torch.stack(valid_diagonals, dim=0).permute(0, 3, 1, 2).float()
+        )  # (T, N, 1, k) -> (T, k, N, 1)
         # print(valid_masks.int().squeeze(-1)); print(masks) # verify its correctness
 
-        loss_masks = valid_masks * subsampled_masks(valid_masks, self.subsample_rate) # (T, k, N, 1)
+        loss_masks = valid_masks * subsampled_masks(
+            valid_masks, self.subsample_rate
+        )  # (T, k, N, 1)
         num_valid_losses = torch.count_nonzero(loss_masks)
-        avg_positive_loss = (positive_loss * loss_masks).sum() / torch.clamp(num_valid_losses, min=1.0)
-        avg_negative_loss = (negative_loss * loss_masks).sum() / torch.clamp(num_valid_losses, min=1.0)
+        avg_positive_loss = (positive_loss * loss_masks).sum() / torch.clamp(
+            num_valid_losses, min=1.0
+        )
+        avg_negative_loss = (negative_loss * loss_masks).sum() / torch.clamp(
+            num_valid_losses, min=1.0
+        )
 
         avg_loss = avg_positive_loss + avg_negative_loss
 
         return (
             avg_loss,
-            {"total": cast(torch.Tensor, avg_loss).item(),
-            "positive_loss": cast(torch.Tensor, avg_positive_loss).item(),
-            "negative_loss": cast(torch.Tensor, avg_negative_loss).item(),
+            {
+                "total": cast(torch.Tensor, avg_loss).item(),
+                "positive_loss": cast(torch.Tensor, avg_positive_loss).item(),
+                "negative_loss": cast(torch.Tensor, avg_negative_loss).item(),
             },
         )
+
 
 class CPCA1Loss(CPCALoss):
     UUID = "CPCA_1"
 
-    def __init__(
-        self, subsample_rate: float = 0.2, *args, **kwargs
-    ):
-        super().__init__(planning_steps=1, 
-            subsample_rate=subsample_rate, *args, **kwargs
+    def __init__(self, subsample_rate: float = 0.2, *args, **kwargs):
+        super().__init__(
+            planning_steps=1, subsample_rate=subsample_rate, *args, **kwargs
         )
+
 
 class CPCA2Loss(CPCALoss):
     UUID = "CPCA_2"
 
-    def __init__(
-        self, subsample_rate: float = 0.2, *args, **kwargs
-    ):
-        super().__init__(planning_steps=2, 
-            subsample_rate=subsample_rate, *args, **kwargs
+    def __init__(self, subsample_rate: float = 0.2, *args, **kwargs):
+        super().__init__(
+            planning_steps=2, subsample_rate=subsample_rate, *args, **kwargs
         )
+
 
 class CPCA4Loss(CPCALoss):
     UUID = "CPCA_4"
 
-    def __init__(
-        self, subsample_rate: float = 0.2, *args, **kwargs
-    ):
-        super().__init__(planning_steps=4, 
-            subsample_rate=subsample_rate, *args, **kwargs
+    def __init__(self, subsample_rate: float = 0.2, *args, **kwargs):
+        super().__init__(
+            planning_steps=4, subsample_rate=subsample_rate, *args, **kwargs
         )
+
 
 class CPCA8Loss(CPCALoss):
     UUID = "CPCA_8"
 
-    def __init__(
-        self, subsample_rate: float = 0.2, *args, **kwargs
-    ):
-        super().__init__(planning_steps=8, 
-            subsample_rate=subsample_rate, *args, **kwargs
+    def __init__(self, subsample_rate: float = 0.2, *args, **kwargs):
+        super().__init__(
+            planning_steps=8, subsample_rate=subsample_rate, *args, **kwargs
         )
+
 
 class CPCA16Loss(CPCALoss):
     UUID = "CPCA_16"
 
-    def __init__(
-        self, subsample_rate: float = 0.2, *args, **kwargs
-    ):
-        super().__init__(planning_steps=16, 
-            subsample_rate=subsample_rate, *args, **kwargs
+    def __init__(self, subsample_rate: float = 0.2, *args, **kwargs):
+        super().__init__(
+            planning_steps=16, subsample_rate=subsample_rate, *args, **kwargs
         )

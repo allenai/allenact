@@ -23,6 +23,7 @@ from gym.spaces.dict import Dict as SpaceDict
 from allenact.utils.model_utils import Flatten
 from allenact.utils.system import get_logger
 
+
 def conv3x3(in_planes, out_planes, stride=1, groups=1):
     """3x3 convolution with padding"""
     return nn.Conv2d(
@@ -38,9 +39,7 @@ def conv3x3(in_planes, out_planes, stride=1, groups=1):
 
 def conv1x1(in_planes, out_planes, stride=1):
     """1x1 convolution"""
-    return nn.Conv2d(
-        in_planes, out_planes, kernel_size=1, stride=stride, bias=False
-    )
+    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
 
 
 class BasicBlock(nn.Module):
@@ -48,13 +47,7 @@ class BasicBlock(nn.Module):
     resneXt = False
 
     def __init__(
-        self,
-        inplanes,
-        planes,
-        ngroups,
-        stride=1,
-        downsample=None,
-        cardinality=1,
+        self, inplanes, planes, ngroups, stride=1, downsample=None, cardinality=1,
     ):
         super(BasicBlock, self).__init__()
         self.convs = nn.Sequential(
@@ -78,9 +71,7 @@ class BasicBlock(nn.Module):
         return self.relu(out + residual)
 
 
-def _build_bottleneck_branch(
-    inplanes, planes, ngroups, stride, expansion, groups=1
-):
+def _build_bottleneck_branch(inplanes, planes, ngroups, stride, expansion, groups=1):
     return nn.Sequential(
         conv1x1(inplanes, planes),
         nn.GroupNorm(ngroups, planes),
@@ -122,22 +113,11 @@ class Bottleneck(nn.Module):
     resneXt = False
 
     def __init__(
-        self,
-        inplanes,
-        planes,
-        ngroups,
-        stride=1,
-        downsample=None,
-        cardinality=1,
+        self, inplanes, planes, ngroups, stride=1, downsample=None, cardinality=1,
     ):
         super().__init__()
         self.convs = _build_bottleneck_branch(
-            inplanes,
-            planes,
-            ngroups,
-            stride,
-            self.expansion,
-            groups=cardinality,
+            inplanes, planes, ngroups, stride, self.expansion, groups=cardinality,
         )
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
@@ -158,17 +138,9 @@ class Bottleneck(nn.Module):
 
 class SEBottleneck(Bottleneck):
     def __init__(
-        self,
-        inplanes,
-        planes,
-        ngroups,
-        stride=1,
-        downsample=None,
-        cardinality=1,
+        self, inplanes, planes, ngroups, stride=1, downsample=None, cardinality=1,
     ):
-        super().__init__(
-            inplanes, planes, ngroups, stride, downsample, cardinality
-        )
+        super().__init__(inplanes, planes, ngroups, stride, downsample, cardinality)
 
         self.se = _build_se_branch(planes * self.expansion)
 
@@ -193,10 +165,9 @@ class ResNeXtBottleneck(Bottleneck):
     expansion = 2
     resneXt = True
 
+
 class ResNet(nn.Module):
-    def __init__(
-        self, in_channels, base_planes, ngroups, block, layers, cardinality=1
-    ):
+    def __init__(self, in_channels, base_planes, ngroups, block, layers, cardinality=1):
         super(ResNet, self).__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(
@@ -294,9 +265,7 @@ def resneXt50(in_channels, base_planes, ngroups):
 
 
 def se_resnet50(in_channels, base_planes, ngroups):
-    model = ResNet(
-        in_channels, base_planes, ngroups, SEBottleneck, [3, 4, 6, 3]
-    )
+    model = ResNet(in_channels, base_planes, ngroups, SEBottleneck, [3, 4, 6, 3])
 
     return model
 
@@ -362,15 +331,17 @@ class ResNetEncoder(nn.Module):
             self._n_input_depth = 0
 
         if not self.is_blind:
-            spatial_size = observation_space.spaces[self._inputs[0]].shape[0] // 2 # H (=W) / 2
+            spatial_size = (
+                observation_space.spaces[self._inputs[0]].shape[0] // 2
+            )  # H (=W) / 2
             # RGBD into one model
-            input_channels = self._n_input_rgb + self._n_input_depth # C
-            
+            input_channels = self._n_input_rgb + self._n_input_depth  # C
+
             self.backbone = make_backbone(input_channels, baseplanes, ngroups)
 
-            final_spatial = int(np.ceil(
-                spatial_size * self.backbone.final_spatial_compress
-            ))  # fix bug in habitat that uses int()
+            final_spatial = int(
+                np.ceil(spatial_size * self.backbone.final_spatial_compress)
+            )  # fix bug in habitat that uses int()
             after_compression_flat_size = 2048
             num_compression_channels = int(
                 round(after_compression_flat_size / (final_spatial ** 2))
@@ -395,9 +366,7 @@ class ResNetEncoder(nn.Module):
 
             self.head = nn.Sequential(
                 Flatten(),
-                nn.Linear(
-                    np.prod(self.output_shape), output_size
-                ),
+                nn.Linear(np.prod(self.output_shape), output_size),
                 nn.ReLU(True),
             )
 
@@ -410,9 +379,7 @@ class ResNetEncoder(nn.Module):
     def layer_init(self):
         for layer in self.modules():
             if isinstance(layer, (nn.Conv2d, nn.Linear)):
-                nn.init.kaiming_normal_(
-                    layer.weight, nn.init.calculate_gain("relu")
-                )
+                nn.init.kaiming_normal_(layer.weight, nn.init.calculate_gain("relu"))
                 if layer.bias is not None:
                     nn.init.constant_(layer.bias, val=0)
         get_logger().info("initialize resnet encoder")
@@ -421,7 +388,7 @@ class ResNetEncoder(nn.Module):
         if self.is_blind:
             return None
 
-        # TODO: the reshape follows compute_cnn_output() 
+        # TODO: the reshape follows compute_cnn_output()
         # but it's hard to make the forward as a nn.Module as cnn param
         cnn_input = []
         for mode in self._inputs:
@@ -436,34 +403,23 @@ class ResNetEncoder(nn.Module):
             else:
                 nsteps, nsamplers = mode_obs.shape[:2]
             # Make FLAT_BATCH = nsteps * nsamplers (* nagents)
-            mode_obs = mode_obs.view((-1,) + mode_obs.shape[2 + int(nagents is not None) :])
+            mode_obs = mode_obs.view(
+                (-1,) + mode_obs.shape[2 + int(nagents is not None) :]
+            )
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
             mode_obs = mode_obs.permute(0, 3, 1, 2)
             cnn_input.append(mode_obs)
 
         x = torch.cat(cnn_input, dim=1)
-        x = F.avg_pool2d(x, 2) # 2x downsampling
+        x = F.avg_pool2d(x, 2)  # 2x downsampling
 
-        x = self.backbone(x) # (256, 4, 4)
-        x = self.compression(x) # (128, 4, 4)
-        x = self.head(x) # (2048) -> (hidden_size)
+        x = self.backbone(x)  # (256, 4, 4)
+        x = self.compression(x)  # (128, 4, 4)
+        x = self.head(x)  # (2048) -> (hidden_size)
 
         if nagents is not None:
-            x = x.reshape(
-                (
-                    nsteps,
-                    nsamplers,
-                    nagents,
-                )
-                + x.shape[1:]
-            )
+            x = x.reshape((nsteps, nsamplers, nagents,) + x.shape[1:])
         else:
-            x = x.reshape(
-                (
-                    nsteps,
-                    nsamplers,
-                )
-                + x.shape[1:]
-            )
+            x = x.reshape((nsteps, nsamplers,) + x.shape[1:])
 
         return x
