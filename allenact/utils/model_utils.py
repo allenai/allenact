@@ -216,3 +216,22 @@ def simple_linear_weights_init(m):
         m.weight.data.uniform_(-w_bound, w_bound)
         if m.bias is not None:
             m.bias.data.fill_(0)
+
+class FeatureEmbedding(nn.Module):
+	""" A wrapper of nn.Embedding but support zero output
+	Used for extracting features for actions/rewards
+	"""
+
+	def __init__(self, input_size, output_size):
+		super().__init__()
+		self.output_size = output_size
+		if self.output_size != 0:
+			self.fc = nn.Embedding(input_size, output_size) 
+		else:
+			self.fc = None
+
+	def forward(self, inputs):
+		if self.output_size != 0:
+			return self.fc(inputs)
+		else: # useful for concat, to be move to device
+			return torch.zeros(0, )
