@@ -3,27 +3,21 @@
 Object navigation is currently available as a Task in AI2-THOR and
 Facebook's Habitat.
 """
-from typing import Tuple, Dict, Optional, cast
+from typing import Tuple, Dict, Optional, cast, List
+from allenact.utils.system import get_logger
 
 import gym
 import torch
 import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
-from allenact.algorithms.onpolicy_sync.policy import (
-    ActorCriticModel,
-    LinearCriticHead,
-    LinearActorHead,
-    DistributionType,
-    Memory,
-    ObservationType,
-)
-from allenact.base_abstractions.distributions import CategoricalDistr
-from allenact.base_abstractions.misc import ActorCriticOutput
-from allenact.embodiedai.models.basic_models import SimpleCNN, RNNStateEncoder
+from allenact.algorithms.onpolicy_sync.policy import ObservationType
+from allenact.embodiedai.models.basic_models import SimpleCNN
+import allenact.embodiedai.models.resnet as resnet
+from allenact.embodiedai.models.visual_nav_models import VisualNavActorCritic
 
 
-class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
+class ObjectNavActorCritic(VisualNavActorCritic):
     """Baseline recurrent actor critic model for object-navigation.
 
     # Attributes
@@ -44,42 +38,76 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         action_space: gym.spaces.Discrete,
         observation_space: SpaceDict,
         goal_sensor_uuid: str,
-        rgb_uuid: Optional[str],
-        depth_uuid: Optional[str],
+        # RNN
         hidden_size=512,
-        object_type_embedding_dim=8,
-        trainable_masked_hidden_state: bool = False,
         num_rnn_layers=1,
         rnn_type="GRU",
+        add_prev_actions=False,
+        action_embed_size=6,
+        # Aux loss
+        multiple_beliefs=False,
+        beliefs_fusion: Optional[str] = None,
+        auxiliary_uuids: Optional[List[str]] = None,
+        # below are custom params
+        rgb_uuid: Optional[str] = None,
+        depth_uuid: Optional[str] = None,
+        object_type_embedding_dim=32,
+        trainable_masked_hidden_state: bool = False,
+        # perception backbone params,
+        backbone="resnet18",
+        resnet_baseplanes=32,
     ):
         """Initializer.
 
         See class documentation for parameter definitions.
         """
-        super().__init__(action_space=action_space, observation_space=observation_space)
+        super().__init__(
+            action_space=action_space,
+            observation_space=observation_space,
+            hidden_size=hidden_size,
+            multiple_beliefs=multiple_beliefs,
+            beliefs_fusion=beliefs_fusion,
+            auxiliary_uuids=auxiliary_uuids,
+        )
 
         self.goal_sensor_uuid = goal_sensor_uuid
         self._n_object_types = self.observation_space.spaces[self.goal_sensor_uuid].n
-        self._hidden_size = hidden_size
         self.object_type_embedding_size = object_type_embedding_dim
 
-        self.visual_encoder = SimpleCNN(
-            observation_space=self.observation_space,
-            output_size=self._hidden_size,
-            rgb_uuid=rgb_uuid,
-            depth_uuid=depth_uuid,
-        )
+        self.backbone = backbone
+        if backbone == "simple_cnn":
+            self.visual_encoder = SimpleCNN(
+                observation_space=observation_space,
+                output_size=hidden_size,
+                rgb_uuid=rgb_uuid,
+                depth_uuid=depth_uuid,
+            )
+        else:  # resnet family
+            self.visual_encoder = resnet.ResNetEncoder(
+                observation_space=observation_space,
+                output_size=hidden_size,
+                rgb_uuid=rgb_uuid,
+                depth_uuid=depth_uuid,
+                baseplanes=resnet_baseplanes,
+                ngroups=resnet_baseplanes // 2,
+                make_backbone=getattr(resnet, backbone),
+            )
 
-        self.state_encoder = RNNStateEncoder(
-            (0 if self.is_blind else self._hidden_size) + object_type_embedding_dim,
-            self._hidden_size,
-            trainable_masked_hidden_state=trainable_masked_hidden_state,
-            num_layers=num_rnn_layers,
+        self.create_state_encoders(
+            obs_embed_size=self.goal_visual_encoder_output_dims,
+            num_rnn_layers=num_rnn_layers,
             rnn_type=rnn_type,
+            add_prev_actions=add_prev_actions,
+            prev_action_embed_size=action_embed_size,
+            trainable_masked_hidden_state=trainable_masked_hidden_state,
         )
 
-        self.actor = LinearActorHead(self._hidden_size, action_space.n)
-        self.critic = LinearCriticHead(self._hidden_size)
+        self.create_actorcritic_head()
+
+        self.create_aux_models(
+            obs_embed_size=self.goal_visual_encoder_output_dims,
+            action_embed_size=action_embed_size,
+        )
 
         self.object_type_embedding = nn.Embedding(
             num_embeddings=self._n_object_types,
@@ -87,11 +115,7 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         )
 
         self.train()
-
-    @property
-    def recurrent_hidden_state_size(self) -> int:
-        """The recurrent hidden state size of the model."""
-        return self._hidden_size
+        get_logger().info(self)
 
     @property
     def is_blind(self) -> bool:
@@ -100,21 +124,11 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         return self.visual_encoder.is_blind
 
     @property
-    def num_recurrent_layers(self) -> int:
-        """Number of recurrent hidden layers."""
-        return self.state_encoder.num_recurrent_layers
-
-    def _recurrent_memory_specification(self):
-        return dict(
-            rnn=(
-                (
-                    ("layer", self.num_recurrent_layers),
-                    ("sampler", None),
-                    ("hidden", self.recurrent_hidden_state_size),
-                ),
-                torch.float32,
-            )
-        )
+    def goal_visual_encoder_output_dims(self):
+        dims = self.object_type_embedding_size
+        if self.is_blind:
+            return dims
+        return dims + self.recurrent_hidden_state_size
 
     def get_object_type_encoding(
         self, observations: Dict[str, torch.FloatTensor]
@@ -125,71 +139,51 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
             observations[self.goal_sensor_uuid].to(torch.int64)
         )
 
-    def forward(  # type:ignore
-        self,
-        observations: ObservationType,
-        memory: Memory,
-        prev_actions: torch.Tensor,
-        masks: torch.FloatTensor,
-    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
-        """Processes input batched observations to produce new actor and critic
-        values. Processes input batched observations (along with prior hidden
-        states, previous actions, and masks denoting which recurrent hidden
-        states should be masked) and returns an `ActorCriticOutput` object
-        containing the model's policy (distribution over actions) and
-        evaluation of the current state (value).
-
-        # Parameters
-        observations : Batched input observations.
-        memory : `Memory` containing the hidden states from initial timepoints.
-        prev_actions : Tensor of previous actions taken.
-        masks : Masks applied to hidden states. See `RNNStateEncoder`.
-        # Returns
-        Tuple of the `ActorCriticOutput` and recurrent hidden state.
-        """
+    def forward_encoder(self, observations: ObservationType) -> torch.FloatTensor:
         target_encoding = self.get_object_type_encoding(
             cast(Dict[str, torch.FloatTensor], observations)
         )
-        x = [target_encoding]
+        obs_embeds = [target_encoding]
 
         if not self.is_blind:
             perception_embed = self.visual_encoder(observations)
-            x = [perception_embed] + x
+            obs_embeds = [perception_embed] + obs_embeds
 
-        x_cat = torch.cat(x, dim=-1)  # type: ignore
-        x_out, rnn_hidden_states = self.state_encoder(
-            x_cat, memory.tensor("rnn"), masks
-        )
-
-        return (
-            ActorCriticOutput(
-                distributions=self.actor(x_out), values=self.critic(x_out), extras={}
-            ),
-            memory.set_tensor("rnn", rnn_hidden_states),
-        )
+        obs_embeds = torch.cat(obs_embeds, dim=-1)
+        return obs_embeds
 
 
-class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
+class ResnetTensorObjectNavActorCritic(VisualNavActorCritic):
     def __init__(
+        # base params
         self,
         action_space: gym.spaces.Discrete,
         observation_space: SpaceDict,
         goal_sensor_uuid: str,
-        rgb_resnet_preprocessor_uuid: Optional[str],
+        hidden_size=512,
+        num_rnn_layers=1,
+        rnn_type="GRU",
+        add_prev_actions=False,
+        action_embed_size=6,
+        multiple_beliefs=False,
+        beliefs_fusion: Optional[str] = None,
+        auxiliary_uuids: Optional[List[str]] = None,
+        # custom params
+        rgb_resnet_preprocessor_uuid: Optional[str] = None,
         depth_resnet_preprocessor_uuid: Optional[str] = None,
-        hidden_size: int = 512,
         goal_dims: int = 32,
         resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
         combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
-        include_auxiliary_head: bool = False,
     ):
-
         super().__init__(
-            action_space=action_space, observation_space=observation_space,
+            action_space=action_space,
+            observation_space=observation_space,
+            hidden_size=hidden_size,
+            multiple_beliefs=multiple_beliefs,
+            beliefs_fusion=beliefs_fusion,
+            auxiliary_uuids=auxiliary_uuids,
         )
 
-        self._hidden_size = hidden_size
-        self.include_auxiliary_head = include_auxiliary_head
         if (
             rgb_resnet_preprocessor_uuid is None
             or depth_resnet_preprocessor_uuid is None
@@ -217,20 +211,23 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
                 resnet_compressor_hidden_out_dims,
                 combiner_hidden_out_dims,
             )
-        self.state_encoder = RNNStateEncoder(
-            self.goal_visual_encoder.output_dims, self._hidden_size,
+        self.create_state_encoders(
+            obs_embed_size=self.goal_visual_encoder.output_dims,
+            num_rnn_layers=num_rnn_layers,
+            rnn_type=rnn_type,
+            add_prev_actions=add_prev_actions,
+            prev_action_embed_size=action_embed_size,
         )
-        self.actor = LinearActorHead(self._hidden_size, action_space.n)
-        self.critic = LinearCriticHead(self._hidden_size)
-        if self.include_auxiliary_head:
-            self.auxiliary_actor = LinearActorHead(self._hidden_size, action_space.n)
+
+        self.create_actorcritic_head()
+
+        self.create_aux_models(
+            obs_embed_size=self.goal_visual_encoder.output_dims,
+            action_embed_size=action_embed_size,
+        )
 
         self.train()
-
-    @property
-    def recurrent_hidden_state_size(self) -> int:
-        """The recurrent hidden state size of the model."""
-        return self._hidden_size
+        get_logger().info(self)
 
     @property
     def is_blind(self) -> bool:
@@ -238,48 +235,14 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         input observation type)."""
         return self.goal_visual_encoder.is_blind
 
-    @property
-    def num_recurrent_layers(self) -> int:
-        """Number of recurrent hidden layers."""
-        return self.state_encoder.num_recurrent_layers
-
-    def _recurrent_memory_specification(self):
-        return dict(
-            rnn=(
-                (
-                    ("layer", self.num_recurrent_layers),
-                    ("sampler", None),
-                    ("hidden", self.recurrent_hidden_state_size),
-                ),
-                torch.float32,
-            )
-        )
-
     def get_object_type_encoding(
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
-        """Get the object type encoding from input batched observations."""
+        """Get the object type encoding from input batched observations. Redundant"""
         return self.goal_visual_encoder.get_object_type_encoding(observations)
 
-    def forward(  # type:ignore
-        self,
-        observations: ObservationType,
-        memory: Memory,
-        prev_actions: torch.Tensor,
-        masks: torch.FloatTensor,
-    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
-        x = self.goal_visual_encoder(observations)
-        x, rnn_hidden_states = self.state_encoder(x, memory.tensor("rnn"), masks)
-        return (
-            ActorCriticOutput(
-                distributions=self.actor(x),
-                values=self.critic(x),
-                extras={"auxiliary_distributions": self.auxiliary_actor(x)}
-                if self.include_auxiliary_head
-                else {},
-            ),
-            memory.set_tensor("rnn", rnn_hidden_states),
-        )
+    def forward_encoder(self, observations: ObservationType) -> torch.FloatTensor:
+        return self.goal_visual_encoder(observations)
 
 
 class ResnetTensorGoalEncoder(nn.Module):
