@@ -2,7 +2,6 @@
 	path = projects/ithor_rearrangement
 	url = https://github.com/allenai/ai2thor-rearrangement.git
 	branch = active_neural_slam
-[submodule "projects/manipulathor_disturb_free"]
-	path = projects/manipulathor_disturb_free
+[submodule "projects/disturb-free"]
+	path = projects/disturb-free
 	url = https://github.com/allenai/disturb-free
-	branch = disturb-free-module
