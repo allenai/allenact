@@ -166,6 +166,21 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
         prev_actions: torch.Tensor,
         masks: torch.FloatTensor,
     ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
+        """
+        Processes input batched observations to produce new actor and critic
+        values. Processes input batched observations (along with prior hidden
+        states, previous actions, and masks denoting which recurrent hidden
+        states should be masked) and returns an `ActorCriticOutput` object
+        containing the model's policy (distribution over actions) and
+        evaluation of the current state (value).
+        # Parameters
+        observations : Batched input observations.
+        memory : `Memory` containing the hidden states from initial timepoints.
+        prev_actions : Tensor of previous actions taken.
+        masks : Masks applied to hidden states. See `RNNStateEncoder`.
+        # Returns
+        Tuple of the `ActorCriticOutput` and recurrent hidden state.
+        """
 
         # 1.1 use perception model (i.e. encoder) to get observation embeddings
         obs_embeds = self.forward_encoder(observations)

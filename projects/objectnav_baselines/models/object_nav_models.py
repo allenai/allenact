@@ -51,7 +51,7 @@ class ObjectNavActorCritic(VisualNavActorCritic):
         # below are custom params
         rgb_uuid: Optional[str] = None,
         depth_uuid: Optional[str] = None,
-        object_type_embedding_dim=32,
+        object_type_embedding_dim=8,
         trainable_masked_hidden_state: bool = False,
         # perception backbone params,
         backbone="gnresnet18",
@@ -115,7 +115,6 @@ class ObjectNavActorCritic(VisualNavActorCritic):
         )
 
         self.train()
-        get_logger().info(self)
 
     @property
     def is_blind(self) -> bool:
@@ -227,19 +226,12 @@ class ResnetTensorObjectNavActorCritic(VisualNavActorCritic):
         )
 
         self.train()
-        get_logger().info(self)
 
     @property
     def is_blind(self) -> bool:
         """True if the model is blind (e.g. neither 'depth' or 'rgb' is an
         input observation type)."""
         return self.goal_visual_encoder.is_blind
-
-    def get_object_type_encoding(
-        self, observations: Dict[str, torch.FloatTensor]
-    ) -> torch.FloatTensor:
-        """Get the object type encoding from input batched observations. Redundant"""
-        return self.goal_visual_encoder.get_object_type_encoding(observations)
 
     def forward_encoder(self, observations: ObservationType) -> torch.FloatTensor:
         return self.goal_visual_encoder(observations)

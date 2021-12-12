@@ -102,7 +102,6 @@ class PointNavActorCritic(VisualNavActorCritic):
         )
 
         self.train()
-        get_logger().info(self)
 
     @property
     def is_blind(self):
@@ -222,7 +221,6 @@ class ResnetTensorPointNavActorCritic(VisualNavActorCritic):
         )
 
         self.train()
-        get_logger().info(self)
 
     @property
     def is_blind(self) -> bool:
