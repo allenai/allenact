@@ -272,21 +272,3 @@ class PickedUpObjSensor(Sensor):
         self, env: ManipulaTHOREnvironment, task: Task, *args: Any, **kwargs: Any
     ) -> Any:
         return task.object_picked_up
-
-
-class DisturbanceSensor(Sensor):
-    def __init__(self, uuid: str = "disturbance_binary", **kwargs: Any):
-        observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(1,), dtype=np.bool)
-        super().__init__(**prepare_locals_for_super(locals()))
-
-    def get_observation(
-        self, env: ManipulaTHOREnvironment, task: Task, *args: Any, **kwargs: Any
-    ) -> Any:
-        scene_id = env.scene_name.split("_")[0]
-        thres = env.vibration_distances_scene[scene_id]
-
-        disturbance_distance = task.current_penalized_distance
-
-        result = disturbance_distance >= thres  # bool
-
-        return result

@@ -360,8 +360,6 @@ class ImageVisualizer(LoggerVisualizer):
             img_adr
             + "_"
             + tag
-            # + "_obj_"
-            # + object_id.split("|")[0]
             + ".png"
         )
         cv2.imwrite(image_dir, image_tensor[:, :, [2, 1, 0]])
@@ -377,8 +375,6 @@ class ImageVisualizer(LoggerVisualizer):
                 img_adr
                 + "_"
                 + tag
-                # + "_obj_"
-                # + object_id.split("|")[0]
                 + "_depth.png"
             )
             cv2.imwrite(depth_dir, rgb[:, :, [2, 1, 0]])

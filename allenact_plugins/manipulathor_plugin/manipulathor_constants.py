@@ -6,7 +6,7 @@ ARM_MIN_HEIGHT = 0.450998873
 ARM_MAX_HEIGHT = 1.8009994
 
 
-ADITIONAL_ARM_ARGS = {
+ADDITIONAL_ARM_ARGS = {
     "disableRendering": True,
     "returnToStart": True,
     "speed": 1,

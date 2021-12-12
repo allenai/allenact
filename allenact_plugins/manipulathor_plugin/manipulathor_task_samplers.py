@@ -419,7 +419,6 @@ class ArmPointNavTaskSampler(SimpleArmPointNavGeneralSampler):
 
         task_info = {
             "objectId": source_location["object_id"],
-            "countertop_id": source_location["countertop_id"],  # not used, redundant
             "source_location": source_location,  # used in analysis
             "target_location": target_location,  # used in analysis
             "agent_initial_state": initial_agent_location,  # not used
