@@ -5,8 +5,8 @@ from allenact_plugins.ithor_plugin.ithor_sensors import (
 from projects.objectnav_baselines.experiments.objectnav_mixin_ddppo import (
     ObjectNavMixInPPOConfig,
 )
-from projects.objectnav_baselines.experiments.objectnav_mixin_rawgru import (
-    ObjectNavMixInRawGRUConfig,
+from projects.objectnav_baselines.experiments.objectnav_mixin_unfrozenresnet_gru import (
+    ObjectNavMixInUnfrozenResNetGRUConfig,
 )
 from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base import (
     ObjectNavRoboThorBaseConfig,
@@ -14,7 +14,9 @@ from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base i
 
 
 class ObjectNavRoboThorRGBPPOExperimentConfig(
-    ObjectNavRoboThorBaseConfig, ObjectNavMixInPPOConfig, ObjectNavMixInRawGRUConfig,
+    ObjectNavRoboThorBaseConfig,
+    ObjectNavMixInPPOConfig,
+    ObjectNavMixInUnfrozenResNetGRUConfig,
 ):
     """An Object Navigation experiment configuration in RoboThor with RGB
     input without preprocessing by frozen ResNet (instead, a trainable ResNet)."""
@@ -33,4 +35,4 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(
 
     @classmethod
     def tag(cls):
-        return "Objectnav-RoboTHOR-RGB-RawGRU-DDPPO"
+        return "Objectnav-RoboTHOR-RGB-UnfrozenResNet-GRU-DDPPO"

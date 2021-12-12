@@ -1,4 +1,5 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Original work Copyright (c) Facebook, Inc. and its affiliates.
+# Modified work Copyright (c) Allen Institute for AI
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 # Adapted from https://github.com/joel99/habitat-pointnav-aux/blob/master/habitat_baselines/
@@ -166,9 +167,9 @@ class ResNeXtBottleneck(Bottleneck):
     resneXt = True
 
 
-class ResNet(nn.Module):
+class GroupNormResNet(nn.Module):
     def __init__(self, in_channels, base_planes, ngroups, block, layers, cardinality=1):
-        super(ResNet, self).__init__()
+        super(GroupNormResNet, self).__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(
                 in_channels,
@@ -239,20 +240,20 @@ class ResNet(nn.Module):
         return x
 
 
-def resnet18(in_channels, base_planes, ngroups):
-    model = ResNet(in_channels, base_planes, ngroups, BasicBlock, [2, 2, 2, 2])
+def gnresnet18(in_channels, base_planes, ngroups):
+    model = GroupNormResNet(in_channels, base_planes, ngroups, BasicBlock, [2, 2, 2, 2])
 
     return model
 
 
-def resnet50(in_channels, base_planes, ngroups):
-    model = ResNet(in_channels, base_planes, ngroups, Bottleneck, [3, 4, 6, 3])
+def gnresnet50(in_channels, base_planes, ngroups):
+    model = GroupNormResNet(in_channels, base_planes, ngroups, Bottleneck, [3, 4, 6, 3])
 
     return model
 
 
-def resneXt50(in_channels, base_planes, ngroups):
-    model = ResNet(
+def gnresneXt50(in_channels, base_planes, ngroups):
+    model = GroupNormResNet(
         in_channels,
         base_planes,
         ngroups,
@@ -264,14 +265,16 @@ def resneXt50(in_channels, base_planes, ngroups):
     return model
 
 
-def se_resnet50(in_channels, base_planes, ngroups):
-    model = ResNet(in_channels, base_planes, ngroups, SEBottleneck, [3, 4, 6, 3])
+def se_gnresnet50(in_channels, base_planes, ngroups):
+    model = GroupNormResNet(
+        in_channels, base_planes, ngroups, SEBottleneck, [3, 4, 6, 3]
+    )
 
     return model
 
 
-def se_resneXt50(in_channels, base_planes, ngroups):
-    model = ResNet(
+def se_gnresneXt50(in_channels, base_planes, ngroups):
+    model = GroupNormResNet(
         in_channels,
         base_planes,
         ngroups,
@@ -283,8 +286,8 @@ def se_resneXt50(in_channels, base_planes, ngroups):
     return model
 
 
-def se_resneXt101(in_channels, base_planes, ngroups):
-    model = ResNet(
+def se_gnresneXt101(in_channels, base_planes, ngroups):
+    model = GroupNormResNet(
         in_channels,
         base_planes,
         ngroups,
@@ -296,7 +299,7 @@ def se_resneXt101(in_channels, base_planes, ngroups):
     return model
 
 
-class ResNetEncoder(nn.Module):
+class GroupNormResNetEncoder(nn.Module):
     def __init__(
         self,
         observation_space: SpaceDict,

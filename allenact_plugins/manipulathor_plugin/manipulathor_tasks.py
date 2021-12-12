@@ -59,6 +59,13 @@ class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
         ROTATE_LEFT,
     )
 
+    # New commit of AI2THOR has some issue that the objects will vibrate a bit
+    # without any external force. To eliminate the vibration effect, we have to
+    # introduce _vibration_dist_dict when checking the disturbance, from an external csv file.
+    # By default it is None, i.e. we assume there is no vibration.
+
+    _vibration_dist_dict: Optional[Dict] = None
+
     def __init__(
         self,
         env: ManipulaTHOREnvironment,
@@ -208,6 +215,7 @@ class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
                 self.initial_object_locations,
                 current_object_locations,
                 self.task_info["objectId"],
+                self._vibration_dist_dict,
             )
             result["disturbance/objects_moved_num"] = len(objects_moved)
 
@@ -224,7 +232,6 @@ class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
             self.finish_visualizer_metrics(result)
             self.finish_visualizer()
             self.action_sequence_and_success = []
-            # print(result)
 
         return result
 
@@ -412,6 +419,7 @@ class ArmPointNavTask(AbstractPickUpDropOffTask):
             current_object_locations=current_object_locations,
             target_object_id=self.task_info["objectId"],
             only_visible=True,
+            thres_dict=self._vibration_dist_dict,
         )
         disturb_distance_all = self.env.get_objects_move_distance(
             initial_object_locations=self.initial_object_locations,
@@ -419,6 +427,7 @@ class ArmPointNavTask(AbstractPickUpDropOffTask):
             current_object_locations=current_object_locations,
             target_object_id=self.task_info["objectId"],
             only_visible=False,
+            thres_dict=self._vibration_dist_dict,
         )
 
         self.cumulated_disturb_distance_all += disturb_distance_all

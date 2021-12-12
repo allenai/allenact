@@ -12,7 +12,11 @@ from typing import Dict, Tuple, List, Optional, Type
 from setproctitle import setproctitle as ptitle
 
 from allenact import __version__
-from allenact.algorithms.onpolicy_sync.runner import OnPolicyRunner, _CONFIG_KWARGS_STR
+from allenact.algorithms.onpolicy_sync.runner import (
+    OnPolicyRunner,
+    _CONFIG_KWARGS_STR,
+    SaveDirFormat,
+)
 from allenact.base_abstractions.experiment_config import ExperimentConfig
 from allenact.utils.system import get_logger, init_logging, HUMAN_LOG_LEVELS
 
@@ -76,6 +80,14 @@ def get_argument_parser():
         type=str,
         default="experiment_output",
         help="experiment output folder",
+    )
+
+    parser.add_argument(
+        "--save_dir_fmt",
+        required=False,
+        type=str,
+        default=SaveDirFormat.FLAT,
+        help="check SaveDirFormat",
     )
 
     parser.add_argument(
@@ -406,6 +418,7 @@ def main():
         OnPolicyRunner(
             config=cfg,
             output_dir=args.output_dir,
+            save_dir_fmt=args.save_dir_fmt,
             loaded_config_src_files=srcs,
             seed=args.seed,
             mode="train",
@@ -426,6 +439,7 @@ def main():
         OnPolicyRunner(
             config=cfg,
             output_dir=args.output_dir,
+            save_dir_fmt=args.save_dir_fmt,
             loaded_config_src_files=srcs,
             seed=args.seed,
             mode="test",

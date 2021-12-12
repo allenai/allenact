@@ -8,7 +8,7 @@ from typing import Dict, Union, Any, Optional, cast
 import ai2thor.server
 import numpy as np
 import math
-import pandas as pd
+
 from ai2thor.controller import Controller
 from allenact.utils.misc_utils import prepare_locals_for_super
 
@@ -22,7 +22,7 @@ from allenact_plugins.manipulathor_plugin.armpointnav_constants import (
 )
 
 from allenact_plugins.manipulathor_plugin.manipulathor_constants import (
-    ADITIONAL_ARM_ARGS,
+    ADDITIONAL_ARM_ARGS,
     ARM_MIN_HEIGHT,
     ARM_MAX_HEIGHT,
 )
@@ -69,10 +69,10 @@ def position_distance(s1, s2, filter_nan: bool = False):
     return dist
 
 
-def rotation_distance(a: Dict[str, float], b: Dict[str, float]):
+def rotation_distance(s1: Dict[str, float], s2: Dict[str, float]):
     """Distance between rotations."""
-    rotation1 = a["rotation"]
-    rotation2 = b["rotation"]
+    rotation1 = s1["rotation"]
+    rotation2 = s2["rotation"]
 
     def deg_dist(d0: float, d1: float):
         dist = (d0 - d1) % 360
@@ -147,20 +147,6 @@ class ManipulaTHOREnvironment(IThorEnvironment):
             **prepare_locals_for_super(locals())
         )
 
-        results = pd.read_csv("allenact_plugins/manipulathor_plugin/vibrations.csv")
-        # use dict is much faster to query than dataframe
-        self.vibration_distances = {}
-        for i in range(results.shape[0]):
-            self.vibration_distances[
-                results.at[i, "scene"] + "-" + results.at[i, "object"]
-            ] = results.at[i, "dist"]
-
-        raw = (
-            results.groupby("scene").sum() / 200
-        )  # averge vibration per step on all the objects
-        raw = raw.clip(lower=0.001)
-        self.vibration_distances_scene = raw.to_dict()["dist"]
-
     def create_controller(self):
         controller = Controller(**self.env_args)
 
@@ -185,18 +171,6 @@ class ManipulaTHOREnvironment(IThorEnvironment):
             )
 
         self.controller = self.create_controller()
-
-        # if (
-        #     self._start_player_screen_height,
-        #     self._start_player_screen_width,
-        # ) != self.current_frame.shape[:2]:
-        #     self.controller.step(
-        #         {
-        #             "action": "ChangeResolution",
-        #             "x": self._start_player_screen_width,
-        #             "y": self._start_player_screen_height,
-        #         }
-        #     )
 
         self._started = True
         self.reset(scene_name=scene_name, move_mag=move_mag, **kwargs)
@@ -326,20 +300,12 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         position_is_close = sum(position_close) == 3
         return position_is_close
 
-        # def deg_dist(d0: float, d1: float):
-        #     dist = (d0 - d1) % 360
-        #     return min(dist, 360 - dist)
-
-        # rotation_close = [
-        #     deg_dist(current_obj_pose["rotation"][k], init_obj_pose["rotation"][k])
-        #     <= threshold
-        #     for k in ["x", "y", "z"]
-        # ]
-        # rotation_is_close = sum(rotation_close) == 3
-        # return position_is_close and rotation_is_close
-
     def get_objects_moved(
-        self, previous_object_locations, current_object_locations, target_object_id,
+        self,
+        previous_object_locations,
+        current_object_locations,
+        target_object_id,
+        thres_dict: Optional[Dict] = None,
     ):
         moved_objects = []
         scene_id = self.scene_name.split("_")[0]
@@ -350,12 +316,14 @@ class ManipulaTHOREnvironment(IThorEnvironment):
             if object_id not in previous_object_locations:
                 continue
 
-            thres = self.vibration_distances[scene_id + "-" + object_id]
+            threshold = UNWANTED_MOVE_THR
+            if thres_dict is not None:
+                threshold = max(threshold, thres_dict[scene_id + "-" + object_id])
 
             if not self.close_enough(
                 current_object_locations[object_id],
                 previous_object_locations[object_id],
-                threshold=max(UNWANTED_MOVE_THR, thres),
+                threshold=threshold,
             ):
                 moved_objects.append(object_id)
 
@@ -368,7 +336,8 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         current_object_locations,
         target_object_id,
         only_visible: bool = False,
-    ):  # may consider mass
+        thres_dict: Optional[Dict] = None,
+    ):
         moved_objects_position_distance = {}
         scene_id = self.scene_name.split("_")[0]
 
@@ -381,8 +350,6 @@ class ManipulaTHOREnvironment(IThorEnvironment):
                 # current is visible
                 if not current_object_locations[object_id]["visible"]:
                     continue
-                # if not previous_object_locations[object_id]["visible"]:
-                #     continue
 
             p_initial2current = position_distance(
                 current_object_locations[object_id],
@@ -395,10 +362,12 @@ class ManipulaTHOREnvironment(IThorEnvironment):
                 filter_nan=True,
             )
 
-            thres = self.vibration_distances[scene_id + "-" + object_id]
+            threshold = 0.0
+            if thres_dict is not None:
+                threshold = max(threshold, thres_dict[scene_id + "-" + object_id])
 
-            p_initial2current = max(0.0, p_initial2current - thres)
-            p_initial2previous = max(0.0, p_initial2previous - thres)
+            p_initial2current = max(0.0, p_initial2current - threshold)
+            p_initial2previous = max(0.0, p_initial2previous - threshold)
 
             moved_objects_position_distance[object_id] = (
                 p_initial2current - p_initial2previous
@@ -440,9 +409,9 @@ class ManipulaTHOREnvironment(IThorEnvironment):
             action_dict = {"action": "Pass"}
 
         elif action in [MOVE_AHEAD, ROTATE_LEFT, ROTATE_RIGHT]:
-            copy_aditions = copy.deepcopy(ADITIONAL_ARM_ARGS)
+            copy_additions = copy.deepcopy(ADDITIONAL_ARM_ARGS)
 
-            action_dict = {**action_dict, **copy_aditions}
+            action_dict = {**action_dict, **copy_additions}
             if action in [MOVE_AHEAD]:
                 action_dict["action"] = "MoveAgent"
                 action_dict["ahead"] = 0.2
@@ -456,8 +425,8 @@ class ManipulaTHOREnvironment(IThorEnvironment):
                 action_dict["degrees"] = -45
 
         elif "MoveArm" in action:
-            copy_aditions = copy.deepcopy(ADITIONAL_ARM_ARGS)
-            action_dict = {**action_dict, **copy_aditions}
+            copy_additions = copy.deepcopy(ADDITIONAL_ARM_ARGS)
+            action_dict = {**action_dict, **copy_additions}
             base_position = self.get_current_arm_state()
             if "MoveArmHeight" in action:
                 action_dict["action"] = "MoveArmBase"
@@ -488,8 +457,8 @@ class ManipulaTHOREnvironment(IThorEnvironment):
                 }
 
         elif "RotateArm" in action:
-            copy_aditions = copy.deepcopy(ADITIONAL_ARM_ARGS)
-            action_dict = {**action_dict, **copy_aditions}
+            copy_additions = copy.deepcopy(ADDITIONAL_ARM_ARGS)
+            action_dict = {**action_dict, **copy_additions}
 
             if action == ROTATE_WRIST_PITCH_P:
                 action_dict["action"] = "RotateWristRelative"
@@ -513,8 +482,8 @@ class ManipulaTHOREnvironment(IThorEnvironment):
                 raise ValueError("invalid action " + str(action))
 
         elif action in [LOOK_UP, LOOK_DOWN]:
-            copy_aditions = copy.deepcopy(ADITIONAL_ARM_ARGS)
-            action_dict = {**action_dict, **copy_aditions}
+            copy_additions = copy.deepcopy(ADDITIONAL_ARM_ARGS)
+            action_dict = {**action_dict, **copy_additions}
             if action == LOOK_UP:
                 action_dict["action"] = LOOK_UP
             elif action == LOOK_DOWN:

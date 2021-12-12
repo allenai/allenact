@@ -1,4 +1,13 @@
-"""Defining the auxiliary loss for actor critic type models."""
+# Original work Copyright (c) Facebook, Inc. and its affiliates.
+# Modified work Copyright (c) Allen Institute for AI
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+"""Defining the auxiliary loss for actor critic type models.
+
+Several of the losses defined in this file are modified versions of those found in 
+    https://github.com/joel99/habitat-pointnav-aux/blob/master/habitat_baselines/
+"""
+
 
 from typing import Dict, cast, Tuple, List
 import abc
@@ -16,12 +25,17 @@ from allenact.base_abstractions.distributions import CategoricalDistr
 from allenact.base_abstractions.misc import ActorCriticOutput
 
 
-def subsampled_masks(masks, p=0.1):
+def _bernoulli_subsample_mask_like(masks, p=0.1):
     return (torch.rand_like(masks) <= p).float()
 
 
-class TaskWeightsLoss(AbstractActorCriticLoss):
-    UUID = "task_weights"  # make sure its uniqueness
+class MultiAuxTaskNegEntropyLoss(AbstractActorCriticLoss):
+    """
+    Used in multiple auxiliary tasks setting.
+    Add a negative entropy loss over all the task weights.
+    """
+
+    UUID = "multitask_entropy"  # make sure this is unique
 
     def __init__(self, task_names: List[str], *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -43,8 +57,7 @@ class TaskWeightsLoss(AbstractActorCriticLoss):
         avg_loss = (-entropy).mean()
         avg_task_weights = task_weights.mean(dim=0)  # (K)
 
-        outputs = dict()
-        outputs["entropy_loss"] = cast(torch.Tensor, avg_loss).item()
+        outputs = {"entropy_loss": cast(torch.Tensor, avg_loss).item()}
         for i in range(self.num_tasks):
             outputs["weight_" + self.task_names[i]] = cast(
                 torch.Tensor, avg_task_weights[i]
@@ -57,6 +70,12 @@ class TaskWeightsLoss(AbstractActorCriticLoss):
 
 
 class AuxiliaryLoss(AbstractActorCriticLoss):
+    """
+    Base class of auxiliary loss. 
+    Any auxiliary task loss should inherit from it, and implement
+        the `get_aux_loss` function.
+    """
+
     def __init__(self, auxiliary_uuid: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -94,12 +113,48 @@ class AuxiliaryLoss(AbstractActorCriticLoss):
         raise NotImplementedError()
 
 
+def _propagate_final_beliefs_to_all_steps(
+    beliefs: torch.Tensor, masks: torch.Tensor, num_sampler: int, num_steps: int,
+):
+    final_beliefs = torch.zeros_like(beliefs)  # (T, B, *)
+    start_locs_list = []
+    end_locs_list = []
+
+    for i in range(num_sampler):
+        # right shift: to locate the 1 before 0 and ignore the 1st element
+        end_locs = torch.where(masks[1:, i] == 0)[0]  # maybe [], dtype=torch.Long
+
+        start_locs = torch.cat(
+            [torch.tensor([0]).to(end_locs), end_locs + 1]
+        )  # add the first element
+        start_locs_list.append(start_locs)
+
+        end_locs = torch.cat(
+            [end_locs, torch.tensor([num_steps - 1]).to(end_locs)]
+        )  # add the last element
+        end_locs_list.append(end_locs)
+
+        for st, ed in zip(start_locs, end_locs):
+            final_beliefs[st : ed + 1, i] = beliefs[ed, i]
+
+    return final_beliefs, start_locs_list, end_locs_list
+
+
 class InverseDynamicsLoss(AuxiliaryLoss):
+    """
+    Auxiliary task of Inverse Dynamics 
+        from Auxiliary Tasks Speed Up Learning PointGoal Navigation (Ye, 2020)
+    """
+
     UUID = "InvDyn"
 
     def __init__(
         self, subsample_rate: float = 0.2, subsample_min_num: int = 10, *args, **kwargs
     ):
+        """
+        Subsample the valid samples by the rate of `subsample_rate`,
+            if the total num of the valid samples is larger than `subsample_min_num`.
+        """
         super().__init__(auxiliary_uuid=self.UUID, *args, **kwargs)
 
         self.cross_entropy_loss = nn.CrossEntropyLoss(reduction="none")
@@ -123,23 +178,12 @@ class InverseDynamicsLoss(AuxiliaryLoss):
         actions = actions[:-1]  # (T-1, B)
 
         ## find the final belief state based on masks
-        # we did not compute loss here cuz model.forward is compute-heavy
+        # we did not compute loss here as model.forward is compute-heavy
         masks = masks.squeeze(-1)  # (T, B)
-        final_beliefs = torch.zeros_like(beliefs)  # (T, B, *)
-        for i in range(num_sampler):
-            # right shift: to locate the 1 before 0 and ignore the 1st element
-            end_locs = torch.where(masks[1:, i] == 0)[0]  # maybe [], dtype=torch.Long
 
-            start_locs = torch.cat(
-                [torch.tensor([0]).to(end_locs), end_locs + 1]
-            )  # add the first element
-
-            end_locs = torch.cat(
-                [end_locs, torch.tensor([num_steps - 1]).to(end_locs)]
-            )  # add the last element
-
-            for st, ed in zip(start_locs, end_locs):
-                final_beliefs[st : ed + 1, i] = beliefs[ed, i]
+        final_beliefs, _, _ = _propagate_final_beliefs_to_all_steps(
+            beliefs, masks, num_sampler, num_steps,
+        )
 
         ## compute CE loss
         decoder_in = torch.cat(
@@ -186,7 +230,9 @@ class InverseDynamicsLoss(AuxiliaryLoss):
         else:
             subsample_rate = self.subsample_rate
 
-        loss_masks = masks[1:] * subsampled_masks(masks[1:], subsample_rate)
+        loss_masks = masks[1:] * _bernoulli_subsample_mask_like(
+            masks[1:], subsample_rate
+        )
         num_valid_losses = torch.count_nonzero(loss_masks)
         avg_loss = (loss * loss_masks).sum() / torch.clamp(num_valid_losses, min=1.0)
 
@@ -197,6 +243,11 @@ class InverseDynamicsLoss(AuxiliaryLoss):
 
 
 class TemporalDistanceLoss(AuxiliaryLoss):
+    """
+    Auxiliary task of Temporal Distance
+        from Auxiliary Tasks Speed Up Learning PointGoal Navigation (Ye, 2020)
+    """
+
     UUID = "TempDist"
 
     def __init__(self, num_pairs: int = 8, epsiode_len_min: int = 5, *args, **kwargs):
@@ -221,9 +272,16 @@ class TemporalDistanceLoss(AuxiliaryLoss):
         actions = actions[:-1]  # (T-1, B)
 
         ## find the final belief state based on masks
-        # we did not compute loss here cuz model.forward is compute-heavy
+        # we did not compute loss here as model.forward is compute-heavy
         masks = masks.squeeze(-1)  # (T, B)
-        final_beliefs = torch.zeros_like(beliefs)  # (T, B, *)
+
+        (
+            final_beliefs,
+            start_locs_list,
+            end_locs_list,
+        ) = _propagate_final_beliefs_to_all_steps(
+            beliefs, masks, num_sampler, num_steps,
+        )
 
         ## also find the locs_batch of shape (M, 3)
         # the last dim: [0] is on num_sampler loc, [1] and [2] is start and end locs
@@ -231,29 +289,19 @@ class TemporalDistanceLoss(AuxiliaryLoss):
         # in other words: at locs_batch[m, 0] in num_sampler dim, there exists one episode
         # starting from locs_batch[m, 1], ends at locs_batch[m, 2] (included)
         locs_batch = []
-
         for i in range(num_sampler):
-            # right shift: to locate the 1 before 0 and ignore the 1st element
-            end_locs = torch.where(masks[1:, i] == 0)[0]  # maybe [], dtype=torch.Long
-
-            start_locs = torch.cat(
-                [torch.tensor([0]).to(end_locs), end_locs + 1]
-            )  # add the first element
-
-            end_locs = torch.cat(
-                [end_locs, torch.tensor([num_steps - 1]).to(end_locs)]
-            )  # add the last element
-
             locs_batch.append(
                 torch.stack(
-                    [i * torch.ones_like(start_locs), start_locs, end_locs], dim=-1
+                    [
+                        i * torch.ones_like(start_locs_list[i]),
+                        start_locs_list[i],
+                        end_locs_list[i],
+                    ],
+                    dim=-1,
                 )
             )  # shape (M[i], 3)
-
-            for st, ed in zip(start_locs, end_locs):
-                final_beliefs[st : ed + 1, i] = beliefs[ed, i]
-
         locs_batch = torch.cat(locs_batch)  # shape (M, 3)
+
         temporal_dist_max = (
             locs_batch[:, 2] - locs_batch[:, 1]
         ).float()  # end - start, (M)
@@ -264,11 +312,9 @@ class TemporalDistanceLoss(AuxiliaryLoss):
             torch.tensor([0]).to(temporal_dist_max),
         )  # (M)
 
-        # sample validpairs: sampled_pairs shape (M, num_pairs, 3)
+        # sample valid pairs: sampled_pairs shape (M, num_pairs, 3)
         # where M is the num of total episodes in the batch
-        locs = (
-            locs_batch.cpu().numpy()
-        )  # cuz torch.randint only support int, not tensor
+        locs = locs_batch.cpu().numpy()  # as torch.randint only support int, not tensor
         sampled_pairs = np.random.randint(
             np.repeat(locs[:, [1]], 2 * self.num_pairs, axis=-1),  # (M, 2*k)
             np.repeat(locs[:, [2]] + 1, 2 * self.num_pairs, axis=-1),  # (M, 2*k)
@@ -317,6 +363,11 @@ class TemporalDistanceLoss(AuxiliaryLoss):
 
 
 class CPCALoss(AuxiliaryLoss):
+    """
+    Auxiliary task of CPC|A
+        from Auxiliary Tasks Speed Up Learning PointGoal Navigation (Ye, 2020)
+    """
+
     UUID = "CPCA"
 
     def __init__(
@@ -454,7 +505,7 @@ class CPCALoss(AuxiliaryLoss):
 
         pred_masks[
             num_steps - 1 :
-        ] = False  # GRU(b_t, a_{t:t+k-1}) is invalid when t >= T, cuz we don't have real z_{t+1}
+        ] = False  # GRU(b_t, a_{t:t+k-1}) is invalid when t >= T, as we don't have real z_{t+1}
         for j in range(1, self.planning_steps + 1):  # for j-step predictions
             pred_masks[
                 : j - 1, j - 1
@@ -478,7 +529,7 @@ class CPCALoss(AuxiliaryLoss):
         )  # (T, N, 1, k) -> (T, k, N, 1)
         # print(valid_masks.int().squeeze(-1)); print(masks) # verify its correctness
 
-        loss_masks = valid_masks * subsampled_masks(
+        loss_masks = valid_masks * _bernoulli_subsample_mask_like(
             valid_masks, self.subsample_rate
         )  # (T, k, N, 1)
         num_valid_losses = torch.count_nonzero(loss_masks)

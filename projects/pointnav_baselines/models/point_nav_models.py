@@ -9,7 +9,10 @@ from gym.spaces.dict import Dict as SpaceDict
 from allenact.algorithms.onpolicy_sync.policy import ObservationType
 from allenact.embodiedai.models.basic_models import SimpleCNN
 import allenact.embodiedai.models.resnet as resnet
-from allenact.embodiedai.models.visual_nav_models import VisualNavActorCritic
+from allenact.embodiedai.models.visual_nav_models import (
+    VisualNavActorCritic,
+    FusionType,
+)
 
 
 class PointNavActorCritic(VisualNavActorCritic):
@@ -29,7 +32,7 @@ class PointNavActorCritic(VisualNavActorCritic):
         add_prev_actions=False,
         action_embed_size=4,
         multiple_beliefs=False,
-        beliefs_fusion: Optional[str] = None,
+        beliefs_fusion: Optional[FusionType] = None,
         auxiliary_uuids: Optional[List[str]] = None,
         # custom params
         rgb_uuid: Optional[str] = None,
@@ -38,7 +41,7 @@ class PointNavActorCritic(VisualNavActorCritic):
         coordinate_embedding_dim=8,
         coordinate_dims=2,
         # perception backbone params,
-        backbone="resnet18",
+        backbone="gnresnet18",
         resnet_baseplanes=32,
     ):
         super().__init__(
@@ -71,7 +74,7 @@ class PointNavActorCritic(VisualNavActorCritic):
                 depth_uuid=depth_uuid,
             )
         else:  # resnet family
-            self.visual_encoder = resnet.ResNetEncoder(
+            self.visual_encoder = resnet.GroupNormResNetEncoder(
                 observation_space=observation_space,
                 output_size=hidden_size,
                 rgb_uuid=rgb_uuid,
@@ -102,7 +105,6 @@ class PointNavActorCritic(VisualNavActorCritic):
         )
 
         self.train()
-        get_logger().info(self)
 
     @property
     def is_blind(self):
@@ -160,7 +162,7 @@ class ResnetTensorPointNavActorCritic(VisualNavActorCritic):
         add_prev_actions=False,
         action_embed_size=4,
         multiple_beliefs=False,
-        beliefs_fusion: Optional[str] = None,
+        beliefs_fusion: Optional[FusionType] = None,
         auxiliary_uuids: Optional[List[str]] = None,
         # custom params
         rgb_resnet_preprocessor_uuid: Optional[str] = None,
@@ -222,7 +224,6 @@ class ResnetTensorPointNavActorCritic(VisualNavActorCritic):
         )
 
         self.train()
-        get_logger().info(self)
 
     @property
     def is_blind(self) -> bool:
