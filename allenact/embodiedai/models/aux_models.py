@@ -1,7 +1,11 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Original work Copyright (c) Facebook, Inc. and its affiliates.
+# Modified work Copyright (c) Allen Institute for AI
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-# Adapted from https://github.com/joel99/habitat-pointnav-aux/blob/master/habitat_baselines/
+"""
+Several of the models defined in this file are modified versions of those found in 
+    https://github.com/joel99/habitat-pointnav-aux/blob/master/habitat_baselines/
+"""
 
 from typing import Tuple, Dict, Optional, Union, List, cast
 
@@ -17,6 +21,9 @@ from allenact.embodiedai.aux_losses.losses import (
 
 
 class AuxiliaryModel(nn.Module):
+    '''
+    The class of defining the models for all kinds of self-supervised auxiliary tasks
+    '''
     def __init__(
         self,
         aux_uuid: str,
@@ -25,8 +32,6 @@ class AuxiliaryModel(nn.Module):
         belief_dim: int,
         action_embed_size: int = 4,
         cpca_classifier_hidden_dim: int = 32,
-        forward_regressor_hidden_dim: int = 128,
-        disturb_hidden_dim: int = 128,
     ):
         super().__init__()
         self.aux_uuid = aux_uuid
@@ -64,4 +69,4 @@ class AuxiliaryModel(nn.Module):
         if self.aux_uuid in [InverseDynamicsLoss.UUID, TemporalDistanceLoss.UUID]:
             return self.decoder(features)
         else:
-            raise ValueError("Not Support Forward")
+            raise NotImplementedError(f"Auxiliary model with UUID {self.aux_uuid} does not support `forward` call.")

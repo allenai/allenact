@@ -26,8 +26,7 @@ class PPO(AbstractActorCriticLoss):
                           but we might use `conditional_entropy` for `SequentialDistr`
     show_ratios : If True, adds tracking for the PPO ratio (linear, clamped, and used) in each
                   epoch to be logged by the engine.
-    normalize_advantage: Whether or not to use normalized advantage. Default is False. 
-                        Caution: previously default is True.
+    normalize_advantage: Whether or not to use normalized advantage. Default is True.
     """
 
     def __init__(
@@ -38,7 +37,7 @@ class PPO(AbstractActorCriticLoss):
         use_clipped_value_loss=True,
         clip_decay: Optional[Callable[[int], float]] = None,
         entropy_method_name: str = "entropy",
-        normalize_advantage: bool = False,
+        normalize_advantage: bool = True,
         show_ratios: bool = False,
         *args,
         **kwargs

@@ -14,7 +14,7 @@ from gym.spaces.dict import Dict as SpaceDict
 from allenact.algorithms.onpolicy_sync.policy import ObservationType
 from allenact.embodiedai.models.basic_models import SimpleCNN
 import allenact.embodiedai.models.resnet as resnet
-from allenact.embodiedai.models.visual_nav_models import VisualNavActorCritic
+from allenact.embodiedai.models.visual_nav_models import VisualNavActorCritic, FusionType
 
 
 class ObjectNavActorCritic(VisualNavActorCritic):
@@ -46,15 +46,15 @@ class ObjectNavActorCritic(VisualNavActorCritic):
         action_embed_size=6,
         # Aux loss
         multiple_beliefs=False,
-        beliefs_fusion: Optional[str] = None,
+        beliefs_fusion: Optional[FusionType] = None,
         auxiliary_uuids: Optional[List[str]] = None,
         # below are custom params
         rgb_uuid: Optional[str] = None,
         depth_uuid: Optional[str] = None,
-        object_type_embedding_dim=32,
+        object_type_embedding_dim=8,
         trainable_masked_hidden_state: bool = False,
         # perception backbone params,
-        backbone="resnet18",
+        backbone="gnresnet18",
         resnet_baseplanes=32,
     ):
         """Initializer.
@@ -83,7 +83,7 @@ class ObjectNavActorCritic(VisualNavActorCritic):
                 depth_uuid=depth_uuid,
             )
         else:  # resnet family
-            self.visual_encoder = resnet.ResNetEncoder(
+            self.visual_encoder = resnet.GroupNormResNetEncoder(
                 observation_space=observation_space,
                 output_size=hidden_size,
                 rgb_uuid=rgb_uuid,
@@ -115,7 +115,6 @@ class ObjectNavActorCritic(VisualNavActorCritic):
         )
 
         self.train()
-        get_logger().info(self)
 
     @property
     def is_blind(self) -> bool:
@@ -166,7 +165,7 @@ class ResnetTensorObjectNavActorCritic(VisualNavActorCritic):
         add_prev_actions=False,
         action_embed_size=6,
         multiple_beliefs=False,
-        beliefs_fusion: Optional[str] = None,
+        beliefs_fusion: Optional[FusionType] = None,
         auxiliary_uuids: Optional[List[str]] = None,
         # custom params
         rgb_resnet_preprocessor_uuid: Optional[str] = None,
@@ -227,19 +226,12 @@ class ResnetTensorObjectNavActorCritic(VisualNavActorCritic):
         )
 
         self.train()
-        get_logger().info(self)
 
     @property
     def is_blind(self) -> bool:
         """True if the model is blind (e.g. neither 'depth' or 'rgb' is an
         input observation type)."""
         return self.goal_visual_encoder.is_blind
-
-    def get_object_type_encoding(
-        self, observations: Dict[str, torch.FloatTensor]
-    ) -> torch.FloatTensor:
-        """Get the object type encoding from input batched observations. Redundant"""
-        return self.goal_visual_encoder.get_object_type_encoding(observations)
 
     def forward_encoder(self, observations: ObservationType) -> torch.FloatTensor:
         return self.goal_visual_encoder(observations)
