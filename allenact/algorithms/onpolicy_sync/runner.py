@@ -81,7 +81,7 @@ class OnPolicyRunner(object):
         disable_config_saving: bool = False,
         distributed_ip_and_port: str = "127.0.0.1:0",
         machine_id: int = 0,
-        save_dir_fmt: SaveDirFormat = SaveDirFormat.FLAT,
+        save_dir_fmt: SaveDirFormat = SaveDirFormat.FLAT.value,
     ):
         self.config = config
         self.output_dir = output_dir
@@ -606,11 +606,11 @@ class OnPolicyRunner(object):
         for _ in range(num_testers):
             self.queues["checkpoints"].put(("quit", None))
 
-        if self.save_dir_fmt == SaveDirFormat.NESTED:
+        if self.save_dir_fmt == SaveDirFormat.NESTED.value:
             checkpoint_parts = self.checkpoint_log_folder_str(checkpoint_paths[0])
             metrics_dir = self.metric_path(self.local_start_time_str, checkpoint_parts)
             suffix = ""
-        elif self.save_dir_fmt == SaveDirFormat.FLAT:
+        elif self.save_dir_fmt == SaveDirFormat.FLAT.value:
             checkpoint_parts = None
             metrics_dir = self.metric_path(self.local_start_time_str)
             suffix = f"__test_{self.local_start_time_str}"
@@ -661,16 +661,16 @@ class OnPolicyRunner(object):
             else os.path.join(self.config.tag(), self.extra_tag),
             start_time_str or self.local_start_time_str,
         ]
-        if self.save_dir_fmt == SaveDirFormat.NESTED:
+        if self.save_dir_fmt == SaveDirFormat.NESTED.value:
             folder = os.path.join(self.output_dir, *path_parts, "checkpoints",)
-        elif self.save_dir_fmt == SaveDirFormat.FLAT:
+        elif self.save_dir_fmt == SaveDirFormat.FLAT.value:
             folder = os.path.join(self.output_dir, "checkpoints", *path_parts,)
         if create_if_none:
             os.makedirs(folder, exist_ok=True)
         return folder
 
     def log_writer_path(self, start_time_str: str, checkpoint_parts: List = []) -> str:
-        if self.save_dir_fmt == SaveDirFormat.NESTED:
+        if self.save_dir_fmt == SaveDirFormat.NESTED.value:
             if self.mode == TEST_MODE_STR:
                 return os.path.join(
                     *checkpoint_parts,
@@ -687,7 +687,7 @@ class OnPolicyRunner(object):
                 "train_tb",
             )
             return path
-        elif self.save_dir_fmt == SaveDirFormat.FLAT:
+        elif self.save_dir_fmt == SaveDirFormat.FLAT.value:
             path = os.path.join(
                 self.output_dir,
                 "tb",
@@ -701,11 +701,11 @@ class OnPolicyRunner(object):
             return path
 
     def metric_path(self, start_time_str: str, checkpoint_parts: List = []) -> str:
-        if self.save_dir_fmt == SaveDirFormat.NESTED:
+        if self.save_dir_fmt == SaveDirFormat.NESTED.value:
             return os.path.join(
                 *checkpoint_parts, "test", self.config.tag(), start_time_str,
             )
-        elif self.save_dir_fmt == SaveDirFormat.FLAT:
+        elif self.save_dir_fmt == SaveDirFormat.FLAT.value:
             return os.path.join(
                 self.output_dir,
                 "metrics",
@@ -722,9 +722,9 @@ class OnPolicyRunner(object):
             else os.path.join(self.config.tag(), self.extra_tag),
             self.local_start_time_str,
         ]
-        if self.save_dir_fmt == SaveDirFormat.NESTED:
+        if self.save_dir_fmt == SaveDirFormat.NESTED.value:
             base_dir = os.path.join(self.output_dir, *path_parts, "used_configs",)
-        elif self.save_dir_fmt == SaveDirFormat.FLAT:
+        elif self.save_dir_fmt == SaveDirFormat.FLAT.value:
             base_dir = os.path.join(self.output_dir, "used_configs", *path_parts,)
         os.makedirs(base_dir, exist_ok=True)
 
