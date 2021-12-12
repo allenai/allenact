@@ -20,7 +20,7 @@ from allenact.utils.model_utils import FeatureEmbedding
 from allenact.embodiedai.models.basic_models import RNNStateEncoder
 from allenact.embodiedai.models.aux_models import AuxiliaryModel
 from allenact.embodiedai.models.fusion_models import FusionModels
-from allenact.embodiedai.aux_losses.losses import TaskWeightsLoss
+from allenact.embodiedai.aux_losses.losses import MultiAuxTaskNegEntropyLoss
 
 
 class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
@@ -143,12 +143,12 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
     def fuse_beliefs(
         self, beliefs_dict: Dict[str, torch.FloatTensor], obs_embeds: torch.FloatTensor,
     ) -> Tuple[torch.FloatTensor, Optional[torch.FloatTensor]]:
-        total_beliefs = torch.stack(list(beliefs_dict.values()), dim=-1)  # (T, N, H, k)
+        all_beliefs = torch.stack(list(beliefs_dict.values()), dim=-1)  # (T, N, H, k)
 
         if self.multiple_beliefs:  # call the fusion model
-            return self.fusion_model(total_beliefs=total_beliefs, obs_embeds=obs_embeds)
+            return self.fusion_model(all_beliefs=all_beliefs, obs_embeds=obs_embeds)
         # single belief
-        beliefs = total_beliefs.squeeze(-1)  # (T,N,H)
+        beliefs = all_beliefs.squeeze(-1)  # (T,N,H)
         return beliefs, None
 
     def forward(  # type:ignore
@@ -199,7 +199,7 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
         )
 
         if self.multiple_beliefs:
-            extras[TaskWeightsLoss.UUID] = task_weights
+            extras[MultiAuxTaskNegEntropyLoss.UUID] = task_weights
 
         actor_critic_output = ActorCriticOutput(
             distributions=self.actor(beliefs),

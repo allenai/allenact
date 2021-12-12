@@ -10,7 +10,7 @@ from allenact.algorithms.onpolicy_sync.losses import PPO
 from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 
 from allenact.embodiedai.aux_losses.losses import (
-    TaskWeightsLoss,
+    MultiAuxTaskNegEntropyLoss,
     InverseDynamicsLoss,
     TemporalDistanceLoss,
     CPCA1Loss,
@@ -112,8 +112,8 @@ class ObjectNavMixInPPOConfig(ObjectNavBaseConfig):
         named_losses["ppo_loss"] = (PPO(**PPOConfig), 1.0)
 
         if cls.multiple_beliefs:  # add weight entropy loss automatically
-            named_losses[TaskWeightsLoss.UUID] = (
-                TaskWeightsLoss(cls.AUXILIARY_UUIDS),
+            named_losses[MultiAuxTaskNegEntropyLoss.UUID] = (
+                MultiAuxTaskNegEntropyLoss(cls.AUXILIARY_UUIDS),
                 0.01,
             )
 
