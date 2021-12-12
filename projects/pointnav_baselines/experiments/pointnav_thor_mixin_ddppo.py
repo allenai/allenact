@@ -60,8 +60,7 @@ class PointNavThorMixInPPOConfig(PointNavBaseConfig, ABC):
 
     normalize_advantage = False
 
-    @classmethod
-    def training_pipeline(cls, **kwargs):
+    def training_pipeline(self, **kwargs):
         # PPO
         ppo_steps = int(75000000)
         lr = 3e-4
@@ -75,6 +74,36 @@ class PointNavThorMixInPPOConfig(PointNavBaseConfig, ABC):
         gae_lambda = 0.95
         max_grad_norm = 0.5
 
+        named_losses = {"ppo_loss": (PPO(**PPOConfig), 1.0)}
+        named_losses = self._update_with_auxiliary_losses(named_losses)
+
+        return TrainingPipeline(
+            save_interval=save_interval,
+            metric_accumulate_interval=log_interval,
+            optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
+            num_mini_batch=num_mini_batch,
+            update_repeats=update_repeats,
+            max_grad_norm=max_grad_norm,
+            num_steps=num_steps,
+            named_losses={key: val[0] for key, val in named_losses.items()},
+            gamma=gamma,
+            use_gae=use_gae,
+            gae_lambda=gae_lambda,
+            advance_scene_rollout_period=self.ADVANCE_SCENE_ROLLOUT_PERIOD,
+            pipeline_stages=[
+                PipelineStage(
+                    loss_names=list(named_losses.keys()),
+                    max_stage_steps=ppo_steps,
+                    loss_weights=[val[1] for val in named_losses.values()],
+                )
+            ],
+            lr_scheduler_builder=Builder(
+                LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
+            ),
+        )
+
+    @classmethod
+    def _update_with_auxiliary_losses(cls, named_losses):
         # auxliary losses
         aux_loss_total_weight = 2.0
 
@@ -113,9 +142,9 @@ class PointNavThorMixInPPOConfig(PointNavBaseConfig, ABC):
                 0.05 * aux_loss_total_weight,  # should times 2
             ),
         }
-        named_losses = {uuid: total_aux_losses[uuid] for uuid in cls.AUXILIARY_UUIDS}
-        PPOConfig["normalize_advantage"] = cls.normalize_advantage
-        named_losses["ppo_loss"] = (PPO(**PPOConfig), 1.0)
+        named_losses.update(
+            {uuid: total_aux_losses[uuid] for uuid in cls.AUXILIARY_UUIDS}
+        )
 
         if cls.multiple_beliefs:  # add weight entropy loss automatically
             named_losses[MultiAuxTaskNegEntropyLoss.UUID] = (
@@ -123,27 +152,4 @@ class PointNavThorMixInPPOConfig(PointNavBaseConfig, ABC):
                 0.01,
             )
 
-        return TrainingPipeline(
-            save_interval=save_interval,
-            metric_accumulate_interval=log_interval,
-            optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
-            num_mini_batch=num_mini_batch,
-            update_repeats=update_repeats,
-            max_grad_norm=max_grad_norm,
-            num_steps=num_steps,
-            named_losses={key: val[0] for key, val in named_losses.items()},
-            gamma=gamma,
-            use_gae=use_gae,
-            gae_lambda=gae_lambda,
-            advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
-            pipeline_stages=[
-                PipelineStage(
-                    loss_names=list(named_losses.keys()),
-                    max_stage_steps=ppo_steps,
-                    loss_weights=[val[1] for val in named_losses.values()],
-                )
-            ],
-            lr_scheduler_builder=Builder(
-                LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
-            ),
-        )
+        return named_losses

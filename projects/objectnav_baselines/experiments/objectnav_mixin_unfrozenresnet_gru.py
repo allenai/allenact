@@ -12,7 +12,7 @@ from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBas
 from projects.objectnav_baselines.models.object_nav_models import ObjectNavActorCritic
 
 
-class ObjectNavMixInRawGRUConfig(ObjectNavBaseConfig):
+class ObjectNavMixInUnfrozenResNetGRUConfig(ObjectNavBaseConfig):
     """
     No ResNet preprocessor, using Raw Image as input, and learn a ResNet as encoder 
     """
