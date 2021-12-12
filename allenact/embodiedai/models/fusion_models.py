@@ -122,10 +122,3 @@ class AttentiveFusion(Fusion):
             scores / math.sqrt(self.hidden_size), dim=-1
         )  # (T*N, K)
         return weights
-
-
-FusionModels = {
-    AverageFusion.UUID: AverageFusion,
-    SoftmaxFusion.UUID: SoftmaxFusion,
-    AttentiveFusion.UUID: AttentiveFusion,
-}

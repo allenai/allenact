@@ -52,7 +52,8 @@ class PointNavThorMixInPPOConfig(PointNavBaseConfig, ABC):
 
     multiple_beliefs = False
     beliefs_fusion = (  # choose one
-        AttentiveFusion.UUID
+        None
+        # AttentiveFusion.UUID
         # AverageFusion.UUID
         # SoftmaxFusion.UUID
     )

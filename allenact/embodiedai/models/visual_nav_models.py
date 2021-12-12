@@ -19,27 +19,35 @@ from allenact.base_abstractions.misc import ActorCriticOutput, Memory
 from allenact.utils.model_utils import FeatureEmbedding
 from allenact.embodiedai.models.basic_models import RNNStateEncoder
 from allenact.embodiedai.models.aux_models import AuxiliaryModel
-from allenact.embodiedai.models.fusion_models import FusionModels
 from allenact.embodiedai.aux_losses.losses import MultiAuxTaskNegEntropyLoss
 
+from typing import TypeVar
+from allenact.embodiedai.models.fusion_models import Fusion
+FusionType = TypeVar("FusionType", bound=Fusion)
 
 class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
+    '''
+    Base class of visual navigation / manipulation (or broadly, embodied AI) model.
+    `forward_encoder` function requires implementation.
+    '''
     def __init__(
         self,
         action_space: gym.spaces.Discrete,
         observation_space: SpaceDict,
         hidden_size=512,
         multiple_beliefs=False,
-        beliefs_fusion: Optional[str] = None,
+        beliefs_fusion: Optional[FusionType] = None,
         auxiliary_uuids: Optional[List[str]] = None,
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
         self._hidden_size = hidden_size
+        assert multiple_beliefs == (beliefs_fusion is not None)
         self.multiple_beliefs = multiple_beliefs
         self.beliefs_fusion = beliefs_fusion
         self.auxiliary_uuids = auxiliary_uuids
         if isinstance(self.auxiliary_uuids, list) and len(self.auxiliary_uuids) == 0:
             self.auxiliary_uuids = None
+        self.aux_models = None
 
     def create_state_encoders(
         self,
@@ -69,7 +77,7 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
                     trainable_masked_hidden_state=trainable_masked_hidden_state,
                 )
             # create fusion model
-            self.fusion_model = FusionModels[self.beliefs_fusion](
+            self.fusion_model = self.beliefs_fusion(
                 hidden_size=self._hidden_size,
                 obs_embed_size=obs_embed_size,
                 num_tasks=len(self.auxiliary_uuids),

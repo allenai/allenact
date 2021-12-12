@@ -14,7 +14,7 @@ from gym.spaces.dict import Dict as SpaceDict
 from allenact.algorithms.onpolicy_sync.policy import ObservationType
 from allenact.embodiedai.models.basic_models import SimpleCNN
 import allenact.embodiedai.models.resnet as resnet
-from allenact.embodiedai.models.visual_nav_models import VisualNavActorCritic
+from allenact.embodiedai.models.visual_nav_models import VisualNavActorCritic, FusionType
 
 
 class ObjectNavActorCritic(VisualNavActorCritic):
@@ -46,7 +46,7 @@ class ObjectNavActorCritic(VisualNavActorCritic):
         action_embed_size=6,
         # Aux loss
         multiple_beliefs=False,
-        beliefs_fusion: Optional[str] = None,
+        beliefs_fusion: Optional[FusionType] = None,
         auxiliary_uuids: Optional[List[str]] = None,
         # below are custom params
         rgb_uuid: Optional[str] = None,
@@ -166,7 +166,7 @@ class ResnetTensorObjectNavActorCritic(VisualNavActorCritic):
         add_prev_actions=False,
         action_embed_size=6,
         multiple_beliefs=False,
-        beliefs_fusion: Optional[str] = None,
+        beliefs_fusion: Optional[FusionType] = None,
         auxiliary_uuids: Optional[List[str]] = None,
         # custom params
         rgb_resnet_preprocessor_uuid: Optional[str] = None,
