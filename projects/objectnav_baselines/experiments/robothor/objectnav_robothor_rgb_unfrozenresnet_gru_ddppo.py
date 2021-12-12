@@ -14,7 +14,9 @@ from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base i
 
 
 class ObjectNavRoboThorRGBPPOExperimentConfig(
-    ObjectNavRoboThorBaseConfig, ObjectNavMixInPPOConfig, ObjectNavMixInUnfrozenResNetGRUConfig,
+    ObjectNavRoboThorBaseConfig,
+    ObjectNavMixInPPOConfig,
+    ObjectNavMixInUnfrozenResNetGRUConfig,
 ):
     """An Object Navigation experiment configuration in RoboThor with RGB
     input without preprocessing by frozen ResNet (instead, a trainable ResNet)."""

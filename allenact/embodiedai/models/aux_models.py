@@ -21,9 +21,10 @@ from allenact.embodiedai.aux_losses.losses import (
 
 
 class AuxiliaryModel(nn.Module):
-    '''
+    """
     The class of defining the models for all kinds of self-supervised auxiliary tasks
-    '''
+    """
+
     def __init__(
         self,
         aux_uuid: str,
@@ -69,4 +70,6 @@ class AuxiliaryModel(nn.Module):
         if self.aux_uuid in [InverseDynamicsLoss.UUID, TemporalDistanceLoss.UUID]:
             return self.decoder(features)
         else:
-            raise NotImplementedError(f"Auxiliary model with UUID {self.aux_uuid} does not support `forward` call.")
+            raise NotImplementedError(
+                f"Auxiliary model with UUID {self.aux_uuid} does not support `forward` call."
+            )

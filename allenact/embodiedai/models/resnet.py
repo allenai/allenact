@@ -266,7 +266,9 @@ def gnresneXt50(in_channels, base_planes, ngroups):
 
 
 def se_gnresnet50(in_channels, base_planes, ngroups):
-    model = GroupNormResNet(in_channels, base_planes, ngroups, SEBottleneck, [3, 4, 6, 3])
+    model = GroupNormResNet(
+        in_channels, base_planes, ngroups, SEBottleneck, [3, 4, 6, 3]
+    )
 
     return model
 

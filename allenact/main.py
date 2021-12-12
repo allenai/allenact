@@ -12,7 +12,11 @@ from typing import Dict, Tuple, List, Optional, Type
 from setproctitle import setproctitle as ptitle
 
 from allenact import __version__
-from allenact.algorithms.onpolicy_sync.runner import OnPolicyRunner, _CONFIG_KWARGS_STR, SaveDirFormat
+from allenact.algorithms.onpolicy_sync.runner import (
+    OnPolicyRunner,
+    _CONFIG_KWARGS_STR,
+    SaveDirFormat,
+)
 from allenact.base_abstractions.experiment_config import ExperimentConfig
 from allenact.utils.system import get_logger, init_logging, HUMAN_LOG_LEVELS
 

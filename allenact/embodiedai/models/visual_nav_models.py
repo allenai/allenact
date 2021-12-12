@@ -23,13 +23,16 @@ from allenact.embodiedai.aux_losses.losses import MultiAuxTaskNegEntropyLoss
 
 from typing import TypeVar
 from allenact.embodiedai.models.fusion_models import Fusion
+
 FusionType = TypeVar("FusionType", bound=Fusion)
 
+
 class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
-    '''
+    """
     Base class of visual navigation / manipulation (or broadly, embodied AI) model.
     `forward_encoder` function requires implementation.
-    '''
+    """
+
     def __init__(
         self,
         action_space: gym.spaces.Discrete,

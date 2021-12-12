@@ -13,12 +13,13 @@ import torch.nn as nn
 
 
 class Fusion(nn.Module):
-    '''
+    """
     Base class of belief fusion model 
         from Auxiliary Tasks Speed Up Learning PointGoal Navigation (Ye, 2020)
     Child class should implement `get_belief_weights` function to generate weights 
         to fuse the beliefs from all the auxiliary task into one.
-    ''' 
+    """
+
     def __init__(self, hidden_size, obs_embed_size, num_tasks):
         super().__init__()
         self.hidden_size = hidden_size  # H
@@ -38,8 +39,7 @@ class Fusion(nn.Module):
         obs_embeds = obs_embeds.view(num_steps * num_samplers, -1)
 
         weights = self.get_belief_weights(
-            all_beliefs=all_beliefs,  # (T*N, H, K)
-            obs_embeds=obs_embeds,  # (T*N, Z)
+            all_beliefs=all_beliefs, obs_embeds=obs_embeds,  # (T*N, H, K)  # (T*N, Z)
         ).unsqueeze(
             -1
         )  # (T*N, K, 1)
@@ -79,6 +79,7 @@ class SoftmaxFusion(Fusion):
     Situational Fusion of Visual Representation for Visual Navigation
     https://arxiv.org/abs/1908.09073
     """
+
     UUID = "smax"
 
     def __init__(self, hidden_size, obs_embed_size, num_tasks):
@@ -104,6 +105,7 @@ class AttentiveFusion(Fusion):
     https://arxiv.org/abs/1706.03762
     i.e. scaled dot-product attention
     """
+
     UUID = "attn"
 
     def __init__(self, hidden_size, obs_embed_size, num_tasks):
