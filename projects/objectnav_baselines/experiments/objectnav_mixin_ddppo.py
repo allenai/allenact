@@ -97,7 +97,7 @@ class ObjectNavMixInPPOConfig(ObjectNavBaseConfig):
                 LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
             ),
         )
-    
+
     @classmethod
     def _update_with_auxiliary_losses(cls, named_losses):
         # auxliary losses

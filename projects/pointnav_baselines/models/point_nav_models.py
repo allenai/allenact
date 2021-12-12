@@ -9,7 +9,10 @@ from gym.spaces.dict import Dict as SpaceDict
 from allenact.algorithms.onpolicy_sync.policy import ObservationType
 from allenact.embodiedai.models.basic_models import SimpleCNN
 import allenact.embodiedai.models.resnet as resnet
-from allenact.embodiedai.models.visual_nav_models import VisualNavActorCritic, FusionType
+from allenact.embodiedai.models.visual_nav_models import (
+    VisualNavActorCritic,
+    FusionType,
+)
 
 
 class PointNavActorCritic(VisualNavActorCritic):

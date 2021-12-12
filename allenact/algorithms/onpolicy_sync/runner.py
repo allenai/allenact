@@ -52,10 +52,13 @@ from allenact.utils.viz_utils import VizSuite
 
 _CONFIG_KWARGS_STR = "__CONFIG_KWARGS__"
 
+
 class SaveDirFormat(enum.Enum):
     """Directory formats that can be used when saving tensorboard logs, checkpoints, etc. during training/evaluation."""
+
     FLAT = "FLAT"
     NESTED = "NESTED"
+
 
 # Has results queue (aggregated per trainer), checkpoints queue and mp context
 # Instantiates train, validate, and test workers
@@ -653,28 +656,20 @@ class OnPolicyRunner(object):
         self, start_time_str: Optional[str] = None, create_if_none: bool = True
     ):
         path_parts = [
-                self.config.tag()
-                if self.extra_tag == ""
-                else os.path.join(self.config.tag(), self.extra_tag),
-                start_time_str or self.local_start_time_str,
+            self.config.tag()
+            if self.extra_tag == ""
+            else os.path.join(self.config.tag(), self.extra_tag),
+            start_time_str or self.local_start_time_str,
         ]
         if self.save_dir_fmt == SaveDirFormat.NESTED:
-            folder = os.path.join(
-                self.output_dir,
-                *path_parts,
-                "checkpoints",
-            )
+            folder = os.path.join(self.output_dir, *path_parts, "checkpoints",)
         elif self.save_dir_fmt == SaveDirFormat.FLAT:
-            folder = os.path.join(
-                self.output_dir,
-                "checkpoints",
-                *path_parts,
-            )
+            folder = os.path.join(self.output_dir, "checkpoints", *path_parts,)
         if create_if_none:
             os.makedirs(folder, exist_ok=True)
         return folder
 
-    def log_writer_path(self, start_time_str: str, checkpoint_parts: List=[]) -> str:
+    def log_writer_path(self, start_time_str: str, checkpoint_parts: List = []) -> str:
         if self.save_dir_fmt == SaveDirFormat.NESTED:
             if self.mode == TEST_MODE_STR:
                 return os.path.join(
@@ -728,17 +723,9 @@ class OnPolicyRunner(object):
             self.local_start_time_str,
         ]
         if self.save_dir_fmt == SaveDirFormat.NESTED:
-            base_dir = os.path.join(
-                self.output_dir,
-                *path_parts,
-                "used_configs",
-            )
+            base_dir = os.path.join(self.output_dir, *path_parts, "used_configs",)
         elif self.save_dir_fmt == SaveDirFormat.FLAT:
-            base_dir = os.path.join(
-                self.output_dir,
-                "used_configs",
-                *path_parts,
-            )
+            base_dir = os.path.join(self.output_dir, "used_configs", *path_parts,)
         os.makedirs(base_dir, exist_ok=True)
 
         # Saving current git diff
