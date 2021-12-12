@@ -301,7 +301,10 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         return position_is_close
 
     def get_objects_moved(
-        self, previous_object_locations, current_object_locations, target_object_id,
+        self,
+        previous_object_locations,
+        current_object_locations,
+        target_object_id,
         thres_dict: Optional[Dict] = None,
     ):
         moved_objects = []
@@ -312,7 +315,7 @@ class ManipulaTHOREnvironment(IThorEnvironment):
                 continue
             if object_id not in previous_object_locations:
                 continue
-            
+
             threshold = UNWANTED_MOVE_THR
             if thres_dict is not None:
                 threshold = max(threshold, thres_dict[scene_id + "-" + object_id])

@@ -60,7 +60,7 @@ class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
     )
 
     # New commit of AI2THOR has some issue that the objects will vibrate a bit
-    # without any external force. To eliminate the vibration effect, we have to 
+    # without any external force. To eliminate the vibration effect, we have to
     # introduce _vibration_dist_dict when checking the disturbance, from an external csv file.
     # By default it is None, i.e. we assume there is no vibration.
 

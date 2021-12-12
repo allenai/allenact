@@ -356,12 +356,7 @@ class ImageVisualizer(LoggerVisualizer):
             print("ERROR: oh no could not teleport in logging")
 
         image_tensor = this_controller.last_event.frame
-        image_dir = (
-            img_adr
-            + "_"
-            + tag
-            + ".png"
-        )
+        image_dir = img_adr + "_" + tag + ".png"
         cv2.imwrite(image_dir, image_tensor[:, :, [2, 1, 0]])
 
         if self.add_depth_map:
@@ -371,12 +366,7 @@ class ImageVisualizer(LoggerVisualizer):
             rgb = cm.get_cmap(plt.get_cmap("viridis"))(norm(depth))[:, :, :3]  # [0,1]
             rgb = (rgb * 255).astype(np.uint8)
 
-            depth_dir = (
-                img_adr
-                + "_"
-                + tag
-                + "_depth.png"
-            )
+            depth_dir = img_adr + "_" + tag + "_depth.png"
             cv2.imwrite(depth_dir, rgb[:, :, [2, 1, 0]])
 
 
