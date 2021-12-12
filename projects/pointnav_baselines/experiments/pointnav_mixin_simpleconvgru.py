@@ -25,7 +25,7 @@ class PointNavMixInSimpleConvGRUConfig(PointNavBaseConfig, ABC):
 
     # TODO only tested in roboTHOR Depth
     BACKBONE = (  # choose one
-        "resnet18"
+        "gnresnet18"
         # "simple_cnn"
     )
 

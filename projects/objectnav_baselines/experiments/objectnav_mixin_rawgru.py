@@ -22,7 +22,7 @@ class ObjectNavMixInRawGRUConfig(ObjectNavBaseConfig):
         return []
 
     BACKBONE = (
-        "resnet18"
+        "gnresnet18"
         # "simple_cnn"
     )
 

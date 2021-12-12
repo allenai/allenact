@@ -38,7 +38,7 @@ class PointNavActorCritic(VisualNavActorCritic):
         coordinate_embedding_dim=8,
         coordinate_dims=2,
         # perception backbone params,
-        backbone="resnet18",
+        backbone="gnresnet18",
         resnet_baseplanes=32,
     ):
         super().__init__(
@@ -71,7 +71,7 @@ class PointNavActorCritic(VisualNavActorCritic):
                 depth_uuid=depth_uuid,
             )
         else:  # resnet family
-            self.visual_encoder = resnet.ResNetEncoder(
+            self.visual_encoder = resnet.GroupNormResNetEncoder(
                 observation_space=observation_space,
                 output_size=hidden_size,
                 rgb_uuid=rgb_uuid,

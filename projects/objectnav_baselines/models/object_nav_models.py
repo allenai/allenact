@@ -54,7 +54,7 @@ class ObjectNavActorCritic(VisualNavActorCritic):
         object_type_embedding_dim=32,
         trainable_masked_hidden_state: bool = False,
         # perception backbone params,
-        backbone="resnet18",
+        backbone="gnresnet18",
         resnet_baseplanes=32,
     ):
         """Initializer.
@@ -83,7 +83,7 @@ class ObjectNavActorCritic(VisualNavActorCritic):
                 depth_uuid=depth_uuid,
             )
         else:  # resnet family
-            self.visual_encoder = resnet.ResNetEncoder(
+            self.visual_encoder = resnet.GroupNormResNetEncoder(
                 observation_space=observation_space,
                 output_size=hidden_size,
                 rgb_uuid=rgb_uuid,
