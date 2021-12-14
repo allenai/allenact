@@ -143,7 +143,8 @@ def _propagate_final_beliefs_to_all_steps(
 class InverseDynamicsLoss(AuxiliaryLoss):
     """
     Auxiliary task of Inverse Dynamics 
-        from Auxiliary Tasks Speed Up Learning PointGoal Navigation (Ye, 2020)
+        from Auxiliary Tasks Speed Up Learning PointGoal Navigation (Ye, 2020) https://arxiv.org/abs/2007.04561
+        originally from Curiosity-driven Exploration by Self-supervised Prediction (Pathak, 2017) https://arxiv.org/abs/1705.05363
     """
 
     UUID = "InvDyn"
@@ -245,7 +246,7 @@ class InverseDynamicsLoss(AuxiliaryLoss):
 class TemporalDistanceLoss(AuxiliaryLoss):
     """
     Auxiliary task of Temporal Distance
-        from Auxiliary Tasks Speed Up Learning PointGoal Navigation (Ye, 2020)
+        from Auxiliary Tasks Speed Up Learning PointGoal Navigation (Ye, 2020) https://arxiv.org/abs/2007.04561
     """
 
     UUID = "TempDist"
@@ -365,7 +366,8 @@ class TemporalDistanceLoss(AuxiliaryLoss):
 class CPCALoss(AuxiliaryLoss):
     """
     Auxiliary task of CPC|A
-        from Auxiliary Tasks Speed Up Learning PointGoal Navigation (Ye, 2020)
+        from Auxiliary Tasks Speed Up Learning PointGoal Navigation (Ye, 2020) https://arxiv.org/abs/2007.04561
+        originally from Neural Predictive Belief Representations (Guo, 2018) https://arxiv.org/abs/1811.06407
     """
 
     UUID = "CPCA"

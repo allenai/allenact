@@ -50,7 +50,12 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
         self.auxiliary_uuids = auxiliary_uuids
         if isinstance(self.auxiliary_uuids, list) and len(self.auxiliary_uuids) == 0:
             self.auxiliary_uuids = None
-        self.aux_models = None
+
+        # Define the placeholders in init function
+        self.state_encoders: nn.ModuleDict
+        self.aux_models: nn.ModuleDict
+        self.actor: LinearActorHead
+        self.critic: LinearCriticHead
 
     def create_state_encoders(
         self,
@@ -188,7 +193,7 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
         # 1.1 use perception model (i.e. encoder) to get observation embeddings
         obs_embeds = self.forward_encoder(observations)
         # 1.2 use embedding model to get prev_action embeddings
-        prev_actions_embeds = self.prev_action_embedder(prev_actions).to(obs_embeds)
+        prev_actions_embeds = self.prev_action_embedder(prev_actions)
         joint_embeds = torch.cat((obs_embeds, prev_actions_embeds), dim=-1)  # (T, N, *)
 
         # 2. use RNNs to get single/multiple beliefs

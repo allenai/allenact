@@ -48,10 +48,10 @@ class PointNavThorMixInPPOConfig(PointNavBaseConfig, ABC):
         # CPCA16Loss.UUID,
     ]
 
-    add_prev_actions = True
+    ADD_PREV_ACTIONS = True
 
-    multiple_beliefs = False
-    beliefs_fusion = (  # choose one
+    MULTIPLE_BELIEFS = False
+    BELIEF_FUSION = (  # choose one
         None
         # AttentiveFusion.UUID
         # AverageFusion.UUID
@@ -146,7 +146,7 @@ class PointNavThorMixInPPOConfig(PointNavBaseConfig, ABC):
             {uuid: total_aux_losses[uuid] for uuid in cls.AUXILIARY_UUIDS}
         )
 
-        if cls.multiple_beliefs:  # add weight entropy loss automatically
+        if cls.MULTIPLE_BELIEFS:  # add weight entropy loss automatically
             named_losses[MultiAuxTaskNegEntropyLoss.UUID] = (
                 MultiAuxTaskNegEntropyLoss(cls.AUXILIARY_UUIDS),
                 0.01,
