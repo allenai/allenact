@@ -58,7 +58,7 @@ class PointNavThorMixInPPOConfig(PointNavBaseConfig, ABC):
         # SoftmaxFusion.UUID
     )
 
-    normalize_advantage = False
+    NORMALIZE_ADVANTAGE = False
 
     def training_pipeline(self, **kwargs):
         # PPO
@@ -73,6 +73,7 @@ class PointNavThorMixInPPOConfig(PointNavBaseConfig, ABC):
         use_gae = True
         gae_lambda = 0.95
         max_grad_norm = 0.5
+        PPOConfig["normalize_advantage"] = self.NORMALIZE_ADVANTAGE
 
         named_losses = {"ppo_loss": (PPO(**PPOConfig), 1.0)}
         named_losses = self._update_with_auxiliary_losses(named_losses)
