@@ -55,11 +55,11 @@ class PointNavMixInSimpleConvGRUConfig(PointNavBaseConfig, ABC):
             goal_sensor_uuid=goal_sensor_uuid,
             # RNN
             hidden_size=228
-            if cls.multiple_beliefs and len(cls.AUXILIARY_UUIDS) > 1
+            if cls.MULTIPLE_BELIEFS and len(cls.AUXILIARY_UUIDS) > 1
             else 512,
             num_rnn_layers=1,
             rnn_type="GRU",
-            add_prev_actions=cls.add_prev_actions,
+            add_prev_actions=cls.ADD_PREV_ACTIONS,
             action_embed_size=4,
             # CNN
             backbone=cls.BACKBONE,
@@ -68,6 +68,6 @@ class PointNavMixInSimpleConvGRUConfig(PointNavBaseConfig, ABC):
             coordinate_dims=2,
             # Aux
             auxiliary_uuids=cls.AUXILIARY_UUIDS,
-            multiple_beliefs=cls.multiple_beliefs,
-            beliefs_fusion=cls.beliefs_fusion,
+            multiple_beliefs=cls.MULTIPLE_BELIEFS,
+            beliefs_fusion=cls.BELIEF_FUSION,
         )

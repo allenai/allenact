@@ -48,17 +48,17 @@ class PointNavThorMixInPPOConfig(PointNavBaseConfig, ABC):
         # CPCA16Loss.UUID,
     ]
 
-    add_prev_actions = True
+    ADD_PREV_ACTIONS = True
 
-    multiple_beliefs = False
-    beliefs_fusion = (  # choose one
+    MULTIPLE_BELIEFS = False
+    BELIEF_FUSION = (  # choose one
         None
         # AttentiveFusion.UUID
         # AverageFusion.UUID
         # SoftmaxFusion.UUID
     )
 
-    normalize_advantage = False
+    NORMALIZE_ADVANTAGE = False
 
     def training_pipeline(self, **kwargs):
         # PPO
@@ -73,6 +73,7 @@ class PointNavThorMixInPPOConfig(PointNavBaseConfig, ABC):
         use_gae = True
         gae_lambda = 0.95
         max_grad_norm = 0.5
+        PPOConfig["normalize_advantage"] = self.NORMALIZE_ADVANTAGE
 
         named_losses = {"ppo_loss": (PPO(**PPOConfig), 1.0)}
         named_losses = self._update_with_auxiliary_losses(named_losses)
@@ -146,7 +147,7 @@ class PointNavThorMixInPPOConfig(PointNavBaseConfig, ABC):
             {uuid: total_aux_losses[uuid] for uuid in cls.AUXILIARY_UUIDS}
         )
 
-        if cls.multiple_beliefs:  # add weight entropy loss automatically
+        if cls.MULTIPLE_BELIEFS:  # add weight entropy loss automatically
             named_losses[MultiAuxTaskNegEntropyLoss.UUID] = (
                 MultiAuxTaskNegEntropyLoss(cls.AUXILIARY_UUIDS),
                 0.01,
