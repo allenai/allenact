@@ -4,7 +4,6 @@ Object navigation is currently available as a Task in AI2-THOR and
 Facebook's Habitat.
 """
 from typing import Tuple, Dict, Optional, cast, List
-from allenact.utils.system import get_logger
 
 import gym
 import torch
