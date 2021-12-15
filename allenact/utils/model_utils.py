@@ -228,11 +228,12 @@ class FeatureEmbedding(nn.Module):
         self.output_size = output_size
         if self.output_size != 0:
             self.fc = nn.Embedding(input_size, output_size)
-        else:
-            self.fc = None
+        else:  # automatically be moved to a device
+            self.null_embedding: torch.Tensor
+            self.register_buffer("null_embedding", torch.zeros(0,), persistent=False)
 
     def forward(self, inputs):
         if self.output_size != 0:
             return self.fc(inputs)
-        else:  # useful for concat, to be move to device
-            return torch.zeros(0,)
+        else:
+            return self.null_embedding

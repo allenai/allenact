@@ -4,17 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 # Adapted from https://github.com/joel99/habitat-pointnav-aux/blob/master/habitat_baselines/
 
-from typing import (
-    Sequence,
-    Dict,
-    Union,
-    cast,
-    List,
-    Callable,
-    Optional,
-    Tuple,
-    Any,
-)
+from typing import Optional
 
 import numpy as np
 import torch

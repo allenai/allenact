@@ -1,5 +1,4 @@
-from typing import Callable, Tuple, Dict, Optional, Union, List, cast, Any
-from allenact.utils.system import get_logger
+from typing import Tuple, Dict, Optional, Union, List, cast
 
 import gym
 import torch

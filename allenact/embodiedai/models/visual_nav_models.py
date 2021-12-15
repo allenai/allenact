@@ -1,4 +1,4 @@
-from typing import Callable, Tuple, Dict, Optional, Union, List, cast, Any
+from typing import Tuple, Dict, Optional, List
 from allenact.utils.system import get_logger
 from collections import OrderedDict
 
@@ -50,7 +50,12 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
         self.auxiliary_uuids = auxiliary_uuids
         if isinstance(self.auxiliary_uuids, list) and len(self.auxiliary_uuids) == 0:
             self.auxiliary_uuids = None
-        self.aux_models = None
+
+        # Define the placeholders in init function
+        self.state_encoders: nn.ModuleDict
+        self.aux_models: nn.ModuleDict
+        self.actor: LinearActorHead
+        self.critic: LinearCriticHead
 
     def create_state_encoders(
         self,
@@ -104,6 +109,19 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
                 len(self.belief_names), self.belief_names
             )
         )
+
+    def load_state_dict(self, state_dict):
+        new_state_dict = state_dict.copy()
+        for key in state_dict.keys():
+            if "state_encoder." in key:  # old key name
+                new_key = key.replace("state_encoder.", "state_encoders.single_belief.")
+            else:
+                new_key = key
+            new_state_dict[new_key] = state_dict[key]
+
+        return super().load_state_dict(
+            new_state_dict, strict=False
+        )  # compatible in keys
 
     def create_actorcritic_head(self):
         self.actor = LinearActorHead(self._hidden_size, self.action_space.n)
@@ -188,7 +206,7 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
         # 1.1 use perception model (i.e. encoder) to get observation embeddings
         obs_embeds = self.forward_encoder(observations)
         # 1.2 use embedding model to get prev_action embeddings
-        prev_actions_embeds = self.prev_action_embedder(prev_actions).to(obs_embeds)
+        prev_actions_embeds = self.prev_action_embedder(prev_actions)
         joint_embeds = torch.cat((obs_embeds, prev_actions_embeds), dim=-1)  # (T, N, *)
 
         # 2. use RNNs to get single/multiple beliefs
