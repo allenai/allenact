@@ -1,10 +1,11 @@
 """Defining imitation losses for actor critic type models."""
 
-from typing import Dict, cast, Optional
 from collections import OrderedDict
+from typing import Dict, cast, Optional
 
 import torch
 
+import allenact.utils.spaces_utils as su
 from allenact.algorithms.onpolicy_sync.losses.abstract_loss import (
     AbstractActorCriticLoss,
     ObservationType,
@@ -17,7 +18,6 @@ from allenact.base_abstractions.distributions import (
 )
 from allenact.base_abstractions.misc import ActorCriticOutput
 from allenact.base_abstractions.sensor import AbstractExpertSensor
-import allenact.utils.spaces_utils as su
 
 
 class Imitation(AbstractActorCriticLoss):
@@ -77,7 +77,7 @@ class Imitation(AbstractActorCriticLoss):
 
         batch : A batch of data corresponding to the information collected when rolling out (possibly many) agents
             over a fixed number of steps. In particular this batch should have the same format as that returned by
-            `RolloutStorage.recurrent_generator`.
+            `RolloutStorage.batched_rollouts_generator`.
             Here `batch["observations"]` must contain `"expert_action"` observations
             or `"expert_policy"` observations. See `ExpertActionSensor` (or `ExpertPolicySensor`) for an example of
             a sensor producing such observations.

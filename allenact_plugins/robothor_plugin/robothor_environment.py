@@ -6,10 +6,10 @@ import random
 import warnings
 from typing import Any, Optional, Dict, List, Union, Tuple, Collection
 
-from ai2thor.fifo_server import FifoServer
 import ai2thor.server
 import numpy as np
 from ai2thor.controller import Controller
+from ai2thor.fifo_server import FifoServer
 from ai2thor.util import metrics
 
 from allenact.utils.cache_utils import (
@@ -175,7 +175,7 @@ class RoboThorEnvironment:
                 else:
                     break
             if d < 0:
-                get_logger().warning(
+                get_logger().debug(
                     f"In scene {self.scene_name}, could not find a path from {position} to {object_type}"
                     f" with {allowed_error} error tolerance. Returning a distance of -1."
                 )
@@ -257,7 +257,7 @@ class RoboThorEnvironment:
                 else:
                     break
             if d < 0:
-                get_logger().warning(
+                get_logger().debug(
                     f"In scene {self.scene_name}, could not find a path from {position} to {target}"
                     f" with {allowed_error} error tolerance. Returning a distance of -1."
                 )

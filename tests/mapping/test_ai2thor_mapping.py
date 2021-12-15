@@ -6,21 +6,19 @@ import urllib
 import urllib.request
 import warnings
 from collections import defaultdict
-
 # noinspection PyUnresolvedReferences
 from tempfile import mkdtemp
 from typing import Dict, List, Tuple, cast
 
 # noinspection PyUnresolvedReferences
 import ai2thor
-
 # noinspection PyUnresolvedReferences
 import ai2thor.wsgi_server
 import compress_pickle
 import numpy as np
 import torch
 
-from allenact.algorithms.onpolicy_sync.storage import RolloutStorage
+from allenact.algorithms.onpolicy_sync.storage import RolloutBlockStorage
 from allenact.base_abstractions.misc import Memory, ActorCriticOutput
 from allenact.embodiedai.mapping.mapping_utils.map_builders import SemanticMapBuilder
 from allenact.utils.experiment_utils import set_seed
@@ -312,11 +310,10 @@ class TestAI2THORMapSensors(object):
             walkthrough_model = WalkthroughRGBMappingPPOExperimentConfig.create_model()
             walkthrough_model.load_state_dict(state_dict["model_state_dict"])
 
-            rollout_storage = RolloutStorage(
-                num_steps=1,
+            rollout_storage = RolloutBlockStorage(
+                init_size=1,
                 num_samplers=1,
                 actor_critic=walkthrough_model,
-                only_store_first_and_last_in_memory=True,
             )
             memory = rollout_storage.pick_memory_step(0)
             masks = rollout_storage.masks[:1]

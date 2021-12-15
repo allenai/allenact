@@ -32,7 +32,7 @@ class AbstractActorCriticLoss(Loss):
 
         batch : A batch of data corresponding to the information collected when rolling out (possibly many) agents
             over a fixed number of steps. In particular this batch should have the same format as that returned by
-            `RolloutStorage.recurrent_generator`.
+            `RolloutStorage.batched_rollouts_generator`.
         actor_critic_output : The output of calling an ActorCriticModel on the observations in `batch`.
         args : Extra args.
         kwargs : Extra kwargs.

@@ -92,7 +92,7 @@ class DelaySignalHandling:
             if callable(self.old_term_handler):
                 self.old_term_handler(*self.term_signal_received)
             else:
-                get_logger().warning(
+                get_logger().debug(
                     "Termination handler could not be called after delaying signal handling."
                     f" Resending the SIGTERM signal. Last (sig, frame) == ({self.term_signal_received})."
                 )

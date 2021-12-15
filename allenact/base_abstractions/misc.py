@@ -316,18 +316,15 @@ class Memory(Dict):
             tensor = self.tensor(key)
             assert (
                 len(tensor.shape) > dim
-            ), "attempting to access dim {} for memory type {} of shape {}".format(
-                dim, key, tensor.shape
-            )
+            ), f"attempting to access dim {dim} for memory type {key} of shape {tensor.shape}"
 
             if not checked:
                 total = tensor.shape[dim]
-
                 checked = True
 
             assert (
                 total == tensor.shape[dim]
-            ), "attempting to slice along non-uniform dimension {}".format(dim)
+            ), f"attempting to slice along non-uniform dimension {dim}"
 
             if start is not None or stop is not None or step != 1:
                 slice_tuple = (

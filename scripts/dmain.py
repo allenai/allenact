@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 
-"""
-Entry point to multi-node (distributed) training for a user given experiment name.
-"""
+"""Entry point to multi-node (distributed) training for a user given experiment
+name."""
 
-import sys
 import os
-import time
 import random
 import string
+import subprocess
+import sys
+import time
 from pathlib import Path
 from typing import Optional
-import subprocess
 
 # Add to PYTHONPATH the path of the parent directory of the current file's directory
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(Path(__file__)))))

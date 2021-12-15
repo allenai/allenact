@@ -7,6 +7,7 @@ import random
 import time
 import traceback
 from collections import defaultdict
+from functools import partial
 from multiprocessing.context import BaseContext
 from typing import (
     Optional,
@@ -18,9 +19,7 @@ from typing import (
     cast,
     Iterator,
     Callable,
-    Tuple,
 )
-from functools import partial
 
 import torch
 import torch.distributed as dist  # type: ignore
@@ -41,7 +40,9 @@ from allenact.algorithms.onpolicy_sync.losses.abstract_loss import (
     AbstractActorCriticLoss,
 )
 from allenact.algorithms.onpolicy_sync.policy import ActorCriticModel
-from allenact.algorithms.onpolicy_sync.storage import RolloutStorage
+from allenact.algorithms.onpolicy_sync.storage import (
+    RolloutBlockStorage,
+)
 from allenact.algorithms.onpolicy_sync.vector_sampled_tasks import (
     VectorSampledTasks,
     COMPLETE_TASK_METRICS_KEY,
@@ -415,16 +416,28 @@ class OnPolicyRLEngine(object):
 
         return len(paused), keep, batch
 
-    def initialize_rollouts(self, rollouts, visualizer: Optional[VizSuite] = None):
+    def initialize_rollout_block_storage_and_vizualizer(
+        self,
+        rollout_block_storage: RolloutBlockStorage,
+        visualizer: Optional[VizSuite] = None,
+    ):
+        assert (
+            rollout_block_storage.step == 0
+        ), "Can only initialize rollouts when they are at step 0"
+
         observations = self.vector_tasks.get_observations()
 
         npaused, keep, batch = self.remove_paused(observations)
         if npaused > 0:
-            rollouts.sampler_select(keep)
-        rollouts.to(self.device)
-        rollouts.insert_observations(
+            rollout_block_storage.sampler_select(keep)
+
+        rollout_block_storage.to(self.device)
+        rollout_block_storage.insert_observations(
             self._preprocess_observations(batch) if len(keep) > 0 else batch
         )
+        rollout_block_storage.prev_actions[0].zero_()  # Have to zero previous actions
+        rollout_block_storage.masks[0].zero_()  # Have to zero masks
+
         if visualizer is not None and len(keep) > 0:
             visualizer.collect(vector_task=self.vector_tasks, alive=keep)
         return npaused
@@ -433,16 +446,21 @@ class OnPolicyRLEngine(object):
     def num_active_samplers(self):
         return self.vector_tasks.num_unpaused_tasks
 
-    def act(self, rollouts: RolloutStorage, dist_wrapper_class: Optional[type] = None):
+    def act(
+        self,
+        rollout_block_storage: RolloutBlockStorage,
+        dist_wrapper_class: Optional[type] = None,
+    ):
         with torch.no_grad():
-            step_observation = rollouts.pick_observation_step(rollouts.step)
-            memory = rollouts.pick_memory_step(rollouts.step)
-            prev_actions = rollouts.pick_prev_actions_step(rollouts.step)
+            cur_step = rollout_block_storage.step
+            step_observation = rollout_block_storage.pick_observation_step(cur_step)
+            memory = rollout_block_storage.pick_memory_step(cur_step)
+            prev_actions = rollout_block_storage.pick_prev_actions_step(cur_step)
             actor_critic_output, memory = self.actor_critic(
                 step_observation,
                 memory,
                 prev_actions,
-                rollouts.masks[rollouts.step : rollouts.step + 1],
+                rollout_block_storage.masks[cur_step : cur_step + 1],
             )
 
             distr = actor_critic_output.distributions
@@ -458,15 +476,16 @@ class OnPolicyRLEngine(object):
         return memory.sampler_select(keep) if memory is not None else memory
 
     def probe(self, dones: List[bool], npaused, period=100000):
-        """Debugging util. When called from self.collect_rollout_step(...),
-        calls render for the 0-th task sampler of the 0-th distributed worker
-        for the first beginning episode spaced at least period steps from the
-        beginning of the previous one.
+        """Debugging util. When called from
+        self.collect_step_across_all_task_samplers(...), calls render for the
+        0-th task sampler of the 0-th distributed worker for the first
+        beginning episode spaced at least period steps from the beginning of
+        the previous one.
 
         For valid, train, it currently renders all episodes for the 0-th task sampler of the
         0-th distributed worker. If this is not wanted, it must be hard-coded for now below.
 
-        :param dones: dones list from self.collect_rollout_step(...)
+        :param dones: dones list from self.collect_step_across_all_task_samplers(...)
         :param npaused: number of newly paused tasks returned by self.removed_paused(...)
         :param period: minimal spacing in sampled steps between the beginning of episodes to be shown.
         """
@@ -508,11 +527,15 @@ class OnPolicyRLEngine(object):
                 else:
                     self._probe_steps = -self._probe_steps
 
-    def collect_rollout_step(
-        self, rollouts: RolloutStorage, visualizer=None, dist_wrapper_class=None
+    def collect_step_across_all_task_samplers(
+        self,
+        rollout_block_storage: RolloutBlockStorage,
+        visualizer=None,
+        dist_wrapper_class=None,
     ) -> int:
         actions, actor_critic_output, memory, _ = self.act(
-            rollouts=rollouts, dist_wrapper_class=dist_wrapper_class
+            rollout_block_storage=rollout_block_storage,
+            dist_wrapper_class=dist_wrapper_class,
         )
 
         # Flatten actions
@@ -570,9 +593,9 @@ class OnPolicyRLEngine(object):
         # self.probe(dones, npaused)
 
         if npaused > 0:
-            rollouts.sampler_select(keep)
+            rollout_block_storage.sampler_select(keep)
 
-        rollouts.insert(
+        rollout_block_storage.append(
             observations=self._preprocess_observations(batch)
             if len(keep) > 0
             else batch,
@@ -590,7 +613,7 @@ class OnPolicyRLEngine(object):
         if visualizer is not None:
             if len(keep) > 0:
                 visualizer.collect(
-                    rollout=rollouts,
+                    rollout=rollout_block_storage,
                     vector_task=self.vector_tasks,
                     alive=keep,
                     actor_critic=actor_critic_output,
@@ -900,7 +923,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         else:
             return self.step_count  # this is actually accurate
 
-    def act(self, rollouts: RolloutStorage, dist_wrapper_class: Optional[type] = None):
+    def act(
+        self,
+        rollout_block_storage: RolloutBlockStorage,
+        dist_wrapper_class: Optional[type] = None,
+    ):
         if self.training_pipeline.current_stage.teacher_forcing is not None:
             assert dist_wrapper_class is None
             dist_wrapper_class = partial(
@@ -913,16 +940,15 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             )
 
         actions, actor_critic_output, memory, step_observation = super().act(
-            rollouts=rollouts, dist_wrapper_class=dist_wrapper_class
+            rollout_block_storage=rollout_block_storage,
+            dist_wrapper_class=dist_wrapper_class,
         )
 
         self.step_count += self.num_active_samplers
 
         return actions, actor_critic_output, memory, step_observation
 
-    def advantage_stats(
-        self, advantages: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def advantage_stats(self, advantages: torch.Tensor) -> Dict[str, torch.Tensor]:
         r"""Computes the mean and variances of advantages (possibly over multiple workers).
         For multiple workers, this method is equivalent to first collecting all versions of
         advantages and then computing the mean and variance locally over that.
@@ -949,7 +975,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         else:
             mean, std = advantages.mean(), advantages.std()
 
-        return mean, std
+        return {"mean": mean, "std": std}
 
     def distributed_weighted_sum(
         self,
@@ -968,16 +994,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 )
             return torch.tensor(to_share * weight).item()
 
-    def update(self, rollouts: RolloutStorage):
-        advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
-
-        adv_mean, adv_std = self.advantage_stats(advantages)
-
+    def update(self, rollout_block_storage: RolloutBlockStorage):
         for e in range(self.training_pipeline.current_stage.update_repeats):
-            data_generator = rollouts.recurrent_generator(
-                advantages=advantages,
-                adv_mean=adv_mean,
-                adv_std=adv_std,
+            data_generator = rollout_block_storage.batched_rollouts_generator(
                 num_mini_batch=self.training_pipeline.current_stage.num_mini_batch,
             )
 
@@ -1293,8 +1312,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.checkpoints_queue.put(("eval", model_path))
         self.last_save = self.training_pipeline.total_steps
 
-    def run_pipeline(self, rollouts: RolloutStorage):
-        self.initialize_rollouts(rollouts)
+    def run_pipeline(self, rollout_block_storage: RolloutBlockStorage):
+        self.initialize_rollout_block_storage_and_vizualizer(rollout_block_storage)
         self.tracking_info.clear()
 
         self.last_log = self.training_pipeline.total_steps
@@ -1354,13 +1373,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
             self.former_steps = self.step_count
             for step in range(self.training_pipeline.current_stage.num_steps):
-                num_paused = self.collect_rollout_step(rollouts=rollouts)
-
-                # Make sure we've collected the entire set of tensors (including memory)
-                if rollouts.num_steps != self.training_pipeline.current_stage.num_steps:
-                    rollouts.unnarrow(unnarrow_to_maximum_size=True)
-                    assert rollouts.num_steps == self.training_pipeline.num_steps
-                    rollouts.narrow(self.training_pipeline.current_stage.num_steps)
+                num_paused = self.collect_step_across_all_task_samplers(
+                    rollout_block_storage=rollout_block_storage
+                )
 
                 if num_paused > 0:
                     raise NotImplementedError(
@@ -1384,21 +1399,21 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         < 0.9 * self.training_pipeline.current_stage.num_steps
                     ):
                         get_logger().debug(
-                            "{} worker {} narrowed rollouts after {} steps (out of {}) with {} workers done".format(
-                                self.mode, self.worker_id, rollouts.step, step, num_done
-                            )
+                            f"{self.mode} worker {self.worker_id} was preempted after {rollout_block_storage.step}"
+                            f" steps (out of {self.training_pipeline.current_stage.num_steps})"
+                            f" with {num_done} workers done"
                         )
-                        rollouts.narrow()
                         break
 
             with torch.no_grad():
                 actor_critic_output, _ = self.actor_critic(
-                    observations=rollouts.pick_observation_step(-1),
-                    memory=rollouts.pick_memory_step(-1),
+                    observations=rollout_block_storage.pick_observation_step(-1),
+                    memory=rollout_block_storage.pick_memory_step(-1),
                     prev_actions=su.unflatten(
-                        self.actor_critic.action_space, rollouts.prev_actions[-1:]
+                        self.actor_critic.action_space,
+                        rollout_block_storage.prev_actions[-1:],
                     ),
-                    masks=rollouts.masks[-1:],
+                    masks=rollout_block_storage.masks[-1:],
                 )
 
             if self.is_distributed:
@@ -1412,24 +1427,26 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 ndone = int(self.num_workers_done.get("done"))
                 assert (
                     ndone == self.num_workers
-                ), "# workers done {} != # workers {}".format(ndone, self.num_workers)
+                ), f"# workers done {ndone} != # workers {self.num_workers}"
 
                 # get the actual step_count
                 self.step_count = (
                     int(self.num_workers_steps.get("steps")) + self.former_steps
                 )
 
-            rollouts.compute_returns(
+            rollout_block_storage.before_update(
                 next_value=actor_critic_output.values.detach(),
                 use_gae=self.training_pipeline.current_stage.use_gae,
                 gamma=self.training_pipeline.current_stage.gamma,
                 tau=self.training_pipeline.current_stage.gae_lambda,
+                adv_stats_callback=self.advantage_stats,
             )
+            self.update(
+                rollout_block_storage=rollout_block_storage
+            )  # here we synchronize
+            rollout_block_storage.after_update()
 
-            self.update(rollouts=rollouts)  # here we synchronize
             self.training_pipeline.rollout_count += 1
-
-            rollouts.after_update()
 
             if self.training_pipeline.current_stage.offpolicy_component is not None:
                 offpolicy_component = (
@@ -1472,12 +1489,13 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 == 0
             ):
                 get_logger().info(
-                    "{} worker {} Force advance tasks with {} rollouts".format(
-                        self.mode, self.worker_id, self.training_pipeline.rollout_count
-                    )
+                    f"{self.mode} worker {self.worker_id} Force advance"
+                    f" tasks with {self.training_pipeline.rollout_count} rollouts"
                 )
                 self.vector_tasks.next_task(force_advance_scene=True)
-                self.initialize_rollouts(rollouts)
+                self.initialize_rollout_block_storage_and_vizualizer(
+                    rollout_block_storage
+                )
 
     def train(
         self, checkpoint_file_name: Optional[str] = None, restart_pipeline: bool = False
@@ -1492,8 +1510,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.checkpoint_load(checkpoint_file_name, restart_pipeline)
 
             self.run_pipeline(
-                RolloutStorage(
-                    num_steps=self.training_pipeline.num_steps,
+                RolloutBlockStorage(
+                    init_size=self.training_pipeline.num_steps,
                     num_samplers=self.num_samplers,
                     actor_critic=self.actor_critic
                     if isinstance(self.actor_critic, ActorCriticModel)
@@ -1579,8 +1597,8 @@ class OnPolicyInference(OnPolicyRLEngine):
         ckpt = self.checkpoint_load(checkpoint_file_path)
         total_steps = cast(int, ckpt["total_steps"])
 
-        rollouts = RolloutStorage(
-            num_steps=rollout_steps,
+        rollouts = RolloutBlockStorage(
+            init_size=rollout_steps,
             num_samplers=self.num_samplers,
             actor_critic=cast(ActorCriticModel, self.actor_critic),
         )
@@ -1588,7 +1606,9 @@ class OnPolicyInference(OnPolicyRLEngine):
         if visualizer is not None:
             assert visualizer.empty()
 
-        num_paused = self.initialize_rollouts(rollouts, visualizer=visualizer)
+        num_paused = self.initialize_rollout_block_storage_and_vizualizer(
+            rollouts, visualizer=visualizer
+        )
         assert num_paused == 0, f"{num_paused} tasks paused when initializing eval"
 
         num_tasks = sum(
@@ -1629,7 +1649,7 @@ class OnPolicyInference(OnPolicyRLEngine):
         logging_pkg = LoggingPackage(mode=self.mode, training_steps=total_steps)
         while self.num_active_samplers > 0:
             frames += self.num_active_samplers
-            self.collect_rollout_step(
+            self.collect_step_across_all_task_samplers(
                 rollouts, visualizer=visualizer, dist_wrapper_class=dist_wrapper_class
             )
             steps += 1

@@ -2,13 +2,24 @@
 # Modified work Copyright (c) Allen Institute for AI
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+import abc
 import random
-from collections import defaultdict
-from typing import Union, List, Dict, Tuple, DefaultDict, Sequence, cast, Optional
+from typing import (
+    Union,
+    List,
+    Dict,
+    Tuple,
+    Sequence,
+    cast,
+    Optional,
+    Callable,
+)
 
 import numpy as np
 import torch
+from torch import Tensor
 
+import allenact.utils.spaces_utils as su
 from allenact.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     FullMemorySpecType,
@@ -16,24 +27,29 @@ from allenact.algorithms.onpolicy_sync.policy import (
     ActionType,
 )
 from allenact.base_abstractions.misc import Memory
-from allenact.utils.system import get_logger
-import allenact.utils.spaces_utils as su
 
 
-class RolloutStorage(object):
+class ExperienceStorage(abc.ABC):
+    def before_update(self, **kwargs):
+        pass
+
+    def after_update(self, **kwargs):
+        pass
+
+    @abc.abstractmethod
+    def to(self, device: torch.device):
+        pass
+
+
+class RolloutBlockStorage(ExperienceStorage):
     """Class for storing rollout information for RL trainers."""
 
     FLATTEN_SEPARATOR: str = "._AUTOFLATTEN_."
 
     def __init__(
-        self,
-        num_steps: int,
-        num_samplers: int,
-        actor_critic: ActorCriticModel,
-        only_store_first_and_last_in_memory: bool = True,
+        self, init_size: int, num_samplers: int, actor_critic: ActorCriticModel,
     ):
-        self.num_steps = num_steps
-        self.only_store_first_and_last_in_memory = only_store_first_and_last_in_memory
+        self.full_size = init_size
 
         self.flattened_to_unflattened: Dict[str, Dict[str, List[str]]] = {
             "memory": dict(),
@@ -45,44 +61,72 @@ class RolloutStorage(object):
         }
 
         self.dim_names = ["step", "sampler", None]
-
-        self.memory: Memory = self.create_memory(
-            actor_critic.recurrent_memory_specification,
-            num_samplers,
-            first_and_last_only=only_store_first_and_last_in_memory,
-        )
-        self.observations: Memory = Memory()
-
-        self.value_preds: Optional[torch.Tensor] = None
-        self.returns: Optional[torch.Tensor] = None
-        self.rewards: Optional[torch.Tensor] = None
-        self.action_log_probs: Optional[torch.Tensor] = None
-
-        self.masks = torch.zeros(num_steps + 1, num_samplers, 1)
-
+        self.memory_specification = actor_critic.recurrent_memory_specification
         self.action_space = actor_critic.action_space
 
+        self.memory_first_last: Memory = self.create_memory(
+            spec=self.memory_specification, num_samplers=num_samplers,
+        )
+        self._observations_full: Memory = Memory()
+
+        self._value_preds_full: Optional[torch.Tensor] = None
+        self._returns_full: Optional[torch.Tensor] = None
+        self._rewards_full: Optional[torch.Tensor] = None
+        self._action_log_probs_full: Optional[torch.Tensor] = None
+
+        # self._advantages and self._normalized_advantages are only computed
+        # when `before_update` is called
+        self._advantages: Optional[torch.Tensor] = None
+        self._normalized_advantages: Optional[torch.Tensor] = None
+
+        self._masks_full = torch.zeros(init_size + 1, num_samplers, 1)
+
         action_flat_dim = su.flatdim(self.action_space)
-        self.actions = torch.zeros(num_steps, num_samplers, action_flat_dim,)
-        self.prev_actions = torch.zeros(num_steps + 1, num_samplers, action_flat_dim,)
+
+        self._actions_full = torch.zeros(init_size, num_samplers, action_flat_dim,)
+        self._prev_actions_full = torch.zeros(
+            init_size + 1, num_samplers, action_flat_dim,
+        )
 
         self.step = 0
-
-        self.unnarrow_data: DefaultDict[
-            str, Union[int, torch.Tensor, Dict]
-        ] = defaultdict(dict)
-
-        self.permanent_unnarrow_data: DefaultDict[
-            str, Union[int, torch.Tensor, Dict]
-        ] = defaultdict(dict)
+        self._before_update_called = False
 
         self.device = torch.device("cpu")
 
+    @property
+    def value_preds(self) -> torch.Tensor:
+        return self._value_preds_full[: self.step + 2]
+
+    @property
+    def rewards(self) -> torch.Tensor:
+        return self._rewards_full[: self.step + 1]
+
+    @property
+    def returns(self) -> torch.Tensor:
+        return self._returns_full[: self.step + 2]
+
+    @property
+    def action_log_probs(self) -> torch.Tensor:
+        return self._action_log_probs_full[: self.step + 1]
+
+    @property
+    def actions(self) -> torch.Tensor:
+        return self._actions_full[: self.step + 1]
+
+    @property
+    def prev_actions(self) -> torch.Tensor:
+        return self._prev_actions_full[: self.step + 2]
+
+    @property
+    def masks(self) -> torch.Tensor:
+        return self._masks_full[: self.step + 2]
+
+    @property
+    def observations(self) -> Memory:
+        return self._observations_full.slice(dim=0, start=0, stop=self.step + 2)
+
     def create_memory(
-        self,
-        spec: Optional[FullMemorySpecType],
-        num_samplers: int,
-        first_and_last_only: bool = False,
+        self, spec: Optional[FullMemorySpecType], num_samplers: int,
     ) -> Memory:
         if spec is None:
             return Memory()
@@ -94,10 +138,7 @@ class RolloutStorage(object):
             dim_names = ["step"] + [d[0] for d in dims_template]
             sampler_dim = dim_names.index("sampler")
 
-            if not first_and_last_only:
-                all_dims = [self.num_steps + 1] + [d[1] for d in dims_template]
-            else:
-                all_dims = [2] + [d[1] for d in dims_template]
+            all_dims = [2] + [d[1] for d in dims_template]
             all_dims[sampler_dim] = num_samplers
 
             memory.check_append(
@@ -112,17 +153,17 @@ class RolloutStorage(object):
         return memory
 
     def to(self, device: torch.device):
-        self.observations.to(device)
-        self.memory.to(device)
-        self.actions = self.actions.to(device)
-        self.prev_actions = self.prev_actions.to(device)
-        self.masks = self.masks.to(device)
+        self._observations_full.to(device)
+        self.memory_first_last.to(device)
+        self._actions_full = self._actions_full.to(device)
+        self._prev_actions_full = self._prev_actions_full.to(device)
+        self._masks_full = self._masks_full.to(device)
 
-        if self.rewards is not None:
-            self.rewards = self.rewards.to(device)
-            self.value_preds = self.value_preds.to(device)
-            self.returns = self.returns.to(device)
-            self.action_log_probs = self.action_log_probs.to(device)
+        if self._rewards_full is not None:
+            self._rewards_full = self._rewards_full.to(device)
+            self._value_preds_full = self._value_preds_full.to(device)
+            self._returns_full = self._returns_full.to(device)
+            self._action_log_probs_full = self._action_log_probs_full.to(device)
 
         self.device = device
 
@@ -130,32 +171,39 @@ class RolloutStorage(object):
         self, observations: ObservationType, time_step: int = 0,
     ):
         self.insert_tensors(
-            storage_name="observations", unflattened=observations, time_step=time_step
+            storage=self._observations_full,
+            storage_name="observations",
+            unflattened=observations,
+            time_step=time_step,
         )
 
     def insert_memory(
         self, memory: Optional[Memory], time_step: int,
     ):
         if memory is None:
-            assert len(self.memory) == 0
+            assert len(self.memory_first_last) == 0
             return
 
-        if self.only_store_first_and_last_in_memory and time_step > 0:
-            time_step = 1
-
+        # `min(time_step, 1)` as we only store the first and last memories:
+        #  * first memory is used for loss computation when the agent model has to compute
+        #    all its outputs again given the full batch.
+        #  * last memory ised used by the agent when collecting rollouts
         self.insert_tensors(
-            storage_name="memory", unflattened=memory, time_step=time_step
+            storage=self.memory_first_last,
+            storage_name="memory",
+            unflattened=memory,
+            time_step=min(time_step, 1),
         )
 
     def insert_tensors(
         self,
+        storage: Memory,
         storage_name: str,
         unflattened: Union[ObservationType, Memory],
         prefix: str = "",
         path: Sequence[str] = (),
         time_step: int = 0,
     ):
-        storage = getattr(self, storage_name)
         path = list(path)
 
         for name in unflattened:
@@ -163,8 +211,9 @@ class RolloutStorage(object):
 
             if isinstance(current_data, Dict):
                 self.insert_tensors(
-                    storage_name,
-                    cast(ObservationType, current_data),
+                    storage=storage,
+                    storage_name=storage_name,
+                    unflattened=cast(ObservationType, current_data),
                     prefix=prefix + name + self.FLATTEN_SEPARATOR,
                     path=path + [name],
                     time_step=time_step,
@@ -182,7 +231,7 @@ class RolloutStorage(object):
                 storage[flatten_name] = (
                     torch.zeros_like(current_data)  # type:ignore
                     .repeat(
-                        self.num_steps + 1,  # required for observations (and memory)
+                        self.full_size + 1,  # required for observations (and memory)
                         *(1 for _ in range(len(current_data.shape))),
                     )
                     .to(self.device),
@@ -191,9 +240,7 @@ class RolloutStorage(object):
 
                 assert (
                     flatten_name not in self.flattened_to_unflattened[storage_name]
-                ), "new flattened name {} already existing in flattened spaces[{}]".format(
-                    flatten_name, storage_name
-                )
+                ), f"new flattened name {flatten_name} already existing in flattened spaces[{storage_name}]"
                 self.flattened_to_unflattened[storage_name][flatten_name] = path + [
                     name
                 ]
@@ -205,16 +252,47 @@ class RolloutStorage(object):
                 # current_data has a step dimension
                 assert time_step >= 0
                 storage[flatten_name][0][time_step : time_step + 1].copy_(current_data)
-            else:
+            elif storage_name == "memory":
                 # current_data does not have a step dimension
                 storage[flatten_name][0][time_step].copy_(current_data)
+            else:
+                raise NotImplementedError
 
     def create_tensor_storage(
         self, num_steps: int, template: torch.Tensor
     ) -> torch.Tensor:
         return torch.cat([torch.zeros_like(template).to(self.device)] * num_steps)
 
-    def insert(
+    def _double_storage_size(self):
+        def pad_tensor_with_zeros(old_t: Optional[torch.Tensor]):
+            if old_t is None:
+                return None
+
+            assert old_t.shape[0] in [self.full_size, self.full_size + 1]
+            padded_t = torch.zeros(
+                old_t.shape[0] + self.full_size,
+                *old_t.shape[1:],
+                dtype=old_t.dtype,
+                device=old_t.device,
+            )
+            padded_t[: old_t.shape[0]] = old_t
+            return padded_t
+
+        for key in list(self._observations_full.keys()):
+            obs_tensor, sampler_dim = self._observations_full[key]
+            self._observations_full[key] = (
+                pad_tensor_with_zeros(obs_tensor),
+                sampler_dim,
+            )
+
+        self._rewards_full = pad_tensor_with_zeros(self._rewards_full)
+        self._value_preds_full = pad_tensor_with_zeros(self._value_preds_full)
+        self._returns_full = pad_tensor_with_zeros(self._returns_full)
+        self._action_log_probs_full = pad_tensor_with_zeros(self._action_log_probs_full)
+
+        self.full_size *= 2
+
+    def append(
         self,
         observations: ObservationType,
         memory: Optional[Memory],
@@ -224,195 +302,125 @@ class RolloutStorage(object):
         rewards: torch.Tensor,
         masks: torch.Tensor,
     ):
+        if self.step == self.full_size:
+            self._double_storage_size()
+        elif self.step > self.full_size:
+            raise RuntimeError
+
         self.insert_observations(observations, time_step=self.step + 1)
         self.insert_memory(memory, time_step=self.step + 1)
 
-        assert actions.shape == self.actions[self.step].shape
+        assert actions.shape == self._actions_full.shape[1:]
 
-        self.actions[self.step].copy_(actions)  # type:ignore
-        self.prev_actions[self.step + 1].copy_(actions)  # type:ignore
+        self._actions_full[self.step].copy_(actions)  # type:ignore
+        self._prev_actions_full[self.step + 1].copy_(actions)  # type:ignore
+        self._masks_full[self.step + 1].copy_(masks)  # type:ignore
 
-        self.masks[self.step + 1].copy_(masks)  # type:ignore
-
-        if self.rewards is None:
+        if self._rewards_full is None:
             # We delay the instantiation of storage for `rewards`, `value_preds`, `action_log_probs` and `returns`
             # as we do not, a priori, know what shape these will be. For instance, if we are in a multi-agent setting
             # then there may be many rewards (one for each agent).
-            self.rewards = self.create_tensor_storage(
-                self.num_steps, rewards.unsqueeze(0)
+            self._rewards_full = self.create_tensor_storage(
+                self.full_size, rewards.unsqueeze(0)
             )  # add step
 
             value_returns_template = value_preds.unsqueeze(0)  # add step
-            self.value_preds = self.create_tensor_storage(
-                self.num_steps + 1, value_returns_template
+            self._value_preds_full = self.create_tensor_storage(
+                self.full_size + 1, value_returns_template
             )
-            self.returns = self.create_tensor_storage(
-                self.num_steps + 1, value_returns_template
-            )
-
-            self.action_log_probs = self.create_tensor_storage(
-                self.num_steps, action_log_probs.unsqueeze(0)
+            self._returns_full = self.create_tensor_storage(
+                self.full_size + 1, value_returns_template
             )
 
-        self.value_preds[self.step].copy_(value_preds)  # type:ignore
-        self.rewards[self.step].copy_(rewards)  # type:ignore
-        self.action_log_probs[self.step].copy_(  # type:ignore
+            self._action_log_probs_full = self.create_tensor_storage(
+                self.full_size, action_log_probs.unsqueeze(0)
+            )
+
+        self._value_preds_full[self.step].copy_(value_preds)  # type:ignore
+        self._rewards_full[self.step].copy_(rewards)  # type:ignore
+        self._action_log_probs_full[self.step].copy_(  # type:ignore
             action_log_probs
         )
 
-        self.step = (self.step + 1) % self.num_steps
+        self.step += 1
+        self._before_update_called = False
+
+        # We set the below to be None just for extra safety.
+        self._advantages = None
+        self._normalized_advantages = None
 
     def sampler_select(self, keep_list: Sequence[int]):
         keep_list = list(keep_list)
-        if self.actions.shape[1] == len(keep_list):  # samplers dim
+        if self._actions_full.shape[1] == len(keep_list):  # samplers dim
             return  # we are keeping everything, no need to copy
 
-        self.observations = self.observations.sampler_select(keep_list)
-        self.memory = self.memory.sampler_select(keep_list)
-        self.actions = self.actions[:, keep_list]
-        self.prev_actions = self.prev_actions[:, keep_list]
-        self.action_log_probs = self.action_log_probs[:, keep_list]
-        self.masks = self.masks[:, keep_list]
+        self._observations_full = self._observations_full.sampler_select(keep_list)
+        self.memory_first_last = self.memory_first_last.sampler_select(keep_list)
+        self._actions_full = self._actions_full[:, keep_list]
+        self._prev_actions_full = self._prev_actions_full[:, keep_list]
+        self._action_log_probs_full = self._action_log_probs_full[:, keep_list]
+        self._masks_full = self._masks_full[:, keep_list]
 
-        if self.rewards is not None:
-            self.value_preds = self.value_preds[:, keep_list]
-            self.rewards = self.rewards[:, keep_list]
-            self.returns = self.returns[:, keep_list]
+        if self._rewards_full is not None:
+            self._value_preds_full = self._value_preds_full[:, keep_list]
+            self._rewards_full = self._rewards_full[:, keep_list]
+            self._returns_full = self._returns_full[:, keep_list]
 
-    def narrow(self, num_steps=None):
-        """This function is used by the training engine to temporarily (after
-        one interrupted rollout in decentralized distributed settings, without
-        arguments) or permanently (for a training stage with shorter horizon,
-        with arguments) narrow the step dimension in the storage.
-
-        The reverse operation, `unnarrow`, is automatically called by
-        `after_update` (without arguments) or when the rollout length
-        varies in the training pipeline (with arguments).
-        """
-        unnarrow_data = (
-            self.unnarrow_data if num_steps is None else self.permanent_unnarrow_data
+    def before_update(
+        self,
+        next_value: torch.Tensor,
+        use_gae: bool,
+        gamma: float,
+        tau: float,
+        adv_stats_callback: Callable[[torch.Tensor], Dict[str, Tensor]],
+        **kwargs,
+    ):
+        assert len(kwargs) == 0
+        self.compute_returns(
+            next_value=next_value, use_gae=use_gae, gamma=gamma, tau=tau,
         )
 
-        assert len(unnarrow_data) == 0, "attempting to narrow narrowed rollouts"
+        self._advantages = self.returns[:-1] - self.value_preds[:-1]
 
-        # Check if we're done
-        if self.step == 0 and num_steps is None:
-            get_logger().warning("Called narrow with self.step == 0")
-            return
-        elif num_steps is not None and num_steps == self.num_steps:
-            return
-
-        base_length = self.step if num_steps is None else num_steps
-
-        for storage_name in ["observations", "memory"]:
-            storage: Memory = getattr(self, storage_name)
-            for key in storage:
-                unnarrow_data[storage_name][key] = storage.tensor(key)
-
-                if (
-                    storage_name == "memory"
-                    and self.only_store_first_and_last_in_memory
-                    and (self.step > 0 or num_steps is not None)
-                ):
-                    length = 2
-                else:
-                    length = base_length + 1
-                storage[key] = (
-                    storage.tensor(key).narrow(dim=0, start=0, length=length),
-                    storage.sampler_dim(key),
-                )
-
-        to_narrow_to_step = ["actions", "action_log_probs", "rewards"]
-        to_narrow_to_step_plus_1 = ["prev_actions", "value_preds", "returns", "masks"]
-        for name in to_narrow_to_step + to_narrow_to_step_plus_1:
-            if getattr(self, name) is not None:
-                unnarrow_data[name] = getattr(self, name)
-                setattr(
-                    self,
-                    name,
-                    unnarrow_data[name].narrow(
-                        dim=0,
-                        start=0,
-                        length=base_length + (name in to_narrow_to_step_plus_1),
-                    ),
-                )
-
-        unnarrow_data["num_steps"] = self.num_steps
-        self.num_steps = base_length
-
-        if num_steps is None:
-            self.step = 0  # we just finished a rollout, so we reset it for the next one
-
-    def unnarrow(self, unnarrow_to_maximum_size=False):
-        """See doc string for the `narrow` method."""
-        unnarrow_data = (
-            self.permanent_unnarrow_data
-            if unnarrow_to_maximum_size
-            else self.unnarrow_data
+        adv_stats = adv_stats_callback(self._advantages)
+        self._normalized_advantages = (self._advantages - adv_stats["mean"]) / (
+            adv_stats["std"] + 1e-5
         )
 
-        if len(unnarrow_data) == 0:
-            return
+        self._before_update_called = True
 
-        for storage_name in ["observations", "memory"]:
-            storage: Memory = getattr(self, storage_name)
-            for key in storage:
-                storage[key] = (
-                    unnarrow_data[storage_name][key],
-                    storage.sampler_dim(key),
-                )
-                unnarrow_data[storage_name].pop(key)
+    def after_update(self, **kwargs):
+        assert len(kwargs) == 0
 
-            # Note that memory can be empty
-            assert (
-                storage_name not in unnarrow_data
-                or len(unnarrow_data[storage_name]) == 0
-            ), "unnarrow_data contains {} {}".format(
-                storage_name, unnarrow_data[storage_name]
-            )
-            unnarrow_data.pop(storage_name, None)
-
-        for name in [
-            "prev_actions",
-            "value_preds",
-            "returns",
-            "masks",
-            "actions",
-            "action_log_probs",
-            "rewards",
-        ]:
-            if name in unnarrow_data:
-                setattr(self, name, unnarrow_data[name])
-                unnarrow_data.pop(name)
-
-        self.num_steps = unnarrow_data["num_steps"]
-        unnarrow_data.pop("num_steps")
-
-        assert len(unnarrow_data) == 0
-
-    def after_update(self):
-        for storage in [self.observations, self.memory]:
+        for storage in [self.observations, self.memory_first_last]:
             for key in storage:
                 storage[key][0][0].copy_(storage[key][0][-1])
 
         self.masks[0].copy_(self.masks[-1])
         self.prev_actions[0].copy_(self.prev_actions[-1])
 
-        if len(self.unnarrow_data) > 0:
-            self.unnarrow()
+        self._before_update_called = False
+        self._advantages = None
+        self._normalized_advantages = None
+        self.step = 0
 
-    def _extend_tensor(self, stored_tensor: torch.Tensor):
+    @staticmethod
+    def _extend_tensor_with_ones(stored_tensor: torch.Tensor, desired_num_dims: int):
         # Ensure broadcast to all flattened dimensions
         extended_shape = stored_tensor.shape + (1,) * (
-            len(self.value_preds.shape) - len(stored_tensor.shape)
+            desired_num_dims - len(stored_tensor.shape)
         )
         return stored_tensor.view(*extended_shape)
 
     def compute_returns(
         self, next_value: torch.Tensor, use_gae: bool, gamma: float, tau: float
     ):
-        extended_mask = self._extend_tensor(self.masks)
-        extended_rewards = self._extend_tensor(self.rewards)
+        extended_mask = self._extend_tensor_with_ones(
+            self.masks, desired_num_dims=len(self.value_preds.shape)
+        )
+        extended_rewards = self._extend_tensor_with_ones(
+            self.rewards, desired_num_dims=len(self.value_preds.shape)
+        )
 
         if use_gae:
             self.value_preds[-1] = next_value
@@ -433,20 +441,18 @@ class RolloutStorage(object):
                     + extended_rewards[step]
                 )
 
-    def recurrent_generator(
-        self,
-        advantages: torch.Tensor,
-        adv_mean: torch.Tensor,
-        adv_std: torch.Tensor,
-        num_mini_batch: int,
+    def batched_rollouts_generator(
+        self, num_mini_batch: int,
     ):
-        normalized_advantages = (advantages - adv_mean) / (adv_std + 1e-5)
-
+        assert self._before_update_called, (
+            "self._before_update_called() must be called before"
+            " attempting to generated batched rollouts."
+        )
         num_samplers = self.rewards.shape[1]
         assert num_samplers >= num_mini_batch, (
-            "The number of task samplers ({}) "
-            "must be greater than or equal to the number of "
-            "mini batches ({}).".format(num_samplers, num_mini_batch)
+            f"The number of task samplers ({num_samplers}) "
+            f"must be greater than or equal to the number of "
+            f"mini batches ({num_mini_batch})."
         )
 
         inds = np.round(
@@ -458,7 +464,9 @@ class RolloutStorage(object):
         for start_ind, end_ind in pairs:
             cur_samplers = list(range(start_ind, end_ind))
 
-            memory_batch = self.memory.step_squeeze(0).sampler_select(cur_samplers)
+            memory_batch = self.memory_first_last.step_squeeze(0).sampler_select(
+                cur_samplers
+            )
             observations_batch = self.unflatten_observations(
                 self.observations.slice(dim=0, stop=-1).sampler_select(cur_samplers)
             )
@@ -480,8 +488,8 @@ class RolloutStorage(object):
                 masks_batch.append(self.masks[:-1, ind])
                 old_action_log_probs_batch.append(self.action_log_probs[:, ind])
 
-                adv_targ.append(advantages[:, ind])
-                norm_adv_targ.append(normalized_advantages[:, ind])
+                adv_targ.append(self._advantages[:, ind])
+                norm_adv_targ.append(self._normalized_advantages[:, ind])
 
             actions_batch = torch.stack(actions_batch, 1)  # type:ignore
             prev_actions_batch = torch.stack(prev_actions_batch, 1)  # type:ignore
@@ -523,9 +531,8 @@ class RolloutStorage(object):
         return self.unflatten_observations(self.observations.step_select(step))
 
     def pick_memory_step(self, step: int) -> Memory:
-        if self.only_store_first_and_last_in_memory and step > 0:
-            step = 1
-        return self.memory.step_squeeze(step)
+        assert step in [0, self.step, -1], "Can only access the first or last memory."
+        return self.memory_first_last.step_squeeze(min(step, 1))
 
     def pick_prev_actions_step(self, step: int) -> ActionType:
         return su.unflatten(self.action_space, self.prev_actions[step : step + 1])

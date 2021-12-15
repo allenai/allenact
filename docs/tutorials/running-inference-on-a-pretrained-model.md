@@ -87,8 +87,8 @@ The visualization types included below are:
 * `TrajectoryViz`: Generic 2D trajectory view.
 * `AgentViewViz`: RGB egocentric view.
 * `ActorViz`: Action probabilities from `ActorCriticOutput[CategoricalDistr]`.
-* `TensorViz1D`: Evolution of a point from RolloutStorage over time.
-* `TensorViz2D`: Evolution of a vector from RolloutStorage over time.
+* `TensorViz1D`: Evolution of a point from RolloutBlockStorage over time.
+* `TensorViz2D`: Evolution of a vector from RolloutBlockStorage over time.
 * `ThorViz`: Specialized 2D trajectory view
 [for RoboThor](https://github.com/allenai/allenact/tree/master/allenact_plugins/robothor_plugin/robothor_viz.py).
 
