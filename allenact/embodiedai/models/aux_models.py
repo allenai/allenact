@@ -7,7 +7,6 @@ Several of the models defined in this file are modified versions of those found 
     https://github.com/joel99/habitat-pointnav-aux/blob/master/habitat_baselines/
 """
 
-from typing import Tuple, Dict, Optional, Union, List, cast
 
 import torch
 import torch.nn as nn

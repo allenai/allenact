@@ -4,8 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 # Adapted from https://github.com/joel99/habitat-pointnav-aux/blob/master/habitat_baselines/
 
-from typing import Callable, Tuple, Dict, Optional, Union, List, cast, Any
-from allenact.utils.system import get_logger
+from typing import Tuple
 
 import math
 import torch
