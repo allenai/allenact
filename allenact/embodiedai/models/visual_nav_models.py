@@ -111,7 +111,7 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
         )
 
     def load_state_dict(self, state_dict):
-        new_state_dict = state_dict.copy()
+        new_state_dict = OrderedDict()
         for key in state_dict.keys():
             if "state_encoder." in key:  # old key name
                 new_key = key.replace("state_encoder.", "state_encoders.single_belief.")
@@ -119,9 +119,7 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
                 new_key = key
             new_state_dict[new_key] = state_dict[key]
 
-        return super().load_state_dict(
-            new_state_dict, strict=False
-        )  # compatible in keys
+        return super().load_state_dict(new_state_dict)  # compatible in keys
 
     def create_actorcritic_head(self):
         self.actor = LinearActorHead(self._hidden_size, self.action_space.n)
