@@ -229,8 +229,6 @@ class ImageVisualizer(LoggerVisualizer):
         self.disturbance_distance_queue = []
 
     def finish_episode(self, environment, episode_info, task_info):
-        now = datetime.now()
-        # time_to_write = now.strftime("%Y_%m_%d_%H_%M_%S_%f")
         time_to_write = "log_ind_{:03d}".format(self.logger_index)
         self.logger_index += 1
         print("Logging", time_to_write, "len", len(self.log_queue))
