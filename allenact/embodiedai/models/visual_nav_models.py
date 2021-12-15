@@ -1,4 +1,4 @@
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, List
 from allenact.utils.system import get_logger
 from collections import OrderedDict
 
@@ -109,6 +109,17 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
                 len(self.belief_names), self.belief_names
             )
         )
+
+    def load_state_dict(self, state_dict):
+        new_state_dict = state_dict.copy()
+        for key in state_dict.keys():
+            if "state_encoder." in key: # old key name
+                new_key = key.replace("state_encoder.", "state_encoders.single_belief.")
+            else:
+                new_key = key
+            new_state_dict[new_key] = state_dict[key]
+
+        return super().load_state_dict(new_state_dict, strict=False) # compatible in keys
 
     def create_actorcritic_head(self):
         self.actor = LinearActorHead(self._hidden_size, self.action_space.n)
