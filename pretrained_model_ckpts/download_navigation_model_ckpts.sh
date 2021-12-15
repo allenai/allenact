@@ -16,6 +16,12 @@ then
     wget https://prior-model-weights.s3.us-east-2.amazonaws.com/embodied-ai/navigation/robothor-objectnav-challenge-2021.tar.gz
     tar -xf robothor-objectnav-challenge-2021.tar.gz && rm robothor-objectnav-challenge-2021.tar.gz
     echo "saved folder: robothor-objectnav-challenge-2021"
+elif [ "$1" = "armpointnav-disturb-free-2022" ]
+then
+    echo "Downloading pretrained ArmPointNav disturb-free models..."
+    wget <>
+    tar -xf <> && rm <>
+    echo "saved folder: armpointnav-disturb-free-2022"
 else
     echo "Failed: Usage download_navigation_model_ckpts.sh robothor-objectnav-challenge-2021"
     exit 1
