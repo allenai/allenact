@@ -15,7 +15,6 @@ import abc
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from allenact.algorithms.onpolicy_sync.losses.abstract_loss import (
     AbstractActorCriticLoss,
@@ -199,27 +198,27 @@ class InverseDynamicsLoss(AuxiliaryLoss):
         )
         loss = loss.view(num_steps - 1, num_sampler)  # (T-1, B)
 
-        def vanilla_valid_losses(loss, num_sampler, end_locs_batch):
-            ##  this is just used to verify the vectorized version works correctly.
-            ##  not used for experimentation
-            valid_losses = []
-            for i in range(num_sampler):
-                end_locs = end_locs_batch[i]
-                for j in range(len(end_locs)):
-                    if j == 0:
-                        start_loc = 0
-                    else:
-                        start_loc = end_locs[j - 1] + 1
-                    end_loc = end_locs[j]
-                    if end_loc - start_loc <= 0:  # the episode only 1-step
-                        continue
-                    valid_losses.append(loss[start_loc:end_loc, i])
+        # def vanilla_valid_losses(loss, num_sampler, end_locs_batch):
+        #     ##  this is just used to verify the vectorized version works correctly.
+        #     ##  not used for experimentation
+        #     valid_losses = []
+        #     for i in range(num_sampler):
+        #         end_locs = end_locs_batch[i]
+        #         for j in range(len(end_locs)):
+        #             if j == 0:
+        #                 start_loc = 0
+        #             else:
+        #                 start_loc = end_locs[j - 1] + 1
+        #             end_loc = end_locs[j]
+        #             if end_loc - start_loc <= 0:  # the episode only 1-step
+        #                 continue
+        #             valid_losses.append(loss[start_loc:end_loc, i])
 
-            if len(valid_losses) == 0:
-                valid_losses = torch.zeros(1, dtype=torch.float).to(loss)
-            else:
-                valid_losses = torch.cat(valid_losses)  # (sum m, )
-            return valid_losses
+        #     if len(valid_losses) == 0:
+        #         valid_losses = torch.zeros(1, dtype=torch.float).to(loss)
+        #     else:
+        #         valid_losses = torch.cat(valid_losses)  # (sum m, )
+        #     return valid_losses
 
         # valid_losses = masks[1:] * loss # (T-1, B)
         # valid_losses0 = vanilla_valid_losses(loss, num_sampler, end_locs_batch)
@@ -269,8 +268,6 @@ class TemporalDistanceLoss(AuxiliaryLoss):
     ):
         ## we discard the last action in the batch
         num_steps, num_sampler = actions.shape  # T, B
-        actions = cast(torch.LongTensor, actions)
-        actions = actions[:-1]  # (T-1, B)
 
         ## find the final belief state based on masks
         # we did not compute loss here as model.forward is compute-heavy

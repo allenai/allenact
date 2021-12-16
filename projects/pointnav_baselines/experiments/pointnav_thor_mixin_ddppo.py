@@ -20,6 +20,8 @@ from allenact.embodiedai.aux_losses.losses import (
     CPCA8Loss,
     CPCA16Loss,
 )
+
+# noinspection PyUnresolvedReferences
 from allenact.embodiedai.models.fusion_models import (
     AverageFusion,
     SoftmaxFusion,
