@@ -17,13 +17,17 @@ except ImportError:
 from allenact_plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
 from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
-from projects.pointnav_baselines.models.point_nav_models import (
-    PointNavActorCriticSimpleConvRNN,
-)
+from projects.pointnav_baselines.models.point_nav_models import PointNavActorCritic
 
 
 class PointNavMixInSimpleConvGRUConfig(PointNavBaseConfig, ABC):
     """The base config for all iTHOR PPO PointNav experiments."""
+
+    # TODO only tested in roboTHOR Depth
+    BACKBONE = (  # choose one
+        "gnresnet18"
+        # "simple_cnn"
+    )
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
@@ -42,15 +46,28 @@ class PointNavMixInSimpleConvGRUConfig(PointNavBaseConfig, ABC):
             None,
         )
 
-        return PointNavActorCriticSimpleConvRNN(
+        return PointNavActorCritic(
+            # Env and Tak
             action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             rgb_uuid=rgb_uuid,
             depth_uuid=depth_uuid,
             goal_sensor_uuid=goal_sensor_uuid,
-            hidden_size=512,
-            embed_coordinates=False,
-            coordinate_dims=2,
+            # RNN
+            hidden_size=228
+            if cls.MULTIPLE_BELIEFS and len(cls.AUXILIARY_UUIDS) > 1
+            else 512,
             num_rnn_layers=1,
             rnn_type="GRU",
+            add_prev_actions=cls.ADD_PREV_ACTIONS,
+            action_embed_size=4,
+            # CNN
+            backbone=cls.BACKBONE,
+            resnet_baseplanes=32,
+            embed_coordinates=False,
+            coordinate_dims=2,
+            # Aux
+            auxiliary_uuids=cls.AUXILIARY_UUIDS,
+            multiple_beliefs=cls.MULTIPLE_BELIEFS,
+            beliefs_fusion=cls.BELIEF_FUSION,
         )

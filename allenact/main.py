@@ -12,7 +12,11 @@ from typing import Dict, Tuple, List, Optional, Type
 from setproctitle import setproctitle as ptitle
 
 from allenact import __version__
-from allenact.algorithms.onpolicy_sync.runner import OnPolicyRunner, _CONFIG_KWARGS_STR
+from allenact.algorithms.onpolicy_sync.runner import (
+    OnPolicyRunner,
+    _CONFIG_KWARGS_STR,
+    SaveDirFormat,
+)
 from allenact.base_abstractions.experiment_config import ExperimentConfig
 from allenact.utils.system import get_logger, init_logging, HUMAN_LOG_LEVELS
 
@@ -79,6 +83,16 @@ def get_argument_parser():
     )
 
     parser.add_argument(
+        "--save_dir_fmt",
+        required=False,
+        type=lambda s: SaveDirFormat[s.upper()],
+        default="flat",
+        help="The file structure to use when saving results from allenact."
+        " See documentation o f`SaveDirFormat` for more details."
+        " Allowed values are ('flat' and 'nested'). Default: 'flat'.",
+    )
+
+    parser.add_argument(
         "-s", "--seed", required=False, default=None, type=int, help="random seed",
     )
     parser.add_argument(
@@ -105,6 +119,13 @@ def get_argument_parser():
         "\nIf you'd like to only evaluate a subset of the checkpoints specified by the above directory/glob"
         " (e.g. every checkpoint saved after 5mil steps) you'll likely want to use the `--approx_ckpt_step_interval`"
         " flag.",
+    )
+    parser.add_argument(
+        "--infer_output_dir",
+        dest="infer_output_dir",
+        action="store_true",
+        required=False,
+        help="applied when evaluating checkpoint(s) in nested save_dir_fmt: if specified, the output dir will be inferred from checkpoint path.",
     )
     parser.add_argument(
         "--approx_ckpt_step_interval",
@@ -406,6 +427,7 @@ def main():
         OnPolicyRunner(
             config=cfg,
             output_dir=args.output_dir,
+            save_dir_fmt=args.save_dir_fmt,
             loaded_config_src_files=srcs,
             seed=args.seed,
             mode="train",
@@ -426,6 +448,7 @@ def main():
         OnPolicyRunner(
             config=cfg,
             output_dir=args.output_dir,
+            save_dir_fmt=args.save_dir_fmt,
             loaded_config_src_files=srcs,
             seed=args.seed,
             mode="test",
@@ -438,6 +461,7 @@ def main():
             machine_id=args.machine_id,
         ).start_test(
             checkpoint_path_dir_or_pattern=args.checkpoint,
+            infer_output_dir=args.infer_output_dir,
             approx_ckpt_step_interval=args.approx_ckpt_step_interval,
             max_sampler_processes_per_worker=args.max_sampler_processes_per_worker,
             inference_expert=args.test_expert,
