@@ -1,13 +1,17 @@
-"""Task Definions for the task of ArmPointNav."""
+"""Task Definions for the task of ArmPointNav"""
 
 from typing import Dict, Tuple, List, Any, Optional
+import copy
 
 import gym
 import numpy as np
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import Sensor
 from allenact.base_abstractions.task import Task
-from allenact_plugins.manipulathor_plugin.armpointnav_constants import MOVE_ARM_CONSTANT
+from allenact_plugins.manipulathor_plugin.armpointnav_constants import (
+    MOVE_ARM_CONSTANT,
+    DISTANCE_EPS,
+)
 
 from allenact_plugins.manipulathor_plugin.manipulathor_constants import (
     MOVE_ARM_HEIGHT_P,
@@ -18,6 +22,14 @@ from allenact_plugins.manipulathor_plugin.manipulathor_constants import (
     MOVE_ARM_Y_M,
     MOVE_ARM_Z_P,
     MOVE_ARM_Z_M,
+    ROTATE_WRIST_PITCH_P,
+    ROTATE_WRIST_PITCH_M,
+    ROTATE_WRIST_YAW_P,
+    ROTATE_WRIST_YAW_M,
+    ROTATE_ELBOW_P,
+    ROTATE_ELBOW_M,
+    LOOK_UP,
+    LOOK_DOWN,
     MOVE_AHEAD,
     ROTATE_RIGHT,
     ROTATE_LEFT,
@@ -26,18 +38,9 @@ from allenact_plugins.manipulathor_plugin.manipulathor_constants import (
 )
 from allenact_plugins.manipulathor_plugin.manipulathor_environment import (
     ManipulaTHOREnvironment,
+    position_distance,
 )
 from allenact_plugins.manipulathor_plugin.manipulathor_viz import LoggerVisualizer
-
-
-def position_distance(s1, s2):
-    position1 = s1["position"]
-    position2 = s2["position"]
-    return (
-        (position1["x"] - position2["x"]) ** 2
-        + (position1["y"] - position2["y"]) ** 2
-        + (position1["z"] - position2["z"]) ** 2
-    ) ** 0.5
 
 
 class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
@@ -55,6 +58,13 @@ class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
         ROTATE_RIGHT,
         ROTATE_LEFT,
     )
+
+    # New commit of AI2THOR has some issue that the objects will vibrate a bit
+    # without any external force. To eliminate the vibration effect, we have to
+    # introduce _vibration_dist_dict when checking the disturbance, from an external csv file.
+    # By default it is None, i.e. we assume there is no vibration.
+
+    _vibration_dist_dict: Optional[Dict] = None
 
     def __init__(
         self,
@@ -92,7 +102,7 @@ class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
         self.object_picked_up = False
         self.got_reward_for_pickup = False
         self.reward_configs = kwargs["reward_configs"]
-        self.initial_object_metadata = self.env.get_current_object_locations()
+        self.initial_object_locations = self.env.get_current_object_locations()
 
     @property
     def action_space(self):
@@ -125,14 +135,14 @@ class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
                 print("OH NO VISUALIZER WAS NOT EMPTY")
                 visualizer.finish_episode(self.env, self, self.task_info)
                 visualizer.finish_episode_metrics(self, self.task_info, None)
-            visualizer.log(self.env, "")
+            visualizer.log(self.env)
 
     def visualize(self, action_str):
 
         for vizualizer in self.visualizers:
             vizualizer.log(self.env, action_str)
 
-    def finish_visualizer(self, episode_success):
+    def finish_visualizer(self):
 
         for visualizer in self.visualizers:
             visualizer.finish_episode(self.env, self, self.task_info)
@@ -147,76 +157,80 @@ class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
         return self.env.current_frame
 
     def calc_action_stat_metrics(self) -> Dict[str, Any]:
-        action_stat = {
-            "metric/action_stat/" + action_str: 0.0 for action_str in self._actions
-        }
+        action_stat = {"action_stat/" + action_str: 0.0 for action_str in self._actions}
         action_success_stat = {
-            "metric/action_success/" + action_str: 0.0 for action_str in self._actions
+            "action_success/" + action_str: 0.0 for action_str in self._actions
         }
-        action_success_stat["metric/action_success/total"] = 0.0
+        action_success_stat["action_success/total"] = 0.0
 
         seq_len = len(self.action_sequence_and_success)
         for (action_name, action_success) in self.action_sequence_and_success:
-            action_stat["metric/action_stat/" + action_name] += 1.0
+            action_stat["action_stat/" + action_name] += 1.0
             action_success_stat[
-                "metric/action_success/{}".format(action_name)
+                "action_success/{}".format(action_name)
             ] += action_success
-            action_success_stat["metric/action_success/total"] += action_success
+            action_success_stat["action_success/total"] += action_success
 
-        action_success_stat["metric/action_success/total"] /= seq_len
+        action_success_stat["action_success/total"] /= seq_len
 
         for action_name in self._actions:
-            action_success_stat[
-                "metric/" + "action_success/{}".format(action_name)
-            ] /= (action_stat["metric/action_stat/" + action_name] + 0.000001)
-            action_stat["metric/action_stat/" + action_name] /= seq_len
+            action_success_stat["action_success/{}".format(action_name)] /= max(
+                action_stat["action_stat/" + action_name], 1.0
+            )
+            action_stat["action_stat/" + action_name] /= seq_len
 
-        succ = [v for v in action_success_stat.values()]
-        sum(succ) / len(succ)
         result = {**action_stat, **action_success_stat}
 
         return result
 
     def metrics(self) -> Dict[str, Any]:
         result = super(AbstractPickUpDropOffTask, self).metrics()
+
         if self.is_done():
             result = {**result, **self.calc_action_stat_metrics()}
+
+            # 1. goal object metrics
             final_obj_distance_from_goal = self.obj_distance_from_goal()
             result[
-                "metric/average/final_obj_distance_from_goal"
+                "average/final_obj_distance_from_goal"
             ] = final_obj_distance_from_goal
             final_arm_distance_from_obj = self.arm_distance_from_obj()
-            result[
-                "metric/average/final_arm_distance_from_obj"
-            ] = final_arm_distance_from_obj
+            result["average/final_arm_distance_from_obj"] = final_arm_distance_from_obj
+
             final_obj_pickup = 1 if self.object_picked_up else 0
-            result["metric/average/final_obj_pickup"] = final_obj_pickup
+            result["average/final_obj_pickup"] = final_obj_pickup
 
-            original_distance = self.get_original_object_distance()
-            result["metric/average/original_distance"] = original_distance
+            original_distance = self.get_original_object_distance() + DISTANCE_EPS
+            result["average/original_distance"] = original_distance
 
-            # this ratio can be more than 1?
+            # this ratio can be more than 1
             if self.object_picked_up:
                 ratio_distance_left = final_obj_distance_from_goal / original_distance
-                result["metric/average/ratio_distance_left"] = ratio_distance_left
-                result["metric/average/eplen_pickup"] = self.eplen_pickup
+                result["average/ratio_distance_left"] = ratio_distance_left
+                result["average/eplen_pickup"] = self.eplen_pickup
 
+            # 2. disturbance with other objects
+            current_object_locations = self.env.get_current_object_locations()
+            objects_moved = self.env.get_objects_moved(
+                self.initial_object_locations,
+                current_object_locations,
+                self.task_info["objectId"],
+                self._vibration_dist_dict,
+            )
+            result["disturbance/objects_moved_num"] = len(objects_moved)
+
+            # 3. conditioned on success
             if self._success:
-                result["metric/average/eplen_success"] = result["ep_length"]
-                # put back this is not the reason for being slow
-                objects_moved = self.env.get_objects_moved(self.initial_object_metadata)
-                # Unnecessary, this is definitely happening objects_moved.remove(self.task_info['object_id'])
-                result["metric/average/number_of_unwanted_moved_objects"] = (
-                    len(objects_moved) - 1
-                )
-                result["metric/average/success_wo_disturb"] = (
-                    len(objects_moved) == 1
-                )  # multiply this by the successrate
+                result["average/eplen_success"] = result["ep_length"]
+                result["average/success_wo_disturb"] = len(objects_moved) == 0
+
+            else:
+                result["average/success_wo_disturb"] = 0.0
 
             result["success"] = self._success
 
             self.finish_visualizer_metrics(result)
-            self.finish_visualizer(self._success)
+            self.finish_visualizer()
             self.action_sequence_and_success = []
 
         return result
@@ -266,6 +280,49 @@ class ArmPointNavTask(AbstractPickUpDropOffTask):
         DONE,
     )
 
+    def __init__(
+        self,
+        env: ManipulaTHOREnvironment,
+        sensors: List[Sensor],
+        task_info: Dict[str, Any],
+        max_steps: int,
+        visualizers: List[LoggerVisualizer] = [],
+        **kwargs
+    ) -> None:
+        super().__init__(
+            env=env,
+            sensors=sensors,
+            task_info=task_info,
+            max_steps=max_steps,
+            visualizers=visualizers,
+            **kwargs
+        )
+        self.cumulated_disturb_distance_all = 0.0
+        self.cumulated_disturb_distance_visible = 0.0
+        # NOTE: visible distance can be negative, no determinitic relation with
+        #   all distance
+        self.previous_object_locations = copy.deepcopy(self.initial_object_locations)
+        self.current_penalized_distance = 0.0  # used in Sensor for auxiliary task
+
+    def metrics(self) -> Dict[str, Any]:
+        result = super(ArmPointNavTask, self).metrics()
+
+        if self.is_done():
+            # add disturbance distance metrics
+            result[
+                "disturbance/objects_moved_distance"
+            ] = self.cumulated_disturb_distance_all
+            result[
+                "disturbance/objects_moved_distance_vis"
+            ] = self.cumulated_disturb_distance_visible
+
+        return result
+
+    def visualize(self, **kwargs):
+
+        for vizualizer in self.visualizers:
+            vizualizer.log(self.env, **kwargs)
+
     def _step(self, action: int) -> RLStepResult:
 
         action_str = self.class_action_names()[action]
@@ -281,7 +338,6 @@ class ArmPointNavTask(AbstractPickUpDropOffTask):
         last_action_name = self._last_action_str
         last_action_success = float(self.last_action_success)
         self.action_sequence_and_success.append((last_action_name, last_action_success))
-        self.visualize(last_action_name)
 
         # If the object has not been picked up yet and it was picked up in the previous step update parameters to integrate it into reward
         if not self.object_picked_up:
@@ -351,9 +407,98 @@ class ArmPointNavTask(AbstractPickUpDropOffTask):
         self.last_obj_to_goal_distance = current_obj_to_goal_distance
         reward += delta_obj_to_goal_distance_reward
 
-        # add collision cost, maybe distance to goal objective,...
+        # add disturbance cost
+        ## here we measure disturbance by the sum of moving distance of all objects
+        ## note that collided object may move for a while wo external force due to inertia
+        ## and we may also consider mass
+        current_object_locations = self.env.get_current_object_locations()
+
+        disturb_distance_visible = self.env.get_objects_move_distance(
+            initial_object_locations=self.initial_object_locations,
+            previous_object_locations=self.previous_object_locations,
+            current_object_locations=current_object_locations,
+            target_object_id=self.task_info["objectId"],
+            only_visible=True,
+            thres_dict=self._vibration_dist_dict,
+        )
+        disturb_distance_all = self.env.get_objects_move_distance(
+            initial_object_locations=self.initial_object_locations,
+            previous_object_locations=self.previous_object_locations,
+            current_object_locations=current_object_locations,
+            target_object_id=self.task_info["objectId"],
+            only_visible=False,
+            thres_dict=self._vibration_dist_dict,
+        )
+
+        self.cumulated_disturb_distance_all += disturb_distance_all
+        self.cumulated_disturb_distance_visible += disturb_distance_visible
+
+        penalized_distance = (
+            disturb_distance_visible
+            if self.reward_configs["disturb_visible"]
+            else disturb_distance_all
+        )
+        reward += self.reward_configs["disturb_penalty"] * penalized_distance
+        self.current_penalized_distance = penalized_distance
+
+        self.previous_object_locations = current_object_locations
+
+        self.visualize(
+            action_str=self._last_action_str,
+            disturbance_str=str(round(penalized_distance, 4)),
+        )
 
         return float(reward)
+
+
+class RotateArmPointNavTask(ArmPointNavTask):
+    _actions = (
+        MOVE_ARM_HEIGHT_P,
+        MOVE_ARM_HEIGHT_M,
+        MOVE_ARM_X_P,
+        MOVE_ARM_X_M,
+        MOVE_ARM_Y_P,
+        MOVE_ARM_Y_M,
+        MOVE_ARM_Z_P,
+        MOVE_ARM_Z_M,
+        ROTATE_WRIST_PITCH_P,
+        ROTATE_WRIST_PITCH_M,
+        ROTATE_WRIST_YAW_P,
+        ROTATE_WRIST_YAW_M,
+        ROTATE_ELBOW_P,
+        ROTATE_ELBOW_M,
+        MOVE_AHEAD,
+        ROTATE_RIGHT,
+        ROTATE_LEFT,
+        PICKUP,
+        DONE,
+    )
+
+
+class CamRotateArmPointNavTask(ArmPointNavTask):
+    _actions = (
+        MOVE_ARM_HEIGHT_P,
+        MOVE_ARM_HEIGHT_M,
+        MOVE_ARM_X_P,
+        MOVE_ARM_X_M,
+        MOVE_ARM_Y_P,
+        MOVE_ARM_Y_M,
+        MOVE_ARM_Z_P,
+        MOVE_ARM_Z_M,
+        ROTATE_WRIST_PITCH_P,
+        ROTATE_WRIST_PITCH_M,
+        ROTATE_WRIST_YAW_P,
+        ROTATE_WRIST_YAW_M,
+        ROTATE_ELBOW_P,
+        ROTATE_ELBOW_M,
+        LOOK_UP,
+        LOOK_DOWN,
+        MOVE_AHEAD,
+        ROTATE_RIGHT,
+        ROTATE_LEFT,
+        PICKUP,
+        DONE,
+    )
 
 
 class EasyArmPointNavTask(ArmPointNavTask):

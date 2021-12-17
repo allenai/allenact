@@ -5,7 +5,7 @@ from allenact_plugins.manipulathor_plugin.armpointnav_constants import (
     ARM_START_POSITIONS,
 )
 from allenact_plugins.manipulathor_plugin.manipulathor_constants import (
-    ADITIONAL_ARM_ARGS,
+    ADDITIONAL_ARM_ARGS,
 )
 
 
@@ -62,7 +62,7 @@ def initialize_arm(controller):
         )
     )
     event2 = controller.step(
-        dict(action="MoveArm", position=dict(x=0.0, y=0, z=0.35), **ADITIONAL_ARM_ARGS)
+        dict(action="MoveArm", position=dict(x=0.0, y=0, z=0.35), **ADDITIONAL_ARM_ARGS)
     )
-    event3 = controller.step(dict(action="MoveArmBase", y=0.8, **ADITIONAL_ARM_ARGS))
+    event3 = controller.step(dict(action="MoveArmBase", y=0.8, **ADDITIONAL_ARM_ARGS))
     return event1, event2, event3
