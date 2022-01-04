@@ -12,6 +12,7 @@ from allenact_plugins.manipulathor_plugin.arm_calculation_utils import (
     world_coords_to_agent_coords,
     state_dict_to_tensor,
     diff_position,
+    coord_system_transform,
 )
 from allenact_plugins.manipulathor_plugin.manipulathor_environment import (
     ManipulaTHOREnvironment,
@@ -73,11 +74,26 @@ class AgentRelativeCurrentObjectStateThorSensor(Sensor):
 
 
 class RelativeObjectToGoalSensor(Sensor):
-    def __init__(self, uuid: str = "relative_obj_to_goal", **kwargs: Any):
-        # observation_space = gym.spaces.Discrete(len(self.detector_types))
+    def __init__(
+        self,
+        uuid: str = "relative_obj_to_goal",
+        coord_system: str = "xyz_unsigned",
+        **kwargs: Any
+    ):
+        assert coord_system in [
+            "xyz_unsigned",
+            "xyz_signed",
+            "polar_radian",
+            "polar_trigo",
+        ]
+        self.coord_system = coord_system
+        if coord_system == "polar_trigo":
+            obs_dim = 5
+        else:
+            obs_dim = 3
         observation_space = gym.spaces.Box(
-            low=-100, high=100, shape=(3,), dtype=np.float32
-        )  # (low=-1.0, high=2.0, shape=(3, 4), dtype=np.float32)
+            low=-100, high=100, shape=(obs_dim,), dtype=np.float32
+        )
         super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
@@ -91,8 +107,11 @@ class RelativeObjectToGoalSensor(Sensor):
 
         relative_current_obj = world_coords_to_agent_coords(object_info, agent_state)
         relative_goal_state = world_coords_to_agent_coords(target_state, agent_state)
-        relative_distance = diff_position(relative_current_obj, relative_goal_state)
-        result = state_dict_to_tensor(dict(position=relative_distance))
+        relative_distance = diff_position(
+            relative_current_obj, relative_goal_state, absolute=False,
+        )
+
+        result = coord_system_transform(relative_distance, self.coord_system)
         return result
 
 
@@ -147,10 +166,26 @@ class DistanceObjectToGoalSensor(Sensor):
 
 
 class RelativeAgentArmToObjectSensor(Sensor):
-    def __init__(self, uuid: str = "relative_agent_arm_to_obj", **kwargs: Any):
+    def __init__(
+        self,
+        uuid: str = "relative_agent_arm_to_obj",
+        coord_system: str = "xyz_unsigned",
+        **kwargs: Any
+    ):
+        assert coord_system in [
+            "xyz_unsigned",
+            "xyz_signed",
+            "polar_radian",
+            "polar_trigo",
+        ]
+        self.coord_system = coord_system
+        if coord_system == "polar_trigo":
+            obs_dim = 5
+        else:
+            obs_dim = 3
         observation_space = gym.spaces.Box(
-            low=-100, high=100, shape=(3,), dtype=np.float32
-        )  # (low=-1.0, high=2.0, shape=(3, 4), dtype=np.float32)
+            low=-100, high=100, shape=(obs_dim,), dtype=np.float32
+        )
         super().__init__(**prepare_locals_for_super(locals()))
 
     def get_observation(
@@ -166,9 +201,10 @@ class RelativeAgentArmToObjectSensor(Sensor):
         relative_hand_state = world_coords_to_agent_coords(
             hand_state, env.controller.last_event.metadata["agent"]
         )
-        relative_distance = diff_position(relative_goal_obj, relative_hand_state)
-        result = state_dict_to_tensor(dict(position=relative_distance))
-
+        relative_distance = diff_position(
+            relative_goal_obj, relative_hand_state, absolute=False,
+        )
+        result = coord_system_transform(relative_distance, self.coord_system)
         return result
 
 

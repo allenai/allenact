@@ -26,6 +26,7 @@ class PPO(AbstractActorCriticLoss):
                           but we might use `conditional_entropy` for `SequentialDistr`
     show_ratios : If True, adds tracking for the PPO ratio (linear, clamped, and used) in each
                   epoch to be logged by the engine.
+    normalize_advantage: Whether or not to use normalized advantage. Default is True.
     """
 
     def __init__(
@@ -36,6 +37,7 @@ class PPO(AbstractActorCriticLoss):
         use_clipped_value_loss=True,
         clip_decay: Optional[Callable[[int], float]] = None,
         entropy_method_name: str = "entropy",
+        normalize_advantage: bool = True,
         show_ratios: bool = False,
         *args,
         **kwargs
@@ -52,6 +54,10 @@ class PPO(AbstractActorCriticLoss):
         self.clip_decay = clip_decay if clip_decay is not None else (lambda x: 1.0)
         self.entropy_method_name = entropy_method_name
         self.show_ratios = show_ratios
+        if normalize_advantage:
+            self.adv_key = "norm_adv_targ"
+        else:
+            self.adv_key = "adv_targ"
 
     def loss_per_step(
         self,
@@ -71,9 +77,9 @@ class PPO(AbstractActorCriticLoss):
         )()
 
         def add_trailing_dims(t: torch.Tensor):
-            assert len(t.shape) <= len(batch["norm_adv_targ"].shape)
+            assert len(t.shape) <= len(batch[self.adv_key].shape)
             return t.view(
-                t.shape + ((1,) * (len(batch["norm_adv_targ"].shape) - len(t.shape)))
+                t.shape + ((1,) * (len(batch[self.adv_key].shape) - len(t.shape)))
             )
 
         dist_entropy = add_trailing_dims(dist_entropy)
@@ -84,8 +90,8 @@ class PPO(AbstractActorCriticLoss):
         ratio = add_trailing_dims(ratio)
         clamped_ratio = torch.clamp(ratio, 1.0 - clip_param, 1.0 + clip_param)
 
-        surr1 = ratio * batch["norm_adv_targ"]
-        surr2 = clamped_ratio * batch["norm_adv_targ"]
+        surr1 = ratio * batch[self.adv_key]
+        surr2 = clamped_ratio * batch[self.adv_key]
 
         use_clamped = surr2 < surr1
         action_loss = -torch.where(cast(torch.Tensor, use_clamped), surr2, surr1)

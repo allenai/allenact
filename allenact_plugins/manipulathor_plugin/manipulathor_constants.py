@@ -6,7 +6,7 @@ ARM_MIN_HEIGHT = 0.450998873
 ARM_MAX_HEIGHT = 1.8009994
 
 
-ADITIONAL_ARM_ARGS = {
+ADDITIONAL_ARM_ARGS = {
     "disableRendering": True,
     "returnToStart": True,
     "speed": 1,
@@ -23,6 +23,14 @@ MOVE_ARM_Y_P = "MoveArmYP"
 MOVE_ARM_Y_M = "MoveArmYM"
 MOVE_ARM_Z_P = "MoveArmZP"
 MOVE_ARM_Z_M = "MoveArmZM"
+ROTATE_WRIST_PITCH_P = "RotateArmWristPitchP"
+ROTATE_WRIST_PITCH_M = "RotateArmWristPitchM"
+ROTATE_WRIST_YAW_P = "RotateArmWristYawP"
+ROTATE_WRIST_YAW_M = "RotateArmWristYawM"
+ROTATE_ELBOW_P = "RotateArmElbowP"
+ROTATE_ELBOW_M = "RotateArmElbowM"
+LOOK_UP = "LookUp"
+LOOK_DOWN = "LookDown"
 PICKUP = "PickUpMidLevel"
 DONE = "DoneMidLevel"
 

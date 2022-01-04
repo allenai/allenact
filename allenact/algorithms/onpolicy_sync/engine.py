@@ -1630,7 +1630,8 @@ class OnPolicyInference(OnPolicyRLEngine):
         frames: int = 0
         if verbose:
             get_logger().info(
-                f"[{self.mode}] worker {self.worker_id}: running evaluation on {num_tasks} tasks."
+                f"[{self.mode}] worker {self.worker_id}: running evaluation on {num_tasks} tasks"
+                f" for ckpt {checkpoint_file_path}"
             )
 
         if self.enforce_expert:
@@ -1685,6 +1686,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                     )
                     get_logger().info(
                         f"[{self.mode}] worker {self.worker_id}:"
+                        f" for ckpt {checkpoint_file_path}"
                         f" {frames / (cur_time - init_time):.1f} fps,"
                         f" {npending}/{num_tasks} tasks pending ({lengths})."
                         f" ~{est_time_to_complete} min. to complete."

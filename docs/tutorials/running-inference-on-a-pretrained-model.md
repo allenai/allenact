@@ -137,7 +137,7 @@ class PointNavRoboThorRGBPPOVizExperimentConfig(PointNavRoboThorRGBPPOExperiment
             # Same episode mask visualizer (rollout storage source):
             episode_mask=TensorViz1D(rollout_source=("masks",)),
             # Default recurrent memory visualizer (rollout storage source):
-            rnn_memory=TensorViz2D(),
+            rnn_memory=TensorViz2D(rollout_source=("memory", "single_belief")),
             # Specialized 2D trajectory visualizer (task output source):
             thor_trajectory=ThorViz(
                 figsize=(16, 8),
