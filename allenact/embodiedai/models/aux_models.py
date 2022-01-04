@@ -2,10 +2,9 @@
 # Modified work Copyright (c) Allen Institute for AI
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-"""
-Several of the models defined in this file are modified versions of those found in 
-    https://github.com/joel99/habitat-pointnav-aux/blob/master/habitat_baselines/
-"""
+"""Several of the models defined in this file are modified versions of those
+found in https://github.com/joel99/habitat-pointnav-
+aux/blob/master/habitat_baselines/"""
 
 
 import torch
@@ -20,9 +19,8 @@ from allenact.embodiedai.aux_losses.losses import (
 
 
 class AuxiliaryModel(nn.Module):
-    """
-    The class of defining the models for all kinds of self-supervised auxiliary tasks
-    """
+    """The class of defining the models for all kinds of self-supervised
+    auxiliary tasks."""
 
     def __init__(
         self,

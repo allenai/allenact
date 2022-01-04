@@ -54,7 +54,10 @@ _CONFIG_KWARGS_STR = "__CONFIG_KWARGS__"
 
 
 class SaveDirFormat(enum.Enum):
-    """Directory formats that can be used when saving tensorboard logs, checkpoints, etc. during training/evaluation.
+    """Directory formats that can be used when saving tensorboard logs,
+    checkpoints, etc.
+
+    during training/evaluation.
     FLAT: the first-level directories are logs, checkpoints, metrics, etc; the second-level are time strings of each experiment
     NESTED: the opposite to FLAT.
     """

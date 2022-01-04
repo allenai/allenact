@@ -13,9 +13,8 @@ from projects.objectnav_baselines.models.object_nav_models import ObjectNavActor
 
 
 class ObjectNavMixInUnfrozenResNetGRUConfig(ObjectNavBaseConfig):
-    """
-    No ResNet preprocessor, using Raw Image as input, and learn a ResNet as encoder 
-    """
+    """No ResNet preprocessor, using Raw Image as input, and learn a ResNet as
+    encoder."""
 
     @classmethod
     def preprocessors(cls) -> Sequence[Union[Preprocessor, Builder[Preprocessor]]]:

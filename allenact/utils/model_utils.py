@@ -219,9 +219,8 @@ def simple_linear_weights_init(m):
 
 
 class FeatureEmbedding(nn.Module):
-    """ A wrapper of nn.Embedding but support zero output
-	Used for extracting features for actions/rewards
-	"""
+    """A wrapper of nn.Embedding but support zero output Used for extracting
+    features for actions/rewards."""
 
     def __init__(self, input_size, output_size):
         super().__init__()

@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
-"""
-Entry point to multi-node (distributed) training for a user given experiment name.
-"""
+"""Entry point to multi-node (distributed) training for a user given experiment
+name."""
 
 import sys
 import os

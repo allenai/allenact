@@ -1,4 +1,4 @@
-"""Task Definions for the task of ArmPointNav"""
+"""Task Definions for the task of ArmPointNav."""
 
 from typing import Dict, Tuple, List, Any, Optional
 import copy

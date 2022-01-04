@@ -28,8 +28,9 @@ FusionType = TypeVar("FusionType", bound=Fusion)
 
 
 class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
-    """
-    Base class of visual navigation / manipulation (or broadly, embodied AI) model.
+    """Base class of visual navigation / manipulation (or broadly, embodied AI)
+    model.
+
     `forward_encoder` function requires implementation.
     """
 
@@ -147,8 +148,7 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
 
     @property
     def recurrent_hidden_state_size(self):
-        """The recurrent hidden state size of a single model.
-        """
+        """The recurrent hidden state size of a single model."""
         return self._hidden_size
 
     def _recurrent_memory_specification(self):
@@ -185,13 +185,13 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
         prev_actions: torch.Tensor,
         masks: torch.FloatTensor,
     ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
-        """
-        Processes input batched observations to produce new actor and critic
+        """Processes input batched observations to produce new actor and critic
         values. Processes input batched observations (along with prior hidden
         states, previous actions, and masks denoting which recurrent hidden
         states should be masked) and returns an `ActorCriticOutput` object
         containing the model's policy (distribution over actions) and
         evaluation of the current state (value).
+
         # Parameters
         observations : Batched input observations.
         memory : `Memory` containing the hidden states from initial timepoints.

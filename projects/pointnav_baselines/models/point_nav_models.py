@@ -15,9 +15,7 @@ from allenact.embodiedai.models.visual_nav_models import (
 
 
 class PointNavActorCritic(VisualNavActorCritic):
-    """
-    Use raw image as observation to the agent
-    """
+    """Use raw image as observation to the agent."""
 
     def __init__(
         # base params
@@ -145,9 +143,7 @@ class PointNavActorCritic(VisualNavActorCritic):
 
 
 class ResnetTensorPointNavActorCritic(VisualNavActorCritic):
-    """
-    Use resnet_preprocessor to generate observations to the agent
-    """
+    """Use resnet_preprocessor to generate observations to the agent."""
 
     def __init__(
         # base params

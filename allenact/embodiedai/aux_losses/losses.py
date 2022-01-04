@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 """Defining the auxiliary loss for actor critic type models.
 
-Several of the losses defined in this file are modified versions of those found in 
+Several of the losses defined in this file are modified versions of those found in
     https://github.com/joel99/habitat-pointnav-aux/blob/master/habitat_baselines/
 """
 
@@ -29,8 +29,8 @@ def _bernoulli_subsample_mask_like(masks, p=0.1):
 
 
 class MultiAuxTaskNegEntropyLoss(AbstractActorCriticLoss):
-    """
-    Used in multiple auxiliary tasks setting.
+    """Used in multiple auxiliary tasks setting.
+
     Add a negative entropy loss over all the task weights.
     """
 
@@ -69,10 +69,10 @@ class MultiAuxTaskNegEntropyLoss(AbstractActorCriticLoss):
 
 
 class AuxiliaryLoss(AbstractActorCriticLoss):
-    """
-    Base class of auxiliary loss. 
+    """Base class of auxiliary loss.
+
     Any auxiliary task loss should inherit from it, and implement
-        the `get_aux_loss` function.
+    the `get_aux_loss` function.
     """
 
     def __init__(self, auxiliary_uuid: str, *args, **kwargs):
@@ -140,21 +140,18 @@ def _propagate_final_beliefs_to_all_steps(
 
 
 class InverseDynamicsLoss(AuxiliaryLoss):
-    """
-    Auxiliary task of Inverse Dynamics 
-        from Auxiliary Tasks Speed Up Learning PointGoal Navigation (Ye, 2020) https://arxiv.org/abs/2007.04561
-        originally from Curiosity-driven Exploration by Self-supervised Prediction (Pathak, 2017) https://arxiv.org/abs/1705.05363
-    """
+    """Auxiliary task of Inverse Dynamics from Auxiliary Tasks Speed Up
+    Learning PointGoal Navigation (Ye, 2020) https://arxiv.org/abs/2007.04561
+    originally from Curiosity-driven Exploration by Self-supervised Prediction
+    (Pathak, 2017) https://arxiv.org/abs/1705.05363."""
 
     UUID = "InvDyn"
 
     def __init__(
         self, subsample_rate: float = 0.2, subsample_min_num: int = 10, *args, **kwargs
     ):
-        """
-        Subsample the valid samples by the rate of `subsample_rate`,
-            if the total num of the valid samples is larger than `subsample_min_num`.
-        """
+        """Subsample the valid samples by the rate of `subsample_rate`, if the
+        total num of the valid samples is larger than `subsample_min_num`."""
         super().__init__(auxiliary_uuid=self.UUID, *args, **kwargs)
 
         self.cross_entropy_loss = nn.CrossEntropyLoss(reduction="none")
@@ -243,10 +240,9 @@ class InverseDynamicsLoss(AuxiliaryLoss):
 
 
 class TemporalDistanceLoss(AuxiliaryLoss):
-    """
-    Auxiliary task of Temporal Distance
-        from Auxiliary Tasks Speed Up Learning PointGoal Navigation (Ye, 2020) https://arxiv.org/abs/2007.04561
-    """
+    """Auxiliary task of Temporal Distance from Auxiliary Tasks Speed Up
+    Learning PointGoal Navigation (Ye, 2020)
+    https://arxiv.org/abs/2007.04561."""
 
     UUID = "TempDist"
 
@@ -361,11 +357,10 @@ class TemporalDistanceLoss(AuxiliaryLoss):
 
 
 class CPCALoss(AuxiliaryLoss):
-    """
-    Auxiliary task of CPC|A
-        from Auxiliary Tasks Speed Up Learning PointGoal Navigation (Ye, 2020) https://arxiv.org/abs/2007.04561
-        originally from Neural Predictive Belief Representations (Guo, 2018) https://arxiv.org/abs/1811.06407
-    """
+    """Auxiliary task of CPC|A from Auxiliary Tasks Speed Up Learning PointGoal
+    Navigation (Ye, 2020) https://arxiv.org/abs/2007.04561 originally from
+    Neural Predictive Belief Representations (Guo, 2018)
+    https://arxiv.org/abs/1811.06407."""
 
     UUID = "CPCA"
 

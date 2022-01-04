@@ -12,12 +12,10 @@ import torch.nn as nn
 
 
 class Fusion(nn.Module):
-    """
-    Base class of belief fusion model 
-        from Auxiliary Tasks Speed Up Learning PointGoal Navigation (Ye, 2020)
-    Child class should implement `get_belief_weights` function to generate weights 
-        to fuse the beliefs from all the auxiliary task into one.
-    """
+    """Base class of belief fusion model from Auxiliary Tasks Speed Up Learning
+    PointGoal Navigation (Ye, 2020) Child class should implement
+    `get_belief_weights` function to generate weights to fuse the beliefs from
+    all the auxiliary task into one."""
 
     def __init__(self, hidden_size, obs_embed_size, num_tasks):
         super().__init__()
@@ -74,10 +72,8 @@ class AverageFusion(Fusion):
 
 
 class SoftmaxFusion(Fusion):
-    """
-    Situational Fusion of Visual Representation for Visual Navigation
-    https://arxiv.org/abs/1908.09073
-    """
+    """Situational Fusion of Visual Representation for Visual Navigation
+    https://arxiv.org/abs/1908.09073."""
 
     UUID = "smax"
 
@@ -99,11 +95,8 @@ class SoftmaxFusion(Fusion):
 
 
 class AttentiveFusion(Fusion):
-    """
-    Attention is All You Need
-    https://arxiv.org/abs/1706.03762
-    i.e. scaled dot-product attention
-    """
+    """Attention is All You Need https://arxiv.org/abs/1706.03762 i.e. scaled
+    dot-product attention."""
 
     UUID = "attn"
 

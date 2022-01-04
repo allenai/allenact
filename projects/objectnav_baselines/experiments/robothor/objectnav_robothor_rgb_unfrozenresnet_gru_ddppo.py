@@ -18,8 +18,8 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(
     ObjectNavMixInPPOConfig,
     ObjectNavMixInUnfrozenResNetGRUConfig,
 ):
-    """An Object Navigation experiment configuration in RoboThor with RGB
-    input without preprocessing by frozen ResNet (instead, a trainable ResNet)."""
+    """An Object Navigation experiment configuration in RoboThor with RGB input
+    without preprocessing by frozen ResNet (instead, a trainable ResNet)."""
 
     SENSORS = [
         RGBSensorThor(
