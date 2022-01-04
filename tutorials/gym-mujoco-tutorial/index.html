@@ -1,0 +1,5682 @@
+
+
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="An open source framework for research in Embodied-AI from AI2">
+      
+      
+        <link rel="canonical" href="https://allenact.org/tutorials/gym-mujoco-tutorial/">
+      
+      
+      <link rel="shortcut icon" href="../../img/AllenAct_A.svg">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.5.3">
+    
+    
+      
+        <title>OpenAI gym for MuJoCo tasks - AllenAct</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.947af8d5.min.css">
+      
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.7f672a1f.min.css">
+      
+      
+        
+        
+        <meta name="theme-color" content="#2196f3">
+      
+    
+    
+    
+      
+        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+      <link rel="stylesheet" href="../../css/extra.css">
+    
+    
+      
+        
+<script>window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)},ga.l=+new Date,ga("create","UA-120916510-8","allenact.org"),ga("set","anonymizeIp",!0),ga("send","pageview"),document.addEventListener("DOMContentLoaded",function(){document.forms.search&&document.forms.search.query.addEventListener("blur",function(){if(this.value){var e=document.location.pathname;ga("send","pageview",e+"?q="+this.value)}})}),document.addEventListener("DOMContentSwitch",function(){ga("send","pageview",document.location.pathname)})</script>
+<script async src="https://www.google-analytics.com/analytics.js"></script>
+      
+    
+    
+  
+  
+    
+  
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="AllenAct - OpenAI gym for MuJoCo tasks" />
+  <meta name="twitter:description" content="An open source framework for research in Embodied-AI from AI2" />
+  <meta name="twitter:image" content="https://www.allenact.org/img/social-card-AllenAct.png" />
+
+  </head>
+  
+  
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="blue" data-md-color-accent="grey">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#tutorial-openai-gym-mujoco-environment" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="https://allenact.org" title="AllenAct" class="md-header-nav__button md-logo" aria-label="AllenAct">
+      
+  <img src="../../img/AI2_Avatar_White.png" alt="logo">
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      
+        <div class="md-header-nav__ellipsis">
+          <span class="md-header-nav__topic md-ellipsis">
+            AllenAct
+          </span>
+          <span class="md-header-nav__topic md-ellipsis">
+            
+              OpenAI gym for MuJoCo tasks
+            
+          </span>
+        </div>
+      
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active">
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/allenai/allenact/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    allenai/allenact
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+        
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="https://allenact.org" title="AllenAct" class="md-nav__button md-logo" aria-label="AllenAct">
+      
+  <img src="../../img/AI2_Avatar_White.png" alt="logo">
+
+    </a>
+    AllenAct
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/allenai/allenact/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    allenai/allenact
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../.." title="Overview" class="md-nav__link">
+      Overview
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2" type="checkbox" id="nav-2">
+    
+    <label class="md-nav__link" for="nav-2">
+      Installation
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="Installation" data-md-level="1">
+      <label class="md-nav__title" for="nav-2">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        Installation
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../installation/installation-allenact/" title="Install AllenAct" class="md-nav__link">
+      Install AllenAct
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../installation/installation-framework/" title="Install environments" class="md-nav__link">
+      Install environments
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../installation/download-datasets/" title="Download datasets" class="md-nav__link">
+      Download datasets
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-3" type="checkbox" id="nav-3">
+    
+    <label class="md-nav__link" for="nav-3">
+      Getting started
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="Getting started" data-md-level="1">
+      <label class="md-nav__title" for="nav-3">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        Getting started
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../getting_started/running-your-first-experiment/" title="Run your first experiment" class="md-nav__link">
+      Run your first experiment
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../getting_started/abstractions/" title="Primary abstractions" class="md-nav__link">
+      Primary abstractions
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../getting_started/structure/" title="Structure of the codebase" class="md-nav__link">
+      Structure of the codebase
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-4" type="checkbox" id="nav-4" checked>
+    
+    <label class="md-nav__link" for="nav-4">
+      Tutorials
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="Tutorials" data-md-level="1">
+      <label class="md-nav__title" for="nav-4">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        Tutorials
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../" title="AllenAct Tutorials" class="md-nav__link">
+      AllenAct Tutorials
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../minigrid-tutorial/" title="Navigation in Minigrid" class="md-nav__link">
+      Navigation in Minigrid
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../training-a-pointnav-model/" title="PointNav in RoboTHOR" class="md-nav__link">
+      PointNav in RoboTHOR
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../transfering-to-a-different-environment-framework/" title="Swapping environments" class="md-nav__link">
+      Swapping environments
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../running-inference-on-a-pretrained-model/" title="Using a pre-trained model" class="md-nav__link">
+      Using a pre-trained model
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../offpolicy-tutorial/" title="Off-policy training" class="md-nav__link">
+      Off-policy training
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../gym-tutorial/" title="OpenAI gym for continuous control" class="md-nav__link">
+      OpenAI gym for continuous control
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../distributed-objectnav-tutorial/" title="Multi-node ObjectNav training" class="md-nav__link">
+      Multi-node ObjectNav training
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        OpenAI gym for MuJoCo tasks
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9h14V7H3v2m0 4h14v-2H3v2m0 4h14v-2H3v2m16 0h2v-2h-2v2m0-10v2h2V7h-2m0 6h2v-2h-2v2z"/></svg>
+        </span>
+      </label>
+    
+    <a href="./" title="OpenAI gym for MuJoCo tasks" class="md-nav__link md-nav__link--active">
+      OpenAI gym for MuJoCo tasks
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-task" class="md-nav__link">
+    The task
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation" class="md-nav__link">
+    Implementation
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sensors-and-model" class="md-nav__link">
+    Sensors and Model
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-samplers" class="md-nav__link">
+    Task samplers
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#machine-parameters" class="md-nav__link">
+    Machine parameters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#training-pipeline" class="md-nav__link">
+    Training pipeline
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#training-and-validation" class="md-nav__link">
+    Training and validation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    Testing
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-5" type="checkbox" id="nav-5">
+    
+    <label class="md-nav__link" for="nav-5">
+      HowTos
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="HowTos" data-md-level="1">
+      <label class="md-nav__title" for="nav-5">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        HowTos
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../howtos/defining-an-experiment/" title="Define an experiment" class="md-nav__link">
+      Define an experiment
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../howtos/changing-rewards-and-losses/" title="Change rewards and losses" class="md-nav__link">
+      Change rewards and losses
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../howtos/defining-a-new-model/" title="Define a new model" class="md-nav__link">
+      Define a new model
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../howtos/defining-a-new-task/" title="Define a new task" class="md-nav__link">
+      Define a new task
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../howtos/defining-a-new-training-pipeline/" title="Define a new training pipeline" class="md-nav__link">
+      Define a new training pipeline
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-6" type="checkbox" id="nav-6">
+    
+    <label class="md-nav__link" for="nav-6">
+      Projects
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="Projects" data-md-level="1">
+      <label class="md-nav__title" for="nav-6">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        Projects
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../projects/babyai_baselines/" title="BabyAI baselines" class="md-nav__link">
+      BabyAI baselines
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../projects/pointnav_baselines/" title="PointNav baselines" class="md-nav__link">
+      PointNav baselines
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../projects/objectnav_baselines/" title="ObjectNav baselines" class="md-nav__link">
+      ObjectNav baselines
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../FAQ/" title="FAQ" class="md-nav__link">
+      FAQ
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../CONTRIBUTING/" title="Contributing" class="md-nav__link">
+      Contributing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../LICENSE/" title="Licence" class="md-nav__link">
+      Licence
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10" type="checkbox" id="nav-10">
+    
+    <label class="md-nav__link" for="nav-10">
+      API
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="API" data-md-level="1">
+      <label class="md-nav__title" for="nav-10">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        API
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-1" type="checkbox" id="nav-10-1">
+    
+    <label class="md-nav__link" for="nav-10-1">
+      allenact
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="allenact" data-md-level="2">
+      <label class="md-nav__title" for="nav-10-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        allenact
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/_constants/" title="_constants" class="md-nav__link">
+      _constants
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-1-2" type="checkbox" id="nav-10-1-2">
+    
+    <label class="md-nav__link" for="nav-10-1-2">
+      embodiedai
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="embodiedai" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-1-2">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        embodiedai
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-1-2-1" type="checkbox" id="nav-10-1-2-1">
+    
+    <label class="md-nav__link" for="nav-10-1-2-1">
+      mapping
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="mapping" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-1-2-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        mapping
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-1-2-1-1" type="checkbox" id="nav-10-1-2-1-1">
+    
+    <label class="md-nav__link" for="nav-10-1-2-1-1">
+      mapping_utils
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="mapping_utils" data-md-level="5">
+      <label class="md-nav__title" for="nav-10-1-2-1-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        mapping_utils
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/embodiedai/mapping/mapping_utils/map_builders/" title="map_builders" class="md-nav__link">
+      map_builders
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/embodiedai/mapping/mapping_utils/point_cloud_utils/" title="point_cloud_utils" class="md-nav__link">
+      point_cloud_utils
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/embodiedai/mapping/mapping_losses/" title="mapping_losses" class="md-nav__link">
+      mapping_losses
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-1-2-1-3" type="checkbox" id="nav-10-1-2-1-3">
+    
+    <label class="md-nav__link" for="nav-10-1-2-1-3">
+      mapping_models
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="mapping_models" data-md-level="5">
+      <label class="md-nav__title" for="nav-10-1-2-1-3">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        mapping_models
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/embodiedai/mapping/mapping_models/active_neural_slam/" title="active_neural_slam" class="md-nav__link">
+      active_neural_slam
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-1-2-2" type="checkbox" id="nav-10-1-2-2">
+    
+    <label class="md-nav__link" for="nav-10-1-2-2">
+      preprocessors
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="preprocessors" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-1-2-2">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        preprocessors
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/embodiedai/preprocessors/resnet/" title="resnet" class="md-nav__link">
+      resnet
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-1-2-3" type="checkbox" id="nav-10-1-2-3">
+    
+    <label class="md-nav__link" for="nav-10-1-2-3">
+      sensors
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="sensors" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-1-2-3">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        sensors
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/embodiedai/sensors/vision_sensors/" title="vision_sensors" class="md-nav__link">
+      vision_sensors
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-1-2-4" type="checkbox" id="nav-10-1-2-4">
+    
+    <label class="md-nav__link" for="nav-10-1-2-4">
+      models
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="models" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-1-2-4">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        models
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/embodiedai/models/aux_models/" title="aux_models" class="md-nav__link">
+      aux_models
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/embodiedai/models/basic_models/" title="basic_models" class="md-nav__link">
+      basic_models
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/embodiedai/models/resnet/" title="resnet" class="md-nav__link">
+      resnet
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/embodiedai/models/fusion_models/" title="fusion_models" class="md-nav__link">
+      fusion_models
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/embodiedai/models/visual_nav_models/" title="visual_nav_models" class="md-nav__link">
+      visual_nav_models
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-1-2-5" type="checkbox" id="nav-10-1-2-5">
+    
+    <label class="md-nav__link" for="nav-10-1-2-5">
+      aux_losses
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="aux_losses" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-1-2-5">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        aux_losses
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/embodiedai/aux_losses/losses/" title="losses" class="md-nav__link">
+      losses
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-1-3" type="checkbox" id="nav-10-1-3">
+    
+    <label class="md-nav__link" for="nav-10-1-3">
+      base_abstractions
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="base_abstractions" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-1-3">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        base_abstractions
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/base_abstractions/experiment_config/" title="experiment_config" class="md-nav__link">
+      experiment_config
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/base_abstractions/misc/" title="misc" class="md-nav__link">
+      misc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/base_abstractions/task/" title="task" class="md-nav__link">
+      task
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/base_abstractions/sensor/" title="sensor" class="md-nav__link">
+      sensor
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/base_abstractions/preprocessor/" title="preprocessor" class="md-nav__link">
+      preprocessor
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/base_abstractions/distributions/" title="distributions" class="md-nav__link">
+      distributions
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-1-4" type="checkbox" id="nav-10-1-4">
+    
+    <label class="md-nav__link" for="nav-10-1-4">
+      algorithms
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="algorithms" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-1-4">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        algorithms
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-1-4-1" type="checkbox" id="nav-10-1-4-1">
+    
+    <label class="md-nav__link" for="nav-10-1-4-1">
+      onpolicy_sync
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="onpolicy_sync" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-1-4-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        onpolicy_sync
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-1-4-1-1" type="checkbox" id="nav-10-1-4-1-1">
+    
+    <label class="md-nav__link" for="nav-10-1-4-1-1">
+      losses
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="losses" data-md-level="5">
+      <label class="md-nav__title" for="nav-10-1-4-1-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        losses
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/algorithms/onpolicy_sync/losses/grouped_action_imitation/" title="grouped_action_imitation" class="md-nav__link">
+      grouped_action_imitation
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/algorithms/onpolicy_sync/losses/imitation/" title="imitation" class="md-nav__link">
+      imitation
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/algorithms/onpolicy_sync/losses/abstract_loss/" title="abstract_loss" class="md-nav__link">
+      abstract_loss
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/algorithms/onpolicy_sync/losses/ppo/" title="ppo" class="md-nav__link">
+      ppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/algorithms/onpolicy_sync/losses/kfac/" title="kfac" class="md-nav__link">
+      kfac
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/algorithms/onpolicy_sync/losses/a2cacktr/" title="a2cacktr" class="md-nav__link">
+      a2cacktr
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/algorithms/onpolicy_sync/runner/" title="runner" class="md-nav__link">
+      runner
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/algorithms/onpolicy_sync/policy/" title="policy" class="md-nav__link">
+      policy
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/algorithms/onpolicy_sync/engine/" title="engine" class="md-nav__link">
+      engine
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/algorithms/onpolicy_sync/vector_sampled_tasks/" title="vector_sampled_tasks" class="md-nav__link">
+      vector_sampled_tasks
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/algorithms/onpolicy_sync/storage/" title="storage" class="md-nav__link">
+      storage
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-1-4-2" type="checkbox" id="nav-10-1-4-2">
+    
+    <label class="md-nav__link" for="nav-10-1-4-2">
+      offpolicy_sync
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="offpolicy_sync" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-1-4-2">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        offpolicy_sync
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-1-4-2-1" type="checkbox" id="nav-10-1-4-2-1">
+    
+    <label class="md-nav__link" for="nav-10-1-4-2-1">
+      losses
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="losses" data-md-level="5">
+      <label class="md-nav__title" for="nav-10-1-4-2-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        losses
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/algorithms/offpolicy_sync/losses/abstract_offpolicy_loss/" title="abstract_offpolicy_loss" class="md-nav__link">
+      abstract_offpolicy_loss
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-1-5" type="checkbox" id="nav-10-1-5">
+    
+    <label class="md-nav__link" for="nav-10-1-5">
+      utils
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="utils" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-1-5">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        utils
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/utils/model_utils/" title="model_utils" class="md-nav__link">
+      model_utils
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/utils/experiment_utils/" title="experiment_utils" class="md-nav__link">
+      experiment_utils
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/utils/spaces_utils/" title="spaces_utils" class="md-nav__link">
+      spaces_utils
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/utils/system/" title="system" class="md-nav__link">
+      system
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/utils/cacheless_frcnn/" title="cacheless_frcnn" class="md-nav__link">
+      cacheless_frcnn
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/utils/misc_utils/" title="misc_utils" class="md-nav__link">
+      misc_utils
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/utils/multi_agent_viz_utils/" title="multi_agent_viz_utils" class="md-nav__link">
+      multi_agent_viz_utils
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/utils/viz_utils/" title="viz_utils" class="md-nav__link">
+      viz_utils
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/utils/tensor_utils/" title="tensor_utils" class="md-nav__link">
+      tensor_utils
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact/utils/cache_utils/" title="cache_utils" class="md-nav__link">
+      cache_utils
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-2" type="checkbox" id="nav-10-2">
+    
+    <label class="md-nav__link" for="nav-10-2">
+      allenact_plugins
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="allenact_plugins" data-md-level="2">
+      <label class="md-nav__title" for="nav-10-2">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        allenact_plugins
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-2-1" type="checkbox" id="nav-10-2-1">
+    
+    <label class="md-nav__link" for="nav-10-2-1">
+      habitat_plugin
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="habitat_plugin" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-2-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        habitat_plugin
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/habitat_plugin/habitat_constants/" title="habitat_constants" class="md-nav__link">
+      habitat_constants
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/habitat_plugin/habitat_tasks/" title="habitat_tasks" class="md-nav__link">
+      habitat_tasks
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/habitat_plugin/habitat_sensors/" title="habitat_sensors" class="md-nav__link">
+      habitat_sensors
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/habitat_plugin/habitat_environment/" title="habitat_environment" class="md-nav__link">
+      habitat_environment
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/habitat_plugin/habitat_preprocessors/" title="habitat_preprocessors" class="md-nav__link">
+      habitat_preprocessors
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/habitat_plugin/habitat_task_samplers/" title="habitat_task_samplers" class="md-nav__link">
+      habitat_task_samplers
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-2-1-7" type="checkbox" id="nav-10-2-1-7">
+    
+    <label class="md-nav__link" for="nav-10-2-1-7">
+      scripts
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="scripts" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-2-1-7">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        scripts
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/habitat_plugin/scripts/agent_demo/" title="agent_demo" class="md-nav__link">
+      agent_demo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/habitat_plugin/scripts/make_map/" title="make_map" class="md-nav__link">
+      make_map
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/habitat_plugin/habitat_utils/" title="habitat_utils" class="md-nav__link">
+      habitat_utils
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-2-2" type="checkbox" id="nav-10-2-2">
+    
+    <label class="md-nav__link" for="nav-10-2-2">
+      lighthouse_plugin
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="lighthouse_plugin" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-2-2">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        lighthouse_plugin
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/lighthouse_plugin/lighthouse_models/" title="lighthouse_models" class="md-nav__link">
+      lighthouse_models
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/lighthouse_plugin/lighthouse_environment/" title="lighthouse_environment" class="md-nav__link">
+      lighthouse_environment
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/lighthouse_plugin/lighthouse_tasks/" title="lighthouse_tasks" class="md-nav__link">
+      lighthouse_tasks
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/lighthouse_plugin/lighthouse_sensors/" title="lighthouse_sensors" class="md-nav__link">
+      lighthouse_sensors
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/lighthouse_plugin/lighthouse_util/" title="lighthouse_util" class="md-nav__link">
+      lighthouse_util
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-2-3" type="checkbox" id="nav-10-2-3">
+    
+    <label class="md-nav__link" for="nav-10-2-3">
+      babyai_plugin
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="babyai_plugin" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-2-3">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        babyai_plugin
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/babyai_plugin/babyai_constants/" title="babyai_constants" class="md-nav__link">
+      babyai_constants
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/babyai_plugin/babyai_models/" title="babyai_models" class="md-nav__link">
+      babyai_models
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-2-3-3" type="checkbox" id="nav-10-2-3-3">
+    
+    <label class="md-nav__link" for="nav-10-2-3-3">
+      scripts
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="scripts" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-2-3-3">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        scripts
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/babyai_plugin/scripts/truncate_expert_demos/" title="truncate_expert_demos" class="md-nav__link">
+      truncate_expert_demos
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/babyai_plugin/scripts/get_instr_length_percentiles/" title="get_instr_length_percentiles" class="md-nav__link">
+      get_instr_length_percentiles
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/babyai_plugin/scripts/download_babyai_expert_demos/" title="download_babyai_expert_demos" class="md-nav__link">
+      download_babyai_expert_demos
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/babyai_plugin/babyai_tasks/" title="babyai_tasks" class="md-nav__link">
+      babyai_tasks
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-2-4" type="checkbox" id="nav-10-2-4">
+    
+    <label class="md-nav__link" for="nav-10-2-4">
+      ithor_plugin
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="ithor_plugin" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-2-4">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        ithor_plugin
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/ithor_plugin/ithor_tasks/" title="ithor_tasks" class="md-nav__link">
+      ithor_tasks
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/ithor_plugin/ithor_environment/" title="ithor_environment" class="md-nav__link">
+      ithor_environment
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/ithor_plugin/ithor_constants/" title="ithor_constants" class="md-nav__link">
+      ithor_constants
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/ithor_plugin/ithor_util/" title="ithor_util" class="md-nav__link">
+      ithor_util
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/ithor_plugin/ithor_sensors/" title="ithor_sensors" class="md-nav__link">
+      ithor_sensors
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-2-4-6" type="checkbox" id="nav-10-2-4-6">
+    
+    <label class="md-nav__link" for="nav-10-2-4-6">
+      scripts
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="scripts" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-2-4-6">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        scripts
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/ithor_plugin/scripts/make_objectnav_debug_dataset/" title="make_objectnav_debug_dataset" class="md-nav__link">
+      make_objectnav_debug_dataset
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/ithor_plugin/scripts/make_pointnav_debug_dataset/" title="make_pointnav_debug_dataset" class="md-nav__link">
+      make_pointnav_debug_dataset
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/ithor_plugin/ithor_viz/" title="ithor_viz" class="md-nav__link">
+      ithor_viz
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/ithor_plugin/ithor_task_samplers/" title="ithor_task_samplers" class="md-nav__link">
+      ithor_task_samplers
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-2-5" type="checkbox" id="nav-10-2-5">
+    
+    <label class="md-nav__link" for="nav-10-2-5">
+      robothor_plugin
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="robothor_plugin" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-2-5">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        robothor_plugin
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/robothor_plugin/robothor_preprocessors/" title="robothor_preprocessors" class="md-nav__link">
+      robothor_preprocessors
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/robothor_plugin/robothor_task_samplers/" title="robothor_task_samplers" class="md-nav__link">
+      robothor_task_samplers
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/robothor_plugin/robothor_environment/" title="robothor_environment" class="md-nav__link">
+      robothor_environment
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/robothor_plugin/robothor_constants/" title="robothor_constants" class="md-nav__link">
+      robothor_constants
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/robothor_plugin/robothor_distributions/" title="robothor_distributions" class="md-nav__link">
+      robothor_distributions
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/robothor_plugin/robothor_models/" title="robothor_models" class="md-nav__link">
+      robothor_models
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/robothor_plugin/robothor_tasks/" title="robothor_tasks" class="md-nav__link">
+      robothor_tasks
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-2-5-8" type="checkbox" id="nav-10-2-5-8">
+    
+    <label class="md-nav__link" for="nav-10-2-5-8">
+      scripts
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="scripts" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-2-5-8">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        scripts
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/robothor_plugin/scripts/make_objectnav_debug_dataset/" title="make_objectnav_debug_dataset" class="md-nav__link">
+      make_objectnav_debug_dataset
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/robothor_plugin/scripts/make_pointnav_debug_dataset/" title="make_pointnav_debug_dataset" class="md-nav__link">
+      make_pointnav_debug_dataset
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/robothor_plugin/robothor_sensors/" title="robothor_sensors" class="md-nav__link">
+      robothor_sensors
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/robothor_plugin/robothor_viz/" title="robothor_viz" class="md-nav__link">
+      robothor_viz
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-2-6" type="checkbox" id="nav-10-2-6">
+    
+    <label class="md-nav__link" for="nav-10-2-6">
+      minigrid_plugin
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="minigrid_plugin" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-2-6">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        minigrid_plugin
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/minigrid_plugin/minigrid_tasks/" title="minigrid_tasks" class="md-nav__link">
+      minigrid_tasks
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/minigrid_plugin/minigrid_environments/" title="minigrid_environments" class="md-nav__link">
+      minigrid_environments
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/minigrid_plugin/minigrid_offpolicy/" title="minigrid_offpolicy" class="md-nav__link">
+      minigrid_offpolicy
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/minigrid_plugin/minigrid_sensors/" title="minigrid_sensors" class="md-nav__link">
+      minigrid_sensors
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-2-6-5" type="checkbox" id="nav-10-2-6-5">
+    
+    <label class="md-nav__link" for="nav-10-2-6-5">
+      configs
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="configs" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-2-6-5">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        configs
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/minigrid_plugin/configs/minigrid_nomemory/" title="minigrid_nomemory" class="md-nav__link">
+      minigrid_nomemory
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/minigrid_plugin/minigrid_models/" title="minigrid_models" class="md-nav__link">
+      minigrid_models
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-2-7" type="checkbox" id="nav-10-2-7">
+    
+    <label class="md-nav__link" for="nav-10-2-7">
+      manipulathor_plugin
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="manipulathor_plugin" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-2-7">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        manipulathor_plugin
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/manipulathor_plugin/manipulathor_viz/" title="manipulathor_viz" class="md-nav__link">
+      manipulathor_viz
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/manipulathor_plugin/manipulathor_tasks/" title="manipulathor_tasks" class="md-nav__link">
+      manipulathor_tasks
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/manipulathor_plugin/manipulathor_task_samplers/" title="manipulathor_task_samplers" class="md-nav__link">
+      manipulathor_task_samplers
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/manipulathor_plugin/manipulathor_constants/" title="manipulathor_constants" class="md-nav__link">
+      manipulathor_constants
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/manipulathor_plugin/armpointnav_constants/" title="armpointnav_constants" class="md-nav__link">
+      armpointnav_constants
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/manipulathor_plugin/manipulathor_sensors/" title="manipulathor_sensors" class="md-nav__link">
+      manipulathor_sensors
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/manipulathor_plugin/arm_calculation_utils/" title="arm_calculation_utils" class="md-nav__link">
+      arm_calculation_utils
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/manipulathor_plugin/manipulathor_utils/" title="manipulathor_utils" class="md-nav__link">
+      manipulathor_utils
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/manipulathor_plugin/manipulathor_environment/" title="manipulathor_environment" class="md-nav__link">
+      manipulathor_environment
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-2-8" type="checkbox" id="nav-10-2-8">
+    
+    <label class="md-nav__link" for="nav-10-2-8">
+      gym_plugin
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="gym_plugin" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-2-8">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        gym_plugin
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/gym_plugin/gym_environment/" title="gym_environment" class="md-nav__link">
+      gym_environment
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/gym_plugin/gym_sensors/" title="gym_sensors" class="md-nav__link">
+      gym_sensors
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/gym_plugin/gym_distributions/" title="gym_distributions" class="md-nav__link">
+      gym_distributions
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/gym_plugin/gym_models/" title="gym_models" class="md-nav__link">
+      gym_models
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/allenact_plugins/gym_plugin/gym_tasks/" title="gym_tasks" class="md-nav__link">
+      gym_tasks
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/constants/" title="constants" class="md-nav__link">
+      constants
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4" type="checkbox" id="nav-10-4">
+    
+    <label class="md-nav__link" for="nav-10-4">
+      projects
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="projects" data-md-level="2">
+      <label class="md-nav__title" for="nav-10-4">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        projects
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-1" type="checkbox" id="nav-10-4-1">
+    
+    <label class="md-nav__link" for="nav-10-4-1">
+      gym_baselines
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="gym_baselines" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-4-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        gym_baselines
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-1-1" type="checkbox" id="nav-10-4-1-1">
+    
+    <label class="md-nav__link" for="nav-10-4-1-1">
+      experiments
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="experiments" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-4-1-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        experiments
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/gym_baselines/experiments/gym_base/" title="gym_base" class="md-nav__link">
+      gym_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/gym_baselines/experiments/gym_humanoid_base/" title="gym_humanoid_base" class="md-nav__link">
+      gym_humanoid_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/gym_baselines/experiments/gym_mujoco_base/" title="gym_mujoco_base" class="md-nav__link">
+      gym_mujoco_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/gym_baselines/experiments/gym_humanoid_ddppo/" title="gym_humanoid_ddppo" class="md-nav__link">
+      gym_humanoid_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-1-1-5" type="checkbox" id="nav-10-4-1-1-5">
+    
+    <label class="md-nav__link" for="nav-10-4-1-1-5">
+      mujoco
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="mujoco" data-md-level="5">
+      <label class="md-nav__title" for="nav-10-4-1-1-5">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        mujoco
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/gym_baselines/experiments/mujoco/gym_mujoco_swimmer_ddppo/" title="gym_mujoco_swimmer_ddppo" class="md-nav__link">
+      gym_mujoco_swimmer_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/gym_baselines/experiments/mujoco/gym_mujoco_reacher_ddppo/" title="gym_mujoco_reacher_ddppo" class="md-nav__link">
+      gym_mujoco_reacher_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/gym_baselines/experiments/mujoco/gym_mujoco_walker2d_ddppo/" title="gym_mujoco_walker2d_ddppo" class="md-nav__link">
+      gym_mujoco_walker2d_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/gym_baselines/experiments/mujoco/gym_mujoco_halfcheetah_ddppo/" title="gym_mujoco_halfcheetah_ddppo" class="md-nav__link">
+      gym_mujoco_halfcheetah_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/gym_baselines/experiments/mujoco/gym_mujoco_humanoid_ddppo/" title="gym_mujoco_humanoid_ddppo" class="md-nav__link">
+      gym_mujoco_humanoid_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/gym_baselines/experiments/mujoco/gym_mujoco_inverteddoublependulum_ddppo/" title="gym_mujoco_inverteddoublependulum_ddppo" class="md-nav__link">
+      gym_mujoco_inverteddoublependulum_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/gym_baselines/experiments/mujoco/gym_mujoco_ant_ddppo/" title="gym_mujoco_ant_ddppo" class="md-nav__link">
+      gym_mujoco_ant_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/gym_baselines/experiments/mujoco/gym_mujoco_hopper_ddppo/" title="gym_mujoco_hopper_ddppo" class="md-nav__link">
+      gym_mujoco_hopper_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/gym_baselines/experiments/mujoco/gym_mujoco_invertedpendulum_ddppo/" title="gym_mujoco_invertedpendulum_ddppo" class="md-nav__link">
+      gym_mujoco_invertedpendulum_ddppo
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/gym_baselines/experiments/gym_mujoco_ddppo/" title="gym_mujoco_ddppo" class="md-nav__link">
+      gym_mujoco_ddppo
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-1-2" type="checkbox" id="nav-10-4-1-2">
+    
+    <label class="md-nav__link" for="nav-10-4-1-2">
+      models
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="models" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-4-1-2">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        models
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/gym_baselines/models/gym_models/" title="gym_models" class="md-nav__link">
+      gym_models
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-2" type="checkbox" id="nav-10-4-2">
+    
+    <label class="md-nav__link" for="nav-10-4-2">
+      objectnav_baselines
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="objectnav_baselines" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-4-2">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        objectnav_baselines
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-2-1" type="checkbox" id="nav-10-4-2-1">
+    
+    <label class="md-nav__link" for="nav-10-4-2-1">
+      experiments
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="experiments" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-4-2-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        experiments
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-2-1-1" type="checkbox" id="nav-10-4-2-1-1">
+    
+    <label class="md-nav__link" for="nav-10-4-2-1-1">
+      robothor
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="robothor" data-md-level="5">
+      <label class="md-nav__title" for="nav-10-4-2-1-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        robothor
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_base/" title="objectnav_robothor_base" class="md-nav__link">
+      objectnav_robothor_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_ddppo/" title="objectnav_robothor_rgb_resnetgru_ddppo" class="md-nav__link">
+      objectnav_robothor_rgb_resnetgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_dagger/" title="objectnav_robothor_rgb_resnetgru_dagger" class="md-nav__link">
+      objectnav_robothor_rgb_resnetgru_dagger
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgbd_resnetgru_ddppo/" title="objectnav_robothor_rgbd_resnetgru_ddppo" class="md-nav__link">
+      objectnav_robothor_rgbd_resnetgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_ddppo_and_gbc/" title="objectnav_robothor_rgb_resnetgru_ddppo_and_gbc" class="md-nav__link">
+      objectnav_robothor_rgb_resnetgru_ddppo_and_gbc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_unfrozenresnet_gru_ddppo/" title="objectnav_robothor_rgb_unfrozenresnet_gru_ddppo" class="md-nav__link">
+      objectnav_robothor_rgb_unfrozenresnet_gru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_depth_resnetgru_ddppo/" title="objectnav_robothor_depth_resnetgru_ddppo" class="md-nav__link">
+      objectnav_robothor_depth_resnetgru_ddppo
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/objectnav_mixin_unfrozenresnet_gru/" title="objectnav_mixin_unfrozenresnet_gru" class="md-nav__link">
+      objectnav_mixin_unfrozenresnet_gru
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-2-1-3" type="checkbox" id="nav-10-4-2-1-3">
+    
+    <label class="md-nav__link" for="nav-10-4-2-1-3">
+      ithor
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="ithor" data-md-level="5">
+      <label class="md-nav__title" for="nav-10-4-2-1-3">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        ithor
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_rgbd_resnetgru_ddppo/" title="objectnav_ithor_rgbd_resnetgru_ddppo" class="md-nav__link">
+      objectnav_ithor_rgbd_resnetgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_depth_resnetgru_ddppo/" title="objectnav_ithor_depth_resnetgru_ddppo" class="md-nav__link">
+      objectnav_ithor_depth_resnetgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_rgb_resnetgru_ddppo/" title="objectnav_ithor_rgb_resnetgru_ddppo" class="md-nav__link">
+      objectnav_ithor_rgb_resnetgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_base/" title="objectnav_ithor_base" class="md-nav__link">
+      objectnav_ithor_base
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/objectnav_thor_mixin_ddppo_and_gbc/" title="objectnav_thor_mixin_ddppo_and_gbc" class="md-nav__link">
+      objectnav_thor_mixin_ddppo_and_gbc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/objectnav_thor_base/" title="objectnav_thor_base" class="md-nav__link">
+      objectnav_thor_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/objectnav_mixin_resnetgru/" title="objectnav_mixin_resnetgru" class="md-nav__link">
+      objectnav_mixin_resnetgru
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/objectnav_base/" title="objectnav_base" class="md-nav__link">
+      objectnav_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/objectnav_mixin_ddppo/" title="objectnav_mixin_ddppo" class="md-nav__link">
+      objectnav_mixin_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/experiments/objectnav_mixin_dagger/" title="objectnav_mixin_dagger" class="md-nav__link">
+      objectnav_mixin_dagger
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-2-2" type="checkbox" id="nav-10-4-2-2">
+    
+    <label class="md-nav__link" for="nav-10-4-2-2">
+      models
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="models" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-4-2-2">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        models
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/objectnav_baselines/models/object_nav_models/" title="object_nav_models" class="md-nav__link">
+      object_nav_models
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-3" type="checkbox" id="nav-10-4-3">
+    
+    <label class="md-nav__link" for="nav-10-4-3">
+      babyai_baselines
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="babyai_baselines" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-4-3">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        babyai_baselines
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-3-1" type="checkbox" id="nav-10-4-3-1">
+    
+    <label class="md-nav__link" for="nav-10-4-3-1">
+      experiments
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="experiments" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-4-3-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        experiments
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-3-1-1" type="checkbox" id="nav-10-4-3-1-1">
+    
+    <label class="md-nav__link" for="nav-10-4-3-1-1">
+      go_to_local
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="go_to_local" data-md-level="5">
+      <label class="md-nav__title" for="nav-10-4-3-1-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        go_to_local
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_local/bc/" title="bc" class="md-nav__link">
+      bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_local/distributed_bc_offpolicy/" title="distributed_bc_offpolicy" class="md-nav__link">
+      distributed_bc_offpolicy
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_local/dagger/" title="dagger" class="md-nav__link">
+      dagger
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_local/bc_teacher_forcing/" title="bc_teacher_forcing" class="md-nav__link">
+      bc_teacher_forcing
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_local/distributed_bc_teacher_forcing/" title="distributed_bc_teacher_forcing" class="md-nav__link">
+      distributed_bc_teacher_forcing
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_local/ppo/" title="ppo" class="md-nav__link">
+      ppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_local/a2c/" title="a2c" class="md-nav__link">
+      a2c
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_local/base/" title="base" class="md-nav__link">
+      base
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-3-1-2" type="checkbox" id="nav-10-4-3-1-2">
+    
+    <label class="md-nav__link" for="nav-10-4-3-1-2">
+      go_to_obj
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="go_to_obj" data-md-level="5">
+      <label class="md-nav__title" for="nav-10-4-3-1-2">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        go_to_obj
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_obj/bc/" title="bc" class="md-nav__link">
+      bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_obj/dagger/" title="dagger" class="md-nav__link">
+      dagger
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_obj/bc_teacher_forcing/" title="bc_teacher_forcing" class="md-nav__link">
+      bc_teacher_forcing
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_obj/ppo/" title="ppo" class="md-nav__link">
+      ppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_obj/a2c/" title="a2c" class="md-nav__link">
+      a2c
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/go_to_obj/base/" title="base" class="md-nav__link">
+      base
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/babyai_baselines/experiments/base/" title="base" class="md-nav__link">
+      base
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-4" type="checkbox" id="nav-10-4-4">
+    
+    <label class="md-nav__link" for="nav-10-4-4">
+      pointnav_baselines
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="pointnav_baselines" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-4-4">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        pointnav_baselines
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-4-1" type="checkbox" id="nav-10-4-4-1">
+    
+    <label class="md-nav__link" for="nav-10-4-4-1">
+      experiments
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="experiments" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-4-4-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        experiments
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-4-1-1" type="checkbox" id="nav-10-4-4-1-1">
+    
+    <label class="md-nav__link" for="nav-10-4-4-1-1">
+      robothor
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="robothor" data-md-level="5">
+      <label class="md-nav__title" for="nav-10-4-4-1-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        robothor
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgbd_simpleconvgru_ddppo/" title="pointnav_robothor_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      pointnav_robothor_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_depth_simpleconvgru_ddppo/" title="pointnav_robothor_depth_simpleconvgru_ddppo" class="md-nav__link">
+      pointnav_robothor_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_simpleconvgru_ddppo/" title="pointnav_robothor_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      pointnav_robothor_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_rgb_simpleconvgru_ddppo_and_gbc/" title="pointnav_robothor_rgb_simpleconvgru_ddppo_and_gbc" class="md-nav__link">
+      pointnav_robothor_rgb_simpleconvgru_ddppo_and_gbc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/robothor/pointnav_robothor_base/" title="pointnav_robothor_base" class="md-nav__link">
+      pointnav_robothor_base
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-4-1-2" type="checkbox" id="nav-10-4-4-1-2">
+    
+    <label class="md-nav__link" for="nav-10-4-4-1-2">
+      habitat
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="habitat" data-md-level="5">
+      <label class="md-nav__title" for="nav-10-4-4-1-2">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        habitat
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgb_simpleconvgru_ddppo/" title="pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_base/" title="pointnav_habitat_base" class="md-nav__link">
+      pointnav_habitat_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgbd_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_ddppo/" title="debug_pointnav_habitat_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_rgb_simpleconvgru_bc/" title="debug_pointnav_habitat_rgb_simpleconvgru_bc" class="md-nav__link">
+      debug_pointnav_habitat_rgb_simpleconvgru_bc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/pointnav_habitat_depth_simpleconvgru_ddppo/" title="pointnav_habitat_depth_simpleconvgru_ddppo" class="md-nav__link">
+      pointnav_habitat_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/habitat/debug_pointnav_habitat_base/" title="debug_pointnav_habitat_base" class="md-nav__link">
+      debug_pointnav_habitat_base
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/pointnav_base/" title="pointnav_base" class="md-nav__link">
+      pointnav_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/pointnav_habitat_mixin_ddppo/" title="pointnav_habitat_mixin_ddppo" class="md-nav__link">
+      pointnav_habitat_mixin_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-4-1-5" type="checkbox" id="nav-10-4-4-1-5">
+    
+    <label class="md-nav__link" for="nav-10-4-4-1-5">
+      ithor
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="ithor" data-md-level="5">
+      <label class="md-nav__title" for="nav-10-4-4-1-5">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        ithor
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_rgbd_simpleconvgru_ddppo/" title="pointnav_ithor_rgbd_simpleconvgru_ddppo" class="md-nav__link">
+      pointnav_ithor_rgbd_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_depth_simpleconvgru_ddppo_and_gbc/" title="pointnav_ithor_depth_simpleconvgru_ddppo_and_gbc" class="md-nav__link">
+      pointnav_ithor_depth_simpleconvgru_ddppo_and_gbc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_rgb_simpleconvgru_ddppo/" title="pointnav_ithor_rgb_simpleconvgru_ddppo" class="md-nav__link">
+      pointnav_ithor_rgb_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_base/" title="pointnav_ithor_base" class="md-nav__link">
+      pointnav_ithor_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/ithor/pointnav_ithor_depth_simpleconvgru_ddppo/" title="pointnav_ithor_depth_simpleconvgru_ddppo" class="md-nav__link">
+      pointnav_ithor_depth_simpleconvgru_ddppo
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/pointnav_mixin_simpleconvgru/" title="pointnav_mixin_simpleconvgru" class="md-nav__link">
+      pointnav_mixin_simpleconvgru
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/pointnav_thor_mixin_ddppo/" title="pointnav_thor_mixin_ddppo" class="md-nav__link">
+      pointnav_thor_mixin_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/pointnav_thor_mixin_ddppo_and_gbc/" title="pointnav_thor_mixin_ddppo_and_gbc" class="md-nav__link">
+      pointnav_thor_mixin_ddppo_and_gbc
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/experiments/pointnav_thor_base/" title="pointnav_thor_base" class="md-nav__link">
+      pointnav_thor_base
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-4-2" type="checkbox" id="nav-10-4-4-2">
+    
+    <label class="md-nav__link" for="nav-10-4-4-2">
+      models
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="models" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-4-4-2">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        models
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/pointnav_baselines/models/point_nav_models/" title="point_nav_models" class="md-nav__link">
+      point_nav_models
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-5" type="checkbox" id="nav-10-4-5">
+    
+    <label class="md-nav__link" for="nav-10-4-5">
+      tutorials
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="tutorials" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-4-5">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        tutorials
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/pointnav_habitat_rgb_ddppo/" title="pointnav_habitat_rgb_ddppo" class="md-nav__link">
+      pointnav_habitat_rgb_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object/" title="object_nav_ithor_dagger_then_ppo_one_object" class="md-nav__link">
+      object_nav_ithor_dagger_then_ppo_one_object
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/minigrid_offpolicy_tutorial/" title="minigrid_offpolicy_tutorial" class="md-nav__link">
+      minigrid_offpolicy_tutorial
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/navtopartner_robothor_rgb_ppo/" title="navtopartner_robothor_rgb_ppo" class="md-nav__link">
+      navtopartner_robothor_rgb_ppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/pointnav_ithor_rgb_ddppo/" title="pointnav_ithor_rgb_ddppo" class="md-nav__link">
+      pointnav_ithor_rgb_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object_viz/" title="object_nav_ithor_dagger_then_ppo_one_object_viz" class="md-nav__link">
+      object_nav_ithor_dagger_then_ppo_one_object_viz
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/object_nav_ithor_ppo_one_object/" title="object_nav_ithor_ppo_one_object" class="md-nav__link">
+      object_nav_ithor_ppo_one_object
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/tutorials/minigrid_tutorial_conds/" title="minigrid_tutorial_conds" class="md-nav__link">
+      minigrid_tutorial_conds
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-6" type="checkbox" id="nav-10-4-6">
+    
+    <label class="md-nav__link" for="nav-10-4-6">
+      manipulathor_baselines
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="manipulathor_baselines" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-4-6">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        manipulathor_baselines
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-6-1" type="checkbox" id="nav-10-4-6-1">
+    
+    <label class="md-nav__link" for="nav-10-4-6-1">
+      armpointnav_baselines
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="armpointnav_baselines" data-md-level="4">
+      <label class="md-nav__title" for="nav-10-4-6-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        armpointnav_baselines
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-6-1-1" type="checkbox" id="nav-10-4-6-1-1">
+    
+    <label class="md-nav__link" for="nav-10-4-6-1-1">
+      experiments
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="experiments" data-md-level="5">
+      <label class="md-nav__title" for="nav-10-4-6-1-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        experiments
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/manipulathor_baselines/armpointnav_baselines/experiments/armpointnav_thor_base/" title="armpointnav_thor_base" class="md-nav__link">
+      armpointnav_thor_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/manipulathor_baselines/armpointnav_baselines/experiments/armpointnav_base/" title="armpointnav_base" class="md-nav__link">
+      armpointnav_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/manipulathor_baselines/armpointnav_baselines/experiments/armpointnav_mixin_ddppo/" title="armpointnav_mixin_ddppo" class="md-nav__link">
+      armpointnav_mixin_ddppo
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-6-1-1-4" type="checkbox" id="nav-10-4-6-1-1-4">
+    
+    <label class="md-nav__link" for="nav-10-4-6-1-1-4">
+      ithor
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="ithor" data-md-level="6">
+      <label class="md-nav__title" for="nav-10-4-6-1-1-4">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        ithor
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_no_vision/" title="armpointnav_no_vision" class="md-nav__link">
+      armpointnav_no_vision
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_ithor_base/" title="armpointnav_ithor_base" class="md-nav__link">
+      armpointnav_ithor_base
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_depth/" title="armpointnav_depth" class="md-nav__link">
+      armpointnav_depth
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_rgb/" title="armpointnav_rgb" class="md-nav__link">
+      armpointnav_rgb
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_rgbdepth/" title="armpointnav_rgbdepth" class="md-nav__link">
+      armpointnav_rgbdepth
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/manipulathor_baselines/armpointnav_baselines/experiments/ithor/armpointnav_disjoint_depth/" title="armpointnav_disjoint_depth" class="md-nav__link">
+      armpointnav_disjoint_depth
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/manipulathor_baselines/armpointnav_baselines/experiments/armpointnav_mixin_simplegru/" title="armpointnav_mixin_simplegru" class="md-nav__link">
+      armpointnav_mixin_simplegru
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-4-6-1-2" type="checkbox" id="nav-10-4-6-1-2">
+    
+    <label class="md-nav__link" for="nav-10-4-6-1-2">
+      models
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="models" data-md-level="5">
+      <label class="md-nav__title" for="nav-10-4-6-1-2">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        models
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/manipulathor_baselines/armpointnav_baselines/models/arm_pointnav_models/" title="arm_pointnav_models" class="md-nav__link">
+      arm_pointnav_models
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/manipulathor_baselines/armpointnav_baselines/models/base_models/" title="base_models" class="md-nav__link">
+      base_models
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/manipulathor_baselines/armpointnav_baselines/models/disjoint_arm_pointnav_models/" title="disjoint_arm_pointnav_models" class="md-nav__link">
+      disjoint_arm_pointnav_models
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/projects/manipulathor_baselines/armpointnav_baselines/models/manipulathor_net_utils/" title="manipulathor_net_utils" class="md-nav__link">
+      manipulathor_net_utils
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-5" type="checkbox" id="nav-10-5">
+    
+    <label class="md-nav__link" for="nav-10-5">
+      tests
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="tests" data-md-level="2">
+      <label class="md-nav__title" for="nav-10-5">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        tests
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-5-1" type="checkbox" id="nav-10-5-1">
+    
+    <label class="md-nav__link" for="nav-10-5-1">
+      mapping
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="mapping" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-5-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        mapping
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/tests/mapping/test_ai2thor_mapping/" title="test_ai2thor_mapping" class="md-nav__link">
+      test_ai2thor_mapping
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-5-2" type="checkbox" id="nav-10-5-2">
+    
+    <label class="md-nav__link" for="nav-10-5-2">
+      multiprocessing
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="multiprocessing" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-5-2">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        multiprocessing
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/tests/multiprocessing/test_frozen_attribs/" title="test_frozen_attribs" class="md-nav__link">
+      test_frozen_attribs
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-5-3" type="checkbox" id="nav-10-5-3">
+    
+    <label class="md-nav__link" for="nav-10-5-3">
+      utils
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="utils" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-5-3">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        utils
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/tests/utils/test_spaces/" title="test_spaces" class="md-nav__link">
+      test_spaces
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-5-4" type="checkbox" id="nav-10-5-4">
+    
+    <label class="md-nav__link" for="nav-10-5-4">
+      vision
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="vision" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-5-4">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        vision
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/tests/vision/test_pillow_rescaling/" title="test_pillow_rescaling" class="md-nav__link">
+      test_pillow_rescaling
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-5-5" type="checkbox" id="nav-10-5-5">
+    
+    <label class="md-nav__link" for="nav-10-5-5">
+      sync_algs_cpu
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="sync_algs_cpu" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-5-5">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        sync_algs_cpu
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/tests/sync_algs_cpu/test_to_to_obj_trains/" title="test_to_to_obj_trains" class="md-nav__link">
+      test_to_to_obj_trains
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-5-6" type="checkbox" id="nav-10-5-6">
+    
+    <label class="md-nav__link" for="nav-10-5-6">
+      manipulathor_plugin
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="manipulathor_plugin" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-5-6">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        manipulathor_plugin
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/tests/manipulathor_plugin/test_utils/" title="test_utils" class="md-nav__link">
+      test_utils
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-10-5-7" type="checkbox" id="nav-10-5-7">
+    
+    <label class="md-nav__link" for="nav-10-5-7">
+      hierarchical_policies
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="hierarchical_policies" data-md-level="3">
+      <label class="md-nav__title" for="nav-10-5-7">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        hierarchical_policies
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../api/tests/hierarchical_policies/test_minigrid_conditional/" title="test_minigrid_conditional" class="md-nav__link">
+      test_minigrid_conditional
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-task" class="md-nav__link">
+    The task
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation" class="md-nav__link">
+    Implementation
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sensors-and-model" class="md-nav__link">
+    Sensors and Model
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-samplers" class="md-nav__link">
+    Task samplers
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#machine-parameters" class="md-nav__link">
+    Machine parameters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#training-pipeline" class="md-nav__link">
+    Training pipeline
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#training-and-validation" class="md-nav__link">
+    Training and validation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    Testing
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/allenai/allenact/edit/master/docs/tutorials/gym-mujoco-tutorial.md" title="Edit this page" class="md-content__button md-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+                  </a>
+                
+                
+                  
+                
+                
+                <!-- DO NOT EDIT THIS FILE. -->
+<!-- THIS FILE WAS AUTOGENERATED FROM 'ALLENACT_BASE_DIR/projects/tutorials/gym_mujoco_tutorial.py', EDIT IT INSTEAD. -->
+
+<h1 id="tutorial-openai-gym-mujoco-environment">Tutorial: OpenAI gym MuJoCo environment.<a class="headerlink" href="#tutorial-openai-gym-mujoco-environment" title="Permanent link">#</a></h1>
+<p><strong>Note</strong> The provided commands to execute in this tutorial assume you have
+<a href="../../installation/installation-allenact/#full-library">installed the full library</a> and the requirements for the
+<code>gym_plugin</code>. The latter can be installed by</p>
+<div class="codehilite"><pre><span></span><code>pip install -r allenact_plugins/gym_plugin/extra_requirements.txt
+</code></pre></div>
+
+<p>The environments for this tutorial use <a href="http://www.mujoco.org/">MuJoCo</a>(<strong>Mu</strong>lti-<strong>Jo</strong>int dynamics in <strong>Co</strong>ntact)
+physics simulator, which is also required to be installed properly with instructions
+<a href="https://github.com/openai/mujoco-py">here</a>.</p>
+<h2 id="the-task">The task<a class="headerlink" href="#the-task" title="Permanent link">#</a></h2>
+<p>For this tutorial, we'll focus on one of the continuous-control environments under the <code>mujoco</code> group of <code>gym</code>
+environments: <a href="https://gym.openai.com/envs/Ant-v2/">Ant-v2</a>. In this task, the goal
+is to make a four-legged creature, "ant", walk forward as fast as possible. A random agent of "Ant-v2" is shown below.</p>
+<p><img alt="The Ant-v2 task" src="https://ai2-prior-allenact-public-assets.s3.us-west-2.amazonaws.com/tutorials/gym-mujoco/ant_random.gif" />.</p>
+<p>To achieve the goal, we need to provide continuous control for the agent moving forward with four legs with the
+<code>x</code> velocity as high as possible for at most 1000 episodes steps. The agent is failed, or done, if the <code>z</code> position
+is out of the range [0.2, 1.0]. The dimension of the action space is 8 and 111 for the dimension of the observation
+space that maps to different body parts, including 3D position <code>(x,y,z)</code>, orientation(quaternion <code>x</code>,<code>y</code>,<code>z</code>,<code>w</code>)
+of the torso, and the joint angles, 3D velocity <code>(x,y,z)</code>, 3D angular velocity <code>(x,y,z)</code>, and joint velocities.
+The rewards for the agent "ant" are composed of the forward rewards, healthy rewards, control cost, and contact cost.</p>
+<h2 id="implementation">Implementation<a class="headerlink" href="#implementation" title="Permanent link">#</a></h2>
+<p>For this tutorial, we'll use the readily available <code>gym_plugin</code>, which includes a
+<a href="../../api/allenact_plugins/gym_plugin/gym_environment/#gymenvironment">wrapper for <code>gym</code> environments</a>, a
+<a href="../../api/allenact_plugins/gym_plugin/gym_tasks/#gymtasksampler">task sampler</a> and
+<a href="../../api/allenact_plugins/gym_plugin/gym_tasks/#gymcontinuousbox2dtask">task definition</a>, a
+<a href="../../api/allenact_plugins/gym_plugin/gym_sensors/#gymbox2dsensor">sensor</a> to wrap the observations provided by the <code>gym</code>
+environment, and a simple <a href="../../api/allenact_plugins/gym_plugin/gym_models/#memorylessactorcritic">model</a>.
+The experiment config, similar to the one used for the
+<a href="../minigrid-tutorial/">Navigation in MiniGrid tutorial</a>, is defined as follows:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">cast</span>
+
+<span class="kn">import</span> <span class="nn">gym</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">torch.optim</span> <span class="k">as</span> <span class="nn">optim</span>
+<span class="kn">from</span> <span class="nn">torch.optim.lr_scheduler</span> <span class="kn">import</span> <span class="n">LambdaLR</span>
+
+<span class="kn">from</span> <span class="nn">allenact.algorithms.onpolicy_sync.losses.ppo</span> <span class="kn">import</span> <span class="n">PPO</span>
+
+<span class="kn">from</span> <span class="nn">allenact.base_abstractions.experiment_config</span> <span class="kn">import</span> <span class="n">ExperimentConfig</span><span class="p">,</span> <span class="n">TaskSampler</span>
+<span class="kn">from</span> <span class="nn">allenact.base_abstractions.sensor</span> <span class="kn">import</span> <span class="n">SensorSuite</span>
+<span class="kn">from</span> <span class="nn">allenact_plugins.gym_plugin.gym_models</span> <span class="kn">import</span> <span class="n">MemorylessActorCritic</span>
+<span class="kn">from</span> <span class="nn">allenact_plugins.gym_plugin.gym_sensors</span> <span class="kn">import</span> <span class="n">GymMuJoCoSensor</span>
+
+<span class="kn">from</span> <span class="nn">allenact_plugins.gym_plugin.gym_tasks</span> <span class="kn">import</span> <span class="n">GymTaskSampler</span>
+<span class="kn">from</span> <span class="nn">allenact.utils.experiment_utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">TrainingPipeline</span><span class="p">,</span>
+    <span class="n">Builder</span><span class="p">,</span>
+    <span class="n">PipelineStage</span><span class="p">,</span>
+    <span class="n">LinearDecay</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">allenact.utils.viz_utils</span> <span class="kn">import</span> <span class="n">VizSuite</span><span class="p">,</span> <span class="n">AgentViewViz</span>
+
+
+<span class="k">class</span> <span class="nc">HandManipulateTutorialExperimentConfig</span><span class="p">(</span><span class="n">ExperimentConfig</span><span class="p">):</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">tag</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;GymMuJoCoTutorial&quot;</span>
+</code></pre></div>
+
+<h3 id="sensors-and-model">Sensors and Model<a class="headerlink" href="#sensors-and-model" title="Permanent link">#</a></h3>
+<p>As mentioned above, we'll use a <a href="../../api/allenact_plugins/gym_plugin/gym_sensors/#gymbox2dsensor">GymBox2DSensor</a> to provide
+full observations from the state of the <code>gym</code> environment to our model.</p>
+<div class="codehilite"><pre><span></span><code>    <span class="n">SENSORS</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">GymMuJoCoSensor</span><span class="p">(</span><span class="s2">&quot;Ant-v2&quot;</span><span class="p">,</span> <span class="n">uuid</span><span class="o">=</span><span class="s2">&quot;gym_mujoco_data&quot;</span><span class="p">),</span>
+    <span class="p">]</span>
+</code></pre></div>
+
+<p>We define our <code>ActorCriticModel</code> agent using a lightweight implementation with separate MLPs for actors and critic,
+<a href="../../api/allenact_plugins/gym_plugin/gym_models/#memorylessactorcritic">MemorylessActorCritic</a>. Since
+this is a model for continuous control, note that the superclass of our model is <code>ActorCriticModel[GaussianDistr]</code>
+instead of <code>ActorCriticModel[CategoricalDistr]</code>, since we'll use a
+<a href="../../api/allenact_plugins/gym_plugin/gym_distributions/#gaussiandistr">Gaussian distribution</a> to sample actions.</p>
+<div class="codehilite"><pre><span></span><code>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;We define our `ActorCriticModel` agent using a lightweight</span>
+<span class="sd">        implementation with separate MLPs for actors and critic,</span>
+<span class="sd">        MemorylessActorCritic.</span>
+
+<span class="sd">        Since this is a model for continuous control, note that the</span>
+<span class="sd">        superclass of our model is `ActorCriticModel[GaussianDistr]`</span>
+<span class="sd">        instead of `ActorCriticModel[CategoricalDistr]`, since we&#39;ll use</span>
+<span class="sd">        a Gaussian distribution to sample actions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">MemorylessActorCritic</span><span class="p">(</span>
+            <span class="n">input_uuid</span><span class="o">=</span><span class="s2">&quot;gym_mujoco_data&quot;</span><span class="p">,</span>
+            <span class="n">action_space</span><span class="o">=</span><span class="n">gym</span><span class="o">.</span><span class="n">spaces</span><span class="o">.</span><span class="n">Box</span><span class="p">(</span>
+                <span class="o">-</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="p">(</span><span class="mi">8</span><span class="p">,),</span> <span class="s2">&quot;float32&quot;</span>
+            <span class="p">),</span>  <span class="c1"># 8 actors, each in the range [-3.0, 3.0]</span>
+            <span class="n">observation_space</span><span class="o">=</span><span class="n">SensorSuite</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">SENSORS</span><span class="p">)</span><span class="o">.</span><span class="n">observation_spaces</span><span class="p">,</span>
+            <span class="n">action_std</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+        <span class="p">)</span>
+</code></pre></div>
+
+<h3 id="task-samplers">Task samplers<a class="headerlink" href="#task-samplers" title="Permanent link">#</a></h3>
+<p>We use an available <code>TaskSampler</code> implementation for <code>gym</code> environments that allows to sample
+<a href="../../api/allenact_plugins/gym_plugin/gym_tasks/#gymtask">GymTasks</a>:
+<a href="../../api/allenact_plugins/gym_plugin/gym_tasks/#gymtasksampler">GymTaskSampler</a>. Even though it is possible to let the task
+sampler instantiate the proper sensor for the chosen task name (by passing <code>None</code>), we use the sensors we created
+above, which contain a custom identifier for the actual observation space (<code>gym_mujoco_data</code>) also used by the model.</p>
+<div class="codehilite"><pre><span></span><code>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">make_sampler_fn</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TaskSampler</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">GymTaskSampler</span><span class="p">(</span><span class="n">gym_env_type</span><span class="o">=</span><span class="s2">&quot;Ant-v2&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</code></pre></div>
+
+<p>For convenience, we will use a <code>_get_sampler_args</code> method to generate the task sampler arguments for all three
+modes, <code>train, valid, test</code>:</p>
+<div class="codehilite"><pre><span></span><code>    <span class="k">def</span> <span class="nf">train_task_sampler_args</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">process_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">total_processes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">devices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">seeds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">deterministic_cudnn</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_sampler_args</span><span class="p">(</span>
+            <span class="n">process_ind</span><span class="o">=</span><span class="n">process_ind</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="n">seeds</span><span class="o">=</span><span class="n">seeds</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">valid_task_sampler_args</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">process_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">total_processes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">devices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">seeds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">deterministic_cudnn</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_sampler_args</span><span class="p">(</span>
+            <span class="n">process_ind</span><span class="o">=</span><span class="n">process_ind</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;valid&quot;</span><span class="p">,</span> <span class="n">seeds</span><span class="o">=</span><span class="n">seeds</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">test_task_sampler_args</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">process_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">total_processes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">devices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">seeds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">deterministic_cudnn</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_sampler_args</span><span class="p">(</span><span class="n">process_ind</span><span class="o">=</span><span class="n">process_ind</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;test&quot;</span><span class="p">,</span> <span class="n">seeds</span><span class="o">=</span><span class="n">seeds</span><span class="p">)</span>
+</code></pre></div>
+
+<p>Similarly to what we do in the Minigrid navigation tutorial, the task sampler samples random tasks for ever, while,
+during testing (or validation), we sample a fixed number of tasks.</p>
+<div class="codehilite"><pre><span></span><code>    <span class="k">def</span> <span class="nf">_get_sampler_args</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">process_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">seeds</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Generate initialization arguments for train, valid, and test</span>
+<span class="sd">        TaskSamplers.</span>
+
+<span class="sd">        # Parameters</span>
+<span class="sd">        process_ind : index of the current task sampler</span>
+<span class="sd">        mode:  one of `train`, `valid`, or `test`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;train&quot;</span><span class="p">:</span>
+            <span class="n">max_tasks</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># infinite training tasks</span>
+            <span class="n">task_seeds_list</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># no predefined random seeds for training</span>
+            <span class="n">deterministic_sampling</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># randomly sample tasks in training</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">max_tasks</span> <span class="o">=</span> <span class="mi">4</span>
+
+            <span class="c1"># one seed for each task to sample:</span>
+            <span class="c1"># - ensures different seeds for each sampler, and</span>
+            <span class="c1"># - ensures a deterministic set of sampled tasks.</span>
+            <span class="n">task_seeds_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+                <span class="nb">range</span><span class="p">(</span><span class="n">process_ind</span> <span class="o">*</span> <span class="n">max_tasks</span><span class="p">,</span> <span class="p">(</span><span class="n">process_ind</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">max_tasks</span><span class="p">)</span>
+            <span class="p">)</span>
+
+            <span class="n">deterministic_sampling</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="kc">True</span>  <span class="c1"># deterministically sample task in validation/testing</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">gym_env_types</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Ant-v2&quot;</span><span class="p">],</span>
+            <span class="n">sensors</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">SENSORS</span><span class="p">,</span>  <span class="c1"># sensors used to return observations to the agent</span>
+            <span class="n">max_tasks</span><span class="o">=</span><span class="n">max_tasks</span><span class="p">,</span>  <span class="c1"># see above</span>
+            <span class="n">task_seeds_list</span><span class="o">=</span><span class="n">task_seeds_list</span><span class="p">,</span>  <span class="c1"># see above</span>
+            <span class="n">deterministic_sampling</span><span class="o">=</span><span class="n">deterministic_sampling</span><span class="p">,</span>  <span class="c1"># see above</span>
+            <span class="n">seed</span><span class="o">=</span><span class="n">seeds</span><span class="p">[</span><span class="n">process_ind</span><span class="p">],</span>
+        <span class="p">)</span>
+</code></pre></div>
+
+<p>Note that we just sample 4 tasks for validation and testing in this case, which suffice to illustrate the model's
+success.</p>
+<h3 id="machine-parameters">Machine parameters<a class="headerlink" href="#machine-parameters" title="Permanent link">#</a></h3>
+<p>In this tutorial, we just train the model on the CPU. We allocate a larger number of samplers for training (8) than
+for validation or testing (just 1), and we default to CPU usage by returning an empty list of <code>devices</code>. We also
+include a video visualizer (<code>AgentViewViz</code>) in test mode.</p>
+<div class="codehilite"><pre><span></span><code>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">machine_params</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="n">visualizer</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;test&quot;</span><span class="p">:</span>
+            <span class="n">visualizer</span> <span class="o">=</span> <span class="n">VizSuite</span><span class="p">(</span>
+                <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+                <span class="n">video_viz</span><span class="o">=</span><span class="n">AgentViewViz</span><span class="p">(</span>
+                    <span class="n">label</span><span class="o">=</span><span class="s2">&quot;episode_vid&quot;</span><span class="p">,</span>
+                    <span class="n">max_clip_length</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
+                    <span class="n">vector_task_source</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;render&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="s2">&quot;rgb_array&quot;</span><span class="p">}),</span>
+                    <span class="n">fps</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;nprocesses&quot;</span><span class="p">:</span> <span class="mi">8</span> <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;train&quot;</span> <span class="k">else</span> <span class="mi">1</span><span class="p">,</span>  <span class="c1"># rollout</span>
+            <span class="s2">&quot;devices&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">&quot;visualizer&quot;</span><span class="p">:</span> <span class="n">visualizer</span><span class="p">,</span>
+        <span class="p">}</span>
+</code></pre></div>
+
+<h3 id="training-pipeline">Training pipeline<a class="headerlink" href="#training-pipeline" title="Permanent link">#</a></h3>
+<p>The last definition is the training pipeline. In this case, we use a PPO stage with linearly decaying learning rate
+and 10 single-batch update repeats per rollout. The reward should exceed 4,000
+in 20M steps in the test. In order to make the "ant" run with an obvious fast speed, we train the agents using PPO
+with 3e7 steps.</p>
+<div class="codehilite"><pre><span></span><code>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">training_pipeline</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TrainingPipeline</span><span class="p">:</span>
+        <span class="n">lr</span> <span class="o">=</span> <span class="mf">3e-4</span>
+        <span class="n">ppo_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">3e7</span><span class="p">)</span>
+        <span class="n">clip_param</span> <span class="o">=</span> <span class="mf">0.2</span>
+        <span class="n">value_loss_coef</span> <span class="o">=</span> <span class="mf">0.5</span>
+        <span class="n">entropy_coef</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">num_mini_batch</span> <span class="o">=</span> <span class="mi">4</span>  <span class="c1"># optimal 64</span>
+        <span class="n">update_repeats</span> <span class="o">=</span> <span class="mi">10</span>
+        <span class="n">max_grad_norm</span> <span class="o">=</span> <span class="mf">0.5</span>
+        <span class="n">num_steps</span> <span class="o">=</span> <span class="mi">2048</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="mf">0.99</span>
+        <span class="n">use_gae</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">gae_lambda</span> <span class="o">=</span> <span class="mf">0.95</span>
+        <span class="n">advance_scene_rollout_period</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">save_interval</span> <span class="o">=</span> <span class="mi">200000</span>
+        <span class="n">metric_accumulate_interval</span> <span class="o">=</span> <span class="mi">50000</span>
+        <span class="k">return</span> <span class="n">TrainingPipeline</span><span class="p">(</span>
+            <span class="n">named_losses</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+                <span class="n">ppo_loss</span><span class="o">=</span><span class="n">PPO</span><span class="p">(</span>
+                    <span class="n">clip_param</span><span class="o">=</span><span class="n">clip_param</span><span class="p">,</span>
+                    <span class="n">value_loss_coef</span><span class="o">=</span><span class="n">value_loss_coef</span><span class="p">,</span>
+                    <span class="n">entropy_coef</span><span class="o">=</span><span class="n">entropy_coef</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">),</span>  <span class="c1"># type:ignore</span>
+            <span class="n">pipeline_stages</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">PipelineStage</span><span class="p">(</span><span class="n">loss_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ppo_loss&quot;</span><span class="p">],</span> <span class="n">max_stage_steps</span><span class="o">=</span><span class="n">ppo_steps</span><span class="p">),</span>
+            <span class="p">],</span>
+            <span class="n">optimizer_builder</span><span class="o">=</span><span class="n">Builder</span><span class="p">(</span><span class="n">cast</span><span class="p">(</span><span class="n">optim</span><span class="o">.</span><span class="n">Optimizer</span><span class="p">,</span> <span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">),</span> <span class="nb">dict</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">)),</span>
+            <span class="n">num_mini_batch</span><span class="o">=</span><span class="n">num_mini_batch</span><span class="p">,</span>
+            <span class="n">update_repeats</span><span class="o">=</span><span class="n">update_repeats</span><span class="p">,</span>
+            <span class="n">max_grad_norm</span><span class="o">=</span><span class="n">max_grad_norm</span><span class="p">,</span>
+            <span class="n">num_steps</span><span class="o">=</span><span class="n">num_steps</span><span class="p">,</span>
+            <span class="n">gamma</span><span class="o">=</span><span class="n">gamma</span><span class="p">,</span>
+            <span class="n">use_gae</span><span class="o">=</span><span class="n">use_gae</span><span class="p">,</span>
+            <span class="n">gae_lambda</span><span class="o">=</span><span class="n">gae_lambda</span><span class="p">,</span>
+            <span class="n">advance_scene_rollout_period</span><span class="o">=</span><span class="n">advance_scene_rollout_period</span><span class="p">,</span>
+            <span class="n">save_interval</span><span class="o">=</span><span class="n">save_interval</span><span class="p">,</span>
+            <span class="n">metric_accumulate_interval</span><span class="o">=</span><span class="n">metric_accumulate_interval</span><span class="p">,</span>
+            <span class="n">lr_scheduler_builder</span><span class="o">=</span><span class="n">Builder</span><span class="p">(</span>
+                <span class="n">LambdaLR</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;lr_lambda&quot;</span><span class="p">:</span> <span class="n">LinearDecay</span><span class="p">(</span><span class="n">steps</span><span class="o">=</span><span class="n">ppo_steps</span><span class="p">,</span> <span class="n">startp</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">endp</span><span class="o">=</span><span class="mi">0</span><span class="p">)},</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+</code></pre></div>
+
+<h2 id="training-and-validation">Training and validation<a class="headerlink" href="#training-and-validation" title="Permanent link">#</a></h2>
+<p>We have a complete implementation of this experiment's configuration class in <code>projects/tutorials/gym_mujoco_tutorial.py</code>.
+To start training from scratch, we just need to invoke</p>
+<div class="codehilite"><pre><span></span><code><span class="nv">PYTHONPATH</span><span class="o">=</span>. python allenact/main.py gym_mujoco_tutorial -b projects/tutorials -m <span class="m">8</span> -o /PATH/TO/gym_mujoco_output -s <span class="m">0</span> -e
+</code></pre></div>
+
+<p>from the <code>allenact</code> root directory. Note that we include <code>-e</code> to enforce deterministic evaluation. Please refer to the
+<a href="../minigrid-tutorial/">Navigation in MiniGrid tutorial</a> if in doubt of the meaning of the rest of parameters.</p>
+<p>If we have Tensorboard installed, we can track progress with</p>
+<div class="codehilite"><pre><span></span><code>tensorboard --logdir /PATH/TO/gym_mujoco_output
+</code></pre></div>
+
+<p>which will default to the URL <a href="http://localhost:6006/">http://localhost:6006/</a>.</p>
+<p>After 30,000,000 steps, the script will terminate. If everything went well, the <code>valid</code> success rate should be 1
+and the mean reward to above 4,000 in 20,000,000 steps, while the average episode length should stay or a
+little below 1,000.</p>
+<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">#</a></h2>
+<p>The training start date for the experiment, in <code>YYYY-MM-DD_HH-MM-SS</code> format, is used as the name of one of the
+subfolders in the path to the checkpoints, saved under the output folder.
+In order to evaluate (i.e. test) a collection of checkpoints, we need to pass the <code>--eval</code> flag and specify the
+directory containing the checkpoints with the <code>--checkpoint CHECKPOINT_DIR</code> option:</p>
+<div class="codehilite"><pre><span></span><code><span class="nv">PYTHONPATH</span><span class="o">=</span>. python allenact/main.py gym_mujoco_tutorial <span class="se">\</span>
+-b projects/tutorials <span class="se">\</span>
+-m <span class="m">1</span> <span class="se">\</span>
+-o /PATH/TO/gym_mujoco_output <span class="se">\</span>
+-s <span class="m">0</span> <span class="se">\</span>
+-e <span class="se">\</span>
+--eval <span class="se">\</span>
+--checkpoint /PATH/TO/gym_mujoco_output/checkpoints/GymMuJoCoTutorial/YOUR_START_DATE
+</code></pre></div>
+
+<p>If everything went well, the <code>test</code> success rate should converge to 1, the <code>test</code> success rate should be 1
+and the mean reward to above 4,000 in 20,000,000 steps, while the average episode length should stay or a
+little below 1,000. The <code>gif</code> results can be seen in the image tab of Tensorboard while testing.
+The output should be something like this:</p>
+<p><img alt="results" src="https://ai2-prior-allenact-public-assets.s3.us-west-2.amazonaws.com/tutorials/gym-mujoco/ant_test.png" />.</p>
+<p>And the <code>gif</code> results can be seen in the image tab of Tensorboard while testing.</p>
+<p><img alt="gif demo" src="https://ai2-prior-allenact-public-assets.s3.us-west-2.amazonaws.com/tutorials/gym-mujoco/ant_test.gif" /></p>
+<p>If the test command fails with <code>pyglet.canvas.xlib.NoSuchDisplayException: Cannot connect to "None"</code>, e.g. when running
+remotely, try prepending <code>DISPLAY=:0.0</code> to the command above, assuming you have an xserver running with such display
+available:</p>
+<div class="codehilite"><pre><span></span><code><span class="nv">DISPLAY</span><span class="o">=</span>:0.0 <span class="nv">PYTHONPATH</span><span class="o">=</span>. python allenact/main.py gym_mujoco_tutorial <span class="se">\</span>
+-b projects/tutorials <span class="se">\</span>
+-m <span class="m">1</span> <span class="se">\</span>
+-o /PATH/TO/gym_mujoco_output <span class="se">\</span>
+-s <span class="m">0</span> <span class="se">\</span>
+-e <span class="se">\</span>
+--eval <span class="se">\</span>
+--checkpoint /PATH/TO/gym_mujoco_output/checkpoints/GymMuJoCoTutorial/YOUR_START_DATE
+</code></pre></div>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href="../distributed-objectnav-tutorial/" title="Multi-node ObjectNav training" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+            </div>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Multi-node ObjectNav training
+              </div>
+            </div>
+          </a>
+        
+        
+          <a href="../../howtos/defining-an-experiment/" title="Define an experiment" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Define an experiment
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../../assets/javascripts/vendor.c3dc8c49.min.js"></script>
+      <script src="../../assets/javascripts/bundle.f9edbbd5.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      
+      <script>
+        app = initialize({
+          base: "../..",
+          features: [],
+          search: Object.assign({
+            worker: "../../assets/javascripts/worker/search.8e2cddea.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>
