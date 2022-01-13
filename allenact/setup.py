@@ -116,7 +116,7 @@ if __name__ == "__main__":
             "moviepy>=1.0.3",
             "filelock",
             "numpy>=1.19.1",
-            "Pillow==8.2.0",
+            "Pillow==9.0.0",
             "matplotlib>=3.3.1",
             "networkx",
             "opencv-python",
