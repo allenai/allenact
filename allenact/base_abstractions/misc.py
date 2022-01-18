@@ -15,6 +15,8 @@ import torch
 
 EnvType = TypeVar("EnvType")
 DistributionType = TypeVar("DistributionType")
+ModelType = TypeVar("ModelType")
+ObservationType = Dict[str, Union[torch.Tensor, Dict[str, Any]]]
 
 
 class RLStepResult(NamedTuple):
@@ -71,15 +73,6 @@ class ActorCriticOutput(tuple, Generic[DistributionType]):
             f" values={self.values},"
             f" extras={self.extras})"
         )
-
-
-class Loss(abc.ABC):
-    def __init__(self, *args, **kwargs):
-        pass
-
-    @abc.abstractmethod
-    def loss(self, *args, **kwargs):
-        raise NotImplementedError()
 
 
 class Memory(Dict):
@@ -349,3 +342,50 @@ class Memory(Dict):
             if tensor.device != device:
                 self.set_tensor(key, tensor.to(device))
         return self
+
+
+class Loss(abc.ABC):
+    pass
+
+
+class LossOutput(NamedTuple):
+    current_loss: torch.Tensor
+    current_info: Dict[str, Union[float, int]]
+    batch_memory: Memory
+    stream_memory: Memory
+    bsize: int
+
+
+class GenericAbstractLoss(Loss):
+    # noinspection PyMethodOverriding
+    @abc.abstractmethod
+    def loss(  # type: ignore
+        self,
+        *,  # No positional arguments
+        model: ModelType,
+        batch: ObservationType,
+        batch_memory: Memory,
+        stream_memory: Memory,
+    ) -> LossOutput:
+        """Computes the loss.
+
+        Loss after processing a batch of data with (part of) a model (possibly with memory).
+
+        # Parameters
+
+        model: model to run on data batch (both assumed to be on the same device)
+        batch: data to use as input for model (already on the same device as model)
+        batch_memory: TODO
+        stream_memory: TODO
+
+        # Returns
+
+        A tuple with:
+
+        current_loss: total loss
+        current_info: additional information about the current loss
+        batch_memory: model memory after processing current data batch
+        stream_memory: model memory after processing current data batch
+        bsize: batch size
+        """
+        raise NotImplementedError()

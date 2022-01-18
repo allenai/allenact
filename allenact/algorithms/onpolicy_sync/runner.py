@@ -1,5 +1,6 @@
 """Defines the reinforcement learning `OnPolicyRunner`."""
 import copy
+import enum
 import glob
 import itertools
 import json
@@ -17,7 +18,6 @@ from collections import defaultdict
 from multiprocessing.context import BaseContext
 from multiprocessing.process import BaseProcess
 from typing import Optional, Dict, Union, Tuple, Sequence, List, Any
-import enum
 
 import filelock
 import numpy as np
@@ -866,6 +866,8 @@ class OnPolicyRunner(object):
             new_dict = {}
             for k, v in d.items():
                 if "offpolicy" in k:
+                    pass
+                elif k.startswith("train-"):  # TODO
                     pass
                 elif k.startswith("losses/"):
                     k = f"{self.mode}-{k}"

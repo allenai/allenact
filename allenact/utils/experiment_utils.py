@@ -30,9 +30,10 @@ from allenact.algorithms.offpolicy_sync.losses.abstract_offpolicy_loss import (
 from allenact.algorithms.onpolicy_sync.losses.abstract_loss import (
     AbstractActorCriticLoss,
 )
+from allenact.algorithms.onpolicy_sync.storage import ExperienceStorage
 from allenact.base_abstractions.misc import Loss
-from allenact.utils.system import get_logger
 from allenact.utils.misc_utils import prepare_locals_for_super
+from allenact.utils.system import get_logger
 
 
 def evenly_distribute_count_into_bins(count: int, nbins: int) -> List[int]:
@@ -458,6 +459,29 @@ class OffPolicyPipelineComponent(NamedTuple):
     ] = lambda cur_worker, rollouts_per_worker, seed: {}
 
 
+class CustomPipelineComponent(NamedTuple):
+    """An custom component for a PipeLineStage.
+
+    # Attributes
+
+    uuid: the name of this component
+    storage_name: the name of the `ExperienceStorage` that will be used with this component.
+    loss_names: list of unique names assigned to off-policy losses
+    num_mini_batch:
+    update_repeats:
+    loss_weights : A list of floating point numbers describing the relative weights
+        applied to the losses referenced by `loss_names`. Should be the same length
+        as `loss_names`. If this is `None`, all weights will be assumed to be one.
+    """
+
+    uuid: str
+    storage_name: str
+    loss_names: List[str]
+    num_mini_batch: Optional[int]
+    update_repeats: Optional[int]
+    loss_weights: Optional[Sequence[float]] = None
+
+
 class TrainingSettings(object):
     """Class defining parameters used for training (within a stage or the
     entire pipeline).
@@ -560,6 +584,7 @@ class PipelineStage(TrainingSettings):
         loss_update_repeats: Optional[Sequence[int]] = None,
         teacher_forcing: Optional[LinearDecay] = None,
         offpolicy_component: Optional[OffPolicyPipelineComponent] = None,
+        custom_components: Optional[Sequence[CustomPipelineComponent]] = None,
         early_stopping_criterion: Optional[EarlyStoppingCriterion] = None,
         num_mini_batch: Optional[int] = None,
         update_repeats: Optional[int] = None,
@@ -593,20 +618,40 @@ class PipelineStage(TrainingSettings):
 
         self.teacher_forcing = teacher_forcing
         self.offpolicy_component = offpolicy_component
+        self.custom_components: List[
+            CustomPipelineComponent
+        ] = custom_components if custom_components is not None else []
+        self.name_to_custom_component: Dict[str, CustomPipelineComponent] = {
+            cc.uuid: cc for cc in self.custom_components
+        }
+        self.name_to_num_epoches: Dict[str, CustomPipelineComponent] = {
+            cc.uuid: 0 for cc in self.custom_components
+        }
+        self.named_custom_storage: Optional[Dict[str, ExperienceStorage]] = None
+
+        assert "onpolicy" not in self.name_to_custom_component
+        assert "offpolicy" not in self.name_to_custom_component
+
         self.early_stopping_criterion = early_stopping_criterion
 
         self.steps_taken_in_stage: int = 0
         self.rollout_count = 0
         self.early_stopping_criterion_met = False
 
+        self._component_name_to_named_loss_weights: Dict[str, Dict[str, float]] = {}
+        self.component_name_to_stream_memory: Dict[str, Memory] = {
+            cc.uuid: Memory() for cc in self.custom_components
+        }
+        self.component_name_to_num_epoches: Dict[str, int] = {
+            cc.uuid: 0 for cc in self.custom_components
+        }
+
         self.named_losses: Optional[Dict[str, AbstractActorCriticLoss]] = None
-        self._named_loss_weights: Optional[Dict[str, float]] = None
         self._named_loss_update_repeats: Optional[Dict[str, float]] = None
 
         self.offpolicy_memory = Memory()
         self.offpolicy_epochs: Optional[int] = None
         self.offpolicy_named_losses: Optional[Dict[str, AbstractOffPolicyLoss]] = None
-        self._offpolicy_named_loss_weights: Optional[Dict[str, float]] = None
         self.offpolicy_steps_taken_in_stage: int = 0
 
     @property
@@ -645,32 +690,32 @@ class PipelineStage(TrainingSettings):
 
     @property
     def named_loss_weights(self):
-        if self._named_loss_weights is None:
-            loss_weights = (
-                self.loss_weights
-                if self.loss_weights is not None
-                else [1.0] * len(self.loss_names)
-            )
-            self._named_loss_weights = {
-                name: weight for name, weight in zip(self.loss_names, loss_weights)
-            }
-        return self._named_loss_weights
+        return self.component_name_to_named_loss_weights("onpolicy")
 
     @property
     def offpolicy_named_loss_weights(self):
-        if self._offpolicy_named_loss_weights is None:
-            loss_weights = (
-                self.offpolicy_component.loss_weights
-                if self.offpolicy_component.loss_weights is not None
-                else [1.0] * len(self.offpolicy_component.loss_names)
-            )
-            self._offpolicy_named_loss_weights = {
-                name: weight
-                for name, weight in zip(
-                    self.offpolicy_component.loss_names, loss_weights
-                )
+        return self.component_name_to_named_loss_weights("offpolicy")
+
+    def component_name_to_named_loss_weights(self, uuid: str):
+        if uuid not in self._component_name_to_named_loss_weights:
+            if uuid == "onpolicy":
+                loss_names = self.loss_names
+                loss_weights = self.loss_weights
+            elif uuid == "offpolicy":
+                loss_names = self.offpolicy_component.loss_names
+                loss_weights = self.offpolicy_component.loss_weights
+            else:
+                loss_names = self.name_to_custom_component[uuid].loss_names
+                loss_weights = self.name_to_custom_component[uuid].loss_weights
+
+            if loss_weights is None:
+                loss_weights = [1.0] * len(loss_names)
+
+            self._component_name_to_named_loss_weights[uuid] = {
+                name: weight for name, weight in zip(loss_names, loss_weights)
             }
-        return self._offpolicy_named_loss_weights
+
+        return self._component_name_to_named_loss_weights[uuid]
 
 
 class TrainingPipeline(TrainingSettings):
@@ -719,6 +764,9 @@ class TrainingPipeline(TrainingSettings):
         advance_scene_rollout_period: Optional[int],
         save_interval: Optional[int],
         metric_accumulate_interval: int,
+        named_storages: Optional[
+            Dict[str, Union[ExperienceStorage, Builder[ExperienceStorage]]]
+        ] = None,
         should_log: bool = True,
         lr_scheduler_builder: Optional[Builder[optim.lr_scheduler._LRScheduler]] = None,  # type: ignore
     ):
@@ -735,6 +783,7 @@ class TrainingPipeline(TrainingSettings):
         self.lr_scheduler_builder = lr_scheduler_builder
 
         self.named_losses = named_losses
+        self.named_custom_storage = {} if named_storages is None else named_storages
         self.should_log = should_log
 
         self.pipeline_stages = pipeline_stages
@@ -851,6 +900,30 @@ class TrainingPipeline(TrainingSettings):
         self.off_policy_epochs = state_dict.get("off_policy_epochs", 0)
 
         self._refresh_current_stage(force_stage_search_from_start=True)
+
+    @property
+    def current_custom_stage_storage(self) -> Dict[str, ExperienceStorage]:
+        if self.current_stage.named_custom_storage is None:
+            storage_names_for_current_stage = sorted(
+                list(
+                    set(cc.storage_name for cc in self.current_stage.custom_components)
+                )
+            )
+            for storage_name in storage_names_for_current_stage:
+                if isinstance(self.named_custom_storage[storage_name], Builder):
+                    self.named_custom_storage[storage_name] = cast(
+                        Builder["ExperienceStorage"],
+                        self.named_custom_storage[storage_name],
+                    )()
+
+            self.current_stage.named_custom_storage = {
+                storage_name: cast(
+                    ExperienceStorage, self.named_custom_storage[storage_name]
+                )
+                for storage_name in storage_names_for_current_stage
+            }
+
+        return self.current_stage.named_custom_storage
 
     @property
     def current_stage_losses(self) -> Dict[str, AbstractActorCriticLoss]:

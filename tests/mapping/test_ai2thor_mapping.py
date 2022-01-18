@@ -6,12 +6,14 @@ import urllib
 import urllib.request
 import warnings
 from collections import defaultdict
+
 # noinspection PyUnresolvedReferences
 from tempfile import mkdtemp
 from typing import Dict, List, Tuple, cast
 
 # noinspection PyUnresolvedReferences
 import ai2thor
+
 # noinspection PyUnresolvedReferences
 import ai2thor.wsgi_server
 import compress_pickle
@@ -311,9 +313,7 @@ class TestAI2THORMapSensors(object):
             walkthrough_model.load_state_dict(state_dict["model_state_dict"])
 
             rollout_storage = RolloutBlockStorage(
-                init_size=1,
-                num_samplers=1,
-                actor_critic=walkthrough_model,
+                init_size=1, num_samplers=1, actor_critic=walkthrough_model,
             )
             memory = rollout_storage.pick_memory_step(0)
             masks = rollout_storage.masks[:1]

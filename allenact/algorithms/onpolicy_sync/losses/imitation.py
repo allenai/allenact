@@ -77,7 +77,7 @@ class Imitation(AbstractActorCriticLoss):
 
         batch : A batch of data corresponding to the information collected when rolling out (possibly many) agents
             over a fixed number of steps. In particular this batch should have the same format as that returned by
-            `RolloutStorage.batched_rollouts_generator`.
+            `RolloutStorage.batched_experience_generator`.
             Here `batch["observations"]` must contain `"expert_action"` observations
             or `"expert_policy"` observations. See `ExpertActionSensor` (or `ExpertPolicySensor`) for an example of
             a sensor producing such observations.

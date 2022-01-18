@@ -1,7 +1,8 @@
-import os
-from collections import defaultdict
 import abc
 import json
+import os
+import sys
+from collections import defaultdict
 from typing import (
     Dict,
     Any,
@@ -14,7 +15,6 @@ from typing import (
     cast,
     Set,
 )
-import sys
 
 import numpy as np
 
@@ -383,9 +383,7 @@ class AgentViewViz(AbstractViz):
             vid = self.make_vid(images)
             if vid is not None:
                 log_writer.add_vid(
-                    "{}/{}_group{}".format(self.mode, self.label, page),
-                    vid,
-                    global_step=num_steps,
+                    f"{self.mode}/{self.label}_group{page}", vid, global_step=num_steps,
                 )
 
     @staticmethod
@@ -983,7 +981,7 @@ class VizSuite(AbstractViz):
         if alive is not None and rollout is not None:
             # in phase with last_it2epid that stay alive
             try:
-                self._collect_rollout(rollout, alive)
+                self._collect_rollout(rollout=rollout, alive=alive)
             except (AssertionError, RuntimeError):
                 get_logger().debug(
                     msg=f"Failed collect (rollout) for viz due to exception:",

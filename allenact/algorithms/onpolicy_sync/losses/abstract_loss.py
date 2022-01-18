@@ -14,6 +14,7 @@ class AbstractActorCriticLoss(Loss):
     """Abstract class representing a loss function used to train an
     ActorCriticModel."""
 
+    # noinspection PyMethodOverriding
     @abc.abstractmethod
     def loss(  # type: ignore
         self,
@@ -32,7 +33,7 @@ class AbstractActorCriticLoss(Loss):
 
         batch : A batch of data corresponding to the information collected when rolling out (possibly many) agents
             over a fixed number of steps. In particular this batch should have the same format as that returned by
-            `RolloutStorage.batched_rollouts_generator`.
+            `RolloutStorage.batched_experience_generator`.
         actor_critic_output : The output of calling an ActorCriticModel on the observations in `batch`.
         args : Extra args.
         kwargs : Extra kwargs.

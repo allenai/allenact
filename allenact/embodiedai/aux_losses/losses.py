@@ -9,8 +9,8 @@ Several of the losses defined in this file are modified versions of those found 
 """
 
 
-from typing import Dict, cast, Tuple, List
 import abc
+from typing import Dict, cast, Tuple, List
 
 import numpy as np
 import torch
@@ -71,8 +71,8 @@ class MultiAuxTaskNegEntropyLoss(AbstractActorCriticLoss):
 class AuxiliaryLoss(AbstractActorCriticLoss):
     """Base class of auxiliary loss.
 
-    Any auxiliary task loss should inherit from it, and implement
-    the `get_aux_loss` function.
+    Any auxiliary task loss should inherit from it, and implement the
+    `get_aux_loss` function.
     """
 
     def __init__(self, auxiliary_uuid: str, *args, **kwargs):
@@ -87,7 +87,7 @@ class AuxiliaryLoss(AbstractActorCriticLoss):
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
         **kwargs
-    ) -> Tuple[torch.FloatTensor, Dict[str, float]]:
+    ) -> Tuple[torch.Tensor, Dict[str, float]]:
 
         # auxiliary loss
         return self.get_aux_loss(
@@ -102,10 +102,10 @@ class AuxiliaryLoss(AbstractActorCriticLoss):
         self,
         aux_model: nn.Module,
         observations: ObservationType,
-        obs_embeds: torch.FloatTensor,
-        actions: torch.FloatTensor,
-        beliefs: torch.FloatTensor,
-        masks: torch.FloatTensor,
+        obs_embeds: torch.Tensor,
+        actions: torch.Tensor,
+        beliefs: torch.Tensor,
+        masks: torch.Tensor,
         *args,
         **kwargs
     ):

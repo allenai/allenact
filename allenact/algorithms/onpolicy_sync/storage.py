@@ -13,6 +13,8 @@ from typing import (
     cast,
     Optional,
     Callable,
+    Any,
+    Generator,
 )
 
 import numpy as np
@@ -30,6 +32,23 @@ from allenact.base_abstractions.misc import Memory
 
 
 class ExperienceStorage(abc.ABC):
+    @abc.abstractmethod
+    def initialize(self, observations: ObservationType):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def add(
+        self,
+        observations: ObservationType,
+        memory: Optional[Memory],
+        actions: torch.Tensor,
+        action_log_probs: torch.Tensor,
+        value_preds: torch.Tensor,
+        rewards: torch.Tensor,
+        masks: torch.Tensor,
+    ):
+        raise NotImplementedError
+
     def before_update(self, **kwargs):
         pass
 
@@ -40,8 +59,38 @@ class ExperienceStorage(abc.ABC):
     def to(self, device: torch.device):
         pass
 
+    @abc.abstractmethod
+    def set_partition(self, index: int, num_parts: int):
+        raise NotImplementedError
 
-class RolloutBlockStorage(ExperienceStorage):
+
+class StreamingExperienceStorage(ExperienceStorage):
+    @abc.abstractmethod
+    def next_batch(self) -> Dict[str, Any]:
+        raise NotImplementedError
+
+    @property
+    def reset_stream(self):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def empty(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    def num_epoches_completed(self) -> int:
+        return 0
+
+
+class MiniBatchExperienceStorage(ExperienceStorage):
+    @abc.abstractmethod
+    def batched_experience_generator(
+        self, num_mini_batch: int,
+    ) -> Generator[Dict[str, Any], None, None]:
+        raise NotImplementedError
+
+
+class RolloutBlockStorage(MiniBatchExperienceStorage, abc.ABC):
     """Class for storing rollout information for RL trainers."""
 
     FLATTEN_SEPARATOR: str = "._AUTOFLATTEN_."
@@ -92,6 +141,9 @@ class RolloutBlockStorage(ExperienceStorage):
         self._before_update_called = False
 
         self.device = torch.device("cpu")
+
+    def set_partition(self, index: int, num_parts: int):
+        pass
 
     @property
     def value_preds(self) -> torch.Tensor:
@@ -167,8 +219,14 @@ class RolloutBlockStorage(ExperienceStorage):
 
         self.device = device
 
+    def initialize(self, observations: ObservationType):
+        assert self.step == 0
+        self.insert_observations(observations=observations, time_step=0)
+        self.prev_actions[0].zero_()  # Have to zero previous actions
+        self.masks[0].zero_()  # Have to zero masks
+
     def insert_observations(
-        self, observations: ObservationType, time_step: int = 0,
+        self, observations: ObservationType, time_step: int,
     ):
         self.insert_tensors(
             storage=self._observations_full,
@@ -292,7 +350,7 @@ class RolloutBlockStorage(ExperienceStorage):
 
         self.full_size *= 2
 
-    def append(
+    def add(
         self,
         observations: ObservationType,
         memory: Optional[Memory],
@@ -441,7 +499,7 @@ class RolloutBlockStorage(ExperienceStorage):
                     + extended_rewards[step]
                 )
 
-    def batched_rollouts_generator(
+    def batched_experience_generator(
         self, num_mini_batch: int,
     ):
         assert self._before_update_called, (
