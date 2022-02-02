@@ -531,6 +531,8 @@ class TupleLinearActorCriticHead(LinearActorCriticHead):
 
 
 class NavToPartnerActorCriticSimpleConvRNN(ActorCriticModel[TupleCategoricalDistr]):
+    action_space: gym.spaces.Tuple
+
     def __init__(
         self,
         action_space: gym.spaces.Tuple,

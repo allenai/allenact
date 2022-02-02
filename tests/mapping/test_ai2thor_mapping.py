@@ -295,7 +295,7 @@ class TestAI2THORMapSensors(object):
             )
 
             named_losses = (
-                WalkthroughRGBMappingPPOExperimentConfig.training_pipeline().named_losses
+                WalkthroughRGBMappingPPOExperimentConfig.training_pipeline()._named_losses
             )
 
             ckpt_path = os.path.join(
@@ -337,6 +337,7 @@ class TestAI2THORMapSensors(object):
                 batch = add_step_dim(batch_observations([task.get_observations()]))
 
                 while not task.is_done():
+                    # noinspection PyTypeChecker
                     ac_out, memory = cast(
                         Tuple[ActorCriticOutput, Memory],
                         walkthrough_model.forward(

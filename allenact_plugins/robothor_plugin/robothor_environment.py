@@ -1,7 +1,5 @@
 import copy
-import glob
 import math
-import pickle
 import random
 import warnings
 from typing import Any, Optional, Dict, List, Union, Tuple, Collection
@@ -12,11 +10,7 @@ from ai2thor.controller import Controller
 from ai2thor.fifo_server import FifoServer
 from ai2thor.util import metrics
 
-from allenact.utils.cache_utils import (
-    DynamicDistanceCache,
-    pos_to_str_for_cache,
-    str_to_pos_for_cache,
-)
+from allenact.utils.cache_utils import DynamicDistanceCache
 from allenact.utils.experiment_utils import recursive_update
 from allenact.utils.system import get_logger
 
@@ -490,183 +484,6 @@ class RoboThorEnvironment:
     def all_objects(self) -> List[Dict[str, Any]]:
         """Return all object metadata."""
         return self.controller.last_event.metadata["objects"]
-
-    def all_objects_with_properties(
-        self, properties: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
-        """Find all objects with the given properties."""
-        objects = []
-        for o in self.all_objects():
-            satisfies_all = True
-            for k, v in properties.items():
-                if o[k] != v:
-                    satisfies_all = False
-                    break
-            if satisfies_all:
-                objects.append(o)
-        return objects
-
-    def visible_objects(self) -> List[Dict[str, Any]]:
-        """Return all visible objects."""
-        return self.all_objects_with_properties({"visible": True})
-
-
-class RoboThorCachedEnvironment:
-    """Wrapper for the robo2thor controller providing additional functionality
-    and bookkeeping.
-
-    See [here](https://ai2thor.allenai.org/robothor/documentation) for comprehensive
-     documentation on RoboTHOR.
-
-    # Attributes
-
-    controller : The AI2THOR controller.
-    config : The AI2THOR controller configuration
-    """
-
-    def __init__(self, **kwargs):
-        self.config = dict(
-            rotateStepDegrees=30.0,
-            visibilityDistance=1.0,
-            gridSize=0.25,
-            continuousMode=True,
-            snapToGrid=False,
-            agentMode="locobot",
-            width=640,
-            height=480,
-        )
-        self.env_root_dir = kwargs["env_root_dir"]
-        random_scene = random.choice(list(glob.glob(self.env_root_dir + "/*.pkl")))
-        handle = open(random_scene, "rb")
-        self.view_cache = pickle.load(handle)
-        handle.close()
-        self.agent_position = list(self.view_cache.keys())[0]
-        self.agent_rotation = list(self.view_cache[self.agent_position].keys())[0]
-        self.known_good_locations: Dict[str, Any] = {
-            self.scene_name: copy.deepcopy(self.currently_reachable_points)
-        }
-        self._last_action = "None"
-        assert len(self.known_good_locations[self.scene_name]) > 10
-
-    def agent_state(self) -> Dict[str, Union[Dict[str, float], float]]:
-        """Return agent position, rotation and horizon."""
-        return {
-            **str_to_pos_for_cache(self.agent_position),
-            "rotation": {"x": 0.0, "y": self.agent_rotation, "z": 0.0},
-            "horizon": 1.0,
-        }
-
-    def teleport(
-        self, pose: Dict[str, float], rotation: Dict[str, float], horizon: float = 0.0
-    ):
-        self.agent_position = pos_to_str_for_cache(pose)
-        self.agent_rotation = (
-            math.floor(rotation["y"] / 90.0) * 90
-        )  # round to nearest 90 degree angle
-        return True
-
-    def reset(self, scene_name: str = None) -> None:
-        """Resets scene to a known initial state."""
-        try:
-            handle = open(self.env_root_dir + "/" + scene_name + ".pkl", "rb")
-            self.view_cache = pickle.load(handle)
-            handle.close()
-            self.agent_position = list(self.view_cache.keys())[0]
-            self.agent_rotation = list(self.view_cache[self.agent_position].keys())[0]
-            self.known_good_locations[self.scene_name] = copy.deepcopy(
-                self.currently_reachable_points
-            )
-            self._last_action = "None"
-            assert len(self.known_good_locations[self.scene_name]) > 10
-        except Exception as _:
-            raise RuntimeError("Could not load scene:", scene_name)
-
-    def known_good_locations_list(self):
-        return self.known_good_locations[self.scene_name]
-
-    @property
-    def currently_reachable_points(self) -> List[Dict[str, float]]:
-        """List of {"x": x, "y": y, "z": z} locations in the scene that are
-        currently reachable."""
-        return [str_to_pos_for_cache(pos) for pos in self.view_cache]
-
-    @property
-    def scene_name(self) -> str:
-        """Current ai2thor scene."""
-        return self.view_cache[self.agent_position][self.agent_rotation].metadata[
-            "sceneName"
-        ]
-
-    @property
-    def current_frame(self) -> np.ndarray:
-        """Returns rgb image corresponding to the agent's egocentric view."""
-        return self.view_cache[self.agent_position][self.agent_rotation].frame
-
-    @property
-    def current_depth(self) -> np.ndarray:
-        """Returns depth image corresponding to the agent's egocentric view."""
-        return self.view_cache[self.agent_position][self.agent_rotation].depth_frame
-
-    @property
-    def last_event(self) -> ai2thor.server.Event:
-        """Last event returned by the controller."""
-        return self.view_cache[self.agent_position][self.agent_rotation]
-
-    @property
-    def last_action(self) -> str:
-        """Last action, as a string, taken by the agent."""
-        return self._last_action
-
-    @property
-    def last_action_success(self) -> bool:
-        """In the cached environment, all actions succeed."""
-        return True
-
-    @property
-    def last_action_return(self) -> Any:
-        """Get the value returned by the last action (if applicable).
-
-        For an example of an action that returns a value, see
-        `"GetReachablePositions"`.
-        """
-        return self.view_cache[self.agent_position][self.agent_rotation].metadata[
-            "actionReturn"
-        ]
-
-    def step(
-        self, action_dict: Dict[str, Union[str, int, float]]
-    ) -> ai2thor.server.Event:
-        """Take a step in the ai2thor environment."""
-        self._last_action = action_dict["action"]
-        if action_dict["action"] == "RotateLeft":
-            self.agent_rotation = (self.agent_rotation - 90.0) % 360.0
-        elif action_dict["action"] == "RotateRight":
-            self.agent_rotation = (self.agent_rotation + 90.0) % 360.0
-        elif action_dict["action"] == "MoveAhead":
-            pos = str_to_pos_for_cache(self.agent_position)
-            if self.agent_rotation == 0.0:
-                pos["x"] += 0.25
-            elif self.agent_rotation == 90.0:
-                pos["z"] += 0.25
-            elif self.agent_rotation == 180.0:
-                pos["x"] -= 0.25
-            elif self.agent_rotation == 270.0:
-                pos["z"] -= 0.25
-            pos_string = pos_to_str_for_cache(pos)
-            if pos_string in self.view_cache:
-                self.agent_position = pos_to_str_for_cache(pos)
-        return self.last_event
-
-    # noinspection PyMethodMayBeStatic
-    def stop(self):
-        """Stops the ai2thor controller."""
-        print("No need to stop cached environment")
-
-    def all_objects(self) -> List[Dict[str, Any]]:
-        """Return all object metadata."""
-        return self.view_cache[self.agent_position][self.agent_rotation].metadata[
-            "objects"
-        ]
 
     def all_objects_with_properties(
         self, properties: Dict[str, Any]

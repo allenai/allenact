@@ -129,7 +129,7 @@ def depth_frame_to_camera_space_xyz(
 
     resolution = depth_frame.shape[0]
     if mask is None:
-        mask = torch.ones_like(depth_frame, dtype=bool)
+        mask = torch.ones_like(depth_frame, dtype=torch.bool)
 
     # pixel centers
     camera_space_yx_offsets = (
@@ -146,6 +146,7 @@ def depth_frame_to_camera_space_xyz(
     # Put points on the clipping plane
     camera_space_yx_offsets *= (2.0 / resolution) * math.tan((fov / 2) / 180 * math.pi)
 
+    # noinspection PyArgumentList
     camera_space_xyz = torch.cat(
         [
             camera_space_yx_offsets[1:, :],  # This is x

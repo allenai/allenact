@@ -28,13 +28,19 @@ try:
 
     _TF_AVAILABLE = True
 except ImportError as _:
+    event_pb2 = None
+    tf_record = None
+
     _TF_AVAILABLE = False
+
+import matplotlib
 
 try:
     # When debugging we don't want to use the interactive version of matplotlib
     # as it causes all sorts of problems.
+
+    # noinspection PyPackageRequirements
     import pydevd
-    import matplotlib
 
     matplotlib.use("agg")
 except ImportError as _:

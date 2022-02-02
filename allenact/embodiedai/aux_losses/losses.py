@@ -313,7 +313,7 @@ class TemporalDistanceLoss(AuxiliaryLoss):
             np.repeat(locs[:, [1]], 2 * self.num_pairs, axis=-1),  # (M, 2*k)
             np.repeat(locs[:, [2]] + 1, 2 * self.num_pairs, axis=-1),  # (M, 2*k)
         ).reshape(
-            -1, self.num_pairs, 2
+            (-1, self.num_pairs, 2)
         )  # (M, k, 2)
         sampled_pairs_batch = torch.from_numpy(sampled_pairs).to(
             locs_batch
@@ -347,7 +347,7 @@ class TemporalDistanceLoss(AuxiliaryLoss):
         ).float()  # (M, k)
 
         pred_error = (pred_temp_dist - true_temp_dist) * normalizer.unsqueeze(1)
-        loss = 0.5 * (pred_error).pow(2)
+        loss = 0.5 * pred_error.pow(2)
         avg_loss = loss.mean()
 
         return (
@@ -376,10 +376,10 @@ class CPCALoss(AuxiliaryLoss):
         self,
         aux_model: nn.Module,
         observations: ObservationType,
-        obs_embeds: torch.FloatTensor,
-        actions: torch.FloatTensor,
-        beliefs: torch.FloatTensor,
-        masks: torch.FloatTensor,
+        obs_embeds: torch.Tensor,
+        actions: torch.Tensor,
+        beliefs: torch.Tensor,
+        masks: torch.Tensor,
         *args,
         **kwargs
     ):
@@ -395,7 +395,7 @@ class CPCALoss(AuxiliaryLoss):
             positives.view(num_steps * num_sampler, -1),
             dim=0,
             index=negative_inds.view(num_steps * num_sampler, 1).expand(
-                num_steps * num_sampler, positives.size(-1)
+                num_steps * num_sampler, positives.shape[-1]
             ),
         ).view(
             num_steps, num_sampler, -1

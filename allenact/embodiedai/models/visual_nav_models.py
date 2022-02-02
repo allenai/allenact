@@ -1,6 +1,6 @@
-from typing import Tuple, Dict, Optional, List
-from allenact.utils.system import get_logger
 from collections import OrderedDict
+from typing import Tuple, Dict, Optional, List, Sequence
+from typing import TypeVar
 
 import gym
 import torch
@@ -16,13 +16,12 @@ from allenact.algorithms.onpolicy_sync.policy import (
 )
 from allenact.base_abstractions.distributions import CategoricalDistr
 from allenact.base_abstractions.misc import ActorCriticOutput, Memory
-from allenact.utils.model_utils import FeatureEmbedding
-from allenact.embodiedai.models.basic_models import RNNStateEncoder
-from allenact.embodiedai.models.aux_models import AuxiliaryModel
 from allenact.embodiedai.aux_losses.losses import MultiAuxTaskNegEntropyLoss
-
-from typing import TypeVar
+from allenact.embodiedai.models.aux_models import AuxiliaryModel
+from allenact.embodiedai.models.basic_models import RNNStateEncoder
 from allenact.embodiedai.models.fusion_models import Fusion
+from allenact.utils.model_utils import FeatureEmbedding
+from allenact.utils.system import get_logger
 
 FusionType = TypeVar("FusionType", bound=Fusion)
 
@@ -33,6 +32,8 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
 
     `forward_encoder` function requires implementation.
     """
+
+    action_space: gym.spaces.Discrete
 
     def __init__(
         self,
@@ -53,10 +54,14 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
             self.auxiliary_uuids = None
 
         # Define the placeholders in init function
-        self.state_encoders: nn.ModuleDict
-        self.aux_models: nn.ModuleDict
-        self.actor: LinearActorHead
-        self.critic: LinearCriticHead
+        self.state_encoders: Optional[nn.ModuleDict] = None
+        self.aux_models: Optional[nn.ModuleDict] = None
+        self.actor: Optional[LinearActorHead] = None
+        self.critic: Optional[LinearCriticHead] = None
+        self.prev_action_embedder: Optional[FeatureEmbedding] = None
+
+        self.fusion_model: Optional[nn.Module] = None
+        self.belief_names: Optional[Sequence[str]] = None
 
     def create_state_encoders(
         self,
@@ -111,7 +116,7 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
             )
         )
 
-    def load_state_dict(self, state_dict):
+    def load_state_dict(self, state_dict, **kwargs):
         new_state_dict = OrderedDict()
         for key in state_dict.keys():
             if "state_encoder." in key:  # old key name

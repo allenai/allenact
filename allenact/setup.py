@@ -56,7 +56,7 @@ def get_version(fname):
     return res
 
 
-if __name__ == "__main__":
+def _do_setup():
     base_dir = os.path.abspath(os.path.dirname(Path(__file__)))
 
     if not os.path.exists(
@@ -127,3 +127,7 @@ if __name__ == "__main__":
         entry_points={"console_scripts": ["allenact=allenact.main:main"]},
         extras_require=extras,
     )
+
+
+if __name__ == "__main__":
+    _do_setup()

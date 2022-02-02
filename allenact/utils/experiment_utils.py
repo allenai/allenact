@@ -2,6 +2,7 @@
 import abc
 import collections.abc
 import copy
+import numbers
 import random
 from collections import OrderedDict, defaultdict
 from typing import (
@@ -17,23 +18,34 @@ from typing import (
     Sequence,
     TypeVar,
     Generic,
+    Tuple,
 )
 
+import attr
 import numpy as np
 import torch
 import torch.optim as optim
 
-from allenact.algorithms.offpolicy_sync.losses.abstract_offpolicy_loss import (
-    AbstractOffPolicyLoss,
-    Memory,
-)
+from allenact.algorithms.offpolicy_sync.losses.abstract_offpolicy_loss import Memory
 from allenact.algorithms.onpolicy_sync.losses.abstract_loss import (
     AbstractActorCriticLoss,
 )
-from allenact.algorithms.onpolicy_sync.storage import ExperienceStorage
-from allenact.base_abstractions.misc import Loss
+from allenact.algorithms.onpolicy_sync.storage import (
+    ExperienceStorage,
+    RolloutStorage,
+    RolloutBlockStorage,
+)
+from allenact.base_abstractions.misc import Loss, GenericAbstractLoss
 from allenact.utils.misc_utils import prepare_locals_for_super
 from allenact.utils.system import get_logger
+
+try:
+    # noinspection PyProtectedMember,PyUnresolvedReferences
+    from torch.optim.lr_scheduler import _LRScheduler
+except (ImportError, ModuleNotFoundError):
+    raise ImportError("`_LRScheduler` was not found in `torch.optim.lr_scheduler`")
+
+_DEFAULT_ONPOLICY_UUID = "onpolicy"
 
 
 def evenly_distribute_count_into_bins(count: int, nbins: int) -> List[int]:
@@ -230,17 +242,20 @@ class LoggingPackage(object):
         self,
         mode: str,
         training_steps: Optional[int],
+        storage_uuid_to_total_experiences: Dict[str, int],
         pipeline_stage: Optional[int] = None,
-        off_policy_steps: Optional[int] = None,
     ) -> None:
         self.mode = mode
 
         self.training_steps: int = training_steps
+        self.storage_uuid_to_total_experiences: Dict[
+            str, int
+        ] = storage_uuid_to_total_experiences
         self.pipeline_stage = pipeline_stage
-        self.off_policy_steps: Optional[int] = off_policy_steps
 
         self.metrics_tracker = ScalarMeanTracker()
-        self.train_info_tracker = ScalarMeanTracker()
+        self.train_info_trackers: Dict[Tuple[str, str], ScalarMeanTracker] = {}
+
         self.metric_dicts: List[Any] = []
         self.viz_data: Optional[Dict[str, List[Dict[str, Any]]]] = None
         self.checkpoint_file_name: Optional[str] = None
@@ -281,10 +296,18 @@ class LoggingPackage(object):
         return True
 
     def add_train_info_dict(
-        self, train_info_dict: Dict[str, Union[int, float]], n: int
+        self,
+        train_info_dict: Dict[str, Union[int, float]],
+        n: int,
+        stage_component_uuid: str,
+        storage_uuid: str,
     ):
+        key = (stage_component_uuid, storage_uuid)
+        if key not in self.train_info_trackers:
+            self.train_info_trackers[key] = ScalarMeanTracker()
+
         assert n >= 0
-        self.train_info_tracker.add_scalars(scalars=train_info_dict, n=n)
+        self.train_info_trackers[key].add_scalars(scalars=train_info_dict, n=n)
 
 
 class LinearDecay(object):
@@ -459,30 +482,7 @@ class OffPolicyPipelineComponent(NamedTuple):
     ] = lambda cur_worker, rollouts_per_worker, seed: {}
 
 
-class CustomPipelineComponent(NamedTuple):
-    """An custom component for a PipeLineStage.
-
-    # Attributes
-
-    uuid: the name of this component
-    storage_name: the name of the `ExperienceStorage` that will be used with this component.
-    loss_names: list of unique names assigned to off-policy losses
-    num_mini_batch:
-    update_repeats:
-    loss_weights : A list of floating point numbers describing the relative weights
-        applied to the losses referenced by `loss_names`. Should be the same length
-        as `loss_names`. If this is `None`, all weights will be assumed to be one.
-    """
-
-    uuid: str
-    storage_name: str
-    loss_names: List[str]
-    num_mini_batch: Optional[int]
-    update_repeats: Optional[int]
-    loss_weights: Optional[Sequence[float]] = None
-
-
-class TrainingSettings(object):
+class TrainingSettings:
     """Class defining parameters used for training (within a stage or the
     entire pipeline).
 
@@ -507,7 +507,7 @@ class TrainingSettings(object):
     """
 
     num_mini_batch: Optional[int]
-    update_repeats: Optional[int]
+    update_repeats: Optional[Union[int, Sequence[int]]]
     max_grad_norm: Optional[float]
     num_steps: Optional[int]
     gamma: Optional[float]
@@ -530,18 +530,75 @@ class TrainingSettings(object):
         advance_scene_rollout_period: Optional[int] = None,
         save_interval: Optional[int] = None,
         metric_accumulate_interval: Optional[int] = None,
-        **kwargs: Any,
     ):
-        all_vars = prepare_locals_for_super(locals(), ignore_kwargs=True)
+        self._key_to_setting = prepare_locals_for_super(locals(), ignore_kwargs=True)
+        self._training_setting_keys = tuple(sorted(self._key_to_setting.keys()))
 
-        for key, value in all_vars.items():
-            setattr(self, key, value)
+        self._defaults: Optional["TrainingSettings"] = None
+
+    def keys(self) -> Tuple[str, ...]:
+        return self._training_setting_keys
+
+    def has_key(self, key: str) -> bool:
+        return key in self._key_to_setting
+
+    def set_defaults(self, defaults: "TrainingSettings"):
+        assert self._defaults is None, "Defaults can only be set once."
+        self._defaults = defaults
+
+    def __getattr__(self, item: str):
+        if item in self._key_to_setting:
+            val = self._key_to_setting[item]
+            if val is None and self._defaults is not None:
+                val = getattr(self._defaults, item)
+            return val
+        else:
+            super(TrainingSettings, self).__getattribute__(item)
 
 
-_TRAINING_SETTINGS_NAMES: List[str] = list(TrainingSettings().__dict__.keys())
+@attr.define(kw_only=True)
+class StageComponent:
+    """An custom component for a PipelineStage, possibly including overrides to
+    the `TrainingSettings` in from the `TrainingPipeline` and `PipelineStage`.
+
+    # Attributes
+
+    uuid: the name of this component
+    storage_uuid: the name of the `ExperienceStorage` that will be used with this component.
+    loss_names: list of unique names assigned to off-policy losses
+    training_settings: TODO
+    loss_weights : A list of floating point numbers describing the relative weights
+        applied to the losses referenced by `loss_names`. Should be the same length
+        as `loss_names`. If this is `None`, all weights will be assumed to be one.
+    """
+
+    uuid: str
+    storage_uuid: str
+    loss_names: Sequence[str]
+    training_settings: TrainingSettings = attr.field(
+        default=attr.Factory(TrainingSettings)
+    )
+
+    @training_settings.validator
+    def _validate_training_settings(self, attribute, value: TrainingSettings):
+        must_be_none = [
+            "num_steps",
+            "gamma",
+            "use_gae",
+            "gae_lambda",
+            "advance_scene_rollout_period",
+            "save_interval",
+            "metric_accumulate_interval",
+        ]
+        for key in must_be_none:
+            assert getattr(value, key) is None, (
+                f"`{key}` must be `None` in `TrainingSettings` passed to"
+                f" `StageComponent` (as such values will be ignored). Pass such"
+                f" settings to the `PipelineStage` or `TrainingPipeline` objects instead.",
+            )
 
 
-class PipelineStage(TrainingSettings):
+class PipelineStage:
     """A single stage in a training pipeline, possibly including overrides to
     the global `TrainingSettings` in `TrainingPipeline`.
 
@@ -563,74 +620,45 @@ class PipelineStage(TrainingSettings):
         `EarlyStoppingCriterion` object may store internal state which is not
         saved in the checkpoint). Currently AllenAct only supports using early stopping
         criterion when **not** using distributed training.
-    num_mini_batch : See docs for `TrainingSettings`.
-    update_repeats : See docs for `TrainingSettings`.
-    max_grad_norm : See docs for `TrainingSettings`.
-    num_steps : See docs for `TrainingSettings`.
-    gamma : See docs for `TrainingSettings`.
-    use_gae : See docs for `TrainingSettings`.
-    gae_lambda : See docs for `TrainingSettings`.
-    advance_scene_rollout_period: See docs for `TrainingSettings`.
-    save_interval : See docs for `TrainingSettings`.
-    metric_accumulate_interval : See docs for `TrainingSettings`.
+    training_settings: TODO
+    training_settings_kwargs: TODO
     """
 
     def __init__(
         self,
         *,  # Disables positional arguments. Please provide arguments as keyword arguments.
-        loss_names: List[str],
         max_stage_steps: Union[int, Callable],
+        loss_names: List[str],
         loss_weights: Optional[Sequence[float]] = None,
-        loss_update_repeats: Optional[Sequence[int]] = None,
-        teacher_forcing: Optional[LinearDecay] = None,
-        offpolicy_component: Optional[OffPolicyPipelineComponent] = None,
-        custom_components: Optional[Sequence[CustomPipelineComponent]] = None,
+        teacher_forcing: Optional[Callable[[int], float]] = None,
+        stage_components: Optional[Sequence[StageComponent]] = None,
         early_stopping_criterion: Optional[EarlyStoppingCriterion] = None,
-        num_mini_batch: Optional[int] = None,
-        update_repeats: Optional[int] = None,
-        max_grad_norm: Optional[float] = None,
-        num_steps: Optional[int] = None,
-        gamma: Optional[float] = None,
-        use_gae: Optional[bool] = None,
-        gae_lambda: Optional[float] = None,
-        advance_scene_rollout_period: Optional[int] = None,
-        save_interval: Optional[int] = None,
-        metric_accumulate_interval: Optional[int] = None,
+        training_settings: Optional[TrainingSettings] = None,
+        **training_settings_kwargs,
     ):
-        self._update_repeats: Optional[int] = None
-
         # Populate TrainingSettings members
-        super().__init__(**prepare_locals_for_super(locals()))
+        # THIS MUST COME FIRST IN `__init__` as otherwise `__getattr__` will loop infinitely.
+        assert training_settings is None or len(training_settings_kwargs) == 0
+        if training_settings is None:
+            training_settings = TrainingSettings(**training_settings_kwargs)
+        self.training_settings = training_settings
+        assert self.training_settings.update_repeats is None or isinstance(
+            self.training_settings.update_repeats, numbers.Integral
+        ), (
+            "`training_settings` passed to `PipelineStage` must have `training_settings.update_repeats`"
+            " equal to `None` or an integer. If you'd like to specify per-loss `update_repeats` then please"
+            " do so in the training settings of a `StageComponent`."
+        )
 
         self.loss_names = loss_names
         self.max_stage_steps = max_stage_steps
 
-        self.loss_weights = loss_weights
-        self.loss_update_repeats = loss_update_repeats
-
-        assert self.loss_weights is None or len(self.loss_weights) == len(
-            self.loss_names
+        self.loss_weights = (
+            [1.0] * len(loss_names) if loss_weights is None else loss_weights
         )
-        assert self.loss_update_repeats is None or (
-            len(self.loss_update_repeats) == len(self.loss_names)
-            and self._update_repeats is None
-        )
+        assert len(self.loss_weights) == len(self.loss_names)
 
         self.teacher_forcing = teacher_forcing
-        self.offpolicy_component = offpolicy_component
-        self.custom_components: List[
-            CustomPipelineComponent
-        ] = custom_components if custom_components is not None else []
-        self.name_to_custom_component: Dict[str, CustomPipelineComponent] = {
-            cc.uuid: cc for cc in self.custom_components
-        }
-        self.name_to_num_epoches: Dict[str, CustomPipelineComponent] = {
-            cc.uuid: 0 for cc in self.custom_components
-        }
-        self.named_custom_storage: Optional[Dict[str, ExperienceStorage]] = None
-
-        assert "onpolicy" not in self.name_to_custom_component
-        assert "offpolicy" not in self.name_to_custom_component
 
         self.early_stopping_criterion = early_stopping_criterion
 
@@ -638,34 +666,84 @@ class PipelineStage(TrainingSettings):
         self.rollout_count = 0
         self.early_stopping_criterion_met = False
 
-        self._component_name_to_named_loss_weights: Dict[str, Dict[str, float]] = {}
-        self.component_name_to_stream_memory: Dict[str, Memory] = {
-            cc.uuid: Memory() for cc in self.custom_components
-        }
-        self.component_name_to_num_epoches: Dict[str, int] = {
-            cc.uuid: 0 for cc in self.custom_components
+        self.uuid_to_loss_weight: Dict[str, float] = {
+            loss_uuid: loss_weight
+            for loss_uuid, loss_weight in zip(loss_names, self.loss_weights)
         }
 
-        self.named_losses: Optional[Dict[str, AbstractActorCriticLoss]] = None
-        self._named_loss_update_repeats: Optional[Dict[str, float]] = None
+        self._stage_components: List[StageComponent] = []
+        self.uuid_to_stage_component: Dict[str, StageComponent] = {}
+        self.storage_uuid_to_steps_taken_in_stage: Dict[str, int] = {}
+        self.stage_component_uuid_to_stream_memory: Dict[str, Memory] = {}
 
-        self.offpolicy_memory = Memory()
-        self.offpolicy_epochs: Optional[int] = None
-        self.offpolicy_named_losses: Optional[Dict[str, AbstractOffPolicyLoss]] = None
-        self.offpolicy_steps_taken_in_stage: int = 0
+        if stage_components is not None:
+            for stage_component in stage_components:
+                self.add_stage_component(stage_component)
+
+        # Sanity check
+        for key in training_settings.keys():
+            assert not hasattr(
+                self, key
+            ), f"`{key}` should be defined in `TrainingSettings`, not in `PipelineStage`."
+
+    def reset(self):
+        self.steps_taken_in_stage: int = 0
+        self.rollout_count = 0
+        self.early_stopping_criterion_met = False
+
+        for k in self.storage_uuid_to_steps_taken_in_stage:
+            self.storage_uuid_to_steps_taken_in_stage[k] = 0
+
+        for memory in self.stage_component_uuid_to_stream_memory.values():
+            memory.clear()
 
     @property
-    def update_repeats(self) -> Optional[int]:
-        if self._update_repeats is None:
-            if self.loss_update_repeats is None:
-                return None
-            return max(self.loss_update_repeats)
-        else:
-            return self._update_repeats
+    def stage_components(self) -> Tuple[StageComponent]:
+        return tuple(self._stage_components)
 
-    @update_repeats.setter
-    def update_repeats(self, val: Optional[int]):
-        self._update_repeats = val
+    def add_stage_component(self, stage_component: StageComponent):
+        assert stage_component.uuid not in self.uuid_to_stage_component
+
+        # Setting default training settings for the `stage_component`
+        sc_ts = stage_component.training_settings
+        sc_ts.set_defaults(self.training_settings)
+
+        # Handling the case where different losses should be updated different
+        # numbers of times
+        stage_update_repeats = self.training_settings.update_repeats
+        if stage_update_repeats is not None and sc_ts.update_repeats is None:
+            loss_to_update_repeats = dict(zip(self.loss_names, stage_update_repeats))
+            if isinstance(stage_update_repeats, Sequence):
+                sc_ts.update_repeats = [
+                    loss_to_update_repeats[uuid] for uuid in stage_component.loss_names
+                ]
+            else:
+                sc_ts.update_repeats = stage_update_repeats
+
+        self._stage_components.append(stage_component)
+        self.uuid_to_stage_component[stage_component.uuid] = stage_component
+
+        if (
+            stage_component.storage_uuid
+            not in self.storage_uuid_to_steps_taken_in_stage
+        ):
+            self.storage_uuid_to_steps_taken_in_stage[stage_component.storage_uuid] = 0
+        else:
+            raise NotImplementedError(
+                "Cannot have multiple stage components which"
+                f" use the same storage (reused storage uuid: '{stage_component.storage_uuid}'."
+            )
+
+        self.stage_component_uuid_to_stream_memory[stage_component.uuid] = Memory()
+
+    def __setattr__(self, key: str, value: Any):
+        if key != "training_settings" and self.training_settings.has_key(key):
+            raise NotImplementedError(
+                f"Cannot set {key} in {self.__name__}, update the"
+                f" `training_settings` attribute of {self.__name__} instead."
+            )
+        else:
+            return super(PipelineStage, self).__setattr__(key, value)
 
     @property
     def is_complete(self):
@@ -674,150 +752,174 @@ class PipelineStage(TrainingSettings):
             or self.steps_taken_in_stage >= self.max_stage_steps
         )
 
-    @property
-    def named_loss_update_repeats(self):
-        if self._named_loss_update_repeats is None:
-            loss_update_repeats = (
-                self.loss_update_repeats
-                if self.loss_update_repeats is not None
-                else [None] * len(self.loss_names)
-            )
-            self._named_loss_update_repeats = {
-                name: weight
-                for name, weight in zip(self.loss_names, loss_update_repeats)
-            }
-        return self._named_loss_update_repeats
 
-    @property
-    def named_loss_weights(self):
-        return self.component_name_to_named_loss_weights("onpolicy")
-
-    @property
-    def offpolicy_named_loss_weights(self):
-        return self.component_name_to_named_loss_weights("offpolicy")
-
-    def component_name_to_named_loss_weights(self, uuid: str):
-        if uuid not in self._component_name_to_named_loss_weights:
-            if uuid == "onpolicy":
-                loss_names = self.loss_names
-                loss_weights = self.loss_weights
-            elif uuid == "offpolicy":
-                loss_names = self.offpolicy_component.loss_names
-                loss_weights = self.offpolicy_component.loss_weights
-            else:
-                loss_names = self.name_to_custom_component[uuid].loss_names
-                loss_weights = self.name_to_custom_component[uuid].loss_weights
-
-            if loss_weights is None:
-                loss_weights = [1.0] * len(loss_names)
-
-            self._component_name_to_named_loss_weights[uuid] = {
-                name: weight for name, weight in zip(loss_names, loss_weights)
-            }
-
-        return self._component_name_to_named_loss_weights[uuid]
-
-
-class TrainingPipeline(TrainingSettings):
+class TrainingPipeline:
     """Class defining the stages (and global training settings) in a training
     pipeline.
 
     The training pipeline can be used as an iterator to go through the pipeline
     stages in, for instance, a loop.
 
-    # Attributes
+    # Parameters
 
     named_losses : Dictionary mapping a the name of a loss to either an instantiation
         of that loss or a `Builder` that, when called, will return that loss.
     pipeline_stages : A list of PipelineStages. Each of these define how the agent
         will be trained and are executed sequentially.
     optimizer_builder : Builder object to instantiate the optimizer to use during training.
-    num_mini_batch : See docs for `TrainingSettings`.
-    update_repeats : See docs for `TrainingSettings`.
-    max_grad_norm : See docs for `TrainingSettings`.
-    num_steps : See docs for `TrainingSettings`.
-    gamma : See docs for `TrainingSettings`.
-    use_gae : See docs for `TrainingSettings`.
-    gae_lambda : See docs for `TrainingSettings`.
-    advance_scene_rollout_period: See docs for `TrainingSettings`.
-    save_interval : See docs for `TrainingSettings`.
-    metric_accumulate_interval : See docs for `TrainingSettings`.
+    named_storages: TODO
+    rollout_storage_uuid: TODO
     should_log: `True` if metrics accumulated during training should be logged to the console as well
         as to a tensorboard file.
     lr_scheduler_builder : Optional builder object to instantiate the learning rate scheduler used
         through the pipeline.
+    training_settings: TODO
+    training_settings_kwargs: TODO
     """
 
     # noinspection PyUnresolvedReferences
     def __init__(
         self,
+        *,
         named_losses: Dict[str, Union[Loss, Builder[Loss]]],
         pipeline_stages: List[PipelineStage],
         optimizer_builder: Builder[optim.Optimizer],  # type: ignore
-        num_mini_batch: int,
-        update_repeats: Optional[int],
-        max_grad_norm: float,
-        num_steps: int,
-        gamma: float,
-        use_gae: bool,
-        gae_lambda: float,
-        advance_scene_rollout_period: Optional[int],
-        save_interval: Optional[int],
-        metric_accumulate_interval: int,
         named_storages: Optional[
             Dict[str, Union[ExperienceStorage, Builder[ExperienceStorage]]]
         ] = None,
+        rollout_storage_uuid: Optional[str] = None,
         should_log: bool = True,
-        lr_scheduler_builder: Optional[Builder[optim.lr_scheduler._LRScheduler]] = None,  # type: ignore
+        lr_scheduler_builder: Optional[Builder[_LRScheduler]] = None,  # type: ignore
+        training_settings: Optional[TrainingSettings] = None,
+        **training_settings_kwargs,
     ):
         """Initializer.
 
         See class docstring for parameter definitions.
         """
-        all_vars = prepare_locals_for_super(locals())
 
         # Populate TrainingSettings members
-        super().__init__(**all_vars)
+        assert training_settings is None or len(training_settings_kwargs) == 0
+        if training_settings is None:
+            training_settings = TrainingSettings(**training_settings_kwargs)
+        self.training_settings = training_settings
+
+        assert self.training_settings.update_repeats is None or isinstance(
+            self.training_settings.update_repeats, numbers.Integral
+        ), (
+            "`training_settings` passed to `TrainingPipeline` must have `training_settings.update_repeats`"
+            " equal to `None` or an integer. If you'd like to specify per-loss `update_repeats` then please"
+            " do so in the training settings of a `StageComponent`."
+        )
+        self.training_settings = training_settings
 
         self.optimizer_builder = optimizer_builder
         self.lr_scheduler_builder = lr_scheduler_builder
 
-        self.named_losses = named_losses
-        self.named_custom_storage = {} if named_storages is None else named_storages
+        self._named_losses = named_losses
+        self._named_storages = self._initialize_named_storages(
+            named_storages=named_storages
+        )
+        self.rollout_storage_uuid = self._initialize_rollout_storage_uuid(
+            rollout_storage_uuid
+        )
+
         self.should_log = should_log
 
         self.pipeline_stages = pipeline_stages
-        if len(self.pipeline_stages) > len(set(id(ps) for ps in pipeline_stages)):
-            raise RuntimeError(
-                "Duplicate `PipelineStage` object instances found in the pipeline stages input"
-                " to `TrainingPipeline`. `PipelineStage` objects are not immutable, if you'd"
-                " like to have multiple pipeline stages of the same type, please instantiate"
-                " multiple separate instances."
-            )
+        assert len(self.pipeline_stages) == len(
+            set(id(ps) for ps in pipeline_stages)
+        ), (
+            "Duplicate `PipelineStage` object instances found in the pipeline stages input"
+            " to `TrainingPipeline`. `PipelineStage` objects are not immutable, if you'd"
+            " like to have multiple pipeline stages of the same type, please instantiate"
+            " multiple separate instances."
+        )
+
+        self._ensure_pipeline_stages_all_have_at_least_one_valid_stage_component()
 
         self._current_stage: Optional[PipelineStage] = None
-        for sit, stage in enumerate(self.pipeline_stages):
-            # Forward all global `TrainingSettings` to all `PipelineStage`s unless overridden:
-            for var in _TRAINING_SETTINGS_NAMES:
-                if getattr(stage, var) is None:
-                    setattr(stage, var, getattr(self, var))
-
-            assert (
-                stage.num_steps <= self.num_steps
-            ), f"Stage {sit} has `num_steps` {stage.num_steps} > {self.num_steps} in pipeline."
-
         self.rollout_count = 0
-        self.off_policy_epochs = None
-
         self._refresh_current_stage(force_stage_search_from_start=True)
 
-    @property
-    def total_steps(self) -> int:
-        return sum(ps.steps_taken_in_stage for ps in self.pipeline_stages)
+    def _initialize_rollout_storage_uuid(
+        self, rollout_storage_uuid: Optional[str]
+    ) -> str:
+        if rollout_storage_uuid is None:
+            rollout_storage_uuids = self._get_uuids_of_rollout_storages(
+                self._named_storages
+            )
+            assert len(rollout_storage_uuids) == 1, (
+                f"`rollout_storage_uuid` cannot be automatically inferred as there are multiple storages defined"
+                f" (ids: {rollout_storage_uuids}) of type `RolloutStorage`."
+            )
+            rollout_storage_uuid = rollout_storage_uuids[0]
+        assert rollout_storage_uuid in self._named_storages
+        return rollout_storage_uuid
 
-    @property
-    def total_offpolicy_steps(self) -> int:
-        return sum(ps.offpolicy_steps_taken_in_stage for ps in self.pipeline_stages)
+    def _ensure_pipeline_stages_all_have_at_least_one_valid_stage_component(self):
+        rollout_storages_uuids = self._get_uuids_of_rollout_storages(
+            self._named_storages
+        )
+
+        for sit, stage in enumerate(self.pipeline_stages):
+            # Forward default `TrainingSettings` to all `PipelineStage`s settings:
+            stage.training_settings.set_defaults(defaults=self.training_settings)
+
+            if len(stage.stage_components) == 0:
+                assert len(rollout_storages_uuids) == 1, (
+                    f"In {sit}th pipeline stage: you have several storages specified ({rollout_storages_uuids}) which"
+                    f" are subclasses of `RolloutStorage`. This is only allowed when stage components are explicitly"
+                    f" defined in every `PipelineStage` instance. You have `PipelineStage`s for which stage components"
+                    f" are not specified."
+                )
+                stage.add_stage_component(
+                    StageComponent(
+                        uuid=rollout_storages_uuids[0],
+                        storage_uuid=rollout_storages_uuids[0],
+                        loss_names=stage.loss_names,
+                        training_settings=TrainingSettings(),
+                    )
+                )
+
+            for sc in stage.stage_components:
+                assert sc.storage_uuid in self._named_storages, (
+                    f"In {sit}th pipeline stage: storage with name '{sc.storage_uuid}' not found in collection of"
+                    f" defined storages names: {list(self._named_storages.keys())}"
+                )
+
+    @classmethod
+    def _get_uuids_of_rollout_storages(
+        cls,
+        named_storages: Dict[str, Union[Builder[ExperienceStorage], ExperienceStorage]],
+    ) -> List[str]:
+        return [
+            uuid
+            for uuid, storage in named_storages.items()
+            if isinstance(storage, RolloutStorage)
+            or (
+                isinstance(storage, Builder)
+                and issubclass(storage.class_type, RolloutStorage)
+            )
+        ]
+
+    @classmethod
+    def _initialize_named_storages(
+        cls,
+        named_storages: Optional[
+            Dict[str, Union[Builder[ExperienceStorage], ExperienceStorage]]
+        ],
+    ) -> Dict[str, Union[Builder[ExperienceStorage], ExperienceStorage]]:
+        named_storages = {} if named_storages is None else {**named_storages}
+
+        rollout_storages_uuids = cls._get_uuids_of_rollout_storages(named_storages)
+        if len(rollout_storages_uuids) == 0:
+            assert (
+                _DEFAULT_ONPOLICY_UUID not in named_storages
+            ), f"Storage uuid '{_DEFAULT_ONPOLICY_UUID}' is reserved, please pick a different uuid."
+            named_storages[_DEFAULT_ONPOLICY_UUID] = Builder(RolloutBlockStorage)
+            rollout_storages_uuids.append(_DEFAULT_ONPOLICY_UUID)
+        return named_storages
 
     def _refresh_current_stage(
         self, force_stage_search_from_start: bool = False
@@ -837,6 +939,19 @@ class TrainingPipeline(TrainingSettings):
                     self._current_stage = ps
                     break
         return self._current_stage
+
+    @property
+    def total_steps(self) -> int:
+        return sum(ps.steps_taken_in_stage for ps in self.pipeline_stages)
+
+    @property
+    def storage_uuid_to_total_experiences(self) -> Dict[str, int]:
+        totals = {k: 0 for k in self._named_storages}
+        for ps in self.pipeline_stages:
+            for k in ps.storage_uuid_to_steps_taken_in_stage:
+                totals[k] += ps.storage_uuid_to_steps_taken_in_stage[k]
+
+        return totals
 
     @property
     def current_stage(self) -> Optional[PipelineStage]:
@@ -869,8 +984,7 @@ class TrainingPipeline(TrainingSettings):
 
     def restart_pipeline(self):
         for ps in self.pipeline_stages:
-            ps.steps_taken_in_stage = 0
-            ps.early_stopping_criterion_met = False
+            ps.reset()
         self._current_stage = None
         self._refresh_current_stage(force_stage_search_from_start=True)
 
@@ -880,80 +994,75 @@ class TrainingPipeline(TrainingSettings):
                 {
                     "early_stopping_criterion_met": ps.early_stopping_criterion_met,
                     "steps_taken_in_stage": ps.steps_taken_in_stage,
-                    "offpolicy_steps_taken_in_stage": ps.offpolicy_steps_taken_in_stage,
                 }
                 for ps in self.pipeline_stages
             ],
             rollout_count=self.rollout_count,
-            off_policy_epochs=self.off_policy_epochs,
         )
 
     def load_state_dict(self, state_dict: Dict[str, Any]):
+        if "off_policy_epochs" in state_dict:
+            get_logger().warning(
+                "Loaded state dict was saved using an older version of AllenAct."
+                " If you are attempting to restart training for a model that had an off-policy component, be aware"
+                " that logging for the off-policy component will not behave as it previously did."
+            )
+
         for ps, stage_info in zip(self.pipeline_stages, state_dict["stage_info_list"]):
             ps.early_stopping_criterion_met = stage_info["early_stopping_criterion_met"]
             ps.steps_taken_in_stage = stage_info["steps_taken_in_stage"]
-            ps.offpolicy_steps_taken_in_stage = stage_info.get(
-                "offpolicy_steps_taken_in_stage", 0
-            )
 
         self.rollout_count = state_dict["rollout_count"]
-        self.off_policy_epochs = state_dict.get("off_policy_epochs", 0)
 
         self._refresh_current_stage(force_stage_search_from_start=True)
 
     @property
-    def current_custom_stage_storage(self) -> Dict[str, ExperienceStorage]:
-        if self.current_stage.named_custom_storage is None:
-            storage_names_for_current_stage = sorted(
-                list(
-                    set(cc.storage_name for cc in self.current_stage.custom_components)
-                )
+    def rollout_storage(self) -> RolloutStorage:
+        return cast(
+            RolloutStorage, self.current_stage_storage[self.rollout_storage_uuid]
+        )
+
+    @property
+    def current_stage_storage(self) -> Dict[str, ExperienceStorage]:
+        storage_uuids_for_current_stage = sorted(
+            list(
+                set(sc.storage_uuid for sc in self.current_stage.stage_components)
+                | {
+                    self.rollout_storage_uuid
+                }  # Always include self.rollout_storage_uuid
             )
-            for storage_name in storage_names_for_current_stage:
-                if isinstance(self.named_custom_storage[storage_name], Builder):
-                    self.named_custom_storage[storage_name] = cast(
-                        Builder["ExperienceStorage"],
-                        self.named_custom_storage[storage_name],
-                    )()
+        )
+        for storage_uuid in storage_uuids_for_current_stage:
+            if isinstance(self._named_storages[storage_uuid], Builder):
+                self._named_storages[storage_uuid] = cast(
+                    Builder["ExperienceStorage"], self._named_storages[storage_uuid],
+                )()
 
-            self.current_stage.named_custom_storage = {
-                storage_name: cast(
-                    ExperienceStorage, self.named_custom_storage[storage_name]
-                )
-                for storage_name in storage_names_for_current_stage
-            }
+        return {k: self._named_storages[k] for k in storage_uuids_for_current_stage}
 
-        return self.current_stage.named_custom_storage
-
-    @property
-    def current_stage_losses(self) -> Dict[str, AbstractActorCriticLoss]:
-        if self.current_stage.named_losses is None:
-            for loss_name in self.current_stage.loss_names:
-                if isinstance(self.named_losses[loss_name], Builder):
-                    self.named_losses[loss_name] = cast(
-                        Builder["AbstractActorCriticLoss"],
-                        self.named_losses[loss_name],
-                    )()
-
-            self.current_stage.named_losses = {
-                loss_name: cast(AbstractActorCriticLoss, self.named_losses[loss_name])
-                for loss_name in self.current_stage.loss_names
-            }
-
-        return self.current_stage.named_losses
+    def get_loss(self, uuid: str):
+        if isinstance(self._named_losses[uuid], Builder):
+            self._named_losses[uuid] = cast(
+                Builder[Union["AbstractActorCriticLoss", "GenericAbstractLoss"]],
+                self._named_losses[uuid],
+            )()
+        return self._named_losses[uuid]
 
     @property
-    def current_stage_offpolicy_losses(self) -> Dict[str, AbstractOffPolicyLoss]:
-        if self.current_stage.offpolicy_named_losses is None:
-            for loss_name in self.current_stage.offpolicy_component.loss_names:
-                if isinstance(self.named_losses[loss_name], Builder):
-                    self.named_losses[loss_name] = cast(
-                        Builder["AbstractOffPolicyLoss"], self.named_losses[loss_name],
-                    )()
+    def current_stage_losses(
+        self,
+    ) -> Dict[str, Union[AbstractActorCriticLoss, GenericAbstractLoss]]:
+        for loss_name in self.current_stage.loss_names:
+            if isinstance(self._named_losses[loss_name], Builder):
+                self._named_losses[loss_name] = cast(
+                    Builder[Union["AbstractActorCriticLoss", "GenericAbstractLoss"]],
+                    self._named_losses[loss_name],
+                )()
 
-            self.current_stage.offpolicy_named_losses = {
-                loss_name: cast(AbstractOffPolicyLoss, self.named_losses[loss_name])
-                for loss_name in self.current_stage.offpolicy_component.loss_names
-            }
-
-        return self.current_stage.offpolicy_named_losses
+        return {
+            loss_name: cast(
+                Union[AbstractActorCriticLoss, GenericAbstractLoss],
+                self._named_losses[loss_name],
+            )
+            for loss_name in self.current_stage.loss_names
+        }

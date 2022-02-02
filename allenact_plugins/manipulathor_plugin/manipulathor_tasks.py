@@ -1,10 +1,11 @@
 """Task Definions for the task of ArmPointNav."""
 
-from typing import Dict, Tuple, List, Any, Optional
 import copy
+from typing import Dict, Tuple, List, Any, Optional
 
 import gym
 import numpy as np
+
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import Sensor
 from allenact.base_abstractions.task import Task
@@ -12,7 +13,6 @@ from allenact_plugins.manipulathor_plugin.armpointnav_constants import (
     MOVE_ARM_CONSTANT,
     DISTANCE_EPS,
 )
-
 from allenact_plugins.manipulathor_plugin.manipulathor_constants import (
     MOVE_ARM_HEIGHT_P,
     MOVE_ARM_HEIGHT_M,
@@ -72,7 +72,7 @@ class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
         sensors: List[Sensor],
         task_info: Dict[str, Any],
         max_steps: int,
-        visualizers: List[LoggerVisualizer] = [],
+        visualizers: Optional[List[LoggerVisualizer]] = None,
         **kwargs
     ) -> None:
         """Initializer.
@@ -87,7 +87,7 @@ class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
         self._subsampled_locations_from_which_obj_visible: Optional[
             List[Tuple[float, float, int, int]]
         ] = None
-        self.visualizers = visualizers
+        self.visualizers = visualizers if visualizers is not None else []
         self.start_visualize()
         self.action_sequence_and_success = []
         self._took_end_action: bool = False
@@ -286,7 +286,7 @@ class ArmPointNavTask(AbstractPickUpDropOffTask):
         sensors: List[Sensor],
         task_info: Dict[str, Any],
         max_steps: int,
-        visualizers: List[LoggerVisualizer] = [],
+        visualizers: Optional[List[LoggerVisualizer]] = None,
         **kwargs
     ) -> None:
         super().__init__(

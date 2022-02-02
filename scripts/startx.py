@@ -79,6 +79,8 @@ def startx(display=0):
     if not devices:
         raise Exception("no nvidia cards found")
 
+    fd = None
+    path = None
     try:
         fd, path = tempfile.mkstemp()
         with open(path, "w") as f:
@@ -87,9 +89,10 @@ def startx(display=0):
         proc = subprocess.Popen(command)
         atexit.register(lambda: proc.poll() is None and proc.kill())
         proc.wait()
-    finally: 
-        os.close(fd)
-        os.unlink(path)
+    finally:
+        if fd is not None:
+            os.close(fd)
+            os.unlink(path)
 
 # fmt: on
 

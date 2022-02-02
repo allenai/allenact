@@ -60,15 +60,15 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from allenact.algorithms.onpolicy_sync.losses import PPO
 from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_rgb_resnetgru_ddppo import (
-    ObjectNavRoboThorRGBPPOExperimentConfig as BaseConfig,
-)
 from allenact.utils.experiment_utils import (
     Builder,
     LinearDecay,
     MultiLinearDecay,
     TrainingPipeline,
     PipelineStage,
+)
+from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_rgb_resnetgru_ddppo import (
+    ObjectNavRoboThorRGBPPOExperimentConfig as BaseConfig,
 )
 
 
@@ -112,7 +112,12 @@ class DistributedObjectNavRoboThorRGBPPOExperimentConfig(BaseConfig):
         val_gpu_ids: Optional[Sequence[int]] = None,
         test_gpu_ids: Optional[Sequence[int]] = None,
     ):
-        super().__init__(num_train_processes, train_gpu_ids, val_gpu_ids, test_gpu_ids)
+        super().__init__(
+            num_train_processes=num_train_processes,
+            train_gpu_ids=train_gpu_ids,
+            val_gpu_ids=val_gpu_ids,
+            test_gpu_ids=test_gpu_ids,
+        )
         self.distributed_nodes = distributed_nodes
 
     # %%

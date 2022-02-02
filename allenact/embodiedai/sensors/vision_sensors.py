@@ -230,9 +230,9 @@ class RGBSensor(VisionSensor[EnvType, SubTaskType], ABC):
             mean, stdev = None, None
 
         if isinstance(mean, tuple):
-            mean = np.array(mean, dtype=np.float32).reshape(1, 1, len(mean))
+            mean = np.array(mean, dtype=np.float32).reshape((1, 1, len(mean)))
         if isinstance(stdev, tuple):
-            stdev = np.array(stdev, dtype=np.float32).reshape(1, 1, len(stdev))
+            stdev = np.array(stdev, dtype=np.float32).reshape((1, 1, len(stdev)))
 
         super().__init__(**prepare_locals_for_super(locals()))
 

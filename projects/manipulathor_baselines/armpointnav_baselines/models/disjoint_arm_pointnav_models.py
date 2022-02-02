@@ -6,6 +6,8 @@ from typing import Tuple, Optional
 
 import gym
 import torch
+from gym.spaces.dict import Dict as SpaceDict
+
 from allenact.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     LinearCriticHead,
@@ -16,8 +18,6 @@ from allenact.algorithms.onpolicy_sync.policy import (
 from allenact.base_abstractions.distributions import CategoricalDistr
 from allenact.base_abstractions.misc import ActorCriticOutput
 from allenact.embodiedai.models.basic_models import SimpleCNN, RNNStateEncoder
-from gym.spaces.dict import Dict as SpaceDict
-
 from projects.manipulathor_baselines.armpointnav_baselines.models.base_models import (
     LinearActorHeadNoCategory,
 )
@@ -75,7 +75,7 @@ class DisjointArmPointNavBaselineActorCritic(ActorCriticModel[CategoricalDistr])
         )
 
         self.state_encoder = RNNStateEncoder(
-            (self._hidden_size) + obj_state_embedding_size,
+            self._hidden_size + obj_state_embedding_size,
             self._hidden_size,
             trainable_masked_hidden_state=trainable_masked_hidden_state,
             num_layers=num_rnn_layers,

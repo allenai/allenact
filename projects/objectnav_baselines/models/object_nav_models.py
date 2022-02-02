@@ -10,9 +10,9 @@ import torch
 import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
+import allenact.embodiedai.models.resnet as resnet
 from allenact.algorithms.onpolicy_sync.policy import ObservationType
 from allenact.embodiedai.models.basic_models import SimpleCNN
-import allenact.embodiedai.models.resnet as resnet
 from allenact.embodiedai.models.visual_nav_models import (
     VisualNavActorCritic,
     FusionType,
@@ -132,17 +132,17 @@ class ObjectNavActorCritic(VisualNavActorCritic):
         return dims + self.recurrent_hidden_state_size
 
     def get_object_type_encoding(
-        self, observations: Dict[str, torch.FloatTensor]
-    ) -> torch.FloatTensor:
+        self, observations: Dict[str, torch.Tensor]
+    ) -> torch.Tensor:
         """Get the object type encoding from input batched observations."""
         # noinspection PyTypeChecker
         return self.object_type_embedding(  # type:ignore
             observations[self.goal_sensor_uuid].to(torch.int64)
         )
 
-    def forward_encoder(self, observations: ObservationType) -> torch.FloatTensor:
+    def forward_encoder(self, observations: ObservationType) -> torch.Tensor:
         target_encoding = self.get_object_type_encoding(
-            cast(Dict[str, torch.FloatTensor], observations)
+            cast(Dict[str, torch.Tensor], observations)
         )
         obs_embeds = [target_encoding]
 
@@ -212,6 +212,7 @@ class ResnetTensorObjectNavActorCritic(VisualNavActorCritic):
                 resnet_compressor_hidden_out_dims,
                 combiner_hidden_out_dims,
             )
+
         self.create_state_encoders(
             obs_embed_size=self.goal_visual_encoder.output_dims,
             num_rnn_layers=num_rnn_layers,
@@ -492,6 +493,6 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         ]
         depth_x = self.depth_target_obs_combiner(torch.cat(depth_embs, dim=1,))
         x = torch.cat([rgb_x, depth_x], dim=1)
-        x = x.reshape(x.size(0), -1)  # flatten
+        x = x.reshape(x.shape[0], -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)

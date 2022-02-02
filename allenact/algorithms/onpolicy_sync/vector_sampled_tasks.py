@@ -65,6 +65,12 @@ RESUME_COMMAND = "resume"
 
 class DelaySignalHandling:
     # Modified from https://stackoverflow.com/a/21919644
+    def __init__(self):
+        self.int_signal_received: Optional[Any] = None
+        self.term_signal_received: Optional[Any] = None
+        self.old_int_handler = None
+        self.old_term_handler = None
+
     def __enter__(self):
         self.int_signal_received: Optional[Any] = None
         self.term_signal_received: Optional[Any] = None
@@ -358,7 +364,7 @@ class VectorSampledTasks(object):
                                 )
                             )
 
-        except KeyboardInterrupt as e:
+        except KeyboardInterrupt:
             if should_log:
                 get_logger().info(f"Worker {worker_id} KeyboardInterrupt")
         except Exception as e:

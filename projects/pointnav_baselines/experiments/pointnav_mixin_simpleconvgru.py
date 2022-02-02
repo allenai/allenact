@@ -1,4 +1,5 @@
 from abc import ABC
+from typing import List, Optional
 
 import gym
 import torch.nn as nn
@@ -22,6 +23,12 @@ from projects.pointnav_baselines.models.point_nav_models import PointNavActorCri
 
 class PointNavMixInSimpleConvGRUConfig(PointNavBaseConfig, ABC):
     """The base config for all iTHOR PPO PointNav experiments."""
+
+    AUXILIARY_UUIDS: List[str]
+    ADD_PREV_ACTIONS: bool
+    MULTIPLE_BELIEFS: bool
+    BELIEF_FUSION: Optional[str]
+    NORMALIZE_ADVANTAGE: bool
 
     # TODO only tested in roboTHOR Depth
     BACKBONE = (  # choose one

@@ -4,9 +4,9 @@
 # LICENSE file in the root directory of this source tree.
 # Adapted from https://github.com/joel99/habitat-pointnav-aux/blob/master/habitat_baselines/
 
+import math
 from typing import Tuple
 
-import math
 import torch
 import torch.nn as nn
 
@@ -85,9 +85,9 @@ class SoftmaxFusion(Fusion):
 
     def get_belief_weights(
         self,
-        all_beliefs: torch.FloatTensor,  # (T*N, H, K)
-        obs_embeds: torch.FloatTensor,  # (T*N, Z)
-    ) -> torch.FloatTensor:  # (T*N, K)
+        all_beliefs: torch.Tensor,  # (T*N, H, K)
+        obs_embeds: torch.Tensor,  # (T*N, Z)
+    ) -> torch.Tensor:  # (T*N, K)
 
         scores = self.linear(obs_embeds)  # (T*N, K)
         weights = torch.softmax(scores, dim=-1)
@@ -106,9 +106,9 @@ class AttentiveFusion(Fusion):
 
     def get_belief_weights(
         self,
-        all_beliefs: torch.FloatTensor,  # (T*N, H, K)
-        obs_embeds: torch.FloatTensor,  # (T*N, Z)
-    ) -> torch.FloatTensor:  # (T*N, K)
+        all_beliefs: torch.Tensor,  # (T*N, H, K)
+        obs_embeds: torch.Tensor,  # (T*N, Z)
+    ) -> torch.Tensor:  # (T*N, K)
 
         queries = self.linear(obs_embeds).unsqueeze(1)  # (T*N, 1, H)
         scores = torch.bmm(queries, all_beliefs).squeeze(1)  # (T*N, K)

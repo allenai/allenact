@@ -91,7 +91,7 @@ class GymContinuousTask(GymTask):
         )
 
 
-def task_selector(env_name: str) -> type:
+def default_task_selector(env_name: str) -> type:
     """Helper function for `GymTaskSampler`."""
     if env_name in [
         # Box2d Env
@@ -135,7 +135,7 @@ def sensor_selector(env_name: str) -> Sensor:
         "Swimmer-v2",
         "Walker2d-v2",
     ]:
-        return GymMuJoCoSensor(env_name=env_name, uuid="gym_mujoco_data")
+        return GymMuJoCoSensor(gym_env_name=env_name, uuid="gym_mujoco_data")
     raise NotImplementedError()
 
 
@@ -150,7 +150,7 @@ class GymTaskSampler(TaskSampler):
         num_unique_seeds: Optional[int] = None,
         task_seeds_list: Optional[List[int]] = None,
         deterministic_sampling: bool = False,
-        task_selector: Callable[[str], type] = task_selector,
+        task_selector: Callable[[str], type] = default_task_selector,
         repeat_failed_task_for_min_steps: int = 0,
         extra_task_kwargs: Optional[Dict] = None,
         seed: Optional[int] = None,

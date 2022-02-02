@@ -22,13 +22,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import math
-from typing import Optional, Tuple, Dict, Any
+from typing import Optional, Tuple, Dict, Any, cast
 
 import numpy as np
 import torch
 import torch.nn as nn
-import torchvision.models as models
 import torch.nn.functional as F
+import torchvision.models as models
 
 from allenact.utils.model_utils import simple_conv_and_linear_weights_init
 
@@ -246,7 +246,7 @@ class ActiveNeuralSLAM(nn.Module):
 
     @property
     def vision_range(self):
-        return self.vision_range_in_cm // (self.resolution_in_cm)
+        return self.vision_range_in_cm // self.resolution_in_cm
 
     def image_to_egocentric_map_logits(
         self,
@@ -570,7 +570,9 @@ def _move_egocentric_map_view_into_allocentric_position(
     # First we place the egocentric map view into the center
     # of a map that has the same size as the allocentric map
 
-    nbatch, c, ego_h, ego_w = map_probs_egocentric.shape
+    nbatch, c, ego_h, ego_w = cast(
+        Tuple[int, int, int, int], map_probs_egocentric.shape
+    )
     allo_h, allo_w = allocentric_map_height_width
 
     max_view_range = math.sqrt((ego_w / 2.0) ** 2 + ego_h ** 2)
@@ -630,7 +632,7 @@ def _move_egocentric_map_view_into_allocentric_position(
     theta22 = torch.stack([zeroes, ones, z], 1)
     theta2 = torch.stack([theta21, theta22], 1)
 
-    grid_size = (nbatch, c, allo_h, allo_w)
+    grid_size = [nbatch, c, allo_h, allo_w]
     rot_grid = F.affine_grid(theta1, grid_size)
     trans_grid = F.affine_grid(theta2, grid_size)
 

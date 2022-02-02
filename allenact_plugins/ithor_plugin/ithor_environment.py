@@ -181,6 +181,7 @@ class IThorEnvironment(object):
                 "Trying to start the environment but it is already started."
             )
 
+        # noinspection PyUnresolvedReferences
         self.controller = Controller(
             x_display=self.x_display,
             width=self._start_player_screen_width,

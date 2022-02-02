@@ -202,8 +202,7 @@ class GroupNormResNet(nn.Module):
                 nn.GroupNorm(ngroups, planes * block.expansion),
             )
 
-        layers = []
-        layers.append(
+        layers = [
             block(
                 self.inplanes,
                 planes,
@@ -212,7 +211,7 @@ class GroupNormResNet(nn.Module):
                 downsample,
                 cardinality=self.cardinality,
             )
-        )
+        ]
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
             layers.append(block(self.inplanes, planes, ngroups))
@@ -299,7 +298,6 @@ class GroupNormResNetEncoder(nn.Module):
         output_size: int,
         baseplanes=32,
         ngroups=32,
-        spatial_size=128,
         make_backbone=None,
     ):
         super().__init__()
@@ -328,6 +326,7 @@ class GroupNormResNetEncoder(nn.Module):
             spatial_size = (
                 observation_space.spaces[self._inputs[0]].shape[0] // 2
             )  # H (=W) / 2
+
             # RGBD into one model
             input_channels = self._n_input_rgb + self._n_input_depth  # C
 

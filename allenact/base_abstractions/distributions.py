@@ -1,12 +1,13 @@
 import abc
-from typing import Any, Union, Callable, TypeVar, Dict, Optional, cast
 from collections import OrderedDict
+from typing import Any, Union, Callable, TypeVar, Dict, Optional, cast, List
 
+import gym
 import torch
 import torch.nn as nn
 from torch.distributions.utils import lazy_property
-import gym
 
+from allenact.algorithms.onpolicy_sync.misc import TrackingInfoType, TrackingInfo
 from allenact.base_abstractions.sensor import AbstractExpertActionSensor as Expert
 from allenact.utils import spaces_utils as su
 from allenact.utils.misc_utils import all_unique
@@ -174,10 +175,10 @@ class SequentialDistr(Distr):
         return actions
 
     def conditional_entropy(self):
-        sum = 0
+        total = 0
         for cd in self.conditional_distrs:
-            sum = sum + cd.entropy()
-        return sum
+            total = total + cd.entropy()
+        return total
 
     def entropy(self):
         raise NotImplementedError(
@@ -217,7 +218,7 @@ class TeacherForcingDistr(Distr):
         num_active_samplers: Optional[int],
         approx_steps: Optional[int],
         teacher_forcing: Optional[TeacherForcingAnnealingType],
-        tracking_info: Optional[Dict[str, Any]],
+        tracking_info_list: Optional[List[TrackingInfo]],
         always_enforce: bool = False,
     ):
         self.distr = distr
@@ -228,7 +229,7 @@ class TeacherForcingDistr(Distr):
         self.num_active_samplers = num_active_samplers
         self.approx_steps = approx_steps
         self.teacher_forcing = teacher_forcing
-        self.tracking_info = tracking_info
+        self.tracking_info_list = tracking_info_list
         self.always_enforce = always_enforce
 
         assert (
@@ -301,7 +302,12 @@ class TeacherForcingDistr(Distr):
         return self.distr.entropy()
 
     def conditional_entropy(self):
-        return self.distr.conditional_entropy()
+        if hasattr(self.distr, "conditional_entropy"):
+            return self.distr.conditional_entropy()
+
+        raise NotImplementedError(
+            f"`conditional_entropy` is not defined for {self.distr}."
+        )
 
     def sample(self, sample_shape=torch.Size()):
         teacher_force_info: Optional[Dict[str, Any]] = None
@@ -330,9 +336,15 @@ class TeacherForcingDistr(Distr):
                 teacher_force_info,
             )
 
-        if self.tracking_info is not None and self.num_active_samplers is not None:
-            self.tracking_info["teacher"].append(
-                ("teacher_package", teacher_force_info, self.num_active_samplers)
+        if self.tracking_info_list is not None and self.num_active_samplers is not None:
+            self.tracking_info_list.append(
+                TrackingInfo(
+                    type=TrackingInfoType.TEACHER_FORCING,
+                    info=teacher_force_info,
+                    n=self.num_active_samplers,
+                    storage_uuid=None,
+                    stage_component_uuid=None,
+                )
             )
 
         return res

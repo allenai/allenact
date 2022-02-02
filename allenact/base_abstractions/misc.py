@@ -11,6 +11,7 @@ from typing import (
     Generic,
 )
 
+import attr
 import torch
 
 EnvType = TypeVar("EnvType")
@@ -348,9 +349,11 @@ class Loss(abc.ABC):
     pass
 
 
-class LossOutput(NamedTuple):
-    current_loss: torch.Tensor
-    current_info: Dict[str, Union[float, int]]
+@attr.define
+class LossOutput:
+    value: torch.Tensor
+    info: Dict[str, Union[float, int]]
+    per_epoch_info: Dict[str, Union[float, int]]
     batch_memory: Memory
     stream_memory: Memory
     bsize: int

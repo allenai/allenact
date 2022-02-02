@@ -17,13 +17,13 @@ from typing import (
     Generator,
 )
 
+import gym
 import numpy as np
 import torch
 from torch import Tensor
 
 import allenact.utils.spaces_utils as su
 from allenact.algorithms.onpolicy_sync.policy import (
-    ActorCriticModel,
     FullMemorySpecType,
     ObservationType,
     ActionType,
@@ -33,7 +33,7 @@ from allenact.base_abstractions.misc import Memory
 
 class ExperienceStorage(abc.ABC):
     @abc.abstractmethod
-    def initialize(self, observations: ObservationType):
+    def initialize(self, *, observations: ObservationType, **kwargs):
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -49,10 +49,10 @@ class ExperienceStorage(abc.ABC):
     ):
         raise NotImplementedError
 
-    def before_update(self, **kwargs):
+    def before_updates(self, **kwargs):
         pass
 
-    def after_update(self, **kwargs):
+    def after_updates(self, **kwargs) -> int:
         pass
 
     @abc.abstractmethod
@@ -63,8 +63,36 @@ class ExperienceStorage(abc.ABC):
     def set_partition(self, index: int, num_parts: int):
         raise NotImplementedError
 
+    @property
+    @abc.abstractmethod
+    def total_experiences(self) -> int:
+        raise NotImplementedError
 
-class StreamingExperienceStorage(ExperienceStorage):
+
+class RolloutStorage(ExperienceStorage, abc.ABC):
+    # noinspection PyMethodOverriding
+    @abc.abstractmethod
+    def initialize(
+        self,
+        *,
+        observations: ObservationType,
+        num_samplers: int,
+        recurrent_memory_specification: FullMemorySpecType,
+        action_space: gym.Space,
+        **kwargs,
+    ):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def agent_input_for_next_step(self) -> Dict[str, Any]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def sampler_select(self, keep_list: Sequence[int]):
+        raise NotImplementedError
+
+
+class StreamingStorageMixin(abc.ABC):
     @abc.abstractmethod
     def next_batch(self) -> Dict[str, Any]:
         raise NotImplementedError
@@ -77,12 +105,8 @@ class StreamingExperienceStorage(ExperienceStorage):
     def empty(self) -> bool:
         raise NotImplementedError
 
-    @property
-    def num_epoches_completed(self) -> int:
-        return 0
 
-
-class MiniBatchExperienceStorage(ExperienceStorage):
+class MiniBatchStorageMixin(abc.ABC):
     @abc.abstractmethod
     def batched_experience_generator(
         self, num_mini_batch: int,
@@ -90,14 +114,12 @@ class MiniBatchExperienceStorage(ExperienceStorage):
         raise NotImplementedError
 
 
-class RolloutBlockStorage(MiniBatchExperienceStorage, abc.ABC):
+class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
     """Class for storing rollout information for RL trainers."""
 
     FLATTEN_SEPARATOR: str = "._AUTOFLATTEN_."
 
-    def __init__(
-        self, init_size: int, num_samplers: int, actor_critic: ActorCriticModel,
-    ):
+    def __init__(self, init_size: int = 50):
         self.full_size = init_size
 
         self.flattened_to_unflattened: Dict[str, Dict[str, List[str]]] = {
@@ -110,12 +132,10 @@ class RolloutBlockStorage(MiniBatchExperienceStorage, abc.ABC):
         }
 
         self.dim_names = ["step", "sampler", None]
-        self.memory_specification = actor_critic.recurrent_memory_specification
-        self.action_space = actor_critic.action_space
 
-        self.memory_first_last: Memory = self.create_memory(
-            spec=self.memory_specification, num_samplers=num_samplers,
-        )
+        self.memory_specification: Optional[FullMemorySpecType] = None
+        self.action_space: Optional[gym.Space] = None
+        self.memory_first_last: Optional[Memory] = None
         self._observations_full: Memory = Memory()
 
         self._value_preds_full: Optional[torch.Tensor] = None
@@ -123,24 +143,57 @@ class RolloutBlockStorage(MiniBatchExperienceStorage, abc.ABC):
         self._rewards_full: Optional[torch.Tensor] = None
         self._action_log_probs_full: Optional[torch.Tensor] = None
 
+        self.step = 0
+        self._total_steps = 0
+        self._before_update_called = False
+        self.device = torch.device("cpu")
+
         # self._advantages and self._normalized_advantages are only computed
-        # when `before_update` is called
+        # when `before_updates` is called
         self._advantages: Optional[torch.Tensor] = None
         self._normalized_advantages: Optional[torch.Tensor] = None
 
-        self._masks_full = torch.zeros(init_size + 1, num_samplers, 1)
+        self._masks_full: Optional[torch.Tensor] = None
+        self._actions_full: Optional[torch.Tensor] = None
+        self._prev_actions_full: Optional[torch.Tensor] = None
 
-        action_flat_dim = su.flatdim(self.action_space)
+    def initialize(
+        self,
+        observations: ObservationType,
+        num_samplers: int,
+        recurrent_memory_specification: FullMemorySpecType,
+        action_space: gym.Space,
+        **kwargs,
+    ):
+        if self.memory_specification is None:
+            self.memory_specification = recurrent_memory_specification
+            self.action_space = action_space
+            self.memory_first_last: Memory = self.create_memory(
+                spec=self.memory_specification, num_samplers=num_samplers,
+            ).to(self.device)
+            self._masks_full = torch.zeros(
+                self.full_size + 1, num_samplers, 1, device=self.device
+            )
+            action_flat_dim = su.flatdim(self.action_space)
+            self._actions_full = torch.zeros(
+                self.full_size, num_samplers, action_flat_dim, device=self.device
+            )
+            self._prev_actions_full = torch.zeros(
+                self.full_size + 1, num_samplers, action_flat_dim, device=self.device
+            )
 
-        self._actions_full = torch.zeros(init_size, num_samplers, action_flat_dim,)
-        self._prev_actions_full = torch.zeros(
-            init_size + 1, num_samplers, action_flat_dim,
-        )
+        assert self.step == 0
+        self.insert_observations(observations=observations, time_step=0)
+        self.prev_actions[0].zero_()  # Have to zero previous actions
+        self.masks[0].zero_()  # Have to zero masks
 
-        self.step = 0
-        self._before_update_called = False
+    @property
+    def total_experiences(self) -> int:
+        return self._total_steps
 
-        self.device = torch.device("cpu")
+    @total_experiences.setter
+    def total_experiences(self, value: int):
+        self._total_steps = value
 
     def set_partition(self, index: int, num_parts: int):
         pass
@@ -205,25 +258,22 @@ class RolloutBlockStorage(MiniBatchExperienceStorage, abc.ABC):
         return memory
 
     def to(self, device: torch.device):
-        self._observations_full.to(device)
-        self.memory_first_last.to(device)
-        self._actions_full = self._actions_full.to(device)
-        self._prev_actions_full = self._prev_actions_full.to(device)
-        self._masks_full = self._masks_full.to(device)
-
-        if self._rewards_full is not None:
-            self._rewards_full = self._rewards_full.to(device)
-            self._value_preds_full = self._value_preds_full.to(device)
-            self._returns_full = self._returns_full.to(device)
-            self._action_log_probs_full = self._action_log_probs_full.to(device)
+        for key in [
+            "_observations_full",
+            "memory_first_last",
+            "_actions_full",
+            "_prev_actions_full",
+            "_masks_full",
+            "_rewards_full",
+            "_value_preds_full",
+            "_returns_full",
+            "_action_log_probs_full",
+        ]:
+            val = getattr(self, key)
+            if val is not None:
+                setattr(self, key, val.to(device))
 
         self.device = device
-
-    def initialize(self, observations: ObservationType):
-        assert self.step == 0
-        self.insert_observations(observations=observations, time_step=0)
-        self.prev_actions[0].zero_()  # Have to zero previous actions
-        self.masks[0].zero_()  # Have to zero masks
 
     def insert_observations(
         self, observations: ObservationType, time_step: int,
@@ -343,6 +393,10 @@ class RolloutBlockStorage(MiniBatchExperienceStorage, abc.ABC):
                 sampler_dim,
             )
 
+        self._actions_full = pad_tensor_with_zeros(self._actions_full)
+        self._prev_actions_full = pad_tensor_with_zeros(self._prev_actions_full)
+        self._masks_full = pad_tensor_with_zeros(self._masks_full)
+
         self._rewards_full = pad_tensor_with_zeros(self._rewards_full)
         self._value_preds_full = pad_tensor_with_zeros(self._value_preds_full)
         self._returns_full = pad_tensor_with_zeros(self._returns_full)
@@ -360,6 +414,12 @@ class RolloutBlockStorage(MiniBatchExperienceStorage, abc.ABC):
         rewards: torch.Tensor,
         masks: torch.Tensor,
     ):
+        assert (
+            len(masks.shape) == 2 and masks.shape[1] == 1
+        ), f"Can only add a single step worth of data at a time (mask shape = {masks.shape})."
+
+        self.total_experiences += masks.shape[0]
+
         if self.step == self.full_size:
             self._double_storage_size()
         elif self.step > self.full_size:
@@ -424,7 +484,7 @@ class RolloutBlockStorage(MiniBatchExperienceStorage, abc.ABC):
             self._rewards_full = self._rewards_full[:, keep_list]
             self._returns_full = self._returns_full[:, keep_list]
 
-    def before_update(
+    def before_updates(
         self,
         next_value: torch.Tensor,
         use_gae: bool,
@@ -447,7 +507,7 @@ class RolloutBlockStorage(MiniBatchExperienceStorage, abc.ABC):
 
         self._before_update_called = True
 
-    def after_update(self, **kwargs):
+    def after_updates(self, **kwargs):
         assert len(kwargs) == 0
 
         for storage in [self.observations, self.memory_first_last]:
@@ -571,6 +631,7 @@ class RolloutBlockStorage(MiniBatchExperienceStorage, abc.ABC):
                 "old_action_log_probs": old_action_log_probs_batch,
                 "adv_targ": adv_targ,
                 "norm_adv_targ": norm_adv_targ,
+                "bsize": int(np.prod(masks_batch.shape[:2])),
             }
 
     def unflatten_observations(self, flattened_batch: Memory) -> ObservationType:
@@ -594,3 +655,11 @@ class RolloutBlockStorage(MiniBatchExperienceStorage, abc.ABC):
 
     def pick_prev_actions_step(self, step: int) -> ActionType:
         return su.unflatten(self.action_space, self.prev_actions[step : step + 1])
+
+    def agent_input_for_next_step(self) -> Dict[str, Any]:
+        return {
+            "observations": self.pick_observation_step(self.step),
+            "memory": self.pick_memory_step(self.step),
+            "prev_actions": self.pick_prev_actions_step(self.step),
+            "masks": self.masks[self.step : self.step + 1],
+        }

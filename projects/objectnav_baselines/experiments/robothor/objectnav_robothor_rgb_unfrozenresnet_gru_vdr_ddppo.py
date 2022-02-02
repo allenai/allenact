@@ -1,6 +1,7 @@
 from typing import Sequence, Union, Optional, Any
 
 import gym
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -8,6 +9,7 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from allenact.algorithms.onpolicy_sync.losses import PPO
 from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from allenact.algorithms.onpolicy_sync.storage import RolloutBlockStorage
 from allenact.base_abstractions.preprocessor import Preprocessor
 
 # noinspection PyUnresolvedReferences
@@ -18,12 +20,12 @@ from allenact.embodiedai.storage.vdr_storage import (
     DiscreteVisualDynamicsReplayStorage,
     InverseDynamicsVDRLoss,
 )
-from allenact.utils.experiment_utils import Builder
+from allenact.utils.experiment_utils import Builder, TrainingSettings
 from allenact.utils.experiment_utils import (
     PipelineStage,
     TrainingPipeline,
     LinearDecay,
-    CustomPipelineComponent,
+    StageComponent,
 )
 from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment
 from allenact_plugins.ithor_plugin.ithor_sensors import GoalObjectTypeThorSensor
@@ -69,6 +71,38 @@ class LastActionSuccessSensor(
         return 1 * task.last_action_success
 
 
+class VisibleObjectTypesSensor(
+    Sensor[
+        Union[IThorEnvironment, RoboThorEnvironment],
+        Union[Task[IThorEnvironment], Task[RoboThorEnvironment]],
+    ]
+):
+    def __init__(self, uuid: str = "visible_objects", **kwargs: Any):
+        super().__init__(
+            uuid=uuid,
+            observation_space=gym.spaces.Box(
+                low=0, high=1, shape=(len(ObjectNavRoboThorBaseConfig.TARGET_TYPES),)
+            ),
+            **kwargs
+        )
+        self.type_to_index = {
+            tt: i for i, tt in enumerate(ObjectNavRoboThorBaseConfig.TARGET_TYPES)
+        }
+
+    def get_observation(
+        self,
+        env: Union[IThorEnvironment, RoboThorEnvironment],
+        task: Optional[Task],
+        *args: Any,
+        **kwargs: Any
+    ) -> Any:
+        out = np.zeros((len(self.type_to_index),))
+        for o in env.controller.last_event.metadata["objects"]:
+            if o["visible"] and o["objectType"] in self.type_to_index:
+                out[self.type_to_index[o["objectType"]]] = 1.0
+        return out
+
+
 class ObjectNavRoboThorVdrTmpRGBExperimentConfig(
     ObjectNavRoboThorBaseConfig, ObjectNavMixInPPOConfig,
 ):
@@ -83,6 +117,7 @@ class ObjectNavRoboThorVdrTmpRGBExperimentConfig(
             object_types=ObjectNavRoboThorBaseConfig.TARGET_TYPES,
         ),
         LastActionSuccessSensor(),
+        VisibleObjectTypesSensor(),
     ]
 
     @classmethod
@@ -106,51 +141,72 @@ class ObjectNavRoboThorVdrTmpRGBExperimentConfig(
         named_losses = {"ppo_loss": (PPO(**PPOConfig), 1.0)}
         named_losses = self._update_with_auxiliary_losses(named_losses)
 
-        return TrainingPipeline(
-            save_interval=save_interval,
-            metric_accumulate_interval=log_interval,
-            optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
+        default_ts = TrainingSettings(
             num_mini_batch=num_mini_batch,
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={
-                **{key: val[0] for key, val in named_losses.items()},
-                "inv_dyn_vdr": InverseDynamicsVDRLoss(
+            gamma=gamma,
+            use_gae=use_gae,
+            gae_lambda=gae_lambda,
+            advance_scene_rollout_period=self.ADVANCE_SCENE_ROLLOUT_PERIOD,
+            save_interval=save_interval,
+            metric_accumulate_interval=log_interval,
+        )
+
+        named_losses = {
+            **named_losses,
+            "inv_dyn_vdr": (
+                InverseDynamicsVDRLoss(
                     compute_action_logits_fn=compute_inv_dyn_action_logits,
                     img0_key="img0",
                     img1_key="img1",
                     action_key="action",
                 ),
-            },
-            gamma=gamma,
-            use_gae=use_gae,
-            gae_lambda=gae_lambda,
-            advance_scene_rollout_period=self.ADVANCE_SCENE_ROLLOUT_PERIOD,
+                1.0,
+            ),
+        }
+
+        sorted_loss_names = list(sorted(named_losses.keys()))
+        return TrainingPipeline(
+            training_settings=default_ts,
+            optimizer_builder=Builder(optim.Adam, dict(lr=lr)),
+            named_losses={k: v[0] for k, v in named_losses.items()},
             named_storages={
+                "onpolicy": RolloutBlockStorage(init_size=num_steps),
                 "discrete_vdr": DiscreteVisualDynamicsReplayStorage(
                     image_uuid="rgb_lowres",
                     action_success_uuid="last_action_success",
+                    extra_targets=["visible_objects"],
                     nactions=6,
-                    num_to_store_per_action=100 if torch.cuda.is_available() else 10,
+                    num_to_store_per_action=200 if torch.cuda.is_available() else 10,
                     max_to_save_per_episode=6,
-                    target_batch_size=512 if torch.cuda.is_available() else 128,
-                )
+                    target_batch_size=256 if torch.cuda.is_available() else 128,
+                ),
             },
             pipeline_stages=[
                 PipelineStage(
-                    loss_names=list(named_losses.keys()),
+                    loss_names=sorted_loss_names,
                     max_stage_steps=ppo_steps,
-                    loss_weights=[val[1] for val in named_losses.values()],
-                    custom_components=[
-                        CustomPipelineComponent(
+                    loss_weights=[
+                        named_losses[loss_name][1] for loss_name in sorted_loss_names
+                    ],
+                    stage_components=[
+                        StageComponent(
+                            uuid="onpolicy",
+                            storage_uuid="onpolicy",
+                            loss_names=[
+                                ln for ln in sorted_loss_names if ln != "inv_dyn_vdr"
+                            ],
+                        ),
+                        StageComponent(
                             uuid="vdr",
-                            storage_name="discrete_vdr",
+                            storage_uuid="discrete_vdr",
                             loss_names=["inv_dyn_vdr"],
-                            num_mini_batch=None,
-                            update_repeats=4,
-                            loss_weights=None,
-                        )
+                            training_settings=TrainingSettings(
+                                num_mini_batch=1, update_repeats=1,
+                            ),
+                        ),
                     ],
                 )
             ],

@@ -1,7 +1,7 @@
 """Defining imitation losses for actor critic type models."""
 
 from collections import OrderedDict
-from typing import Dict, cast, Optional
+from typing import Dict, cast, Optional, Union
 
 import torch
 
@@ -30,9 +30,9 @@ class Imitation(AbstractActorCriticLoss):
 
         self.expert_sensor = expert_sensor
 
+    @staticmethod
     def group_loss(
-        self,
-        distribution: CategoricalDistr,
+        distribution: Union[CategoricalDistr, ConditionalDistr],
         expert_actions: torch.Tensor,
         expert_actions_masks: torch.Tensor,
     ):

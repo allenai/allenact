@@ -57,7 +57,7 @@ def get_version(fname):
     return res
 
 
-if __name__ == "__main__":
+def run_setup():
     base_dir = os.path.abspath(os.path.dirname(Path(__file__)))
 
     if not os.path.exists(
@@ -130,3 +130,7 @@ if __name__ == "__main__":
         tests_require=["pytest", "pytest-cov"],
         extras_require=extras,
     )
+
+
+if __name__ == "__main__":
+    run_setup()

@@ -8,13 +8,13 @@ import numpy as np
 import torch
 
 from allenact.base_abstractions.sensor import Sensor
-from allenact.embodiedai.sensors.vision_sensors import RGBSensor
 from allenact.base_abstractions.task import Task
 from allenact.embodiedai.mapping.mapping_utils.map_builders import (
     BinnedPointCloudMapBuilder,
     SemanticMapBuilder,
     ObjectHull2d,
 )
+from allenact.embodiedai.sensors.vision_sensors import RGBSensor
 from allenact.utils.misc_utils import prepare_locals_for_super
 from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment
 from allenact_plugins.ithor_plugin.ithor_tasks import ObjectNaviThorGridTask
@@ -313,6 +313,8 @@ class SceneBoundsTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnvironment
 class BinnedPointCloudMapTHORSensor(
     Sensor[RoboThorEnvironment, Task[RoboThorEnvironment]]
 ):
+    observation_space = gym.spaces.Dict
+
     def __init__(
         self,
         fov: float,
@@ -401,6 +403,8 @@ class BinnedPointCloudMapTHORSensor(
 
 
 class SemanticMapTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnvironment]]):
+    observation_space = gym.spaces.Dict
+
     def __init__(
         self,
         fov: float,

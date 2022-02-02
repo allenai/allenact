@@ -132,6 +132,7 @@ class SensorPreprocessorGraph:
             g
         ), "preprocessors do not form a direct acyclic graph"
 
+        # noinspection PyCallingNonCallable
         self.observation_spaces = SpaceDict(
             spaces={
                 uuid: obs_spaces[uuid]

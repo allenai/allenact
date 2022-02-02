@@ -7,11 +7,9 @@ from typing import Dict, Union, Any, Optional, cast
 
 import ai2thor.server
 import numpy as np
-import math
-
 from ai2thor.controller import Controller
-from allenact.utils.misc_utils import prepare_locals_for_super
 
+from allenact.utils.misc_utils import prepare_locals_for_super
 from allenact_plugins.ithor_plugin.ithor_constants import VISIBILITY_DISTANCE, FOV
 from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment
 from allenact_plugins.manipulathor_plugin.armpointnav_constants import (
@@ -20,22 +18,12 @@ from allenact_plugins.manipulathor_plugin.armpointnav_constants import (
     UNWANTED_MOVE_THR,
     DISTANCE_MAX,
 )
-
 from allenact_plugins.manipulathor_plugin.manipulathor_constants import (
     ADDITIONAL_ARM_ARGS,
     ARM_MIN_HEIGHT,
     ARM_MAX_HEIGHT,
 )
-
 from allenact_plugins.manipulathor_plugin.manipulathor_constants import (
-    MOVE_ARM_HEIGHT_P,
-    MOVE_ARM_HEIGHT_M,
-    MOVE_ARM_X_P,
-    MOVE_ARM_X_M,
-    MOVE_ARM_Y_P,
-    MOVE_ARM_Y_M,
-    MOVE_ARM_Z_P,
-    MOVE_ARM_Z_M,
     ROTATE_WRIST_PITCH_P,
     ROTATE_WRIST_PITCH_M,
     ROTATE_WRIST_YAW_P,
@@ -50,7 +38,6 @@ from allenact_plugins.manipulathor_plugin.manipulathor_constants import (
     PICKUP,
     DONE,
 )
-
 from allenact_plugins.manipulathor_plugin.manipulathor_utils import (
     reset_environment_and_additional_commands,
 )
@@ -69,7 +56,7 @@ def position_distance(s1, s2, filter_nan: bool = False):
     return dist
 
 
-def rotation_distance(s1: Dict[str, float], s2: Dict[str, float]):
+def rotation_distance(s1: Dict[str, Dict[str, float]], s2: Dict[str, Dict[str, float]]):
     """Distance between rotations."""
     rotation1 = s1["rotation"]
     rotation2 = s2["rotation"]

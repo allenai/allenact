@@ -13,9 +13,10 @@ from allenact.utils.misc_utils import md5_hash_str_as_int
 def md5_hash_of_state_dict(state_dict: Dict[str, Any]):
     hashables = []
     for piece in sorted(state_dict.items()):
-        if isinstance(piece[1], (torch.Tensor, nn.Parameter)):
+        val = piece[1]
+        if isinstance(val, (torch.Tensor, nn.Parameter)):
             hashables.append(
-                int(hashlib.md5(piece[1].data.cpu().numpy().tobytes()).hexdigest(), 16,)
+                int(hashlib.md5(val.data.cpu().numpy().tobytes()).hexdigest(), 16,)
             )
         else:
             md5_hash_str_as_int(str(piece))
@@ -26,6 +27,7 @@ def md5_hash_of_state_dict(state_dict: Dict[str, Any]):
 class Flatten(nn.Module):
     """Flatten input tensor so that it is of shape (FLATTENED_BATCH x -1)."""
 
+    # noinspection PyMethodMayBeStatic
     def forward(self, x):
         """Flatten input tensor.
 

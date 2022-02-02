@@ -14,7 +14,7 @@ from setproctitle import setproctitle as ptitle
 from allenact import __version__
 from allenact.algorithms.onpolicy_sync.runner import (
     OnPolicyRunner,
-    _CONFIG_KWARGS_STR,
+    CONFIG_KWARGS_STR,
     SaveDirFormat,
 )
 from allenact.base_abstractions.experiment_config import ExperimentConfig
@@ -408,7 +408,7 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, str]]:
 
     config = experiments[0](**config_kwargs)
     sources = _config_source(config_type=experiments[0])
-    sources[_CONFIG_KWARGS_STR] = json.dumps(config_kwargs)
+    sources[CONFIG_KWARGS_STR] = json.dumps(config_kwargs)
     return config, sources
 
 

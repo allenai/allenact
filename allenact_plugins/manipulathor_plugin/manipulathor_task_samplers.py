@@ -4,14 +4,11 @@ import random
 from typing import List, Dict, Optional, Any, Union
 
 import gym
+
 from allenact.base_abstractions.sensor import Sensor
 from allenact.base_abstractions.task import Task
 from allenact.base_abstractions.task import TaskSampler
 from allenact.utils.experiment_utils import set_deterministic_cudnn, set_seed
-from allenact_plugins.manipulathor_plugin.manipulathor_utils import (
-    transport_wrapper,
-    initialize_arm,
-)
 from allenact_plugins.manipulathor_plugin.manipulathor_environment import (
     ManipulaTHOREnvironment,
 )
@@ -21,6 +18,10 @@ from allenact_plugins.manipulathor_plugin.manipulathor_tasks import (
     RotateArmPointNavTask,
     CamRotateArmPointNavTask,
     EasyArmPointNavTask,
+)
+from allenact_plugins.manipulathor_plugin.manipulathor_utils import (
+    transport_wrapper,
+    initialize_arm,
 )
 from allenact_plugins.manipulathor_plugin.manipulathor_viz import (
     ImageVisualizer,
@@ -47,7 +48,7 @@ class AbstractMidLevelArmTaskSampler(TaskSampler):
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
         fixed_tasks: Optional[List[Dict[str, Any]]] = None,
-        visualizers: List[LoggerVisualizer] = [],
+        visualizers: Optional[List[LoggerVisualizer]] = None,
         *args,
         **kwargs
     ) -> None:
@@ -80,7 +81,7 @@ class AbstractMidLevelArmTaskSampler(TaskSampler):
             set_deterministic_cudnn()
 
         self.reset()
-        self.visualizers = visualizers
+        self.visualizers = visualizers if visualizers is not None else []
         self.sampler_mode = kwargs["sampler_mode"]
         self.cap_training = kwargs["cap_training"]
 

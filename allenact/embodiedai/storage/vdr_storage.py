@@ -1,14 +1,22 @@
 import math
 import random
 from collections import defaultdict
-from typing import Union, Tuple, Optional, Dict, Callable
+from typing import Union, Tuple, Optional, Dict, Callable, cast, Sequence
 
 import torch
 import torch.nn.functional as F
 
 from allenact.algorithms.onpolicy_sync.policy import ObservationType
-from allenact.algorithms.onpolicy_sync.storage import MiniBatchExperienceStorage
-from allenact.base_abstractions.misc import GenericAbstractLoss, ModelType, Memory
+from allenact.algorithms.onpolicy_sync.storage import (
+    MiniBatchStorageMixin,
+    ExperienceStorage,
+)
+from allenact.base_abstractions.misc import (
+    GenericAbstractLoss,
+    ModelType,
+    Memory,
+    LossOutput,
+)
 from allenact.utils.misc_utils import unzip, partition_sequence
 
 
@@ -40,21 +48,22 @@ class InverseDynamicsVDRLoss(GenericAbstractLoss):
         batch: ObservationType,
         batch_memory: Memory,
         stream_memory: Memory,
-    ) -> Tuple[torch.Tensor, Dict[str, float], Memory, Memory, int]:
+    ) -> LossOutput:
         action_logits = self.compute_action_logits_fn(
             model=model, img0=batch[self.img0_key], img1=batch[self.img1_key],
         )
         loss = F.cross_entropy(action_logits, target=batch[self.action_key])
-        return (
-            loss,
-            {"cross_entropy": loss.item()},
-            batch_memory,
-            stream_memory,
-            int(batch[self.img0_key].shape[0]),
+        return LossOutput(
+            value=loss,
+            info={"cross_entropy": loss.item()},
+            per_epoch_info={},
+            batch_memory=batch_memory,
+            stream_memory=stream_memory,
+            bsize=int(batch[self.img0_key].shape[0]),
         )
 
 
-class DiscreteVisualDynamicsReplayStorage(MiniBatchExperienceStorage):
+class DiscreteVisualDynamicsReplayStorage(ExperienceStorage, MiniBatchStorageMixin):
     def __init__(
         self,
         image_uuid: Union[str, Tuple[str, ...]],
@@ -63,6 +72,7 @@ class DiscreteVisualDynamicsReplayStorage(MiniBatchExperienceStorage):
         num_to_store_per_action: int,
         max_to_save_per_episode: int,
         target_batch_size: int,
+        extra_targets: Optional[Sequence] = None,
     ):
         self.image_uuid = image_uuid
         self.action_success_uuid = action_success_uuid
@@ -70,10 +80,9 @@ class DiscreteVisualDynamicsReplayStorage(MiniBatchExperienceStorage):
         self.num_to_store_per_action = num_to_store_per_action
         self.max_to_save_per_episode = max_to_save_per_episode
         self.target_batch_size = target_batch_size
+        self.extra_targets = extra_targets if extra_targets is not None else []
 
-        self._prev_imgs: Optional[
-            Dict[Union[str, Tuple[str, ...]], torch.Tensor]
-        ] = None
+        self._prev_imgs: Optional[torch.Tensor] = None
 
         self.action_to_saved_transitions = {i: [] for i in range(nactions)}
         self.action_to_num_seen = {i: 0 for i in range(nactions)}
@@ -81,13 +90,19 @@ class DiscreteVisualDynamicsReplayStorage(MiniBatchExperienceStorage):
 
         self.device = torch.device("cpu")
 
+        self._total_samples_returned_in_batches = 0
+
+    @property
+    def total_experiences(self):
+        return self._total_samples_returned_in_batches
+
     def set_partition(self, index: int, num_parts: int):
         self.num_to_store_per_action = math.ceil(
             self.num_to_store_per_action / num_parts
         )
         self.target_batch_size = math.ceil(self.target_batch_size / num_parts)
 
-    def initialize(self, observations: ObservationType):
+    def initialize(self, observations: ObservationType, **kwargs):
         self._prev_imgs = None
         self.add(observations=observations, actions=None, masks=None)
 
@@ -112,6 +127,7 @@ class DiscreteVisualDynamicsReplayStorage(MiniBatchExperienceStorage):
             action = torch.tensor(actions, device=self.device)
             img1 = torch.stack([i1.to(self.device) for i1 in img1s], 0)
 
+            self._total_samples_returned_in_batches += img0.shape[0]
             yield {"img0": img0, "action": action, "img1": img1}
 
     def add(
@@ -122,7 +138,9 @@ class DiscreteVisualDynamicsReplayStorage(MiniBatchExperienceStorage):
         masks: Optional[torch.Tensor],
         **kwargs,
     ):
-        cur_imgs = _index_recursive(d=observations, key=self.image_uuid).cpu()
+        cur_imgs = cast(
+            torch.Tensor, _index_recursive(d=observations, key=self.image_uuid).cpu()
+        )
 
         if self._prev_imgs is not None:
             actions = actions.view(-1).cpu().numpy()
@@ -134,6 +152,10 @@ class DiscreteVisualDynamicsReplayStorage(MiniBatchExperienceStorage):
                 )
             else:
                 action_successes = [True] * actions.shape[0]
+
+            extra = {}
+            for et in self.extra_targets:
+                extra[et] = observations[et][0].cpu().numpy()
 
             nsamplers = actions.shape[0]
             assert nsamplers == masks.shape[0]
@@ -184,10 +206,10 @@ class DiscreteVisualDynamicsReplayStorage(MiniBatchExperienceStorage):
 
         self._prev_imgs = cur_imgs
 
-    def before_update(self, **kwargs):
+    def before_updates(self, **kwargs):
         pass
 
-    def after_update(self, **kwargs):
+    def after_updates(self, **kwargs):
         pass
 
     def to(self, device: torch.device):

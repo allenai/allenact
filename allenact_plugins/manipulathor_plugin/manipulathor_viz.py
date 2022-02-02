@@ -4,10 +4,10 @@ from datetime import datetime
 
 import cv2
 import imageio
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 import matplotlib
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+import numpy as np
 
 from allenact_plugins.manipulathor_plugin.manipulathor_utils import initialize_arm
 from allenact_plugins.manipulathor_plugin.manipulathor_utils import (
@@ -173,7 +173,7 @@ class BringObjImageVisualizer(LoggerVisualizer):
             print("ERROR: ARM MOVEMENT FAILED in logging! SHOULD NEVER HAPPEN")
 
         event = transport_wrapper(this_controller, object_id, object_location)
-        if event.metadata["lastActionSuccess"] == False:
+        if not event.metadata["lastActionSuccess"]:
             print("ERROR: oh no could not transport in logging")
 
         event = this_controller.step(
@@ -191,7 +191,7 @@ class BringObjImageVisualizer(LoggerVisualizer):
                 horizon=agent_state["cameraHorizon"],
             )
         )
-        if event.metadata["lastActionSuccess"] == False:
+        if not event.metadata["lastActionSuccess"]:
             print("ERROR: oh no could not teleport in logging")
 
         image_tensor = this_controller.last_event.frame
@@ -332,7 +332,7 @@ class ImageVisualizer(LoggerVisualizer):
             print("ERROR: ARM MOVEMENT FAILED in logging! SHOULD NEVER HAPPEN")
 
         event = transport_wrapper(this_controller, object_id, object_location)
-        if event.metadata["lastActionSuccess"] == False:
+        if not event.metadata["lastActionSuccess"]:
             print("ERROR: oh no could not transport in logging")
 
         event = this_controller.step(
@@ -350,7 +350,7 @@ class ImageVisualizer(LoggerVisualizer):
                 horizon=agent_state["cameraHorizon"],
             )
         )
-        if event.metadata["lastActionSuccess"] == False:
+        if not event.metadata["lastActionSuccess"]:
             print("ERROR: oh no could not teleport in logging")
 
         image_tensor = this_controller.last_event.frame
@@ -391,7 +391,7 @@ def put_annotation_on_image(images, annotations):
     for img, annot in zip(images, annotations):
         position = (10, 10)
 
-        from PIL import Image, ImageFont, ImageDraw
+        from PIL import Image, ImageDraw
 
         pil_img = Image.fromarray(img)
         draw = ImageDraw.Draw(pil_img)

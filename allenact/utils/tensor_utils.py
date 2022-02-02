@@ -293,8 +293,8 @@ def image(tag, tensor, rescale=1, dataformats="CHW"):
     if tensor.dtype != np.uint8:
         tensor = (tensor * 255.0).astype(np.uint8)
 
-    image = tbxsummary.make_image(tensor, rescale=rescale)
-    return TBXSummary(value=[TBXSummary.Value(tag=tag, image=image)])
+    img = tbxsummary.make_image(tensor, rescale=rescale)
+    return TBXSummary(value=[TBXSummary.Value(tag=tag, image=img)])
 
 
 def convert_to_HWC(tensor, input_format):  # tensor: numpy array

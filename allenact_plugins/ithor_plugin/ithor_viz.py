@@ -4,17 +4,16 @@ import math
 import os
 from typing import Tuple, Sequence, Union, Dict, Optional, Any, cast, Generator, List
 
+import colour as col
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw
 from ai2thor.controller import Controller
 from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
-import colour as col
 
 from allenact.utils.system import get_logger
 from allenact.utils.viz_utils import TrajectoryViz
-
 
 ITHOR_VIZ_CACHED_TOPDOWN_VIEWS_DIR = os.path.join(
     os.path.expanduser("~"), ".allenact", "ithor", "top_down_viz_cache"
@@ -320,15 +319,15 @@ class ThorViz(TrajectoryViz):
                         col.Color(trajectory_start_end_color_str[1]), len(positions) - 1
                     )
                 )
-            for i in range(len(positions) - 1):
-                frame = ThorViz.add_line_to_map(
-                    ThorViz.position_to_tuple(positions[i]),
-                    ThorViz.position_to_tuple(positions[i + 1]),
-                    frame,
-                    pos_translator,
-                    opacity=line_opacity,
-                    color=tuple(map(lambda x: int(round(255 * x)), colors[i].rgb)),
-                )
+                for i in range(len(positions) - 1):
+                    frame = ThorViz.add_line_to_map(
+                        ThorViz.position_to_tuple(positions[i]),
+                        ThorViz.position_to_tuple(positions[i + 1]),
+                        frame,
+                        pos_translator,
+                        opacity=line_opacity,
+                        color=tuple(map(lambda x: int(round(255 * x)), colors[i].rgb)),
+                    )
 
         if view_triangle_only_on_last:
             positions = [positions[-1]]

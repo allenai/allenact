@@ -2,9 +2,9 @@
 
 """Tool to run command on multiple nodes through SSH."""
 
-import os
 import argparse
 import glob
+import os
 
 
 def get_argument_parser():
@@ -85,7 +85,7 @@ if __name__ == "__main__":
                 # Each line contains 'IP_address screen_ID'
                 nodes = [tuple(line[:-1].split(" ")) for line in f.readlines()]
 
-            all_addresses = [node[0] for node in nodes]
+            all_addresses.extend(node[0] for node in nodes)
 
             use_addresses = ""
             while use_addresses not in ["y", "n"]:
@@ -96,7 +96,7 @@ if __name__ == "__main__":
                     use_addresses = "y"
 
             if use_addresses == "n":
-                all_addresses = []
+                all_addresses.clear()
             else:
                 break
 
