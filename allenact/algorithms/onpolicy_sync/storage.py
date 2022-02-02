@@ -47,6 +47,19 @@ class ExperienceStorage(abc.ABC):
         rewards: torch.Tensor,
         masks: torch.Tensor,
     ):
+        """
+        # Parameters
+        observations : Observations after taking `actions`
+        memory: Memory after having observed the last set of observations.
+        actions: Actions taken to reach the current state, i.e. taking these actions has led to a new state with
+            new `observations`.
+        action_log_probs : Log probs of `actions`
+        value_preds : Value predictions corresponding to the last observations
+            (i.e. the states before taking `actions`).
+        rewards : Rewards from taking `actions` in the last set of states.
+        masks : Masks corresponding to the current states, having 0 entries where `observations` correspond to
+            observations from the beginning of a new episode.
+        """
         raise NotImplementedError
 
     def before_updates(self, **kwargs):
@@ -200,35 +213,35 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
 
     @property
     def value_preds(self) -> torch.Tensor:
-        return self._value_preds_full[: self.step + 2]
+        return self._value_preds_full[: self.step + 1]
 
     @property
     def rewards(self) -> torch.Tensor:
-        return self._rewards_full[: self.step + 1]
+        return self._rewards_full[: self.step]
 
     @property
     def returns(self) -> torch.Tensor:
-        return self._returns_full[: self.step + 2]
+        return self._returns_full[: self.step + 1]
 
     @property
     def action_log_probs(self) -> torch.Tensor:
-        return self._action_log_probs_full[: self.step + 1]
+        return self._action_log_probs_full[: self.step]
 
     @property
     def actions(self) -> torch.Tensor:
-        return self._actions_full[: self.step + 1]
+        return self._actions_full[: self.step]
 
     @property
     def prev_actions(self) -> torch.Tensor:
-        return self._prev_actions_full[: self.step + 2]
+        return self._prev_actions_full[: self.step + 1]
 
     @property
     def masks(self) -> torch.Tensor:
-        return self._masks_full[: self.step + 2]
+        return self._masks_full[: self.step + 1]
 
     @property
     def observations(self) -> Memory:
-        return self._observations_full.slice(dim=0, start=0, stop=self.step + 2)
+        return self._observations_full.slice(dim=0, start=0, stop=self.step + 1)
 
     def create_memory(
         self, spec: Optional[FullMemorySpecType], num_samplers: int,
@@ -414,6 +427,7 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
         rewards: torch.Tensor,
         masks: torch.Tensor,
     ):
+        """See `ExperienceStorage.add` documentation."""
         assert (
             len(masks.shape) == 2 and masks.shape[1] == 1
         ), f"Can only add a single step worth of data at a time (mask shape = {masks.shape})."
