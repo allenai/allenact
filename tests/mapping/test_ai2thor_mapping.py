@@ -150,12 +150,48 @@ class TestAI2THORMapSensors(object):
                     obs = 1.0 * obs
                     goal_obs = 1.0 * goal_obs
 
-                    where_nan = np.isnan(goal_obs)
+                    goal_where_nan = np.isnan(goal_obs)
+                    obs_where_nan = np.isnan(obs)
+
+                    where_nan_not_equal = (goal_where_nan != obs_where_nan).sum()
+                    assert (
+                        where_nan_not_equal.sum() <= 1
+                        and where_nan_not_equal.mean() < 1e3
+                    )
+
+                    where_nan = np.logical_or(goal_where_nan, obs_where_nan)
                     obs[where_nan] = 0.0
                     goal_obs[where_nan] = 0.0
+
+                    def special_mean(v):
+                        while len(v.shape) > 2:
+                            v = v.sum(-1)
+                        return v.mean()
+
+                    numer = np.abs(obs - goal_obs)
+                    denom = np.abs(
+                        np.stack((obs, goal_obs, np.ones_like(obs)), axis=0)
+                    ).max(0)
+                    difference = special_mean(numer / denom)
                     assert (
-                        np.abs(1.0 * obs - 1.0 * goal_obs).mean() < 1e-4
-                    ), f"Difference of {np.abs(1.0 * obs - 1.0 * goal_obs).mean()} at {key_list}."
+                        difference < 1.2e-3
+                    ), f"Difference of {np.abs(obs - goal_obs).mean()} at {key_list}."
+
+                    if (
+                        len(obs.shape) >= 2
+                        and obs.shape[0] == obs.shape[1]
+                        and obs.shape[0] > 1
+                    ):
+                        # Sanity check that rotating the observations makes them not-equal
+                        rot_obs = np.rot90(obs)
+                        numer = np.abs(rot_obs - goal_obs)
+                        denom = np.abs(
+                            np.stack((rot_obs, goal_obs, np.ones_like(obs)), axis=0)
+                        ).max(0)
+                        rot_difference = special_mean(numer / denom)
+                        assert (
+                            difference < rot_difference or (obs == rot_obs).all()
+                        ), f"Too small a difference ({(numer / denom).mean()})."
 
             observations_dict = defaultdict(lambda: [])
             for i in range(5):  # Why 5, why not 5?
@@ -312,11 +348,11 @@ class TestAI2THORMapSensors(object):
             walkthrough_model = WalkthroughRGBMappingPPOExperimentConfig.create_model()
             walkthrough_model.load_state_dict(state_dict["model_state_dict"])
 
-            rollout_storage = RolloutBlockStorage(
-                init_size=1, num_samplers=1, actor_critic=walkthrough_model,
-            )
-            memory = rollout_storage.pick_memory_step(0)
-            masks = rollout_storage.masks[:1]
+            memory = RolloutBlockStorage.create_memory(
+                spec=walkthrough_model.recurrent_memory_specification, num_samplers=1
+            ).step_squeeze(0)
+
+            masks = torch.FloatTensor([0]).view(1, 1, 1)
 
             binned_map_losses = []
             semantic_map_losses = []
@@ -399,5 +435,5 @@ if __name__ == "__main__":
     TestAI2THORMapSensors().test_binned_and_semantic_mapping(mkdtemp())  # type:ignore
     # TestAI2THORMapSensors().test_binned_and_semantic_mapping("tmp_out")  # Used for local debugging
     # TestAI2THORMapSensors().test_pretrained_rearrange_walkthrough_mapping_agent(
-    #     "tmp_out"
+    #     mkdtemp() # "tmp_out"
     # )  # Used for local debugging

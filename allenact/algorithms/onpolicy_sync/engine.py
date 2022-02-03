@@ -612,7 +612,7 @@ class OnPolicyRLEngine(object):
                 if isinstance(s, RolloutStorage):
                     s.sampler_select(keep)
 
-            if self.mode != TRAIN_MODE_STR:
+            if self.mode == TRAIN_MODE_STR:
                 raise NotImplementedError(
                     "When trying to get a new task from a task sampler (using the `.next_task()` method)"
                     " the task sampler returned `None`. This is not currently supported during training"
@@ -1332,34 +1332,16 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         while True:
             pipeline_stage_changed = self.training_pipeline.before_rollout(
                 train_metrics=self._last_aggregated_train_task_metrics
-            )
+            )  # This is `False` at the very start of training, i.e. pipeline starts with a stage initialized
+
             self._last_aggregated_train_task_metrics.reset()
             training_is_complete = self.training_pipeline.current_stage is None
 
-            # Saving checkpoints and initializing storage when the pipeline stage changes
-            if pipeline_stage_changed and (
-                self.training_pipeline.current_stage_index != 0  # Skip the 0th change
-            ):
-                # Update the training settings we're using
-                cur_stage_training_settings = (
-                    self.training_pipeline.current_stage.training_settings
-                )
+            # `training_is_complete` should imply `pipeline_stage_changed`
+            assert pipeline_stage_changed or not training_is_complete
 
-                # If the pipeline stage changed we must initialize any new custom storage and
-                # stop updating any custom storage that is no longer in use (this second bit
-                # is done by simply updating `uuid_to_storage` to the new custom storage objects).
-                new_uuid_to_storage = self.training_pipeline.current_stage_storage
-                storage_to_initialize = [
-                    s
-                    for uuid, s in new_uuid_to_storage.items()
-                    if uuid
-                    not in uuid_to_storage  # Don't initialize storage already in use
-                ]
-                self.initialize_storage_and_vizualizer(
-                    storage_to_initialize=storage_to_initialize,
-                )
-                uuid_to_storage = new_uuid_to_storage
-
+            #  Saving checkpoints and initializing storage when the pipeline stage changes
+            if pipeline_stage_changed:
                 # Here we handle saving a checkpoint after a pipeline stage ends. We
                 # do this:
                 # (1) after every pipeline stage if the `self.save_ckpt_after_every_pipeline_stage`
@@ -1382,10 +1364,32 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         else len(self.training_pipeline.pipeline_stages) - 1
                     )
 
-            already_saved_checkpoint = False
+                # If training is complete, break out
+                if training_is_complete:
+                    break
 
-            if training_is_complete:
-                break
+                # Here we handle updating our training settings after a pipeline stage ends.
+                # Update the training settings we're using
+                cur_stage_training_settings = (
+                    self.training_pipeline.current_stage.training_settings
+                )
+
+                # If the pipeline stage changed we must initialize any new custom storage and
+                # stop updating any custom storage that is no longer in use (this second bit
+                # is done by simply updating `uuid_to_storage` to the new custom storage objects).
+                new_uuid_to_storage = self.training_pipeline.current_stage_storage
+                storage_to_initialize = [
+                    s
+                    for uuid, s in new_uuid_to_storage.items()
+                    if uuid
+                    not in uuid_to_storage  # Don't initialize storage already in use
+                ]
+                self.initialize_storage_and_vizualizer(
+                    storage_to_initialize=storage_to_initialize,
+                )
+                uuid_to_storage = new_uuid_to_storage
+
+            already_saved_checkpoint = False
 
             if self.is_distributed:
                 self.num_workers_done.set("done", str(0))

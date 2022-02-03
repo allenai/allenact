@@ -922,9 +922,13 @@ class OnPolicyRunner(object):
                     scalars=train_info_means, n=train_info_counts,
                 )
 
-                total_exp_for_storage = pkg.storage_uuid_to_total_experiences[
-                    storage_uuid
-                ]
+                if storage_uuid is None:
+                    assert stage_component_uuid is None
+                    total_exp_for_storage = training_steps
+                else:
+                    total_exp_for_storage = pkg.storage_uuid_to_total_experiences[
+                        storage_uuid
+                    ]
                 for scalar_name in train_info_means:
                     if scalar_name in scalar_name_to_total_storage_experience:
                         assert (

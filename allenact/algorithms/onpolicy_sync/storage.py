@@ -181,9 +181,14 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
         if self.memory_specification is None:
             self.memory_specification = recurrent_memory_specification
             self.action_space = action_space
+
             self.memory_first_last: Memory = self.create_memory(
                 spec=self.memory_specification, num_samplers=num_samplers,
             ).to(self.device)
+            for key in self.memory_specification:
+                self.flattened_to_unflattened["memory"][key] = [key]
+                self.unflattened_to_flattened["memory"][(key,)] = key
+
             self._masks_full = torch.zeros(
                 self.full_size + 1, num_samplers, 1, device=self.device
             )
@@ -243,9 +248,8 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
     def observations(self) -> Memory:
         return self._observations_full.slice(dim=0, start=0, stop=self.step + 1)
 
-    def create_memory(
-        self, spec: Optional[FullMemorySpecType], num_samplers: int,
-    ) -> Memory:
+    @staticmethod
+    def create_memory(spec: Optional[FullMemorySpecType], num_samplers: int,) -> Memory:
         if spec is None:
             return Memory()
 
@@ -264,9 +268,6 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
                 tensor=torch.zeros(*all_dims, dtype=dtype),
                 sampler_dim=sampler_dim,
             )
-
-            self.flattened_to_unflattened["memory"][key] = [key]
-            self.unflattened_to_flattened["memory"][(key,)] = key
 
         return memory
 
