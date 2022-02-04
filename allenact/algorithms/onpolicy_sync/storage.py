@@ -110,7 +110,6 @@ class StreamingStorageMixin(abc.ABC):
     def next_batch(self) -> Dict[str, Any]:
         raise NotImplementedError
 
-    @property
     def reset_stream(self):
         raise NotImplementedError
 

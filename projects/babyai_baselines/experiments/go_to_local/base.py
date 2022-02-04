@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
+from allenact.algorithms.onpolicy_sync.storage import ExperienceStorage
 from allenact.base_abstractions.misc import Loss
 from allenact.base_abstractions.sensor import SensorSuite
 from allenact.utils.experiment_utils import (
@@ -55,6 +56,7 @@ class BaseBabyAIGoToLocalExperimentConfig(BaseBabyAIExperimentConfig, ABC):
         update_repeats: int,
         total_train_steps: int,
         lr: Optional[float] = None,
+        named_storages: Optional[Dict[str, Union[ExperienceStorage, Builder]]] = None,
     ):
         lr = cls.DEFAULT_LR
 
@@ -84,6 +86,7 @@ class BaseBabyAIGoToLocalExperimentConfig(BaseBabyAIExperimentConfig, ABC):
             advance_scene_rollout_period=None,
             should_log=cls.SHOULD_LOG,
             pipeline_stages=pipeline_stages,
+            named_storages=named_storages,
             lr_scheduler_builder=Builder(
                 LambdaLR, {"lr_lambda": LinearDecay(steps=total_train_steps)}  # type: ignore
             )

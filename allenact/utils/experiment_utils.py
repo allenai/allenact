@@ -888,6 +888,14 @@ class TrainingPipeline:
                     f" defined storages names: {list(self._named_storages.keys())}"
                 )
 
+            if (
+                self.rollout_storage_uuid
+                not in stage.storage_uuid_to_steps_taken_in_stage
+            ):
+                stage.storage_uuid_to_steps_taken_in_stage[
+                    self.rollout_storage_uuid
+                ] = 0
+
     @classmethod
     def _get_uuids_of_rollout_storages(
         cls,
