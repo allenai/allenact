@@ -111,7 +111,7 @@ class DelaySignalHandling:
                 signal.default_int_handler(*self.int_signal_received)
 
 
-class VectorSampledTasks(object):
+class VectorSampledTasks:
     """Vectorized collection of tasks. Creates multiple processes where each
     process runs its own TaskSampler. Each process generates one Task from its
     TaskSampler at a time and this class allows for interacting with these

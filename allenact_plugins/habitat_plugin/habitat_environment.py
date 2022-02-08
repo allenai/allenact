@@ -13,11 +13,10 @@ from allenact.utils.cache_utils import DynamicDistanceCache
 from allenact.utils.system import get_logger
 
 
-class HabitatEnvironment(object):
-    def __init__(self, config: Config, dataset: Dataset, x_display: str = None) -> None:
-        # print("habitat_plugin env constructor")
-        self.x_display = x_display
+class HabitatEnvironment:
+    def __init__(self, config: Config, dataset: Dataset) -> None:
         self.env = habitat.Env(config=config, dataset=dataset)
+
         # Set the target to a random goal from the provided list for this episode
         self.goal_index = 0
         self.last_geodesic_distance = None
@@ -37,11 +36,6 @@ class HabitatEnvironment(object):
         obs = self.env.step(action_dict["action"])
         self._current_frame = obs
         return obs
-
-    # def get_distance_to_target(self) -> float:
-    #     curr = self.get_location()
-    #     goal = self.get_current_episode().goals[0].view_points[0].agent_state.position
-    #     return self.env.sim.geodesic_distance(curr, goal)
 
     def get_location(self) -> Optional[np.ndarray]:
         return self.env.sim.get_agent_state().position

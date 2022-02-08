@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Documentation Status](https://img.shields.io/badge/docs-up%20to%20date-Green.svg)](https://allenact.org)
 [![Latest Release](https://img.shields.io/github/v/release/allenai/allenact)](https://github.com/allenai/allenact/releases/latest)
-[![Python 3.6](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/release/python-360/)
+[![Python 3.7](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/release/python-360/)
 [![LGTM Grade: Python](https://img.shields.io/lgtm/grade/python/g/allenai/allenact.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/allenai/allenact/context:python)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 

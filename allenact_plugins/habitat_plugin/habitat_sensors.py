@@ -107,7 +107,8 @@ class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
 
         super().__init__(**prepare_locals_for_super(locals()))
 
-    def _get_observation_space(self):
+    @staticmethod
+    def _get_observation_space():
         return gym.spaces.Discrete(38)
 
     def get_observation(
@@ -128,7 +129,8 @@ class AgentCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
 
         super().__init__(**prepare_locals_for_super(locals()))
 
-    def _get_observation_space(self):
+    @staticmethod
+    def _get_observation_space():
         return gym.spaces.Box(np.float32(-1000), np.float32(1000), shape=(4,))
 
     def get_observation(
