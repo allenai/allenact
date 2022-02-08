@@ -25,11 +25,58 @@ def state_dict_to_tensor(state: Dict):
     return torch.Tensor(result)
 
 
-def diff_position(state_goal, state_curr):
+def diff_position(state_goal, state_curr, absolute: bool = True):
     p1 = state_goal["position"]
     p2 = state_curr["position"]
-    result = {k: abs(p1[k] - p2[k]) for k in p1.keys()}
+    if absolute:
+        result = {k: abs(p1[k] - p2[k]) for k in p1.keys()}
+    else:
+        result = {k: (p1[k] - p2[k]) for k in p1.keys()}
     return result
+
+
+def coord_system_transform(position: Dict, coord_system: str):
+    assert coord_system in [
+        "xyz_unsigned",
+        "xyz_signed",
+        "polar_radian",
+        "polar_trigo",
+    ]
+
+    if "xyz" in coord_system:
+        result = [
+            position["x"],
+            position["y"],
+            position["z"],
+        ]
+        result = torch.Tensor(result)
+        if coord_system == "xyz_unsigned":
+            return torch.abs(result)
+        else:  # xyz_signed
+            return result
+
+    else:
+        hxy = np.hypot(position["x"], position["y"])
+        r = np.hypot(hxy, position["z"])
+        el = np.arctan2(position["z"], hxy)  # elevation angle: [-pi/2, pi/2]
+        az = np.arctan2(position["y"], position["x"])  # azimuthal angle: [-pi, pi]
+
+        if coord_system == "polar_radian":
+            result = [
+                r,
+                el / (0.5 * np.pi),
+                az / np.pi,
+            ]  # normalize to [-1, 1]
+            return torch.Tensor(result)
+        else:  # polar_trigo
+            result = [
+                r,
+                np.cos(el),
+                np.sin(el),
+                np.cos(az),
+                np.sin(az),
+            ]
+            return torch.Tensor(result)
 
 
 def position_rotation_to_matrix(position, rotation):

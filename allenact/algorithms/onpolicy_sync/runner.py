@@ -17,6 +17,7 @@ from collections import defaultdict
 from multiprocessing.context import BaseContext
 from multiprocessing.process import BaseProcess
 from typing import Optional, Dict, Union, Tuple, Sequence, List, Any
+import enum
 
 import filelock
 import numpy as np
@@ -52,6 +53,19 @@ from allenact.utils.viz_utils import VizSuite
 _CONFIG_KWARGS_STR = "__CONFIG_KWARGS__"
 
 
+class SaveDirFormat(enum.Enum):
+    """Directory formats that can be used when saving tensorboard logs,
+    checkpoints, etc.
+
+    during training/evaluation.
+    FLAT: the first-level directories are logs, checkpoints, metrics, etc; the second-level are time strings of each experiment
+    NESTED: the opposite to FLAT.
+    """
+
+    FLAT = "FLAT"
+    NESTED = "NESTED"
+
+
 # Has results queue (aggregated per trainer), checkpoints queue and mp context
 # Instantiates train, validate, and test workers
 # Logging
@@ -73,6 +87,7 @@ class OnPolicyRunner(object):
         disable_config_saving: bool = False,
         distributed_ip_and_port: str = "127.0.0.1:0",
         machine_id: int = 0,
+        save_dir_fmt: SaveDirFormat = SaveDirFormat.FLAT,
     ):
         self.config = config
         self.output_dir = output_dir
@@ -119,6 +134,8 @@ class OnPolicyRunner(object):
 
         self.distributed_ip_and_port = distributed_ip_and_port
         self.machine_id = machine_id
+
+        self.save_dir_fmt = save_dir_fmt
 
     @property
     def local_start_time_str(self) -> str:
@@ -528,6 +545,7 @@ class OnPolicyRunner(object):
     def start_test(
         self,
         checkpoint_path_dir_or_pattern: str,
+        infer_output_dir: bool = False,
         approx_ckpt_step_interval: Optional[Union[float, int]] = None,
         max_sampler_processes_per_worker: Optional[int] = None,
         inference_expert: bool = False,
@@ -595,9 +613,16 @@ class OnPolicyRunner(object):
         for _ in range(num_testers):
             self.queues["checkpoints"].put(("quit", None))
 
+        if self.save_dir_fmt == SaveDirFormat.NESTED:
+            if infer_output_dir:  # NOTE: we change output_dir here
+                self.output_dir = self.checkpoint_log_folder_str(checkpoint_paths[0])
+            suffix = ""
+        elif self.save_dir_fmt == SaveDirFormat.FLAT:
+            suffix = f"__test_{self.local_start_time_str}"
+        else:
+            raise NotImplementedError
         metrics_dir = self.metric_path(self.local_start_time_str)
         os.makedirs(metrics_dir, exist_ok=True)
-        suffix = f"__test_{self.local_start_time_str}"
         metrics_file_path = os.path.join(metrics_dir, "metrics" + suffix + ".json")
 
         get_logger().info(f"Saving test metrics in {metrics_file_path}")
@@ -621,6 +646,14 @@ class OnPolicyRunner(object):
         get_logger().info(f"Using checkpoint start time {start_time_str}")
         return start_time_str
 
+    @staticmethod
+    def checkpoint_log_folder_str(checkpoint_file_name):
+        parts = checkpoint_file_name.split(os.path.sep)
+        assert len(parts) > 1, f"{checkpoint_file_name} is not a valid checkpoint path"
+        log_folder_str = (os.path.sep).join(parts[:-2])  # remove checkpoints/*.pt
+        get_logger().info(f"Using log folder {log_folder_str}")
+        return log_folder_str
+
     @property
     def experiment_name(self):
         if len(self.extra_tag) > 0:
@@ -630,50 +663,85 @@ class OnPolicyRunner(object):
     def checkpoint_dir(
         self, start_time_str: Optional[str] = None, create_if_none: bool = True
     ):
-        folder = os.path.join(
-            self.output_dir,
-            "checkpoints",
+        path_parts = [
             self.config.tag()
             if self.extra_tag == ""
             else os.path.join(self.config.tag(), self.extra_tag),
             start_time_str or self.local_start_time_str,
-        )
+        ]
+        if self.save_dir_fmt == SaveDirFormat.NESTED:
+            folder = os.path.join(self.output_dir, *path_parts, "checkpoints",)
+        elif self.save_dir_fmt == SaveDirFormat.FLAT:
+            folder = os.path.join(self.output_dir, "checkpoints", *path_parts,)
+        else:
+            raise NotImplementedError
         if create_if_none:
             os.makedirs(folder, exist_ok=True)
         return folder
 
     def log_writer_path(self, start_time_str: str) -> str:
-        path = os.path.join(
-            self.output_dir,
-            "tb",
-            self.config.tag()
-            if self.extra_tag == ""
-            else os.path.join(self.config.tag(), self.extra_tag),
-            start_time_str,
-        )
-        if self.mode == TEST_MODE_STR:
-            path = os.path.join(path, "test", self.local_start_time_str)
-        return path
+        if self.save_dir_fmt == SaveDirFormat.NESTED:
+            if self.mode == TEST_MODE_STR:
+                return os.path.join(
+                    self.output_dir,
+                    "test",
+                    self.config.tag(),
+                    self.local_start_time_str,
+                )
+            path = os.path.join(
+                self.output_dir,
+                self.config.tag()
+                if self.extra_tag == ""
+                else os.path.join(self.config.tag(), self.extra_tag),
+                start_time_str,
+                "train_tb",
+            )
+            return path
+        elif self.save_dir_fmt == SaveDirFormat.FLAT:
+            path = os.path.join(
+                self.output_dir,
+                "tb",
+                self.config.tag()
+                if self.extra_tag == ""
+                else os.path.join(self.config.tag(), self.extra_tag),
+                start_time_str,
+            )
+            if self.mode == TEST_MODE_STR:
+                path = os.path.join(path, "test", self.local_start_time_str)
+            return path
+        else:
+            raise NotImplementedError
 
     def metric_path(self, start_time_str: str) -> str:
-        return os.path.join(
-            self.output_dir,
-            "metrics",
-            self.config.tag()
-            if self.extra_tag == ""
-            else os.path.join(self.config.tag(), self.extra_tag),
-            start_time_str,
-        )
+        if self.save_dir_fmt == SaveDirFormat.NESTED:
+            return os.path.join(
+                self.output_dir, "test", self.config.tag(), start_time_str,
+            )
+        elif self.save_dir_fmt == SaveDirFormat.FLAT:
+            return os.path.join(
+                self.output_dir,
+                "metrics",
+                self.config.tag()
+                if self.extra_tag == ""
+                else os.path.join(self.config.tag(), self.extra_tag),
+                start_time_str,
+            )
+        else:
+            raise NotImplementedError
 
     def save_project_state(self):
-        base_dir = os.path.join(
-            self.output_dir,
-            "used_configs",
+        path_parts = [
             self.config.tag()
             if self.extra_tag == ""
             else os.path.join(self.config.tag(), self.extra_tag),
             self.local_start_time_str,
-        )
+        ]
+        if self.save_dir_fmt == SaveDirFormat.NESTED:
+            base_dir = os.path.join(self.output_dir, *path_parts, "used_configs",)
+        elif self.save_dir_fmt == SaveDirFormat.FLAT:
+            base_dir = os.path.join(self.output_dir, "used_configs", *path_parts,)
+        else:
+            raise NotImplementedError
         os.makedirs(base_dir, exist_ok=True)
 
         # Saving current git diff

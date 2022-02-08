@@ -44,6 +44,7 @@ nav:
   - Off-policy training: tutorials/offpolicy-tutorial.md
   - OpenAI gym for continuous control: tutorials/gym-tutorial.md
   - Multi-node ObjectNav training: tutorials/distributed-objectnav-tutorial.md
+  - OpenAI gym for MuJoCo tasks: tutorials/gym-mujoco-tutorial.md
 #  - IL to RL with pipelines: tutorials/training-pipelines.md
 - HowTos:
   - Define an experiment: howtos/defining-an-experiment.md
@@ -78,7 +79,13 @@ nav:
       - sensors:
         - vision_sensors: api/allenact/embodiedai/sensors/vision_sensors.md
       - models:
+        - aux_models: api/allenact/embodiedai/models/aux_models.md
         - basic_models: api/allenact/embodiedai/models/basic_models.md
+        - resnet: api/allenact/embodiedai/models/resnet.md
+        - fusion_models: api/allenact/embodiedai/models/fusion_models.md
+        - visual_nav_models: api/allenact/embodiedai/models/visual_nav_models.md
+      - aux_losses:
+        - losses: api/allenact/embodiedai/aux_losses/losses.md
     - base_abstractions:
       - experiment_config: api/allenact/base_abstractions/experiment_config.md
       - misc: api/allenact/base_abstractions/misc.md
@@ -217,7 +224,9 @@ nav:
           - objectnav_robothor_rgb_resnetgru_dagger: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_dagger.md
           - objectnav_robothor_rgbd_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgbd_resnetgru_ddppo.md
           - objectnav_robothor_rgb_resnetgru_ddppo_and_gbc: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_ddppo_and_gbc.md
+          - objectnav_robothor_rgb_unfrozenresnet_gru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_unfrozenresnet_gru_ddppo.md
           - objectnav_robothor_depth_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_depth_resnetgru_ddppo.md
+        - objectnav_mixin_unfrozenresnet_gru: api/projects/objectnav_baselines/experiments/objectnav_mixin_unfrozenresnet_gru.md
         - ithor:
           - objectnav_ithor_rgbd_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_rgbd_resnetgru_ddppo.md
           - objectnav_ithor_depth_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/ithor/objectnav_ithor_depth_resnetgru_ddppo.md
@@ -284,6 +293,7 @@ nav:
     - tutorials:
       - pointnav_habitat_rgb_ddppo: api/projects/tutorials/pointnav_habitat_rgb_ddppo.md
       - object_nav_ithor_dagger_then_ppo_one_object: api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object.md
+      - minigrid_offpolicy_tutorial: api/projects/tutorials/minigrid_offpolicy_tutorial.md
       - navtopartner_robothor_rgb_ppo: api/projects/tutorials/navtopartner_robothor_rgb_ppo.md
       - pointnav_ithor_rgb_ddppo: api/projects/tutorials/pointnav_ithor_rgb_ddppo.md
       - object_nav_ithor_dagger_then_ppo_one_object_viz: api/projects/tutorials/object_nav_ithor_dagger_then_ppo_one_object_viz.md

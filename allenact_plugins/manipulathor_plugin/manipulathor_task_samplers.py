@@ -18,6 +18,8 @@ from allenact_plugins.manipulathor_plugin.manipulathor_environment import (
 from allenact_plugins.manipulathor_plugin.manipulathor_tasks import (
     AbstractPickUpDropOffTask,
     ArmPointNavTask,
+    RotateArmPointNavTask,
+    CamRotateArmPointNavTask,
     EasyArmPointNavTask,
 )
 from allenact_plugins.manipulathor_plugin.manipulathor_viz import (
@@ -41,6 +43,7 @@ class AbstractMidLevelArmTaskSampler(TaskSampler):
         objects: List[str],
         scene_period: Optional[Union[int, str]] = None,
         max_tasks: Optional[int] = None,
+        num_task_per_scene: Optional[int] = None,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
         fixed_tasks: Optional[List[Dict[str, Any]]] = None,
@@ -57,6 +60,7 @@ class AbstractMidLevelArmTaskSampler(TaskSampler):
         self.max_steps = max_steps
         self._action_space = action_space
         self.objects = objects
+        self.num_task_per_scene = num_task_per_scene
 
         self.scene_counter: Optional[int] = None
         self.scene_order: Optional[List[str]] = None
@@ -186,7 +190,12 @@ class SimpleArmPointNavGeneralSampler(AbstractMidLevelArmTaskSampler):
                         dict(scene=scene, index=i, datapoint=data)
                         for (i, data) in enumerate(data_points[scene])
                     ]
-                    self.deterministic_data_list += visible_data
+                    if self.num_task_per_scene is None:
+                        self.deterministic_data_list += visible_data
+                    else:  # select a small number of data points for fast evaluation
+                        self.deterministic_data_list += visible_data[
+                            : min(self.num_task_per_scene, len(visible_data))
+                        ]
 
         if self.sampler_mode == "test":
             random.shuffle(self.deterministic_data_list)
@@ -369,6 +378,7 @@ class ArmPointNavTaskSampler(SimpleArmPointNavGeneralSampler):
         target_location = dict(
             position=target_data_point["object_location"],
             rotation={"x": 0, "y": 0, "z": 0},
+            countertop_id=target_data_point["countertop_id"],
         )
 
         this_controller = self.env
@@ -409,11 +419,10 @@ class ArmPointNavTaskSampler(SimpleArmPointNavGeneralSampler):
 
         task_info = {
             "objectId": source_location["object_id"],
-            "countertop_id": source_location["countertop_id"],
-            "source_location": source_location,
-            "target_location": target_location,
-            "agent_initial_state": initial_agent_location,
-            "initial_object_location": initial_object_info,
+            "source_location": source_location,  # used in analysis
+            "target_location": target_location,  # used in analysis
+            "agent_initial_state": initial_agent_location,  # not used
+            "initial_object_location": initial_object_info,  # not used
             "initial_hand_state": initial_hand_state,
         }
 
@@ -492,6 +501,14 @@ class ArmPointNavTaskSampler(SimpleArmPointNavGeneralSampler):
             self.sampler_index += 1
 
         return result
+
+
+class RotateArmPointNavTaskSampler(ArmPointNavTaskSampler):
+    _TASK_TYPE = RotateArmPointNavTask
+
+
+class CamRotateArmPointNavTaskSampler(ArmPointNavTaskSampler):
+    _TASK_TYPE = CamRotateArmPointNavTask
 
 
 class EasyArmPointNavTaskSampler(ArmPointNavTaskSampler):
