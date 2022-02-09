@@ -1,9 +1,9 @@
-from allenact.embodiedai.preprocessors.resnet import ClipResNetPreprocessor
+from allenact_plugins.clip_plugin.clip_preprocessors import ClipResNetPreprocessor
 from allenact_plugins.ithor_plugin.ithor_sensors import (
     RGBSensorThor,
     GoalObjectTypeThorSensor,
 )
-from projects.objectnav_baselines.experiments.objectnav_zeroshot_mixin_clip_gru import (
+from projects.objectnav_baselines.experiments.clip.objectnav_zeroshot_mixin_clip_gru import (
     ObjectNavZeroShotMixInClipGRUConfig,
 )
 from projects.objectnav_baselines.experiments.objectnav_mixin_ddppo import (

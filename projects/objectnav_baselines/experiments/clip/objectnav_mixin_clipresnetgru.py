@@ -5,7 +5,7 @@ import numpy as np
 import torch.nn as nn
 
 from allenact.base_abstractions.preprocessor import Preprocessor
-from allenact.embodiedai.preprocessors.resnet import ClipResNetPreprocessor
+from allenact_plugins.clip_plugin.clip_preprocessors import ClipResNetPreprocessor
 from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 from allenact.utils.experiment_utils import Builder
 from allenact_plugins.ithor_plugin.ithor_sensors import GoalObjectTypeThorSensor

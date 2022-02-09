@@ -317,6 +317,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
             for scene in scenes
         }
 
+        # Only keep episodes containing desired objects
         if 'object_types' in kwargs:
             self.episodes = {
                 scene : [ep for ep in episodes if ep["object_type"] in kwargs['object_types']]
