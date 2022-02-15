@@ -3,7 +3,7 @@
 Object navigation is currently available as a Task in AI2-THOR and
 Facebook's Habitat.
 """
-from typing import Tuple, Dict, Optional, cast
+from typing import Tuple, Dict, Optional
 
 import gym
 import torch
@@ -34,7 +34,9 @@ class CLIPObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         include_auxiliary_head: bool = False,
     ):
 
-        super().__init__(action_space=action_space, observation_space=observation_space,)
+        super().__init__(
+            action_space=action_space, observation_space=observation_space,
+        )
 
         self._hidden_size = hidden_size
         self.include_auxiliary_head = include_auxiliary_head
@@ -43,13 +45,15 @@ class CLIPObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
             self.observation_space,
             goal_sensor_uuid,
             rgb_resnet_preprocessor_uuid,
-            self._hidden_size
+            self._hidden_size,
         )
 
         self.actor = LinearActorHead(self.encoder.output_dims, action_space.n)
         self.critic = LinearCriticHead(self.encoder.output_dims)
         if self.include_auxiliary_head:
-            self.auxiliary_actor = LinearActorHead(self.encoder.output_dims, action_space.n)
+            self.auxiliary_actor = LinearActorHead(
+                self.encoder.output_dims, action_space.n
+            )
 
         self.train()
 
@@ -113,7 +117,7 @@ class CLIPActorCriticEncoder(nn.Module):
         observation_spaces: SpaceDict,
         goal_sensor_uuid: str,
         resnet_preprocessor_uuid: str,
-        rnn_hidden_size: int = 512
+        rnn_hidden_size: int = 512,
     ) -> None:
         super().__init__()
         self.goal_uuid = goal_sensor_uuid
@@ -127,7 +131,7 @@ class CLIPActorCriticEncoder(nn.Module):
 
     @property
     def output_dims(self):
-        return (1024)
+        return 1024
 
     def get_object_type_encoding(
         self, observations: Dict[str, torch.FloatTensor]
@@ -143,9 +147,7 @@ class CLIPActorCriticEncoder(nn.Module):
         nstep, nsampler = observations[self.resnet_uuid].shape[:2]
 
         x, rnn_hidden_states = self.state_encoder(
-            observations[self.resnet_uuid],
-            memory.tensor("rnn"),
-            masks
+            observations[self.resnet_uuid], memory.tensor("rnn"), masks
         )
 
         x = x.view(nstep * nsampler, -1)

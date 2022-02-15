@@ -7,15 +7,15 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from allenact.algorithms.onpolicy_sync.losses import PPO
 from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from projects.objectnav_baselines.experiments.robothor.clip.objectnav_robothor_zeroshot_rgb_clipgru_ddppo import (
-    ObjectNavRoboThorClipRGBPPOExperimentConfig as BaseConfig,
-)
 from allenact.utils.experiment_utils import (
     Builder,
     LinearDecay,
     MultiLinearDecay,
     TrainingPipeline,
     PipelineStage,
+)
+from projects.objectnav_baselines.experiments.robothor.clip.objectnav_robothor_zeroshot_rgb_clipgru_ddppo import (
+    ObjectNavRoboThorClipRGBPPOExperimentConfig as BaseConfig,
 )
 
 

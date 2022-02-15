@@ -10,9 +10,9 @@ import torch
 import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
+import allenact.embodiedai.models.resnet as resnet
 from allenact.algorithms.onpolicy_sync.policy import ObservationType
 from allenact.embodiedai.models.basic_models import SimpleCNN
-import allenact.embodiedai.models.resnet as resnet
 from allenact.embodiedai.models.visual_nav_models import (
     VisualNavActorCritic,
     FusionType,

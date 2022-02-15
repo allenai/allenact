@@ -52,16 +52,7 @@ class ObjectNavRoboThorClipRGBPPOExperimentConfig(
     #     )
     # )
 
-    TARGET_TYPES = tuple(
-        sorted(
-            [
-                "Apple",
-                "BasketBall",
-                "HousePlant",
-                "Television",
-            ]
-        )
-    )
+    TARGET_TYPES = tuple(sorted(["Apple", "BasketBall", "HousePlant", "Television",]))
 
     SENSORS = [
         RGBSensorThor(
@@ -72,9 +63,7 @@ class ObjectNavRoboThorClipRGBPPOExperimentConfig(
             mean=ClipResNetPreprocessor.CLIP_RGB_MEANS,
             stdev=ClipResNetPreprocessor.CLIP_RGB_STDS,
         ),
-        GoalObjectTypeThorSensor(
-            object_types=TARGET_TYPES,
-        ),
+        GoalObjectTypeThorSensor(object_types=TARGET_TYPES,),
     ]
 
     @classmethod

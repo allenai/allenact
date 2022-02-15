@@ -318,11 +318,18 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         }
 
         # Only keep episodes containing desired objects
-        if 'object_types' in kwargs:
+        if "object_types" in kwargs:
             self.episodes = {
-                scene : [ep for ep in episodes if ep["object_type"] in kwargs['object_types']]
-            for scene, episodes in self.episodes.items()}
-            self.episodes = {scene:episodes for scene, episodes in self.episodes.items() if len(episodes) > 0}
+                scene: [
+                    ep for ep in episodes if ep["object_type"] in kwargs["object_types"]
+                ]
+                for scene, episodes in self.episodes.items()
+            }
+            self.episodes = {
+                scene: episodes
+                for scene, episodes in self.episodes.items()
+                if len(episodes) > 0
+            }
             self.scenes = [scene for scene in self.scenes if scene in self.episodes]
 
         self.env_class = env_class

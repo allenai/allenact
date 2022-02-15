@@ -5,16 +5,16 @@ import numpy as np
 import torch.nn as nn
 
 from allenact.base_abstractions.preprocessor import Preprocessor
-from allenact_plugins.clip_plugin.clip_preprocessors import (
-    ClipResNetPreprocessor,
-    ClipTextPreprocessor
-)
 from allenact.embodiedai.sensors.vision_sensors import RGBSensor
 from allenact.utils.experiment_utils import Builder
+from allenact_plugins.clip_plugin.clip_preprocessors import (
+    ClipResNetPreprocessor,
+    ClipTextPreprocessor,
+)
+from allenact_plugins.clip_plugin.objectnav_models import CLIPObjectNavActorCritic
 from allenact_plugins.ithor_plugin.ithor_sensors import GoalObjectTypeThorSensor
 from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
-from allenact_plugins.clip_plugin.objectnav_models import CLIPObjectNavActorCritic
 
 
 class ObjectNavZeroShotMixInClipGRUConfig(ObjectNavBaseConfig):
@@ -73,7 +73,9 @@ class ObjectNavZeroShotMixInClipGRUConfig(ObjectNavBaseConfig):
             None,
         )
         goal_uuid = (
-            'goal_object_encoded' if 'goal_object_encoded' in kwargs["sensor_preprocessor_graph"].preprocessors
+            "goal_object_encoded"
+            if "goal_object_encoded"
+            in kwargs["sensor_preprocessor_graph"].preprocessors
             else goal_sensor_uuid
         )
 

@@ -53,7 +53,7 @@ class ResNetPreprocessor(Preprocessor):
         torchvision_resnet_model: Callable[..., models.ResNet] = models.resnet18,
         device: Optional[torch.device] = None,
         device_ids: Optional[List[torch.device]] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         def f(x, k):
             assert k in x, "{} must be set in ResNetPreprocessor".format(k)

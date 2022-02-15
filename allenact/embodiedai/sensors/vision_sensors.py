@@ -12,6 +12,9 @@ from allenact.base_abstractions.task import SubTaskType
 from allenact.utils.misc_utils import prepare_locals_for_super
 from allenact.utils.tensor_utils import ScaleBothSides
 
+IMAGENET_RGB_MEANS: Tuple[float, float, float] = (0.485, 0.456, 0.406)
+IMAGENET_RGB_STDS: Tuple[float, float, float] = (0.229, 0.224, 0.225)
+
 
 class VisionSensor(Sensor[EnvType, SubTaskType]):
     def __init__(
@@ -189,14 +192,11 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
 
 
 class RGBSensor(VisionSensor[EnvType, SubTaskType], ABC):
-    IMAGENET_RGB_MEANS: Tuple[float, float, float] = (0.485, 0.456, 0.406)
-    IMAGENET_RGB_STDS: Tuple[float, float, float] = (0.229, 0.224, 0.225)
-
     def __init__(
         self,
         use_resnet_normalization: bool = False,
-        mean: Optional[Union[np.ndarray, Sequence[float]]] = RGBSensor.IMAGENET_RGB_MEANS,
-        stdev: Optional[Union[np.ndarray, Sequence[float]]] = RGBSensor.IMAGENET_RGB_STDS,
+        mean: Optional[Union[np.ndarray, Sequence[float]]] = IMAGENET_RGB_MEANS,
+        stdev: Optional[Union[np.ndarray, Sequence[float]]] = IMAGENET_RGB_STDS,
         height: Optional[int] = None,
         width: Optional[int] = None,
         uuid: str = "rgb",

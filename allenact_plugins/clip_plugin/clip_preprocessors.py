@@ -1,11 +1,10 @@
-from typing import List, Callable, Optional, Any, cast, Dict
+from typing import List, Optional, Any, cast, Dict
 
+import clip
 import gym
 import numpy as np
 import torch
 import torch.nn as nn
-from torchvision import models
-import clip
 
 from allenact.base_abstractions.preprocessor import Preprocessor
 from allenact.utils.misc_utils import prepare_locals_for_super
@@ -21,7 +20,23 @@ class ClipResNetEmbedder(nn.Module):
     def forward(self, x):
         m = self.model.visual
         with torch.no_grad():
-            return m(x)
+
+            def stem(x):
+                for conv, bn in [(m.conv1, m.bn1), (m.conv2, m.bn2), (m.conv3, m.bn3)]:
+                    x = m.relu(bn(conv(x)))
+                x = m.avgpool(x)
+                return x
+
+            x = x.type(m.conv1.weight.dtype)
+            x = stem(x)
+            x = m.layer1(x)
+            x = m.layer2(x)
+            x = m.layer3(x)
+            x = m.layer4(x)
+            if self.pool:
+                x = F.adaptive_avg_pool2d(x, (1, 1))
+                x = torch.flatten(x, 1)
+            return x
 
 
 class ClipResNetPreprocessor(Preprocessor):
@@ -79,8 +94,6 @@ class ClipResNetPreprocessor(Preprocessor):
 
     @property
     def resnet(self) -> ClipResNetEmbedder:
-        import clip
-
         if self._resnet is None:
             self._resnet = ClipResNetEmbedder(
                 clip.load(self.clip_model_type, device=self.device)[0], pool=self.pool
@@ -102,7 +115,6 @@ class ClipResNetPreprocessor(Preprocessor):
 
 
 class ClipTextPreprocessor(Preprocessor):
-
     def __init__(
         self,
         goal_sensor_uuid: str,
@@ -111,15 +123,6 @@ class ClipTextPreprocessor(Preprocessor):
         device_ids: Optional[List[torch.device]] = None,
         **kwargs: Any,
     ):
-        try:
-            import clip
-            self.clip = clip
-        except ImportError as _:
-            raise ImportError(
-                "Cannot `import clip` when instatiating `CLIPResNetPreprocessor`."
-                " Please install clip from the openai/CLIP git repository:"
-                "\n`pip install git+https://github.com/openai/CLIP.git@3b473b0e682c091a9e53623eebc1ca1657385717`"
-            )
 
         output_shape = (1024,)
 
@@ -136,14 +139,14 @@ class ClipTextPreprocessor(Preprocessor):
 
         observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
 
-        input_uuids = [goal_sensor_uuid]        
+        input_uuids = [goal_sensor_uuid]
 
         super().__init__(**prepare_locals_for_super(locals()))
 
     @property
     def text_encoder(self):
         if self._clip_model is None:
-            self._clip_model = self.clip.load('RN50', device=self.device)[0]
+            self._clip_model = clip.load("RN50", device=self.device)[0]
             self._clip_model.eval()
         return self._clip_model.encode_text
 
@@ -155,6 +158,8 @@ class ClipTextPreprocessor(Preprocessor):
     def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:
         object_inds = obs[self.input_uuids[0]]
         object_types = [self.object_types[ind] for ind in object_inds]
-        x = self.clip.tokenize([f"navigate to the {obj}" for obj in object_types]).to(self.device)
+        x = clip.tokenize([f"navigate to the {obj}" for obj in object_types]).to(
+            self.device
+        )
         with torch.no_grad():
             return self.text_encoder(x).float()

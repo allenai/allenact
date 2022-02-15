@@ -5,9 +5,11 @@ from abc import ABC
 from math import ceil
 from typing import Dict, Any, List, Optional, Sequence, Tuple, cast
 
+import ai2thor
 import gym
 import numpy as np
 import torch
+from packaging import version
 
 from allenact.base_abstractions.experiment_config import MachineParams
 from allenact.base_abstractions.preprocessor import SensorPreprocessorGraph
@@ -25,9 +27,6 @@ from allenact_plugins.robothor_plugin.robothor_task_samplers import (
 )
 from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
-import ai2thor
-from packaging import version
-
 
 if ai2thor.__version__ not in ["0.0.1", None] and version.parse(
     ai2thor.__version__
