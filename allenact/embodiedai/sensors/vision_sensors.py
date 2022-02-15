@@ -189,11 +189,14 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
 
 
 class RGBSensor(VisionSensor[EnvType, SubTaskType], ABC):
+    IMAGENET_RGB_MEANS: Tuple[float, float, float] = (0.485, 0.456, 0.406)
+    IMAGENET_RGB_STDS: Tuple[float, float, float] = (0.229, 0.224, 0.225)
+
     def __init__(
         self,
         use_resnet_normalization: bool = False,
-        mean: Optional[Union[np.ndarray, Sequence[float]]] = (0.485, 0.456, 0.406),
-        stdev: Optional[Union[np.ndarray, Sequence[float]]] = (0.229, 0.224, 0.225),
+        mean: Optional[Union[np.ndarray, Sequence[float]]] = RGBSensor.IMAGENET_RGB_MEANS,
+        stdev: Optional[Union[np.ndarray, Sequence[float]]] = RGBSensor.IMAGENET_RGB_STDS,
         height: Optional[int] = None,
         width: Optional[int] = None,
         uuid: str = "rgb",

@@ -255,10 +255,12 @@ class ResnetTensorGoalEncoder(nn.Module):
         self.class_dims = class_dims
         self.resnet_hid_out_dims = resnet_compressor_hidden_out_dims
         self.combine_hid_out_dims = combiner_hidden_out_dims
+
         self.embed_class = nn.Embedding(
             num_embeddings=observation_spaces.spaces[self.goal_uuid].n,
             embedding_dim=self.class_dims,
         )
+
         self.blind = self.resnet_uuid not in observation_spaces.spaces
         if not self.blind:
             self.resnet_tensor_shape = observation_spaces.spaces[self.resnet_uuid].shape
@@ -313,6 +315,7 @@ class ResnetTensorGoalEncoder(nn.Module):
 
     def adapt_input(self, observations):
         resnet = observations[self.resnet_uuid]
+        goal = observations[self.goal_uuid]
 
         use_agent = False
         nagent = 1
@@ -324,7 +327,7 @@ class ResnetTensorGoalEncoder(nn.Module):
             nstep, nsampler = resnet.shape[:2]
 
         observations[self.resnet_uuid] = resnet.view(-1, *resnet.shape[-3:])
-        observations[self.goal_uuid] = observations[self.goal_uuid].view(-1, 1)
+        observations[self.goal_uuid] = goal.view(-1, goal.shape[-1])
 
         return observations, use_agent, nstep, nsampler, nagent
 

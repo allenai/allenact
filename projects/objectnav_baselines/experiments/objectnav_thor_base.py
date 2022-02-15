@@ -314,15 +314,21 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
+
         if self.test_on_validation or self.TEST_DATASET_DIR is None:
             if not self.test_on_validation:
                 get_logger().warning(
-                    "No test dataset dir detected, running test on validation set instead."
+                    "`test_on_validation` is set to `True` and thus we will run evaluation on the validation set instead."
+                    " Be careful as the saved metrics json and tensorboard files **will still be labeled as"
+                    " 'test' rather than 'valid'**."
                 )
             else:
-                get_logger().info(
-                    "`test_on_validation` was `True``, running test on validation set."
+                get_logger().warning(
+                    "No test dataset dir detected, running test on validation set instead."
+                    " Be careful as the saved metrics json and tensorboard files *will still be labeled as"
+                    " 'test' rather than 'valid'**."
                 )
+
             return self.valid_task_sampler_args(
                 process_ind=process_ind,
                 total_processes=total_processes,

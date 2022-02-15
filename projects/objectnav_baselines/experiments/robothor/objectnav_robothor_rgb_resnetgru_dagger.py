@@ -7,8 +7,8 @@ from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.objectnav_baselines.experiments.objectnav_mixin_dagger import (
     ObjectNavMixInDAggerConfig,
 )
-from projects.objectnav_baselines.experiments.objectnav_mixin_resnetgru import (
-    ObjectNavMixInResNetGRUConfig,
+from projects.objectnav_baselines.experiments.objectnav_mixin_resnet18gru import (
+    ObjectNavMixInResNet18GRUConfig,
 )
 from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base import (
     ObjectNavRoboThorBaseConfig,
@@ -18,7 +18,7 @@ from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base i
 class ObjectNaviThorRGBDAggerExperimentConfig(
     ObjectNavRoboThorBaseConfig,
     ObjectNavMixInDAggerConfig,
-    ObjectNavMixInResNetGRUConfig,
+    ObjectNavMixInResNet18GRUConfig,
 ):
     """An Object Navigation experiment configuration in RoboThor with RGB
     input."""
