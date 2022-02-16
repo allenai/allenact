@@ -122,6 +122,7 @@ def _do_setup():
             "networkx",
             "opencv-python",
             "wheel>=0.36.2",
+            "attrs>=21.4.0"
         ],
         setup_requires=["pytest-runner"],
         tests_require=["pytest", "pytest-cov", "compress_pickle"],
