@@ -1037,7 +1037,7 @@ class TrainingPipeline:
         )
 
     @property
-    def current_stage_storage(self) -> OrderedDict[str, ExperienceStorage]:
+    def current_stage_storage(self) -> "OrderedDict[str, ExperienceStorage]":
         storage_uuids_for_current_stage = sorted(
             list(
                 set(sc.storage_uuid for sc in self.current_stage.stage_components)
