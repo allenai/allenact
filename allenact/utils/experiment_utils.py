@@ -566,7 +566,7 @@ class StageComponent:
     uuid: the name of this component
     storage_uuid: the name of the `ExperienceStorage` that will be used with this component.
     loss_names: list of unique names assigned to off-policy losses
-    training_settings: TODO
+    training_settings: Instance of `TrainingSettings`
     loss_weights : A list of floating point numbers describing the relative weights
         applied to the losses referenced by `loss_names`. Should be the same length
         as `loss_names`. If this is `None`, all weights will be assumed to be one.
@@ -620,8 +620,9 @@ class PipelineStage:
         `EarlyStoppingCriterion` object may store internal state which is not
         saved in the checkpoint). Currently AllenAct only supports using early stopping
         criterion when **not** using distributed training.
-    training_settings: TODO
-    training_settings_kwargs: TODO
+    training_settings: Instance of `TrainingSettings`.
+    training_settings_kwargs: For backwards compatability: arguments to instantiate TrainingSettings when
+     `training_settings` is `None`.
     """
 
     def __init__(
@@ -767,14 +768,19 @@ class TrainingPipeline:
     pipeline_stages : A list of PipelineStages. Each of these define how the agent
         will be trained and are executed sequentially.
     optimizer_builder : Builder object to instantiate the optimizer to use during training.
-    named_storages: TODO
-    rollout_storage_uuid: TODO
+    named_storages: Map of storage names to corresponding `ExperienceStorage` instances or `Builder` objects.
+        If this is `None` (or does not contain a value of (sub)type `RolloutStorage`) then a new
+        `Builder[RolloutBlockStorage]` will be created and added by default.
+    rollout_storage_uuid: Optional name of `RolloutStorage`, if `None` given, it will be assigned to the
+    `ExperienceStorage`  of subclass `RolloutStorage` in `named_storages`. Note that this assumes that there
+    is only a single `RolloutStorage` object in the values of `named_storages`.
     should_log: `True` if metrics accumulated during training should be logged to the console as well
         as to a tensorboard file.
     lr_scheduler_builder : Optional builder object to instantiate the learning rate scheduler used
         through the pipeline.
-    training_settings: TODO
-    training_settings_kwargs: TODO
+    training_settings: Instance of `TrainingSettings`
+    training_settings_kwargs: For backwards compatability: arguments to instantiate TrainingSettings when
+        `training_settings` is `None`.
     """
 
     # noinspection PyUnresolvedReferences
@@ -1031,7 +1037,7 @@ class TrainingPipeline:
         )
 
     @property
-    def current_stage_storage(self) -> Dict[str, ExperienceStorage]:
+    def current_stage_storage(self) -> OrderedDict[str, ExperienceStorage]:
         storage_uuids_for_current_stage = sorted(
             list(
                 set(sc.storage_uuid for sc in self.current_stage.stage_components)
@@ -1046,7 +1052,9 @@ class TrainingPipeline:
                     Builder["ExperienceStorage"], self._named_storages[storage_uuid],
                 )()
 
-        return {k: self._named_storages[k] for k in storage_uuids_for_current_stage}
+        return OrderedDict(
+            (k, self._named_storages[k]) for k in storage_uuids_for_current_stage
+        )
 
     def get_loss(self, uuid: str):
         if isinstance(self._named_losses[uuid], Builder):

@@ -374,12 +374,44 @@ class GenericAbstractLoss(Loss):
 
         Loss after processing a batch of data with (part of) a model (possibly with memory).
 
+        We support two different types of memory: `batch_memory` and `stream_memory` that can be
+        used to compute losses and share computation.
+
+        ## `batch_memory`
+        During the update phase of training, the following
+        steps happen in order:
+        1. A `batch` of data is sampled from an `ExperienceStorage` (which stores data possibly collected during previous
+             rollout steps).
+        2.  This `batch` is passed to each of the specified `GenericAbstractLoss`'s and is used, along with the `model`,
+             to compute each such loss.
+        3. The losses are summed together, gradients are computed by backpropagation, and an update step is taken.
+        4. The process loops back to (1) with a new batch until.
+        Now supposed that the computation used by a `GenericAbstractLoss` (`LossA`) can be shared across multiple of the
+        `GenericAbstractLoss`'s (`LossB`, ...). For instance, `LossA` might run the visual encoder of `model` across
+        all the images contained in `batch` so that it can compute a classification loss while `LossB` would like to
+        run the same visual encoder on the same images to compute a depth-prediction loss. Without having some sort
+        of memory, you would need to rerun this visual encoder on all images multiple times, wasting computational
+        resources. This is where `batch_memory` comes in: `LossA` is can store the visual representations it computed
+        in `batch_memory` and then `LossB` can access them.  Note that the `batch_memory` will be reinitialized after
+        each new `batch` is sampled.
+
+        ## `stream_memory`
+        As described above, `batch_memory` treats each batch as its own independent collection of data. But what if
+        your `ExperienceStorage` samples its batches in a streaming fashion? E.g. your `ExperienceStorage`
+        might be a fixed collection of expert trajectories for use with imitation learning. In this case you can't
+        simply treat each batch independently: you might want to save information from one batch to use in another.
+        The simplest case of this would be if your agent `model` uses an RNN and produces a recurrent hidden state.
+        In this case, the hidden state from the end of one batch should be used at the start of computations for the
+        next batch. To allow for this, you can use the `stream_memory`. `stream_memory` is not cleared across
+        batches but, **importantly**, `stream_memory` is detached from the computation graph after each backpropagation
+        step so that the size of the computation graph does not grow unboundedly.
+
         # Parameters
 
         model: model to run on data batch (both assumed to be on the same device)
         batch: data to use as input for model (already on the same device as model)
-        batch_memory: TODO
-        stream_memory: TODO
+        batch_memory: See above.
+        stream_memory: See above.
 
         # Returns
 
@@ -387,8 +419,8 @@ class GenericAbstractLoss(Loss):
 
         current_loss: total loss
         current_info: additional information about the current loss
-        batch_memory: model memory after processing current data batch
-        stream_memory: model memory after processing current data batch
+        batch_memory: `batch_memory` memory after processing current data batch, see above.
+        stream_memory: `stream_memory` memory after processing current data batch, see above.
         bsize: batch size
         """
         raise NotImplementedError()
