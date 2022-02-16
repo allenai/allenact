@@ -116,14 +116,14 @@ from allenact.utils.experiment_utils import (
     evenly_distribute_count_into_bins,
 )
 from allenact_plugins.ithor_plugin.ithor_sensors import RGBSensorThor
+from allenact_plugins.navigation_plugin.objectnav.models import (
+    ResnetTensorNavActorCritic,
+)
 from allenact_plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from allenact_plugins.robothor_plugin.robothor_task_samplers import (
     PointNavDatasetTaskSampler,
 )
 from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
-from projects.pointnav_baselines.models.point_nav_models import (
-    ResnetTensorPointNavActorCritic,
-)
 
 # %%
 """Next we define a new experiment config class:"""
@@ -281,6 +281,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         rotateStepDegrees=30.0,
         visibilityDistance=1.0,
         gridSize=0.25,
+        agentMode="bot",
     )
 
     # %%
@@ -406,7 +407,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     # %%
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ResnetTensorPointNavActorCritic(
+        return ResnetTensorNavActorCritic(
             action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",

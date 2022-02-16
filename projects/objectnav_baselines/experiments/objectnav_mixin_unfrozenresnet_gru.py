@@ -9,7 +9,7 @@ from allenact.utils.experiment_utils import Builder
 from allenact_plugins.ithor_plugin.ithor_sensors import GoalObjectTypeThorSensor
 from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
-from projects.objectnav_baselines.models.object_nav_models import ObjectNavActorCritic
+from allenact_plugins.navigation_plugin.objectnav.models import ObjectNavActorCritic
 
 
 class ObjectNavMixInUnfrozenResNetGRUConfig(ObjectNavBaseConfig):

@@ -618,17 +618,13 @@ class OnPolicyRLEngine(object):
         if "_vector_tasks" in self.__dict__ and self._vector_tasks is not None:
             try:
                 logif(
-                    "{} worker {} Closing OnPolicyRLEngine.vector_tasks.".format(
-                        self.mode, self.worker_id
-                    )
+                    f"{self.mode} worker {self.worker_id} Closing OnPolicyRLEngine.vector_tasks."
                 )
                 self._vector_tasks.close()
                 logif("{} worker {} Closed.".format(self.mode, self.worker_id))
             except Exception as e:
                 logif(
-                    "{} worker {} Exception raised when closing OnPolicyRLEngine.vector_tasks:".format(
-                        self.mode, self.worker_id
-                    )
+                    f"{self.mode} worker {self.worker_id} Exception raised when closing OnPolicyRLEngine.vector_tasks:"
                 )
                 logif(e)
 
@@ -821,7 +817,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.seed = cast(int, ckpt["trainer_seed"])
             self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])  # type: ignore
             if self.lr_scheduler is not None:
-                self.lr_scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
+                self.lr_scheduler.load_state_dict(ckpt["scheduler_state"],)  # type: ignore
 
         self.deterministic_seeds()
 

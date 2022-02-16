@@ -57,7 +57,7 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
             rotateStepDegrees=self.ROTATION_DEGREES,
             gridSize=self.STEP_SIZE,
             snapToGrid=False,
-            agentMode="locobot",
+            agentMode="bot",
             include_private_scenes=False,
             renderDepthImage=any(isinstance(s, DepthSensorThor) for s in self.SENSORS),
         )
