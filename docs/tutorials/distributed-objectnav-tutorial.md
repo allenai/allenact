@@ -294,7 +294,7 @@ The training pipeline looks like:
 distributed processes, we encourage you to use that. The experimental distributed tools included here are intended for
 a rather basic usage pattern that might not suit your needs.
 
-If we haven't set up AllenAct with the headless version of Ai2-THOR in our nodes, we can define a configuration script
+If we haven't set up AllenAct with the headless version of AI2-THOR in our nodes, we can define a configuration script
 similar to:
 
 ```bash
