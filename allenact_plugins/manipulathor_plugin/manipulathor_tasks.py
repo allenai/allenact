@@ -211,18 +211,20 @@ class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
 
             # 2. disturbance with other objects
             current_object_locations = self.env.get_current_object_locations()
-            objects_moved = self.env.get_objects_moved(
+            self.final_objects_moved = self.env.get_objects_moved(
                 self.initial_object_locations,
                 current_object_locations,
                 self.task_info["objectId"],
                 self._vibration_dist_dict,
             )
-            result["disturbance/objects_moved_num"] = len(objects_moved)
+            result["disturbance/objects_moved_num"] = len(self.final_objects_moved)
 
             # 3. conditioned on success
             if self._success:
                 result["average/eplen_success"] = result["ep_length"]
-                result["average/success_wo_disturb"] = len(objects_moved) == 0
+                result["average/success_wo_disturb"] = (
+                    len(self.final_objects_moved) == 0
+                )
 
             else:
                 result["average/success_wo_disturb"] = 0.0
@@ -304,6 +306,8 @@ class ArmPointNavTask(AbstractPickUpDropOffTask):
         self.previous_object_locations = copy.deepcopy(self.initial_object_locations)
         self.current_penalized_distance = 0.0  # used in Sensor for auxiliary task
 
+        self.total_objects_moved = []
+
     def metrics(self) -> Dict[str, Any]:
         result = super(ArmPointNavTask, self).metrics()
 
@@ -315,6 +319,13 @@ class ArmPointNavTask(AbstractPickUpDropOffTask):
             result[
                 "disturbance/objects_moved_distance_vis"
             ] = self.cumulated_disturb_distance_visible
+
+            # how many objects are temporarily moved but finally stay at origin
+            diff = set(self.total_objects_moved) - set(self.final_objects_moved)
+            print("total_objects_moved", self.total_objects_moved)
+            print("final_objects_moved", self.final_objects_moved)
+            result["disturbance/objects_restore"] = len(diff) > 0
+            result["disturbance/objects_restore_num"] = len(diff)
 
         return result
 
@@ -442,6 +453,16 @@ class ArmPointNavTask(AbstractPickUpDropOffTask):
         self.current_penalized_distance = penalized_distance
 
         self.previous_object_locations = current_object_locations
+
+        current_objects_moved = self.env.get_objects_moved(
+            self.initial_object_locations,
+            current_object_locations,
+            self.task_info["objectId"],
+            self._vibration_dist_dict,
+        )
+        self.total_objects_moved = list(
+            set(current_objects_moved) | set(self.total_objects_moved)
+        )
 
         self.visualize(
             action_str=self._last_action_str,
