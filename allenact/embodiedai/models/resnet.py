@@ -375,7 +375,7 @@ class GroupNormResNetEncoder(nn.Module):
                 nn.init.kaiming_normal_(layer.weight, nn.init.calculate_gain("relu"))
                 if layer.bias is not None:
                     nn.init.constant_(layer.bias, val=0)
-        get_logger().info("initialize resnet encoder")
+        get_logger().debug("initialize resnet encoder")
 
     def forward(self, observations):
         if self.is_blind:

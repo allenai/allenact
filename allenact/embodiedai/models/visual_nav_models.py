@@ -104,7 +104,7 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
 
         self.belief_names = list(self.state_encoders.keys())
 
-        get_logger().info(
+        get_logger().debug(
             "there are {} belief models: {}".format(
                 len(self.belief_names), self.belief_names
             )
