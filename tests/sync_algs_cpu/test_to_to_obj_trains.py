@@ -60,7 +60,7 @@ class TestGoToObjTrains(object):
             tr["tasks"]
         ), "Success counts don't seem to match"
         assert (
-            tr["success"] > 0.95
+            tr["success"] > 0.939
         ), "PPO did not seem to converge for the go_to_obj task (success {}).".format(
             tr["success"]
         )
