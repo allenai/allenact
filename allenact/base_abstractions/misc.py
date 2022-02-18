@@ -351,12 +351,12 @@ class Loss(abc.ABC):
 
 @attr.s(kw_only=True)
 class LossOutput:
-    value: torch.Tensor
-    info: Dict[str, Union[float, int]]
-    per_epoch_info: Dict[str, Union[float, int]]
-    batch_memory: Memory
-    stream_memory: Memory
-    bsize: int
+    value: torch.Tensor = attr.ib()
+    info: Dict[str, Union[float, int]] = attr.ib()
+    per_epoch_info: Dict[str, Union[float, int]] = attr.ib()
+    batch_memory: Memory = attr.ib()
+    stream_memory: Memory = attr.ib()
+    bsize: int = attr.ib()
 
 
 class GenericAbstractLoss(Loss):
