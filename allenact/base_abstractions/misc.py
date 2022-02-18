@@ -349,7 +349,7 @@ class Loss(abc.ABC):
     pass
 
 
-@attr.define
+@attr.s(kw_only=True)
 class LossOutput:
     value: torch.Tensor
     info: Dict[str, Union[float, int]]

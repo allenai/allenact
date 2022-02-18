@@ -10,7 +10,7 @@ class TrackingInfoType(Enum):
     UPDATE_INFO = "update_info"
 
 
-@attr.define
+@attr.s(kw_only=True)
 class TrackingInfo:
     type: TrackingInfoType
     info: Dict[str, Any]

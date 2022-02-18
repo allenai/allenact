@@ -556,7 +556,7 @@ class TrainingSettings:
             super(TrainingSettings, self).__getattribute__(item)
 
 
-@attr.define(kw_only=True)
+@attr.s(kw_only=True)
 class StageComponent:
     """An custom component for a PipelineStage, possibly including overrides to
     the `TrainingSettings` in from the `TrainingPipeline` and `PipelineStage`.
@@ -572,10 +572,10 @@ class StageComponent:
         as `loss_names`. If this is `None`, all weights will be assumed to be one.
     """
 
-    uuid: str
-    storage_uuid: str
-    loss_names: Sequence[str]
-    training_settings: TrainingSettings = attr.field(
+    uuid: str = attr.ib()
+    storage_uuid: str = attr.ib()
+    loss_names: Sequence[str] = attr.ib()
+    training_settings: TrainingSettings = attr.ib(
         default=attr.Factory(TrainingSettings)
     )
 
