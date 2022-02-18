@@ -13,13 +13,15 @@ from allenact.utils.misc_utils import md5_hash_str_as_int
 def md5_hash_of_state_dict(state_dict: Dict[str, Any]):
     hashables = []
     for piece in sorted(state_dict.items()):
-        val = piece[1]
-        if isinstance(val, (torch.Tensor, nn.Parameter)):
-            hashables.append(
-                int(hashlib.md5(val.data.cpu().numpy().tobytes()).hexdigest(), 16,)
-            )
+        if isinstance(piece[1], (np.ndarray, torch.Tensor, nn.Parameter)):
+            hashables.append(piece[0])
+            if not isinstance(piece[1], np.ndarray):
+                p1 = piece[1].data.cpu().numpy()
+            else:
+                p1 = piece[1]
+            hashables.append(int(hashlib.md5(p1.tobytes()).hexdigest(), 16,))
         else:
-            md5_hash_str_as_int(str(piece))
+            hashables.append(md5_hash_str_as_int(str(piece)))
 
     return md5_hash_str_as_int(str(hashables))
 

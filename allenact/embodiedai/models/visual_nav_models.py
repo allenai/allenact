@@ -121,11 +121,15 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
         for key in state_dict.keys():
             if "state_encoder." in key:  # old key name
                 new_key = key.replace("state_encoder.", "state_encoders.single_belief.")
+            elif "goal_visual_encoder.embed_class" in key:
+                new_key = key.replace(
+                    "goal_visual_encoder.embed_class", "goal_visual_encoder.embed_goal"
+                )
             else:
                 new_key = key
             new_state_dict[new_key] = state_dict[key]
 
-        return super().load_state_dict(new_state_dict)  # compatible in keys
+        return super().load_state_dict(new_state_dict, **kwargs)  # compatible in keys
 
     def create_actorcritic_head(self):
         self.actor = LinearActorHead(self._hidden_size, self.action_space.n)

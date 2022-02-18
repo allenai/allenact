@@ -6,13 +6,13 @@ from projects.objectnav_baselines.experiments.ithor.objectnav_ithor_base import 
 from projects.objectnav_baselines.experiments.objectnav_mixin_ddppo import (
     ObjectNavMixInPPOConfig,
 )
-from projects.objectnav_baselines.experiments.objectnav_mixin_resnetgru import (
-    ObjectNavMixInResNetGRUConfig,
+from projects.objectnav_baselines.experiments.objectnav_mixin_resnet18gru import (
+    ObjectNavMixInResNet18GRUConfig,
 )
 
 
 class ObjectNaviThorDepthPPOExperimentConfig(
-    ObjectNaviThorBaseConfig, ObjectNavMixInPPOConfig, ObjectNavMixInResNetGRUConfig,
+    ObjectNaviThorBaseConfig, ObjectNavMixInPPOConfig, ObjectNavMixInResNet18GRUConfig,
 ):
     """An Object Navigation experiment configuration in iThor with Depth
     input."""

@@ -3,15 +3,17 @@
 Object navigation is currently available as a Task in AI2-THOR and
 Facebook's Habitat.
 """
-from typing import Tuple, Dict, Optional, cast, List
+import numbers
+from typing import Optional, List, Dict, cast, Tuple
 
 import gym
 import torch
-import torch.nn as nn
-from gym.spaces.dict import Dict as SpaceDict
+from gym.spaces import Dict as SpaceDict
+from torch import nn as nn
 
 import allenact.embodiedai.models.resnet as resnet
 from allenact.algorithms.onpolicy_sync.policy import ObservationType
+from allenact.embodiedai.models import resnet as resnet
 from allenact.embodiedai.models.basic_models import SimpleCNN
 from allenact.embodiedai.models.visual_nav_models import (
     VisualNavActorCritic,
@@ -154,7 +156,7 @@ class ObjectNavActorCritic(VisualNavActorCritic):
         return obs_embeds
 
 
-class ResnetTensorObjectNavActorCritic(VisualNavActorCritic):
+class ResnetTensorNavActorCritic(VisualNavActorCritic):
     def __init__(
         # base params
         self,
@@ -246,20 +248,27 @@ class ResnetTensorGoalEncoder(nn.Module):
         observation_spaces: SpaceDict,
         goal_sensor_uuid: str,
         resnet_preprocessor_uuid: str,
-        class_dims: int = 32,
+        goal_embed_dims: int = 32,
         resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
         combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
     ) -> None:
         super().__init__()
         self.goal_uuid = goal_sensor_uuid
         self.resnet_uuid = resnet_preprocessor_uuid
-        self.class_dims = class_dims
+        self.goal_embed_dims = goal_embed_dims
         self.resnet_hid_out_dims = resnet_compressor_hidden_out_dims
         self.combine_hid_out_dims = combiner_hidden_out_dims
-        self.embed_class = nn.Embedding(
-            num_embeddings=observation_spaces.spaces[self.goal_uuid].n,
-            embedding_dim=self.class_dims,
-        )
+
+        self.goal_space = observation_spaces.spaces[self.goal_uuid]
+        if isinstance(self.goal_space, gym.spaces.Discrete):
+            self.embed_goal = nn.Embedding(
+                num_embeddings=self.goal_space.n, embedding_dim=self.goal_embed_dims,
+            )
+        elif isinstance(self.goal_space, gym.spaces.Box):
+            self.embed_goal = nn.Linear(self.goal_space.shape[-1], self.goal_embed_dims)
+        else:
+            raise NotImplementedError
+
         self.blind = self.resnet_uuid not in observation_spaces.spaces
         if not self.blind:
             self.resnet_tensor_shape = observation_spaces.spaces[self.resnet_uuid].shape
@@ -271,7 +280,7 @@ class ResnetTensorGoalEncoder(nn.Module):
             )
             self.target_obs_combiner = nn.Sequential(
                 nn.Conv2d(
-                    self.resnet_hid_out_dims[1] + self.class_dims,
+                    self.resnet_hid_out_dims[1] + self.goal_embed_dims,
                     self.combine_hid_out_dims[0],
                     1,
                 ),
@@ -286,7 +295,7 @@ class ResnetTensorGoalEncoder(nn.Module):
     @property
     def output_dims(self):
         if self.blind:
-            return self.class_dims
+            return self.goal_embed_dims
         else:
             return (
                 self.combine_hid_out_dims[-1]
@@ -300,20 +309,21 @@ class ResnetTensorGoalEncoder(nn.Module):
         """Get the object type encoding from input batched observations."""
         return cast(
             torch.FloatTensor,
-            self.embed_class(observations[self.goal_uuid].to(torch.int64)),
+            self.embed_goal(observations[self.goal_uuid].to(torch.int64)),
         )
 
     def compress_resnet(self, observations):
         return self.resnet_compressor(observations[self.resnet_uuid])
 
     def distribute_target(self, observations):
-        target_emb = self.embed_class(observations[self.goal_uuid])
-        return target_emb.view(-1, self.class_dims, 1, 1).expand(
+        target_emb = self.embed_goal(observations[self.goal_uuid])
+        return target_emb.view(-1, self.goal_embed_dims, 1, 1).expand(
             -1, -1, self.resnet_tensor_shape[-2], self.resnet_tensor_shape[-1]
         )
 
     def adapt_input(self, observations):
         resnet = observations[self.resnet_uuid]
+        goal = observations[self.goal_uuid]
 
         use_agent = False
         nagent = 1
@@ -325,7 +335,7 @@ class ResnetTensorGoalEncoder(nn.Module):
             nstep, nsampler = resnet.shape[:2]
 
         observations[self.resnet_uuid] = resnet.view(-1, *resnet.shape[-3:])
-        observations[self.goal_uuid] = observations[self.goal_uuid].view(-1, 1)
+        observations[self.goal_uuid] = goal.view(-1, goal.shape[-1])
 
         return observations, use_agent, nstep, nsampler, nagent
 
@@ -341,7 +351,7 @@ class ResnetTensorGoalEncoder(nn.Module):
         )
 
         if self.blind:
-            return self.embed_class(observations[self.goal_uuid])
+            return self.embed_goal(observations[self.goal_uuid])
         embs = [
             self.compress_resnet(observations),
             self.distribute_target(observations),
@@ -359,7 +369,7 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         goal_sensor_uuid: str,
         rgb_resnet_preprocessor_uuid: str,
         depth_resnet_preprocessor_uuid: str,
-        class_dims: int = 32,
+        goal_embed_dims: int = 32,
         resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
         combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
     ) -> None:
@@ -367,13 +377,20 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         self.goal_uuid = goal_sensor_uuid
         self.rgb_resnet_uuid = rgb_resnet_preprocessor_uuid
         self.depth_resnet_uuid = depth_resnet_preprocessor_uuid
-        self.class_dims = class_dims
+        self.goal_embed_dims = goal_embed_dims
         self.resnet_hid_out_dims = resnet_compressor_hidden_out_dims
         self.combine_hid_out_dims = combiner_hidden_out_dims
-        self.embed_class = nn.Embedding(
-            num_embeddings=observation_spaces.spaces[self.goal_uuid].n,
-            embedding_dim=self.class_dims,
-        )
+
+        self.goal_space = observation_spaces.spaces[self.goal_uuid]
+        if isinstance(self.goal_space, gym.spaces.Discrete):
+            self.embed_goal = nn.Embedding(
+                num_embeddings=self.goal_space.n, embedding_dim=self.goal_embed_dims,
+            )
+        elif isinstance(self.goal_space, gym.spaces.Box):
+            self.embed_goal = nn.Linear(self.goal_space.shape[-1], self.goal_embed_dims)
+        else:
+            raise NotImplementedError
+
         self.blind = (
             self.rgb_resnet_uuid not in observation_spaces.spaces
             or self.depth_resnet_uuid not in observation_spaces.spaces
@@ -396,7 +413,7 @@ class ResnetDualTensorGoalEncoder(nn.Module):
             )
             self.rgb_target_obs_combiner = nn.Sequential(
                 nn.Conv2d(
-                    self.resnet_hid_out_dims[1] + self.class_dims,
+                    self.resnet_hid_out_dims[1] + self.goal_embed_dims,
                     self.combine_hid_out_dims[0],
                     1,
                 ),
@@ -405,7 +422,7 @@ class ResnetDualTensorGoalEncoder(nn.Module):
             )
             self.depth_target_obs_combiner = nn.Sequential(
                 nn.Conv2d(
-                    self.resnet_hid_out_dims[1] + self.class_dims,
+                    self.resnet_hid_out_dims[1] + self.goal_embed_dims,
                     self.combine_hid_out_dims[0],
                     1,
                 ),
@@ -420,7 +437,7 @@ class ResnetDualTensorGoalEncoder(nn.Module):
     @property
     def output_dims(self):
         if self.blind:
-            return self.class_dims
+            return self.goal_embed_dims
         else:
             return (
                 2
@@ -435,7 +452,7 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         """Get the object type encoding from input batched observations."""
         return cast(
             torch.FloatTensor,
-            self.embed_class(observations[self.goal_uuid].to(torch.int64)),
+            self.embed_goal(observations[self.goal_uuid].to(torch.int64)),
         )
 
     def compress_rgb_resnet(self, observations):
@@ -445,8 +462,8 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         return self.depth_resnet_compressor(observations[self.depth_resnet_uuid])
 
     def distribute_target(self, observations):
-        target_emb = self.embed_class(observations[self.goal_uuid])
-        return target_emb.view(-1, self.class_dims, 1, 1).expand(
+        target_emb = self.embed_goal(observations[self.goal_uuid])
+        return target_emb.view(-1, self.goal_embed_dims, 1, 1).expand(
             -1, -1, self.resnet_tensor_shape[-2], self.resnet_tensor_shape[-1]
         )
 
@@ -481,7 +498,7 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         )
 
         if self.blind:
-            return self.embed_class(observations[self.goal_uuid])
+            return self.embed_goal(observations[self.goal_uuid])
         rgb_embs = [
             self.compress_rgb_resnet(observations),
             self.distribute_target(observations),

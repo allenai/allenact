@@ -18,7 +18,7 @@ except ImportError:
 from allenact_plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
 from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
 from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
-from projects.pointnav_baselines.models.point_nav_models import PointNavActorCritic
+from allenact_plugins.navigation_plugin.pointnav.models import PointNavActorCritic
 
 
 class PointNavMixInSimpleConvGRUConfig(PointNavBaseConfig, ABC):
