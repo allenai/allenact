@@ -20,7 +20,7 @@ dependencies:
   - networkx
   - numpy>=1.19.1
   - opencv
-  - conda-forge::pillow>=8.2.0
+  - conda-forge::pillow>=8.2.0,<9.0.0
   - pip
   - proglog>=0.1.9
   - protobuf>=3.14.0

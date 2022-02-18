@@ -120,7 +120,7 @@ def run_setup():
         packages=find_packages(include=["allenact_plugins", "allenact_plugins.*"]),
         install_requires=[
             "gym>=0.17.0,<0.20.0",
-            "torch>=python=3.8,<1.9.0",
+            "torch>=1.6.0,!=1.8.0,<2.0.0",
             "torchvision>=0.7.0,<0.10.0",
             "numpy>=1.19.1",
             "wheel>=0.36.2",
