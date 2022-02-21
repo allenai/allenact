@@ -4,7 +4,7 @@
 cd "$( cd "$( dirname "${BASH_SOURCE[0]}/.." )" >/dev/null 2>&1 && pwd )" || exit
 
 echo RUNNING BLACK
-black . --exclude src
+black . --exclude src --exclude external_projects
 echo BLACK DONE
 echo ""
 

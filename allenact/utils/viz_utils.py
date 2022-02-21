@@ -46,9 +46,8 @@ try:
 except ImportError as _:
     pass
 
-from matplotlib import pyplot as plt, markers
-from matplotlib.collections import LineCollection
-from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+import matplotlib.markers as markers
 import cv2
 
 from allenact.utils.system import get_logger
@@ -265,7 +264,7 @@ class TrajectoryViz(AbstractViz):
             z = np.asarray(z)
 
             segments = make_segments(x, y)
-            lc = LineCollection(
+            lc = matplotlib.collections.LineCollection(
                 segments,
                 array=z,
                 cmap=cmap,
@@ -522,7 +521,9 @@ class AbstractTensorViz(AbstractViz):
             )  # close all current figures (SummaryWriter already closes all figures we log)
 
     @abc.abstractmethod
-    def make_fig(self, episode_src: Sequence[np.ndarray], episode_id: str) -> Figure:
+    def make_fig(
+        self, episode_src: Sequence[np.ndarray], episode_id: str
+    ) -> matplotlib.figure.Figure:
         raise NotImplementedError()
 
 

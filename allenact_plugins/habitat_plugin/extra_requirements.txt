@@ -1,4 +1,4 @@
-habitat @ git+https://github.com/Lucaweihs/habitat-lab.git@99124c785bd5ca51e321ea20462f71071cd43ae2
+habitat @ git+https://github.com/facebookresearch/habitat-lab.git@33654923dc733f5fcea23aea6391034c3f694a67
 numpy-quaternion
 pyquaternion>=0.9.9
 numba

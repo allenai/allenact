@@ -428,7 +428,7 @@ class OnPolicyRLEngine(object):
 
         return len(paused), keep, batch
 
-    def initialize_storage_and_vizualizer(
+    def initialize_storage_and_viz(
         self,
         storage_to_initialize: Optional[Sequence[ExperienceStorage]],
         visualizer: Optional[VizSuite] = None,
@@ -879,7 +879,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.seed = cast(int, ckpt["trainer_seed"])
             self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])  # type: ignore
             if self.lr_scheduler is not None:
-                self.lr_scheduler.load_state_dict(ckpt["scheduler_state"],)  # type: ignore
+                self.lr_scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
 
         self.deterministic_seeds()
 
@@ -1308,7 +1308,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         rollout_storage = self.training_pipeline.rollout_storage
         uuid_to_storage = self.training_pipeline.current_stage_storage
-        self.initialize_storage_and_vizualizer(
+        self.initialize_storage_and_viz(
             storage_to_initialize=list(uuid_to_storage.values())
         )
         self.tracking_info_list.clear()
@@ -1380,7 +1380,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     if uuid
                     not in uuid_to_storage  # Don't initialize storage already in use
                 ]
-                self.initialize_storage_and_vizualizer(
+                self.initialize_storage_and_viz(
                     storage_to_initialize=storage_to_initialize,
                 )
                 uuid_to_storage = new_uuid_to_storage
@@ -1494,8 +1494,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             # This may seem a bit weird but consider a storage that corresponds to a fixed dataset
             # used for imitation learning. For such a dataset, the "steps" will only increase as
             # new batches are sampled during update calls.
-            # Note: Sorting the keys below is possibly important to ensure distributed updates happen correctly.
-            #       This might not be necessary as newer python versions have keys that are automatically ordered.
+            # Note: We don't need to sort the keys below to ensure that distributed updates happen correctly
+            #   as `self.training_pipeline.current_stage_storage` is an ordered `dict`.
             # First we calculate the change in counts (possibly aggregating across devices)
             change_in_storage_experiences = {}
             for k in sorted(self.training_pipeline.current_stage_storage.keys()):
@@ -1548,7 +1548,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     f" tasks with {self.training_pipeline.rollout_count} rollouts"
                 )
                 self.vector_tasks.next_task(force_advance_scene=True)
-                self.initialize_storage_and_vizualizer(
+                self.initialize_storage_and_viz(
                     storage_to_initialize=list(uuid_to_storage.values())
                 )
 
@@ -1645,7 +1645,7 @@ class OnPolicyInference(OnPolicyRLEngine):
         if visualizer is not None:
             assert visualizer.empty()
 
-        num_paused = self.initialize_storage_and_vizualizer(
+        num_paused = self.initialize_storage_and_viz(
             storage_to_initialize=[rollout_storage], visualizer=visualizer,
         )
         assert num_paused == 0, f"{num_paused} tasks paused when initializing eval"

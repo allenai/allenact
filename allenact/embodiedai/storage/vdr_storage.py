@@ -102,7 +102,7 @@ class DiscreteVisualDynamicsReplayStorage(ExperienceStorage, MiniBatchStorageMix
         )
         self.target_batch_size = math.ceil(self.target_batch_size / num_parts)
 
-    def initialize(self, observations: ObservationType, **kwargs):
+    def initialize(self, *, observations: ObservationType, **kwargs):
         self._prev_imgs = None
         self.add(observations=observations, actions=None, masks=None)
 

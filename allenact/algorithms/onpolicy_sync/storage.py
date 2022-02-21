@@ -20,7 +20,6 @@ from typing import (
 import gym
 import numpy as np
 import torch
-from torch import Tensor
 
 import allenact.utils.spaces_utils as su
 from allenact.algorithms.onpolicy_sync.policy import (
@@ -171,6 +170,7 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
 
     def initialize(
         self,
+        *,
         observations: ObservationType,
         num_samplers: int,
         recurrent_memory_specification: FullMemorySpecType,
@@ -500,11 +500,12 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
 
     def before_updates(
         self,
+        *,
         next_value: torch.Tensor,
         use_gae: bool,
         gamma: float,
         tau: float,
-        adv_stats_callback: Callable[[torch.Tensor], Dict[str, Tensor]],
+        adv_stats_callback: Callable[[torch.Tensor], Dict[str, torch.Tensor]],
         **kwargs,
     ):
         assert len(kwargs) == 0

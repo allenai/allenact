@@ -10,10 +10,10 @@ class TrackingInfoType(Enum):
     UPDATE_INFO = "update_info"
 
 
-@attr.define
+@attr.s(kw_only=True)
 class TrackingInfo:
-    type: TrackingInfoType
-    info: Dict[str, Any]
-    n: int
-    storage_uuid: Optional[str]
-    stage_component_uuid: Optional[str]
+    type: TrackingInfoType = attr.ib()
+    info: Dict[str, Any] = attr.ib()
+    n: int = attr.ib()
+    storage_uuid: Optional[str] = attr.ib()
+    stage_component_uuid: Optional[str] = attr.ib()

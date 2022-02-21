@@ -30,8 +30,11 @@ def agent_demo():
         HABITAT_DATASETS_DIR, "pointnav/gibson/v1/train/train.json.gz"
     )
     config.DATASET.SCENES_DIR = HABITAT_SCENE_DATASETS_DIR
+
+    config.DATASET.CONTENT_SCENES = ["Adrian"]
+
     config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = 0
-    config.SIMULATOR.TURN_ANGLE = 45
+
     config.freeze()
     env = habitat.Env(config=config)
 

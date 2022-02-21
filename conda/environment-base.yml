@@ -3,40 +3,40 @@ channels:
   - pytorch
   - conda-forge
 dependencies:
-  - certifi=2020.12.5
+  - python=3.8
+  - certifi
   - chardet=4.0.0
   - cloudpickle=1.6.0
   - cycler=0.10.0
   - decorator=4.4.2
   - filelock=3.0.12
   - future=0.18.2
-  - gym>=0.17.0,<0.18.0
-  - idna=2.10
-  - imageio=2.9.0
-  - imageio-ffmpeg=0.4.3
+  - gym>=0.17.0,<0.20.0
+  - idna>=2.10
+  - imageio>=2.9.0
+  - imageio-ffmpeg>=0.4.3
   - kiwisolver=1.3.1
   - matplotlib>=3.3.1
   - networkx
   - numpy>=1.19.1
   - opencv
-  - pillow=8.2.0
+  - conda-forge::pillow>=8.2.0,<9.0.0
   - pip
-  - proglog=0.1.9
-  - protobuf=3.14.0
-  - pyglet=1.5.0
-  - pyparsing=2.4.7
-  - python=3.6.12
-  - python-dateutil=2.8.1
-  - pytorch>=1.6.0,!=1.8.0,<1.9.0
-  - torchvision>=0.7.0,<0.10.0
-  - requests=2.25.1
+  - proglog>=0.1.9
+  - protobuf>=3.14.0
+  - pyglet>=1.5.0
+  - pyparsing>=2.4.7
+  - python-dateutil>=2.8.1
+  - pytorch::pytorch>=1.6.0,!=1.8.0
+  - pytorch::torchvision>=0.7.0
+  - requests>=2.25.1
   - setproctitle
-  - six=1.15.0
-  - tensorboardx=2.1
+  - six>=1.15.0
+  - tensorboardx>=2.1
   - tqdm
-  - urllib3=1.26.2
+  - urllib3>=1.26.2
+  - attrs
   - pip:
-    - opencv-python
-    - moviepy==1.0.3
-    - scipy==1.5.4
-    - compress-pickle==1.2.0
+    - moviepy>=1.0.3
+    - scipy>=1.5.4
+    - compress-pickle>=1.2.0
