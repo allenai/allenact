@@ -6,6 +6,8 @@ from typing import Tuple, Optional
 
 import gym
 import torch
+from gym.spaces.dict import Dict as SpaceDict
+
 from allenact.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     LinearCriticHead,
@@ -17,8 +19,6 @@ from allenact.algorithms.onpolicy_sync.policy import (
 from allenact.base_abstractions.distributions import CategoricalDistr
 from allenact.base_abstractions.misc import ActorCriticOutput
 from allenact.embodiedai.models.basic_models import SimpleCNN, RNNStateEncoder
-from gym.spaces.dict import Dict as SpaceDict
-
 from projects.manipulathor_baselines.armpointnav_baselines.models.manipulathor_net_utils import (
     input_embedding_net,
 )
@@ -70,9 +70,11 @@ class ArmPointNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
             input_visual_feature_num = 1
         elif "depth_lowres" in sensor_names:
             input_visual_feature_num = 1
+        else:
+            raise NotImplementedError
 
         self.state_encoder = RNNStateEncoder(
-            (self._hidden_size) * input_visual_feature_num + obj_state_embedding_size,
+            self._hidden_size * input_visual_feature_num + obj_state_embedding_size,
             self._hidden_size,
             trainable_masked_hidden_state=trainable_masked_hidden_state,
             num_layers=num_rnn_layers,

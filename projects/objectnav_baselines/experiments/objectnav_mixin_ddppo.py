@@ -1,14 +1,14 @@
 from typing import Dict, Tuple
+
 import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
+from allenact.algorithms.onpolicy_sync.losses import PPO
 from allenact.algorithms.onpolicy_sync.losses.abstract_loss import (
     AbstractActorCriticLoss,
 )
-from allenact.algorithms.onpolicy_sync.losses import PPO
 from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-
 from allenact.embodiedai.aux_losses.losses import (
     MultiAuxTaskNegEntropyLoss,
     InverseDynamicsLoss,
@@ -26,7 +26,6 @@ from allenact.embodiedai.models.fusion_models import (
     SoftmaxFusion,
     AttentiveFusion,
 )
-
 from allenact.utils.experiment_utils import (
     Builder,
     PipelineStage,
@@ -53,9 +52,9 @@ class ObjectNavMixInPPOConfig(ObjectNavBaseConfig):
     MULTIPLE_BELIEFS = False
     BELIEF_FUSION = (  # choose one
         None
-        # AttentiveFusion.UUID
-        # AverageFusion.UUID
-        # SoftmaxFusion.UUID
+        # AttentiveFusion
+        # AverageFusion
+        # SoftmaxFusion
     )
 
     def training_pipeline(self, **kwargs):

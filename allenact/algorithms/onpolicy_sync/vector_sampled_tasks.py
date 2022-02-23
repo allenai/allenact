@@ -65,6 +65,12 @@ RESUME_COMMAND = "resume"
 
 class DelaySignalHandling:
     # Modified from https://stackoverflow.com/a/21919644
+    def __init__(self):
+        self.int_signal_received: Optional[Any] = None
+        self.term_signal_received: Optional[Any] = None
+        self.old_int_handler = None
+        self.old_term_handler = None
+
     def __enter__(self):
         self.int_signal_received: Optional[Any] = None
         self.term_signal_received: Optional[Any] = None
@@ -92,7 +98,7 @@ class DelaySignalHandling:
             if callable(self.old_term_handler):
                 self.old_term_handler(*self.term_signal_received)
             else:
-                get_logger().warning(
+                get_logger().debug(
                     "Termination handler could not be called after delaying signal handling."
                     f" Resending the SIGTERM signal. Last (sig, frame) == ({self.term_signal_received})."
                 )
@@ -105,7 +111,7 @@ class DelaySignalHandling:
                 signal.default_int_handler(*self.int_signal_received)
 
 
-class VectorSampledTasks(object):
+class VectorSampledTasks:
     """Vectorized collection of tasks. Creates multiple processes where each
     process runs its own TaskSampler. Each process generates one Task from its
     TaskSampler at a time and this class allows for interacting with these
@@ -358,7 +364,7 @@ class VectorSampledTasks(object):
                                 )
                             )
 
-        except KeyboardInterrupt as e:
+        except KeyboardInterrupt:
             if should_log:
                 get_logger().info(f"Worker {worker_id} KeyboardInterrupt")
         except Exception as e:

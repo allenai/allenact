@@ -1,7 +1,8 @@
-import os
-from collections import defaultdict
 import abc
 import json
+import os
+import sys
+from collections import defaultdict
 from typing import (
     Dict,
     Any,
@@ -14,7 +15,6 @@ from typing import (
     cast,
     Set,
 )
-import sys
 
 import numpy as np
 
@@ -28,21 +28,26 @@ try:
 
     _TF_AVAILABLE = True
 except ImportError as _:
+    event_pb2 = None
+    tf_record = None
+
     _TF_AVAILABLE = False
+
+import matplotlib
 
 try:
     # When debugging we don't want to use the interactive version of matplotlib
     # as it causes all sorts of problems.
+
+    # noinspection PyPackageRequirements
     import pydevd
-    import matplotlib
 
     matplotlib.use("agg")
 except ImportError as _:
     pass
 
-from matplotlib import pyplot as plt, markers
-from matplotlib.collections import LineCollection
-from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+import matplotlib.markers as markers
 import cv2
 
 from allenact.utils.system import get_logger
@@ -259,7 +264,7 @@ class TrajectoryViz(AbstractViz):
             z = np.asarray(z)
 
             segments = make_segments(x, y)
-            lc = LineCollection(
+            lc = matplotlib.collections.LineCollection(
                 segments,
                 array=z,
                 cmap=cmap,
@@ -383,9 +388,7 @@ class AgentViewViz(AbstractViz):
             vid = self.make_vid(images)
             if vid is not None:
                 log_writer.add_vid(
-                    "{}/{}_group{}".format(self.mode, self.label, page),
-                    vid,
-                    global_step=num_steps,
+                    f"{self.mode}/{self.label}_group{page}", vid, global_step=num_steps,
                 )
 
     @staticmethod
@@ -518,7 +521,9 @@ class AbstractTensorViz(AbstractViz):
             )  # close all current figures (SummaryWriter already closes all figures we log)
 
     @abc.abstractmethod
-    def make_fig(self, episode_src: Sequence[np.ndarray], episode_id: str) -> Figure:
+    def make_fig(
+        self, episode_src: Sequence[np.ndarray], episode_id: str
+    ) -> matplotlib.figure.Figure:
         raise NotImplementedError()
 
 
@@ -983,7 +988,7 @@ class VizSuite(AbstractViz):
         if alive is not None and rollout is not None:
             # in phase with last_it2epid that stay alive
             try:
-                self._collect_rollout(rollout, alive)
+                self._collect_rollout(rollout=rollout, alive=alive)
             except (AssertionError, RuntimeError):
                 get_logger().debug(
                     msg=f"Failed collect (rollout) for viz due to exception:",

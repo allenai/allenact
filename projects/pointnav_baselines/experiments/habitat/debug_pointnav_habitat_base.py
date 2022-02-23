@@ -1,7 +1,14 @@
 import os
 from abc import ABC
 
-import habitat
+from allenact.utils.system import ImportChecker
+
+with ImportChecker(
+    "\n\nPlease install [habitat](https://aihabitat.org/)"
+):
+    # noinspection PyUnresolvedReferences,PyPackageRequirements
+    import habitat
+
 import torch
 
 from allenact_plugins.habitat_plugin.habitat_constants import (

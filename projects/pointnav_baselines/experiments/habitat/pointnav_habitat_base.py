@@ -3,14 +3,15 @@ from abc import ABC
 from typing import Dict, Any, List, Optional, Sequence
 
 import gym
+# noinspection PyUnresolvedReferences
 import habitat
 import torch
 
 from allenact.base_abstractions.experiment_config import MachineParams
 from allenact.base_abstractions.preprocessor import SensorPreprocessorGraph
 from allenact.base_abstractions.sensor import SensorSuite
-from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 from allenact.base_abstractions.task import TaskSampler
+from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 from allenact.utils.experiment_utils import evenly_distribute_count_into_bins
 from allenact.utils.system import get_logger
 from allenact_plugins.habitat_plugin.habitat_constants import (

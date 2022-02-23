@@ -2,7 +2,9 @@ from typing import Sequence, Union
 
 import gym
 import torch.nn as nn
+
 from allenact.base_abstractions.preprocessor import Preprocessor
+from allenact.base_abstractions.task import TaskSampler
 from allenact.utils.experiment_utils import Builder
 from projects.manipulathor_baselines.armpointnav_baselines.experiments.armpointnav_base import (
     ArmPointNavBaseConfig,
@@ -13,6 +15,8 @@ from projects.manipulathor_baselines.armpointnav_baselines.models.arm_pointnav_m
 
 
 class ArmPointNavMixInSimpleGRUConfig(ArmPointNavBaseConfig):
+    TASK_SAMPLER: TaskSampler
+
     @classmethod
     def preprocessors(cls) -> Sequence[Union[Preprocessor, Builder[Preprocessor]]]:
         preprocessors = []

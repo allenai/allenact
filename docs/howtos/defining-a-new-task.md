@@ -144,7 +144,7 @@ e.g. for DAgger training.
 We also need to define the corresponding TaskSampler, which must contain implementations for methods `__len__`,
 `total_unique`, `last_sampled_task`, `next_task`, `close`, `reset`, and `set_seed`. Currently,
 an additional method `all_observation_spaces_equal` is used to ensure compatibility with the current
-[RolloutStorage](/api/allenact/algorithms/onpolicy_sync/storage#rolloutstorage).
+[RolloutBlockStorage](/api/allenact/algorithms/onpolicy_sync/storage#rolloutblockstorage).
 
 Let's define a tasks sampler able to provide an infinite number of object navigation tasks for AI2-THOR.
 

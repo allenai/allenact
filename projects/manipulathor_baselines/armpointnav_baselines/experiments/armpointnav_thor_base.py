@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional, Sequence
 import gym
 import numpy as np
 import torch
+
 from allenact.base_abstractions.experiment_config import MachineParams
 from allenact.base_abstractions.preprocessor import SensorPreprocessorGraph
 from allenact.base_abstractions.sensor import SensorSuite, ExpertActionSensor
@@ -43,9 +44,9 @@ class ArmPointNavThorBaseConfig(ArmPointNavBaseConfig, ABC):
 
     CAP_TRAINING = None
 
-    TRAIN_SCENES: str = None
-    VAL_SCENES: str = None
-    TEST_SCENES: str = None
+    TRAIN_SCENES: Optional[List[str]] = None
+    VAL_SCENES: Optional[List[str]] = None
+    TEST_SCENES: Optional[List[str]] = None
 
     OBJECT_TYPES: Optional[Sequence[str]] = None
     VALID_SAMPLES_IN_SCENE = 1

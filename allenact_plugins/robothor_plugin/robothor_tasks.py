@@ -246,6 +246,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             self.closest_geo_distance = self.last_geodesic_distance
 
         self.last_expert_action: Optional[int] = None
+        self.last_action_success = False
 
     @property
     def action_space(self):

@@ -327,7 +327,7 @@ The output should be something like this:
 
 And the `gif` results can be seen in the image tab of Tensorboard while testing.
 
-![gif demo](https://ai2-prior-allenact-public-assets.s3.us-west-2.amazonaws.com/tutorials/gym-mujoco/ant_test.gif)
+![mp4 demo](https://ai2-prior-allenact-public-assets.s3.us-west-2.amazonaws.com/tutorials/gym-mujoco/ant_test.gif)
 
 If the test command fails with `pyglet.canvas.xlib.NoSuchDisplayException: Cannot connect to "None"`, e.g. when running
 remotely, try prepending `DISPLAY=:0.0` to the command above, assuming you have an xserver running with such display

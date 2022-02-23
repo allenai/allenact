@@ -57,7 +57,7 @@ def get_version(fname):
     return res
 
 
-if __name__ == "__main__":
+def run_setup():
     base_dir = os.path.abspath(os.path.dirname(Path(__file__)))
 
     if not os.path.exists(
@@ -119,8 +119,8 @@ if __name__ == "__main__":
         license="MIT",
         packages=find_packages(include=["allenact_plugins", "allenact_plugins.*"]),
         install_requires=[
-            "gym>=0.17.0,<0.18.0",
-            "torch>=1.6.0,!=1.8.0,<1.9.0",
+            "gym>=0.17.0,<0.20.0",
+            "torch>=1.6.0,!=1.8.0,<2.0.0",
             "torchvision>=0.7.0,<0.10.0",
             "numpy>=1.19.1",
             "wheel>=0.36.2",
@@ -130,3 +130,7 @@ if __name__ == "__main__":
         tests_require=["pytest", "pytest-cov"],
         extras_require=extras,
     )
+
+
+if __name__ == "__main__":
+    run_setup()

@@ -1,4 +1,4 @@
-from typing import Sequence, Union
+from typing import Sequence, Union, List, Optional
 
 import gym
 import torch.nn as nn
@@ -15,6 +15,12 @@ from projects.objectnav_baselines.models.object_nav_models import ObjectNavActor
 class ObjectNavMixInUnfrozenResNetGRUConfig(ObjectNavBaseConfig):
     """No ResNet preprocessor, using Raw Image as input, and learn a ResNet as
     encoder."""
+
+    AUXILIARY_UUIDS: List[str]
+    ADD_PREV_ACTIONS: bool
+    MULTIPLE_BELIEFS: bool
+    BELIEF_FUSION: Optional[str]
+    NORMALIZE_ADVANTAGE: bool
 
     @classmethod
     def preprocessors(cls) -> Sequence[Union[Preprocessor, Builder[Preprocessor]]]:

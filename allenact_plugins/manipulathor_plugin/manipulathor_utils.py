@@ -43,6 +43,8 @@ def transport_wrapper(controller, target_object, target_location):
     elif type(controller) == ai2thor.controller.Controller:
         event = controller.step(**transport_detail)
         controller.step(**advance_detail)
+    else:
+        raise NotImplementedError
     return event
 
 

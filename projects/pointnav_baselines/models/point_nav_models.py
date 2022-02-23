@@ -5,9 +5,9 @@ import torch
 import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
+import allenact.embodiedai.models.resnet as resnet
 from allenact.algorithms.onpolicy_sync.policy import ObservationType
 from allenact.embodiedai.models.basic_models import SimpleCNN
-import allenact.embodiedai.models.resnet as resnet
 from allenact.embodiedai.models.visual_nav_models import (
     VisualNavActorCritic,
     FusionType,
@@ -122,7 +122,7 @@ class PointNavActorCritic(VisualNavActorCritic):
         else:
             return observations[self.goal_sensor_uuid].to(torch.float32)
 
-    def forward_encoder(self, observations: ObservationType) -> torch.FloatTensor:
+    def forward_encoder(self, observations: ObservationType) -> torch.Tensor:
         target_encoding = self.get_target_coordinates_encoding(observations)
         obs_embeds: Union[torch.Tensor, List[torch.Tensor]]
         obs_embeds = [target_encoding]
@@ -477,6 +477,6 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         ]
         depth_x = self.depth_target_obs_combiner(torch.cat(depth_embs, dim=1,))
         x = torch.cat([rgb_x, depth_x], dim=1)
-        x = x.reshape(x.size(0), -1)  # flatten
+        x = x.reshape(x.shape[0], -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)

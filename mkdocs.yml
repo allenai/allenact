@@ -84,6 +84,8 @@ nav:
         - resnet: api/allenact/embodiedai/models/resnet.md
         - fusion_models: api/allenact/embodiedai/models/fusion_models.md
         - visual_nav_models: api/allenact/embodiedai/models/visual_nav_models.md
+      - storage:
+        - vdr_storage: api/allenact/embodiedai/storage/vdr_storage.md
       - aux_losses:
         - losses: api/allenact/embodiedai/aux_losses/losses.md
     - base_abstractions:
@@ -100,8 +102,8 @@ nav:
           - imitation: api/allenact/algorithms/onpolicy_sync/losses/imitation.md
           - abstract_loss: api/allenact/algorithms/onpolicy_sync/losses/abstract_loss.md
           - ppo: api/allenact/algorithms/onpolicy_sync/losses/ppo.md
-          - kfac: api/allenact/algorithms/onpolicy_sync/losses/kfac.md
           - a2cacktr: api/allenact/algorithms/onpolicy_sync/losses/a2cacktr.md
+        - misc: api/allenact/algorithms/onpolicy_sync/misc.md
         - runner: api/allenact/algorithms/onpolicy_sync/runner.md
         - policy: api/allenact/algorithms/onpolicy_sync/policy.md
         - engine: api/allenact/algorithms/onpolicy_sync/engine.md
@@ -225,6 +227,7 @@ nav:
           - objectnav_robothor_rgbd_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgbd_resnetgru_ddppo.md
           - objectnav_robothor_rgb_resnetgru_ddppo_and_gbc: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_resnetgru_ddppo_and_gbc.md
           - objectnav_robothor_rgb_unfrozenresnet_gru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_unfrozenresnet_gru_ddppo.md
+          - objectnav_robothor_rgb_unfrozenresnet_gru_vdr_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_rgb_unfrozenresnet_gru_vdr_ddppo.md
           - objectnav_robothor_depth_resnetgru_ddppo: api/projects/objectnav_baselines/experiments/robothor/objectnav_robothor_depth_resnetgru_ddppo.md
         - objectnav_mixin_unfrozenresnet_gru: api/projects/objectnav_baselines/experiments/objectnav_mixin_unfrozenresnet_gru.md
         - ithor:

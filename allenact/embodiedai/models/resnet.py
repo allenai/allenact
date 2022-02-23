@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from gym.spaces.dict import Dict as SpaceDict
+
 from allenact.utils.model_utils import Flatten
 from allenact.utils.system import get_logger
 
@@ -201,8 +202,7 @@ class GroupNormResNet(nn.Module):
                 nn.GroupNorm(ngroups, planes * block.expansion),
             )
 
-        layers = []
-        layers.append(
+        layers = [
             block(
                 self.inplanes,
                 planes,
@@ -211,7 +211,7 @@ class GroupNormResNet(nn.Module):
                 downsample,
                 cardinality=self.cardinality,
             )
-        )
+        ]
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
             layers.append(block(self.inplanes, planes, ngroups))
@@ -298,7 +298,6 @@ class GroupNormResNetEncoder(nn.Module):
         output_size: int,
         baseplanes=32,
         ngroups=32,
-        spatial_size=128,
         make_backbone=None,
     ):
         super().__init__()
@@ -327,6 +326,7 @@ class GroupNormResNetEncoder(nn.Module):
             spatial_size = (
                 observation_space.spaces[self._inputs[0]].shape[0] // 2
             )  # H (=W) / 2
+
             # RGBD into one model
             input_channels = self._n_input_rgb + self._n_input_depth  # C
 
@@ -375,7 +375,7 @@ class GroupNormResNetEncoder(nn.Module):
                 nn.init.kaiming_normal_(layer.weight, nn.init.calculate_gain("relu"))
                 if layer.bias is not None:
                     nn.init.constant_(layer.bias, val=0)
-        get_logger().info("initialize resnet encoder")
+        get_logger().debug("Initializing resnet encoder")
 
     def forward(self, observations):
         if self.is_blind:
@@ -383,6 +383,11 @@ class GroupNormResNetEncoder(nn.Module):
 
         # TODO: the reshape follows compute_cnn_output()
         # but it's hard to make the forward as a nn.Module as cnn param
+        nagents: Optional[int] = None
+        nsteps: Optional[int] = None
+        nsamplers: Optional[int] = None
+        assert len(self._inputs) > 0
+
         cnn_input = []
         for mode in self._inputs:
             mode_obs = observations[mode]
@@ -390,7 +395,6 @@ class GroupNormResNetEncoder(nn.Module):
                 5,
                 6,
             ], "CNN input must have shape [STEP, SAMPLER, (AGENT,) dim1, dim2, dim3]"
-            nagents: Optional[int] = None
             if len(mode_obs.shape) == 6:
                 nsteps, nsamplers, nagents = mode_obs.shape[:3]
             else:

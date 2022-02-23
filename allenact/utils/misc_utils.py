@@ -186,6 +186,33 @@ def partition_sequence(seq: Sequence, parts: int) -> List:
     return [seq[ind0:ind1] for ind0, ind1 in zip(inds[:-1], inds[1:])]
 
 
+def unzip(seq: Sequence[Tuple], n: Optional[int]):
+    """Undoes a `zip` operation.
+
+    # Parameters
+
+    seq: The sequence of tuples that should be unzipped
+    n: The number of items in each tuple. This is an optional value but is necessary if
+       `len(seq) == 0` (as there is no other way to infer how many empty lists were zipped together
+        in this case) and can otherwise be used to error check.
+
+    # Returns
+
+    A tuple (of length `n` if `n` is given) of lists where the ith list contains all
+    the ith elements from the tuples in the input `seq`.
+    """
+    assert n is not None or len(seq) != 0
+    if n is None:
+        n = len(seq[0])
+    lists = [[] for _ in range(n)]
+
+    for t in seq:
+        assert len(t) == n
+        for i in range(n):
+            lists[i].append(t[i])
+    return lists
+
+
 def uninterleave(seq: Sequence, parts: int) -> List:
     assert 0 < parts <= len(seq)
     n = len(seq)

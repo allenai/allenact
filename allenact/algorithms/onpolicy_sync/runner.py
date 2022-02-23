@@ -1,5 +1,6 @@
 """Defines the reinforcement learning `OnPolicyRunner`."""
 import copy
+import enum
 import glob
 import itertools
 import json
@@ -17,7 +18,6 @@ from collections import defaultdict
 from multiprocessing.context import BaseContext
 from multiprocessing.process import BaseProcess
 from typing import Optional, Dict, Union, Tuple, Sequence, List, Any
-import enum
 
 import filelock
 import numpy as np
@@ -50,7 +50,7 @@ from allenact.utils.system import get_logger, find_free_port
 from allenact.utils.tensor_utils import SummaryWriter
 from allenact.utils.viz_utils import VizSuite
 
-_CONFIG_KWARGS_STR = "__CONFIG_KWARGS__"
+CONFIG_KWARGS_STR = "__CONFIG_KWARGS__"
 
 
 class SaveDirFormat(enum.Enum):
@@ -266,15 +266,16 @@ class OnPolicyRunner(object):
         def create_handler(termination_type: str):
             def handler(_signo, _frame):
                 prefix = f"{termination_type} signal sent to worker {mode}-{id}."
-                if to_close_on_termination._is_closed:
+                if to_close_on_termination.is_closed:
                     get_logger().info(
                         f"{prefix} Worker {mode}-{id} is already closed, exiting."
                     )
                     sys.exit(0)
-                elif not to_close_on_termination._is_closing:
+                elif not to_close_on_termination.is_closing:
                     get_logger().info(
                         f"{prefix} Forcing worker {mode}-{id} to close and exiting."
                     )
+                    # noinspection PyBroadException
                     try:
                         to_close_on_termination.close(True)
                     except Exception:
@@ -650,7 +651,7 @@ class OnPolicyRunner(object):
     def checkpoint_log_folder_str(checkpoint_file_name):
         parts = checkpoint_file_name.split(os.path.sep)
         assert len(parts) > 1, f"{checkpoint_file_name} is not a valid checkpoint path"
-        log_folder_str = (os.path.sep).join(parts[:-2])  # remove checkpoints/*.pt
+        log_folder_str = os.path.sep.join(parts[:-2])  # remove checkpoints/*.pt
         get_logger().info(f"Using log folder {log_folder_str}")
         return log_folder_str
 
@@ -760,7 +761,7 @@ class OnPolicyRunner(object):
         # Saving configs
         if self.loaded_config_src_files is not None:
             for src_path in self.loaded_config_src_files:
-                if src_path == _CONFIG_KWARGS_STR:
+                if src_path == CONFIG_KWARGS_STR:
                     # We also save key-word arguments passed to to the experiment
                     # initializer.
                     save_path = os.path.join(base_dir, "config_kwargs.json")
@@ -845,16 +846,17 @@ class OnPolicyRunner(object):
         self,
         log_writer: Optional[SummaryWriter],
         pkgs: List[LoggingPackage],
-        last_steps=0,
-        last_offpolicy_steps=0,
-        last_time=0.0,
+        last_steps: int,
+        last_storage_uuid_to_total_experiences: Dict[str, int],
+        last_time: float,
     ):
         assert self.mode == TRAIN_MODE_STR
 
         current_time = time.time()
 
         training_steps = pkgs[0].training_steps
-        offpolicy_steps = pkgs[0].off_policy_steps
+        storage_uuid_to_total_experiences = pkgs[0].storage_uuid_to_total_experiences
+
         if log_writer is not None:
             log_writer.add_scalar(
                 tag="train-misc/pipeline_stage",
@@ -862,37 +864,103 @@ class OnPolicyRunner(object):
                 global_step=training_steps,
             )
 
-        def add_prefix(d: Dict[str, Any], tag: str) -> Dict[str, Any]:
-            new_dict = {}
-            for k, v in d.items():
-                if "offpolicy" in k:
-                    pass
-                elif k.startswith("losses/"):
-                    k = f"{self.mode}-{k}"
+            for storage_uuid, val in storage_uuid_to_total_experiences.items():
+                log_writer.add_scalar(
+                    tag=f"train-misc/{storage_uuid}_total_experiences",
+                    scalar_value=val,
+                    global_step=training_steps,
+                )
+
+        def add_prefix(
+            d: Union[Dict[str, Any], str],
+            tag_if_not_a_loss: str,
+            stage_component_uuid: Optional[str],
+        ) -> Union[Dict[str, Any], str]:
+            midfix = (
+                "-" if stage_component_uuid is None else f"-{stage_component_uuid}-"
+            )
+
+            def _convert(key: str):
+                if key.startswith("losses/"):
+                    return f"{self.mode}{midfix}{key}"
                 else:
-                    k = f"{self.mode}-{tag}/{k}"
-                new_dict[k] = v
-            return new_dict
+                    return f"{self.mode}{midfix}{tag_if_not_a_loss}/{key}"
+
+            if isinstance(d, str):
+                return _convert(d)
+            return {_convert(k): v for k, v in d.items()}
 
         metrics_and_train_info_tracker = ScalarMeanTracker()
+        scalar_name_to_total_storage_experience = {}
+        storage_uuid_to_stage_component_uuids = defaultdict(lambda: set())
         for pkg in pkgs:
             metrics_and_train_info_tracker.add_scalars(
-                scalars=add_prefix(pkg.metrics_tracker.means(), "metrics"),
-                n=add_prefix(pkg.metrics_tracker.counts(), "metrics"),
-            )
-            metrics_and_train_info_tracker.add_scalars(
-                scalars=add_prefix(pkg.train_info_tracker.means(), "misc"),
-                n=add_prefix(pkg.train_info_tracker.counts(), "misc"),
+                scalars=add_prefix(pkg.metrics_tracker.means(), "metrics", None),
+                n=add_prefix(pkg.metrics_tracker.counts(), "metrics", None),
             )
 
-        message = [f"train {training_steps} steps {offpolicy_steps} offpolicy:"]
+            for (
+                (stage_component_uuid, storage_uuid),
+                train_info_tracker,
+            ) in pkg.train_info_trackers.items():
+
+                storage_uuid_to_stage_component_uuids[storage_uuid].add(
+                    stage_component_uuid
+                )
+
+                train_info_means = add_prefix(
+                    train_info_tracker.means(),
+                    tag_if_not_a_loss="misc",
+                    stage_component_uuid=stage_component_uuid,
+                )
+                train_info_counts = add_prefix(
+                    train_info_tracker.counts(),
+                    tag_if_not_a_loss="misc",
+                    stage_component_uuid=stage_component_uuid,
+                )
+                metrics_and_train_info_tracker.add_scalars(
+                    scalars=train_info_means, n=train_info_counts,
+                )
+
+                if storage_uuid is None:
+                    assert stage_component_uuid is None
+                    total_exp_for_storage = training_steps
+                else:
+                    total_exp_for_storage = pkg.storage_uuid_to_total_experiences[
+                        storage_uuid
+                    ]
+                for scalar_name in train_info_means:
+                    if scalar_name in scalar_name_to_total_storage_experience:
+                        assert (
+                            total_exp_for_storage
+                            == scalar_name_to_total_storage_experience[scalar_name]
+                        ), (
+                            f"For metric {scalar_name}: there is disagreement between the training steps parameter"
+                            f" across different workers ({total_exp_for_storage} !="
+                            f" {scalar_name_to_total_storage_experience[scalar_name]}). This suggests an error in "
+                            f" AllenAct, please report this issue at https://github.com/allenai/allenact/issues."
+                        )
+                    else:
+                        scalar_name_to_total_storage_experience[
+                            scalar_name
+                        ] = total_exp_for_storage
+
+        message = [
+            f"TRAIN: {training_steps} rollout steps ({pkgs[0].storage_uuid_to_total_experiences})"
+        ]
         means = metrics_and_train_info_tracker.means()
 
         for k in sorted(
             means.keys(), key=lambda mean_key: (mean_key.count("/"), mean_key)
         ):
             if log_writer is not None:
-                log_writer.add_scalar(k, means[k], training_steps)
+                log_writer.add_scalar(
+                    tag=k,
+                    scalar_value=means[k],
+                    global_step=scalar_name_to_total_storage_experience.get(
+                        k, training_steps
+                    ),
+                )
             short_key = (
                 "/".join(k.split("/")[1:]) if k.startswith("train-") and "/" in k else k
             )
@@ -903,17 +971,35 @@ class OnPolicyRunner(object):
             fps = (training_steps - last_steps) / (current_time - last_time)
             message += [f"approx_fps {fps:.3g}"]
             if log_writer is not None:
-                log_writer.add_scalar("train-misc/approx_fps", fps, training_steps)
+                log_writer.add_scalar(
+                    add_prefix("approx_fps", "misc", None), fps, training_steps
+                )
 
-        if last_offpolicy_steps > 0:
-            fps = (offpolicy_steps - last_offpolicy_steps) / (current_time - last_time)
-            message += [f"offpolicy/approx_fps {fps:.3g}"]
-            if log_writer is not None:
-                log_writer.add_scalar("offpolicy/approx_fps", fps, training_steps)
+        for (
+            storage_uuid,
+            last_total_exp,
+        ) in last_storage_uuid_to_total_experiences.items():
+            if storage_uuid in storage_uuid_to_total_experiences:
+                cur_total_exp = storage_uuid_to_total_experiences[storage_uuid]
+                eps = (cur_total_exp - last_total_exp) / (current_time - last_time)
+                message += [f"{storage_uuid}/approx_eps {eps:.3g}"]
+                if log_writer is not None:
+                    for stage_component_uuid in storage_uuid_to_stage_component_uuids[
+                        storage_uuid
+                    ]:
+                        log_writer.add_scalar(
+                            add_prefix(
+                                f"approx_eps",
+                                "misc",
+                                stage_component_uuid=stage_component_uuid,
+                            ),
+                            eps,
+                            cur_total_exp,
+                        )
 
         get_logger().info(" ".join(message))
 
-        return training_steps, offpolicy_steps, current_time
+        return training_steps, storage_uuid_to_total_experiences, current_time
 
     def process_test_packages(
         self,
@@ -992,7 +1078,7 @@ class OnPolicyRunner(object):
         # To aggregate/buffer metrics from trainers/testers
         collected: List[LoggingPackage] = []
         last_train_steps = 0
-        last_offpolicy_steps = 0
+        last_storage_uuid_to_total_experiences = {}
         last_train_time = time.time()
         # test_steps = sorted(test_steps, reverse=True)
         eval_results: List[Dict] = []
@@ -1016,25 +1102,29 @@ class OnPolicyRunner(object):
                                     collected,
                                     key=lambda pkg: (
                                         pkg.training_steps,
-                                        pkg.off_policy_steps,
+                                        *sorted(
+                                            pkg.storage_uuid_to_total_experiences.items()
+                                        ),
                                     ),
                                 )
 
                                 if (
                                     collected[nworkers - 1].training_steps
                                     == collected[0].training_steps
-                                    and collected[nworkers - 1].off_policy_steps
-                                    == collected[0].off_policy_steps
-                                ):  # ensure nworkers have provided the same num_steps
+                                    and collected[
+                                        nworkers - 1
+                                    ].storage_uuid_to_total_experiences
+                                    == collected[0].storage_uuid_to_total_experiences
+                                ):  # ensure all workers have provided the same training_steps and total_experiences
                                     (
                                         last_train_steps,
-                                        last_offpolicy_steps,
+                                        last_storage_uuid_to_total_experiences,
                                         last_train_time,
                                     ) = self.process_train_packages(
                                         log_writer=log_writer,
                                         pkgs=collected[:nworkers],
                                         last_steps=last_train_steps,
-                                        last_offpolicy_steps=last_offpolicy_steps,
+                                        last_storage_uuid_to_total_experiences=last_storage_uuid_to_total_experiences,
                                         last_time=last_train_time,
                                     )
                                     collected = collected[nworkers:]
@@ -1106,10 +1196,8 @@ class OnPolicyRunner(object):
                                             cls=NumpyJSONEncoder,
                                         )
                                         get_logger().info(
-                                            "Updated {} up to checkpoint {}".format(
-                                                metrics_file,
-                                                test_steps[len(eval_results) - 1],
-                                            )
+                                            f"Updated {metrics_file} up to checkpoint"
+                                            f" {test_steps[len(eval_results) - 1]}"
                                         )
                         else:
                             get_logger().error(

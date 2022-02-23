@@ -15,14 +15,15 @@ class AbstractOffPolicyLoss(Generic[ModelType], Loss):
     """Abstract class representing an off-policy loss function used to train a
     model."""
 
+    # noinspection PyMethodOverriding
     @abc.abstractmethod
     def loss(  # type: ignore
         self,
+        *,  # No positional arguments
         step_count: int,
         model: ModelType,
         batch: ObservationType,
         memory: Memory,
-        *args,
         **kwargs,
     ) -> Tuple[torch.FloatTensor, Dict[str, float], Memory, int]:
         """Computes the loss.

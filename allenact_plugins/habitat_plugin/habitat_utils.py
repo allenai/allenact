@@ -1,16 +1,12 @@
-import glob
 import os
-import shutil
 from typing import List
 
 import habitat
-from habitat import Config
-
-from allenact.utils.system import get_logger
 from allenact_plugins.habitat_plugin.habitat_constants import (
-    HABITAT_DATA_BASE,
+    HABITAT_BASE,
     HABITAT_CONFIGS_DIR,
 )
+from habitat import Config
 
 
 def construct_env_configs(
@@ -227,49 +223,29 @@ def distribute(
         scene_splits[j * procs_per_gpu + i + proc_offset].append(scene)
 
 
-def get_habitat_config(path: str, allow_download: bool = True):
+def get_habitat_config(path: str):
     assert (
         path[-4:].lower() == ".yml" or path[-5:].lower() == ".yaml"
     ), f"path ({path}) must be a .yml or .yaml file."
 
-    if not os.path.exists(path):
-        if not allow_download:
-            raise IOError(
-                "Path {} does not exist and we do not wish to try downloading it."
+    if not os.path.isabs(path):
+        candidate_paths = [
+            os.path.join(d, path)
+            for d in [os.getcwd(), HABITAT_BASE, HABITAT_CONFIGS_DIR]
+        ]
+        success = False
+        for candidate_path in candidate_paths:
+            if os.path.exists(candidate_path):
+                success = True
+                path = candidate_path
+                break
+
+        if not success:
+            raise FileExistsError(
+                f"Could not find config file with given relative path {path}. Tried the following possible absolute"
+                f" paths {candidate_paths}."
             )
-
-        get_logger().info(
-            f"Attempting to load config at path {path}. This path does not exist, attempting to"
-            f"download habitat configs and will try again. Downloading..."
-        )
-
-        os.chdir(HABITAT_DATA_BASE)
-
-        output_archive_name = "__TO_OVERWRITE__.zip"
-        deletable_dir_name = "__TO_DELETE__"
-
-        url = "https://github.com/facebookresearch/habitat-lab/archive/7c4286653211bbfaca59d0807c28bfb3a6b962bf.zip"
-        cmd = f"wget {url} -O {output_archive_name}"
-        if os.system(cmd):
-            raise RuntimeError(f"ERROR: `{cmd}` failed.")
-
-        cmd = f"unzip {output_archive_name} -d {deletable_dir_name}"
-        if os.system(cmd):
-            raise RuntimeError(f"ERROR: `{cmd}` failed.")
-
-        habitat_path = glob.glob(os.path.join(deletable_dir_name, "habitat-lab*"))[0]
-        cmd = f"rsync --ignore-existing -raz {habitat_path}/configs/ {HABITAT_CONFIGS_DIR}/"
-        if os.system(cmd):
-            raise RuntimeError(f"ERROR: `{cmd}` failed.")
-
-        os.remove(output_archive_name)
-        shutil.rmtree(deletable_dir_name)
-
-        if not os.path.exists(path):
-            raise RuntimeError(
-                f"Config at path {path} does not exist even after downloading habitat configs to {HABITAT_CONFIGS_DIR}."
-            )
-        else:
-            get_logger().info(f"Config downloaded successfully.")
+    elif not os.path.exists(path):
+        raise FileExistsError(f"Could not find config file with given path {path}.")
 
     return habitat.get_config(path)

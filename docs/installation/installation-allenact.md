@@ -1,7 +1,7 @@
 # Installation of AllenAct
 
-**Note 1:** This library has been tested *only in python 3.6*. The following assumes you have a working
-version of *python 3.6* installed locally. 
+**Note 1:** This library has been tested *only in python 3.6.*/3.7.*. The following assumes you have a working
+version of *python 3.6/3.7* installed locally. 
 
 **Note 2:** If you are installing `allenact` intending to use a GPU for training/inference and your
 current machine uses an older version of CUDA you may need to manually install the version of 

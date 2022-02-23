@@ -43,68 +43,107 @@ PYTHONPATH=. python allenact_plugins/babyai_plugin/scripts/truncate_expert_demos
 from the project's root directory, which will generate `BabyAI-GoToLocal-v0-small.pkl` under the same
 `allenact_plugins/babyai_plugin/data/demos` directory.
 
-## Data iterator
+## Data storage
 
-In order to train with an off-policy dataset, we need to define a data `Iterator`.
-The `Data Iterator` merges the functionality of the `Dataset` and `Dataloader` in PyTorch,
-in that it defines the way to both sample data from the dataset and convert them into batches to be
-used for training.
-An
-example of a `Data Iterator` for BabyAI expert demos might look as follows:
+In order to train with an off-policy dataset, we need to define an `ExperienceStorage`. In AllenAct, an
+`ExperienceStorage` object has two primary functions:
+1. It stores/manages relevant data (e.g. similarly to the `Dataset` class in PyTorch).
+2. It loads stored data into batches that will be used for loss computation (e.g. similarly to the `Dataloader`
+class in PyTorch).
+Unlike a PyTorch `Dataset` however, an `ExperienceStorage` object can build its dataset **at runtime** by processing
+rollouts from the agent. This flexibility allows for us to, for exmaple, implement the experience replay datastructure
+used in deep Q-learning. For this tutorial we won't need this additional functionality as our off-policy dataset
+is a fixed collection of expert trajectories.
+
+An example of a `ExperienceStorage` for BabyAI expert demos might look as follows:
 
 ```python
-class ExpertTrajectoryIterator(Iterator):
+class MiniGridExpertTrajectoryStorage(ExperienceStorage, StreamingStorageMixin):
     def __init__(
         self,
-        data: List[Tuple[str, bytes, List[int], MiniGridEnv.Actions]],
-        nrollouts: int,
+        data_path: str,
+        num_samplers: int,
         rollout_len: int,
         instr_len: Optional[int],
         restrict_max_steps_in_dataset: Optional[int] = None,
-        num_data_length_clusters: int = 8,
-        current_worker: Optional[int] = None,
-        num_workers: Optional[int] = None,
+        device: torch.device = torch.device("cpu"),
     ):
         ...
 
-    def add_data_to_rollout_queue(self, q: queue.Queue, sampler: int) -> bool:
+    def data(self) -> List[Tuple[str, bytes, List[int], MiniGridEnv.Actions]]:
         ...
 
-    def get_data_for_rollout_ind(self, rollout_ind: int) -> Dict[str, np.ndarray]:
+    def set_partition(self, index: int, num_parts: int):
         ...
 
-    def __next__(self) -> Dict[str, torch.Tensor]:
+    def initialize(self, *, observations: ObservationType, **kwargs):
+        ...
+
+    def add(
+        self,
+        observations: ObservationType,
+        memory: Optional[Memory],
+        actions: torch.Tensor,
+        action_log_probs: torch.Tensor,
+        value_preds: torch.Tensor,
+        rewards: torch.Tensor,
+        masks: torch.Tensor,
+    ):
+        ...
+
+    def to(self, device: torch.device):
+        ...
+
+    def total_experiences(self) -> int:
+        ...
+
+    def reset_stream(self):
+        ...
+
+    def empty(self) -> bool:
+        ...
+
+    def _get_next_ind(self):
+        ...
+
+    def _fill_rollout_queue(self, q: queue.Queue, sampler: int):
+        ...
+
+    def get_data_for_rollout_ind(self, sampler_ind: int) -> Dict[str, np.ndarray]:
+        ...
+
+    def next_batch(self) -> Dict[str, torch.Tensor]:
         ...
 ```
 A complete example can be found in
-[ExpertTrajectoryIterator](/api/allenact_plugins/minigrid_plugin/minigrid_offpolicy#ExpertTrajectoryIterator).
+[MiniGridExpertTrajectoryStorage](/api/allenact_plugins/minigrid_plugin/minigrid_offpolicy#MiniGridExpertTrajectoryStorage).
 
 ## Loss function
 
 Off-policy losses must implement the
-[AbstractOffPolicyLoss](/api/allenact/algorithms/offpolicy_sync/losses/abstract_offpolicy_loss/#abstractoffpolicyloss)
+[`GenericAbstractLoss`](/api/allenact/base_abstractions/misc/#genericabstractloss)
 interface. In this case, we minimize the cross-entropy between the actor's policy and the expert action:
 
 ```python
-class MiniGridOffPolicyExpertCELoss(AbstractOffPolicyLoss[ActorCriticModel]):
+class MiniGridOffPolicyExpertCELoss(GenericAbstractLoss):
     def __init__(self, total_episodes_in_epoch: Optional[int] = None):
         super().__init__()
         self.total_episodes_in_epoch = total_episodes_in_epoch
 
-    def loss(  # type:ignore
+    def loss(  # type: ignore
         self,
-        model: ActorCriticModel,
+        *,  # No positional arguments
+        model: ModelType,
         batch: ObservationType,
-        memory: Memory,
-        *args,
-        **kwargs
-    ) -> Tuple[torch.FloatTensor, Dict[str, float], Memory, int]:
+        batch_memory: Memory,
+        stream_memory: Memory,
+    ) -> LossOutput:
         rollout_len, nrollouts = cast(torch.Tensor, batch["minigrid_ego_image"]).shape[
             :2
         ]
 
         # Initialize Memory if empty
-        if len(memory) == 0:
+        if len(stream_memory) == 0:
             spec = model.recurrent_memory_specification
             for key in spec:
                 dims_template, dtype = spec[key]
@@ -116,20 +155,20 @@ class MiniGridOffPolicyExpertCELoss(AbstractOffPolicyLoss[ActorCriticModel]):
                 all_dims = [d[1] for d in dims_template]
                 all_dims[sampler_dim] = nrollouts
 
-                memory.check_append(
+                stream_memory.check_append(
                     key=key,
                     tensor=torch.zeros(
                         *all_dims,
                         dtype=dtype,
-                        device=cast(torch.Tensor, batch["minigrid_ego_image"]).device
+                        device=cast(torch.Tensor, batch["minigrid_ego_image"]).device,
                     ),
                     sampler_dim=sampler_dim,
                 )
 
         # Forward data (through the actor and critic)
-        ac_out, memory = model.forward(
+        ac_out, stream_memory = model.forward(
             observations=batch,
-            memory=memory,
+            memory=stream_memory,
             prev_actions=None,  # type:ignore
             masks=cast(torch.FloatTensor, batch["masks"]),
         )
@@ -139,18 +178,14 @@ class MiniGridOffPolicyExpertCELoss(AbstractOffPolicyLoss[ActorCriticModel]):
 
         info = {"expert_ce": expert_ce_loss.item()}
 
-        if self.total_episodes_in_epoch is not None:
-            if "completed_episode_count" not in memory:
-                memory["completed_episode_count"] = 0
-            memory["completed_episode_count"] += (
-                int(np.prod(batch["masks"].shape))  # type: ignore
-                - batch["masks"].sum().item()  # type: ignore
-            )
-            info["epoch_progress"] = (
-                memory["completed_episode_count"] / self.total_episodes_in_epoch
-            )
-
-        return expert_ce_loss, info, memory, rollout_len * nrollouts
+        return LossOutput(
+            value=expert_ce_loss,
+            info=info,
+            per_epoch_info={},
+            batch_memory=batch_memory,
+            stream_memory=stream_memory,
+            bsize=rollout_len * nrollouts,
+        )
 
 ```
 A complete example can be found in
@@ -200,29 +235,36 @@ class BCOffPolicyBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentCo
                     total_episodes_in_epoch=int(1e6)
                 ),
             },
-            pipeline_stages=[
-                # Single stage, only with off-policy training
-                PipelineStage(
-                    loss_names=[],                                              # no on-policy losses
-                    max_stage_steps=total_train_steps,                          # keep sampling episodes in the stage
-                    # Enable off-policy training:
-                    offpolicy_component=OffPolicyPipelineComponent(
-                        # Pass a method to instantiate data iterators
-                        data_iterator_builder=lambda **extra_kwargs: create_minigrid_offpolicy_data_iterator(
-                            path=os.path.join(
+            named_storages={
+                "onpolicy": RolloutBlockStorage(),
+                "minigrid_offpolicy_expert": MiniGridExpertTrajectoryStorage(
+                    data_path=os.path.join(
                                 BABYAI_EXPERT_TRAJECTORIES_DIR,
                                 "BabyAI-GoToLocal-v0{}.pkl".format(
                                     "" if torch.cuda.is_available() else "-small"
                                 ),
                             ),
-                            nrollouts=cls.NUM_TRAIN_SAMPLERS // num_mini_batch,  # per trainer batch size
-                            rollout_len=cls.ROLLOUT_STEPS,
-                            instr_len=cls.INSTR_LEN,
-                            **extra_kwargs,
-                        ),
-                        loss_names=["offpolicy_expert_ce_loss"],                 # off-policy losses
-                        updates=num_mini_batch * update_repeats,                 # number of batches per rollout
-                    ),
+                    num_samplers=cls.NUM_TRAIN_SAMPLERS,
+                    rollout_len=cls.ROLLOUT_STEPS,
+                    instr_len=cls.INSTR_LEN,
+                ),
+            },
+            pipeline_stages=[
+                # Single stage, only with off-policy training
+                PipelineStage(
+                    loss_names=["offpolicy_expert_ce_loss"],                                              # no on-policy losses
+                    max_stage_steps=total_train_steps,                          # keep sampling episodes in the stage
+                    stage_components=[
+                        StageComponent(
+                            uuid="offpolicy",
+                            storage_uuid="minigrid_offpolicy_expert",
+                            loss_names=["offpolicy_expert_ce_loss"],
+                            training_settings=TrainingSettings(
+                                update_repeats=num_mini_batch * update_repeats,
+                                num_mini_batch=1,
+                            )
+                        )
+                    ],
                 ),
             ],
             # As we don't have any on-policy losses, we set the next
@@ -252,10 +294,19 @@ updates.
 If everything goes well, the training success should quickly reach values around 0.7-0.8 on GPU and converge to values
 close to 1 if given sufficient time to train.
 
-If running tensorboard, you'll notice a separate group of scalars named `offpolicy` with losses, approximate frame rate
-and other tracked values in addition to the standard `train` used for on-policy training.
+If running tensorboard, you'll notice a separate group of scalars named `train-offpolicy-losses` and
+`train-offpolicy-misc` with losses, approximate "experiences per second" (i.e. the number of off-policy experiences/steps
+being used to update the model per second), and other tracked values in addition to the standard `train-onpolicy-*`
+used for on-policy training. In the `train-metrics` and `train-misc` sections you'll find the metrics
+quantifying the performance of the agent throughout training and some other plots showing training details.
+*Note that the x-axis for these plots is different than for the `train-offpolicy-*` sections*. This
+is because these plots use the number of rollout steps as the x-axis (i.e. steps that the trained agent
+takes interactively) while the `train-offpolicy-*` plots uses the number of offpolicy "experiences" that have
+been shown to the agent.
 
-A view of the training progress about 5 minutes after starting on a CUDA-capable GPU should look similar to
 
-![off-policy progress](/img/offpolicy_training_tutorial.jpg)
+A view of the training progress about 5 hours after starting on a CUDA-capable GPU should look similar to the below
+(note that training reached >99% success after about 50 minutes).
+
+![off-policy progress](https://ai2-prior-allenact-public-assets.s3.us-west-2.amazonaws.com/tutorials/minigrid-offpolicy/minigrid-offpolicy-tutorial-tb.png)
 
