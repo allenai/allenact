@@ -3,15 +3,13 @@
 Object navigation is currently available as a Task in AI2-THOR and
 Facebook's Habitat.
 """
-import numbers
-from typing import Optional, List, Dict, cast, Tuple
+from typing import Optional, List, Dict, cast, Tuple, Sequence
 
 import gym
 import torch
 from gym.spaces import Dict as SpaceDict
 from torch import nn as nn
 
-import allenact.embodiedai.models.resnet as resnet
 from allenact.algorithms.onpolicy_sync.policy import ObservationType
 from allenact.embodiedai.models import resnet as resnet
 from allenact.embodiedai.models.basic_models import SimpleCNN
@@ -51,7 +49,7 @@ class ObjectNavActorCritic(VisualNavActorCritic):
         # Aux loss
         multiple_beliefs=False,
         beliefs_fusion: Optional[FusionType] = None,
-        auxiliary_uuids: Optional[List[str]] = None,
+        auxiliary_uuids: Optional[Sequence[str]] = None,
         # below are custom params
         rgb_uuid: Optional[str] = None,
         depth_uuid: Optional[str] = None,

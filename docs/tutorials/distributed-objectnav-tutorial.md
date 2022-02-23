@@ -64,7 +64,7 @@ from allenact.utils.experiment_utils import (
     TrainingPipeline,
     PipelineStage,
 )
-from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_rgb_resnetgru_ddppo import (
+from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_rgb_resnet18gru_ddppo import (
     ObjectNavRoboThorRGBPPOExperimentConfig as BaseConfig,
 )
 

@@ -52,9 +52,7 @@ class PointNavTaskSampler(TaskSampler):
                 raise RuntimeError("Empty dataset after filtering.")
 
         env = HabitatEnvironment(config=self.env_config, dataset=dataset)
-        self.max_tasks = (
-            None if self.env_config.MODE == "train" else env.num_episodes
-        )  # env.num_episodes
+        self.max_tasks = None if self.env_config.MODE == "train" else env.num_episodes
         self.reset_tasks = self.max_tasks
         return env
 
@@ -95,11 +93,15 @@ class PointNavTaskSampler(TaskSampler):
             self.env = self._create_environment()
             self.env.reset()
         ep_info = self.env.get_current_episode()
+        assert len(ep_info.goals) == 1
         target = ep_info.goals[0].position
 
         task_info = {
             "target": target,
             "distance_to_goal": self.distance_to_goal,
+            "episode_id": ep_info.episode_id,
+            "scene_id": ep_info.scene_id.split("/")[-1],
+            **ep_info.info,
         }
 
         self._last_sampled_task = PointNavTask(
@@ -132,7 +134,6 @@ class ObjectNavTaskSampler(TaskSampler):
         sensors: List[Sensor],
         max_steps: int,
         action_space: gym.Space,
-        distance_to_goal: float,
         **kwargs,
     ) -> None:
         self.grid_size = 0.25
@@ -143,7 +144,6 @@ class ObjectNavTaskSampler(TaskSampler):
         self.max_steps = max_steps
         self._action_space = action_space
         self.env_config = env_config
-        self.distance_to_goal = distance_to_goal
         self.seed: Optional[int] = None
 
         self._last_sampled_task: Optional[ObjectNavTask] = None
@@ -196,11 +196,17 @@ class ObjectNavTaskSampler(TaskSampler):
             self.env = self._create_environment()
             self.env.reset()
         ep_info = self.env.get_current_episode()
-        target = ep_info.goals[0].position
+
+        target_categories = {g.object_category for g in ep_info.goals}
+        assert len(target_categories) == 1
+
+        target_category = list(target_categories)[0]
 
         task_info = {
-            "target": target,
-            "distance_to_goal": self.distance_to_goal,
+            "target_category": target_category,
+            "episode_id": ep_info.episode_id,
+            "scene_id": ep_info.scene_id.split("/")[-1],
+            **ep_info.info,
         }
 
         self._last_sampled_task = ObjectNavTask(

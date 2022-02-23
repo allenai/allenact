@@ -226,15 +226,20 @@ class OnPolicyRLEngine(object):
         self.store: Optional[torch.distributed.TCPStore] = None  # type:ignore
         if self.num_workers > 1:
             self.store = torch.distributed.TCPStore(  # type:ignore
-                self.distributed_ip,
-                self.distributed_port,
-                self.num_workers,
-                self.worker_id == 0,
+                host_name=self.distributed_ip,
+                port=self.distributed_port,
+                world_size=self.num_workers,
+                is_master=self.worker_id == 0,
             )
             cpu_device = self.device == torch.device("cpu")  # type:ignore
 
+            # "gloo" required during testing to ensure that `barrier()` doesn't time out.
+            backend = "gloo" if cpu_device or self.mode == TEST_MODE_STR else "nccl"
+            get_logger().debug(
+                f"Worker {self.worker_id}: initializing distributed {backend} backend with device {self.device}."
+            )
             dist.init_process_group(  # type:ignore
-                backend="gloo" if cpu_device or self.mode == TEST_MODE_STR else "nccl",
+                backend=backend,
                 store=self.store,
                 rank=self.worker_id,
                 world_size=self.num_workers,
@@ -1001,7 +1006,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.insufficient_data_for_update.set(
                 "insufficient_data_for_update", str(0)
             )
-            dist.barrier()
+            dist.barrier(
+                device_ids=None
+                if self.device == torch.device("cpu")
+                else [self.device.index]
+            )
 
         training_settings = stage_component.training_settings
 
@@ -1067,7 +1076,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         "insufficient_data_for_update",
                         1 * (not enough_data_for_update),
                     )
-                    dist.barrier()
+                    dist.barrier(
+                        device_ids=None
+                        if self.device == torch.device("cpu")
+                        else [self.device.index]
+                    )
 
                     if (
                         int(
@@ -1391,7 +1404,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_done.set("done", str(0))
                 self.num_workers_steps.set("steps", str(0))
                 # Ensure all workers are done before incrementing num_workers_{steps, done}
-                dist.barrier()
+                dist.barrier(
+                    device_ids=None
+                    if self.device == torch.device("cpu")
+                    else [self.device.index]
+                )
 
             self.former_steps = self.step_count
             former_storage_experiences = {
@@ -1443,7 +1460,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_steps.add("steps", self.step_count - self.former_steps)
 
                 # Ensure all workers are done before updating step counter
-                dist.barrier()
+                dist.barrier(
+                    device_ids=None
+                    if self.device == torch.device("cpu")
+                    else [self.device.index]
+                )
 
                 ndone = int(self.num_workers_done.get("done"))
                 assert (

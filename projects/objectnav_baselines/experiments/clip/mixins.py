@@ -1,29 +1,31 @@
-from typing import Sequence, Union
+from typing import Sequence, Union, Type
 
+import attr
 import gym
 import numpy as np
 import torch.nn as nn
 
 from allenact.base_abstractions.preprocessor import Preprocessor
+from allenact.base_abstractions.sensor import Sensor
 from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 from allenact.utils.experiment_utils import Builder
 from allenact_plugins.clip_plugin.clip_preprocessors import ClipResNetPreprocessor
-from allenact_plugins.ithor_plugin.ithor_sensors import GoalObjectTypeThorSensor
-from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
-from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 from allenact_plugins.navigation_plugin.objectnav.models import (
     ResnetTensorNavActorCritic,
 )
 
 
-class ObjectNavMixInClipResNetGRUConfig(ObjectNavBaseConfig):
-    CLIP_MODEL_TYPE: str
+@attr.s(kw_only=True)
+class ClipResNetPreprocessGRUActorCriticMixin:
+    sensors: Sequence[Sensor] = attr.ib()
+    clip_model_type: str = attr.ib()
+    screen_size: int = attr.ib()
+    goal_sensor_type: Type[Sensor] = attr.ib()
 
-    @classmethod
-    def preprocessors(cls) -> Sequence[Union[Preprocessor, Builder[Preprocessor]]]:
+    def preprocessors(self) -> Sequence[Union[Preprocessor, Builder[Preprocessor]]]:
         preprocessors = []
 
-        rgb_sensor = next((s for s in cls.SENSORS if isinstance(s, RGBSensor)), None)
+        rgb_sensor = next((s for s in self.sensors if isinstance(s, RGBSensor)), None)
         assert (
             np.linalg.norm(
                 np.array(rgb_sensor._norm_means)
@@ -43,20 +45,20 @@ class ObjectNavMixInClipResNetGRUConfig(ObjectNavBaseConfig):
             preprocessors.append(
                 ClipResNetPreprocessor(
                     rgb_input_uuid=rgb_sensor.uuid,
-                    clip_model_type=cls.CLIP_MODEL_TYPE,
+                    clip_model_type=self.clip_model_type,
                     pool=False,
                     output_uuid="rgb_clip_resnet",
                 )
             )
 
         depth_sensor = next(
-            (s for s in cls.SENSORS if isinstance(s, DepthSensor)), None
+            (s for s in self.sensors if isinstance(s, DepthSensor)), None
         )
         if depth_sensor is not None:
             preprocessors.append(
                 ClipResNetPreprocessor(
                     rgb_input_uuid=depth_sensor.uuid,
-                    clip_model_type=cls.CLIP_MODEL_TYPE,
+                    clip_model_type=self.clip_model_type,
                     pool=False,
                     output_uuid="depth_clip_resnet",
                 )
@@ -64,18 +66,17 @@ class ObjectNavMixInClipResNetGRUConfig(ObjectNavBaseConfig):
 
         return preprocessors
 
-    @classmethod
-    def create_model(cls, **kwargs) -> nn.Module:
-        has_rgb = any(isinstance(s, RGBSensor) for s in cls.SENSORS)
-        has_depth = any(isinstance(s, DepthSensor) for s in cls.SENSORS)
+    def create_model(self, num_actions: int, **kwargs) -> nn.Module:
+        has_rgb = any(isinstance(s, RGBSensor) for s in self.sensors)
+        has_depth = any(isinstance(s, DepthSensor) for s in self.sensors)
 
         goal_sensor_uuid = next(
-            (s.uuid for s in cls.SENSORS if isinstance(s, GoalObjectTypeThorSensor)),
+            (s.uuid for s in self.sensors if isinstance(s, self.goal_sensor_type)),
             None,
         )
 
         return ResnetTensorNavActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask.class_action_names())),
+            action_space=gym.spaces.Discrete(num_actions),
             observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             goal_sensor_uuid=goal_sensor_uuid,
             rgb_resnet_preprocessor_uuid="rgb_clip_resnet" if has_rgb else None,

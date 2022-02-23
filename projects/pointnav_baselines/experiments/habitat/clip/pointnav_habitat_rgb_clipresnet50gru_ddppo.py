@@ -5,37 +5,34 @@ import torch.nn as nn
 from allenact.base_abstractions.preprocessor import Preprocessor
 from allenact.utils.experiment_utils import Builder, TrainingPipeline
 from allenact_plugins.clip_plugin.clip_preprocessors import ClipResNetPreprocessor
-from allenact_plugins.ithor_plugin.ithor_sensors import (
-    GoalObjectTypeThorSensor,
-    RGBSensorThor,
+from allenact_plugins.habitat_plugin.habitat_sensors import (
+    RGBSensorHabitat,
+    TargetCoordinatesSensorHabitat,
 )
 from projects.objectnav_baselines.experiments.clip.mixins import (
     ClipResNetPreprocessGRUActorCriticMixin,
 )
-from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base import (
-    ObjectNavRoboThorBaseConfig,
+from projects.pointnav_baselines.experiments.habitat.pointnav_habitat_base import (
+    PointNavHabitatBaseConfig,
 )
-from projects.objectnav_baselines.mixins import ObjectNavPPOMixin
+from projects.pointnav_baselines.mixins import PointNavPPOMixin
 
 
-class ObjectNavRoboThorClipRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig,):
-    """An Object Navigation experiment configuration in RoboThor with RGB
+class PointNavHabitatRGBClipResNet50GRUDDPPOExperimentConfig(PointNavHabitatBaseConfig):
+    """An Point Navigation experiment configuration in Habitat with Depth
     input."""
 
     CLIP_MODEL_TYPE = "RN50"
 
     SENSORS = [
-        RGBSensorThor(
-            height=ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
-            width=ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
+        RGBSensorHabitat(
+            height=PointNavHabitatBaseConfig.SCREEN_SIZE,
+            width=PointNavHabitatBaseConfig.SCREEN_SIZE,
             use_resnet_normalization=True,
-            uuid="rgb_lowres",
             mean=ClipResNetPreprocessor.CLIP_RGB_MEANS,
             stdev=ClipResNetPreprocessor.CLIP_RGB_STDS,
         ),
-        GoalObjectTypeThorSensor(
-            object_types=ObjectNavRoboThorBaseConfig.TARGET_TYPES,
-        ),
+        TargetCoordinatesSensorHabitat(coordinate_dims=2),
     ]
 
     def __init__(self, **kwargs):
@@ -45,13 +42,14 @@ class ObjectNavRoboThorClipRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig,):
             sensors=self.SENSORS,
             clip_model_type=self.CLIP_MODEL_TYPE,
             screen_size=self.SCREEN_SIZE,
-            goal_sensor_type=GoalObjectTypeThorSensor,
+            goal_sensor_type=TargetCoordinatesSensorHabitat,
         )
 
     def training_pipeline(self, **kwargs) -> TrainingPipeline:
-        return ObjectNavPPOMixin.training_pipeline(
+        return PointNavPPOMixin.training_pipeline(
             auxiliary_uuids=[],
             multiple_beliefs=False,
+            normalize_advantage=False,
             advance_scene_rollout_period=self.ADVANCE_SCENE_ROLLOUT_PERIOD,
         )
 
@@ -65,4 +63,4 @@ class ObjectNavRoboThorClipRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig,):
 
     @classmethod
     def tag(cls):
-        return "ObjectNav-RoboTHOR-RGB-ClipResNet50GRU-DDPPO"
+        return "PointNav-Habitat-RGB-ClipResNet50GRU-DDPPO"

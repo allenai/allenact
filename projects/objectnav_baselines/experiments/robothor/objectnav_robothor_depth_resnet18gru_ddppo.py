@@ -4,46 +4,39 @@ import torch.nn as nn
 
 from allenact.base_abstractions.preprocessor import Preprocessor
 from allenact.utils.experiment_utils import Builder, TrainingPipeline
-from allenact_plugins.clip_plugin.clip_preprocessors import ClipResNetPreprocessor
-from allenact_plugins.ithor_plugin.ithor_sensors import (
-    GoalObjectTypeThorSensor,
-    RGBSensorThor,
-)
-from projects.objectnav_baselines.experiments.clip.mixins import (
-    ClipResNetPreprocessGRUActorCriticMixin,
-)
+from allenact_plugins.ithor_plugin.ithor_sensors import GoalObjectTypeThorSensor
+from allenact_plugins.robothor_plugin.robothor_sensors import DepthSensorThor
 from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base import (
     ObjectNavRoboThorBaseConfig,
 )
-from projects.objectnav_baselines.mixins import ObjectNavPPOMixin
+from projects.objectnav_baselines.mixins import (
+    ResNetPreprocessGRUActorCriticMixin,
+    ObjectNavPPOMixin,
+)
 
 
-class ObjectNavRoboThorClipRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig,):
-    """An Object Navigation experiment configuration in RoboThor with RGB
+class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig,):
+    """An Object Navigation experiment configuration in RoboThor with Depth
     input."""
 
-    CLIP_MODEL_TYPE = "RN50"
-
-    SENSORS = [
-        RGBSensorThor(
+    SENSORS = (
+        DepthSensorThor(
             height=ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
             width=ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
-            use_resnet_normalization=True,
-            uuid="rgb_lowres",
-            mean=ClipResNetPreprocessor.CLIP_RGB_MEANS,
-            stdev=ClipResNetPreprocessor.CLIP_RGB_STDS,
+            use_normalization=True,
+            uuid="depth_lowres",
         ),
         GoalObjectTypeThorSensor(
             object_types=ObjectNavRoboThorBaseConfig.TARGET_TYPES,
         ),
-    ]
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.preprocessing_and_model = ClipResNetPreprocessGRUActorCriticMixin(
+        self.preprocessing_and_model = ResNetPreprocessGRUActorCriticMixin(
             sensors=self.SENSORS,
-            clip_model_type=self.CLIP_MODEL_TYPE,
+            resnet_type="RN18",
             screen_size=self.SCREEN_SIZE,
             goal_sensor_type=GoalObjectTypeThorSensor,
         )
@@ -63,6 +56,5 @@ class ObjectNavRoboThorClipRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig,):
             num_actions=self.ACTION_SPACE.n, **kwargs
         )
 
-    @classmethod
-    def tag(cls):
-        return "ObjectNav-RoboTHOR-RGB-ClipResNet50GRU-DDPPO"
+    def tag(self):
+        return "ObjectNav-RoboTHOR-Depth-ResNet18GRU-DDPPO"

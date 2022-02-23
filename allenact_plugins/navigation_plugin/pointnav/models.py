@@ -3,7 +3,7 @@
 Object navigation is currently available as a Task in AI2-THOR and
 Facebook's Habitat.
 """
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Sequence
 
 import gym
 import torch
@@ -35,7 +35,7 @@ class PointNavActorCritic(VisualNavActorCritic):
         action_embed_size=4,
         multiple_beliefs=False,
         beliefs_fusion: Optional[FusionType] = None,
-        auxiliary_uuids: Optional[List[str]] = None,
+        auxiliary_uuids: Optional[Sequence[str]] = None,
         # custom params
         rgb_uuid: Optional[str] = None,
         depth_uuid: Optional[str] = None,

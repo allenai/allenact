@@ -56,6 +56,8 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
     THOR_COMMIT_ID: Optional[str] = None
     THOR_IS_HEADLESS: bool = False
 
+    ACTION_SPACE = gym.spaces.Discrete(len(ObjectNavTask.class_action_names()))
+
     def __init__(
         self,
         num_train_processes: Optional[int] = None,
@@ -251,9 +253,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
                 for s in self.SENSORS
                 if (include_expert_sensor or not isinstance(s, ExpertActionSensor))
             ],
-            "action_space": gym.spaces.Discrete(
-                len(ObjectNavTask.class_action_names())
-            ),
+            "action_space": self.ACTION_SPACE,
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG,

@@ -1,15 +1,17 @@
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Tuple, TYPE_CHECKING
 
 import gym
 import numpy as np
 from pyquaternion import Quaternion
 
 from allenact.base_abstractions.sensor import Sensor
-from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 from allenact.base_abstractions.task import Task
+from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 from allenact.utils.misc_utils import prepare_locals_for_super
 from allenact_plugins.habitat_plugin.habitat_environment import HabitatEnvironment
-from allenact_plugins.habitat_plugin.habitat_tasks import PointNavTask  # type: ignore
+
+if TYPE_CHECKING:
+    from allenact_plugins.habitat_plugin.habitat_tasks import PointNavTask  # type: ignore
 
 
 class RGBSensorHabitat(RGBSensor[HabitatEnvironment, Task[HabitatEnvironment]]):
@@ -73,7 +75,7 @@ class DepthSensorHabitat(DepthSensor[HabitatEnvironment, Task[HabitatEnvironment
         return env.current_frame["depth"].copy()
 
 
-class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
+class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, "PointNavTask"]):
     def __init__(
         self, coordinate_dims: int, uuid: str = "target_coordinates_ind", **kwargs: Any
     ):
@@ -92,7 +94,7 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def get_observation(
         self,
         env: HabitatEnvironment,
-        task: Optional[PointNavTask],
+        task: Optional["PointNavTask"],
         *args: Any,
         **kwargs: Any
     ) -> Any:
@@ -101,7 +103,7 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         return goal
 
 
-class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
+class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, "PointNavTask"]):
     def __init__(self, uuid: str = "target_object_id", **kwargs: Any):
         observation_space = self._get_observation_space()
 
@@ -114,7 +116,7 @@ class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def get_observation(
         self,
         env: HabitatEnvironment,
-        task: Optional[PointNavTask],
+        task: Optional["PointNavTask"],
         *args: Any,
         **kwargs: Any
     ) -> Any:
@@ -123,7 +125,7 @@ class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
         return goal
 
 
-class AgentCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
+class AgentCoordinatesSensorHabitat(Sensor[HabitatEnvironment, "PointNavTask"]):
     def __init__(self, uuid: str = "agent_position_and_rotation", **kwargs: Any):
         observation_space = self._get_observation_space()
 
@@ -133,10 +135,10 @@ class AgentCoordinatesSensorHabitat(Sensor[HabitatEnvironment, PointNavTask]):
     def _get_observation_space():
         return gym.spaces.Box(np.float32(-1000), np.float32(1000), shape=(4,))
 
+    @staticmethod
     def get_observation(
-        self,
         env: HabitatEnvironment,
-        task: Optional[PointNavTask],
+        task: Optional["PointNavTask"],
         *args: Any,
         **kwargs: Any
     ) -> Any:

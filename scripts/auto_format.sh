@@ -9,7 +9,7 @@ echo BLACK DONE
 echo ""
 
 echo RUNNING DOCFORMATTER
-find . -name "*.py" | grep -v ^./src | grep -v used_configs | xargs docformatter --in-place -r
+find . -name "*.py" | grep -v ^./src | grep -v ^./external_projects | grep -v used_configs | xargs docformatter --in-place -r
 echo DOCFORMATTER DONE
 
 echo ALL DONE

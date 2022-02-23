@@ -32,6 +32,5 @@ class ObjectNavBaseConfig(ExperimentConfig, ABC):
             "shaping_weight": 1.0,
         }
 
-    @classmethod
-    def preprocessors(cls) -> Sequence[Union[Preprocessor, Builder[Preprocessor]]]:
+    def preprocessors(self) -> Sequence[Union[Preprocessor, Builder[Preprocessor]]]:
         return tuple()

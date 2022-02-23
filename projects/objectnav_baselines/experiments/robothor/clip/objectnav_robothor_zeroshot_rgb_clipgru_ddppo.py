@@ -1,3 +1,7 @@
+from projects.objectnav_baselines.experiments.objectnav_mixin_ddppo import (
+    ObjectNavMixInPPOConfig,
+)
+
 from allenact_plugins.clip_plugin.clip_preprocessors import ClipResNetPreprocessor
 from allenact_plugins.ithor_plugin.ithor_sensors import (
     RGBSensorThor,
@@ -5,9 +9,6 @@ from allenact_plugins.ithor_plugin.ithor_sensors import (
 )
 from projects.objectnav_baselines.experiments.clip.objectnav_zeroshot_mixin_clip_gru import (
     ObjectNavZeroShotMixInClipGRUConfig,
-)
-from projects.objectnav_baselines.experiments.objectnav_mixin_ddppo import (
-    ObjectNavMixInPPOConfig,
 )
 from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base import (
     ObjectNavRoboThorBaseConfig,

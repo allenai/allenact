@@ -1,4 +1,4 @@
-from typing import Sequence, Union, Optional, Any
+from typing import Union, Optional, Any
 
 import gym
 import numpy as np
@@ -10,12 +10,10 @@ from torch.optim.lr_scheduler import LambdaLR
 from allenact.algorithms.onpolicy_sync.losses import PPO
 from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 from allenact.algorithms.onpolicy_sync.storage import RolloutBlockStorage
-from allenact.base_abstractions.preprocessor import Preprocessor
 
 # noinspection PyUnresolvedReferences
 from allenact.base_abstractions.sensor import Sensor
 from allenact.base_abstractions.task import Task
-from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 from allenact.embodiedai.storage.vdr_storage import (
     DiscreteVisualDynamicsReplayStorage,
     InverseDynamicsVDRLoss,
@@ -23,22 +21,23 @@ from allenact.embodiedai.storage.vdr_storage import (
 from allenact.utils.experiment_utils import Builder, TrainingSettings
 from allenact.utils.experiment_utils import (
     PipelineStage,
-    TrainingPipeline,
     LinearDecay,
     StageComponent,
 )
+from allenact.utils.experiment_utils import TrainingPipeline
 from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment
-from allenact_plugins.ithor_plugin.ithor_sensors import GoalObjectTypeThorSensor
-from allenact_plugins.ithor_plugin.ithor_sensors import RGBSensorThor
-from allenact_plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
-from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
-from projects.objectnav_baselines.experiments.objectnav_mixin_ddppo import (
-    ObjectNavMixInPPOConfig,
+from allenact_plugins.ithor_plugin.ithor_sensors import (
+    RGBSensorThor,
+    GoalObjectTypeThorSensor,
 )
+from allenact_plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base import (
     ObjectNavRoboThorBaseConfig,
 )
-from projects.objectnav_baselines.models.object_nav_models import ObjectNavActorCritic
+from projects.objectnav_baselines.mixins import (
+    ObjectNavUnfrozenResNetWithGRUActorCriticMixin,
+    update_with_auxiliary_losses,
+)
 
 
 def compute_inv_dyn_action_logits(
@@ -103,9 +102,7 @@ class VisibleObjectTypesSensor(
         return out
 
 
-class ObjectNavRoboThorVdrTmpRGBExperimentConfig(
-    ObjectNavRoboThorBaseConfig, ObjectNavMixInPPOConfig,
-):
+class ObjectNavRoboThorVdrTmpRGBExperimentConfig(ObjectNavRoboThorBaseConfig):
     SENSORS = [
         RGBSensorThor(
             height=ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
@@ -120,9 +117,17 @@ class ObjectNavRoboThorVdrTmpRGBExperimentConfig(
         VisibleObjectTypesSensor(),
     ]
 
-    @classmethod
-    def tag(cls):
-        return "Objectnav-RoboTHOR-RGB-Unfrozen-VDR"
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.model_creation_handler = ObjectNavUnfrozenResNetWithGRUActorCriticMixin(
+            backbone="gnresnet18",
+            sensors=self.SENSORS,
+            auxiliary_uuids=[],
+            add_prev_actions=True,
+            multiple_beliefs=False,
+            belief_fusion=None,
+        )
 
     def training_pipeline(self, **kwargs):
         # PPO
@@ -139,7 +144,7 @@ class ObjectNavRoboThorVdrTmpRGBExperimentConfig(
         max_grad_norm = 0.5
 
         named_losses = {"ppo_loss": (PPO(**PPOConfig), 1.0)}
-        named_losses = self._update_with_auxiliary_losses(named_losses)
+        named_losses = update_with_auxiliary_losses(named_losses)
 
         default_ts = TrainingSettings(
             num_mini_batch=num_mini_batch,
@@ -215,45 +220,12 @@ class ObjectNavRoboThorVdrTmpRGBExperimentConfig(
             ),
         )
 
-    @classmethod
-    def preprocessors(cls) -> Sequence[Union[Preprocessor, Builder[Preprocessor]]]:
-        return []
-
-    BACKBONE = "gnresnet18"
-
-    @classmethod
-    def create_model(cls, **kwargs) -> nn.Module:
-        rgb_uuid = next((s.uuid for s in cls.SENSORS if isinstance(s, RGBSensor)), None)
-        depth_uuid = next(
-            (s.uuid for s in cls.SENSORS if isinstance(s, DepthSensor)), None
-        )
-        goal_sensor_uuid = next(
-            (s.uuid for s in cls.SENSORS if isinstance(s, GoalObjectTypeThorSensor)),
-            None,
-        )
-
-        model = ObjectNavActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask.class_action_names())),
-            observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
-            rgb_uuid=rgb_uuid,
-            depth_uuid=depth_uuid,
-            goal_sensor_uuid=goal_sensor_uuid,
-            hidden_size=192
-            if cls.MULTIPLE_BELIEFS and len(cls.AUXILIARY_UUIDS) > 1
-            else 512,
-            backbone=cls.BACKBONE,
-            resnet_baseplanes=32,
-            object_type_embedding_dim=32,
-            num_rnn_layers=1,
-            rnn_type="GRU",
-            add_prev_actions=cls.ADD_PREV_ACTIONS,
-            action_embed_size=6,
-            auxiliary_uuids=cls.AUXILIARY_UUIDS,
-            multiple_beliefs=cls.MULTIPLE_BELIEFS,
-            beliefs_fusion=cls.BELIEF_FUSION,
-        )
+    def create_model(self, **kwargs) -> nn.Module:
+        model = self.model_creation_handler.create_model(**kwargs)
         model.inv_dyn_mlp = nn.Sequential(
             nn.Linear(1024, 256), nn.ReLU(inplace=True), nn.Linear(256, 6),
         )
-
         return model
+
+    def tag(self):
+        return "Objectnav-RoboTHOR-RGB-UnfrozenResNet18GRU-VDR"

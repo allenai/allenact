@@ -1,22 +1,19 @@
+from allenact.utils.experiment_utils import TrainingPipeline
+from allenact_plugins.habitat_plugin.habitat_sensors import RGBSensorHabitat
 from allenact_plugins.habitat_plugin.habitat_sensors import (
-    RGBSensorHabitat,
     TargetCoordinatesSensorHabitat,
 )
 from projects.pointnav_baselines.experiments.habitat.pointnav_habitat_base import (
     PointNavHabitatBaseConfig,
 )
-from projects.pointnav_baselines.experiments.pointnav_habitat_mixin_ddppo import (
-    PointNavHabitatMixInPPOConfig,
-)
-from projects.pointnav_baselines.experiments.pointnav_mixin_simpleconvgru import (
-    PointNavMixInSimpleConvGRUConfig,
+from projects.pointnav_baselines.mixins import PointNavPPOMixin
+from projects.pointnav_baselines.mixins import (
+    PointNavUnfrozenResNetWithGRUActorCriticMixin,
 )
 
 
 class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(
-    PointNavHabitatBaseConfig,
-    PointNavHabitatMixInPPOConfig,
-    PointNavMixInSimpleConvGRUConfig,
+    PointNavHabitatBaseConfig
 ):
     """An Point Navigation experiment configuration in Habitat with Depth
     input."""
@@ -30,6 +27,28 @@ class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(
         TargetCoordinatesSensorHabitat(coordinate_dims=2),
     ]
 
-    @classmethod
+    def __init__(self):
+        super().__init__()
+
+        self.model_creation_handler = PointNavUnfrozenResNetWithGRUActorCriticMixin(
+            backbone="simpleconv",
+            sensors=self.SENSORS,
+            auxiliary_uuids=[],
+            add_prev_actions=True,
+            multiple_beliefs=False,
+            belief_fusion=None,
+        )
+
+    def training_pipeline(self, **kwargs) -> TrainingPipeline:
+        return PointNavPPOMixin.training_pipeline(
+            auxiliary_uuids=[],
+            multiple_beliefs=False,
+            normalize_advantage=True,
+            advance_scene_rollout_period=self.ADVANCE_SCENE_ROLLOUT_PERIOD,
+        )
+
+    def create_model(self, **kwargs):
+        return self.model_creation_handler.create_model(**kwargs)
+
     def tag(cls):
-        return "Pointnav-Habitat-RGB-SimpleConv-DDPPO"
+        return "PointNav-Habitat-RGB-SimpleConv-DDPPO"

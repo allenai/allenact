@@ -1,17 +1,14 @@
 from abc import ABC
-from typing import Optional, Sequence, Union
+from typing import Optional, Sequence
 
 from allenact.base_abstractions.experiment_config import ExperimentConfig
-from allenact.base_abstractions.preprocessor import Preprocessor
 from allenact.base_abstractions.sensor import Sensor
-from allenact.utils.experiment_utils import Builder
 
 
 class PointNavBaseConfig(ExperimentConfig, ABC):
     """An Object Navigation experiment configuration in iThor."""
 
     ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
-    PREPROCESSORS: Sequence[Union[Preprocessor, Builder[Preprocessor]]] = tuple()
     SENSORS: Optional[Sequence[Sensor]] = None
 
     STEP_SIZE = 0.25

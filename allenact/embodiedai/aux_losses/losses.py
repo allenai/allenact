@@ -10,7 +10,7 @@ Several of the losses defined in this file are modified versions of those found 
 
 
 import abc
-from typing import Dict, cast, Tuple, List
+from typing import Dict, cast, Tuple, Sequence
 
 import numpy as np
 import torch
@@ -36,7 +36,7 @@ class MultiAuxTaskNegEntropyLoss(AbstractActorCriticLoss):
 
     UUID = "multitask_entropy"  # make sure this is unique
 
-    def __init__(self, task_names: List[str], *args, **kwargs):
+    def __init__(self, task_names: Sequence[str], *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.num_tasks = len(task_names)
         self.task_names = task_names

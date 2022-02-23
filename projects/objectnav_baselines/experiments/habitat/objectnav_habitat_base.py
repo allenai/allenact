@@ -22,21 +22,20 @@ from allenact_plugins.habitat_plugin.habitat_constants import (
     HABITAT_CONFIGS_DIR,
     HABITAT_SCENE_DATASETS_DIR,
 )
-from allenact_plugins.habitat_plugin.habitat_task_samplers import PointNavTaskSampler
-from allenact_plugins.habitat_plugin.habitat_tasks import PointNavTask
+from allenact_plugins.habitat_plugin.habitat_task_samplers import ObjectNavTaskSampler
+from allenact_plugins.habitat_plugin.habitat_tasks import ObjectNavTask
 from allenact_plugins.habitat_plugin.habitat_utils import (
     get_habitat_config,
     construct_env_configs,
 )
-from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
+from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 
 
-def create_pointnav_config(
+def create_objectnav_config(
     config_yaml_path: str,
     mode: str,
     scenes_path: str,
     simulator_gpu_ids: Sequence[int],
-    distance_to_goal: float,
     rotation_degrees: float,
     step_size: float,
     max_steps: int,
@@ -67,20 +66,22 @@ def create_pointnav_config(
     config.SIMULATOR.RGB_SENSOR.HEIGHT = camera_height
     config.SIMULATOR.DEPTH_SENSOR.WIDTH = camera_width
     config.SIMULATOR.DEPTH_SENSOR.HEIGHT = camera_height
-    config.SIMULATOR.TURN_ANGLE = rotation_degrees
-    config.SIMULATOR.FORWARD_STEP_SIZE = step_size
-    config.ENVIRONMENT.MAX_EPISODE_STEPS = max_steps
+    config.SIMULATOR.SEMANTIC_SENSOR.WIDTH = camera_width
+    config.SIMULATOR.SEMANTIC_SENSOR.HEIGHT = camera_height
 
-    config.TASK.TYPE = "Nav-v0"
-    config.TASK.SUCCESS_DISTANCE = distance_to_goal
-    config.TASK.SENSORS = ["POINTGOAL_WITH_GPS_COMPASS_SENSOR"]
-    config.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.GOAL_FORMAT = "POLAR"
-    config.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.DIMENSIONALITY = 2
-    config.TASK.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
-    config.TASK.MEASUREMENTS = ["DISTANCE_TO_GOAL", "SUCCESS", "SPL"]
-    config.TASK.SPL.TYPE = "SPL"
-    config.TASK.SPL.SUCCESS_DISTANCE = distance_to_goal
-    config.TASK.SUCCESS.SUCCESS_DISTANCE = distance_to_goal
+    assert rotation_degrees == config.SIMULATOR.TURN_ANGLE
+    assert step_size == config.SIMULATOR.FORWARD_STEP_SIZE
+    assert max_steps == config.ENVIRONMENT.MAX_EPISODE_STEPS
+    config.SIMULATOR.MAX_EPISODE_STEPS = max_steps
+
+    assert config.TASK.TYPE == "ObjectNav-v1"
+
+    assert config.TASK.SUCCESS.SUCCESS_DISTANCE == 0.1
+    assert config.TASK.DISTANCE_TO_GOAL.DISTANCE_TO == "VIEW_POINTS"
+
+    config.TASK.SENSORS = ["OBJECTGOAL_SENSOR", "COMPASS_SENSOR", "GPS_SENSOR"]
+    config.TASK.GOAL_SENSOR_UUID = "objectgoal"
+    config.TASK.MEASUREMENTS = ["DISTANCE_TO_GOAL", "SUCCESS", "SPL", "SOFT_SPL"]
 
     if not training:
         config.SEED = 0
@@ -96,8 +97,8 @@ def create_pointnav_config(
     return config
 
 
-class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
-    """The base config for all Habitat PointNav experiments."""
+class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
+    """The base config for all Habitat ObjectNav experiments."""
 
     # selected auxiliary uuids
     ## if comment all the keys, then it's vanilla DD-PPO
@@ -121,13 +122,13 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
     FAILED_END_REWARD = -1.0
 
     TASK_DATA_DIR_TEMPLATE = os.path.join(
-        HABITAT_DATASETS_DIR, "pointnav/gibson/v1/{}/{}.json.gz"
+        HABITAT_DATASETS_DIR, "objectnav/mp3d/v1/{}/{}.json.gz"
     )
     BASE_CONFIG_YAML_PATH = os.path.join(
-        HABITAT_CONFIGS_DIR, "tasks/pointnav_gibson.yaml"
+        HABITAT_CONFIGS_DIR, "tasks/objectnav_mp3d.yaml"
     )
 
-    ACTION_SPACE = gym.spaces.Discrete(len(PointNavTask.class_action_names()))
+    ACTION_SPACE = gym.spaces.Discrete(len(ObjectNavTask.class_action_names()))
 
     DEFAULT_NUM_TRAIN_PROCESSES = (
         max(5 * torch.cuda.device_count(), 4) if torch.cuda.is_available() else 1
@@ -177,12 +178,11 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
             training: bool = True,
             num_episode_sample: int = -1,
         ):
-            return create_pointnav_config(
+            return create_objectnav_config(
                 config_yaml_path=self.BASE_CONFIG_YAML_PATH,
                 mode=mode,
                 scenes_path=scenes_path,
                 simulator_gpu_ids=simulator_gpu_ids,
-                distance_to_goal=self.DISTANCE_TO_GOAL,
                 rotation_degrees=self.ROTATION_DEGREES,
                 step_size=self.STEP_SIZE,
                 max_steps=self.MAX_STEPS,
@@ -223,10 +223,10 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
         )
 
         if debug:
-            get_logger().warning("IN DEBUG MODE, WILL ONLY USE `Adrian` SCENE!!!")
+            get_logger().warning("IN DEBUG MODE, WILL ONLY USE `1LXtFkjw3qL` SCENE!!!")
             for config in self.TRAIN_CONFIGS_PER_PROCESS:
                 config.defrost()
-                config.DATASET.CONTENT_SCENES = ["Adrian"]
+                config.DATASET.CONTENT_SCENES = ["1LXtFkjw3qL"]
                 config.freeze()
 
         self.TEST_CONFIG_PER_PROCESS = construct_env_configs(
@@ -246,7 +246,7 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
 
     @classmethod
     def tag(cls):
-        return "PointNav"
+        return "ObjectNav"
 
     def preprocessors(self) -> Sequence[Union[Preprocessor, Builder[Preprocessor]]]:
         return tuple()
@@ -292,7 +292,7 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return PointNavTaskSampler(
+        return ObjectNavTaskSampler(
             **{"failed_end_reward": cls.FAILED_END_REWARD, **kwargs}  # type: ignore
         )
 
@@ -310,7 +310,6 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": self.ACTION_SPACE,
-            "distance_to_goal": self.DISTANCE_TO_GOAL,
         }
 
     def valid_task_sampler_args(
@@ -329,8 +328,9 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
             "env_config": self.VALID_CONFIG,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
-            "distance_to_goal": self.DISTANCE_TO_GOAL,
+            "action_space": gym.spaces.Discrete(
+                len(ObjectNavTask.class_action_names())
+            ),
         }
 
     def test_task_sampler_args(
@@ -346,6 +346,7 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
             "env_config": config,
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
-            "action_space": gym.spaces.Discrete(len(PointNavTask.class_action_names())),
-            "distance_to_goal": self.DISTANCE_TO_GOAL,
+            "action_space": gym.spaces.Discrete(
+                len(ObjectNavTask.class_action_names())
+            ),
         }

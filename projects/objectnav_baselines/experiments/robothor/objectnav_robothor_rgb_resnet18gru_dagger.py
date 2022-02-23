@@ -3,26 +3,25 @@ from typing import Sequence, Union
 import torch.nn as nn
 
 from allenact.base_abstractions.preprocessor import Preprocessor
+from allenact.base_abstractions.sensor import ExpertActionSensor
 from allenact.utils.experiment_utils import Builder, TrainingPipeline
-from allenact_plugins.clip_plugin.clip_preprocessors import ClipResNetPreprocessor
 from allenact_plugins.ithor_plugin.ithor_sensors import (
     GoalObjectTypeThorSensor,
     RGBSensorThor,
 )
-from projects.objectnav_baselines.experiments.clip.mixins import (
-    ClipResNetPreprocessGRUActorCriticMixin,
-)
+from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base import (
     ObjectNavRoboThorBaseConfig,
 )
-from projects.objectnav_baselines.mixins import ObjectNavPPOMixin
+from projects.objectnav_baselines.mixins import (
+    ResNetPreprocessGRUActorCriticMixin,
+    ObjectNavDAggerMixin,
+)
 
 
-class ObjectNavRoboThorClipRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig,):
+class ObjectNavRoboThorRGBDAggerExperimentConfig(ObjectNavRoboThorBaseConfig):
     """An Object Navigation experiment configuration in RoboThor with RGB
     input."""
-
-    CLIP_MODEL_TYPE = "RN50"
 
     SENSORS = [
         RGBSensorThor(
@@ -30,28 +29,27 @@ class ObjectNavRoboThorClipRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig,):
             width=ObjectNavRoboThorBaseConfig.SCREEN_SIZE,
             use_resnet_normalization=True,
             uuid="rgb_lowres",
-            mean=ClipResNetPreprocessor.CLIP_RGB_MEANS,
-            stdev=ClipResNetPreprocessor.CLIP_RGB_STDS,
         ),
         GoalObjectTypeThorSensor(
             object_types=ObjectNavRoboThorBaseConfig.TARGET_TYPES,
         ),
+        ExpertActionSensor(nactions=len(ObjectNavTask.class_action_names()),),
     ]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.preprocessing_and_model = ClipResNetPreprocessGRUActorCriticMixin(
+        self.REWARD_CONFIG["shaping"] = 0
+
+        self.preprocessing_and_model = ResNetPreprocessGRUActorCriticMixin(
             sensors=self.SENSORS,
-            clip_model_type=self.CLIP_MODEL_TYPE,
+            resnet_type="RN18",
             screen_size=self.SCREEN_SIZE,
             goal_sensor_type=GoalObjectTypeThorSensor,
         )
 
     def training_pipeline(self, **kwargs) -> TrainingPipeline:
-        return ObjectNavPPOMixin.training_pipeline(
-            auxiliary_uuids=[],
-            multiple_beliefs=False,
+        return ObjectNavDAggerMixin.training_pipeline(
             advance_scene_rollout_period=self.ADVANCE_SCENE_ROLLOUT_PERIOD,
         )
 
@@ -65,4 +63,4 @@ class ObjectNavRoboThorClipRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig,):
 
     @classmethod
     def tag(cls):
-        return "ObjectNav-RoboTHOR-RGB-ClipResNet50GRU-DDPPO"
+        return "ObjectNav-RoboTHOR-RGB-ResNet18GRU-DAgger"
