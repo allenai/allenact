@@ -228,6 +228,7 @@ class FeatureEmbedding(nn.Module):
 
     def __init__(self, input_size, output_size):
         super().__init__()
+        self.input_size = input_size
         self.output_size = output_size
         if self.output_size != 0:
             self.fc = nn.Embedding(input_size, output_size)

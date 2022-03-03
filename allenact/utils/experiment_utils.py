@@ -1008,6 +1008,8 @@ class TrainingPipeline:
                 {
                     "early_stopping_criterion_met": ps.early_stopping_criterion_met,
                     "steps_taken_in_stage": ps.steps_taken_in_stage,
+                    "storage_uuid_to_steps_taken_in_stage": ps.storage_uuid_to_steps_taken_in_stage,
+                    "rollout_count": ps.rollout_count
                 }
                 for ps in self.pipeline_stages
             ],
@@ -1020,11 +1022,17 @@ class TrainingPipeline:
                 "Loaded state dict was saved using an older version of AllenAct."
                 " If you are attempting to restart training for a model that had an off-policy component, be aware"
                 " that logging for the off-policy component will not behave as it previously did."
+                " Additionally, while the total step count will remain accurate, step counts"
+                " associated with losses will be reset to step 0."
             )
 
         for ps, stage_info in zip(self.pipeline_stages, state_dict["stage_info_list"]):
             ps.early_stopping_criterion_met = stage_info["early_stopping_criterion_met"]
             ps.steps_taken_in_stage = stage_info["steps_taken_in_stage"]
+
+            if "storage_uuid_to_steps_taken_in_stage" in stage_info:
+                ps.storage_uuid_to_steps_taken_in_stage = stage_info["storage_uuid_to_steps_taken_in_stage"]
+                ps.rollout_count = stage_info["rollout_count"]
 
         self.rollout_count = state_dict["rollout_count"]
 

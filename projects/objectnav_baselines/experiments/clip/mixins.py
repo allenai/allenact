@@ -21,6 +21,7 @@ class ClipResNetPreprocessGRUActorCriticMixin:
     clip_model_type: str = attr.ib()
     screen_size: int = attr.ib()
     goal_sensor_type: Type[Sensor] = attr.ib()
+    pool: bool = attr.ib(default=False)
 
     def preprocessors(self) -> Sequence[Union[Preprocessor, Builder[Preprocessor]]]:
         preprocessors = []
@@ -46,7 +47,7 @@ class ClipResNetPreprocessGRUActorCriticMixin:
                 ClipResNetPreprocessor(
                     rgb_input_uuid=rgb_sensor.uuid,
                     clip_model_type=self.clip_model_type,
-                    pool=False,
+                    pool=self.pool,
                     output_uuid="rgb_clip_resnet",
                 )
             )
@@ -59,7 +60,7 @@ class ClipResNetPreprocessGRUActorCriticMixin:
                 ClipResNetPreprocessor(
                     rgb_input_uuid=depth_sensor.uuid,
                     clip_model_type=self.clip_model_type,
-                    pool=False,
+                    pool=self.pool,
                     output_uuid="depth_clip_resnet",
                 )
             )

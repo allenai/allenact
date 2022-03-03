@@ -32,6 +32,7 @@ class PointNavActorCritic(VisualNavActorCritic):
         num_rnn_layers=1,
         rnn_type="GRU",
         add_prev_actions=False,
+        add_prev_action_null_token=False,
         action_embed_size=4,
         multiple_beliefs=False,
         beliefs_fusion: Optional[FusionType] = None,
@@ -96,6 +97,7 @@ class PointNavActorCritic(VisualNavActorCritic):
             num_rnn_layers=num_rnn_layers,
             rnn_type=rnn_type,
             add_prev_actions=add_prev_actions,
+            add_prev_action_null_token=add_prev_action_null_token,
             prev_action_embed_size=action_embed_size,
         )
 

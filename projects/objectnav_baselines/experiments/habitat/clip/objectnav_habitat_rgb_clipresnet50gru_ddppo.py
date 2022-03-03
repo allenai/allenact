@@ -33,11 +33,15 @@ class ObjectNavHabitatRGBClipResNet50GRUDDPPOExperimentConfig(
             mean=ClipResNetPreprocessor.CLIP_RGB_MEANS,
             stdev=ClipResNetPreprocessor.CLIP_RGB_STDS,
         ),
-        TargetObjectSensorHabitat(),
+        TargetObjectSensorHabitat(
+            len(ObjectNavHabitatBaseConfig.DEFAULT_OBJECT_CATEGORIES_TO_IND)
+        ),
     ]
 
-    def __init__(self, **kwargs):
+    def __init__(self, lr: float, **kwargs):
         super().__init__(**kwargs)
+
+        self.lr = lr
 
         self.preprocessing_and_model = ClipResNetPreprocessGRUActorCriticMixin(
             sensors=self.SENSORS,
@@ -48,6 +52,7 @@ class ObjectNavHabitatRGBClipResNet50GRUDDPPOExperimentConfig(
 
     def training_pipeline(self, **kwargs) -> TrainingPipeline:
         return ObjectNavPPOMixin.training_pipeline(
+            lr=self.lr,
             auxiliary_uuids=[],
             multiple_beliefs=False,
             advance_scene_rollout_period=self.ADVANCE_SCENE_ROLLOUT_PERIOD,
@@ -61,6 +66,5 @@ class ObjectNavHabitatRGBClipResNet50GRUDDPPOExperimentConfig(
             num_actions=self.ACTION_SPACE.n, **kwargs
         )
 
-    @classmethod
-    def tag(cls):
-        return "ObjectNav-Habitat-RGB-ClipResNet50GRU-DDPPO"
+    def tag(self):
+        return f"ObjectNav-Habitat-RGB-ClipResNet50GRU-DDPPO-lr{self.lr}"

@@ -6,6 +6,7 @@ from math import ceil
 from typing import Dict, Any, List, Optional, Sequence, Tuple, cast
 
 import ai2thor
+import ai2thor.build
 import gym
 import numpy as np
 import torch
@@ -36,6 +37,7 @@ if ai2thor.__version__ not in ["0.0.1", None] and version.parse(
         " ai2thor version 3.2.0 or higher."
     )
 
+import ai2thor.platform
 
 class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
     """The base config for all AI2-THOR ObjectNav experiments."""
@@ -54,7 +56,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
     TARGET_TYPES: Optional[Sequence[str]] = None
 
     THOR_COMMIT_ID: Optional[str] = None
-    THOR_IS_HEADLESS: bool = False
+    DEFAULT_THOR_IS_HEADLESS: bool = False
 
     ACTION_SPACE = gym.spaces.Discrete(len(ObjectNavTask.class_action_names()))
 
@@ -67,6 +69,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         val_gpu_ids: Optional[Sequence[int]] = None,
         test_gpu_ids: Optional[Sequence[int]] = None,
         randomize_train_materials: bool = False,
+        headless: bool = False,
     ):
         super().__init__()
 
@@ -84,31 +87,33 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         self.val_gpu_ids = v_or_default(val_gpu_ids, self.DEFAULT_VALID_GPU_IDS)
         self.test_gpu_ids = v_or_default(test_gpu_ids, self.DEFAULT_TEST_GPU_IDS)
 
+        self.headless = v_or_default(headless, self.DEFAULT_THOR_IS_HEADLESS)
+
         self.sampler_devices = self.train_gpu_ids
         self.randomize_train_materials = randomize_train_materials
 
-    @classmethod
-    def env_args(cls):
-        assert cls.THOR_COMMIT_ID is not None
+    def env_args(self):
+        assert self.THOR_COMMIT_ID is not None
 
         return dict(
-            width=cls.CAMERA_WIDTH,
-            height=cls.CAMERA_HEIGHT,
-            commit_id=cls.THOR_COMMIT_ID,
+            width=self.CAMERA_WIDTH,
+            height=self.CAMERA_HEIGHT,
+            commit_id=self.THOR_COMMIT_ID if not self.headless else ai2thor.build.COMMIT_ID,
+            stochastic=True,
             continuousMode=True,
-            applyActionNoise=cls.STOCHASTIC,
-            rotateStepDegrees=cls.ROTATION_DEGREES,
-            visibilityDistance=cls.VISIBILITY_DISTANCE,
-            gridSize=cls.STEP_SIZE,
+            applyActionNoise=self.STOCHASTIC,
+            rotateStepDegrees=self.ROTATION_DEGREES,
+            visibilityDistance=self.VISIBILITY_DISTANCE,
+            gridSize=self.STEP_SIZE,
             snapToGrid=False,
-            agentMode=cls.AGENT_MODE,
+            agentMode=self.AGENT_MODE,
             fieldOfView=horizontal_to_vertical_fov(
-                horizontal_fov_in_degrees=cls.HORIZONTAL_FIELD_OF_VIEW,
-                width=cls.CAMERA_WIDTH,
-                height=cls.CAMERA_HEIGHT,
+                horizontal_fov_in_degrees=self.HORIZONTAL_FIELD_OF_VIEW,
+                width=self.CAMERA_WIDTH,
+                height=self.CAMERA_HEIGHT,
             ),
             include_private_scenes=False,
-            renderDepthImage=any(isinstance(s, DepthSensorThor) for s in cls.SENSORS),
+            renderDepthImage=any(isinstance(s, DepthSensorThor) for s in self.SENSORS),
         )
 
     def machine_params(self, mode="train", **kwargs):
@@ -223,7 +228,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
 
         inds = self._partition_inds(len(scenes), total_processes)
 
-        if not self.THOR_IS_HEADLESS:
+        if not self.headless:
             x_display: Optional[str] = None
             if platform.system() == "Linux":
                 x_displays = get_open_x_displays(throw_error_if_empty=True)
@@ -242,7 +247,10 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
 
             device_dict = dict(x_display=x_display)
         else:
-            device_dict = dict(gpu_device=devices[process_ind % len(devices)])
+            device_dict = dict(
+                gpu_device=devices[process_ind % len(devices)],
+                platform=ai2thor.platform.CloudRendering
+            )
 
         return {
             "scenes": scenes[inds[process_ind] : inds[process_ind + 1]],

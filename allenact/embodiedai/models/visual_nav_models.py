@@ -70,11 +70,12 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
         num_rnn_layers: int,
         rnn_type: str,
         add_prev_actions: bool,
+        add_prev_action_null_token: bool,
         trainable_masked_hidden_state=False,
     ):
         rnn_input_size = obs_embed_size
         self.prev_action_embedder = FeatureEmbedding(
-            input_size=self.action_space.n,
+            input_size=self.action_space.n + add_prev_action_null_token,
             output_size=prev_action_embed_size if add_prev_actions else 0,
         )
         if add_prev_actions:
@@ -212,8 +213,19 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
 
         # 1.1 use perception model (i.e. encoder) to get observation embeddings
         obs_embeds = self.forward_encoder(observations)
+
         # 1.2 use embedding model to get prev_action embeddings
-        prev_actions_embeds = self.prev_action_embedder(prev_actions)
+        if self.prev_action_embedder.input_size == self.action_space.n + 1:
+            # In this case we have a unique embedding for the start of an episode
+            prev_actions_embeds = self.prev_action_embedder(
+                torch.where(
+                    condition=masks.view(*self.prev_actions.shape),
+                    self=self.prev_actions + 1,
+                    other=torch.zeros_like(prev_actions),
+                )
+            )
+        else:
+            prev_actions_embeds = self.prev_action_embedder(prev_actions)
         joint_embeds = torch.cat((obs_embeds, prev_actions_embeds), dim=-1)  # (T, N, *)
 
         # 2. use RNNs to get single/multiple beliefs

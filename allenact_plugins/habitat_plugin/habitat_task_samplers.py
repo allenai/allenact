@@ -1,7 +1,8 @@
-from typing import List, Optional, Union, Callable
+from typing import List, Optional, Union, Callable, Any, Dict, Type
 
 import gym
 import habitat
+from allenact.utils.experiment_utils import Builder
 from habitat.config import Config
 
 from allenact.base_abstractions.sensor import Sensor
@@ -134,6 +135,13 @@ class ObjectNavTaskSampler(TaskSampler):
         sensors: List[Sensor],
         max_steps: int,
         action_space: gym.Space,
+        filter_dataset_func: Optional[
+            Callable[[habitat.Dataset], habitat.Dataset]
+        ] = None,
+        task_kwargs: Dict[str, Any] = None,
+        objectnav_task_type: Union[
+            Type[ObjectNavTask], Builder[ObjectNavTask]
+        ] = ObjectNavTask,
         **kwargs,
     ) -> None:
         self.grid_size = 0.25
@@ -145,13 +153,22 @@ class ObjectNavTaskSampler(TaskSampler):
         self._action_space = action_space
         self.env_config = env_config
         self.seed: Optional[int] = None
+        self.filter_dataset_func = filter_dataset_func
+        self.objectnav_task_type = objectnav_task_type
 
+        self.task_kwargs = {} if task_kwargs is None else task_kwargs
         self._last_sampled_task: Optional[ObjectNavTask] = None
 
     def _create_environment(self) -> HabitatEnvironment:
         dataset = habitat.make_dataset(
             self.env_config.DATASET.TYPE, config=self.env_config.DATASET
         )
+
+        if self.filter_dataset_func is not None:
+            dataset = self.filter_dataset_func(dataset)
+            if len(dataset.episodes) == 0:
+                raise RuntimeError("Empty dataset after filtering.")
+
         env = HabitatEnvironment(config=self.env_config, dataset=dataset)
         self.max_tasks = (
             None if self.env_config.MODE == "train" else env.num_episodes
@@ -209,12 +226,13 @@ class ObjectNavTaskSampler(TaskSampler):
             **ep_info.info,
         }
 
-        self._last_sampled_task = ObjectNavTask(
+        self._last_sampled_task = self.objectnav_task_type(
             env=self.env,
             sensors=self.sensors,
             task_info=task_info,
             max_steps=self.max_steps,
             action_space=self._action_space,
+            **self.task_kwargs,
         )
 
         if self.max_tasks is not None:

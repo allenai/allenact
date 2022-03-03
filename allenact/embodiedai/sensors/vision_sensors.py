@@ -160,35 +160,37 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
     def frame_from_env(self, env: EnvType, task: Optional[SubTaskType]) -> np.ndarray:
         raise NotImplementedError
 
-    def get_observation(
-        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
-    ) -> Any:
-        im = self.frame_from_env(env=env, task=task)
+    def process_img(self, img: np.ndarray):
         assert (
-            im.dtype == np.float32 and (len(im.shape) == 2 or im.shape[-1] == 1)
-        ) or (im.shape[-1] == 3 and im.dtype == np.uint8), (
+            img.dtype == np.float32 and (len(img.shape) == 2 or img.shape[-1] == 1)
+        ) or (img.shape[-1] == 3 and img.dtype == np.uint8), (
             "Input frame must either have 3 channels and be of"
             " type np.uint8 or have one channel and be of type np.float32"
         )
 
         if self._scale_first:
-            if self.scaler is not None and im.shape[:2] != (self._height, self._width):
-                im = np.array(self.scaler(self.to_pil(im)), dtype=im.dtype)  # hwc
+            if self.scaler is not None and img.shape[:2] != (self._height, self._width):
+                img = np.array(self.scaler(self.to_pil(img)), dtype=img.dtype)  # hwc
 
-        assert im.dtype in [np.uint8, np.float32]
+        assert img.dtype in [np.uint8, np.float32]
 
-        if im.dtype == np.uint8:
-            im = im.astype(np.float32) / 255.0
+        if img.dtype == np.uint8:
+            img = img.astype(np.float32) / 255.0
 
         if self._should_normalize:
-            im -= self._norm_means
-            im /= self._norm_sds
+            img -= self._norm_means
+            img /= self._norm_sds
 
         if not self._scale_first:
-            if self.scaler is not None and im.shape[:2] != (self._height, self._width):
-                im = np.array(self.scaler(self.to_pil(im)), dtype=np.float32)  # hwc
+            if self.scaler is not None and img.shape[:2] != (self._height, self._width):
+                img = np.array(self.scaler(self.to_pil(img)), dtype=np.float32)  # hwc
 
-        return im
+        return img
+
+    def get_observation(
+        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
+    ) -> Any:
+        return self.process_img(self.frame_from_env(env=env, task=task))
 
 
 class RGBSensor(VisionSensor[EnvType, SubTaskType], ABC):

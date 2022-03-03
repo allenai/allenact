@@ -7,6 +7,8 @@ import torch
 
 # noinspection PyUnresolvedReferences
 import habitat
+from torch.distributions.utils import lazy_property
+
 from allenact.base_abstractions.experiment_config import MachineParams
 from allenact.base_abstractions.preprocessor import (
     SensorPreprocessorGraph,
@@ -133,11 +135,35 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
     DEFAULT_NUM_TRAIN_PROCESSES = (
         max(5 * torch.cuda.device_count(), 4) if torch.cuda.is_available() else 1
     )
-    DEFAULT_NUM_TEST_PROCESSES = 10
+    DEFAULT_NUM_TEST_PROCESSES = 11
 
     DEFAULT_TRAIN_GPU_IDS = tuple(range(torch.cuda.device_count()))
     DEFAULT_VALID_GPU_IDS = [torch.cuda.device_count() - 1]
-    DEFAULT_TEST_GPU_IDS = [torch.cuda.device_count() - 1]
+    DEFAULT_TEST_GPU_IDS = tuple(range(torch.cuda.device_count()))
+
+    DEFAULT_OBJECT_CATEGORIES_TO_IND = {
+        "chair": 0,
+        "table": 1,
+        "picture": 2,
+        "cabinet": 3,
+        "cushion": 4,
+        "sofa": 5,
+        "bed": 6,
+        "chest_of_drawers": 7,
+        "plant": 8,
+        "sink": 9,
+        "toilet": 10,
+        "stool": 11,
+        "towel": 12,
+        "tv_monitor": 13,
+        "shower": 14,
+        "bathtub": 15,
+        "counter": 16,
+        "fireplace": 17,
+        "gym_equipment": 18,
+        "seating": 19,
+        "clothes": 20,
+    }
 
     def __init__(
         self,
@@ -152,6 +178,7 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
         **kwargs,
     ):
         super().__init__(**kwargs)
+        self.debug = debug
 
         def v_or_default(v, default):
             return v if v is not None else default
@@ -170,39 +197,45 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
         )
         self.test_gpu_ids = v_or_default(test_gpu_ids, self.DEFAULT_TEST_GPU_IDS)
 
-        def create_config(
-            mode: str,
-            scenes_path: str,
-            num_processes: int,
-            simulator_gpu_ids: Sequence[int],
-            training: bool = True,
-            num_episode_sample: int = -1,
-        ):
-            return create_objectnav_config(
-                config_yaml_path=self.BASE_CONFIG_YAML_PATH,
-                mode=mode,
-                scenes_path=scenes_path,
-                simulator_gpu_ids=simulator_gpu_ids,
-                rotation_degrees=self.ROTATION_DEGREES,
-                step_size=self.STEP_SIZE,
-                max_steps=self.MAX_STEPS,
-                num_processes=num_processes,
-                camera_width=self.CAMERA_WIDTH,
-                camera_height=self.CAMERA_HEIGHT,
-                using_rgb=any(isinstance(s, RGBSensor) for s in self.SENSORS),
-                using_depth=any(isinstance(s, DepthSensor) for s in self.SENSORS),
-                training=training,
-                num_episode_sample=num_episode_sample,
-            )
+    def _create_config(
+        self,
+        mode: str,
+        scenes_path: str,
+        num_processes: int,
+        simulator_gpu_ids: Sequence[int],
+        training: bool = True,
+        num_episode_sample: int = -1,
+    ):
+        return create_objectnav_config(
+            config_yaml_path=self.BASE_CONFIG_YAML_PATH,
+            mode=mode,
+            scenes_path=scenes_path,
+            simulator_gpu_ids=simulator_gpu_ids,
+            rotation_degrees=self.ROTATION_DEGREES,
+            step_size=self.STEP_SIZE,
+            max_steps=self.MAX_STEPS,
+            num_processes=num_processes,
+            camera_width=self.CAMERA_WIDTH,
+            camera_height=self.CAMERA_HEIGHT,
+            using_rgb=any(isinstance(s, RGBSensor) for s in self.SENSORS),
+            using_depth=any(isinstance(s, DepthSensor) for s in self.SENSORS),
+            training=training,
+            num_episode_sample=num_episode_sample,
+        )
 
-        self.TRAIN_CONFIG = create_config(
+    @lazy_property
+    def TRAIN_CONFIG(self):
+        return self._create_config(
             mode="train",
             scenes_path=self.train_scenes_path(),
             num_processes=self.num_train_processes,
             simulator_gpu_ids=self.train_gpu_ids,
             training=True,
         )
-        self.VALID_CONFIG = create_config(
+
+    @lazy_property
+    def VALID_CONFIG(self):
+        return self._create_config(
             mode="validate",
             scenes_path=self.valid_scenes_path(),
             num_processes=1,
@@ -210,7 +243,10 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
             training=False,
             num_episode_sample=200,
         )
-        self.TEST_CONFIG = create_config(
+
+    @lazy_property
+    def TEST_CONFIG(self):
+        return self._create_config(
             mode="validate",
             scenes_path=self.test_scenes_path(),
             num_processes=self.num_test_processes,
@@ -218,20 +254,21 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
             training=False,
         )
 
-        self.TRAIN_CONFIGS_PER_PROCESS = construct_env_configs(
-            self.TRAIN_CONFIG, allow_scene_repeat=True
-        )
+    @lazy_property
+    def TRAIN_CONFIGS_PER_PROCESS(self):
+        configs = construct_env_configs(self.TRAIN_CONFIG, allow_scene_repeat=True)
 
-        if debug:
+        if self.debug:
             get_logger().warning("IN DEBUG MODE, WILL ONLY USE `1LXtFkjw3qL` SCENE!!!")
-            for config in self.TRAIN_CONFIGS_PER_PROCESS:
+            for config in configs:
                 config.defrost()
                 config.DATASET.CONTENT_SCENES = ["1LXtFkjw3qL"]
                 config.freeze()
+        return configs
 
-        self.TEST_CONFIG_PER_PROCESS = construct_env_configs(
-            self.TEST_CONFIG, allow_scene_repeat=False
-        )
+    @lazy_property
+    def TEST_CONFIG_PER_PROCESS(self):
+        return construct_env_configs(self.TEST_CONFIG, allow_scene_repeat=False)
 
     def train_scenes_path(self):
         return self.TASK_DATA_DIR_TEMPLATE.format(*(["train"] * 2))

@@ -19,6 +19,22 @@ from allenact.embodiedai.models.visual_nav_models import (
 )
 
 
+class CatObservations(nn.Module):
+    def __init__(self, ordered_uuids: Sequence[str], dim: int):
+        super().__init__()
+        assert len(ordered_uuids) != 0
+
+        self.ordered_uuids = ordered_uuids
+        self.dim = dim
+
+    def forward(self, observations: ObservationType):
+        if len(self.ordered_uuids) == 1:
+            return observations[self.ordered_uuids[0]]
+        return torch.cat(
+            [observations[uuid] for uuid in self.ordered_uuids], dim=self.dim
+        )
+
+
 class ObjectNavActorCritic(VisualNavActorCritic):
     """Baseline recurrent actor critic model for object-navigation.
 
@@ -45,6 +61,7 @@ class ObjectNavActorCritic(VisualNavActorCritic):
         num_rnn_layers=1,
         rnn_type="GRU",
         add_prev_actions=False,
+        add_prev_action_null_token=False,
         action_embed_size=6,
         # Aux loss
         multiple_beliefs=False,
@@ -72,6 +89,9 @@ class ObjectNavActorCritic(VisualNavActorCritic):
             auxiliary_uuids=auxiliary_uuids,
         )
 
+        self.rgb_uuid = rgb_uuid
+        self.depth_uuid = depth_uuid
+
         self.goal_sensor_uuid = goal_sensor_uuid
         self._n_object_types = self.observation_space.spaces[self.goal_sensor_uuid].n
         self.object_type_embedding_size = object_type_embedding_dim
@@ -84,7 +104,9 @@ class ObjectNavActorCritic(VisualNavActorCritic):
                 rgb_uuid=rgb_uuid,
                 depth_uuid=depth_uuid,
             )
-        else:  # resnet family
+            self.visual_encoder_output_size = hidden_size
+            assert self.is_blind == self.visual_encoder.is_blind
+        elif backbone == "gnresnet18":  # resnet family
             self.visual_encoder = resnet.GroupNormResNetEncoder(
                 observation_space=observation_space,
                 output_size=hidden_size,
@@ -94,12 +116,34 @@ class ObjectNavActorCritic(VisualNavActorCritic):
                 ngroups=resnet_baseplanes // 2,
                 make_backbone=getattr(resnet, backbone),
             )
+            self.visual_encoder_output_size = hidden_size
+            assert self.is_blind == self.visual_encoder.is_blind
+        elif backbone in ["identity", "projection"]:
+            good_uuids = [
+                uuid for uuid in [self.rgb_uuid, self.depth_uuid] if uuid is not None
+            ]
+            cat_model = CatObservations(ordered_uuids=good_uuids, dim=-1,)
+            after_cat_size = sum(
+                observation_space[uuid].shape[-1] for uuid in good_uuids
+            )
+            if backbone == "identity":
+                self.visual_encoder = cat_model
+                self.visual_encoder_output_size = after_cat_size
+            else:
+                self.visual_encoder = nn.Sequential(
+                    cat_model, nn.Linear(after_cat_size, hidden_size), nn.ReLU(True)
+                )
+                self.visual_encoder_output_size = hidden_size
+
+        else:
+            raise NotImplementedError
 
         self.create_state_encoders(
             obs_embed_size=self.goal_visual_encoder_output_dims,
             num_rnn_layers=num_rnn_layers,
             rnn_type=rnn_type,
             add_prev_actions=add_prev_actions,
+            add_prev_action_null_token=add_prev_action_null_token,
             prev_action_embed_size=action_embed_size,
             trainable_masked_hidden_state=trainable_masked_hidden_state,
         )
@@ -122,14 +166,14 @@ class ObjectNavActorCritic(VisualNavActorCritic):
     def is_blind(self) -> bool:
         """True if the model is blind (e.g. neither 'depth' or 'rgb' is an
         input observation type)."""
-        return self.visual_encoder.is_blind
+        return self.rgb_uuid is None and self.depth_uuid is None
 
     @property
     def goal_visual_encoder_output_dims(self):
         dims = self.object_type_embedding_size
         if self.is_blind:
             return dims
-        return dims + self.recurrent_hidden_state_size
+        return dims + self.visual_encoder_output_size
 
     def get_object_type_encoding(
         self, observations: Dict[str, torch.Tensor]
@@ -165,6 +209,7 @@ class ResnetTensorNavActorCritic(VisualNavActorCritic):
         num_rnn_layers=1,
         rnn_type="GRU",
         add_prev_actions=False,
+        add_prev_action_null_token=False,
         action_embed_size=6,
         multiple_beliefs=False,
         beliefs_fusion: Optional[FusionType] = None,
@@ -218,6 +263,7 @@ class ResnetTensorNavActorCritic(VisualNavActorCritic):
             num_rnn_layers=num_rnn_layers,
             rnn_type=rnn_type,
             add_prev_actions=add_prev_actions,
+            add_prev_action_null_token=add_prev_action_null_token,
             prev_action_embed_size=action_embed_size,
         )
 

@@ -5,38 +5,35 @@ import gym
 import numpy as np
 import torch
 import torch.nn as nn
+from clip.model import CLIP
 
 from allenact.base_abstractions.preprocessor import Preprocessor
 from allenact.utils.misc_utils import prepare_locals_for_super
 
 
 class ClipResNetEmbedder(nn.Module):
-    def __init__(self, resnet, pool=True):
+    def __init__(self, resnet: CLIP, pool=True, pooling_type="avg"):
         super().__init__()
         self.model = resnet
         self.pool = pool
+        self.pooling_type = pooling_type
+
+        if not pool:
+            self.model.visual.attnpool = nn.Identity()
+        elif self.pooling_type == "attn":
+            pass
+        elif self.pooling_type == "avg":
+            self.model.visual.attnpool = nn.Sequential(
+                nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten(start_dim=-3, end_dim=-1)
+            )
+        else:
+            raise NotImplementedError("`pooling_type` must be 'avg' or 'attn'.")
+
         self.eval()
 
     def forward(self, x):
-        m = self.model.visual
         with torch.no_grad():
-
-            def stem(x):
-                for conv, bn in [(m.conv1, m.bn1), (m.conv2, m.bn2), (m.conv3, m.bn3)]:
-                    x = m.relu(bn(conv(x)))
-                x = m.avgpool(x)
-                return x
-
-            x = x.type(m.conv1.weight.dtype)
-            x = stem(x)
-            x = m.layer1(x)
-            x = m.layer2(x)
-            x = m.layer3(x)
-            x = m.layer4(x)
-            if self.pool:
-                x = F.adaptive_avg_pool2d(x, (1, 1))
-                x = torch.flatten(x, 1)
-            return x
+            return self.model.visual(x)
 
 
 class ClipResNetPreprocessor(Preprocessor):
@@ -98,6 +95,10 @@ class ClipResNetPreprocessor(Preprocessor):
             self._resnet = ClipResNetEmbedder(
                 clip.load(self.clip_model_type, device=self.device)[0], pool=self.pool
             ).to(self.device)
+            for module in self._resnet.modules():
+                if "BatchNorm" in type(module).__name__:
+                    module.momentum = 0.0
+            self._resnet.eval()
         return self._resnet
 
     def to(self, device: torch.device) -> "ClipResNetPreprocessor":

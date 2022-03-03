@@ -11,7 +11,7 @@ from allenact.utils.misc_utils import prepare_locals_for_super
 from allenact_plugins.habitat_plugin.habitat_environment import HabitatEnvironment
 
 if TYPE_CHECKING:
-    from allenact_plugins.habitat_plugin.habitat_tasks import PointNavTask  # type: ignore
+    from allenact_plugins.habitat_plugin.habitat_tasks import PointNavTask, ObjectNavTask  # type: ignore
 
 
 class RGBSensorHabitat(RGBSensor[HabitatEnvironment, Task[HabitatEnvironment]]):
@@ -103,20 +103,19 @@ class TargetCoordinatesSensorHabitat(Sensor[HabitatEnvironment, "PointNavTask"])
         return goal
 
 
-class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, "PointNavTask"]):
-    def __init__(self, uuid: str = "target_object_id", **kwargs: Any):
-        observation_space = self._get_observation_space()
-
+class TargetObjectSensorHabitat(Sensor[HabitatEnvironment, "ObjectNavTask"]):
+    def __init__(self, num_objects: int, uuid: str = "target_object_id", **kwargs: Any):
+        observation_space = self._get_observation_space(num_objects)
         super().__init__(**prepare_locals_for_super(locals()))
 
     @staticmethod
-    def _get_observation_space():
-        return gym.spaces.Discrete(38)
+    def _get_observation_space(num_objects: int):
+        return gym.spaces.Discrete(num_objects)
 
     def get_observation(
         self,
         env: HabitatEnvironment,
-        task: Optional["PointNavTask"],
+        task: Optional["ObjectNavTask"],
         *args: Any,
         **kwargs: Any
     ) -> Any:
