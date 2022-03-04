@@ -1,15 +1,21 @@
 import os
-from typing import Sequence, Optional
+from typing import Optional
+from typing import Sequence
 
 import torch
 
-from allenact.utils.experiment_utils import PipelineStage, OffPolicyPipelineComponent
+from allenact.algorithms.onpolicy_sync.storage import RolloutBlockStorage
+from allenact.utils.experiment_utils import (
+    PipelineStage,
+    StageComponent,
+    TrainingSettings,
+)
 from allenact_plugins.babyai_plugin.babyai_constants import (
     BABYAI_EXPERT_TRAJECTORIES_DIR,
 )
 from allenact_plugins.minigrid_plugin.minigrid_offpolicy import (
     MiniGridOffPolicyExpertCELoss,
-    create_minigrid_offpolicy_data_iterator,
+    MiniGridExpertTrajectoryStorage,
 )
 from projects.tutorials.minigrid_offpolicy_tutorial import (
     BCOffPolicyBabyAIGoToLocalExperimentConfig,
@@ -56,30 +62,37 @@ class DistributedBCOffPolicyBabyAIGoToLocalExperimentConfig(
             named_losses={
                 "offpolicy_expert_ce_loss": MiniGridOffPolicyExpertCELoss(
                     total_episodes_in_epoch=int(1e6)
-                    // len(cls.machine_params("train")["gpu_ids"])
                 ),
             },
-            pipeline_stages=[
-                PipelineStage(
-                    loss_names=[],
-                    max_stage_steps=total_train_steps,
-                    offpolicy_component=OffPolicyPipelineComponent(
-                        data_iterator_builder=lambda **extra_kwargs: create_minigrid_offpolicy_data_iterator(
-                            path=os.path.join(
+            named_storages={
+                "onpolicy": RolloutBlockStorage(),
+                "minigrid_offpolicy_expert": MiniGridExpertTrajectoryStorage(
+                    data_path=os.path.join(
                                 BABYAI_EXPERT_TRAJECTORIES_DIR,
                                 "BabyAI-GoToLocal-v0{}.pkl".format(
                                     "" if torch.cuda.is_available() else "-small"
                                 ),
                             ),
-                            nrollouts=cls.NUM_TRAIN_SAMPLERS // num_mini_batch,
-                            rollout_len=cls.ROLLOUT_STEPS,
-                            instr_len=cls.INSTR_LEN,
-                            **extra_kwargs,
-                        ),
-                        data_iterator_kwargs_generator=cls.expert_ce_loss_kwargs_generator,
-                        loss_names=["offpolicy_expert_ce_loss"],
-                        updates=num_mini_batch * update_repeats,
-                    ),
+                    num_samplers=cls.NUM_TRAIN_SAMPLERS,
+                    rollout_len=cls.ROLLOUT_STEPS,
+                    instr_len=cls.INSTR_LEN,
+                ),
+            },
+            pipeline_stages=[
+                PipelineStage(
+                    loss_names=["offpolicy_expert_ce_loss"],
+                    max_stage_steps=total_train_steps,
+                    stage_components=[
+                        StageComponent(
+                            uuid="offpolicy",
+                            storage_uuid="minigrid_offpolicy_expert",
+                            loss_names=["offpolicy_expert_ce_loss"],
+                            training_settings=TrainingSettings(
+                                update_repeats=num_mini_batch * update_repeats,
+                                num_mini_batch=1,
+                            )
+                        )
+                    ],
                 ),
             ],
             num_mini_batch=0,

@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from urllib.request import urlopen
 
-from more_itertools import all_equal
+from allenact.utils.misc_utils import all_equal
 
 DATASET_DIR = os.path.abspath(os.path.dirname(Path(__file__)))
 
