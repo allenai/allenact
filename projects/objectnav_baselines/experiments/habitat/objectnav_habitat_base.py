@@ -1,12 +1,13 @@
+import math
 import os
 from abc import ABC
 from typing import Dict, Any, List, Optional, Sequence, Union
 
 import gym
-import torch
-
 # noinspection PyUnresolvedReferences
 import habitat
+import numpy as np
+import torch
 from torch.distributions.utils import lazy_property
 
 from allenact.base_abstractions.experiment_config import MachineParams
@@ -257,6 +258,36 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
     @lazy_property
     def TRAIN_CONFIGS_PER_PROCESS(self):
         configs = construct_env_configs(self.TRAIN_CONFIG, allow_scene_repeat=True)
+
+        if len(self.train_gpu_ids) >= 2:
+            scenes_dir = configs[0].DATASET.SCENES_DIR
+            memory_use_per_config = []
+            for config in configs:
+                assert len(config.DATASET.CONTENT_SCENES) == 1
+                scene_name = config.DATASET.CONTENT_SCENES[0]
+                glb_path = os.path.join(
+                    scenes_dir, "mp3d", scene_name, f"{scene_name}.glb"
+                )
+                memory_use_per_config.append(os.path.getsize(glb_path))
+
+            max_configs_per_device = math.ceil(len(configs) / len(self.train_gpu_ids))
+            mem_per_device = np.array([0.0 for _ in range(len(self.train_gpu_ids))])
+            configs_per_device = [[] for _ in range(len(mem_per_device))]
+            for mem, config in sorted(
+                list(zip(memory_use_per_config, configs)), key=lambda x: x[0]
+            ):
+                ind = int(np.argmin(mem_per_device))
+                config.defrost()
+                config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = self.train_gpu_ids[ind]
+                config.freeze()
+                configs_per_device[ind].append(config)
+
+                mem_per_device[ind] += mem
+                if len(configs_per_device[ind]) >= max_configs_per_device:
+                    mem_per_device[ind] = float("inf")
+
+            configs_per_device.sort(key=lambda x: len(x))
+            configs = sum(configs_per_device, [])
 
         if self.debug:
             get_logger().warning("IN DEBUG MODE, WILL ONLY USE `1LXtFkjw3qL` SCENE!!!")

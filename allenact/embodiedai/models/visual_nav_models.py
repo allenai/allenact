@@ -219,8 +219,8 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
             # In this case we have a unique embedding for the start of an episode
             prev_actions_embeds = self.prev_action_embedder(
                 torch.where(
-                    condition=masks.view(*self.prev_actions.shape),
-                    self=self.prev_actions + 1,
+                    condition=0 != masks.view(*prev_actions.shape),
+                    input=prev_actions + 1,
                     other=torch.zeros_like(prev_actions),
                 )
             )
