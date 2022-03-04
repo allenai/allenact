@@ -4,6 +4,7 @@ from abc import ABC
 from typing import Dict, Any, List, Optional, Sequence, Union
 
 import gym
+
 # noinspection PyUnresolvedReferences
 import habitat
 import numpy as np

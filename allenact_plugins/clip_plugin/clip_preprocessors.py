@@ -113,4 +113,3 @@ class ClipResNetPreprocessor(Preprocessor):
             x = x.repeat(1, 3, 1, 1)
         x = self.resnet(x).float()
         return x
-

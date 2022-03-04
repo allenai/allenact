@@ -1009,7 +1009,7 @@ class TrainingPipeline:
                     "early_stopping_criterion_met": ps.early_stopping_criterion_met,
                     "steps_taken_in_stage": ps.steps_taken_in_stage,
                     "storage_uuid_to_steps_taken_in_stage": ps.storage_uuid_to_steps_taken_in_stage,
-                    "rollout_count": ps.rollout_count
+                    "rollout_count": ps.rollout_count,
                 }
                 for ps in self.pipeline_stages
             ],
@@ -1031,7 +1031,9 @@ class TrainingPipeline:
             ps.steps_taken_in_stage = stage_info["steps_taken_in_stage"]
 
             if "storage_uuid_to_steps_taken_in_stage" in stage_info:
-                ps.storage_uuid_to_steps_taken_in_stage = stage_info["storage_uuid_to_steps_taken_in_stage"]
+                ps.storage_uuid_to_steps_taken_in_stage = stage_info[
+                    "storage_uuid_to_steps_taken_in_stage"
+                ]
                 ps.rollout_count = stage_info["rollout_count"]
 
         self.rollout_count = state_dict["rollout_count"]

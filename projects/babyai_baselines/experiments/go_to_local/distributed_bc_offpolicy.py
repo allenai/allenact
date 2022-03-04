@@ -68,11 +68,11 @@ class DistributedBCOffPolicyBabyAIGoToLocalExperimentConfig(
                 "onpolicy": RolloutBlockStorage(),
                 "minigrid_offpolicy_expert": MiniGridExpertTrajectoryStorage(
                     data_path=os.path.join(
-                                BABYAI_EXPERT_TRAJECTORIES_DIR,
-                                "BabyAI-GoToLocal-v0{}.pkl".format(
-                                    "" if torch.cuda.is_available() else "-small"
-                                ),
-                            ),
+                        BABYAI_EXPERT_TRAJECTORIES_DIR,
+                        "BabyAI-GoToLocal-v0{}.pkl".format(
+                            "" if torch.cuda.is_available() else "-small"
+                        ),
+                    ),
                     num_samplers=cls.NUM_TRAIN_SAMPLERS,
                     rollout_len=cls.ROLLOUT_STEPS,
                     instr_len=cls.INSTR_LEN,
@@ -90,7 +90,7 @@ class DistributedBCOffPolicyBabyAIGoToLocalExperimentConfig(
                             training_settings=TrainingSettings(
                                 update_repeats=num_mini_batch * update_repeats,
                                 num_mini_batch=1,
-                            )
+                            ),
                         )
                     ],
                 ),

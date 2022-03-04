@@ -39,6 +39,7 @@ if ai2thor.__version__ not in ["0.0.1", None] and version.parse(
 
 import ai2thor.platform
 
+
 class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
     """The base config for all AI2-THOR ObjectNav experiments."""
 
@@ -98,7 +99,9 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         return dict(
             width=self.CAMERA_WIDTH,
             height=self.CAMERA_HEIGHT,
-            commit_id=self.THOR_COMMIT_ID if not self.headless else ai2thor.build.COMMIT_ID,
+            commit_id=self.THOR_COMMIT_ID
+            if not self.headless
+            else ai2thor.build.COMMIT_ID,
             stochastic=True,
             continuousMode=True,
             applyActionNoise=self.STOCHASTIC,
@@ -249,7 +252,7 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         else:
             device_dict = dict(
                 gpu_device=devices[process_ind % len(devices)],
-                platform=ai2thor.platform.CloudRendering
+                platform=ai2thor.platform.CloudRendering,
             )
 
         return {
