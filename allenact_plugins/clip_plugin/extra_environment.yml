@@ -1,0 +1,12 @@
+channels:
+  - pytorch
+  - defaults
+  - conda-forge
+dependencies:
+  - pytorch>=1.7.1
+  - torchvision
+  - pip:
+      - ftfy
+      - regex
+      - tqdm
+      - "--editable=git+https://github.com/openai/CLIP.git@e184f608c5d5e58165682f7c332c3a8b4c1545f2#egg=clip"

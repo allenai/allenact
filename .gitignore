@@ -181,7 +181,7 @@ allenact_plugins/robothor_plugin/data/*
 allenact_plugins/ithor_plugin/data/*
 
 # Habitat
-habitat
+external_projects/habitat-lab
 
 # Local pip installations
 src
@@ -199,3 +199,4 @@ src
 *.allenact_last_start_time_string
 *.allenact_start_time_string.lock
 *.lock
+rsync-*

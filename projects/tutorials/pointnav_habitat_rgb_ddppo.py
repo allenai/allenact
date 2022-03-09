@@ -35,10 +35,10 @@ from allenact_plugins.habitat_plugin.habitat_utils import (
     construct_env_configs,
     get_habitat_config,
 )
-from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
-from projects.pointnav_baselines.models.point_nav_models import (
-    ResnetTensorPointNavActorCritic,
+from allenact_plugins.navigation_plugin.objectnav.models import (
+    ResnetTensorNavActorCritic,
 )
+from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
 
 
 class PointNavHabitatRGBPPOTutorialExperimentConfig(ExperimentConfig):
@@ -215,7 +215,7 @@ class PointNavHabitatRGBPPOTutorialExperimentConfig(ExperimentConfig):
     # Define Model
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ResnetTensorPointNavActorCritic(
+        return ResnetTensorNavActorCritic(
             action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             goal_sensor_uuid="target_coordinates_ind",

@@ -1,8 +1,8 @@
 import os
 
-# New directory structure
 HABITAT_BASE = os.getenv(
-    "HABITAT_BASE_DIR", default=os.path.join(os.getcwd(), "external_projects")
+    "HABITAT_BASE_DIR",
+    default=os.path.join(os.getcwd(), "external_projects", "habitat-lab"),
 )
 HABITAT_DATA_BASE = os.path.join(os.getcwd(), "data",)
 

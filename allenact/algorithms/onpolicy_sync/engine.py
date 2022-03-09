@@ -219,22 +219,27 @@ class OnPolicyRLEngine(object):
         if get_logger().level == logging.DEBUG:
             model_hash = md5_hash_of_state_dict(self.actor_critic.state_dict())
             get_logger().debug(
-                f"WORKER ({self.mode}): {self.worker_id}, model weights hash: {model_hash}"
+                f"[{self.mode} worker {self.worker_id}] model weights hash: {model_hash}"
             )
 
         self.is_distributed = False
         self.store: Optional[torch.distributed.TCPStore] = None  # type:ignore
         if self.num_workers > 1:
             self.store = torch.distributed.TCPStore(  # type:ignore
-                self.distributed_ip,
-                self.distributed_port,
-                self.num_workers,
-                self.worker_id == 0,
+                host_name=self.distributed_ip,
+                port=self.distributed_port,
+                world_size=self.num_workers,
+                is_master=self.worker_id == 0,
             )
             cpu_device = self.device == torch.device("cpu")  # type:ignore
 
+            # "gloo" required during testing to ensure that `barrier()` doesn't time out.
+            backend = "gloo" if cpu_device or self.mode == TEST_MODE_STR else "nccl"
+            get_logger().debug(
+                f"Worker {self.worker_id}: initializing distributed {backend} backend with device {self.device}."
+            )
             dist.init_process_group(  # type:ignore
-                backend="gloo" if cpu_device or self.mode == TEST_MODE_STR else "nccl",
+                backend=backend,
                 store=self.store,
                 rank=self.worker_id,
                 world_size=self.num_workers,
@@ -357,9 +362,7 @@ class OnPolicyRLEngine(object):
     ) -> Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]]:
         if isinstance(ckpt, str):
             get_logger().info(
-                "{} worker {} loading checkpoint from {}".format(
-                    self.mode, self.worker_id, ckpt
-                )
+                f"[{self.mode} worker {self.worker_id}] Loading checkpoint from {ckpt}"
             )
             # Map location CPU is almost always better than mapping to a CUDA device.
             ckpt = torch.load(os.path.abspath(ckpt), map_location="cpu")
@@ -401,7 +404,7 @@ class OnPolicyRLEngine(object):
 
         if num_empty_tasks_dequeued != 0:
             get_logger().warning(
-                "Discarded {} empty task metrics".format(num_empty_tasks_dequeued)
+                f"Discarded {num_empty_tasks_dequeued} empty task metrics"
             )
 
         return logging_pkg
@@ -668,17 +671,13 @@ class OnPolicyRLEngine(object):
         if "_vector_tasks" in self.__dict__ and self._vector_tasks is not None:
             try:
                 logif(
-                    "{} worker {} Closing OnPolicyRLEngine.vector_tasks.".format(
-                        self.mode, self.worker_id
-                    )
+                    f"[{self.mode} worker {self.worker_id}] Closing OnPolicyRLEngine.vector_tasks."
                 )
                 self._vector_tasks.close()
-                logif("{} worker {} Closed.".format(self.mode, self.worker_id))
+                logif(f"[{self.mode} worker {self.worker_id}] Closed.")
             except Exception as e:
                 logif(
-                    "{} worker {} Exception raised when closing OnPolicyRLEngine.vector_tasks:".format(
-                        self.mode, self.worker_id
-                    )
+                    f"[{self.mode} worker {self.worker_id}] Exception raised when closing OnPolicyRLEngine.vector_tasks:"
                 )
                 logif(e)
 
@@ -1005,7 +1004,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.insufficient_data_for_update.set(
                 "insufficient_data_for_update", str(0)
             )
-            dist.barrier()
+            dist.barrier(
+                device_ids=None
+                if self.device == torch.device("cpu")
+                else [self.device.index]
+            )
 
         training_settings = stage_component.training_settings
 
@@ -1071,7 +1074,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         "insufficient_data_for_update",
                         1 * (not enough_data_for_update),
                     )
-                    dist.barrier()
+                    dist.barrier(
+                        device_ids=None
+                        if self.device == torch.device("cpu")
+                        else [self.device.index]
+                    )
 
                     if (
                         int(
@@ -1395,7 +1402,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_done.set("done", str(0))
                 self.num_workers_steps.set("steps", str(0))
                 # Ensure all workers are done before incrementing num_workers_{steps, done}
-                dist.barrier()
+                dist.barrier(
+                    device_ids=None
+                    if self.device == torch.device("cpu")
+                    else [self.device.index]
+                )
 
             self.former_steps = self.step_count
             former_storage_experiences = {
@@ -1428,7 +1439,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         < 0.9 * cur_stage_training_settings.num_steps
                     ):
                         get_logger().debug(
-                            f"{self.mode} worker {self.worker_id} was preempted after {step}"
+                            f"[{self.mode} worker {self.worker_id}] Preempted after {step}"
                             f" steps (out of {cur_stage_training_settings.num_steps})"
                             f" with {num_done} workers done"
                         )
@@ -1447,7 +1458,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_steps.add("steps", self.step_count - self.former_steps)
 
                 # Ensure all workers are done before updating step counter
-                dist.barrier()
+                dist.barrier(
+                    device_ids=None
+                    if self.device == torch.device("cpu")
+                    else [self.device.index]
+                )
 
                 ndone = int(self.num_workers_done.get("done"))
                 assert (
@@ -1548,7 +1563,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 == 0
             ):
                 get_logger().info(
-                    f"{self.mode} worker {self.worker_id} Force advance"
+                    f"[{self.mode} worker {self.worker_id}] Force advance"
                     f" tasks with {self.training_pipeline.rollout_count} rollouts"
                 )
                 self.vector_tasks.next_task(force_advance_scene=True)
@@ -1574,18 +1589,20 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             training_completed_successfully = True
         except KeyboardInterrupt:
             get_logger().info(
-                f"KeyboardInterrupt. Terminating {self.mode} worker {self.worker_id}"
+                f"[{self.mode} worker {self.worker_id}] KeyboardInterrupt, exiting."
             )
-        except Exception:
+        except Exception as e:
             get_logger().error(
-                f"Encountered Exception. Terminating {self.mode} worker {self.worker_id}"
+                f"[{self.mode} worker {self.worker_id}] Encountered {type(e).__name__}, exiting."
             )
             get_logger().exception(traceback.format_exc())
         finally:
             if training_completed_successfully:
                 if self.worker_id == 0:
                     self.results_queue.put(("train_stopped", 0))
-                get_logger().info(f"{self.mode} worker {self.worker_id} COMPLETE")
+                get_logger().info(
+                    f"[{self.mode} worker {self.worker_id}]. Training finished successfully."
+                )
             else:
                 self.results_queue.put(("train_stopped", 1 + self.worker_id))
             self.close()
@@ -1673,7 +1690,7 @@ class OnPolicyInference(OnPolicyRLEngine):
         frames: int = 0
         if verbose:
             get_logger().info(
-                f"[{self.mode}] worker {self.worker_id}: running evaluation on {num_tasks} tasks"
+                f"[{self.mode} worker {self.worker_id}] Running evaluation on {num_tasks} tasks"
                 f" for ckpt {checkpoint_file_path}"
             )
 
@@ -1737,8 +1754,8 @@ class OnPolicyInference(OnPolicyRLEngine):
                         else "???"
                     )
                     get_logger().info(
-                        f"[{self.mode}] worker {self.worker_id}:"
-                        f" for ckpt {checkpoint_file_path}"
+                        f"[{self.mode} worker {self.worker_id}]"
+                        f" For ckpt {checkpoint_file_path}"
                         f" {frames / (cur_time - init_time):.1f} fps,"
                         f" {npending}/{num_tasks} tasks pending ({lengths})."
                         f" ~{est_time_to_complete} min. to complete."
@@ -1747,7 +1764,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                         get_logger().info(
                             ", ".join(
                                 [
-                                    f"[{self.mode}] worker {self.worker_id}:"
+                                    f"[{self.mode} worker {self.worker_id}]"
                                     f" num_{self.mode}_tasks_complete {logging_pkg.num_non_empty_metrics_dicts_added}",
                                     *[
                                         f"{k} {v:.3g}"
@@ -1760,7 +1777,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                     last_time = cur_time
 
         get_logger().info(
-            f"worker {self.mode}: {self.worker_id} complete, all task samplers paused"
+            f"[{self.mode} worker {self.worker_id}] Evaluation complete, all task samplers paused."
         )
 
         self.vector_tasks.resume_all()
@@ -1800,13 +1817,11 @@ class OnPolicyInference(OnPolicyRLEngine):
                 elif new_command == sentinel[0]:
                     assert (
                         new_data == sentinel[1]
-                    ), "wrong sentinel found: {} vs {}".format(new_data, sentinel[1])
+                    ), f"Wrong sentinel found: {new_data} vs {sentinel[1]}"
                     forwarded = True
                 else:
                     raise ValueError(
-                        "Unexpected command {} with data {}".format(
-                            new_command, new_data
-                        )
+                        f"Unexpected command {new_command} with data {new_data}"
                     )
             time.sleep(1)
             cond = not checkpoints_queue.empty()
@@ -1883,15 +1898,11 @@ class OnPolicyInference(OnPolicyRLEngine):
                     raise NotImplementedError()
         except KeyboardInterrupt:
             get_logger().info(
-                "KeyboardInterrupt. Terminating {} worker {}".format(
-                    self.mode, self.worker_id
-                )
+                f"[{self.mode} worker {self.worker_id}] KeyboardInterrupt, exiting."
             )
-        except Exception:
+        except Exception as e:
             get_logger().error(
-                "Encountered Exception. Terminating {} worker {}".format(
-                    self.mode, self.worker_id
-                )
+                f"[{self.mode} worker {self.worker_id}] Encountered {type(e).__name__}, exiting."
             )
             get_logger().error(traceback.format_exc())
         finally:
@@ -1899,7 +1910,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                 if self.mode == TEST_MODE_STR:
                     self.results_queue.put(("test_stopped", 0))
                 get_logger().info(
-                    "{} worker {} complete".format(self.mode, self.worker_id)
+                    f"[{self.mode} worker {self.worker_id}] Complete, all checkpoints processed."
                 )
             else:
                 if self.mode == TEST_MODE_STR:

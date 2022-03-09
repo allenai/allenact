@@ -1,5 +1,5 @@
 """A wrapper for interacting with the Habitat environment."""
-
+import os
 from typing import Dict, Union, List, Optional
 
 import habitat
@@ -14,8 +14,12 @@ from allenact.utils.system import get_logger
 
 
 class HabitatEnvironment:
-    def __init__(self, config: Config, dataset: Dataset) -> None:
+    def __init__(self, config: Config, dataset: Dataset, verbose: bool = False) -> None:
         self.env = habitat.Env(config=config, dataset=dataset)
+
+        if not verbose:
+            os.environ["GLOG_minloglevel"] = "2"
+            os.environ["MAGNUM_LOG"] = "quiet"
 
         # Set the target to a random goal from the provided list for this episode
         self.goal_index = 0

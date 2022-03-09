@@ -193,19 +193,3 @@ class ObservationSet:
         raise DeprecationWarning(
             "`ObservationSet` has been deprecated. Use `SensorPreprocessorGraph` instead."
         )
-
-
-class ResNetEmbedder:
-    def __init__(self, *args, **kwargs) -> None:
-        raise DeprecationWarning(
-            "`allenact.base_abstractions.preprocessor.ResNetEmbedder` has been moved"
-            " to `allenact.embodied_ai.preprocessors.resnet.ResNetEmbedder`."
-        )
-
-
-class ResNetPreprocessor:
-    def __init__(self, *args, **kwargs) -> None:
-        raise DeprecationWarning(
-            "`allenact.base_abstractions.preprocessor.ResNetPreprocessor` has been moved"
-            " to `allenact.embodied_ai.preprocessors.resnet.ResNetPreprocessor`."
-        )

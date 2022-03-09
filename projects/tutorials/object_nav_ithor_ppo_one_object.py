@@ -25,9 +25,7 @@ from allenact_plugins.ithor_plugin.ithor_sensors import (
 )
 from allenact_plugins.ithor_plugin.ithor_task_samplers import ObjectNavTaskSampler
 from allenact_plugins.ithor_plugin.ithor_tasks import ObjectNaviThorGridTask
-from projects.objectnav_baselines.models.object_nav_models import (
-    ObjectNavBaselineActorCritic,
-)
+from allenact_plugins.navigation_plugin.objectnav.models import ObjectNavActorCritic
 
 
 class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
@@ -125,7 +123,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-        return ObjectNavBaselineActorCritic(
+        return ObjectNavActorCritic(
             action_space=gym.spaces.Discrete(
                 len(ObjectNaviThorGridTask.class_action_names())
             ),

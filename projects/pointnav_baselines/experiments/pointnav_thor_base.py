@@ -22,7 +22,7 @@ from allenact_plugins.robothor_plugin.robothor_sensors import DepthSensorThor
 from allenact_plugins.robothor_plugin.robothor_task_samplers import (
     PointNavDatasetTaskSampler,
 )
-from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
+from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
 from projects.pointnav_baselines.experiments.pointnav_base import PointNavBaseConfig
 
 if ai2thor.__version__ not in ["0.0.1", None] and version.parse(
@@ -47,6 +47,8 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
 
     TARGET_TYPES: Optional[Sequence[str]] = None
 
+    ACTION_SPACE = gym.spaces.Discrete(len(PointNavTask.class_action_names()))
+
     def __init__(self):
         super().__init__()
         self.ENV_ARGS = dict(
@@ -57,7 +59,7 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
             rotateStepDegrees=self.ROTATION_DEGREES,
             gridSize=self.STEP_SIZE,
             snapToGrid=False,
-            agentMode="locobot",
+            agentMode="bot",
             include_private_scenes=False,
             renderDepthImage=any(isinstance(s, DepthSensorThor) for s in self.SENSORS),
         )
@@ -177,9 +179,7 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
                 for s in self.SENSORS
                 if (include_expert_sensor or not isinstance(s, ExpertActionSensor))
             ],
-            "action_space": gym.spaces.Discrete(
-                len(ObjectNavTask.class_action_names())
-            ),
+            "action_space": self.ACTION_SPACE,
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG,
