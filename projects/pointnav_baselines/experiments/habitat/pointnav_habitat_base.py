@@ -130,7 +130,7 @@ class PointNavHabitatBaseConfig(PointNavBaseConfig, ABC):
     ACTION_SPACE = gym.spaces.Discrete(len(PointNavTask.class_action_names()))
 
     DEFAULT_NUM_TRAIN_PROCESSES = (
-        max(5 * torch.cuda.device_count(), 4) if torch.cuda.is_available() else 1
+        5 * torch.cuda.device_count() if torch.cuda.is_available() else 1
     )
     DEFAULT_NUM_TEST_PROCESSES = 10
 

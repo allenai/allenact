@@ -235,7 +235,7 @@ class ScalarMeanTracker(object):
         return len(self._sums) == 0
 
 
-class LoggingPackage(object):
+class LoggingPackage:
     """Data package used for logging."""
 
     def __init__(

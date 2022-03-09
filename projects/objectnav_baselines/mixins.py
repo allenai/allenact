@@ -4,7 +4,7 @@ import attr
 import gym
 import torch
 import torch.nn as nn
-from torch import optim as optim
+import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision import models
 

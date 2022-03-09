@@ -143,8 +143,15 @@ class ObjectNavRoboThorVdrTmpRGBExperimentConfig(ObjectNavRoboThorBaseConfig):
         gae_lambda = 0.95
         max_grad_norm = 0.5
 
+        auxiliary_uuids = tuple()
+        multiple_beliefs = False
+
         named_losses = {"ppo_loss": (PPO(**PPOConfig), 1.0)}
-        named_losses = update_with_auxiliary_losses(named_losses)
+        named_losses = update_with_auxiliary_losses(
+            named_losses=named_losses,
+            auxiliary_uuids=auxiliary_uuids,
+            multiple_beliefs=multiple_beliefs,
+        )
 
         default_ts = TrainingSettings(
             num_mini_batch=num_mini_batch,

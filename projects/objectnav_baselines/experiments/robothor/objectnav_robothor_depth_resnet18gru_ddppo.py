@@ -15,7 +15,7 @@ from projects.objectnav_baselines.mixins import (
 )
 
 
-class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig,):
+class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig):
     """An Object Navigation experiment configuration in RoboThor with Depth
     input."""
 

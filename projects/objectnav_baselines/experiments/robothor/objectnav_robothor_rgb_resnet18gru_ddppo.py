@@ -17,7 +17,7 @@ from projects.objectnav_baselines.mixins import (
 )
 
 
-class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig,):
+class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig):
     """An Object Navigation experiment configuration in RoboThor with RGB
     input."""
 
@@ -58,5 +58,6 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig,):
             num_actions=self.ACTION_SPACE.n, **kwargs
         )
 
+    @classmethod
     def tag(cls):
         return "ObjectNav-RoboTHOR-RGB-ResNet18GRU-DDPPO"

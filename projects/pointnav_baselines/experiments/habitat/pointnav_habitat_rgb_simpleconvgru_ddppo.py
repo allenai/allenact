@@ -50,5 +50,6 @@ class PointNavHabitatDepthDeterministiSimpleConvGRUDDPPOExperimentConfig(
     def create_model(self, **kwargs):
         return self.model_creation_handler.create_model(**kwargs)
 
+    @classmethod
     def tag(cls):
         return "PointNav-Habitat-RGB-SimpleConv-DDPPO"

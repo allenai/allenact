@@ -18,7 +18,7 @@ from projects.objectnav_baselines.experiments.robothor.objectnav_robothor_base i
 from projects.objectnav_baselines.mixins import ObjectNavPPOMixin
 
 
-class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig,):
+class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig):
     """An Object Navigation experiment configuration in RoboThor with RGB
     input."""
 

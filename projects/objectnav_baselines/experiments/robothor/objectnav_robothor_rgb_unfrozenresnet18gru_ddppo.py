@@ -14,7 +14,7 @@ from projects.objectnav_baselines.mixins import (
 )
 
 
-class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig,):
+class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig):
     """An Object Navigation experiment configuration in RoboThor with RGB input
     without preprocessing by frozen ResNet (instead, a trainable ResNet)."""
 

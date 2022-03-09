@@ -75,7 +75,7 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
     ):
         rnn_input_size = obs_embed_size
         self.prev_action_embedder = FeatureEmbedding(
-            input_size=self.action_space.n + add_prev_action_null_token,
+            input_size=int(add_prev_action_null_token) + self.action_space.n,
             output_size=prev_action_embed_size if add_prev_actions else 0,
         )
         if add_prev_actions:

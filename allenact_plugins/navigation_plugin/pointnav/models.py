@@ -7,8 +7,8 @@ from typing import Optional, List, Union, Sequence
 
 import gym
 import torch
+import torch.nn as nn
 from gym.spaces import Dict as SpaceDict
-from torch import nn as nn
 
 from allenact.algorithms.onpolicy_sync.policy import ObservationType
 from allenact.embodiedai.models import resnet as resnet

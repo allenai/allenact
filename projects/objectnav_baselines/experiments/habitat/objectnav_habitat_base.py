@@ -4,13 +4,12 @@ from abc import ABC
 from typing import Dict, Any, List, Optional, Sequence, Union
 
 import gym
-
-# noinspection PyUnresolvedReferences
-import habitat
 import numpy as np
 import torch
 from torch.distributions.utils import lazy_property
 
+# noinspection PyUnresolvedReferences
+import habitat
 from allenact.base_abstractions.experiment_config import MachineParams
 from allenact.base_abstractions.preprocessor import (
     SensorPreprocessorGraph,
@@ -135,7 +134,7 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
     ACTION_SPACE = gym.spaces.Discrete(len(ObjectNavTask.class_action_names()))
 
     DEFAULT_NUM_TRAIN_PROCESSES = (
-        max(5 * torch.cuda.device_count(), 4) if torch.cuda.is_available() else 1
+        5 * torch.cuda.device_count() if torch.cuda.is_available() else 1
     )
     DEFAULT_NUM_TEST_PROCESSES = 11
 
