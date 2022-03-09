@@ -33,7 +33,8 @@ class InferenceAgent:
         self.actor_critic.to(device=self.device)
         if self.memory is not None:
             self.memory.to(device=self.device)
-        self.sensor_preprocessor_graph.to(self.device)
+        if self.sensor_preprocessor_graph is not None:
+            self.sensor_preprocessor_graph.to(self.device)
 
         self.rollout_storage.to(self.device)
         self.rollout_storage.set_partition(index=0, num_parts=1)
