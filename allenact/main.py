@@ -448,6 +448,7 @@ def main():
             distributed_ip_and_port=args.distributed_ip_and_port,
             machine_id=args.machine_id,
             callbacks=args.callbacks,
+            args=args,
         ).start_train(
             checkpoint=args.checkpoint,
             restart_pipeline=args.restart_pipeline,
@@ -470,6 +471,7 @@ def main():
             distributed_ip_and_port=args.distributed_ip_and_port,
             machine_id=args.machine_id,
             callbacks=args.callbacks,
+            args=args,
         ).start_test(
             checkpoint_path_dir_or_pattern=args.checkpoint,
             infer_output_dir=args.infer_output_dir,
