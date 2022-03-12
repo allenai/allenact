@@ -845,10 +845,13 @@ class OnPolicyRunner(object):
 
         mode = pkg.mode
 
+        metrics = dict()
+
         if log_writer is not None:
             log_writer.add_scalar(
                 f"{mode}-misc/num_tasks_evaled", num_tasks, training_steps
             )
+            metrics[f"{mode}-misc/num_tasks_evaled"] = num_tasks
 
         message = [f"{mode} {training_steps} steps:"]
         for k in sorted(metric_means.keys()):
@@ -857,6 +860,7 @@ class OnPolicyRunner(object):
                     f"{mode}-metrics/{k}", metric_means[k], training_steps
                 )
             message.append(f"{k} {metric_means[k]}")
+            metrics[f"{mode}-metrics/{k}"] = metric_means[k]
 
         if all_results is not None:
             results = copy.deepcopy(metric_means)
@@ -865,6 +869,9 @@ class OnPolicyRunner(object):
 
         message.append(f"tasks {num_tasks} checkpoint {checkpoint_file_name}")
         get_logger().info(" ".join(message))
+
+        for callback in self.callbacks:
+            callback.on_valid_log(metrics=metrics, step=training_steps)
 
         if self.visualizer is not None:
             self.visualizer.log(
