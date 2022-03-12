@@ -2,6 +2,8 @@
 import copy
 import enum
 import glob
+import importlib.util
+import inspect
 import itertools
 import json
 import math
@@ -17,38 +19,38 @@ import traceback
 from collections import defaultdict
 from multiprocessing.context import BaseContext
 from multiprocessing.process import BaseProcess
-from typing import Optional, Dict, Union, Tuple, Sequence, List, Any
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import filelock
 import numpy as np
 import torch
 import torch.multiprocessing as mp
-from setproctitle import setproctitle as ptitle
-
 from allenact.algorithms.onpolicy_sync.engine import (
-    OnPolicyTrainer,
-    OnPolicyInference,
+    TEST_MODE_STR,
     TRAIN_MODE_STR,
     VALID_MODE_STR,
-    TEST_MODE_STR,
+    OnPolicyInference,
     OnPolicyRLEngine,
+    OnPolicyTrainer,
 )
+from allenact.base_abstractions.callbacks import Callback
 from allenact.base_abstractions.experiment_config import ExperimentConfig, MachineParams
 from allenact.utils.experiment_utils import (
+    LoggingPackage,
     ScalarMeanTracker,
     set_deterministic_cudnn,
     set_seed,
-    LoggingPackage,
 )
 from allenact.utils.misc_utils import (
+    NumpyJSONEncoder,
     all_equal,
     get_git_diff_of_project,
-    NumpyJSONEncoder,
 )
 from allenact.utils.model_utils import md5_hash_of_state_dict
-from allenact.utils.system import get_logger, find_free_port
+from allenact.utils.system import find_free_port, get_logger
 from allenact.utils.tensor_utils import SummaryWriter
 from allenact.utils.viz_utils import VizSuite
+from setproctitle import setproctitle as ptitle
 
 CONFIG_KWARGS_STR = "__CONFIG_KWARGS__"
 
@@ -88,6 +90,7 @@ class OnPolicyRunner(object):
         distributed_ip_and_port: str = "127.0.0.1:0",
         machine_id: int = 0,
         save_dir_fmt: SaveDirFormat = SaveDirFormat.FLAT,
+        callbacks: str = "",
     ):
         self.config = config
         self.output_dir = output_dir
@@ -137,6 +140,8 @@ class OnPolicyRunner(object):
 
         self.save_dir_fmt = save_dir_fmt
 
+        self.callbacks = self.get_callback_classes(callbacks)
+
     @property
     def local_start_time_str(self) -> str:
         if self._local_start_time_str is None:
@@ -177,6 +182,33 @@ class OnPolicyRunner(object):
             )
 
         return mp_ctx
+
+    @staticmethod
+    def get_callback_classes(callbacks: str) -> List[Callback]:
+        """Get a list of Callback classes from a comma-separated list of filenames."""
+        if callbacks == "":
+            return []
+
+        callback_classes = set()
+        files = callbacks.split(",")
+        for i, filename in enumerate(files):
+            full_path = os.path.join(os.getcwd(), filename)
+            if not os.path.isfile(full_path):
+                raise ValueError(f"Could not find callback file {full_path}")
+            spec = importlib.util.spec_from_file_location(f"___callback{i}", full_path)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+
+            classes = inspect.getmembers(mod, inspect.isclass)
+
+            for mod_class in classes:
+                if issubclass(mod_class[1], Callback) and mod_class[1] != Callback:
+                    # NOTE: initialize the callback class
+                    inst_class = mod_class[1]()
+                    inst_class.setup()
+                    callback_classes.add(inst_class)
+
+        return callback_classes
 
     def _acquire_unique_local_start_time_string(self) -> str:
         """Creates a (unique) local start time string for this experiment.
@@ -949,6 +981,9 @@ class OnPolicyRunner(object):
             f"TRAIN: {training_steps} rollout steps ({pkgs[0].storage_uuid_to_total_experiences})"
         ]
         means = metrics_and_train_info_tracker.means()
+
+        for callback in self.callbacks:
+            callback.on_train_log(metrics=means, step=training_steps)
 
         for k in sorted(
             means.keys(), key=lambda mean_key: (mean_key.count("/"), mean_key)
