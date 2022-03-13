@@ -881,11 +881,10 @@ class OnPolicyRunner(object):
         message.append(f"tasks {num_tasks} checkpoint {checkpoint_file_name}")
         get_logger().info(" ".join(message))
 
-        metrics = all_results[-1] if all_results else None
         for callback in self.callbacks:
             callback.on_valid_log(
                 metric_means=callback_metric_means,
-                metrics=metrics,
+                metrics=pkg.metric_dicts,
                 step=training_steps,
                 tasks_data=tasks_callback_data,
             )
