@@ -1266,6 +1266,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         for callback_dict in self.single_process_task_callback_data:
             logging_pkg.task_callback_data.append(callback_dict)
+        self.single_process_task_callback_data = []
 
         if self.mode == TRAIN_MODE_STR:
             # Technically self.mode should always be "train" here (as this is the training engine),
@@ -1786,6 +1787,7 @@ class OnPolicyInference(OnPolicyRLEngine):
 
         for callback_dict in self.single_process_task_callback_data:
             logging_pkg.task_callback_data.append(callback_dict)
+        self.single_process_task_callback_data = []
 
         logging_pkg.viz_data = (
             visualizer.read_and_reset() if visualizer is not None else None
