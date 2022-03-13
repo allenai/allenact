@@ -854,6 +854,7 @@ class OnPolicyRunner(object):
         num_tasks = pkg.num_non_empty_metrics_dicts_added
         metric_means = pkg.metrics_tracker.means()
         callback_metric_means = dict()
+        tasks_callback_data = pkg.task_callback_data
 
         mode = pkg.mode
 
@@ -883,7 +884,10 @@ class OnPolicyRunner(object):
         metrics = all_results[-1] if all_results else None
         for callback in self.callbacks:
             callback.on_valid_log(
-                metric_means=callback_metric_means, metrics=metrics, step=training_steps
+                metric_means=callback_metric_means,
+                metrics=metrics,
+                step=training_steps,
+                tasks_data=tasks_callback_data,
             )
 
         if self.visualizer is not None:
@@ -948,11 +952,13 @@ class OnPolicyRunner(object):
         metrics_and_train_info_tracker = ScalarMeanTracker()
         scalar_name_to_total_storage_experience = {}
         storage_uuid_to_stage_component_uuids = defaultdict(lambda: set())
+        tasks_callback_data = []
         for pkg in pkgs:
             metrics_and_train_info_tracker.add_scalars(
                 scalars=add_prefix(pkg.metrics_tracker.means(), "metrics", None),
                 n=add_prefix(pkg.metrics_tracker.counts(), "metrics", None),
             )
+            tasks_callback_data.extend(pkg.task_callback_data)
 
             for (
                 (stage_component_uuid, storage_uuid),
@@ -1062,7 +1068,11 @@ class OnPolicyRunner(object):
         get_logger().info(" ".join(message))
 
         for callback in self.callbacks:
-            callback.on_train_log(metric_means=callback_metric_means, step=training_steps)
+            callback.on_train_log(
+                metric_means=callback_metric_means,
+                step=training_steps,
+                tasks_data=tasks_callback_data,
+            )
 
         return training_steps, storage_uuid_to_total_experiences, current_time
 
@@ -1079,10 +1089,12 @@ class OnPolicyRunner(object):
 
         all_metrics_tracker = ScalarMeanTracker()
         metric_dicts_list, render, checkpoint_file_name = [], {}, []
+        tasks_callback_data = []
         for pkg in pkgs:
             all_metrics_tracker.add_scalars(
                 scalars=pkg.metrics_tracker.means(), n=pkg.metrics_tracker.counts()
             )
+            tasks_callback_data.extend(pkg.task_callback_data)
             metric_dicts_list.extend(pkg.metric_dicts)
             if pkg.viz_data is not None:
                 render.update(pkg.viz_data)
@@ -1125,6 +1137,7 @@ class OnPolicyRunner(object):
                 metrics=all_results[-1],
                 step=training_steps,
                 checkpoint=checkpoint_file_name[0],
+                tasks_data=tasks_callback_data,
             )
 
         if self.visualizer is not None:

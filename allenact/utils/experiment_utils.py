@@ -259,6 +259,7 @@ class LoggingPackage:
         self.metric_dicts: List[Any] = []
         self.viz_data: Optional[Dict[str, List[Dict[str, Any]]]] = None
         self.checkpoint_file_name: Optional[str] = None
+        self.task_callback_data: List[Any] = []
 
         self.num_empty_metrics_dicts_added: int = 0
 

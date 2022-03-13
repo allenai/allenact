@@ -7,15 +7,14 @@
 environment."""
 
 import abc
-from typing import Dict, Any, Tuple, Generic, Union, Optional, TypeVar, Sequence, List
+from typing import Any, Dict, Generic, List, Optional, Sequence, Tuple, TypeVar, Union
 
 import gym
 import numpy as np
-from gym.spaces.dict import Dict as SpaceDict
-
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import Sensor, SensorSuite
 from allenact.utils.misc_utils import deprecated
+from gym.spaces.dict import Dict as SpaceDict
 
 EnvType = TypeVar("EnvType")
 
@@ -229,6 +228,10 @@ class Task(Generic[EnvType]):
             "reward": self.cumulative_reward,
             "task_info": self.task_info,
         }
+
+    def task_callback_data(self) -> Optional[Any]:
+        """Returns any data that should be passed to the log callback function."""
+        return None
 
     def query_expert(self, **kwargs) -> Tuple[Any, bool]:
         """(Deprecated) Query the expert policy for this task.

@@ -13,27 +13,26 @@ from threading import Thread
 from typing import (
     Any,
     Callable,
+    Dict,
+    Generator,
+    Iterator,
     List,
     Optional,
     Sequence,
     Set,
     Tuple,
     Union,
-    Dict,
-    Generator,
-    Iterator,
     cast,
 )
 
 import numpy as np
-from gym.spaces.dict import Dict as SpaceDict
-from setproctitle import setproctitle as ptitle
-
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.task import TaskSampler
 from allenact.utils.misc_utils import partition_sequence
 from allenact.utils.system import get_logger
 from allenact.utils.tensor_utils import tile_images
+from gym.spaces.dict import Dict as SpaceDict
+from setproctitle import setproctitle as ptitle
 
 try:
     # Use torch.multiprocessing if we can.
@@ -46,6 +45,7 @@ except ImportError:
 
 DEFAULT_MP_CONTEXT_TYPE = "forkserver"
 COMPLETE_TASK_METRICS_KEY = "__AFTER_TASK_METRICS__"
+COMPLETE_TASK_CALLBACK_KEY = "__AFTER_TASK_CALLBACK__"
 
 STEP_COMMAND = "step"
 NEXT_TASK_COMMAND = "next_task"
@@ -925,6 +925,12 @@ class SingleProcessVectorSampledTasks(object):
                             if step_result.info is None:
                                 step_result = step_result.clone({"info": {}})
                             step_result.info[COMPLETE_TASK_METRICS_KEY] = metrics
+
+                        task_callback_data = current_task.task_callback_data()
+                        if task_callback_data:
+                            if step_result.info is None:
+                                step_result = step_result.clone({"info": {}})
+                            step_result.info[COMPLETE_TASK_CALLBACK_KEY] = task_callback_data
 
                         if auto_resample_when_done:
                             current_task = task_sampler.next_task()

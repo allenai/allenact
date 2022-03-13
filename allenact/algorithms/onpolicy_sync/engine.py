@@ -8,15 +8,7 @@ import time
 import traceback
 from functools import partial
 from multiprocessing.context import BaseContext
-from typing import (
-    Optional,
-    Any,
-    Dict,
-    Union,
-    List,
-    cast,
-    Sequence,
-)
+from typing import Any, Dict, List, Optional, Sequence, Union, cast
 
 import torch
 import torch.distributed as dist  # type: ignore
@@ -24,12 +16,11 @@ import torch.distributions  # type: ignore
 import torch.multiprocessing as mp  # type: ignore
 import torch.nn as nn
 import torch.optim as optim
+from allenact.algorithms.onpolicy_sync.misc import TrackingInfo, TrackingInfoType
+from allenact.utils.model_utils import md5_hash_of_state_dict
 
 # noinspection PyProtectedMember
 from torch._C._distributed_c10d import ReduceOp
-
-from allenact.algorithms.onpolicy_sync.misc import TrackingInfoType, TrackingInfo
-from allenact.utils.model_utils import md5_hash_of_state_dict
 
 try:
     # noinspection PyProtectedMember,PyUnresolvedReferences
@@ -44,37 +35,35 @@ from allenact.algorithms.onpolicy_sync.policy import ActorCriticModel
 from allenact.algorithms.onpolicy_sync.storage import (
     ExperienceStorage,
     MiniBatchStorageMixin,
-    StreamingStorageMixin,
     RolloutStorage,
+    StreamingStorageMixin,
 )
 from allenact.algorithms.onpolicy_sync.vector_sampled_tasks import (
-    VectorSampledTasks,
+    COMPLETE_TASK_CALLBACK_KEY,
     COMPLETE_TASK_METRICS_KEY,
     SingleProcessVectorSampledTasks,
-)
-from allenact.base_abstractions.experiment_config import ExperimentConfig, MachineParams
-from allenact.base_abstractions.misc import (
-    RLStepResult,
-    Memory,
-    ActorCriticOutput,
-    GenericAbstractLoss,
+    VectorSampledTasks,
 )
 from allenact.base_abstractions.distributions import TeacherForcingDistr
+from allenact.base_abstractions.experiment_config import ExperimentConfig, MachineParams
+from allenact.base_abstractions.misc import (
+    ActorCriticOutput,
+    GenericAbstractLoss,
+    Memory,
+    RLStepResult,
+)
 from allenact.utils import spaces_utils as su
 from allenact.utils.experiment_utils import (
-    set_seed,
-    TrainingPipeline,
     LoggingPackage,
     PipelineStage,
-    set_deterministic_cudnn,
     ScalarMeanTracker,
     StageComponent,
+    TrainingPipeline,
+    set_deterministic_cudnn,
+    set_seed,
 )
 from allenact.utils.system import get_logger
-from allenact.utils.tensor_utils import (
-    batch_observations,
-    detach_recursively,
-)
+from allenact.utils.tensor_utils import batch_observations, detach_recursively
 from allenact.utils.viz_utils import VizSuite
 
 TRAIN_MODE_STR = "train"
@@ -262,6 +251,7 @@ class OnPolicyRLEngine(object):
 
         # Keeping track of metrics during training/inference
         self.single_process_metrics: List = []
+        self.single_process_task_callback_data: List = []
 
     @property
     def vector_tasks(
@@ -572,14 +562,17 @@ class OnPolicyRLEngine(object):
 
         # Save after task completion metrics
         for step_result in outputs:
-            if (
-                step_result.info is not None
-                and COMPLETE_TASK_METRICS_KEY in step_result.info
-            ):
-                self.single_process_metrics.append(
-                    step_result.info[COMPLETE_TASK_METRICS_KEY]
-                )
-                del step_result.info[COMPLETE_TASK_METRICS_KEY]
+            if step_result.info is not None:
+                if COMPLETE_TASK_METRICS_KEY in step_result.info:
+                    self.single_process_metrics.append(
+                        step_result.info[COMPLETE_TASK_METRICS_KEY]
+                    )
+                    del step_result.info[COMPLETE_TASK_METRICS_KEY]
+                if COMPLETE_TASK_CALLBACK_KEY in step_result.info:
+                    self.single_process_task_callback_data.append(
+                        step_result.info[COMPLETE_TASK_CALLBACK_KEY]
+                    )
+                    del step_result.info[COMPLETE_TASK_CALLBACK_KEY]
 
         rewards: Union[List, torch.Tensor]
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
@@ -1271,6 +1264,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         self.aggregate_task_metrics(logging_pkg=logging_pkg)
 
+        for callback_dict in self.single_process_task_callback_data:
+            logging_pkg.task_callback_data.append(callback_dict)
+
         if self.mode == TRAIN_MODE_STR:
             # Technically self.mode should always be "train" here (as this is the training engine),
             # this conditional is defensive
@@ -1667,7 +1663,8 @@ class OnPolicyInference(OnPolicyRLEngine):
             assert visualizer.empty()
 
         num_paused = self.initialize_storage_and_viz(
-            storage_to_initialize=[rollout_storage], visualizer=visualizer,
+            storage_to_initialize=[rollout_storage],
+            visualizer=visualizer,
         )
         assert num_paused == 0, f"{num_paused} tasks paused when initializing eval"
 
@@ -1736,7 +1733,8 @@ class OnPolicyInference(OnPolicyRLEngine):
                     lengths: List[int]
                     if self.num_active_samplers > 0:
                         lengths = self.vector_tasks.command(
-                            "sampler_attr", ["length"] * self.num_active_samplers,
+                            "sampler_attr",
+                            ["length"] * self.num_active_samplers,
                         )
                         npending = sum(lengths)
                     else:
@@ -1785,6 +1783,9 @@ class OnPolicyInference(OnPolicyRLEngine):
         self.vector_tasks.reset_all()
 
         self.aggregate_task_metrics(logging_pkg=logging_pkg)
+
+        for callback_dict in self.single_process_task_callback_data:
+            logging_pkg.task_callback_data.append(callback_dict)
 
         logging_pkg.viz_data = (
             visualizer.read_and_reset() if visualizer is not None else None
