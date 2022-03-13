@@ -856,13 +856,10 @@ class OnPolicyRunner(object):
 
         mode = pkg.mode
 
-        metric_means = dict()
-
         if log_writer is not None:
             log_writer.add_scalar(
                 f"{mode}-misc/num_tasks_evaled", num_tasks, training_steps
             )
-            metric_means[f"{mode}-misc/num_tasks_evaled"] = num_tasks
 
         message = [f"{mode} {training_steps} steps:"]
         for k in sorted(metric_means.keys()):
@@ -871,7 +868,6 @@ class OnPolicyRunner(object):
                     f"{mode}-metrics/{k}", metric_means[k], training_steps
                 )
             message.append(f"{k} {metric_means[k]}")
-            metric_means[f"{mode}-metrics/{k}"] = metric_means[k]
 
         if all_results is not None:
             results = copy.deepcopy(metric_means)
@@ -1067,7 +1063,6 @@ class OnPolicyRunner(object):
         assert mode == TEST_MODE_STR
 
         training_steps = pkgs[0].training_steps
-        metric_means = dict()
 
         all_metrics_tracker = ScalarMeanTracker()
         metric_dicts_list, render, checkpoint_file_name = [], {}, []
@@ -1091,7 +1086,6 @@ class OnPolicyRunner(object):
                     f"{mode}-metrics/{k}", metric_means[k], training_steps
                 )
             message.append(k + f" {metric_means[k]:.3g}")
-            metric_means[f"{mode}-metrics/{k}"] = metric_means[k]
 
         if all_results is not None:
             results = copy.deepcopy(metric_means)
@@ -1105,7 +1099,6 @@ class OnPolicyRunner(object):
             log_writer.add_scalar(
                 f"{mode}-misc/num_tasks_evaled", num_tasks, training_steps
             )
-            metric_means[f"{mode}-misc/num_tasks_evaled"] = num_tasks
 
         message.append(f"tasks {num_tasks} checkpoint {checkpoint_file_name[0]}")
         get_logger().info(" ".join(message))
