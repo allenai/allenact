@@ -873,9 +873,9 @@ class OnPolicyRunner(object):
                 callback_metric_means[f"{mode}-metrics/{k}"] = metric_means[k]
             message.append(f"{k} {metric_means[k]}")
 
+        results = copy.deepcopy(metric_means)
+        results.update({"training_steps": training_steps, "tasks": task_outputs})
         if all_results is not None:
-            results = copy.deepcopy(metric_means)
-            results.update({"training_steps": training_steps, "tasks": task_outputs})
             all_results.append(results)
 
         message.append(f"tasks {num_tasks} checkpoint {checkpoint_file_name}")
@@ -884,7 +884,7 @@ class OnPolicyRunner(object):
         for callback in self.callbacks:
             callback.on_valid_log(
                 metric_means=callback_metric_means,
-                metrics=pkg.metric_dicts,
+                metrics=results,
                 step=training_steps,
                 tasks_data=tasks_callback_data,
             )
