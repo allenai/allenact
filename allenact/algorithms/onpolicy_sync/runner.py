@@ -853,6 +853,7 @@ class OnPolicyRunner(object):
 
         num_tasks = pkg.num_non_empty_metrics_dicts_added
         metric_means = pkg.metrics_tracker.means()
+        callback_metric_means = dict()
 
         mode = pkg.mode
 
@@ -860,6 +861,7 @@ class OnPolicyRunner(object):
             log_writer.add_scalar(
                 f"{mode}-misc/num_tasks_evaled", num_tasks, training_steps
             )
+            callback_metric_means[f"{mode}-misc/num_tasks_evaled"] = num_tasks
 
         message = [f"{mode} {training_steps} steps:"]
         for k in sorted(metric_means.keys()):
@@ -867,6 +869,7 @@ class OnPolicyRunner(object):
                 log_writer.add_scalar(
                     f"{mode}-metrics/{k}", metric_means[k], training_steps
                 )
+                callback_metric_means[f"{mode}-metrics/{k}"] = metric_means[k]
             message.append(f"{k} {metric_means[k]}")
 
         if all_results is not None:
@@ -880,7 +883,7 @@ class OnPolicyRunner(object):
         metrics = all_results[-1] if all_results else None
         for callback in self.callbacks:
             callback.on_valid_log(
-                metric_means=metric_means, metrics=metrics, step=training_steps
+                metric_means=callback_metric_means, metrics=metrics, step=training_steps
             )
 
         if self.visualizer is not None:
@@ -900,6 +903,7 @@ class OnPolicyRunner(object):
         last_time: float,
     ):
         assert self.mode == TRAIN_MODE_STR
+        callback_metric_means = dict()
 
         current_time = time.time()
 
@@ -912,6 +916,7 @@ class OnPolicyRunner(object):
                 scalar_value=pkgs[0].pipeline_stage,
                 global_step=training_steps,
             )
+            callback_metric_means[f"train-misc/pipeline_stage"] = pkgs[0].pipeline_stage
 
             for storage_uuid, val in storage_uuid_to_total_experiences.items():
                 log_writer.add_scalar(
@@ -919,6 +924,7 @@ class OnPolicyRunner(object):
                     scalar_value=val,
                     global_step=training_steps,
                 )
+                callback_metric_means[f"train-misc/{storage_uuid}_total_experiences"] = val
 
         def add_prefix(
             d: Union[Dict[str, Any], str],
@@ -998,9 +1004,7 @@ class OnPolicyRunner(object):
             f"TRAIN: {training_steps} rollout steps ({pkgs[0].storage_uuid_to_total_experiences})"
         ]
         means = metrics_and_train_info_tracker.means()
-
-        for callback in self.callbacks:
-            callback.on_train_log(metric_means=means, step=training_steps)
+        callback_metric_means.update(means)
 
         for k in sorted(
             means.keys(), key=lambda mean_key: (mean_key.count("/"), mean_key)
@@ -1026,6 +1030,7 @@ class OnPolicyRunner(object):
                 log_writer.add_scalar(
                     add_prefix("approx_fps", "misc", None), fps, training_steps
                 )
+                callback_metric_means[add_prefix("approx_fps", "misc", None)] = fps
 
         for (
             storage_uuid,
@@ -1048,8 +1053,16 @@ class OnPolicyRunner(object):
                             eps,
                             cur_total_exp,
                         )
+                        callback_metric_means[
+                            add_prefix(
+                                f"approx_eps", "misc", stage_component_uuid=stage_component_uuid,
+                            )
+                        ] = eps
 
         get_logger().info(" ".join(message))
+
+        for callback in self.callbacks:
+            callback.on_train_log(metric_means=callback_metric_means, step=training_steps)
 
         return training_steps, storage_uuid_to_total_experiences, current_time
 
@@ -1080,11 +1093,13 @@ class OnPolicyRunner(object):
         message = [f"{mode} {training_steps} steps:"]
 
         metric_means = all_metrics_tracker.means()
+        callback_metric_means = dict()
         for k in sorted(metric_means.keys()):
             if log_writer is not None:
                 log_writer.add_scalar(
                     f"{mode}-metrics/{k}", metric_means[k], training_steps
                 )
+                callback_metric_means[f"{mode}-metrics/{k}"] = metric_means[k]
             message.append(k + f" {metric_means[k]:.3g}")
 
         if all_results is not None:
@@ -1099,13 +1114,14 @@ class OnPolicyRunner(object):
             log_writer.add_scalar(
                 f"{mode}-misc/num_tasks_evaled", num_tasks, training_steps
             )
+            callback_metric_means[f"{mode}-misc/num_tasks_evaled"] = num_tasks
 
         message.append(f"tasks {num_tasks} checkpoint {checkpoint_file_name[0]}")
         get_logger().info(" ".join(message))
 
         for callback in self.callbacks:
             callback.on_test_log(
-                metric_means=metric_means,
+                metric_means=callback_metric_means,
                 metrics=all_results[-1],
                 step=training_steps,
                 checkpoint=checkpoint_file_name[0],
