@@ -3,4 +3,4 @@ torchvision
 ftfy
 regex
 tqdm
-clip @ git+git://github.com/openai/clip@e184f608c5d5e58165682f7c332c3a8b4c1545f2#egg=clip
+clip @ git+https://github.com/openai/clip@e184f608c5d5e58165682f7c332c3a8b4c1545f2#egg=clip
