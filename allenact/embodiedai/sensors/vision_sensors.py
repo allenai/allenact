@@ -19,8 +19,8 @@ IMAGENET_RGB_STDS: Tuple[float, float, float] = (0.229, 0.224, 0.225)
 class VisionSensor(Sensor[EnvType, SubTaskType]):
     def __init__(
         self,
-        mean: Optional[np.ndarray] = None,
-        stdev: Optional[np.ndarray] = None,
+        mean: Union[Sequence[float], np.ndarray, None] = None,
+        stdev: Union[Sequence[float], np.ndarray, None] = None,
         height: Optional[int] = None,
         width: Optional[int] = None,
         uuid: str = "vision",
@@ -50,8 +50,8 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         kwargs : Extra kwargs. Currently unused.
         """
 
-        self._norm_means = mean
-        self._norm_sds = stdev
+        self._norm_means = np.array(mean)
+        self._norm_sds = np.array(stdev)
         assert (self._norm_means is None) == (self._norm_sds is None), (
             "In VisionSensor's config, "
             "either both mean/stdev must be None or neither."
