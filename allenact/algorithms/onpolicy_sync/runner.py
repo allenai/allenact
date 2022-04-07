@@ -1067,8 +1067,13 @@ class OnPolicyRunner(object):
 
         get_logger().info(" ".join(message))
 
+        metrics = []
+        for pkg in pkgs:
+            metrics.extend(pkg.metric_dicts)
+
         for callback in self.callbacks:
             callback.on_train_log(
+                metrics=metrics,
                 metric_means=callback_metric_means,
                 step=training_steps,
                 tasks_data=tasks_callback_data,
