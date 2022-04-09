@@ -111,6 +111,8 @@ def run_setup():
             "Programming Language :: Python :: 3.6",
             "Programming Language :: Python :: 3.7",
             "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
         ],
         keywords=["reinforcement learning", "embodied-AI", "AI", "RL", "SLAM"],
         url="https://github.com/allenai/allenact",
@@ -121,7 +123,7 @@ def run_setup():
         install_requires=[
             "gym>=0.17.0,<0.20.0",
             "torch>=1.6.0,!=1.8.0,<2.0.0",
-            "torchvision>=0.7.0,<0.10.0",
+            "torchvision>=0.7.0",
             "numpy>=1.19.1",
             "wheel>=0.36.2",
             f"allenact=={__version__}",
