@@ -836,6 +836,8 @@ class OnPolicyRunner(object):
                         break
 
         get_logger().info(f"Config files saved to {base_dir}")
+        for callback in self.callbacks:
+            callback.after_save_project_state(base_dir=base_dir)
 
     def process_eval_package(
         self,

@@ -10,3 +10,6 @@ class Callback:
 
     def on_test_log(self, **kwargs) -> None:
         """Called after test ends."""
+
+    def after_save_project_state(self, base_dir: str) -> None:
+        """Called after saving the project state in base_dir."""
