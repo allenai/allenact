@@ -31,7 +31,7 @@ def parse_req_file(fname, initial=None):
                 continue
             if line[0] == "[":
                 # Add new key for current extras (if missing in dict)
-                cline = line[1:-1]
+                cline = line[1:-1].strip()
                 if cline not in reqs:
                     reqs[cline] = []
             else:

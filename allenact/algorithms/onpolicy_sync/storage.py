@@ -178,7 +178,7 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
         **kwargs,
     ):
         if self.memory_specification is None:
-            self.memory_specification = recurrent_memory_specification
+            self.memory_specification = recurrent_memory_specification or {}
             self.action_space = action_space
 
             self.memory_first_last: Memory = self.create_memory(
