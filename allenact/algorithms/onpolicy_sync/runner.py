@@ -91,7 +91,7 @@ class OnPolicyRunner(object):
         distributed_ip_and_port: str = "127.0.0.1:0",
         machine_id: int = 0,
         save_dir_fmt: SaveDirFormat = SaveDirFormat.FLAT,
-        callbacks: str = "",
+        callbacks: Optional[str] = None,
         args: Optional[ArgumentParser] = None,
     ):
         self.config = config
@@ -187,10 +187,10 @@ class OnPolicyRunner(object):
         return mp_ctx
 
     def get_callback_classes(
-        self, callbacks: str, args: Optional[ArgumentParser] = None
+        self, callbacks: Optional[str], args: Optional[ArgumentParser] = None
     ) -> List[Callback]:
         """Get a list of Callback classes from a comma-separated list of filenames."""
-        if callbacks == "":
+        if callbacks == "" or callbacks is None:
             return []
 
         setup_dict = dict(name=self.experiment_name, config=self.config, mode=self.mode)
@@ -199,15 +199,12 @@ class OnPolicyRunner(object):
 
         callback_classes = set()
         files = callbacks.split(",")
-        for i, filename in enumerate(files):
-            full_path = os.path.join(os.getcwd(), filename)
-            if not os.path.isfile(full_path):
-                raise ValueError(f"Could not find callback file {full_path}")
-            spec = importlib.util.spec_from_file_location(f"___callback{i}", full_path)
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-
-            classes = inspect.getmembers(mod, inspect.isclass)
+        for filename in files:
+            module_path = filename.replace("/", ".")
+            if module_path.endswith(".py"):
+                module_path = module_path[:-3]
+            module = importlib.import_module(module_path)
+            classes = inspect.getmembers(module, inspect.isclass)
 
             for mod_class in classes:
                 if issubclass(mod_class[1], Callback) and mod_class[1] != Callback:
@@ -886,6 +883,7 @@ class OnPolicyRunner(object):
                 metric_means=callback_metric_means,
                 metrics=results,
                 step=training_steps,
+                checkpoint_file_name=checkpoint_file_name,
                 tasks_data=tasks_callback_data,
             )
 
@@ -1141,7 +1139,7 @@ class OnPolicyRunner(object):
                 metric_means=callback_metric_means,
                 metrics=all_results[-1],
                 step=training_steps,
-                checkpoint=checkpoint_file_name[0],
+                checkpoint_file_name=checkpoint_file_name[0],
                 tasks_data=tasks_callback_data,
             )
 
