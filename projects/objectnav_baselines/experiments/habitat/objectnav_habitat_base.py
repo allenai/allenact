@@ -1,3 +1,4 @@
+import glob
 import math
 import os
 from abc import ABC
@@ -124,13 +125,6 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
 
     FAILED_END_REWARD = -1.0
 
-    TASK_DATA_DIR_TEMPLATE = os.path.join(
-        HABITAT_DATASETS_DIR, "objectnav/mp3d/v1/{}/{}.json.gz"
-    )
-    BASE_CONFIG_YAML_PATH = os.path.join(
-        HABITAT_CONFIGS_DIR, "tasks/objectnav_mp3d.yaml"
-    )
-
     ACTION_SPACE = gym.spaces.Discrete(len(ObjectNavTask.class_action_names()))
 
     DEFAULT_NUM_TRAIN_PROCESSES = (
@@ -142,32 +136,9 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
     DEFAULT_VALID_GPU_IDS = [torch.cuda.device_count() - 1]
     DEFAULT_TEST_GPU_IDS = tuple(range(torch.cuda.device_count()))
 
-    DEFAULT_OBJECT_CATEGORIES_TO_IND = {
-        "chair": 0,
-        "table": 1,
-        "picture": 2,
-        "cabinet": 3,
-        "cushion": 4,
-        "sofa": 5,
-        "bed": 6,
-        "chest_of_drawers": 7,
-        "plant": 8,
-        "sink": 9,
-        "toilet": 10,
-        "stool": 11,
-        "towel": 12,
-        "tv_monitor": 13,
-        "shower": 14,
-        "bathtub": 15,
-        "counter": 16,
-        "fireplace": 17,
-        "gym_equipment": 18,
-        "seating": 19,
-        "clothes": 20,
-    }
-
     def __init__(
         self,
+        scene_dataset: str,  # Should be "mp3d" or "hm3d"
         debug: bool = False,
         num_train_processes: Optional[int] = None,
         num_test_processes: Optional[int] = None,
@@ -179,6 +150,8 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
         **kwargs,
     ):
         super().__init__(**kwargs)
+
+        self.scene_dataset = scene_dataset
         self.debug = debug
 
         def v_or_default(v, default):
@@ -225,6 +198,56 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
         )
 
     @lazy_property
+    def DEFAULT_OBJECT_CATEGORIES_TO_IND(self):
+        if self.scene_dataset == "mp3d":
+            return {
+                "chair": 0,
+                "table": 1,
+                "picture": 2,
+                "cabinet": 3,
+                "cushion": 4,
+                "sofa": 5,
+                "bed": 6,
+                "chest_of_drawers": 7,
+                "plant": 8,
+                "sink": 9,
+                "toilet": 10,
+                "stool": 11,
+                "towel": 12,
+                "tv_monitor": 13,
+                "shower": 14,
+                "bathtub": 15,
+                "counter": 16,
+                "fireplace": 17,
+                "gym_equipment": 18,
+                "seating": 19,
+                "clothes": 20,
+            }
+        elif self.scene_dataset == "hm3d":
+            return {
+                "chair": 0,
+                "bed": 1,
+                "plant": 2,
+                "toilet": 3,
+                "tv_monitor": 4,
+                "sofa": 5,
+            }
+        else:
+            raise NotImplementedError
+
+    @lazy_property
+    def TASK_DATA_DIR_TEMPLATE(self):
+        return os.path.join(
+            HABITAT_DATASETS_DIR, f"objectnav/{self.scene_dataset}/v1/{{}}/{{}}.json.gz"
+        )
+
+    @lazy_property
+    def BASE_CONFIG_YAML_PATH(self):
+        return os.path.join(
+            HABITAT_CONFIGS_DIR, f"tasks/objectnav_{self.scene_dataset}.yaml"
+        )
+
+    @lazy_property
     def TRAIN_CONFIG(self):
         return self._create_config(
             mode="train",
@@ -265,10 +288,20 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
             for config in configs:
                 assert len(config.DATASET.CONTENT_SCENES) == 1
                 scene_name = config.DATASET.CONTENT_SCENES[0]
-                glb_path = os.path.join(
-                    scenes_dir, "mp3d", scene_name, f"{scene_name}.glb"
+
+                paths = glob.glob(
+                    os.path.join(
+                        scenes_dir, self.scene_dataset, "**", f"{scene_name}.*"
+                    ),
+                    recursive=True,
                 )
-                memory_use_per_config.append(os.path.getsize(glb_path))
+
+                if self.scene_dataset == "mp3d":
+                    assert len(paths) == 4
+                else:
+                    assert len(paths) == 2
+
+                memory_use_per_config.append(sum(os.path.getsize(p) for p in paths))
 
             max_configs_per_device = math.ceil(len(configs) / len(self.train_gpu_ids))
             mem_per_device = np.array([0.0 for _ in range(len(self.train_gpu_ids))])
@@ -290,10 +323,17 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
             configs = sum(configs_per_device, [])
 
         if self.debug:
-            get_logger().warning("IN DEBUG MODE, WILL ONLY USE `1LXtFkjw3qL` SCENE!!!")
+            get_logger().warning(
+                "IN DEBUG MODE, WILL ONLY USE `1LXtFkjw3qL` SCENE IN MP3D OR `1S7LAXRdDqK` scene in HM3D!!!"
+            )
             for config in configs:
                 config.defrost()
-                config.DATASET.CONTENT_SCENES = ["1LXtFkjw3qL"]
+                if self.scene_dataset == "mp3d":
+                    config.DATASET.CONTENT_SCENES = ["1LXtFkjw3qL"]
+                elif self.scene_dataset == "hm3d":
+                    config.DATASET.CONTENT_SCENES = ["1S7LAXRdDqK"]
+                else:
+                    raise NotImplementedError
                 config.freeze()
         return configs
 
@@ -312,9 +352,8 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
         return self.TASK_DATA_DIR_TEMPLATE.format(*(["val"] * 2))
         # return self.TASK_DATA_DIR_TEMPLATE.format(*(["test"] * 2))
 
-    @classmethod
-    def tag(cls):
-        return "ObjectNav"
+    def tag(self):
+        return f"ObjectNav-Habitat-{self.scene_dataset.upper()}"
 
     def preprocessors(self) -> Sequence[Union[Preprocessor, Builder[Preprocessor]]]:
         return tuple()
