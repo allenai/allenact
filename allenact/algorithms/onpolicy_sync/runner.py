@@ -89,6 +89,7 @@ class OnPolicyRunner(object):
         disable_tensorboard: bool = False,
         disable_config_saving: bool = False,
         distributed_ip_and_port: str = "127.0.0.1:0",
+        distributed_preemption_threshold: float = 0.7,
         machine_id: int = 0,
         save_dir_fmt: SaveDirFormat = SaveDirFormat.FLAT,
         callbacks: Optional[str] = None,
@@ -99,6 +100,7 @@ class OnPolicyRunner(object):
         self.loaded_config_src_files = loaded_config_src_files
         self.seed = seed if seed is not None else random.randint(0, 2 ** 31 - 1)
         self.deterministic_cudnn = deterministic_cudnn
+        self.distributed_preemption_threshold = distributed_preemption_threshold
         if multiprocessing_start_method == "default":
             if torch.cuda.is_available():
                 multiprocessing_start_method = "forkserver"
@@ -494,6 +496,7 @@ class OnPolicyRunner(object):
                 if model_hash is None
                 else model_hash,
                 first_local_worker_id=worker_ids[0],
+                distributed_preemption_threshold=self.distributed_preemption_threshold,
             )
             train: BaseProcess = self.mp_ctx.Process(
                 target=self.train_loop, kwargs=training_kwargs,
