@@ -27,6 +27,7 @@ class InferenceAgent:
     memory: Optional[Memory] = attr.ib(default=None)
     steps_taken_in_task: int = attr.ib(default=0)
     last_action_flat: Optional = attr.ib(default=None)
+    has_initialized: Optional = attr.ib(default=False)
 
     def __attrs_post_init__(self):
         self.actor_critic.eval()
@@ -74,6 +75,8 @@ class InferenceAgent:
         )
 
     def reset(self):
+        if self.has_initialized:
+            self.rollout_storage.after_updates()
         self.steps_taken_in_task = 0
         self.memory = None
 
@@ -84,6 +87,7 @@ class InferenceAgent:
             obs_batch = self.sensor_preprocessor_graph.get_observations(obs_batch)
 
         if self.steps_taken_in_task == 0:
+            self.has_initialized = True
             self.rollout_storage.initialize(
                 observations=obs_batch,
                 num_samplers=1,

@@ -1,6 +1,7 @@
 from typing import Sequence, Union
 
 import torch.nn as nn
+from torch.distributions.utils import lazy_property
 
 from allenact.base_abstractions.preprocessor import Preprocessor
 from allenact.utils.experiment_utils import Builder, TrainingPipeline
@@ -25,19 +26,6 @@ class ObjectNavHabitatRGBClipResNet50GRUDDPPOExperimentConfig(
 
     CLIP_MODEL_TYPE = "RN50"
 
-    SENSORS = [
-        RGBSensorHabitat(
-            height=ObjectNavHabitatBaseConfig.SCREEN_SIZE,
-            width=ObjectNavHabitatBaseConfig.SCREEN_SIZE,
-            use_resnet_normalization=True,
-            mean=ClipResNetPreprocessor.CLIP_RGB_MEANS,
-            stdev=ClipResNetPreprocessor.CLIP_RGB_STDS,
-        ),
-        TargetObjectSensorHabitat(
-            len(ObjectNavHabitatBaseConfig.DEFAULT_OBJECT_CATEGORIES_TO_IND)
-        ),
-    ]
-
     def __init__(self, lr: float, **kwargs):
         super().__init__(**kwargs)
 
@@ -49,6 +37,19 @@ class ObjectNavHabitatRGBClipResNet50GRUDDPPOExperimentConfig(
             screen_size=self.SCREEN_SIZE,
             goal_sensor_type=TargetObjectSensorHabitat,
         )
+
+    @lazy_property
+    def SENSORS(self):
+        return [
+            RGBSensorHabitat(
+                height=ObjectNavHabitatBaseConfig.SCREEN_SIZE,
+                width=ObjectNavHabitatBaseConfig.SCREEN_SIZE,
+                use_resnet_normalization=True,
+                mean=ClipResNetPreprocessor.CLIP_RGB_MEANS,
+                stdev=ClipResNetPreprocessor.CLIP_RGB_STDS,
+            ),
+            TargetObjectSensorHabitat(len(self.DEFAULT_OBJECT_CATEGORIES_TO_IND)),
+        ]
 
     def training_pipeline(self, **kwargs) -> TrainingPipeline:
         return ObjectNavPPOMixin.training_pipeline(
@@ -67,4 +68,7 @@ class ObjectNavHabitatRGBClipResNet50GRUDDPPOExperimentConfig(
         )
 
     def tag(self):
-        return f"ObjectNav-Habitat-RGB-ClipResNet50GRU-DDPPO-lr{self.lr}"
+        return (
+            f"{super(ObjectNavHabitatRGBClipResNet50GRUDDPPOExperimentConfig, self).tag()}"
+            f"-RGB-ClipResNet50GRU-DDPPO-lr{self.lr}"
+        )

@@ -320,9 +320,9 @@ class OnPolicyRunner(object):
                     except Exception:
                         get_logger().error(
                             f"Error occurred when closing the RL engine used by work {mode}-{id}."
-                            f" We cannot recover from this and will simply exit. The exception:"
+                            f" We cannot recover from this and will simply exit. The exception:\n"
+                            f"{traceback.format_exc()}"
                         )
-                        get_logger().exception(traceback.format_exc())
                         sys.exit(1)
                     sys.exit(0)
                 else:
@@ -467,6 +467,15 @@ class OnPolicyRunner(object):
         ).state_dict()
 
         distributed_port = 0 if num_workers == 1 else self.get_port()
+
+        if (
+            num_workers > 1
+            and "NCCL_ASYNC_ERROR_HANDLING" not in os.environ
+            and "NCCL_BLOCKING_WAIT" not in os.environ
+        ):
+            # This ensures the NCCL distributed backend will throw errors
+            # if we timeout at a call to `barrier()`
+            os.environ["NCCL_ASYNC_ERROR_HANDLING"] = "1"
 
         worker_ids = self.local_worker_ids(TRAIN_MODE_STR)
 
