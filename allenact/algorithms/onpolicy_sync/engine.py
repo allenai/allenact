@@ -113,6 +113,7 @@ class OnPolicyRLEngine(object):
         deterministic_agents: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
         initial_model_state_dict: Optional[Union[Dict[str, Any], int]] = None,
+        try_restart_after_task_timeout: bool = False,
         **kwargs,
     ):
         """Initializer.
@@ -140,6 +141,7 @@ class OnPolicyRLEngine(object):
         self.device = torch.device("cpu") if device == -1 else torch.device(device)  # type: ignore
         self.distributed_ip = distributed_ip
         self.distributed_port = distributed_port
+        self.try_restart_after_task_timeout = try_restart_after_task_timeout
 
         self.mode = mode.lower().strip()
         assert self.mode in [
@@ -1414,11 +1416,47 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 for k, v in self.training_pipeline.current_stage_storage.items()
             }
 
-            for step in range(cur_stage_training_settings.num_steps):
-                num_paused = self.collect_step_across_all_task_samplers(
-                    rollout_storage_uuid=self.training_pipeline.rollout_storage_uuid,
-                    uuid_to_storage=uuid_to_storage,
-                )
+            vector_tasks_already_restarted = False
+            step = -1
+            while step < cur_stage_training_settings.num_steps - 1:
+                step += 1
+
+                try:
+                    num_paused = self.collect_step_across_all_task_samplers(
+                        rollout_storage_uuid=self.training_pipeline.rollout_storage_uuid,
+                        uuid_to_storage=uuid_to_storage,
+                    )
+                except TimeoutError:
+                    if (
+                        not self.try_restart_after_task_timeout
+                    ) or self.mode != TRAIN_MODE_STR:
+                        # Apparently you can just call `raise` here and doing so will just raise the exception as though
+                        # it was not caught (so the stacktrace isn't messed up)
+                        raise
+                    elif vector_tasks_already_restarted:
+                        raise RuntimeError(
+                            f"[{self.mode} worker {self.worker_id}] `vector_tasks` has timed out twice in the same"
+                            f" rollout. This suggests that this error was not recoverable. Timeout exception:\n{traceback.format_exc()}"
+                        )
+                    else:
+                        get_logger().warning(
+                            f"[{self.mode} worker {self.worker_id}] `vector_tasks` appears to have crashed during"
+                            f" training as it has timed out. You have set `try_restart_after_task_timeout` to `True` so"
+                            f" we will attempt to restart these tasks from the beginning. USE THIS FEATURE AT YOUR OWN"
+                            f" RISK. Timeout exception:\n{traceback.format_exc()}."
+                        )
+                        self.vector_tasks.close()
+                        self._vector_tasks = None
+
+                        vector_tasks_already_restarted = True
+                        for (
+                            storage
+                        ) in self.training_pipeline.current_stage_storage.values():
+                            storage.after_updates()
+                        self.initialize_storage_and_viz(
+                            storage_to_initialize=list(uuid_to_storage.values())
+                        )
+                        num_paused = 0
 
                 # A more informative error message should already have been thrown in be given in
                 # `collect_step_across_all_task_samplers` if `num_paused != 0` here but this serves
@@ -1595,7 +1633,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             get_logger().error(
                 f"[{self.mode} worker {self.worker_id}] Encountered {type(e).__name__}, exiting."
             )
-            get_logger().exception(traceback.format_exc())
+            get_logger().error(traceback.format_exc())
         finally:
             if training_completed_successfully:
                 if self.worker_id == 0:
