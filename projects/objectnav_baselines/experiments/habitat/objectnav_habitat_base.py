@@ -1,16 +1,18 @@
 import glob
 import math
 import os
+import warnings
 from abc import ABC
 from typing import Dict, Any, List, Optional, Sequence, Union
 
 import gym
+
+# noinspection PyUnresolvedReferences
+import habitat
 import numpy as np
 import torch
 from torch.distributions.utils import lazy_property
 
-# noinspection PyUnresolvedReferences
-import habitat
 from allenact.base_abstractions.experiment_config import MachineParams
 from allenact.base_abstractions.preprocessor import (
     SensorPreprocessorGraph,
@@ -323,7 +325,7 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
             configs = sum(configs_per_device, [])
 
         if self.debug:
-            get_logger().warning(
+            warnings.warning(
                 "IN DEBUG MODE, WILL ONLY USE `1LXtFkjw3qL` SCENE IN MP3D OR `1S7LAXRdDqK` scene in HM3D!!!"
             )
             for config in configs:

@@ -48,9 +48,7 @@ class ObjectNavHabitatRGBClipResNet50GRUDDPPOExperimentConfig(
                 mean=ClipResNetPreprocessor.CLIP_RGB_MEANS,
                 stdev=ClipResNetPreprocessor.CLIP_RGB_STDS,
             ),
-            TargetObjectSensorHabitat(
-                len(self.DEFAULT_OBJECT_CATEGORIES_TO_IND)
-            ),
+            TargetObjectSensorHabitat(len(self.DEFAULT_OBJECT_CATEGORIES_TO_IND)),
         ]
 
     def training_pipeline(self, **kwargs) -> TrainingPipeline:
