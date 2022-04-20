@@ -102,7 +102,7 @@ class OnPolicyRLEngine(object):
         deterministic_agents: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
         initial_model_state_dict: Optional[Union[Dict[str, Any], int]] = None,
-        try_restart_after_task_timeout: bool = False,
+        try_restart_after_task_timeout: bool = True,
         **kwargs,
     ):
         """Initializer.
