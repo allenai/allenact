@@ -77,6 +77,16 @@ from allenact.utils.tensor_utils import (
 )
 from allenact.utils.viz_utils import VizSuite
 
+try:
+    # When debugging we don't want to timeout in the VectorSampledTasks
+
+    # noinspection PyPackageRequirements
+    import pydevd
+
+    DEBUGGING = True
+except ImportError:
+    DEBUGGING = False
+
 TRAIN_MODE_STR = "train"
 VALID_MODE_STR = "valid"
 TEST_MODE_STR = "test"
@@ -248,7 +258,7 @@ class OnPolicyRLEngine(object):
                 # During testing, we sometimes found that default timeout was too short
                 # resulting in the run terminating surprisingly, we increase it here.
                 timeout=datetime.timedelta(minutes=3000)
-                if self.mode == TEST_MODE_STR
+                if (self.mode == TEST_MODE_STR or DEBUGGING)
                 else dist.default_pg_timeout,
             )
             self.is_distributed = True
@@ -302,6 +312,7 @@ class OnPolicyRLEngine(object):
                 else None,
                 mp_ctx=self.mp_ctx,
                 max_processes=self.max_sampler_processes_per_worker,
+                read_timeout=None if DEBUGGING else 60
             )
         return self._vector_tasks
 

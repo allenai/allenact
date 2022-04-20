@@ -325,7 +325,7 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
             configs = sum(configs_per_device, [])
 
         if self.debug:
-            warnings.warning(
+            warnings.warn(
                 "IN DEBUG MODE, WILL ONLY USE `1LXtFkjw3qL` SCENE IN MP3D OR `1S7LAXRdDqK` scene in HM3D!!!"
             )
             for config in configs:
