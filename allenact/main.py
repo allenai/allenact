@@ -227,7 +227,7 @@ def get_argument_parser():
         required=False,
         help="enables running validation on the model with initial weights",
     )
-    parser.set_defaults(collect_valid_results=False)
+    parser.set_defaults(valid_on_initial_weights=False)
 
     parser.add_argument(
         "--test_expert",
