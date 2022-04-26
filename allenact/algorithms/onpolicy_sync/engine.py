@@ -1312,7 +1312,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.checkpoints_queue.put(("eval", model_path))
         self.last_save = self.training_pipeline.total_steps
 
-    def run_pipeline(self):
+    def run_pipeline(self, valid_on_initial_weights: bool = False):
         cur_stage_training_settings = (
             self.training_pipeline.current_stage.training_settings
         )
@@ -1335,6 +1335,16 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             and cur_stage_training_settings.save_interval > 0
         )
         already_saved_checkpoint = False
+
+        if (
+            valid_on_initial_weights
+            and should_save_checkpoints
+            and self.checkpoints_queue is not None
+        ):
+            if self.worker_id == self.first_local_worker_id:
+                model_path = self.checkpoint_save()
+                if self.checkpoints_queue is not None:
+                    self.checkpoints_queue.put(("eval", model_path))
 
         while True:
             pipeline_stage_changed = self.training_pipeline.before_rollout(
@@ -1572,7 +1582,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 )
 
     def train(
-        self, checkpoint_file_name: Optional[str] = None, restart_pipeline: bool = False
+        self,
+        checkpoint_file_name: Optional[str] = None,
+        restart_pipeline: bool = False,
+        valid_on_initial_weights: bool = False,
     ):
         assert (
             self.mode == TRAIN_MODE_STR
@@ -1584,7 +1597,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             if checkpoint_file_name is not None:
                 self.checkpoint_load(checkpoint_file_name, restart_pipeline)
 
-            self.run_pipeline()
+            self.run_pipeline(valid_on_initial_weights=valid_on_initial_weights)
 
             training_completed_successfully = True
         except KeyboardInterrupt:
