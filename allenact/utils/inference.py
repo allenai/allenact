@@ -13,8 +13,8 @@ from allenact.base_abstractions.misc import (
     DistributionType,
 )
 from allenact.base_abstractions.preprocessor import SensorPreprocessorGraph
-from allenact.utils.tensor_utils import batch_observations
 from allenact.utils import spaces_utils as su
+from allenact.utils.tensor_utils import batch_observations
 
 
 @attr.s(kw_only=True)
@@ -121,7 +121,7 @@ class InferenceAgent:
 
         self.steps_taken_in_task += 1
 
-        if self.steps_taken_in_task % self.steps_before_rollout_refresh:
+        if self.steps_taken_in_task % self.steps_before_rollout_refresh == 0:
             self.rollout_storage.after_updates()
 
         return su.action_list(self.actor_critic.action_space, self.last_action_flat)[0]

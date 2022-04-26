@@ -6,13 +6,12 @@ from abc import ABC
 from typing import Dict, Any, List, Optional, Sequence, Union
 
 import gym
-
-# noinspection PyUnresolvedReferences
-import habitat
 import numpy as np
 import torch
 from torch.distributions.utils import lazy_property
 
+# noinspection PyUnresolvedReferences
+import habitat
 from allenact.base_abstractions.experiment_config import MachineParams
 from allenact.base_abstractions.preprocessor import (
     SensorPreprocessorGraph,
@@ -116,7 +115,6 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
         # CPCA8Loss.UUID,
         # CPCA16Loss.UUID,
     ]
-    ADD_PREV_ACTIONS = False
     MULTIPLE_BELIEFS = False
     BELIEF_FUSION = (  # choose one
         None
@@ -149,6 +147,7 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
         train_gpu_ids: Optional[Sequence[int]] = None,
         val_gpu_ids: Optional[Sequence[int]] = None,
         test_gpu_ids: Optional[Sequence[int]] = None,
+        add_prev_actions: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -172,6 +171,7 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
             val_gpu_ids, self.DEFAULT_VALID_GPU_IDS if run_valid else []
         )
         self.test_gpu_ids = v_or_default(test_gpu_ids, self.DEFAULT_TEST_GPU_IDS)
+        self.add_prev_actions = add_prev_actions
 
     def _create_config(
         self,
@@ -355,7 +355,10 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
         # return self.TASK_DATA_DIR_TEMPLATE.format(*(["test"] * 2))
 
     def tag(self):
-        return f"ObjectNav-Habitat-{self.scene_dataset.upper()}"
+        t = f"ObjectNav-Habitat-{self.scene_dataset.upper()}"
+        if not self.add_prev_actions:
+            return t
+        return f"{t}-PrevActions"
 
     def preprocessors(self) -> Sequence[Union[Preprocessor, Builder[Preprocessor]]]:
         return tuple()

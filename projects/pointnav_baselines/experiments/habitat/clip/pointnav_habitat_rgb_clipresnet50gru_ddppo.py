@@ -35,7 +35,7 @@ class PointNavHabitatRGBClipResNet50GRUDDPPOExperimentConfig(PointNavHabitatBase
         TargetCoordinatesSensorHabitat(coordinate_dims=2),
     ]
 
-    def __init__(self, **kwargs):
+    def __init__(self, add_prev_actions: bool = False, **kwargs):
         super().__init__(**kwargs)
 
         self.preprocessing_and_model = ClipResNetPreprocessGRUActorCriticMixin(
@@ -44,6 +44,7 @@ class PointNavHabitatRGBClipResNet50GRUDDPPOExperimentConfig(PointNavHabitatBase
             screen_size=self.SCREEN_SIZE,
             goal_sensor_type=TargetCoordinatesSensorHabitat,
         )
+        self.add_prev_actions = add_prev_actions
 
     def training_pipeline(self, **kwargs) -> TrainingPipeline:
         return PointNavPPOMixin.training_pipeline(
@@ -58,7 +59,9 @@ class PointNavHabitatRGBClipResNet50GRUDDPPOExperimentConfig(PointNavHabitatBase
 
     def create_model(self, **kwargs) -> nn.Module:
         return self.preprocessing_and_model.create_model(
-            num_actions=self.ACTION_SPACE.n, **kwargs
+            num_actions=self.ACTION_SPACE.n,
+            add_prev_actions=self.add_prev_actions,
+            **kwargs,
         )
 
     @classmethod
