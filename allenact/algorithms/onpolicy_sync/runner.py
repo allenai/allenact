@@ -355,6 +355,7 @@ class OnPolicyRunner(object):
         id: int = 0,
         checkpoint: Optional[str] = None,
         restart_pipeline: bool = False,
+        valid_on_initial_weights: bool = False,
         *engine_args,
         **engine_kwargs,
     ):
@@ -372,7 +373,9 @@ class OnPolicyRunner(object):
         if trainer is not None:
             OnPolicyRunner.init_process("Train", id, to_close_on_termination=trainer)
             trainer.train(
-                checkpoint_file_name=checkpoint, restart_pipeline=restart_pipeline
+                checkpoint_file_name=checkpoint,
+                restart_pipeline=restart_pipeline,
+                valid_on_initial_weights=valid_on_initial_weights,
             )
 
     @staticmethod
@@ -446,6 +449,7 @@ class OnPolicyRunner(object):
         max_sampler_processes_per_worker: Optional[int] = None,
         save_ckpt_after_every_pipeline_stage: bool = True,
         collect_valid_results: bool = False,
+        valid_on_initial_weights: bool = False,
     ):
         self._initialize_start_train_or_start_test()
 
@@ -497,6 +501,7 @@ class OnPolicyRunner(object):
                 else model_hash,
                 first_local_worker_id=worker_ids[0],
                 distributed_preemption_threshold=self.distributed_preemption_threshold,
+                valid_on_initial_weights=valid_on_initial_weights,
             )
             train: BaseProcess = self.mp_ctx.Process(
                 target=self.train_loop, kwargs=training_kwargs,
