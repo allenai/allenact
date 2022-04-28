@@ -46,10 +46,11 @@ class InferenceAgent:
         exp_config: ExperimentConfig,
         device: torch.device,
         checkpoint_path: Optional[str] = None,
+        mode: str = "test",
     ):
         rollout_storage = exp_config.training_pipeline().rollout_storage
 
-        machine_params = exp_config.machine_params("test")
+        machine_params = exp_config.machine_params(mode)
         if not isinstance(machine_params, MachineParams):
             machine_params = MachineParams(**machine_params)
 
