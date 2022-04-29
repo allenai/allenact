@@ -24,7 +24,6 @@ import torch.distributions  # type: ignore
 import torch.multiprocessing as mp  # type: ignore
 import torch.nn as nn
 import torch.optim as optim
-
 # noinspection PyProtectedMember
 from torch._C._distributed_c10d import ReduceOp
 
@@ -312,7 +311,7 @@ class OnPolicyRLEngine(object):
                 else None,
                 mp_ctx=self.mp_ctx,
                 max_processes=self.max_sampler_processes_per_worker,
-                read_timeout=None if DEBUGGING else 60
+                read_timeout=None if DEBUGGING else 5 * 60
             )
         return self._vector_tasks
 
