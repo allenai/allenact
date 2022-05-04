@@ -123,7 +123,7 @@ class OnPolicyRLEngine(object):
         deterministic_agents: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
         initial_model_state_dict: Optional[Union[Dict[str, Any], int]] = None,
-        try_restart_after_task_timeout: bool = False,
+        try_restart_after_task_timeout: bool = True,
         **kwargs,
     ):
         """Initializer.
@@ -312,7 +312,7 @@ class OnPolicyRLEngine(object):
                 else None,
                 mp_ctx=self.mp_ctx,
                 max_processes=self.max_sampler_processes_per_worker,
-                read_timeout=None if DEBUGGING else 60
+                read_timeout=None if DEBUGGING else 180,
             )
         return self._vector_tasks
 
