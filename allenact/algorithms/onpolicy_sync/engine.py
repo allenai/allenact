@@ -1459,6 +1459,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         self.vector_tasks.close()
                         self._vector_tasks = None
 
+                        # Attempt to free some GPU memory
+                        torch.cuda.empty_cache()
+
                         vector_tasks_already_restarted = True
                         for (
                             storage
