@@ -312,7 +312,7 @@ class OnPolicyRLEngine(object):
                 else None,
                 mp_ctx=self.mp_ctx,
                 max_processes=self.max_sampler_processes_per_worker,
-                read_timeout=None if DEBUGGING else 180,
+                read_timeout=None if DEBUGGING else 240,
             )
         return self._vector_tasks
 
