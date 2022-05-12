@@ -86,6 +86,10 @@ try:
 except ImportError:
     DEBUGGING = False
 
+DEBUG_VST_TIMEOUT: Optional[int] = (lambda x: int(x) if x is not None else x)(
+    os.getenv("ALLENACT_DEBUG_VST_TIMEOUT", None)
+)
+
 TRAIN_MODE_STR = "train"
 VALID_MODE_STR = "valid"
 TEST_MODE_STR = "test"
@@ -311,7 +315,7 @@ class OnPolicyRLEngine(object):
                 else None,
                 mp_ctx=self.mp_ctx,
                 max_processes=self.max_sampler_processes_per_worker,
-                read_timeout=None if DEBUGGING else 5 * 60
+                read_timeout=DEBUG_VST_TIMEOUT if DEBUGGING else 5 * 60,
             )
         return self._vector_tasks
 
@@ -1466,7 +1470,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         self.initialize_storage_and_viz(
                             storage_to_initialize=list(uuid_to_storage.values())
                         )
-                        num_paused = 0
+                        step = -1
+                        continue
 
                 # A more informative error message should already have been thrown in be given in
                 # `collect_step_across_all_task_samplers` if `num_paused != 0` here but this serves
