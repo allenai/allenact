@@ -246,24 +246,25 @@ class OnPolicyRLEngine(object):
                 world_size=self.num_workers,
                 is_master=self.worker_id == 0,
             )
-            cpu_device = self.device == torch.device("cpu")  # type:ignore
-
-            # "gloo" required during testing to ensure that `barrier()` doesn't time out.
-            backend = "gloo" if cpu_device or self.mode == TEST_MODE_STR else "nccl"
-            get_logger().debug(
-                f"Worker {self.worker_id}: initializing distributed {backend} backend with device {self.device}."
-            )
-            dist.init_process_group(  # type:ignore
-                backend=backend,
-                store=self.store,
-                rank=self.worker_id,
-                world_size=self.num_workers,
-                # During testing, we sometimes found that default timeout was too short
-                # resulting in the run terminating surprisingly, we increase it here.
-                timeout=datetime.timedelta(minutes=3000)
-                if (self.mode == TEST_MODE_STR or DEBUGGING)
-                else dist.default_pg_timeout,
-            )
+            self.init_group()
+            # cpu_device = self.device == torch.device("cpu")  # type:ignore
+            #
+            # # "gloo" required during testing to ensure that `barrier()` doesn't time out.
+            # backend = "gloo" if cpu_device or self.mode == TEST_MODE_STR else "nccl"
+            # get_logger().debug(
+            #     f"Worker {self.worker_id}: initializing distributed {backend} backend with device {self.device}."
+            # )
+            # dist.init_process_group(  # type:ignore
+            #     backend=backend,
+            #     store=self.store,
+            #     rank=self.worker_id,
+            #     world_size=self.num_workers,
+            #     # During testing, we sometimes found that default timeout was too short
+            #     # resulting in the run terminating surprisingly, we increase it here.
+            #     timeout=datetime.timedelta(minutes=3000)
+            #     if (self.mode == TEST_MODE_STR or DEBUGGING)
+            #     else dist.default_pg_timeout,
+            # )
             self.is_distributed = True
 
         self.deterministic_agents = deterministic_agents
@@ -277,6 +278,38 @@ class OnPolicyRLEngine(object):
 
         # Keeping track of metrics during training/inference
         self.single_process_metrics: List = []
+
+    def init_group(self):
+        cpu_device = self.device == torch.device("cpu")  # type:ignore
+
+        # "gloo" required during testing to ensure that `barrier()` doesn't time out.
+        backend = "gloo" if cpu_device or self.mode == TEST_MODE_STR else "nccl"
+        get_logger().debug(
+            f"Worker {self.worker_id}: initializing distributed {backend} backend with device {self.device}."
+        )
+        dist.init_process_group(  # type:ignore
+            backend=backend,
+            store=self.store,
+            rank=self.worker_id,
+            world_size=self.num_workers,
+            # During testing, we sometimes found that default timeout was too short
+            # resulting in the run terminating surprisingly, we increase it here.
+            timeout=datetime.timedelta(minutes=3000)
+            if (self.mode == TEST_MODE_STR or DEBUGGING)
+            else dist.default_pg_timeout,
+        )
+
+    def dist_caller(self, dist_func, *args, **kwargs):
+        cur_try = 1
+        while True:
+            try:
+                return dist_func(*args, **kwargs)
+            except Exception as e:
+                dist.destroy_process_group()
+                self.init_group()
+                if cur_try == 2:
+                    raise e
+                cur_try += 1
 
     @property
     def vector_tasks(
@@ -970,11 +1003,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         if self.is_distributed:
             summed_advantages = advantages.sum()
-            dist.all_reduce(summed_advantages)
+            self.dist_caller(dist.all_reduce, summed_advantages)
             mean = summed_advantages / global_rollout_steps
 
             summed_squares = (advantages - mean).pow(2).sum()
-            dist.all_reduce(summed_squares)
+            self.dist_caller(dist.all_reduce, summed_squares)
             std = (summed_squares / (global_rollout_steps - 1)).sqrt()
         else:
             # noinspection PyArgumentList
@@ -990,7 +1023,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         """Weighted sum of scalar across distributed workers."""
         if self.is_distributed:
             aggregate = torch.tensor(to_share * weight).to(self.device)
-            dist.all_reduce(aggregate)
+            self.dist_caller(dist.all_reduce, aggregate)
             return aggregate.item()
         else:
             if abs(1 - weight) > 1e-5:
@@ -1005,7 +1038,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         """Weighted sum of scalar across distributed workers."""
         if self.is_distributed:
             aggregate = torch.tensor(to_share).to(self.device)
-            dist.all_reduce(aggregate, op=op)
+            self.dist_caller(dist.all_reduce, aggregate, op=op)
             return aggregate.item()
         else:
             return torch.tensor(to_share).item()
@@ -1020,10 +1053,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.insufficient_data_for_update.set(
                 "insufficient_data_for_update", str(0)
             )
-            dist.barrier(
+            self.dist_caller(
+                dist.barrier,
                 device_ids=None
                 if self.device == torch.device("cpu")
-                else [self.device.index]
+                else [self.device.index],
             )
 
         training_settings = stage_component.training_settings
@@ -1090,10 +1124,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         "insufficient_data_for_update",
                         1 * (not enough_data_for_update),
                     )
-                    dist.barrier(
+                    self.dist_caller(
+                        dist.barrier,
                         device_ids=None
                         if self.device == torch.device("cpu")
-                        else [self.device.index]
+                        else [self.device.index],
                     )
 
                     if (
@@ -1263,7 +1298,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     else:  # local_global_batch_size_tuple is not None, since we're distributed:
                         p.grad = p.grad * local_to_global_batch_size_ratio
                     reductions.append(
-                        dist.all_reduce(p.grad, async_op=True,)  # sum
+                        self.dist_caller(dist.all_reduce, p.grad, async_op=True,)  # sum
                     )  # synchronize
                     all_params.append(p)
             for reduction, p in zip(reductions, all_params):
@@ -1418,10 +1453,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_done.set("done", str(0))
                 self.num_workers_steps.set("steps", str(0))
                 # Ensure all workers are done before incrementing num_workers_{steps, done}
-                dist.barrier(
+                self.dist_caller(
+                    dist.barrier,
                     device_ids=None
                     if self.device == torch.device("cpu")
-                    else [self.device.index]
+                    else [self.device.index],
                 )
 
             self.former_steps = self.step_count
@@ -1511,10 +1547,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_steps.add("steps", self.step_count - self.former_steps)
 
                 # Ensure all workers are done before updating step counter
-                dist.barrier(
+                self.dist_caller(
+                    dist.barrier,
                     device_ids=None
                     if self.device == torch.device("cpu")
-                    else [self.device.index]
+                    else [self.device.index],
                 )
 
                 ndone = int(self.num_workers_done.get("done"))
@@ -1935,7 +1972,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                         self.results_queue.put(eval_package)
 
                         if self.is_distributed:
-                            dist.barrier()
+                            self.dist_caller(dist.barrier)
                     else:
                         self.results_queue.put(
                             LoggingPackage(
