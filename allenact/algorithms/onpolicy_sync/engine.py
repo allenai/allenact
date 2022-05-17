@@ -24,6 +24,7 @@ import torch.distributions  # type: ignore
 import torch.multiprocessing as mp  # type: ignore
 import torch.nn as nn
 import torch.optim as optim
+
 # noinspection PyProtectedMember
 from torch._C._distributed_c10d import ReduceOp
 
@@ -247,24 +248,6 @@ class OnPolicyRLEngine(object):
                 is_master=self.worker_id == 0,
             )
             self.init_group()
-            # cpu_device = self.device == torch.device("cpu")  # type:ignore
-            #
-            # # "gloo" required during testing to ensure that `barrier()` doesn't time out.
-            # backend = "gloo" if cpu_device or self.mode == TEST_MODE_STR else "nccl"
-            # get_logger().debug(
-            #     f"Worker {self.worker_id}: initializing distributed {backend} backend with device {self.device}."
-            # )
-            # dist.init_process_group(  # type:ignore
-            #     backend=backend,
-            #     store=self.store,
-            #     rank=self.worker_id,
-            #     world_size=self.num_workers,
-            #     # During testing, we sometimes found that default timeout was too short
-            #     # resulting in the run terminating surprisingly, we increase it here.
-            #     timeout=datetime.timedelta(minutes=3000)
-            #     if (self.mode == TEST_MODE_STR or DEBUGGING)
-            #     else dist.default_pg_timeout,
-            # )
             self.is_distributed = True
 
         self.deterministic_agents = deterministic_agents
