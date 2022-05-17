@@ -1285,7 +1285,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     )  # synchronize
                     all_params.append(p)
             for reduction, p in zip(reductions, all_params):
-                reduction.wait()
+                self.dist_caller(reduction.wait)
 
         nn.utils.clip_grad_norm_(
             self.actor_critic.parameters(), max_norm=max_grad_norm,  # type: ignore
