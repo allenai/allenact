@@ -288,10 +288,10 @@ class OnPolicyRLEngine(object):
             try:
                 return dist_func(*args, **kwargs)
             except Exception as e:
-                dist.destroy_process_group()
-                self.init_group()
                 if cur_try == 2:
                     raise e
+                dist.destroy_process_group()
+                self.init_group()
                 cur_try += 1
 
     @property
