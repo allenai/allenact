@@ -25,6 +25,11 @@ from allenact.embodiedai.aux_losses.losses import (
     CPCA8Loss,
     CPCA16Loss,
     MultiAuxTaskNegEntropyLoss,
+    CPCA1SoftMaxLoss,
+    CPCA2SoftMaxLoss,
+    CPCA4SoftMaxLoss,
+    CPCA8SoftMaxLoss,
+    CPCA16SoftMaxLoss,
 )
 from allenact.embodiedai.preprocessors.resnet import ResNetPreprocessor
 from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
@@ -261,6 +266,26 @@ def update_with_auxiliary_losses(
             CPCA16Loss(subsample_rate=0.2,),  # TODO: test its effects
             0.05 * aux_loss_total_weight,  # should times 2
         ),
+        CPCA1SoftMaxLoss.UUID: (
+            CPCA1SoftMaxLoss(subsample_rate=1.0,),
+            0.05 * aux_loss_total_weight,  # should times 2
+        ),
+        CPCA2SoftMaxLoss.UUID: (
+            CPCA2SoftMaxLoss(subsample_rate=1.0,),
+            0.05 * aux_loss_total_weight,  # should times 2
+        ),
+        CPCA4SoftMaxLoss.UUID: (
+            CPCA4SoftMaxLoss(subsample_rate=1.0,),
+            0.05 * aux_loss_total_weight,  # should times 2
+        ),
+        CPCA8SoftMaxLoss.UUID: (
+            CPCA8SoftMaxLoss(subsample_rate=1.0,),
+            0.05 * aux_loss_total_weight,  # should times 2
+        ),
+        CPCA16SoftMaxLoss.UUID: (
+            CPCA16SoftMaxLoss(subsample_rate=1.0,),
+            0.05 * aux_loss_total_weight,  # should times 2
+        ),
     }
     named_losses.update({uuid: total_aux_losses[uuid] for uuid in auxiliary_uuids})
 
@@ -290,6 +315,7 @@ class ObjectNavPPOMixin:
         use_gae=True,
         gae_lambda=0.95,
         max_grad_norm=0.5,
+        anneal_lr: bool = True,
     ) -> TrainingPipeline:
         ppo_steps = int(300000000)
 
@@ -324,5 +350,7 @@ class ObjectNavPPOMixin:
             ],
             lr_scheduler_builder=Builder(
                 LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
-            ),
+            )
+            if anneal_lr
+            else None,
         )
