@@ -588,7 +588,7 @@ class CPCASoftMaxLoss(AuxiliaryLoss):
         num_steps, num_samplers, obs_embed_size = obs_embeds.shape  # T, N, H_O
         ##visual observation of all num_steps
 
-        if 0 < self.planning_steps <= num_steps:
+        if not (0 < self.planning_steps <= num_steps):
             if self.allow_skipping:
                 return 0, {}
             else:
