@@ -64,6 +64,9 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
             renderDepthImage=any(isinstance(s, DepthSensorThor) for s in self.SENSORS),
         )
 
+    def preprocessors(self):
+        return tuple()
+
     def machine_params(self, mode="train", **kwargs):
         sampler_devices: Sequence[int] = []
         if mode == "train":
@@ -91,7 +94,7 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
         sensor_preprocessor_graph = (
             SensorPreprocessorGraph(
                 source_observation_spaces=SensorSuite(self.SENSORS).observation_spaces,
-                preprocessors=self.PREPROCESSORS,
+                preprocessors=self.preprocessors(),
             )
             if mode == "train"
             or (
