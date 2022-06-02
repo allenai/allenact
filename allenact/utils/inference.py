@@ -13,8 +13,8 @@ from allenact.base_abstractions.misc import (
     DistributionType,
 )
 from allenact.base_abstractions.preprocessor import SensorPreprocessorGraph
-from allenact.utils.tensor_utils import batch_observations
 from allenact.utils import spaces_utils as su
+from allenact.utils.tensor_utils import batch_observations
 
 
 @attr.s(kw_only=True)
@@ -27,6 +27,7 @@ class InferenceAgent:
     memory: Optional[Memory] = attr.ib(default=None)
     steps_taken_in_task: int = attr.ib(default=0)
     last_action_flat: Optional = attr.ib(default=None)
+    has_initialized: Optional = attr.ib(default=False)
 
     def __attrs_post_init__(self):
         self.actor_critic.eval()
@@ -45,10 +46,11 @@ class InferenceAgent:
         exp_config: ExperimentConfig,
         device: torch.device,
         checkpoint_path: Optional[str] = None,
+        mode: str = "test",
     ):
         rollout_storage = exp_config.training_pipeline().rollout_storage
 
-        machine_params = exp_config.machine_params("test")
+        machine_params = exp_config.machine_params(mode)
         if not isinstance(machine_params, MachineParams):
             machine_params = MachineParams(**machine_params)
 
@@ -74,6 +76,8 @@ class InferenceAgent:
         )
 
     def reset(self):
+        if self.has_initialized:
+            self.rollout_storage.after_updates()
         self.steps_taken_in_task = 0
         self.memory = None
 
@@ -84,6 +88,7 @@ class InferenceAgent:
             obs_batch = self.sensor_preprocessor_graph.get_observations(obs_batch)
 
         if self.steps_taken_in_task == 0:
+            self.has_initialized = True
             self.rollout_storage.initialize(
                 observations=obs_batch,
                 num_samplers=1,
@@ -117,7 +122,7 @@ class InferenceAgent:
 
         self.steps_taken_in_task += 1
 
-        if self.steps_taken_in_task % self.steps_before_rollout_refresh:
+        if self.steps_taken_in_task % self.steps_before_rollout_refresh == 0:
             self.rollout_storage.after_updates()
 
         return su.action_list(self.actor_critic.action_space, self.last_action_flat)[0]

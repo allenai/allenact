@@ -144,6 +144,7 @@ class VectorSampledTasks:
     _mp_ctx: BaseContext
     _connection_read_fns: List[Callable[[], Any]]
     _connection_write_fns: List[Callable[[Any], None]]
+    _read_timeout: Optional[float]
 
     def __init__(
         self,
@@ -154,12 +155,16 @@ class VectorSampledTasks:
         mp_ctx: Optional[BaseContext] = None,
         should_log: bool = True,
         max_processes: Optional[int] = None,
+        read_timeout: Optional[
+            float
+        ] = 60,  # Seconds to wait for a task to return a response before timing out
     ) -> None:
 
         self._is_waiting = False
         self._is_closed = True
         self.should_log = should_log
         self.max_processes = max_processes
+        self.read_timeout = read_timeout
 
         assert (
             sampler_fn_args is not None and len(sampler_fn_args) > 0
@@ -195,7 +200,8 @@ class VectorSampledTasks:
         for args in sampler_fn_args:
             args["mp_ctx"] = self._mp_ctx
         (
-            self._connection_read_fns,
+            connection_poll_fns,
+            connection_read_fns,
             self._connection_write_fns,
         ) = self._spawn_workers(  # noqa
             make_sampler_fn=make_sampler_fn,
@@ -203,6 +209,13 @@ class VectorSampledTasks:
                 args_list for args_list in self._partition_to_processes(sampler_fn_args)
             ],
         )
+
+        self._connection_read_fns = [
+            self._create_read_function_with_timeout(
+                read_fn=read_fn, poll_fn=poll_fn, timeout=self.read_timeout
+            )
+            for read_fn, poll_fn in zip(connection_read_fns, connection_poll_fns)
+        ]
 
         self._is_closed = False
 
@@ -233,6 +246,25 @@ class VectorSampledTasks:
         self.action_spaces = [
             space for read_fn in self._connection_read_fns for space in read_fn()
         ]
+
+    @staticmethod
+    def _create_read_function_with_timeout(
+        *,
+        read_fn: Callable[[], Any],
+        poll_fn: Callable[[float], bool],
+        timeout: Optional[float],
+    ) -> Callable[[], Any]:
+        def read_with_timeout(timeout_to_use: Optional[float] = timeout):
+            if timeout_to_use is not None:
+                # noinspection PyArgumentList
+                if not poll_fn(timeout=timeout_to_use):
+                    raise TimeoutError(
+                        f"Did not recieve output from `VectorSampledTask` worker for {timeout_to_use} seconds."
+                    )
+
+            return read_fn()
+
+        return read_with_timeout
 
     def _reset_sampler_index_to_process_ind_and_subprocess_ind(self):
         self.sampler_index_to_process_ind_and_subprocess_ind = [
@@ -297,7 +329,7 @@ class VectorSampledTasks:
         """process worker for creating and interacting with the
         Tasks/TaskSampler."""
 
-        ptitle("VectorSampledTask: {}".format(worker_id))
+        ptitle(f"VectorSampledTask: {worker_id}")
 
         sp_vector_sampled_tasks = SingleProcessVectorSampledTasks(
             make_sampler_fn=make_sampler_fn,
@@ -307,7 +339,7 @@ class VectorSampledTasks:
         )
 
         if parent_pipe is not None:
-            parent_pipe.close()
+            parent_pipe.close()  # Means this pipe will close when the calling process closes it
         try:
             while True:
                 read_input = connection_read_fn()
@@ -368,7 +400,9 @@ class VectorSampledTasks:
             if should_log:
                 get_logger().info(f"Worker {worker_id} KeyboardInterrupt")
         except Exception as e:
-            get_logger().error(traceback.format_exc())
+            get_logger().error(
+                f"Worker {worker_id} encountered an exception:\n{traceback.format_exc()}"
+            )
             raise e
         finally:
             if child_pipe is not None:
@@ -380,52 +414,50 @@ class VectorSampledTasks:
         self,
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args_list: Sequence[Sequence[Dict[str, Any]]],
-    ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
+    ) -> Tuple[
+        List[Callable[[], bool]], List[Callable[[], Any]], List[Callable[[Any], None]]
+    ]:
         parent_connections, worker_connections = zip(
             *[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_processes)]
         )
         self._workers = []
         k = 0
         id: Union[int, str]
-        for id, stuff in enumerate(
+        for id, (worker_conn, parent_conn, current_sampler_fn_args_list) in enumerate(
             zip(worker_connections, parent_connections, sampler_fn_args_list)
         ):
-            worker_conn, parent_conn, current_sampler_fn_args_list = stuff  # type: ignore
-
             if len(current_sampler_fn_args_list) != 1:
-                id = "{}({}-{})".format(
-                    id, k, k + len(current_sampler_fn_args_list) - 1
-                )
+                id = f"{id}({k}-{k + len(current_sampler_fn_args_list) - 1})"
                 k += len(current_sampler_fn_args_list)
 
             if self.should_log:
                 get_logger().info(
-                    "Starting {}-th VectorSampledTask worker with args {}".format(
-                        id, current_sampler_fn_args_list
-                    )
+                    f"Starting {id}-th VectorSampledTask worker with args {current_sampler_fn_args_list}"
                 )
+
             ps = self._mp_ctx.Process(  # type: ignore
                 target=self._task_sampling_loop_worker,
-                args=(
-                    id,
-                    worker_conn.recv,
-                    worker_conn.send,
-                    make_sampler_fn,
-                    current_sampler_fn_args_list,
-                    self._auto_resample_when_done,
-                    self.should_log,
-                    worker_conn,
-                    parent_conn,
+                kwargs=dict(
+                    worker_id=id,
+                    connection_read_fn=worker_conn.recv,
+                    connection_write_fn=worker_conn.send,
+                    make_sampler_fn=make_sampler_fn,
+                    sampler_fn_args_list=current_sampler_fn_args_list,
+                    auto_resample_when_done=self._auto_resample_when_done,
+                    should_log=self.should_log,
+                    child_pipe=worker_conn,
+                    parent_pipe=parent_conn,
                 ),
             )
             self._workers.append(ps)
             ps.daemon = True
             ps.start()
-            worker_conn.close()
+            worker_conn.close()  # Means this pipe will close when the child process closes it
             time.sleep(
                 0.1
             )  # Useful to ensure things don't lock up when spawning many envs
         return (
+            [p.poll for p in parent_connections],
             [p.recv for p in parent_connections],
             [p.send for p in parent_connections],
         )
@@ -593,7 +625,8 @@ class VectorSampledTasks:
         if self._is_waiting:
             for read_fn in self._connection_read_fns:
                 try:
-                    read_fn()
+                    # noinspection PyArgumentList
+                    read_fn(0)  # Time out immediately
                 except Exception:
                     pass
 

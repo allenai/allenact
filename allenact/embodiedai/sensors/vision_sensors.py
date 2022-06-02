@@ -162,28 +162,37 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
 
     def process_img(self, img: np.ndarray):
         assert (
-            img.dtype == np.float32 and (len(img.shape) == 2 or img.shape[-1] == 1)
-        ) or (img.shape[-1] == 3 and img.dtype == np.uint8), (
+            np.issubdtype(img.dtype, np.float32)
+            and (len(img.shape) == 2 or img.shape[-1] == 1)
+        ) or (img.shape[-1] == 3 and np.issubdtype(img.dtype, np.uint8)), (
             "Input frame must either have 3 channels and be of"
             " type np.uint8 or have one channel and be of type np.float32"
         )
 
-        if self._scale_first:
-            if self.scaler is not None and img.shape[:2] != (self._height, self._width):
-                img = np.array(self.scaler(self.to_pil(img)), dtype=img.dtype)  # hwc
+        if (
+            self._scale_first
+            and self.scaler is not None
+            and img.shape[:2] != (self._height, self._width)
+        ):
+            img = np.array(self.scaler(self.to_pil(img)), dtype=img.dtype)  # hwc
+        elif np.issubdtype(img.dtype, np.float32):
+            img = img.copy()
 
         assert img.dtype in [np.uint8, np.float32]
 
-        if img.dtype == np.uint8:
+        if np.issubdtype(img.dtype, np.uint8):
             img = img.astype(np.float32) / 255.0
 
         if self._should_normalize:
             img -= self._norm_means
             img /= self._norm_sds
 
-        if not self._scale_first:
-            if self.scaler is not None and img.shape[:2] != (self._height, self._width):
-                img = np.array(self.scaler(self.to_pil(img)), dtype=np.float32)  # hwc
+        if (
+            (not self._scale_first)
+            and self.scaler is not None
+            and img.shape[:2] != (self._height, self._width)
+        ):
+            img = np.array(self.scaler(self.to_pil(img)), dtype=np.float32)  # hwc
 
         return img
 

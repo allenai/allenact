@@ -2,6 +2,8 @@ import glob
 import math
 import os
 import platform
+import traceback
+import warnings
 from contextlib import contextmanager
 from typing import Sequence
 
@@ -70,10 +72,13 @@ def get_open_x_displays(throw_error_if_empty: bool = False) -> Sequence[str]:
     for open_display_str in sorted(open_display_strs):
         try:
             open_display_str = str(int(open_display_str))
+            display = Xlib.display.Display(f":{open_display_str}")
         except Exception:
+            warnings.warn(
+                f"Encountered error when attempting to open display :{open_display_str},"
+                f" error message:\n{traceback.format_exc()}"
+            )
             continue
-
-        display = Xlib.display.Display(":{}".format(open_display_str))
 
         displays.extend(
             [f"{open_display_str}.{i}" for i in range(display.screen_count())]
