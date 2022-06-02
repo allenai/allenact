@@ -67,7 +67,7 @@ class ClipResNetPreprocessGRUActorCriticMixin:
 
         return preprocessors
 
-    def create_model(self, num_actions: int, **kwargs) -> nn.Module:
+    def create_model(self, num_actions: int, add_prev_actions: bool, **kwargs) -> nn.Module:
         has_rgb = any(isinstance(s, RGBSensor) for s in self.sensors)
         has_depth = any(isinstance(s, DepthSensor) for s in self.sensors)
 
@@ -84,4 +84,5 @@ class ClipResNetPreprocessGRUActorCriticMixin:
             depth_resnet_preprocessor_uuid="depth_clip_resnet" if has_depth else None,
             hidden_size=512,
             goal_dims=32,
+            add_prev_actions=add_prev_actions
         )
