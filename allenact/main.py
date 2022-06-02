@@ -221,6 +221,15 @@ def get_argument_parser():
     parser.set_defaults(collect_valid_results=False)
 
     parser.add_argument(
+        "--valid_on_initial_weights",
+        dest="valid_on_initial_weights",
+        action="store_true",
+        required=False,
+        help="enables running validation on the model with initial weights",
+    )
+    parser.set_defaults(valid_on_initial_weights=False)
+
+    parser.add_argument(
         "--test_expert",
         dest="test_expert",
         action="store_true",
@@ -443,6 +452,7 @@ def main():
             restart_pipeline=args.restart_pipeline,
             max_sampler_processes_per_worker=args.max_sampler_processes_per_worker,
             collect_valid_results=args.collect_valid_results,
+            valid_on_initial_weights=args.valid_on_initial_weights,
         )
     else:
         OnPolicyRunner(
