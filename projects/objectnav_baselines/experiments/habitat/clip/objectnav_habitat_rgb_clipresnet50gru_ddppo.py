@@ -54,7 +54,7 @@ class ObjectNavHabitatRGBClipResNet50GRUDDPPOExperimentConfig(
     def training_pipeline(self, **kwargs) -> TrainingPipeline:
         return ObjectNavPPOMixin.training_pipeline(
             lr=self.lr,
-            auxiliary_uuids=[],
+            auxiliary_uuids=self.auxiliary_uuids,
             multiple_beliefs=False,
             advance_scene_rollout_period=self.ADVANCE_SCENE_ROLLOUT_PERIOD,
         )
@@ -64,7 +64,10 @@ class ObjectNavHabitatRGBClipResNet50GRUDDPPOExperimentConfig(
 
     def create_model(self, **kwargs) -> nn.Module:
         return self.preprocessing_and_model.create_model(
-            num_actions=self.ACTION_SPACE.n, add_prev_actions=self.add_prev_actions, **kwargs
+            num_actions=self.ACTION_SPACE.n,
+            add_prev_actions=self.add_prev_actions,
+            auxiliary_uuids=self.auxiliary_uuids,
+            **kwargs,
         )
 
     def tag(self):

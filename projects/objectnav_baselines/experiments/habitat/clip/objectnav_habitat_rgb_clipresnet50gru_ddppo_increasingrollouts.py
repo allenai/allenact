@@ -23,7 +23,7 @@ class ObjectNavHabitatRGBClipResNet50GRUDDPPOIncreasingLengthExpConfig(
         self.lr = lr
 
     def training_pipeline(self, **kwargs) -> TrainingPipeline:
-        auxiliary_uuids = []
+        auxiliary_uuids = self.auxiliary_uuids
         multiple_beliefs = False
         normalize_advantage = False
         advance_scene_rollout_period = self.ADVANCE_SCENE_ROLLOUT_PERIOD
@@ -72,21 +72,21 @@ class ObjectNavHabitatRGBClipResNet50GRUDDPPOIncreasingLengthExpConfig(
             advance_scene_rollout_period=advance_scene_rollout_period,
             pipeline_stages=[
                 PipelineStage(
-                    loss_names=["ppo_loss"],
+                    loss_names=list(named_losses.keys()),
                     max_stage_steps=batch_steps_0,
                     training_settings=TrainingSettings(
                         num_steps=32, metric_accumulate_interval=log_interval_small
                     ),
                 ),
                 PipelineStage(
-                    loss_names=["ppo_loss"],
+                    loss_names=list(named_losses.keys()),
                     max_stage_steps=batch_steps_1,
                     training_settings=TrainingSettings(
                         num_steps=64, metric_accumulate_interval=log_interval_med,
                     ),
                 ),
                 PipelineStage(
-                    loss_names=["ppo_loss"],
+                    loss_names=list(named_losses.keys()),
                     max_stage_steps=batch_steps_2,
                     training_settings=TrainingSettings(
                         num_steps=128, metric_accumulate_interval=log_interval_large,
