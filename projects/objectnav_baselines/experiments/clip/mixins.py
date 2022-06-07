@@ -1,13 +1,12 @@
-from typing import Sequence, Union, Type
+from typing import Sequence, Type, Union
 
 import attr
 import gym
 import numpy as np
 import torch.nn as nn
-
 from allenact.base_abstractions.preprocessor import Preprocessor
 from allenact.base_abstractions.sensor import Sensor
-from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
+from allenact.embodiedai.sensors.vision_sensors import DepthSensor, RGBSensor
 from allenact.utils.experiment_utils import Builder
 from allenact_plugins.clip_plugin.clip_preprocessors import ClipResNetPreprocessor
 from allenact_plugins.navigation_plugin.objectnav.models import (
@@ -84,4 +83,5 @@ class ClipResNetPreprocessGRUActorCriticMixin:
             depth_resnet_preprocessor_uuid="depth_clip_resnet" if has_depth else None,
             hidden_size=512,
             goal_dims=32,
+            add_prev_actions=True
         )

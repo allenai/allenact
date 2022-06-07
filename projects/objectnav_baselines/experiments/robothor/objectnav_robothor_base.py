@@ -1,9 +1,8 @@
 import os
 from abc import ABC
-from typing import Optional, List, Any, Dict
+from typing import Any, Dict, List, Optional
 
 import torch
-
 from allenact.utils.misc_utils import prepare_locals_for_super
 from projects.objectnav_baselines.experiments.objectnav_thor_base import (
     ObjectNavThorBaseConfig,
@@ -31,13 +30,17 @@ class ObjectNavRoboThorBaseConfig(ObjectNavThorBaseConfig, ABC):
                 "Apple",
                 "BaseballBat",
                 "BasketBall",
+                "Bed",
                 "Bowl",
+                "Chair",
                 "GarbageCan",
                 "HousePlant",
                 "Laptop",
                 "Mug",
+                "Sofa",
                 "SprayBottle",
                 "Television",
+                "Toilet",
                 "Vase",
             ]
         )

@@ -3,30 +3,29 @@ import os
 import platform
 from abc import ABC
 from math import ceil
-from typing import Dict, Any, List, Optional, Sequence, Tuple, cast
+from typing import Any, Dict, List, Optional, Sequence, Tuple, cast
 
 import ai2thor
 import ai2thor.build
 import gym
 import numpy as np
 import torch
-from packaging import version
-
 from allenact.base_abstractions.experiment_config import MachineParams
 from allenact.base_abstractions.preprocessor import SensorPreprocessorGraph
-from allenact.base_abstractions.sensor import SensorSuite, ExpertActionSensor
+from allenact.base_abstractions.sensor import ExpertActionSensor, SensorSuite
 from allenact.base_abstractions.task import TaskSampler
 from allenact.utils.experiment_utils import evenly_distribute_count_into_bins
 from allenact.utils.system import get_logger
 from allenact_plugins.ithor_plugin.ithor_util import (
-    horizontal_to_vertical_fov,
     get_open_x_displays,
+    horizontal_to_vertical_fov,
 )
 from allenact_plugins.robothor_plugin.robothor_sensors import DepthSensorThor
 from allenact_plugins.robothor_plugin.robothor_task_samplers import (
     ObjectNavDatasetTaskSampler,
 )
 from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
+from packaging import version
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 
 if ai2thor.__version__ not in ["0.0.1", None] and version.parse(
@@ -83,10 +82,11 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         self.num_test_processes = v_or_default(
             num_test_processes, (10 if torch.cuda.is_available() else 1)
         )
-        self.test_on_validation = test_on_validation
+        # self.test_on_validation = False
+        self.test_on_validation = True
         self.train_gpu_ids = v_or_default(train_gpu_ids, self.DEFAULT_TRAIN_GPU_IDS)
         self.val_gpu_ids = v_or_default(val_gpu_ids, self.DEFAULT_VALID_GPU_IDS)
-        self.test_gpu_ids = v_or_default(test_gpu_ids, self.DEFAULT_TEST_GPU_IDS)
+        self.test_gpu_ids = range(8)
 
         self.headless = v_or_default(headless, self.DEFAULT_THOR_IS_HEADLESS)
 
