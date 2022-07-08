@@ -316,11 +316,16 @@ class ObjectNavPPOMixin:
         gae_lambda=0.95,
         max_grad_norm=0.5,
         anneal_lr: bool = True,
+        extra_losses: Optional[Dict[str, Tuple[AbstractActorCriticLoss, float]]] = None,
     ) -> TrainingPipeline:
         ppo_steps = int(300000000)
 
         named_losses = {
-            "ppo_loss": (PPO(**PPOConfig, normalize_advantage=normalize_advantage), 1.0)
+            "ppo_loss": (
+                PPO(**PPOConfig, normalize_advantage=normalize_advantage),
+                1.0,
+            ),
+            **({} if extra_losses is None else extra_losses),
         }
         named_losses = update_with_auxiliary_losses(
             named_losses=named_losses,

@@ -10,17 +10,18 @@ from functools import partial
 from multiprocessing.context import BaseContext
 from typing import Any, Dict, List, Optional, Sequence, Union, cast
 
+import filelock
 import torch
 import torch.distributed as dist  # type: ignore
 import torch.distributions  # type: ignore
 import torch.multiprocessing as mp  # type: ignore
 import torch.nn as nn
 import torch.optim as optim
-from allenact.algorithms.onpolicy_sync.misc import TrackingInfo, TrackingInfoType
-from allenact.utils.model_utils import md5_hash_of_state_dict
-
 # noinspection PyProtectedMember
 from torch._C._distributed_c10d import ReduceOp
+
+from allenact.algorithms.onpolicy_sync.misc import TrackingInfo, TrackingInfoType
+from allenact.utils.model_utils import md5_hash_of_state_dict
 
 try:
     # noinspection PyProtectedMember,PyUnresolvedReferences
@@ -306,7 +307,7 @@ class OnPolicyRLEngine(object):
                 else None,
                 mp_ctx=self.mp_ctx,
                 max_processes=self.max_sampler_processes_per_worker,
-                read_timeout=DEBUG_VST_TIMEOUT if DEBUGGING else 5 * 60,
+                read_timeout=DEBUG_VST_TIMEOUT if DEBUGGING else 1 * 60,
             )
         return self._vector_tasks
 
@@ -850,6 +851,36 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             )  # use the latest seed for workers and update rng state
             self.vector_tasks.set_seeds(seeds)
 
+    def save_error_data(self, batch: Dict[str, Any]) -> str:
+        model_path = os.path.join(
+            self.checkpoints_dir,
+            "error_for_exp_{}__stage_{:02d}__steps_{:012d}.pt".format(
+                self.experiment_name,
+                self.training_pipeline.current_stage_index,
+                self.training_pipeline.total_steps,
+            ),
+        )
+        with filelock.FileLock(
+            os.path.join(self.checkpoints_dir, "error.lock"), timeout=60
+        ):
+            if not os.path.exists(model_path):
+                save_dict = {
+                    "model_state_dict": self.actor_critic.state_dict(),  # type:ignore
+                    "total_steps": self.training_pipeline.total_steps,  # Total steps including current stage
+                    "optimizer_state_dict": self.optimizer.state_dict(),  # type: ignore
+                    "training_pipeline_state_dict": self.training_pipeline.state_dict(),
+                    "trainer_seed": self.seed,
+                    "batch": batch,
+                }
+
+                if self.lr_scheduler is not None:
+                    save_dict["scheduler_state"] = cast(
+                        _LRScheduler, self.lr_scheduler
+                    ).state_dict()
+
+                torch.save(save_dict, model_path)
+        return model_path
+
     def checkpoint_save(self, pipeline_stage_index: Optional[int] = None) -> str:
         model_path = os.path.join(
             self.checkpoints_dir,
@@ -1118,12 +1149,21 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         bsize = batch["bsize"]
 
                         if actor_critic_output_for_batch is None:
-                            actor_critic_output_for_batch, _ = self.actor_critic(
-                                observations=batch["observations"],
-                                memory=batch["memory"],
-                                prev_actions=batch["prev_actions"],
-                                masks=batch["masks"],
-                            )
+
+                            try:
+                                actor_critic_output_for_batch, _ = self.actor_critic(
+                                    observations=batch["observations"],
+                                    memory=batch["memory"],
+                                    prev_actions=batch["prev_actions"],
+                                    masks=batch["masks"],
+                                )
+                            except ValueError:
+                                save_path = self.save_error_data(batch=batch)
+                                get_logger().error(
+                                    f"Encountered a value error! Likely because of nans in the output/input."
+                                    f" Saving all error information to {save_path}."
+                                )
+                                raise
 
                         loss_return = loss.loss(
                             step_count=self.step_count,

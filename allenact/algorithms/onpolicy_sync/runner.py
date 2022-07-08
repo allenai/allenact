@@ -26,6 +26,8 @@ import filelock
 import numpy as np
 import torch
 import torch.multiprocessing as mp
+from setproctitle import setproctitle as ptitle
+
 from allenact.algorithms.onpolicy_sync.engine import (
     TEST_MODE_STR,
     TRAIN_MODE_STR,
@@ -51,7 +53,6 @@ from allenact.utils.model_utils import md5_hash_of_state_dict
 from allenact.utils.system import find_free_port, get_logger
 from allenact.utils.tensor_utils import SummaryWriter
 from allenact.utils.viz_utils import VizSuite
-from setproctitle import setproctitle as ptitle
 
 CONFIG_KWARGS_STR = "__CONFIG_KWARGS__"
 
@@ -191,7 +192,8 @@ class OnPolicyRunner(object):
     def get_callback_classes(
         self, callbacks: Optional[str], args: Optional[ArgumentParser] = None
     ) -> List[Callback]:
-        """Get a list of Callback classes from a comma-separated list of filenames."""
+        """Get a list of Callback classes from a comma-separated list of
+        filenames."""
         if callbacks == "" or callbacks is None:
             return []
 
@@ -450,6 +452,7 @@ class OnPolicyRunner(object):
         save_ckpt_after_every_pipeline_stage: bool = True,
         collect_valid_results: bool = False,
         valid_on_initial_weights: bool = False,
+        try_restart_after_task_timeout: bool = False,
     ):
         self._initialize_start_train_or_start_test()
 
@@ -511,6 +514,7 @@ class OnPolicyRunner(object):
                 first_local_worker_id=worker_ids[0],
                 distributed_preemption_threshold=self.distributed_preemption_threshold,
                 valid_on_initial_weights=valid_on_initial_weights,
+                try_restart_after_task_timeout=try_restart_after_task_timeout
             )
             train: BaseProcess = self.mp_ctx.Process(
                 target=self.train_loop, kwargs=training_kwargs,

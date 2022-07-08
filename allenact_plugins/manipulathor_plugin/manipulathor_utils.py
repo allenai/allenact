@@ -2,7 +2,7 @@ import ai2thor
 
 from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment
 from allenact_plugins.manipulathor_plugin.armpointnav_constants import (
-    ARM_START_POSITIONS,
+    get_agent_start_positions,
 )
 from allenact_plugins.manipulathor_plugin.manipulathor_constants import (
     ADDITIONAL_ARM_ARGS,
@@ -51,7 +51,7 @@ def transport_wrapper(controller, target_object, target_location):
 def initialize_arm(controller):
     # for start arm from high up,
     scene = controller.last_event.metadata["sceneName"]
-    initial_pose = ARM_START_POSITIONS[scene]
+    initial_pose = get_agent_start_positions()[scene]
     event1 = controller.step(
         dict(
             action="TeleportFull",

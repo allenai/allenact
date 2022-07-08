@@ -22,12 +22,18 @@ from allenact_plugins.ithor_plugin.ithor_util import include_object_data
 from allenact_plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask, ObjectNavTask
 
+THOR_ENV_TYPE = Union[
+    ai2thor.controller.Controller, IThorEnvironment, RoboThorEnvironment
+]
+THOR_TASK_TYPE = Union[
+    Task[ai2thor.controller.Controller],
+    Task[IThorEnvironment],
+    Task[RoboThorEnvironment],
+]
+
 
 class RGBSensorThor(
-    RGBSensor[
-        Union[IThorEnvironment, RoboThorEnvironment],
-        Union[Task[IThorEnvironment], Task[RoboThorEnvironment]],
-    ]
+    RGBSensor[THOR_ENV_TYPE, THOR_TASK_TYPE]
 ):
     """Sensor for RGB images in THOR.
 
@@ -36,9 +42,12 @@ class RGBSensorThor(
     """
 
     def frame_from_env(
-        self, env: IThorEnvironment, task: Task[IThorEnvironment]
+        self, env: THOR_ENV_TYPE, task: Optional[THOR_TASK_TYPE],
     ) -> np.ndarray:  # type:ignore
-        return env.current_frame.copy()
+        if isinstance(env, ai2thor.controller.Controller):
+            return env.last_event.frame.copy()
+        else:
+            return env.current_frame.copy()
 
 
 class GoalObjectTypeThorSensor(Sensor):

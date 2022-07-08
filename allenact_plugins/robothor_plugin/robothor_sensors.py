@@ -1,16 +1,20 @@
-from typing import Any, Tuple, Optional, Union
+from typing import Any, Tuple, Optional
 
+import ai2thor.controller
 import gym
 import numpy as np
 import quaternion  # noqa # pylint: disable=unused-import
 
 from allenact.base_abstractions.sensor import Sensor
-from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 from allenact.base_abstractions.task import Task
+from allenact.embodiedai.sensors.vision_sensors import RGBSensor, DepthSensor
 from allenact.utils.misc_utils import prepare_locals_for_super
 from allenact.utils.system import get_logger
-from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment
-from allenact_plugins.ithor_plugin.ithor_sensors import RGBSensorThor
+from allenact_plugins.ithor_plugin.ithor_sensors import (
+    RGBSensorThor,
+    THOR_ENV_TYPE,
+    THOR_TASK_TYPE,
+)
 from allenact_plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
 
@@ -147,12 +151,7 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
         )
 
 
-class DepthSensorThor(
-    DepthSensor[
-        Union[IThorEnvironment, RoboThorEnvironment],
-        Union[Task[IThorEnvironment], Task[RoboThorEnvironment]],
-    ],
-):
+class DepthSensorThor(DepthSensor[THOR_ENV_TYPE, THOR_TASK_TYPE,],):
     def __init__(
         self,
         use_resnet_normalization: Optional[bool] = None,
@@ -178,9 +177,12 @@ class DepthSensorThor(
         super().__init__(**prepare_locals_for_super(locals()))
 
     def frame_from_env(
-        self, env: RoboThorEnvironment, task: Optional[Task[RoboThorEnvironment]]
+        self, env: THOR_ENV_TYPE, task: Optional[THOR_TASK_TYPE]
     ) -> np.ndarray:
-        return env.controller.last_event.depth_frame
+        if not isinstance(env, ai2thor.controller.Controller):
+            env = env.controller.last_event.depth_frame
+
+        return env.last_event.depth_frame
 
 
 class DepthSensorRoboThor(DepthSensorThor):

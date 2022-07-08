@@ -26,13 +26,14 @@ from typing import (
 )
 
 import numpy as np
+from gym.spaces.dict import Dict as SpaceDict
+from setproctitle import setproctitle as ptitle
+
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.task import TaskSampler
 from allenact.utils.misc_utils import partition_sequence
 from allenact.utils.system import get_logger
 from allenact.utils.tensor_utils import tile_images
-from gym.spaces.dict import Dict as SpaceDict
-from setproctitle import setproctitle as ptitle
 
 try:
     # Use torch.multiprocessing if we can.
@@ -222,8 +223,11 @@ class VectorSampledTasks:
         for write_fn in self._connection_write_fns:
             write_fn((OBSERVATION_SPACE_COMMAND, None))
 
+        # Note that we increase the read timeout below as initialization can take some time
         observation_spaces = [
-            space for read_fn in self._connection_read_fns for space in read_fn()
+            space
+            for read_fn in self._connection_read_fns
+            for space in read_fn(timeout_to_use=5 * self.read_timeout) # type: ignore
         ]
 
         if any(os is None for os in observation_spaces):
@@ -259,7 +263,7 @@ class VectorSampledTasks:
                 # noinspection PyArgumentList
                 if not poll_fn(timeout=timeout_to_use):
                     raise TimeoutError(
-                        f"Did not recieve output from `VectorSampledTask` worker for {timeout_to_use} seconds."
+                        f"Did not receive output from `VectorSampledTask` worker for {timeout_to_use} seconds."
                     )
 
             return read_fn()
@@ -1072,9 +1076,7 @@ class SingleProcessVectorSampledTasks(object):
         for id, current_sampler_fn_args in enumerate(sampler_fn_args):
             if self.should_log:
                 get_logger().info(
-                    "Starting {}-th SingleProcessVectorSampledTasks generator with args {}".format(
-                        id, current_sampler_fn_args
-                    )
+                    f"Starting {id}-th SingleProcessVectorSampledTasks generator with args {current_sampler_fn_args}."
                 )
             generators.append(
                 self._task_sampling_loop_generator_fn(
