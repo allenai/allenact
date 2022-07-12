@@ -4,22 +4,22 @@ import numbers
 import os
 import tempfile
 from collections import defaultdict
-from typing import List, Dict, Optional, DefaultDict, Union, Any, cast
+from typing import Any, DefaultDict, Dict, List, Optional, Union, cast
 
-import PIL
 import numpy as np
+import PIL
 import torch
-from PIL import Image
+from allenact.utils.system import get_logger
 from moviepy import editor as mpy
 from moviepy.editor import concatenate_videoclips
-from tensorboardX import SummaryWriter as TBXSummaryWriter, summary as tbxsummary
+from PIL import Image
+from tensorboardX import SummaryWriter as TBXSummaryWriter
+from tensorboardX import summary as tbxsummary
 from tensorboardX.proto.summary_pb2 import Summary as TBXSummary
 
 # noinspection PyProtectedMember
 from tensorboardX.utils import _prepare_video as tbx_prepare_video
 from tensorboardX.x2num import make_np as tbxmake_np
-
-from allenact.utils.system import get_logger
 
 
 def to_device_recursively(

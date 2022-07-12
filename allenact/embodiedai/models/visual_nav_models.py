@@ -1,18 +1,16 @@
 from collections import OrderedDict
-from typing import Tuple, Dict, Optional, List, Sequence
-from typing import TypeVar
+from typing import Dict, List, Optional, Sequence, Tuple, TypeVar
 
 import gym
 import torch
 import torch.nn as nn
-from gym.spaces.dict import Dict as SpaceDict
-
+import torch.nn.functional as F
 from allenact.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
-    LinearCriticHead,
-    LinearActorHead,
-    ObservationType,
     DistributionType,
+    LinearActorHead,
+    LinearCriticHead,
+    ObservationType,
 )
 from allenact.base_abstractions.distributions import CategoricalDistr
 from allenact.base_abstractions.misc import ActorCriticOutput, Memory
@@ -22,6 +20,7 @@ from allenact.embodiedai.models.basic_models import RNNStateEncoder
 from allenact.embodiedai.models.fusion_models import Fusion
 from allenact.utils.model_utils import FeatureEmbedding
 from allenact.utils.system import get_logger
+from gym.spaces.dict import Dict as SpaceDict
 
 FusionType = TypeVar("FusionType", bound=Fusion)
 
@@ -178,7 +177,9 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
         raise NotImplementedError("Obs Encoder Not Implemented")
 
     def fuse_beliefs(
-        self, beliefs_dict: Dict[str, torch.FloatTensor], obs_embeds: torch.FloatTensor,
+        self,
+        beliefs_dict: Dict[str, torch.FloatTensor],
+        obs_embeds: torch.FloatTensor,
     ) -> Tuple[torch.FloatTensor, Optional[torch.FloatTensor]]:
         all_beliefs = torch.stack(list(beliefs_dict.values()), dim=-1)  # (T, N, H, k)
 
@@ -269,5 +270,24 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
             values=self.critic(beliefs),
             extras=extras,
         )
+
+        assert len(observations["task_id_sensor"].shape) == 3
+        assert observations["task_id_sensor"].shape[0] == 1
+
+        for i in range(len(observations["task_id_sensor"][0])):
+            task_id = "".join(
+                [
+                    chr(int(k))
+                    for k in observations["task_id_sensor"][0, i]
+                    if chr(int(k)) != " "
+                ]
+            )
+
+            with open(f"ac-data/{task_id}.txt", "a") as f:
+                estimated_value = actor_critic_output.values[0, i].item()
+                policy = F.softmax(
+                    actor_critic_output.distributions.logits[0, i]
+                ).tolist()
+                f.write(",".join(map(str, policy + [estimated_value])) + "\n")
 
         return actor_critic_output, memory
