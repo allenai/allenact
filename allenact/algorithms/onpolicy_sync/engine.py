@@ -117,7 +117,7 @@ class OnPolicyRLEngine(object):
         deterministic_agents: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
         initial_model_state_dict: Optional[Union[Dict[str, Any], int]] = None,
-        try_restart_after_task_timeout: bool = False,
+        try_restart_after_task_error: bool = False,
         **kwargs,
     ):
         """Initializer.
@@ -145,7 +145,7 @@ class OnPolicyRLEngine(object):
         self.device = torch.device("cpu") if device == -1 else torch.device(device)  # type: ignore
         self.distributed_ip = distributed_ip
         self.distributed_port = distributed_port
-        self.try_restart_after_task_timeout = try_restart_after_task_timeout
+        self.try_restart_after_task_error = try_restart_after_task_error
 
         self.mode = mode.lower().strip()
         assert self.mode in [
@@ -1488,9 +1488,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         rollout_storage_uuid=self.training_pipeline.rollout_storage_uuid,
                         uuid_to_storage=uuid_to_storage,
                     )
-                except TimeoutError:
+                except (TimeoutError, EOFError) as e:
                     if (
-                        not self.try_restart_after_task_timeout
+                        not self.try_restart_after_task_error
                     ) or self.mode != TRAIN_MODE_STR:
                         # Apparently you can just call `raise` here and doing so will just raise the exception as though
                         # it was not caught (so the stacktrace isn't messed up)
@@ -1503,9 +1503,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     else:
                         get_logger().warning(
                             f"[{self.mode} worker {self.worker_id}] `vector_tasks` appears to have crashed during"
-                            f" training as it has timed out. You have set `try_restart_after_task_timeout` to `True` so"
-                            f" we will attempt to restart these tasks from the beginning. USE THIS FEATURE AT YOUR OWN"
-                            f" RISK. Timeout exception:\n{traceback.format_exc()}."
+                            f" training due to an {type(e).__name__} error. You have set"
+                            f" `try_restart_after_task_error` to `True` so we will attempt to restart these tasks from"
+                            f" the beginning. USE THIS FEATURE AT YOUR OWN"
+                            f" RISK. Exception:\n{traceback.format_exc()}."
                         )
                         self.vector_tasks.close()
                         self._vector_tasks = None

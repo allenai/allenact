@@ -452,7 +452,7 @@ class OnPolicyRunner(object):
         save_ckpt_after_every_pipeline_stage: bool = True,
         collect_valid_results: bool = False,
         valid_on_initial_weights: bool = False,
-        try_restart_after_task_timeout: bool = False,
+        try_restart_after_task_error: bool = False,
     ):
         self._initialize_start_train_or_start_test()
 
@@ -514,7 +514,7 @@ class OnPolicyRunner(object):
                 first_local_worker_id=worker_ids[0],
                 distributed_preemption_threshold=self.distributed_preemption_threshold,
                 valid_on_initial_weights=valid_on_initial_weights,
-                try_restart_after_task_timeout=try_restart_after_task_timeout
+                try_restart_after_task_error=try_restart_after_task_error
             )
             train: BaseProcess = self.mp_ctx.Process(
                 target=self.train_loop, kwargs=training_kwargs,

@@ -478,7 +478,7 @@ def main():
             max_sampler_processes_per_worker=args.max_sampler_processes_per_worker,
             collect_valid_results=args.collect_valid_results,
             valid_on_initial_weights=args.valid_on_initial_weights,
-            try_restart_after_task_timeout=args.enable_crash_recovery,
+            try_restart_after_task_error=args.enable_crash_recovery,
         )
     else:
         OnPolicyRunner(

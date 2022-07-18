@@ -197,7 +197,7 @@ class VectorSampledTasks:
         ] = None
         self._reset_sampler_index_to_process_ind_and_subprocess_ind()
 
-        self._workers: Optional[List] = None
+        self._workers: Optional[List[Union[mp.Process, Thread, BaseProcess]]] = None
         for args in sampler_fn_args:
             args["mp_ctx"] = self._mp_ctx
         (
@@ -227,7 +227,7 @@ class VectorSampledTasks:
         observation_spaces = [
             space
             for read_fn in self._connection_read_fns
-            for space in read_fn(timeout_to_use=5 * self.read_timeout) # type: ignore
+            for space in read_fn(timeout_to_use=5 * self.read_timeout if self.read_timeout is not None else None)  # type: ignore
         ]
 
         if any(os is None for os in observation_spaces):
@@ -348,57 +348,55 @@ class VectorSampledTasks:
             while True:
                 read_input = connection_read_fn()
 
-                with DelaySignalHandling():
-                    # Delaying signal handling here is necessary to ensure that we don't
-                    # (when processing a SIGTERM/SIGINT signal) attempt to send data to
-                    # a generator while it is already processing other data.
-                    if len(read_input) == 3:
-                        sampler_index, command, data = read_input
+                # TODO: Was the below necessary?
+                # with DelaySignalHandling():
+                #     # Delaying signal handling here is necessary to ensure that we don't
+                #     # (when processing a SIGTERM/SIGINT signal) attempt to send data to
+                #     # a generator while it is already processing other data.
+                if len(read_input) == 3:
+                    sampler_index, command, data = read_input
 
-                        assert (
-                            command != CLOSE_COMMAND
-                        ), "Must close all processes at once."
-                        assert (
-                            command != RESUME_COMMAND
-                        ), "Must resume all task samplers at once."
+                    assert command != CLOSE_COMMAND, "Must close all processes at once."
+                    assert (
+                        command != RESUME_COMMAND
+                    ), "Must resume all task samplers at once."
 
-                        if command == PAUSE_COMMAND:
-                            sp_vector_sampled_tasks.pause_at(
-                                sampler_index=sampler_index
-                            )
-                            connection_write_fn("done")
-                        else:
-                            connection_write_fn(
-                                sp_vector_sampled_tasks.command_at(
-                                    sampler_index=sampler_index,
-                                    command=command,
-                                    data=data,
-                                )
-                            )
+                    if command == PAUSE_COMMAND:
+                        sp_vector_sampled_tasks.pause_at(sampler_index=sampler_index)
+                        connection_write_fn("done")
                     else:
-                        commands, data_list = read_input
-
-                        assert (
-                            commands != PAUSE_COMMAND
-                        ), "Cannot pause all task samplers at once."
-
-                        if commands == CLOSE_COMMAND:
-                            sp_vector_sampled_tasks.close()
-                            break
-                        elif commands == RESUME_COMMAND:
-                            sp_vector_sampled_tasks.resume_all()
-                            connection_write_fn("done")
-                        else:
-                            if isinstance(commands, str):
-                                commands = [
-                                    commands
-                                ] * sp_vector_sampled_tasks.num_unpaused_tasks
-
-                            connection_write_fn(
-                                sp_vector_sampled_tasks.command(
-                                    commands=commands, data_list=data_list
-                                )
+                        connection_write_fn(
+                            sp_vector_sampled_tasks.command_at(
+                                sampler_index=sampler_index,
+                                command=command,
+                                data=data,
                             )
+                        )
+                else:
+                    commands, data_list = read_input
+
+                    assert (
+                        commands != PAUSE_COMMAND
+                    ), "Cannot pause all task samplers at once."
+
+                    if commands == CLOSE_COMMAND:
+                        # Will close the `sp_vector_sampled_tasks` in the `finally` clause below
+                        break
+
+                    elif commands == RESUME_COMMAND:
+                        sp_vector_sampled_tasks.resume_all()
+                        connection_write_fn("done")
+                    else:
+                        if isinstance(commands, str):
+                            commands = [
+                                commands
+                            ] * sp_vector_sampled_tasks.num_unpaused_tasks
+
+                        connection_write_fn(
+                            sp_vector_sampled_tasks.command(
+                                commands=commands, data_list=data_list
+                            )
+                        )
 
         except KeyboardInterrupt:
             if should_log:
@@ -409,6 +407,11 @@ class VectorSampledTasks:
             )
             raise e
         finally:
+            try:
+                sp_vector_sampled_tasks.close()
+            except Exception:
+                pass
+
             if child_pipe is not None:
                 child_pipe.close()
             if should_log:
@@ -488,7 +491,9 @@ class VectorSampledTasks:
 
         List of observations for each of the unpaused tasks.
         """
-        return self.call(["get_observations"] * self.num_unpaused_tasks,)
+        return self.call(
+            ["get_observations"] * self.num_unpaused_tasks,
+        )
 
     def command_at(
         self, sampler_index: int, command: str, data: Optional[Any] = None
@@ -646,6 +651,10 @@ class VectorSampledTasks:
             except Exception:
                 pass
 
+        for process in self._workers:
+            if process.is_alive():
+                process.kill()
+
         self._is_closed = True
 
     def pause_at(self, sampler_index: int) -> None:
@@ -673,9 +682,9 @@ class VectorSampledTasks:
         for i in range(
             sampler_index + 1, len(self.sampler_index_to_process_ind_and_subprocess_ind)
         ):
-            other_process_and_sub_process_inds = self.sampler_index_to_process_ind_and_subprocess_ind[
-                i
-            ]
+            other_process_and_sub_process_inds = (
+                self.sampler_index_to_process_ind_and_subprocess_ind[i]
+            )
             if other_process_and_sub_process_inds[0] == process_ind:
                 other_process_and_sub_process_inds[1] -= 1
             else:
@@ -967,7 +976,9 @@ class SingleProcessVectorSampledTasks(object):
                         if task_callback_data:
                             if step_result.info is None:
                                 step_result = step_result.clone({"info": {}})
-                            step_result.info[COMPLETE_TASK_CALLBACK_KEY] = task_callback_data
+                            step_result.info[
+                                COMPLETE_TASK_CALLBACK_KEY
+                            ] = task_callback_data
 
                         if auto_resample_when_done:
                             current_task = task_sampler.next_task()
@@ -1115,7 +1126,9 @@ class SingleProcessVectorSampledTasks(object):
 
         List of observations for each of the unpaused tasks.
         """
-        return self.call(["get_observations"] * self.num_unpaused_tasks,)
+        return self.call(
+            ["get_observations"] * self.num_unpaused_tasks,
+        )
 
     def next_task_at(self, index_process: int) -> List[RLStepResult]:
         """Move to the the next Task from the TaskSampler in index_process
