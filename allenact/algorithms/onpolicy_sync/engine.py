@@ -17,6 +17,7 @@ import torch.distributions  # type: ignore
 import torch.multiprocessing as mp  # type: ignore
 import torch.nn as nn
 import torch.optim as optim
+
 # noinspection PyProtectedMember
 from torch._C._distributed_c10d import ReduceOp
 
@@ -236,6 +237,9 @@ class OnPolicyRLEngine(object):
                 port=self.distributed_port,
                 world_size=self.num_workers,
                 is_master=self.worker_id == 0,
+                timeout=datetime.timedelta(
+                    seconds=3 * (DEBUG_VST_TIMEOUT if DEBUGGING else 1 * 60) + 300
+                ),
             )
             cpu_device = self.device == torch.device("cpu")  # type:ignore
 
@@ -1772,8 +1776,7 @@ class OnPolicyInference(OnPolicyRLEngine):
             assert visualizer.empty()
 
         num_paused = self.initialize_storage_and_viz(
-            storage_to_initialize=[rollout_storage],
-            visualizer=visualizer,
+            storage_to_initialize=[rollout_storage], visualizer=visualizer,
         )
         assert num_paused == 0, f"{num_paused} tasks paused when initializing eval"
 
@@ -1842,8 +1845,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                     lengths: List[int]
                     if self.num_active_samplers > 0:
                         lengths = self.vector_tasks.command(
-                            "sampler_attr",
-                            ["length"] * self.num_active_samplers,
+                            "sampler_attr", ["length"] * self.num_active_samplers,
                         )
                         npending = sum(lengths)
                     else:
