@@ -35,7 +35,7 @@ class PointNaviThorRGBDPPOExperimentConfig(PointNaviThorBaseConfig):
         super().__init__()
 
         self.model_creation_handler = PointNavUnfrozenResNetWithGRUActorCriticMixin(
-            backbone="simpleconv",
+            backbone="simple_cnn",
             sensors=self.SENSORS,
             auxiliary_uuids=[],
             add_prev_actions=True,

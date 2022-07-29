@@ -199,7 +199,7 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
                 self.full_size + 1, num_samplers, action_flat_dim, device=self.device
             )
 
-        assert self.step == 0, "Must call `after_update` before calling `initialize`"
+        assert self.step == 0, "Must call `after_updates` before calling `initialize`"
         self.insert_observations(observations=observations, time_step=0)
         self.prev_actions[0].zero_()  # Have to zero previous actions
         self.masks[0].zero_()  # Have to zero masks
@@ -529,8 +529,11 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
             for key in storage:
                 storage[key][0][0].copy_(storage[key][0][-1])
 
-        self.masks[0].copy_(self.masks[-1])
-        self.prev_actions[0].copy_(self.prev_actions[-1])
+        if self._masks_full is not None:
+            self.masks[0].copy_(self.masks[-1])
+
+        if self._prev_actions_full is not None:
+            self.prev_actions[0].copy_(self.prev_actions[-1])
 
         self._before_update_called = False
         self._advantages = None
