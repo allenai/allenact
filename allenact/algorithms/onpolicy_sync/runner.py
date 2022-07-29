@@ -16,11 +16,10 @@ import subprocess
 import sys
 import time
 import traceback
-from argparse import ArgumentParser
 from collections import defaultdict
 from multiprocessing.context import BaseContext
 from multiprocessing.process import BaseProcess
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, Set
 
 import filelock
 import numpy as np
@@ -93,8 +92,7 @@ class OnPolicyRunner(object):
         distributed_preemption_threshold: float = 0.7,
         machine_id: int = 0,
         save_dir_fmt: SaveDirFormat = SaveDirFormat.FLAT,
-        callbacks: Optional[str] = None,
-        args: Optional[ArgumentParser] = None,
+        callbacks_paths: Optional[str] = None,
     ):
         self.config = config
         self.output_dir = output_dir
@@ -145,8 +143,7 @@ class OnPolicyRunner(object):
 
         self.save_dir_fmt = save_dir_fmt
 
-        self.callbacks = self.get_callback_classes(callbacks, args=args)
-        self.args = args
+        self.callbacks = self.setup_callback_classes(callbacks_paths)
 
     @property
     def local_start_time_str(self) -> str:
@@ -189,18 +186,13 @@ class OnPolicyRunner(object):
 
         return mp_ctx
 
-    def get_callback_classes(
-        self, callbacks: Optional[str], args: Optional[ArgumentParser] = None
-    ) -> List[Callback]:
+    def setup_callback_classes(self, callbacks: Optional[str]) -> Set[Callback]:
         """Get a list of Callback classes from a comma-separated list of
         filenames."""
         if callbacks == "" or callbacks is None:
-            return []
+            return set()
 
         setup_dict = dict(name=self.experiment_name, config=self.config, mode=self.mode)
-        if args is not None:
-            setup_dict.update(vars(args))
-
         callback_classes = set()
         files = callbacks.split(",")
         for filename in files:
@@ -514,7 +506,7 @@ class OnPolicyRunner(object):
                 first_local_worker_id=worker_ids[0],
                 distributed_preemption_threshold=self.distributed_preemption_threshold,
                 valid_on_initial_weights=valid_on_initial_weights,
-                try_restart_after_task_error=try_restart_after_task_error
+                try_restart_after_task_error=try_restart_after_task_error,
             )
             train: BaseProcess = self.mp_ctx.Process(
                 target=self.train_loop, kwargs=training_kwargs,
@@ -1072,7 +1064,9 @@ class OnPolicyRunner(object):
                 ]:
                     callback_metric_means[
                         add_prefix(
-                            f"approx_eps", "misc", stage_component_uuid=stage_component_uuid,
+                            f"approx_eps",
+                            "misc",
+                            stage_component_uuid=stage_component_uuid,
                         )
                     ] = eps
                     if log_writer is not None:

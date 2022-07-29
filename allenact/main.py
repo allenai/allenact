@@ -470,8 +470,7 @@ def main():
             disable_config_saving=args.disable_config_saving,
             distributed_ip_and_port=args.distributed_ip_and_port,
             machine_id=args.machine_id,
-            callbacks=args.callbacks,
-            args=args,
+            callbacks_paths=args.callbacks,
         ).start_train(
             checkpoint=args.checkpoint,
             restart_pipeline=args.restart_pipeline,
@@ -495,8 +494,7 @@ def main():
             disable_config_saving=args.disable_config_saving,
             distributed_ip_and_port=args.distributed_ip_and_port,
             machine_id=args.machine_id,
-            callbacks=args.callbacks,
-            args=args,
+            callbacks_paths=args.callbacks,
         ).start_test(
             checkpoint_path_dir_or_pattern=args.checkpoint,
             infer_output_dir=args.infer_output_dir,
