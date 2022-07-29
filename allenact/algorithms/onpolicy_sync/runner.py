@@ -497,7 +497,7 @@ class OnPolicyRunner(object):
                 restart_pipeline=restart_pipeline,
                 experiment_name=self.experiment_name,
                 config=self.config,
-                callback_sensors=self._get_callback_sensors(),
+                callback_sensors=self._get_callback_sensors,
                 results_queue=self.queues["results"],
                 checkpoints_queue=self.queues["checkpoints"]
                 if self.running_validation
@@ -555,7 +555,7 @@ class OnPolicyRunner(object):
                 args=(0,),
                 kwargs=dict(
                     config=self.config,
-                    callback_sensors=self._get_callback_sensors(),
+                    callback_sensors=self._get_callback_sensors,
                     results_queue=self.queues["results"],
                     checkpoints_queue=self.queues["checkpoints"],
                     seed=12345,  # TODO allow same order for randomly sampled tasks? Is this any useful anyway?
@@ -642,7 +642,7 @@ class OnPolicyRunner(object):
                 args=(tester_it,),
                 kwargs=dict(
                     config=self.config,
-                    callback_sensors=self._get_callback_sensors(),
+                    callback_sensors=self._get_callback_sensors,
                     results_queue=self.queues["results"],
                     checkpoints_queue=self.queues["checkpoints"],
                     seed=12345,  # TODO allow same order for randomly sampled tasks? Is this any useful anyway?
