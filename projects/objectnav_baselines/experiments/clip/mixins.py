@@ -1,4 +1,4 @@
-from typing import Sequence, Union, Type, Tuple, Optional
+from typing import Sequence, Union, Type, Tuple, Optional, Dict, Any
 
 import attr
 import gym
@@ -91,6 +91,7 @@ class ClipResNetPreprocessGRUActorCriticMixin:
                     clip_model_type=self.clip_model_type,
                     pool=self.pool,
                     output_uuid="rgb_clip_resnet",
+                    input_img_height_width=(rgb_sensor.height, rgb_sensor.width),
                 )
             )
 
@@ -104,6 +105,7 @@ class ClipResNetPreprocessGRUActorCriticMixin:
                     clip_model_type=self.clip_model_type,
                     pool=self.pool,
                     output_uuid="depth_clip_resnet",
+                    input_img_height_width=(depth_sensor.height, depth_sensor.width),
                 )
             )
 
@@ -115,6 +117,9 @@ class ClipResNetPreprocessGRUActorCriticMixin:
         add_prev_actions: bool,
         look_down_first: bool = False,
         look_down_action_index: Optional[int] = None,
+        hidden_size: int = 512,
+        rnn_type="GRU",
+        model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> nn.Module:
         has_rgb = any(isinstance(s, RGBSensor) for s in self.sensors)
@@ -125,15 +130,20 @@ class ClipResNetPreprocessGRUActorCriticMixin:
             None,
         )
 
+        if model_kwargs is None:
+            model_kwargs = {}
+
         model_kwargs = dict(
             action_space=gym.spaces.Discrete(num_actions),
             observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             goal_sensor_uuid=goal_sensor_uuid,
             rgb_resnet_preprocessor_uuid="rgb_clip_resnet" if has_rgb else None,
             depth_resnet_preprocessor_uuid="depth_clip_resnet" if has_depth else None,
-            hidden_size=512,
+            hidden_size=hidden_size,
             goal_dims=32,
             add_prev_actions=add_prev_actions,
+            rnn_type=rnn_type,
+            **model_kwargs
         )
 
         if not look_down_first:
