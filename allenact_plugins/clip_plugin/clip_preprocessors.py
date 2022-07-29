@@ -1,4 +1,4 @@
-from typing import List, Optional, Any, cast, Dict
+from typing import List, Optional, Any, cast, Dict, Tuple
 
 import clip
 import gym
@@ -50,14 +50,18 @@ class ClipResNetPreprocessor(Preprocessor):
         pool: bool,
         device: Optional[torch.device] = None,
         device_ids: Optional[List[torch.device]] = None,
+        input_img_height_width: Tuple[int, int] = (224, 224),
         **kwargs: Any,
     ):
         assert clip_model_type in clip.available_models()
+        assert pool == False or input_img_height_width == (224, 224)
+        assert all(iis % 32 == 0 for iis in input_img_height_width)
 
+        output_height_width = tuple(iis // 32 for iis in input_img_height_width)
         if clip_model_type == "RN50":
-            output_shape = (2048, 7, 7)
+            output_shape = (2048,) + output_height_width
         elif clip_model_type == "RN50x16":
-            output_shape = (3072, 7, 7)
+            output_shape = (3072,) + output_height_width
         else:
             raise NotImplementedError(
                 f"Currently `clip_model_type` must be one of 'RN50' or 'RN50x16'"
