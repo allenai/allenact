@@ -1,6 +1,7 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Sequence, Optional
 
 from allenact.base_abstractions.experiment_config import ExperimentConfig
+from allenact.base_abstractions.sensor import Sensor
 
 try:
     from typing import Literal
@@ -52,3 +53,7 @@ class Callback:
 
     def after_save_project_state(self, base_dir: str) -> None:
         """Called after saving the project state in base_dir."""
+
+    def callback_sensors(self) -> Optional[Sequence[Sensor]]:
+        """Determines the data returned to the `tasks_data` parameter in the
+        above *_log functions."""

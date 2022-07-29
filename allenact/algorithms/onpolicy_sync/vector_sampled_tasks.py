@@ -30,6 +30,7 @@ from gym.spaces.dict import Dict as SpaceDict
 from setproctitle import setproctitle as ptitle
 
 from allenact.base_abstractions.misc import RLStepResult
+from allenact.base_abstractions.sensor import SensorSuite, Sensor
 from allenact.base_abstractions.task import TaskSampler
 from allenact.utils.misc_utils import partition_sequence
 from allenact.utils.system import get_logger
@@ -151,6 +152,7 @@ class VectorSampledTasks:
         self,
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args: Sequence[Dict[str, Any]] = None,
+        callback_sensors: Optional[Sequence[Sensor]] = None,
         auto_resample_when_done: bool = True,
         multiprocessing_start_method: Optional[str] = "forkserver",
         mp_ctx: Optional[BaseContext] = None,
@@ -209,6 +211,11 @@ class VectorSampledTasks:
             sampler_fn_args_list=[
                 args_list for args_list in self._partition_to_processes(sampler_fn_args)
             ],
+            callback_sensor_suite=(
+                SensorSuite(callback_sensors)
+                if isinstance(callback_sensors, Sequence)
+                else callback_sensors
+            ),
         )
 
         self._connection_read_fns = [
@@ -325,6 +332,7 @@ class VectorSampledTasks:
         connection_write_fn: Callable,
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args_list: List[Dict[str, Any]],
+        callback_sensor_suite: Optional[SensorSuite],
         auto_resample_when_done: bool,
         should_log: bool,
         child_pipe: Optional[Connection] = None,
@@ -338,6 +346,7 @@ class VectorSampledTasks:
         sp_vector_sampled_tasks = SingleProcessVectorSampledTasks(
             make_sampler_fn=make_sampler_fn,
             sampler_fn_args_list=sampler_fn_args_list,
+            callback_sensor_suite=callback_sensor_suite,
             auto_resample_when_done=auto_resample_when_done,
             should_log=should_log,
         )
@@ -367,9 +376,7 @@ class VectorSampledTasks:
                     else:
                         connection_write_fn(
                             sp_vector_sampled_tasks.command_at(
-                                sampler_index=sampler_index,
-                                command=command,
-                                data=data,
+                                sampler_index=sampler_index, command=command, data=data,
                             )
                         )
                 else:
@@ -421,6 +428,7 @@ class VectorSampledTasks:
         self,
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args_list: Sequence[Sequence[Dict[str, Any]]],
+        callback_sensor_suite: Optional[SensorSuite],
     ) -> Tuple[
         List[Callable[[], bool]], List[Callable[[], Any]], List[Callable[[Any], None]]
     ]:
@@ -450,6 +458,7 @@ class VectorSampledTasks:
                     connection_write_fn=worker_conn.send,
                     make_sampler_fn=make_sampler_fn,
                     sampler_fn_args_list=current_sampler_fn_args_list,
+                    callback_sensor_suite=callback_sensor_suite,
                     auto_resample_when_done=self._auto_resample_when_done,
                     should_log=self.should_log,
                     child_pipe=worker_conn,
@@ -491,9 +500,7 @@ class VectorSampledTasks:
 
         List of observations for each of the unpaused tasks.
         """
-        return self.call(
-            ["get_observations"] * self.num_unpaused_tasks,
-        )
+        return self.call(["get_observations"] * self.num_unpaused_tasks,)
 
     def command_at(
         self, sampler_index: int, command: str, data: Optional[Any] = None
@@ -682,9 +689,9 @@ class VectorSampledTasks:
         for i in range(
             sampler_index + 1, len(self.sampler_index_to_process_ind_and_subprocess_ind)
         ):
-            other_process_and_sub_process_inds = (
-                self.sampler_index_to_process_ind_and_subprocess_ind[i]
-            )
+            other_process_and_sub_process_inds = self.sampler_index_to_process_ind_and_subprocess_ind[
+                i
+            ]
             if other_process_and_sub_process_inds[0] == process_ind:
                 other_process_and_sub_process_inds[1] -= 1
             else:
@@ -871,6 +878,7 @@ class SingleProcessVectorSampledTasks(object):
         self,
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args_list: Sequence[Dict[str, Any]] = None,
+        callback_sensor_suite: Optional[SensorSuite] = None,
         auto_resample_when_done: bool = True,
         should_log: bool = True,
     ) -> None:
@@ -889,6 +897,7 @@ class SingleProcessVectorSampledTasks(object):
         self._vector_task_generators: List[Generator] = self._create_generators(
             make_sampler_fn=make_sampler_fn,
             sampler_fn_args=[{"mp_ctx": None, **args} for args in sampler_fn_args_list],
+            callback_sensor_suite=callback_sensor_suite,
         )
 
         self._is_closed = False
@@ -943,6 +952,7 @@ class SingleProcessVectorSampledTasks(object):
         worker_id: int,
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args: Dict[str, Any],
+        callback_sensor_suite: Optional[SensorSuite],
         auto_resample_when_done: bool,
         should_log: bool,
     ) -> Generator:
@@ -972,8 +982,10 @@ class SingleProcessVectorSampledTasks(object):
                                 step_result = step_result.clone({"info": {}})
                             step_result.info[COMPLETE_TASK_METRICS_KEY] = metrics
 
-                        task_callback_data = current_task.task_callback_data()
-                        if task_callback_data:
+                        if callback_sensor_suite is not None:
+                            task_callback_data = callback_sensor_suite.get_observations(
+                                env=current_task.env, task=current_task
+                            )
                             if step_result.info is None:
                                 step_result = step_result.clone({"info": {}})
                             step_result.info[
@@ -1081,6 +1093,7 @@ class SingleProcessVectorSampledTasks(object):
         self,
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args: Sequence[Dict[str, Any]],
+        callback_sensor_suite: Optional[SensorSuite],
     ) -> List[Generator]:
 
         generators = []
@@ -1094,6 +1107,7 @@ class SingleProcessVectorSampledTasks(object):
                     worker_id=id,
                     make_sampler_fn=make_sampler_fn,
                     sampler_fn_args=current_sampler_fn_args,
+                    callback_sensor_suite=callback_sensor_suite,
                     auto_resample_when_done=self._auto_resample_when_done,
                     should_log=self.should_log,
                 )
@@ -1126,9 +1140,7 @@ class SingleProcessVectorSampledTasks(object):
 
         List of observations for each of the unpaused tasks.
         """
-        return self.call(
-            ["get_observations"] * self.num_unpaused_tasks,
-        )
+        return self.call(["get_observations"] * self.num_unpaused_tasks,)
 
     def next_task_at(self, index_process: int) -> List[RLStepResult]:
         """Move to the the next Task from the TaskSampler in index_process

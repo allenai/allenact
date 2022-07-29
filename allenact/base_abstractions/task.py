@@ -230,11 +230,6 @@ class Task(Generic[EnvType]):
             "task_info": self.task_info,
         }
 
-    def task_callback_data(self) -> Optional[Any]:
-        """Returns any data that should be passed to the log callback
-        function."""
-        return None
-
     def query_expert(self, **kwargs) -> Tuple[Any, bool]:
         """(Deprecated) Query the expert policy for this task.
 

@@ -17,11 +17,11 @@ import torch.distributions  # type: ignore
 import torch.multiprocessing as mp  # type: ignore
 import torch.nn as nn
 import torch.optim as optim
-
 # noinspection PyProtectedMember
 from torch._C._distributed_c10d import ReduceOp
 
 from allenact.algorithms.onpolicy_sync.misc import TrackingInfo, TrackingInfoType
+from allenact.base_abstractions.sensor import Sensor
 from allenact.utils.model_utils import md5_hash_of_state_dict
 
 try:
@@ -107,6 +107,7 @@ class OnPolicyRLEngine(object):
         ],  # to write/read (trainer/evaluator) ready checkpoints
         checkpoints_dir: str,
         mode: str = "train",
+        callback_sensors: Optional[Sequence[Sensor]] = None,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
         mp_ctx: Optional[BaseContext] = None,
@@ -155,6 +156,7 @@ class OnPolicyRLEngine(object):
             TEST_MODE_STR,
         ], 'Only "train", "valid", "test" modes supported'
 
+        self.callback_sensors = callback_sensors
         self.deterministic_cudnn = deterministic_cudnn
         if self.deterministic_cudnn:
             set_deterministic_cudnn()
@@ -306,6 +308,7 @@ class OnPolicyRLEngine(object):
             self._vector_tasks = VectorSampledTasks(
                 make_sampler_fn=self.config.make_sampler_fn,
                 sampler_fn_args=self.get_sampler_fn_args(seeds),
+                callback_sensors=self.callback_sensors,
                 multiprocessing_start_method="forkserver"
                 if self.mp_ctx is None
                 else None,
