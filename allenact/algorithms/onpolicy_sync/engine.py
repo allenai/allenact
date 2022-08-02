@@ -74,7 +74,7 @@ try:
     # noinspection PyPackageRequirements
     import pydevd
 
-    DEBUGGING = True
+    DEBUGGING = os.getenv("ALLENACT_DEBUG", True)
 except ImportError:
     DEBUGGING = os.getenv("ALLENACT_DEBUG", False)
 
