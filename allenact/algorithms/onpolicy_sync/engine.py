@@ -22,6 +22,7 @@ from torch._C._distributed_c10d import ReduceOp
 
 from allenact.algorithms.onpolicy_sync.misc import TrackingInfo, TrackingInfoType
 from allenact.base_abstractions.sensor import Sensor
+from allenact.utils.misc_utils import str2bool
 from allenact.utils.model_utils import md5_hash_of_state_dict
 
 try:
@@ -74,9 +75,9 @@ try:
     # noinspection PyPackageRequirements
     import pydevd
 
-    DEBUGGING = os.getenv("ALLENACT_DEBUG", True)
+    DEBUGGING = str2bool(os.getenv("ALLENACT_DEBUG", "true"))
 except ImportError:
-    DEBUGGING = os.getenv("ALLENACT_DEBUG", False)
+    DEBUGGING = str2bool(os.getenv("ALLENACT_DEBUG", "false"))
 
 DEBUG_VST_TIMEOUT: Optional[int] = (lambda x: int(x) if x is not None else x)(
     os.getenv("ALLENACT_DEBUG_VST_TIMEOUT", None)
