@@ -222,7 +222,8 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         else:
             raise AttributeError("Must be <= 1 inventory objects.")
 
-    def correct_nan_inf(self, flawed_dict, extra_tag=""):
+    @classmethod
+    def correct_nan_inf(cls, flawed_dict, extra_tag=""):
         corrected_dict = copy.deepcopy(flawed_dict)
         for (k, v) in corrected_dict.items():
             if math.isnan(v) or math.isinf(v):
@@ -374,7 +375,7 @@ class ManipulaTHOREnvironment(IThorEnvironment):
             last_frame = self.current_frame
 
         if self.simplify_physics:
-            action_dict["simplifyOPhysics"] = True
+            action_dict["simplifyPhysics"] = True
         if action in [PICKUP, DONE]:
             if action == PICKUP:
                 object_id = action_dict["object_id"]

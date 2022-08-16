@@ -3,10 +3,6 @@ from typing import Tuple, List, Dict, Any, Optional, Union, Sequence, cast
 
 import gym
 import numpy as np
-
-from allenact_plugins.habitat_plugin.habitat_sensors import (
-    AgentCoordinatesSensorHabitat,
-)
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
@@ -24,6 +20,9 @@ from allenact_plugins.habitat_plugin.habitat_constants import (
     LOOK_DOWN,
 )
 from allenact_plugins.habitat_plugin.habitat_environment import HabitatEnvironment
+from allenact_plugins.habitat_plugin.habitat_sensors import (
+    AgentCoordinatesSensorHabitat,
+)
 
 
 class HabitatTask(Task[HabitatEnvironment], ABC):
@@ -33,7 +32,7 @@ class HabitatTask(Task[HabitatEnvironment], ABC):
         sensors: List[Sensor],
         task_info: Dict[str, Any],
         max_steps: int,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
@@ -91,7 +90,7 @@ class PointNavTask(Task[HabitatEnvironment]):
         task_info: Dict[str, Any],
         max_steps: int,
         failed_end_reward: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
@@ -241,11 +240,15 @@ class ObjectNavTask(HabitatTask):
         sensors: List[Sensor],
         task_info: Dict[str, Any],
         max_steps: int,
-        **kwargs
+        look_constraints: Optional[Tuple[int, int]] = None,
+        **kwargs,
     ) -> None:
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
+        self.look_constraints = look_constraints
+        self._look_state = 0
+
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible = None
@@ -308,7 +311,26 @@ class ObjectNavTask(HabitatTask):
         action_str = self.action_names()[action]
         self._actions_taken.append(action_str)
 
-        self.env.step({"action": action_str})
+        skip_action = False
+        if self.look_constraints is not None:
+            max_look_up, max_look_down = self.look_constraints
+
+            if action_str == LOOK_UP:
+                num_look_ups = self._look_state
+                # assert num_look_ups <= max_look_up
+                skip_action = num_look_ups >= max_look_up
+                self._look_state += 1
+
+            if action_str == LOOK_DOWN:
+                num_look_downs = -self._look_state
+                # assert num_look_downs <= max_look_down
+                skip_action = num_look_downs >= max_look_down
+                self._look_state -= 1
+
+            self._look_state = min(max(self._look_state, -max_look_down), max_look_up)
+
+        if not skip_action:
+            self.env.step({"action": action_str})
 
         if action_str == END:
             self._took_end_action = True

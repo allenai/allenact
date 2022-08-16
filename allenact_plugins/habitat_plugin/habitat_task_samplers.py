@@ -1,14 +1,14 @@
 from typing import List, Optional, Union, Callable, Any, Dict, Type
 
 import gym
-import habitat
-from allenact.utils.experiment_utils import Builder
-from habitat.config import Config
 
+import habitat
 from allenact.base_abstractions.sensor import Sensor
 from allenact.base_abstractions.task import TaskSampler
+from allenact.utils.experiment_utils import Builder
 from allenact_plugins.habitat_plugin.habitat_environment import HabitatEnvironment
 from allenact_plugins.habitat_plugin.habitat_tasks import PointNavTask, ObjectNavTask  # type: ignore
+from habitat.config import Config
 
 
 class PointNavTaskSampler(TaskSampler):
@@ -208,6 +208,9 @@ class ObjectNavTaskSampler(TaskSampler):
             return None
 
         if self.env is not None:
+            if force_advance_scene:
+                self.env.env._episode_iterator._forced_scene_switch()
+                self.env.env._episode_iterator._set_shuffle_intervals()
             self.env.reset()
         else:
             self.env = self._create_environment()

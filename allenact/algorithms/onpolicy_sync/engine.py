@@ -10,17 +10,20 @@ from functools import partial
 from multiprocessing.context import BaseContext
 from typing import Any, Dict, List, Optional, Sequence, Union, cast
 
+import filelock
 import torch
 import torch.distributed as dist  # type: ignore
 import torch.distributions  # type: ignore
 import torch.multiprocessing as mp  # type: ignore
 import torch.nn as nn
 import torch.optim as optim
-from allenact.algorithms.onpolicy_sync.misc import TrackingInfo, TrackingInfoType
-from allenact.utils.model_utils import md5_hash_of_state_dict
-
 # noinspection PyProtectedMember
 from torch._C._distributed_c10d import ReduceOp
+
+from allenact.algorithms.onpolicy_sync.misc import TrackingInfo, TrackingInfoType
+from allenact.base_abstractions.sensor import Sensor
+from allenact.utils.misc_utils import str2bool
+from allenact.utils.model_utils import md5_hash_of_state_dict
 
 try:
     # noinspection PyProtectedMember,PyUnresolvedReferences
@@ -72,9 +75,9 @@ try:
     # noinspection PyPackageRequirements
     import pydevd
 
-    DEBUGGING = True
+    DEBUGGING = str2bool(os.getenv("ALLENACT_DEBUG", "true"))
 except ImportError:
-    DEBUGGING = False
+    DEBUGGING = str2bool(os.getenv("ALLENACT_DEBUG", "false"))
 
 DEBUG_VST_TIMEOUT: Optional[int] = (lambda x: int(x) if x is not None else x)(
     os.getenv("ALLENACT_DEBUG_VST_TIMEOUT", None)
@@ -105,6 +108,7 @@ class OnPolicyRLEngine(object):
         ],  # to write/read (trainer/evaluator) ready checkpoints
         checkpoints_dir: str,
         mode: str = "train",
+        callback_sensors: Optional[Sequence[Sensor]] = None,
         seed: Optional[int] = None,
         deterministic_cudnn: bool = False,
         mp_ctx: Optional[BaseContext] = None,
@@ -116,7 +120,7 @@ class OnPolicyRLEngine(object):
         deterministic_agents: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
         initial_model_state_dict: Optional[Union[Dict[str, Any], int]] = None,
-        try_restart_after_task_timeout: bool = False,
+        try_restart_after_task_error: bool = False,
         **kwargs,
     ):
         """Initializer.
@@ -144,7 +148,7 @@ class OnPolicyRLEngine(object):
         self.device = torch.device("cpu") if device == -1 else torch.device(device)  # type: ignore
         self.distributed_ip = distributed_ip
         self.distributed_port = distributed_port
-        self.try_restart_after_task_timeout = try_restart_after_task_timeout
+        self.try_restart_after_task_error = try_restart_after_task_error
 
         self.mode = mode.lower().strip()
         assert self.mode in [
@@ -153,6 +157,7 @@ class OnPolicyRLEngine(object):
             TEST_MODE_STR,
         ], 'Only "train", "valid", "test" modes supported'
 
+        self.callback_sensors = callback_sensors
         self.deterministic_cudnn = deterministic_cudnn
         if self.deterministic_cudnn:
             set_deterministic_cudnn()
@@ -235,6 +240,9 @@ class OnPolicyRLEngine(object):
                 port=self.distributed_port,
                 world_size=self.num_workers,
                 is_master=self.worker_id == 0,
+                timeout=datetime.timedelta(
+                    seconds=3 * (DEBUG_VST_TIMEOUT if DEBUGGING else 1 * 60) + 300
+                ),
             )
             cpu_device = self.device == torch.device("cpu")  # type:ignore
 
@@ -301,12 +309,13 @@ class OnPolicyRLEngine(object):
             self._vector_tasks = VectorSampledTasks(
                 make_sampler_fn=self.config.make_sampler_fn,
                 sampler_fn_args=self.get_sampler_fn_args(seeds),
+                callback_sensors=self.callback_sensors,
                 multiprocessing_start_method="forkserver"
                 if self.mp_ctx is None
                 else None,
                 mp_ctx=self.mp_ctx,
                 max_processes=self.max_sampler_processes_per_worker,
-                read_timeout=DEBUG_VST_TIMEOUT if DEBUGGING else 5 * 60,
+                read_timeout=DEBUG_VST_TIMEOUT if DEBUGGING else 1 * 60,
             )
         return self._vector_tasks
 
@@ -850,6 +859,36 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             )  # use the latest seed for workers and update rng state
             self.vector_tasks.set_seeds(seeds)
 
+    def save_error_data(self, batch: Dict[str, Any]) -> str:
+        model_path = os.path.join(
+            self.checkpoints_dir,
+            "error_for_exp_{}__stage_{:02d}__steps_{:012d}.pt".format(
+                self.experiment_name,
+                self.training_pipeline.current_stage_index,
+                self.training_pipeline.total_steps,
+            ),
+        )
+        with filelock.FileLock(
+            os.path.join(self.checkpoints_dir, "error.lock"), timeout=60
+        ):
+            if not os.path.exists(model_path):
+                save_dict = {
+                    "model_state_dict": self.actor_critic.state_dict(),  # type:ignore
+                    "total_steps": self.training_pipeline.total_steps,  # Total steps including current stage
+                    "optimizer_state_dict": self.optimizer.state_dict(),  # type: ignore
+                    "training_pipeline_state_dict": self.training_pipeline.state_dict(),
+                    "trainer_seed": self.seed,
+                    "batch": batch,
+                }
+
+                if self.lr_scheduler is not None:
+                    save_dict["scheduler_state"] = cast(
+                        _LRScheduler, self.lr_scheduler
+                    ).state_dict()
+
+                torch.save(save_dict, model_path)
+        return model_path
+
     def checkpoint_save(self, pipeline_stage_index: Optional[int] = None) -> str:
         model_path = os.path.join(
             self.checkpoints_dir,
@@ -1118,12 +1157,21 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         bsize = batch["bsize"]
 
                         if actor_critic_output_for_batch is None:
-                            actor_critic_output_for_batch, _ = self.actor_critic(
-                                observations=batch["observations"],
-                                memory=batch["memory"],
-                                prev_actions=batch["prev_actions"],
-                                masks=batch["masks"],
-                            )
+
+                            try:
+                                actor_critic_output_for_batch, _ = self.actor_critic(
+                                    observations=batch["observations"],
+                                    memory=batch["memory"],
+                                    prev_actions=batch["prev_actions"],
+                                    masks=batch["masks"],
+                                )
+                            except ValueError:
+                                save_path = self.save_error_data(batch=batch)
+                                get_logger().error(
+                                    f"Encountered a value error! Likely because of nans in the output/input."
+                                    f" Saving all error information to {save_path}."
+                                )
+                                raise
 
                         loss_return = loss.loss(
                             step_count=self.step_count,
@@ -1448,9 +1496,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         rollout_storage_uuid=self.training_pipeline.rollout_storage_uuid,
                         uuid_to_storage=uuid_to_storage,
                     )
-                except TimeoutError:
+                except (TimeoutError, EOFError) as e:
                     if (
-                        not self.try_restart_after_task_timeout
+                        not self.try_restart_after_task_error
                     ) or self.mode != TRAIN_MODE_STR:
                         # Apparently you can just call `raise` here and doing so will just raise the exception as though
                         # it was not caught (so the stacktrace isn't messed up)
@@ -1463,9 +1511,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     else:
                         get_logger().warning(
                             f"[{self.mode} worker {self.worker_id}] `vector_tasks` appears to have crashed during"
-                            f" training as it has timed out. You have set `try_restart_after_task_timeout` to `True` so"
-                            f" we will attempt to restart these tasks from the beginning. USE THIS FEATURE AT YOUR OWN"
-                            f" RISK. Timeout exception:\n{traceback.format_exc()}."
+                            f" training due to an {type(e).__name__} error. You have set"
+                            f" `try_restart_after_task_error` to `True` so we will attempt to restart these tasks from"
+                            f" the beginning. USE THIS FEATURE AT YOUR OWN"
+                            f" RISK. Exception:\n{traceback.format_exc()}."
                         )
                         self.vector_tasks.close()
                         self._vector_tasks = None
@@ -1731,8 +1780,7 @@ class OnPolicyInference(OnPolicyRLEngine):
             assert visualizer.empty()
 
         num_paused = self.initialize_storage_and_viz(
-            storage_to_initialize=[rollout_storage],
-            visualizer=visualizer,
+            storage_to_initialize=[rollout_storage], visualizer=visualizer,
         )
         assert num_paused == 0, f"{num_paused} tasks paused when initializing eval"
 
@@ -1801,8 +1849,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                     lengths: List[int]
                     if self.num_active_samplers > 0:
                         lengths = self.vector_tasks.command(
-                            "sampler_attr",
-                            ["length"] * self.num_active_samplers,
+                            "sampler_attr", ["length"] * self.num_active_samplers,
                         )
                         npending = sum(lengths)
                     else:

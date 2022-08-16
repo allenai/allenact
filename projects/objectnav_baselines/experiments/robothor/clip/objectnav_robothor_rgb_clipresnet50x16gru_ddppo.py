@@ -61,7 +61,9 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig):
 
     def create_model(self, **kwargs) -> nn.Module:
         return self.preprocessing_and_model.create_model(
-            num_actions=self.ACTION_SPACE.n, add_prev_actions=self.add_prev_actions, **kwargs
+            num_actions=self.ACTION_SPACE.n,
+            add_prev_actions=self.add_prev_actions,
+            **kwargs
         )
 
     @classmethod

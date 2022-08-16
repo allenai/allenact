@@ -3,15 +3,15 @@ import math
 import os
 import warnings
 from abc import ABC
-from typing import Dict, Any, List, Optional, Sequence, Union
+from typing import Dict, Any, List, Optional, Sequence, Union, Tuple
 
 import gym
+# noinspection PyUnresolvedReferences
+import habitat
 import numpy as np
 import torch
 from torch.distributions.utils import lazy_property
 
-# noinspection PyUnresolvedReferences
-import habitat
 from allenact.base_abstractions.experiment_config import MachineParams
 from allenact.base_abstractions.preprocessor import (
     SensorPreprocessorGraph,
@@ -107,7 +107,7 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
 
     # selected auxiliary uuids
     ## if comment all the keys, then it's vanilla DD-PPO
-    AUXILIARY_UUIDS = [
+    _AUXILIARY_UUIDS = [
         # InverseDynamicsLoss.UUID,
         # TemporalDistanceLoss.UUID,
         # CPCA1Loss.UUID,
@@ -148,12 +148,21 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
         val_gpu_ids: Optional[Sequence[int]] = None,
         test_gpu_ids: Optional[Sequence[int]] = None,
         add_prev_actions: bool = False,
+        look_constraints: Optional[Tuple[int, int]] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
 
         self.scene_dataset = scene_dataset
         self.debug = debug
+
+        assert look_constraints is None or all(
+            lc in [0, 1, 2, 3] for lc in look_constraints
+        ), "Look constraints limit the number of times agents can look up/down when starting from the horizon line."
+        assert (
+            look_constraints is None or look_constraints[1] > 0
+        ), "The agent must be allowed to look down from the horizon at least once."
+        self.look_constraints = look_constraints
 
         def v_or_default(v, default):
             return v if v is not None else default
@@ -172,6 +181,8 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
         )
         self.test_gpu_ids = v_or_default(test_gpu_ids, self.DEFAULT_TEST_GPU_IDS)
         self.add_prev_actions = add_prev_actions
+
+        self.auxiliary_uuids = self._AUXILIARY_UUIDS
 
     def _create_config(
         self,
@@ -356,9 +367,13 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
 
     def tag(self):
         t = f"ObjectNav-Habitat-{self.scene_dataset.upper()}"
-        if not self.add_prev_actions:
-            return t
-        return f"{t}-PrevActions"
+        if self.add_prev_actions:
+            t = f"{t}-PrevActions"
+
+        if self.look_constraints is not None:
+            t = f"{t}-Look{','.join(map(str, self.look_constraints))}"
+
+        return t
 
     def preprocessors(self) -> Sequence[Union[Preprocessor, Builder[Preprocessor]]]:
         return tuple()
@@ -402,10 +417,10 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
             sensor_preprocessor_graph=sensor_preprocessor_graph,
         )
 
-    @classmethod
-    def make_sampler_fn(cls, **kwargs) -> TaskSampler:
+    def make_sampler_fn(self, **kwargs) -> TaskSampler:
         return ObjectNavTaskSampler(
-            **{"failed_end_reward": cls.FAILED_END_REWARD, **kwargs}  # type: ignore
+            task_kwargs={"look_constraints": self.look_constraints,},
+            **{"failed_end_reward": self.FAILED_END_REWARD, **kwargs},  # type: ignore
         )
 
     def train_task_sampler_args(

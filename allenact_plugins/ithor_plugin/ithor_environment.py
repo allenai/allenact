@@ -657,7 +657,7 @@ class IThorEnvironment(object):
             last_frame = self.current_frame
 
         if self.simplify_physics:
-            action_dict["simplifyOPhysics"] = True
+            action_dict["simplifyPhysics"] = True
 
         if "Move" in action and "Hand" not in action:  # type: ignore
             action_dict = {

@@ -321,3 +321,13 @@ def partition_limits(num_items: int, num_parts: int):
         .astype(np.int32)
         .tolist()
     )
+
+
+def str2bool(v: str):
+    v = v.lower().strip()
+    if v in ("yes", "true", "t", "y", "1"):
+        return True
+    elif v in ("no", "false", "f", "n", "0"):
+        return False
+    else:
+        raise ValueError(f"{v} cannot be converted to a bool")

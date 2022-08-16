@@ -6,16 +6,16 @@
 found in https://github.com/joel99/habitat-pointnav-
 aux/blob/master/habitat_baselines/"""
 
-
 import torch
 import torch.nn as nn
 
-from allenact.utils.model_utils import FeatureEmbedding
 from allenact.embodiedai.aux_losses.losses import (
     InverseDynamicsLoss,
     TemporalDistanceLoss,
     CPCALoss,
+    CPCASoftMaxLoss,
 )
+from allenact.utils.model_utils import FeatureEmbedding
 
 
 class AuxiliaryModel(nn.Module):
@@ -30,6 +30,7 @@ class AuxiliaryModel(nn.Module):
         belief_dim: int,
         action_embed_size: int = 4,
         cpca_classifier_hidden_dim: int = 32,
+        cpca_softmax_dim: int = 128,
     ):
         super().__init__()
         self.aux_uuid = aux_uuid
@@ -58,6 +59,29 @@ class AuxiliaryModel(nn.Module):
                 ),
                 nn.ReLU(),
                 nn.Linear(cpca_classifier_hidden_dim, 1),
+            )
+
+        elif CPCASoftMaxLoss.UUID in self.aux_uuid:
+            ###
+            # same as CPCA with extra MLP for contrastive losses.
+            ###
+            self.action_embedder = FeatureEmbedding(
+                self.action_dim + 1, action_embed_size
+            )
+            # NOTE: add extra 1 in embedding dict cuz we will pad zero actions?
+            self.context_model = nn.GRU(action_embed_size, self.belief_dim)
+
+            ## Classifier to estimate mutual information
+            self.visual_mlp = nn.Sequential(
+                nn.Linear(obs_embed_dim, cpca_classifier_hidden_dim),
+                nn.ReLU(),
+                nn.Linear(cpca_classifier_hidden_dim, cpca_softmax_dim),
+            )
+
+            self.belief_mlp = nn.Sequential(
+                nn.Linear(self.belief_dim, cpca_classifier_hidden_dim),
+                nn.ReLU(),
+                nn.Linear(cpca_classifier_hidden_dim, cpca_softmax_dim),
             )
 
         else:

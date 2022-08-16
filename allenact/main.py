@@ -1,12 +1,17 @@
 """Entry point to training/validating/testing for a user given experiment
 name."""
 
+import os
+
+if "CUDA_DEVICE_ORDER" not in os.environ:
+    # Necessary to order GPUs correctly in some cases
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+
 import argparse
 import ast
 import importlib
 import inspect
 import json
-import os
 from typing import Dict, List, Optional, Tuple, Type
 
 from setproctitle import setproctitle as ptitle
@@ -269,7 +274,16 @@ def get_argument_parser():
         required=False,
         type=str,
         default="",
-        help="Comma-separated list of files with Callback classes to use."
+        help="Comma-separated list of files with Callback classes to use.",
+    )
+
+    parser.add_argument(
+        "--enable_crash_recovery",
+        dest="enable_crash_recovery",
+        default=False,
+        action="store_true",
+        required=False,
+        help="Whether or not to try recovering when a task crashes (use at your own risk).",
     )
 
     ### DEPRECATED FLAGS
@@ -456,14 +470,14 @@ def main():
             disable_config_saving=args.disable_config_saving,
             distributed_ip_and_port=args.distributed_ip_and_port,
             machine_id=args.machine_id,
-            callbacks=args.callbacks,
-            args=args,
+            callbacks_paths=args.callbacks,
         ).start_train(
             checkpoint=args.checkpoint,
             restart_pipeline=args.restart_pipeline,
             max_sampler_processes_per_worker=args.max_sampler_processes_per_worker,
             collect_valid_results=args.collect_valid_results,
             valid_on_initial_weights=args.valid_on_initial_weights,
+            try_restart_after_task_error=args.enable_crash_recovery,
         )
     else:
         OnPolicyRunner(
@@ -480,8 +494,7 @@ def main():
             disable_config_saving=args.disable_config_saving,
             distributed_ip_and_port=args.distributed_ip_and_port,
             machine_id=args.machine_id,
-            callbacks=args.callbacks,
-            args=args,
+            callbacks_paths=args.callbacks,
         ).start_test(
             checkpoint_path_dir_or_pattern=args.checkpoint,
             infer_output_dir=args.infer_output_dir,

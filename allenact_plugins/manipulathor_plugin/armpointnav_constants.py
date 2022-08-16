@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Dict, Optional, Any
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 
@@ -14,8 +15,17 @@ DISTANCE_MAX = 10.0
 dataset_json_file = os.path.join(
     ABS_PATH_OF_TOP_LEVEL_DIR, "datasets", "apnd-dataset", "starting_pose.json"
 )
-try:
-    with open(dataset_json_file) as f:
-        ARM_START_POSITIONS = json.load(f)
-except Exception:
-    raise Exception("Dataset not found in {}".format(dataset_json_file))
+
+_ARM_START_POSITIONS: Optional[Dict[str, Any]] = None
+
+
+def get_agent_start_positions():
+    global _ARM_START_POSITIONS
+    if _ARM_START_POSITIONS is not None:
+        try:
+            with open(dataset_json_file) as f:
+                _ARM_START_POSITIONS = json.load(f)
+        except Exception:
+            raise Exception(f"Dataset not found in {dataset_json_file}")
+
+    return _ARM_START_POSITIONS

@@ -1,4 +1,4 @@
-from typing import Optional, cast, Tuple
+from typing import Optional, cast, Tuple, Any, Dict
 
 import attr
 import torch
@@ -46,8 +46,12 @@ class InferenceAgent:
         exp_config: ExperimentConfig,
         device: torch.device,
         checkpoint_path: Optional[str] = None,
+        model_state_dict: Optional[Dict[str, Any]] = None,
         mode: str = "test",
     ):
+        assert (
+            checkpoint_path is None or model_state_dict is None
+        ), "Cannot have `checkpoint_path` and `model_state_dict` both non-None."
         rollout_storage = exp_config.training_pipeline().rollout_storage
 
         machine_params = exp_config.machine_params(mode)
@@ -66,6 +70,12 @@ class InferenceAgent:
         if checkpoint_path is not None:
             actor_critic.load_state_dict(
                 torch.load(checkpoint_path, map_location="cpu")["model_state_dict"]
+            )
+        elif model_state_dict is not None:
+            actor_critic.load_state_dict(
+                model_state_dict
+                if "model_state_dict" not in model_state_dict
+                else model_state_dict["model_state_dict"]
             )
 
         return cls(

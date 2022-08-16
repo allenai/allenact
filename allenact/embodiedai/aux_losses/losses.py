@@ -15,6 +15,7 @@ from typing import Dict, cast, Tuple, Sequence
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from allenact.algorithms.onpolicy_sync.losses.abstract_loss import (
     AbstractActorCriticLoss,
@@ -47,7 +48,7 @@ class MultiAuxTaskNegEntropyLoss(AbstractActorCriticLoss):
         batch: ObservationType,
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
-        **kwargs
+        **kwargs,
     ) -> Tuple[torch.FloatTensor, Dict[str, float]]:
         task_weights = actor_critic_output.extras[self.UUID]
         task_weights = task_weights.view(-1, self.num_tasks)
@@ -86,7 +87,7 @@ class AuxiliaryLoss(AbstractActorCriticLoss):
         batch: ObservationType,
         actor_critic_output: ActorCriticOutput[CategoricalDistr],
         *args,
-        **kwargs
+        **kwargs,
     ) -> Tuple[torch.Tensor, Dict[str, float]]:
 
         # auxiliary loss
@@ -107,7 +108,7 @@ class AuxiliaryLoss(AbstractActorCriticLoss):
         beliefs: torch.Tensor,
         masks: torch.Tensor,
         *args,
-        **kwargs
+        **kwargs,
     ):
         raise NotImplementedError()
 
@@ -167,7 +168,7 @@ class InverseDynamicsLoss(AuxiliaryLoss):
         beliefs: torch.FloatTensor,
         masks: torch.FloatTensor,
         *args,
-        **kwargs
+        **kwargs,
     ):
         ## we discard the last action in the batch
         num_steps, num_sampler = actions.shape  # T, B
@@ -260,7 +261,7 @@ class TemporalDistanceLoss(AuxiliaryLoss):
         beliefs: torch.FloatTensor,
         masks: torch.FloatTensor,
         *args,
-        **kwargs
+        **kwargs,
     ):
         ## we discard the last action in the batch
         num_steps, num_sampler = actions.shape  # T, B
@@ -313,7 +314,7 @@ class TemporalDistanceLoss(AuxiliaryLoss):
             np.repeat(locs[:, [1]], 2 * self.num_pairs, axis=-1),  # (M, 2*k)
             np.repeat(locs[:, [2]] + 1, 2 * self.num_pairs, axis=-1),  # (M, 2*k)
         ).reshape(
-            (-1, self.num_pairs, 2)
+            -1, self.num_pairs, 2
         )  # (M, k, 2)
         sampled_pairs_batch = torch.from_numpy(sampled_pairs).to(
             locs_batch
@@ -347,7 +348,7 @@ class TemporalDistanceLoss(AuxiliaryLoss):
         ).float()  # (M, k)
 
         pred_error = (pred_temp_dist - true_temp_dist) * normalizer.unsqueeze(1)
-        loss = 0.5 * pred_error.pow(2)
+        loss = 0.5 * (pred_error).pow(2)
         avg_loss = loss.mean()
 
         return (
@@ -381,7 +382,7 @@ class CPCALoss(AuxiliaryLoss):
         beliefs: torch.Tensor,
         masks: torch.Tensor,
         *args,
-        **kwargs
+        **kwargs,
     ):
         # prepare for autoregressive inputs: c_{t+1:t+k} = GRU(b_t, a_{t:t+k-1}) <-> z_{t+k}
         ## where b_t = RNN(b_{t-1}, z_t, a_{t-1}), prev action is optional
@@ -412,18 +413,22 @@ class CPCALoss(AuxiliaryLoss):
         action_padded = torch.cat(
             (action_embedding, action_padding), dim=0
         )  # (T+k-1, N, -1)
+
         ## unfold function will create consecutive action sequences
         action_seq = (
             action_padded.unfold(dimension=0, size=self.planning_steps, step=1)
             .permute(3, 0, 1, 2)
             .view(self.planning_steps, num_steps * num_sampler, action_embed_size)
         )  # (k, T*N, -1)
+
+        ## beliefs GRU output
         beliefs = beliefs.view(num_steps * num_sampler, -1).unsqueeze(0)  # (1, T*N, -1)
 
         # get future contexts c_{t+1:t+k} = GRU(b_t, a_{t:t+k-1})
         future_contexts_all, _ = aux_model.context_model(
             action_seq, beliefs
         )  # (k, T*N, -1)
+
         ## NOTE: future_contexts_all starting from next step t+1 to t+k, not t to t+k-1
         future_contexts_all = future_contexts_all.view(
             self.planning_steps, num_steps, num_sampler, -1
@@ -544,6 +549,192 @@ class CPCALoss(AuxiliaryLoss):
                 "negative_loss": cast(torch.Tensor, avg_negative_loss).item(),
             },
         )
+
+
+class CPCASoftMaxLoss(AuxiliaryLoss):
+    """Auxiliary task of CPC|A with multi class softmax."""
+
+    UUID = "cpcA_SOFTMAX"
+
+    def __init__(
+        self,
+        planning_steps: int = 8,
+        subsample_rate: float = 1,
+        allow_skipping: bool = True,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(auxiliary_uuid=self.UUID, *args, **kwargs)
+        self.planning_steps = planning_steps
+        self.subsample_rate = subsample_rate
+        self.cross_entropy_loss = nn.CrossEntropyLoss(
+            reduction="none"
+        )  # nn.BCEWithLogitsLoss(reduction="none")
+        self.allow_skipping = allow_skipping
+
+    def get_aux_loss(
+        self,
+        aux_model: nn.Module,
+        observations: ObservationType,
+        obs_embeds: torch.Tensor,
+        actions: torch.Tensor,
+        beliefs: torch.Tensor,
+        masks: torch.Tensor,
+        *args,
+        **kwargs,
+    ):
+        # prepare for autoregressive inputs: c_{t+1:t+k} = GRU(b_t, a_{t:t+k-1}) <-> z_{t+k}
+        ## where b_t = RNN(b_{t-1}, z_t, a_{t-1}), prev action is optional
+        num_steps, num_samplers, obs_embed_size = obs_embeds.shape  # T, N, H_O
+        ##visual observation of all num_steps
+
+        if not (0 < self.planning_steps <= num_steps):
+            if self.allow_skipping:
+                return 0, {}
+            else:
+                raise RuntimeError(
+                    f"Insufficient planning steps: self.planning_steps {self.planning_steps} must"
+                    f" be greater than zero and less than or equal to num_steps {num_steps}."
+                )
+
+        ## prepare action sequences and initial beliefs
+        action_embedding = aux_model.action_embedder(actions)  # (T, N, -1)
+        action_embed_size = action_embedding.size(-1)
+        action_padding = torch.zeros(
+            self.planning_steps - 1,
+            num_samplers,
+            action_embed_size,
+            device=action_embedding.device,
+        )  # (k-1, N, -1)
+        action_padded = torch.cat(
+            (action_embedding, action_padding), dim=0
+        )  # (T+k-1, N, -1)
+
+        ## unfold function will create consecutive action sequences
+        action_seq = (
+            action_padded.unfold(dimension=0, size=self.planning_steps, step=1)
+            .permute(3, 0, 1, 2)
+            .view(self.planning_steps, num_steps * num_samplers, action_embed_size)
+        )  # (k, T*N, -1)
+
+        ## beliefs GRU output
+        obs_embeds = aux_model.visual_mlp(obs_embeds)  # (T, N, 128)
+
+        beliefs = beliefs.view(1, num_steps * num_samplers, -1)  # (1, T*N, -1)
+
+        # get future contexts c_{t+1:t+k} = GRU(b_t, a_{t:t+k-1})
+        future_contexts_all, _ = aux_model.context_model(
+            action_seq, beliefs
+        )  # (k, T*N, -1)
+
+        future_contexts_all = aux_model.belief_mlp(future_contexts_all)  # (k, T*N, 128)
+        future_contexts_all = future_contexts_all.view(-1, 128)  # (k*T*N, 128)
+
+        obs_embeds = obs_embeds.view(
+            num_steps * num_samplers, obs_embeds.shape[-1]
+        ).permute(
+            1, 0
+        )  # (-1, T*N)
+
+        visual_logits = torch.matmul(future_contexts_all, obs_embeds)
+        visual_log_probs = F.log_softmax(visual_logits, dim=1)  ## (k*T*N, T*N)
+
+        target = torch.zeros(
+            (self.planning_steps, num_steps, num_samplers),
+            dtype=torch.long,
+            device=beliefs.device,
+        )  # (k, T, N)
+        loss_mask = torch.zeros(
+            (self.planning_steps, num_steps, num_samplers), device=beliefs.device
+        )  # (k, T, N)
+
+        num_valid_before = 0
+        for j in range(num_samplers):
+            for i in range(num_steps):
+                index = i * num_samplers + j
+
+                if i == 0 or masks[i, j].item() == 0:
+                    num_valid_before = 0
+                    continue
+
+                num_valid_before += 1
+                for back in range(min(num_valid_before, self.planning_steps)):
+                    target[back, i - (back + 1), j] = index
+                    loss_mask[back, i - (back + 1), j] = 1.0
+
+        target = target.view(-1)  # (k*T*N,)
+
+        loss_value = self.cross_entropy_loss(visual_log_probs, target)
+        loss_value = loss_value.view(
+            self.planning_steps, num_steps, num_samplers, 1
+        )  # (k, T, N, 1)
+
+        loss_mask = loss_mask.unsqueeze(-1)  # (k, T, N, 1)
+        loss_valid_masks = loss_mask * _bernoulli_subsample_mask_like(
+            loss_mask, self.subsample_rate
+        )  # (k, T, N, 1)
+
+        num_valid_losses = torch.count_nonzero(loss_valid_masks)
+
+        avg_multi_class_loss = (loss_value * loss_valid_masks).sum() / torch.clamp(
+            num_valid_losses, min=1.0
+        )
+
+        return (
+            avg_multi_class_loss,
+            {"total": cast(torch.Tensor, avg_multi_class_loss).item(),},
+        )
+
+
+######## CPCA Softmax variants ######
+
+
+class CPCA1SoftMaxLoss(CPCASoftMaxLoss):
+    UUID = "cpcA_SOFTMAX_1"
+
+    def __init__(self, subsample_rate: float = 1, *args, **kwargs):
+        super().__init__(
+            planning_steps=1, subsample_rate=subsample_rate, *args, **kwargs
+        )
+
+
+class CPCA2SoftMaxLoss(CPCASoftMaxLoss):
+    UUID = "cpcA_SOFTMAX_2"
+
+    def __init__(self, subsample_rate: float = 1, *args, **kwargs):
+        super().__init__(
+            planning_steps=2, subsample_rate=subsample_rate, *args, **kwargs
+        )
+
+
+class CPCA4SoftMaxLoss(CPCASoftMaxLoss):
+    UUID = "cpcA_SOFTMAX_4"
+
+    def __init__(self, subsample_rate: float = 1, *args, **kwargs):
+        super().__init__(
+            planning_steps=4, subsample_rate=subsample_rate, *args, **kwargs
+        )
+
+
+class CPCA8SoftMaxLoss(CPCASoftMaxLoss):
+    UUID = "cpcA_SOFTMAX_8"
+
+    def __init__(self, subsample_rate: float = 1, *args, **kwargs):
+        super().__init__(
+            planning_steps=8, subsample_rate=subsample_rate, *args, **kwargs
+        )
+
+
+class CPCA16SoftMaxLoss(CPCASoftMaxLoss):
+    UUID = "cpcA_SOFTMAX_16"
+
+    def __init__(self, subsample_rate: float = 1, *args, **kwargs):
+        super().__init__(
+            planning_steps=16, subsample_rate=subsample_rate, *args, **kwargs
+        )
+
+
+###########
 
 
 class CPCA1Loss(CPCALoss):
