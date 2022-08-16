@@ -2,6 +2,8 @@
 import copy
 import enum
 import glob
+import importlib.util
+import inspect
 import itertools
 import json
 import math
@@ -17,36 +19,39 @@ import traceback
 from collections import defaultdict
 from multiprocessing.context import BaseContext
 from multiprocessing.process import BaseProcess
-from typing import Optional, Dict, Union, Tuple, Sequence, List, Any
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, Set
 
 import filelock
 import numpy as np
 import torch
 import torch.multiprocessing as mp
 from setproctitle import setproctitle as ptitle
+from torch.distributions.utils import lazy_property
 
 from allenact.algorithms.onpolicy_sync.engine import (
-    OnPolicyTrainer,
-    OnPolicyInference,
+    TEST_MODE_STR,
     TRAIN_MODE_STR,
     VALID_MODE_STR,
-    TEST_MODE_STR,
+    OnPolicyInference,
     OnPolicyRLEngine,
+    OnPolicyTrainer,
 )
+from allenact.base_abstractions.callbacks import Callback
 from allenact.base_abstractions.experiment_config import ExperimentConfig, MachineParams
+from allenact.base_abstractions.sensor import Sensor
 from allenact.utils.experiment_utils import (
+    LoggingPackage,
     ScalarMeanTracker,
     set_deterministic_cudnn,
     set_seed,
-    LoggingPackage,
 )
 from allenact.utils.misc_utils import (
+    NumpyJSONEncoder,
     all_equal,
     get_git_diff_of_project,
-    NumpyJSONEncoder,
 )
 from allenact.utils.model_utils import md5_hash_of_state_dict
-from allenact.utils.system import get_logger, find_free_port
+from allenact.utils.system import find_free_port, get_logger
 from allenact.utils.tensor_utils import SummaryWriter
 from allenact.utils.viz_utils import VizSuite
 
@@ -86,14 +91,17 @@ class OnPolicyRunner(object):
         disable_tensorboard: bool = False,
         disable_config_saving: bool = False,
         distributed_ip_and_port: str = "127.0.0.1:0",
+        distributed_preemption_threshold: float = 0.7,
         machine_id: int = 0,
         save_dir_fmt: SaveDirFormat = SaveDirFormat.FLAT,
+        callbacks_paths: Optional[str] = None,
     ):
         self.config = config
         self.output_dir = output_dir
         self.loaded_config_src_files = loaded_config_src_files
         self.seed = seed if seed is not None else random.randint(0, 2 ** 31 - 1)
         self.deterministic_cudnn = deterministic_cudnn
+        self.distributed_preemption_threshold = distributed_preemption_threshold
         if multiprocessing_start_method == "default":
             if torch.cuda.is_available():
                 multiprocessing_start_method = "forkserver"
@@ -137,6 +145,8 @@ class OnPolicyRunner(object):
 
         self.save_dir_fmt = save_dir_fmt
 
+        self.callbacks = self.setup_callback_classes(callbacks_paths)
+
     @property
     def local_start_time_str(self) -> str:
         if self._local_start_time_str is None:
@@ -177,6 +187,31 @@ class OnPolicyRunner(object):
             )
 
         return mp_ctx
+
+    def setup_callback_classes(self, callbacks: Optional[str]) -> Set[Callback]:
+        """Get a list of Callback classes from a comma-separated list of
+        filenames."""
+        if callbacks == "" or callbacks is None:
+            return set()
+
+        setup_dict = dict(name=self.experiment_name, config=self.config, mode=self.mode)
+        callback_classes = set()
+        files = callbacks.split(",")
+        for filename in files:
+            module_path = filename.replace("/", ".")
+            if module_path.endswith(".py"):
+                module_path = module_path[:-3]
+            module = importlib.import_module(module_path)
+            classes = inspect.getmembers(module, inspect.isclass)
+
+            for mod_class in classes:
+                if issubclass(mod_class[1], Callback) and mod_class[1] != Callback:
+                    # NOTE: initialize the callback class
+                    inst_class = mod_class[1]()
+                    inst_class.setup(**setup_dict)
+                    callback_classes.add(inst_class)
+
+        return callback_classes
 
     def _acquire_unique_local_start_time_string(self) -> str:
         """Creates a (unique) local start time string for this experiment.
@@ -311,6 +346,15 @@ class OnPolicyRunner(object):
         finally:
             return worker
 
+    @lazy_property
+    def _get_callback_sensors(self) -> List[Sensor]:
+        callback_sensors: List[Sensor] = []
+        for c in self.callbacks:
+            sensors = c.callback_sensors()
+            if sensors is not None:
+                callback_sensors.extend(sensors)
+        return callback_sensors
+
     @staticmethod
     def train_loop(
         id: int = 0,
@@ -411,6 +455,7 @@ class OnPolicyRunner(object):
         save_ckpt_after_every_pipeline_stage: bool = True,
         collect_valid_results: bool = False,
         valid_on_initial_weights: bool = False,
+        try_restart_after_task_error: bool = False,
     ):
         self._initialize_start_train_or_start_test()
 
@@ -452,6 +497,7 @@ class OnPolicyRunner(object):
                 restart_pipeline=restart_pipeline,
                 experiment_name=self.experiment_name,
                 config=self.config,
+                callback_sensors=self._get_callback_sensors,
                 results_queue=self.queues["results"],
                 checkpoints_queue=self.queues["checkpoints"]
                 if self.running_validation
@@ -470,7 +516,9 @@ class OnPolicyRunner(object):
                 if model_hash is None
                 else model_hash,
                 first_local_worker_id=worker_ids[0],
+                distributed_preemption_threshold=self.distributed_preemption_threshold,
                 valid_on_initial_weights=valid_on_initial_weights,
+                try_restart_after_task_error=try_restart_after_task_error,
             )
             train: BaseProcess = self.mp_ctx.Process(
                 target=self.train_loop, kwargs=training_kwargs,
@@ -507,6 +555,7 @@ class OnPolicyRunner(object):
                 args=(0,),
                 kwargs=dict(
                     config=self.config,
+                    callback_sensors=self._get_callback_sensors,
                     results_queue=self.queues["results"],
                     checkpoints_queue=self.queues["checkpoints"],
                     seed=12345,  # TODO allow same order for randomly sampled tasks? Is this any useful anyway?
@@ -569,6 +618,9 @@ class OnPolicyRunner(object):
         assert (
             self.machine_id == 0
         ), f"Received `machine_id={self.machine_id} for test. Only one machine supported."
+        assert isinstance(
+            checkpoint_path_dir_or_pattern, str
+        ), "Must provide a --checkpoint path or pattern to test on."
 
         self.extra_tag += (
             "__" * (len(self.extra_tag) > 0) + "enforced_test_expert"
@@ -590,6 +642,7 @@ class OnPolicyRunner(object):
                 args=(tester_it,),
                 kwargs=dict(
                     config=self.config,
+                    callback_sensors=self._get_callback_sensors,
                     results_queue=self.queues["results"],
                     checkpoints_queue=self.queues["checkpoints"],
                     seed=12345,  # TODO allow same order for randomly sampled tasks? Is this any useful anyway?
@@ -810,8 +863,10 @@ class OnPolicyRunner(object):
                         break
 
         get_logger().info(f"Config files saved to {base_dir}")
+        for callback in self.callbacks:
+            callback.after_save_project_state(base_dir=base_dir)
 
-    def process_eval_package(
+    def process_valid_package(
         self,
         log_writer: Optional[SummaryWriter],
         pkg: LoggingPackage,
@@ -824,29 +879,41 @@ class OnPolicyRunner(object):
 
         num_tasks = pkg.num_non_empty_metrics_dicts_added
         metric_means = pkg.metrics_tracker.means()
+        callback_metric_means = dict()
+        tasks_callback_data = pkg.task_callback_data
 
         mode = pkg.mode
+        assert mode == "valid"
 
+        num_tasks_key = f"{mode}-misc/num_tasks_evaled"
         if log_writer is not None:
-            log_writer.add_scalar(
-                f"{mode}-misc/num_tasks_evaled", num_tasks, training_steps
-            )
+            log_writer.add_scalar(num_tasks_key, num_tasks, training_steps)
+        callback_metric_means[num_tasks_key] = num_tasks
 
         message = [f"{mode} {training_steps} steps:"]
         for k in sorted(metric_means.keys()):
+            metrics_key = f"{mode}-metrics/{k}"
             if log_writer is not None:
-                log_writer.add_scalar(
-                    f"{mode}-metrics/{k}", metric_means[k], training_steps
-                )
+                log_writer.add_scalar(metrics_key, metric_means[k], training_steps)
+            callback_metric_means[metrics_key] = metric_means[k]
             message.append(f"{k} {metric_means[k]}")
 
+        results = copy.deepcopy(metric_means)
+        results.update({"training_steps": training_steps, "tasks": task_outputs})
         if all_results is not None:
-            results = copy.deepcopy(metric_means)
-            results.update({"training_steps": training_steps, "tasks": task_outputs})
             all_results.append(results)
 
         message.append(f"tasks {num_tasks} checkpoint {checkpoint_file_name}")
         get_logger().info(" ".join(message))
+
+        for callback in self.callbacks:
+            callback.on_valid_log(
+                metric_means=callback_metric_means,
+                metrics=results,
+                step=training_steps,
+                checkpoint_file_name=checkpoint_file_name,
+                tasks_data=tasks_callback_data,
+            )
 
         if self.visualizer is not None:
             self.visualizer.log(
@@ -865,6 +932,7 @@ class OnPolicyRunner(object):
         last_time: float,
     ):
         assert self.mode == TRAIN_MODE_STR
+        callback_metric_means = dict()
 
         current_time = time.time()
 
@@ -877,13 +945,17 @@ class OnPolicyRunner(object):
                 scalar_value=pkgs[0].pipeline_stage,
                 global_step=training_steps,
             )
+        callback_metric_means[f"train-misc/pipeline_stage"] = pkgs[0].pipeline_stage
 
-            for storage_uuid, val in storage_uuid_to_total_experiences.items():
+        for storage_uuid, val in storage_uuid_to_total_experiences.items():
+            total_experiences_key = f"train-misc/{storage_uuid}_total_experiences"
+            if log_writer is not None:
                 log_writer.add_scalar(
-                    tag=f"train-misc/{storage_uuid}_total_experiences",
+                    tag=total_experiences_key,
                     scalar_value=val,
                     global_step=training_steps,
                 )
+            callback_metric_means[total_experiences_key] = val
 
         def add_prefix(
             d: Union[Dict[str, Any], str],
@@ -907,11 +979,13 @@ class OnPolicyRunner(object):
         metrics_and_train_info_tracker = ScalarMeanTracker()
         scalar_name_to_total_storage_experience = {}
         storage_uuid_to_stage_component_uuids = defaultdict(lambda: set())
+        tasks_callback_data = []
         for pkg in pkgs:
             metrics_and_train_info_tracker.add_scalars(
                 scalars=add_prefix(pkg.metrics_tracker.means(), "metrics", None),
                 n=add_prefix(pkg.metrics_tracker.counts(), "metrics", None),
             )
+            tasks_callback_data.extend(pkg.task_callback_data)
 
             for (
                 (stage_component_uuid, storage_uuid),
@@ -963,6 +1037,7 @@ class OnPolicyRunner(object):
             f"TRAIN: {training_steps} rollout steps ({pkgs[0].storage_uuid_to_total_experiences})"
         ]
         means = metrics_and_train_info_tracker.means()
+        callback_metric_means.update(means)
 
         for k in sorted(
             means.keys(), key=lambda mean_key: (mean_key.count("/"), mean_key)
@@ -984,10 +1059,10 @@ class OnPolicyRunner(object):
         if last_steps > 0:
             fps = (training_steps - last_steps) / (current_time - last_time)
             message += [f"approx_fps {fps:.3g}"]
+            approx_fps_key = add_prefix("approx_fps", "misc", None)
             if log_writer is not None:
-                log_writer.add_scalar(
-                    add_prefix("approx_fps", "misc", None), fps, training_steps
-                )
+                log_writer.add_scalar(approx_fps_key, fps, training_steps)
+            callback_metric_means[approx_fps_key] = fps
 
         for (
             storage_uuid,
@@ -997,21 +1072,33 @@ class OnPolicyRunner(object):
                 cur_total_exp = storage_uuid_to_total_experiences[storage_uuid]
                 eps = (cur_total_exp - last_total_exp) / (current_time - last_time)
                 message += [f"{storage_uuid}/approx_eps {eps:.3g}"]
-                if log_writer is not None:
-                    for stage_component_uuid in storage_uuid_to_stage_component_uuids[
-                        storage_uuid
-                    ]:
+                for stage_component_uuid in storage_uuid_to_stage_component_uuids[
+                    storage_uuid
+                ]:
+                    approx_eps_key = add_prefix(
+                        f"approx_eps",
+                        "misc",
+                        stage_component_uuid=stage_component_uuid,
+                    )
+                    callback_metric_means[approx_eps_key] = eps
+                    if log_writer is not None:
                         log_writer.add_scalar(
-                            add_prefix(
-                                f"approx_eps",
-                                "misc",
-                                stage_component_uuid=stage_component_uuid,
-                            ),
-                            eps,
-                            cur_total_exp,
+                            approx_eps_key, eps, cur_total_exp,
                         )
 
         get_logger().info(" ".join(message))
+
+        metrics = []
+        for pkg in pkgs:
+            metrics.extend(pkg.metric_dicts)
+
+        for callback in self.callbacks:
+            callback.on_train_log(
+                metrics=metrics,
+                metric_means=callback_metric_means,
+                step=training_steps,
+                tasks_data=tasks_callback_data,
+            )
 
         return training_steps, storage_uuid_to_total_experiences, current_time
 
@@ -1028,10 +1115,12 @@ class OnPolicyRunner(object):
 
         all_metrics_tracker = ScalarMeanTracker()
         metric_dicts_list, render, checkpoint_file_name = [], {}, []
+        tasks_callback_data = []
         for pkg in pkgs:
             all_metrics_tracker.add_scalars(
                 scalars=pkg.metrics_tracker.means(), n=pkg.metrics_tracker.counts()
             )
+            tasks_callback_data.extend(pkg.task_callback_data)
             metric_dicts_list.extend(pkg.metric_dicts)
             if pkg.viz_data is not None:
                 render.update(pkg.viz_data)
@@ -1042,11 +1131,12 @@ class OnPolicyRunner(object):
         message = [f"{mode} {training_steps} steps:"]
 
         metric_means = all_metrics_tracker.means()
+        callback_metric_means = dict()
         for k in sorted(metric_means.keys()):
+            metrics_key = f"{mode}-metrics/{k}"
             if log_writer is not None:
-                log_writer.add_scalar(
-                    f"{mode}-metrics/{k}", metric_means[k], training_steps
-                )
+                log_writer.add_scalar(metrics_key, metric_means[k], training_steps)
+            callback_metric_means[metrics_key] = metric_means[k]
             message.append(k + f" {metric_means[k]:.3g}")
 
         if all_results is not None:
@@ -1057,13 +1147,23 @@ class OnPolicyRunner(object):
             all_results.append(results)
 
         num_tasks = sum([pkg.num_non_empty_metrics_dicts_added for pkg in pkgs])
+
+        num_tasks_evaled_key = f"{mode}-misc/num_tasks_evaled"
         if log_writer is not None:
-            log_writer.add_scalar(
-                f"{mode}-misc/num_tasks_evaled", num_tasks, training_steps
-            )
+            log_writer.add_scalar(num_tasks_evaled_key, num_tasks, training_steps)
+        callback_metric_means[num_tasks_evaled_key] = num_tasks
 
         message.append(f"tasks {num_tasks} checkpoint {checkpoint_file_name[0]}")
         get_logger().info(" ".join(message))
+
+        for callback in self.callbacks:
+            callback.on_test_log(
+                metric_means=callback_metric_means,
+                metrics=all_results[-1],
+                step=training_steps,
+                checkpoint_file_name=checkpoint_file_name[0],
+                tasks_data=tasks_callback_data,
+            )
 
         if self.visualizer is not None:
             self.visualizer.log(
@@ -1153,7 +1253,7 @@ class OnPolicyRunner(object):
                             if (
                                 package.training_steps is not None
                             ):  # no validation samplers
-                                self.process_eval_package(
+                                self.process_valid_package(
                                     log_writer=log_writer,
                                     pkg=package,
                                     all_results=eval_results

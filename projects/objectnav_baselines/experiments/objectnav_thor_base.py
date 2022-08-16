@@ -29,9 +29,11 @@ from allenact_plugins.robothor_plugin.robothor_task_samplers import (
 from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from projects.objectnav_baselines.experiments.objectnav_base import ObjectNavBaseConfig
 
-if ai2thor.__version__ not in ["0.0.1", None] and version.parse(
-    ai2thor.__version__
-) < version.parse("3.2.0"):
+if (
+    ai2thor.__version__ not in ["0.0.1", None]
+    and not ai2thor.__version__.startswith("0+")
+    and version.parse(ai2thor.__version__) < version.parse("3.2.0")
+):
     raise ImportError(
         "To run the AI2-THOR ObjectNav baseline experiments you must use"
         " ai2thor version 3.2.0 or higher."

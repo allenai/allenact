@@ -4,8 +4,9 @@ from typing import Dict
 
 import numpy as np
 import torch
-from allenact.utils.system import get_logger
 from scipy.spatial.transform import Rotation as R
+
+from allenact.utils.system import get_logger
 
 
 def state_dict_to_tensor(state: Dict):
@@ -103,15 +104,17 @@ def matrix_to_position_rotation(matrix):
     return result
 
 
-def find_closest_inverse(deg):
-    for k in _saved_inverse_rotation_mats.keys():
-        if abs(k - deg) < 5:
-            return _saved_inverse_rotation_mats[k]
+def find_closest_inverse(deg, use_cache):
+    if use_cache:
+        for k in _saved_inverse_rotation_mats.keys():
+            if abs(k - deg) < 5:
+                return _saved_inverse_rotation_mats[k]
     # if it reaches here it means it had not calculated the degree before
     rotation = R.from_euler("xyz", [0, deg, 0], degrees=True)
     result = rotation.as_matrix()
     inverse = inverse_rot_trans_matrix(result)
-    get_logger().warning(f"Had to calculate the matrix for {deg}")
+    if use_cache:
+        get_logger().warning(f"Had to calculate the matrix for {deg}")
     return inverse
 
 
@@ -126,12 +129,12 @@ _saved_inverse_rotation_mats = {i: calc_inverse(i) for i in range(0, 360, 45)}
 _saved_inverse_rotation_mats[360] = _saved_inverse_rotation_mats[0]
 
 
-def world_coords_to_agent_coords(world_obj, agent_state):
+def world_coords_to_agent_coords(world_obj, agent_state, use_cache=True):
     position = agent_state["position"]
     rotation = agent_state["rotation"]
     agent_translation = [position["x"], position["y"], position["z"]]
     assert abs(rotation["x"]) < 0.01 and abs(rotation["z"]) < 0.01
-    inverse_agent_rotation = find_closest_inverse(rotation["y"])
+    inverse_agent_rotation = find_closest_inverse(rotation["y"], use_cache=use_cache)
     obj_matrix = position_rotation_to_matrix(
         world_obj["position"], world_obj["rotation"]
     )

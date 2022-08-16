@@ -1,24 +1,29 @@
 """Entry point to training/validating/testing for a user given experiment
 name."""
 
+import os
+
+if "CUDA_DEVICE_ORDER" not in os.environ:
+    # Necessary to order GPUs correctly in some cases
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+
 import argparse
 import ast
 import importlib
 import inspect
 import json
-import os
-from typing import Dict, Tuple, List, Optional, Type
+from typing import Dict, List, Optional, Tuple, Type
 
 from setproctitle import setproctitle as ptitle
 
 from allenact import __version__
 from allenact.algorithms.onpolicy_sync.runner import (
-    OnPolicyRunner,
     CONFIG_KWARGS_STR,
+    OnPolicyRunner,
     SaveDirFormat,
 )
 from allenact.base_abstractions.experiment_config import ExperimentConfig
-from allenact.utils.system import get_logger, init_logging, HUMAN_LOG_LEVELS
+from allenact.utils.system import HUMAN_LOG_LEVELS, get_logger, init_logging
 
 
 def get_argument_parser():
@@ -263,6 +268,24 @@ def get_argument_parser():
         " tutorial https://allenact.org/tutorials/distributed-objectnav-tutorial/",
     )
 
+    parser.add_argument(
+        "--callbacks",
+        dest="callbacks",
+        required=False,
+        type=str,
+        default="",
+        help="Comma-separated list of files with Callback classes to use.",
+    )
+
+    parser.add_argument(
+        "--enable_crash_recovery",
+        dest="enable_crash_recovery",
+        default=False,
+        action="store_true",
+        required=False,
+        help="Whether or not to try recovering when a task crashes (use at your own risk).",
+    )
+
     ### DEPRECATED FLAGS
     parser.add_argument(
         "-t",
@@ -447,12 +470,14 @@ def main():
             disable_config_saving=args.disable_config_saving,
             distributed_ip_and_port=args.distributed_ip_and_port,
             machine_id=args.machine_id,
+            callbacks_paths=args.callbacks,
         ).start_train(
             checkpoint=args.checkpoint,
             restart_pipeline=args.restart_pipeline,
             max_sampler_processes_per_worker=args.max_sampler_processes_per_worker,
             collect_valid_results=args.collect_valid_results,
             valid_on_initial_weights=args.valid_on_initial_weights,
+            try_restart_after_task_error=args.enable_crash_recovery,
         )
     else:
         OnPolicyRunner(
@@ -469,6 +494,7 @@ def main():
             disable_config_saving=args.disable_config_saving,
             distributed_ip_and_port=args.distributed_ip_and_port,
             machine_id=args.machine_id,
+            callbacks_paths=args.callbacks,
         ).start_test(
             checkpoint_path_dir_or_pattern=args.checkpoint,
             infer_output_dir=args.infer_output_dir,

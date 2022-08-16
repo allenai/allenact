@@ -13,15 +13,15 @@ from threading import Thread
 from typing import (
     Any,
     Callable,
+    Dict,
+    Generator,
+    Iterator,
     List,
     Optional,
     Sequence,
     Set,
     Tuple,
     Union,
-    Dict,
-    Generator,
-    Iterator,
     cast,
 )
 
@@ -30,6 +30,7 @@ from gym.spaces.dict import Dict as SpaceDict
 from setproctitle import setproctitle as ptitle
 
 from allenact.base_abstractions.misc import RLStepResult
+from allenact.base_abstractions.sensor import SensorSuite, Sensor
 from allenact.base_abstractions.task import TaskSampler
 from allenact.utils.misc_utils import partition_sequence
 from allenact.utils.system import get_logger
@@ -46,6 +47,7 @@ except ImportError:
 
 DEFAULT_MP_CONTEXT_TYPE = "forkserver"
 COMPLETE_TASK_METRICS_KEY = "__AFTER_TASK_METRICS__"
+COMPLETE_TASK_CALLBACK_KEY = "__AFTER_TASK_CALLBACK__"
 
 STEP_COMMAND = "step"
 NEXT_TASK_COMMAND = "next_task"
@@ -150,6 +152,7 @@ class VectorSampledTasks:
         self,
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args: Sequence[Dict[str, Any]] = None,
+        callback_sensors: Optional[Sequence[Sensor]] = None,
         auto_resample_when_done: bool = True,
         multiprocessing_start_method: Optional[str] = "forkserver",
         mp_ctx: Optional[BaseContext] = None,
@@ -196,7 +199,7 @@ class VectorSampledTasks:
         ] = None
         self._reset_sampler_index_to_process_ind_and_subprocess_ind()
 
-        self._workers: Optional[List] = None
+        self._workers: Optional[List[Union[mp.Process, Thread, BaseProcess]]] = None
         for args in sampler_fn_args:
             args["mp_ctx"] = self._mp_ctx
         (
@@ -208,6 +211,11 @@ class VectorSampledTasks:
             sampler_fn_args_list=[
                 args_list for args_list in self._partition_to_processes(sampler_fn_args)
             ],
+            callback_sensor_suite=(
+                SensorSuite(callback_sensors)
+                if isinstance(callback_sensors, Sequence)
+                else callback_sensors
+            ),
         )
 
         self._connection_read_fns = [
@@ -222,8 +230,11 @@ class VectorSampledTasks:
         for write_fn in self._connection_write_fns:
             write_fn((OBSERVATION_SPACE_COMMAND, None))
 
+        # Note that we increase the read timeout below as initialization can take some time
         observation_spaces = [
-            space for read_fn in self._connection_read_fns for space in read_fn()
+            space
+            for read_fn in self._connection_read_fns
+            for space in read_fn(timeout_to_use=5 * self.read_timeout if self.read_timeout is not None else None)  # type: ignore
         ]
 
         if any(os is None for os in observation_spaces):
@@ -259,7 +270,7 @@ class VectorSampledTasks:
                 # noinspection PyArgumentList
                 if not poll_fn(timeout=timeout_to_use):
                     raise TimeoutError(
-                        f"Did not recieve output from `VectorSampledTask` worker for {timeout_to_use} seconds."
+                        f"Did not receive output from `VectorSampledTask` worker for {timeout_to_use} seconds."
                     )
 
             return read_fn()
@@ -321,6 +332,7 @@ class VectorSampledTasks:
         connection_write_fn: Callable,
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args_list: List[Dict[str, Any]],
+        callback_sensor_suite: Optional[SensorSuite],
         auto_resample_when_done: bool,
         should_log: bool,
         child_pipe: Optional[Connection] = None,
@@ -334,6 +346,7 @@ class VectorSampledTasks:
         sp_vector_sampled_tasks = SingleProcessVectorSampledTasks(
             make_sampler_fn=make_sampler_fn,
             sampler_fn_args_list=sampler_fn_args_list,
+            callback_sensor_suite=callback_sensor_suite,
             auto_resample_when_done=auto_resample_when_done,
             should_log=should_log,
         )
@@ -344,57 +357,53 @@ class VectorSampledTasks:
             while True:
                 read_input = connection_read_fn()
 
-                with DelaySignalHandling():
-                    # Delaying signal handling here is necessary to ensure that we don't
-                    # (when processing a SIGTERM/SIGINT signal) attempt to send data to
-                    # a generator while it is already processing other data.
-                    if len(read_input) == 3:
-                        sampler_index, command, data = read_input
+                # TODO: Was the below necessary?
+                # with DelaySignalHandling():
+                #     # Delaying signal handling here is necessary to ensure that we don't
+                #     # (when processing a SIGTERM/SIGINT signal) attempt to send data to
+                #     # a generator while it is already processing other data.
+                if len(read_input) == 3:
+                    sampler_index, command, data = read_input
 
-                        assert (
-                            command != CLOSE_COMMAND
-                        ), "Must close all processes at once."
-                        assert (
-                            command != RESUME_COMMAND
-                        ), "Must resume all task samplers at once."
+                    assert command != CLOSE_COMMAND, "Must close all processes at once."
+                    assert (
+                        command != RESUME_COMMAND
+                    ), "Must resume all task samplers at once."
 
-                        if command == PAUSE_COMMAND:
-                            sp_vector_sampled_tasks.pause_at(
-                                sampler_index=sampler_index
-                            )
-                            connection_write_fn("done")
-                        else:
-                            connection_write_fn(
-                                sp_vector_sampled_tasks.command_at(
-                                    sampler_index=sampler_index,
-                                    command=command,
-                                    data=data,
-                                )
-                            )
+                    if command == PAUSE_COMMAND:
+                        sp_vector_sampled_tasks.pause_at(sampler_index=sampler_index)
+                        connection_write_fn("done")
                     else:
-                        commands, data_list = read_input
-
-                        assert (
-                            commands != PAUSE_COMMAND
-                        ), "Cannot pause all task samplers at once."
-
-                        if commands == CLOSE_COMMAND:
-                            sp_vector_sampled_tasks.close()
-                            break
-                        elif commands == RESUME_COMMAND:
-                            sp_vector_sampled_tasks.resume_all()
-                            connection_write_fn("done")
-                        else:
-                            if isinstance(commands, str):
-                                commands = [
-                                    commands
-                                ] * sp_vector_sampled_tasks.num_unpaused_tasks
-
-                            connection_write_fn(
-                                sp_vector_sampled_tasks.command(
-                                    commands=commands, data_list=data_list
-                                )
+                        connection_write_fn(
+                            sp_vector_sampled_tasks.command_at(
+                                sampler_index=sampler_index, command=command, data=data,
                             )
+                        )
+                else:
+                    commands, data_list = read_input
+
+                    assert (
+                        commands != PAUSE_COMMAND
+                    ), "Cannot pause all task samplers at once."
+
+                    if commands == CLOSE_COMMAND:
+                        # Will close the `sp_vector_sampled_tasks` in the `finally` clause below
+                        break
+
+                    elif commands == RESUME_COMMAND:
+                        sp_vector_sampled_tasks.resume_all()
+                        connection_write_fn("done")
+                    else:
+                        if isinstance(commands, str):
+                            commands = [
+                                commands
+                            ] * sp_vector_sampled_tasks.num_unpaused_tasks
+
+                        connection_write_fn(
+                            sp_vector_sampled_tasks.command(
+                                commands=commands, data_list=data_list
+                            )
+                        )
 
         except KeyboardInterrupt:
             if should_log:
@@ -405,6 +414,11 @@ class VectorSampledTasks:
             )
             raise e
         finally:
+            try:
+                sp_vector_sampled_tasks.close()
+            except Exception:
+                pass
+
             if child_pipe is not None:
                 child_pipe.close()
             if should_log:
@@ -414,6 +428,7 @@ class VectorSampledTasks:
         self,
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args_list: Sequence[Sequence[Dict[str, Any]]],
+        callback_sensor_suite: Optional[SensorSuite],
     ) -> Tuple[
         List[Callable[[], bool]], List[Callable[[], Any]], List[Callable[[Any], None]]
     ]:
@@ -443,6 +458,7 @@ class VectorSampledTasks:
                     connection_write_fn=worker_conn.send,
                     make_sampler_fn=make_sampler_fn,
                     sampler_fn_args_list=current_sampler_fn_args_list,
+                    callback_sensor_suite=callback_sensor_suite,
                     auto_resample_when_done=self._auto_resample_when_done,
                     should_log=self.should_log,
                     child_pipe=worker_conn,
@@ -641,6 +657,10 @@ class VectorSampledTasks:
                 process.join(timeout=0.1)
             except Exception:
                 pass
+
+        for process in self._workers:
+            if process.is_alive():
+                process.kill()
 
         self._is_closed = True
 
@@ -858,6 +878,7 @@ class SingleProcessVectorSampledTasks(object):
         self,
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args_list: Sequence[Dict[str, Any]] = None,
+        callback_sensor_suite: Optional[SensorSuite] = None,
         auto_resample_when_done: bool = True,
         should_log: bool = True,
     ) -> None:
@@ -876,6 +897,7 @@ class SingleProcessVectorSampledTasks(object):
         self._vector_task_generators: List[Generator] = self._create_generators(
             make_sampler_fn=make_sampler_fn,
             sampler_fn_args=[{"mp_ctx": None, **args} for args in sampler_fn_args_list],
+            callback_sensor_suite=callback_sensor_suite,
         )
 
         self._is_closed = False
@@ -930,6 +952,7 @@ class SingleProcessVectorSampledTasks(object):
         worker_id: int,
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args: Dict[str, Any],
+        callback_sensor_suite: Optional[SensorSuite],
         auto_resample_when_done: bool,
         should_log: bool,
     ) -> Generator:
@@ -958,6 +981,16 @@ class SingleProcessVectorSampledTasks(object):
                             if step_result.info is None:
                                 step_result = step_result.clone({"info": {}})
                             step_result.info[COMPLETE_TASK_METRICS_KEY] = metrics
+
+                        if callback_sensor_suite is not None:
+                            task_callback_data = callback_sensor_suite.get_observations(
+                                env=current_task.env, task=current_task
+                            )
+                            if step_result.info is None:
+                                step_result = step_result.clone({"info": {}})
+                            step_result.info[
+                                COMPLETE_TASK_CALLBACK_KEY
+                            ] = task_callback_data
 
                         if auto_resample_when_done:
                             current_task = task_sampler.next_task()
@@ -1060,21 +1093,21 @@ class SingleProcessVectorSampledTasks(object):
         self,
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args: Sequence[Dict[str, Any]],
+        callback_sensor_suite: Optional[SensorSuite],
     ) -> List[Generator]:
 
         generators = []
         for id, current_sampler_fn_args in enumerate(sampler_fn_args):
             if self.should_log:
                 get_logger().info(
-                    "Starting {}-th SingleProcessVectorSampledTasks generator with args {}".format(
-                        id, current_sampler_fn_args
-                    )
+                    f"Starting {id}-th SingleProcessVectorSampledTasks generator with args {current_sampler_fn_args}."
                 )
             generators.append(
                 self._task_sampling_loop_generator_fn(
                     worker_id=id,
                     make_sampler_fn=make_sampler_fn,
                     sampler_fn_args=current_sampler_fn_args,
+                    callback_sensor_suite=callback_sensor_suite,
                     auto_resample_when_done=self._auto_resample_when_done,
                     should_log=self.should_log,
                 )

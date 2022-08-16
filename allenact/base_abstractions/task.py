@@ -7,7 +7,7 @@
 environment."""
 
 import abc
-from typing import Dict, Any, Tuple, Generic, Union, Optional, TypeVar, Sequence, List
+from typing import Any, Dict, Generic, List, Optional, Sequence, Tuple, TypeVar, Union
 
 import gym
 import numpy as np

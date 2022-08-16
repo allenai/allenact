@@ -13,6 +13,7 @@ ADDITIONAL_ARM_ARGS = {
 }
 
 MOVE_AHEAD = "MoveAheadContinuous"
+MOVE_BACK = "MoveBackContinuous"
 ROTATE_LEFT = "RotateLeftContinuous"
 ROTATE_RIGHT = "RotateRightContinuous"
 MOVE_ARM_HEIGHT_P = "MoveArmHeightP"
@@ -27,11 +28,14 @@ ROTATE_WRIST_PITCH_P = "RotateArmWristPitchP"
 ROTATE_WRIST_PITCH_M = "RotateArmWristPitchM"
 ROTATE_WRIST_YAW_P = "RotateArmWristYawP"
 ROTATE_WRIST_YAW_M = "RotateArmWristYawM"
+ROTATE_WRIST_ROLL_P = "RotateArmWristRollP"
+ROTATE_WRIST_ROLL_M = "RotateArmWristRollM"
 ROTATE_ELBOW_P = "RotateArmElbowP"
 ROTATE_ELBOW_M = "RotateArmElbowM"
 LOOK_UP = "LookUp"
 LOOK_DOWN = "LookDown"
 PICKUP = "PickUpMidLevel"
+DROP = "DropMidLevel"
 DONE = "DoneMidLevel"
 
 
