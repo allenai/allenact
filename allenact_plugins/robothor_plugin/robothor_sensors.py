@@ -180,7 +180,7 @@ class DepthSensorThor(DepthSensor[THOR_ENV_TYPE, THOR_TASK_TYPE,],):
         self, env: THOR_ENV_TYPE, task: Optional[THOR_TASK_TYPE]
     ) -> np.ndarray:
         if not isinstance(env, ai2thor.controller.Controller):
-            env = env.controller.last_event.depth_frame
+            return env.controller.last_event.depth_frame
 
         return env.last_event.depth_frame
 
