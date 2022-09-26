@@ -43,6 +43,7 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
         multiple_beliefs=False,
         beliefs_fusion: Optional[FusionType] = None,
         auxiliary_uuids: Optional[List[str]] = None,
+        auxiliary_model_class = AuxiliaryModel,
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
         self._hidden_size = hidden_size
@@ -62,6 +63,7 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
 
         self.fusion_model: Optional[nn.Module] = None
         self.belief_names: Optional[Sequence[str]] = None
+        self.auxiliary_model_class = auxiliary_model_class
 
     def create_state_encoders(
         self,
@@ -141,7 +143,7 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
             return
         aux_models = OrderedDict()
         for aux_uuid in self.auxiliary_uuids:
-            aux_models[aux_uuid] = AuxiliaryModel(
+            aux_models[aux_uuid] = self.auxiliary_model_class(
                 aux_uuid=aux_uuid,
                 action_dim=self.action_space.n,
                 obs_embed_dim=obs_embed_size,
