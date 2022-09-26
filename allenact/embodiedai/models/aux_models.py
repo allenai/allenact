@@ -37,55 +37,70 @@ class AuxiliaryModel(nn.Module):
         self.action_dim = action_dim
         self.obs_embed_dim = obs_embed_dim
         self.belief_dim = belief_dim
+        self.action_embed_size = action_embed_size
+        self.cpca_classifier_hidden_dim = cpca_classifier_hidden_dim
+        self.cpca_softmax_dim = cpca_softmax_dim
 
-        if self.aux_uuid == InverseDynamicsLoss.UUID:
-            self.decoder = nn.Linear(
-                2 * self.obs_embed_dim + self.belief_dim, self.action_dim
-            )
-        elif self.aux_uuid == TemporalDistanceLoss.UUID:
-            self.decoder = nn.Linear(2 * self.obs_embed_dim + self.belief_dim, 1)
-        elif CPCALoss.UUID in self.aux_uuid:  # the CPCA family with various k
-            ## Auto-regressive model to predict future context
-            self.action_embedder = FeatureEmbedding(
-                self.action_dim + 1, action_embed_size
-            )
-            # NOTE: add extra 1 in embedding dict cuz we will pad zero actions?
-            self.context_model = nn.GRU(action_embed_size, self.belief_dim)
+        self.initialize_model_given_aux_uuid(self.aux_uuid)
 
-            ## Classifier to estimate mutual information
-            self.classifier = nn.Sequential(
-                nn.Linear(
-                    self.belief_dim + self.obs_embed_dim, cpca_classifier_hidden_dim
-                ),
-                nn.ReLU(),
-                nn.Linear(cpca_classifier_hidden_dim, 1),
-            )
-
-        elif CPCASoftMaxLoss.UUID in self.aux_uuid:
-            ###
-            # same as CPCA with extra MLP for contrastive losses.
-            ###
-            self.action_embedder = FeatureEmbedding(
-                self.action_dim + 1, action_embed_size
-            )
-            # NOTE: add extra 1 in embedding dict cuz we will pad zero actions?
-            self.context_model = nn.GRU(action_embed_size, self.belief_dim)
-
-            ## Classifier to estimate mutual information
-            self.visual_mlp = nn.Sequential(
-                nn.Linear(obs_embed_dim, cpca_classifier_hidden_dim),
-                nn.ReLU(),
-                nn.Linear(cpca_classifier_hidden_dim, cpca_softmax_dim),
-            )
-
-            self.belief_mlp = nn.Sequential(
-                nn.Linear(self.belief_dim, cpca_classifier_hidden_dim),
-                nn.ReLU(),
-                nn.Linear(cpca_classifier_hidden_dim, cpca_softmax_dim),
-            )
-
+    def initialize_model_given_aux_uuid(self, aux_uuid: str):
+        if aux_uuid == InverseDynamicsLoss.UUID:
+            self.init_inverse_dynamics()
+        elif aux_uuid == TemporalDistanceLoss.UUID:
+            self.init_temporal_distance()
+        elif CPCALoss.UUID in aux_uuid:  # the CPCA family with various k
+            self.init_cpca()
+        elif CPCASoftMaxLoss.UUID in aux_uuid:
+            self.init_cpca_softmax()
         else:
             raise ValueError("Unknown Auxiliary Loss UUID")
+
+    def init_inverse_dynamics(self):
+        self.decoder = nn.Linear(
+            2 * self.obs_embed_dim + self.belief_dim, self.action_dim
+        )
+
+    def init_temporal_distance(self):
+        self.decoder = nn.Linear(2 * self.obs_embed_dim + self.belief_dim, 1)
+
+    def init_cpca(self):
+        ## Auto-regressive model to predict future context
+        self.action_embedder = FeatureEmbedding(
+            self.action_dim + 1, self.action_embed_size
+        )
+        # NOTE: add extra 1 in embedding dict cuz we will pad zero actions?
+        self.context_model = nn.GRU(self.action_embed_size, self.belief_dim)
+
+        ## Classifier to estimate mutual information
+        self.classifier = nn.Sequential(
+            nn.Linear(
+                self.belief_dim + self.obs_embed_dim, self.cpca_classifier_hidden_dim
+            ),
+            nn.ReLU(),
+            nn.Linear(self.cpca_classifier_hidden_dim, 1),
+        )
+
+    def init_cpca_softmax(self):
+        # same as CPCA with extra MLP for contrastive losses.
+        ###
+        self.action_embedder = FeatureEmbedding(
+            self.action_dim + 1, self.action_embed_size
+        )
+        # NOTE: add extra 1 in embedding dict cuz we will pad zero actions?
+        self.context_model = nn.GRU(self.action_embed_size, self.belief_dim)
+
+        ## Classifier to estimate mutual information
+        self.visual_mlp = nn.Sequential(
+            nn.Linear(self.obs_embed_dim, self.cpca_classifier_hidden_dim),
+            nn.ReLU(),
+            nn.Linear(self.cpca_classifier_hidden_dim, self.cpca_softmax_dim),
+        )
+
+        self.belief_mlp = nn.Sequential(
+            nn.Linear(self.belief_dim, self.cpca_classifier_hidden_dim),
+            nn.ReLU(),
+            nn.Linear(self.cpca_classifier_hidden_dim, self.cpca_softmax_dim),
+        )
 
     def forward(self, features: torch.FloatTensor):
         if self.aux_uuid in [InverseDynamicsLoss.UUID, TemporalDistanceLoss.UUID]:

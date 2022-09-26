@@ -62,7 +62,7 @@ class ClipResNetPreprocessGRUActorCriticMixin:
     sensors: Sequence[Sensor] = attr.ib()
     clip_model_type: str = attr.ib()
     screen_size: int = attr.ib()
-    goal_sensor_type: Type[Sensor] = attr.ib()
+    goal_sensor_type: Type[Optional[Sensor]] = attr.ib()
     pool: bool = attr.ib(default=False)
 
     def preprocessors(self) -> Sequence[Union[Preprocessor, Builder[Preprocessor]]]:
