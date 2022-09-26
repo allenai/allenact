@@ -228,6 +228,7 @@ class ResnetTensorNavActorCritic(VisualNavActorCritic):
             multiple_beliefs=multiple_beliefs,
             beliefs_fusion=beliefs_fusion,
             auxiliary_uuids=auxiliary_uuids,
+            **kwargs,
         )
 
         if (
