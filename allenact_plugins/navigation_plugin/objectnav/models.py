@@ -220,6 +220,7 @@ class ResnetTensorNavActorCritic(VisualNavActorCritic):
         goal_dims: int = 32,
         resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
         combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
+        **kwargs,
     ):
         super().__init__(
             action_space=action_space,
