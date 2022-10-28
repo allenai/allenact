@@ -50,8 +50,9 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         kwargs : Extra kwargs. Currently unused.
         """
 
-        self._norm_means = np.array(mean)
-        self._norm_sds = np.array(stdev)
+        self._norm_means = np.array(mean) if mean is not None else None
+        self._norm_sds = np.array(stdev) if stdev is not None else None
+
         assert (self._norm_means is None) == (self._norm_sds is None), (
             "In VisionSensor's config, "
             "either both mean/stdev must be None or neither."
