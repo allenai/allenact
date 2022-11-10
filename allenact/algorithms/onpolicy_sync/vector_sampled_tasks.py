@@ -167,7 +167,7 @@ class VectorSampledTasks:
         self._is_closed = True
         self.should_log = should_log
         self.max_processes = max_processes
-        self.read_timeout = read_timeout
+        self.read_timeout = 3600
 
         assert (
             sampler_fn_args is not None and len(sampler_fn_args) > 0
