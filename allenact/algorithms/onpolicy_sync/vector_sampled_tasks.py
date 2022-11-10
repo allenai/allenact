@@ -160,7 +160,7 @@ class VectorSampledTasks:
         max_processes: Optional[int] = None,
         read_timeout: Optional[
             float
-        ] = 60,  # Seconds to wait for a task to return a response before timing out
+        ] = 3600,  # Seconds to wait for a task to return a response before timing out
     ) -> None:
 
         self._is_waiting = False
