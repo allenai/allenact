@@ -9,6 +9,7 @@ from allenact.base_abstractions.sensor import Sensor
 from allenact.base_abstractions.task import Task
 from allenact.utils.system import get_logger
 from allenact.utils.tensor_utils import tile_images
+from allenact.embodiedai.metrics import visited_cells_metric, num_reachable_positions_cells
 from allenact_plugins.ithor_plugin.ithor_environment import IThorEnvironment
 from allenact_plugins.robothor_plugin.robothor_constants import (
     MOVE_AHEAD,
@@ -478,6 +479,8 @@ class NavToPartnerTask(Task[RoboThorEnvironment]):
         self.task_info["followed_path1"] = [pose1]
         self.task_info["followed_path2"] = [pose2]
         self.task_info["action_names"] = self.class_action_names()
+        self.task_info["num_reachable_positions"] = num_reachable_positions_cells(self.env.controller)
+        assert self.task_info["num_reachable_positions"] > 0
 
     @property
     def action_space(self):
@@ -515,11 +518,37 @@ class NavToPartnerTask(Task[RoboThorEnvironment]):
         pose2 = self.env.agent_state(1)
         self.task_info["followed_path2"].append(pose2)
 
+        def retry_dist(position: Dict[str, float], object_type: Dict[str, float]):
+            allowed_error = 0.05
+            debug_log = ""
+            d = -1.0
+            while allowed_error < 2.5:
+                d = self.env.distance_from_point_to_point(
+                    position, object_type, allowed_error
+                )
+                if d < 0:
+                    debug_log = (
+                        f"In scene {self.env.scene_name}, could not find a path from {position} to {object_type} with"
+                        f" {allowed_error} error tolerance. Increasing this tolerance to"
+                        f" {2 * allowed_error} any trying again."
+                    )
+                    allowed_error *= 2
+                else:
+                    break
+            if d < 0:
+                get_logger().debug(
+                    f"In scene {self.env.scene_name}, could not find a path from {position} to {object_type}"
+                    f" with {allowed_error} error tolerance. Returning a distance of -1."
+                )
+            elif debug_log != "":
+                get_logger().debug(debug_log)
+            return d
+
         self.last_geodesic_distance = self.env.distance_cache.find_distance(
             self.env.scene_name,
             {k: pose1[k] for k in ["x", "y", "z"]},
             {k: pose2[k] for k in ["x", "y", "z"]},
-            self.env.distance_from_point_to_point,
+            retry_dist,
         )
 
         step_result = RLStepResult(
@@ -556,7 +585,14 @@ class NavToPartnerTask(Task[RoboThorEnvironment]):
         if not self.is_done():
             return {}
 
+        num_cells_visited1 = visited_cells_metric(self.task_info["followed_path1"])
+        num_cells_visited2 = visited_cells_metric(self.task_info["followed_path2"])
+
         return {
             **super().metrics(),
             "success": self.reached_terminal_state(),
+            "num_cells_visited1": num_cells_visited1,
+            "num_cells_visited2": num_cells_visited2,
+            "ratio_cells_visited1": num_cells_visited1 / self.task_info["num_reachable_positions"],
+            "ratio_cells_visited2": num_cells_visited2 / self.task_info["num_reachable_positions"],
         }
