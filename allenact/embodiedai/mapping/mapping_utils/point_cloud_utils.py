@@ -28,6 +28,8 @@ from typing import Optional, Sequence, cast
 import numpy as np
 import torch
 
+from allenact_plugins.ithor_plugin.ithor_util import vertical_to_horizontal_fov
+
 
 def camera_space_xyz_to_world_xyz(
     camera_space_xyzs: torch.Tensor,
@@ -123,11 +125,7 @@ def depth_frame_to_camera_space_xyz(
     A 3xN matrix with entry [:, i] equalling a the xyz coordinates (in the camera's coordinate
     frame) of a point in the point cloud corresponding to the input depth frame.
     """
-    assert (
-        len(depth_frame.shape) == 2 and depth_frame.shape[0] == depth_frame.shape[1]
-    ), f"depth has shape {depth_frame.shape}, we only support (N, N) shapes for now."
-
-    resolution = depth_frame.shape[0]
+    h, w = depth_frame.shape[:2]
     if mask is None:
         mask = torch.ones_like(depth_frame, dtype=torch.bool)
 
@@ -138,13 +136,17 @@ def depth_frame_to_camera_space_xyz(
     )
 
     # Subtract center
-    camera_space_yx_offsets -= resolution / 2.0
+    camera_space_yx_offsets[:1] -= h / 2.0
+    camera_space_yx_offsets[1:] -= w / 2.0
 
     # Make "up" in y be positive
     camera_space_yx_offsets[0, :] *= -1
 
     # Put points on the clipping plane
-    camera_space_yx_offsets *= (2.0 / resolution) * math.tan((fov / 2) / 180 * math.pi)
+    camera_space_yx_offsets[:1] *= (2.0 / h) * math.tan((fov / 2) / 180 * math.pi)
+    camera_space_yx_offsets[1:] *= (2.0 / w) * math.tan(
+        (vertical_to_horizontal_fov(fov, height=h, width=w) / 2) / 180 * math.pi
+    )
 
     # noinspection PyArgumentList
     camera_space_xyz = torch.cat(
@@ -290,7 +292,8 @@ def project_point_cloud_to_map(
 
     isvalid = torch.logical_and(
         torch.logical_and(
-            (uvw_points_binned >= 0).all(-1), (uvw_points_binned < maxes).all(-1),
+            (uvw_points_binned >= 0).all(-1),
+            (uvw_points_binned < maxes).all(-1),
         ),
         isnotnan,
     )

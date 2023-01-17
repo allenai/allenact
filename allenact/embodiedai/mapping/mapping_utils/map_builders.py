@@ -75,6 +75,7 @@ class BinnedPointCloudMapBuilder(object):
         map_size_in_cm: int,
         resolution_in_cm: int,
         height_bins: Sequence[float],
+        return_egocentric_local_context: bool= False,
         device: torch.device = torch.device("cpu"),
     ):
         assert vision_range_in_cm % resolution_in_cm == 0
@@ -85,6 +86,7 @@ class BinnedPointCloudMapBuilder(object):
         self.resolution_in_cm = resolution_in_cm
         self.height_bins = height_bins
         self.device = device
+        self.return_egocentric_local_context = return_egocentric_local_context
 
         self.binned_point_cloud_map = np.zeros(
             (
@@ -135,7 +137,11 @@ class BinnedPointCloudMapBuilder(object):
                 torch.from_numpy(camera_xyz - self.min_xyz).float().to(self.device)
             )
 
-            depth_frame = torch.from_numpy(depth_frame).to(self.device)
+            try:
+                depth_frame = torch.from_numpy(depth_frame).to(self.device)
+            except ValueError:
+                depth_frame = torch.from_numpy(depth_frame.copy()).to(self.device)
+
             depth_frame[
                 depth_frame
                 > self.vision_range_in_map_units * self.resolution_in_cm / 100
@@ -201,12 +207,91 @@ class BinnedPointCloudMapBuilder(object):
                 :vr, (width_div_2 - vr_div_2) : (width_div_2 + vr_div_2), :
             ]
 
-            return {
+            to_return = {
                 "egocentric_update": agent_centric_binned_map.cpu().numpy(),
                 "allocentric_update": allocentric_update_numpy,
                 "map": self.binned_point_cloud_map,
             }
 
+            if self.return_egocentric_local_context:
+                # See the update function of the semantic map sensor for in depth comments regarding the below
+                # Essentially we are simply rotating the full map into the orientation of the agent and then
+                # selecting a smaller region around the agent.
+                theta = -np.pi * camera_rotation / 180
+                cos_theta = np.cos(theta)
+                sin_theta = np.sin(theta)
+                rot_mat = torch.FloatTensor(
+                    [[cos_theta, -sin_theta], [sin_theta, cos_theta]]
+                ).to(self.device)
+
+                move_back_offset = (
+                    -0.5
+                    * (self.vision_range_in_map_units * self.resolution_in_cm / 100)
+                ) * (
+                    rot_mat
+                    @ torch.tensor(
+                        [0, 1], dtype=torch.float, device=self.device
+                    ).unsqueeze(-1)
+                )
+
+                map_size = self.binned_point_cloud_map.shape[0]
+                scaler = 2 * (100 / (self.resolution_in_cm * map_size))
+                offset_to_center_the_agent = (
+                    scaler
+                    * (
+                        torch.tensor(
+                            [
+                                camera_xyz[0],
+                                camera_xyz[2],
+                            ],
+                            dtype=torch.float,
+                            device=self.device,
+                        ).unsqueeze(-1)
+                        + move_back_offset
+                    )
+                    - 1
+                )
+                offset_to_top_of_image = rot_mat @ torch.FloatTensor(
+                    [0, 1.0]
+                ).unsqueeze(1).to(self.device)
+                rotation_and_translate_mat = torch.cat(
+                    (
+                        rot_mat,
+                        offset_to_top_of_image + offset_to_center_the_agent,
+                    ),
+                    dim=1,
+                )
+
+                full_map_tensor = (
+                    torch.tensor(
+                        self.binned_point_cloud_map,
+                        dtype=torch.float,
+                        device=self.device,
+                    )
+                    .unsqueeze(0)
+                    .permute(0, 3, 1, 2)
+                )
+                full_ego_map = (
+                    F.grid_sample(
+                        full_map_tensor,
+                        F.affine_grid(
+                            rotation_and_translate_mat.to(self.device).unsqueeze(0),
+                            full_map_tensor.shape,
+                            align_corners=False,
+                        ),
+                        align_corners=False,
+                    )
+                    .squeeze(0)
+                    .permute(1, 2, 0)
+                )
+
+                egocentric_local_context = full_ego_map[
+                    :vr, (width_div_2 - vr_div_2) : (width_div_2 + vr_div_2), :
+                ]
+
+                to_return["egocentric_local_context"] = egocentric_local_context.cpu().numpy()
+
+            return to_return
     def reset(self, min_xyz: np.ndarray):
         """Reset the map.
 
@@ -474,7 +559,11 @@ class SemanticMapBuilder(object):
                 1
             ).to(self.device)
             rotation_and_translate_mat = torch.cat(
-                (rot_mat, offset_to_top_of_image + offset_to_center_the_agent,), dim=1,
+                (
+                    rot_mat,
+                    offset_to_top_of_image + offset_to_center_the_agent,
+                ),
+                dim=1,
             )
 
             ego_update_and_mask = F.grid_sample(
