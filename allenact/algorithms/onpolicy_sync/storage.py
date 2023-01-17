@@ -28,6 +28,7 @@ from allenact.algorithms.onpolicy_sync.policy import (
     ActionType,
 )
 from allenact.base_abstractions.misc import Memory
+from allenact.utils.system import get_logger
 
 
 class ExperienceStorage(abc.ABC):
@@ -369,15 +370,19 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
                     tuple(path + [name])
                 ] = flatten_name
 
-            if storage_name == "observations":
-                # current_data has a step dimension
-                assert time_step >= 0
-                storage[flatten_name][0][time_step : time_step + 1].copy_(current_data)
-            elif storage_name == "memory":
-                # current_data does not have a step dimension
-                storage[flatten_name][0][time_step].copy_(current_data)
-            else:
-                raise NotImplementedError
+            try:
+                if storage_name == "observations":
+                    # current_data has a step dimension
+                    assert time_step >= 0
+                    storage[flatten_name][0][time_step : time_step + 1].copy_(current_data)
+                elif storage_name == "memory":
+                    # current_data does not have a step dimension
+                    storage[flatten_name][0][time_step].copy_(current_data)
+                else:
+                    raise NotImplementedError
+            except:
+                get_logger().error(f"Error while inserting data in storage for name {flatten_name}")
+                raise
 
     def create_tensor_storage(
         self, num_steps: int, template: torch.Tensor

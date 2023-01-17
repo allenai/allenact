@@ -51,6 +51,7 @@ class ClipResNetPreprocessor(Preprocessor):
         device: Optional[torch.device] = None,
         device_ids: Optional[List[torch.device]] = None,
         input_img_height_width: Tuple[int, int] = (224, 224),
+        chunk_size: Optional[int] = None,
         **kwargs: Any,
     ):
         assert clip_model_type in clip.available_models()
@@ -79,6 +80,8 @@ class ClipResNetPreprocessor(Preprocessor):
             List[torch.device], list(range(torch.cuda.device_count()))
         )
         self._resnet: Optional[ClipResNetEmbedder] = None
+
+        self.chunk_size = chunk_size
 
         low = -np.inf
         high = np.inf
@@ -115,7 +118,19 @@ class ClipResNetPreprocessor(Preprocessor):
         # If the input is depth, repeat it across all 3 channels
         if x.shape[1] == 1:
             x = x.repeat(1, 3, 1, 1)
-        x = self.resnet(x).float()
+
+        n = x.shape[0]
+        if self.chunk_size is not None and x.shape[0] > self.chunk_size:
+            processed_chunks = []
+            for idx in range(0, n, self.chunk_size):
+                processed_chunks.append(
+                    self.resnet(
+                        x[idx : min(idx + self.chunk_size, n)]
+                    ).float()
+                )
+            x = torch.cat(processed_chunks, dim=0)
+        else:
+            x = self.resnet(x).float()
         return x
 
 

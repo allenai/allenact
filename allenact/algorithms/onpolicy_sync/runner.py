@@ -1180,6 +1180,8 @@ class OnPolicyRunner(object):
         test_steps: Sequence[int] = (),
         metrics_file: Optional[str] = None,
     ) -> List[Dict]:
+        ptitle(f"AllenAct-Logging-{self.local_start_time_str}")
+
         finalized = False
 
         log_writer: Optional[SummaryWriter] = None

@@ -1,4 +1,5 @@
 import copy
+from functools import reduce
 from typing import Any, Dict, Optional, Union, Sequence
 
 import ai2thor.controller
@@ -32,9 +33,7 @@ THOR_TASK_TYPE = Union[
 ]
 
 
-class RGBSensorThor(
-    RGBSensor[THOR_ENV_TYPE, THOR_TASK_TYPE]
-):
+class RGBSensorThor(RGBSensor[THOR_ENV_TYPE, THOR_TASK_TYPE]):
     """Sensor for RGB images in THOR.
 
     Returns from a running IThorEnvironment instance, the current RGB
@@ -42,7 +41,9 @@ class RGBSensorThor(
     """
 
     def frame_from_env(
-        self, env: THOR_ENV_TYPE, task: Optional[THOR_TASK_TYPE],
+        self,
+        env: THOR_ENV_TYPE,
+        task: Optional[THOR_TASK_TYPE],
     ) -> np.ndarray:  # type:ignore
         if isinstance(env, ai2thor.controller.Controller):
             return env.last_event.frame.copy()
@@ -249,7 +250,8 @@ class ReachableBoundsTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnviron
 
     @staticmethod
     def get_bounds(
-        controller: ai2thor.controller.Controller, margin: float,
+        controller: ai2thor.controller.Controller,
+        margin: float,
     ) -> Dict[str, np.ndarray]:
         positions = controller.step("GetReachablePositions").metadata["actionReturn"]
         min_x = min(p["x"] for p in positions)
@@ -269,10 +271,15 @@ class ReachableBoundsTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnviron
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        scene_name = env.controller.last_event.metadata["sceneName"]
+        if isinstance(env, ai2thor.controller.Controller):
+            controller = env
+        else:
+            controller = env.controller
+
+        scene_name = controller.last_event.metadata["sceneName"]
         if scene_name not in self._bounds_cache:
             self._bounds_cache[scene_name] = self.get_bounds(
-                controller=env.controller, margin=self.margin
+                controller=controller, margin=self.margin
             )
 
         return copy.deepcopy(self._bounds_cache[scene_name])
@@ -326,14 +333,17 @@ class BinnedPointCloudMapTHORSensor(
 
     def __init__(
         self,
-        fov: float,
+        fov: Optional[float],
         vision_range_in_cm: int,
         map_size_in_cm: int,
         resolution_in_cm: int,
         map_range_sensor: Sensor,
+        return_egocentric_local_context: bool = False,
         height_bins: Sequence[float] = (0.02, 2),
         ego_only: bool = True,
+        exclude_agent: bool = False,
         uuid: str = "binned_pc_map",
+        device: torch.device = torch.device("cpu"),
         **kwargs: Any,
     ):
         self.fov = fov
@@ -342,6 +352,8 @@ class BinnedPointCloudMapTHORSensor(
         self.resolution_in_cm = resolution_in_cm
         self.height_bins = height_bins
         self.ego_only = ego_only
+        self.return_egocentric_local_context = return_egocentric_local_context
+        self.exclude_agent = exclude_agent
 
         self.binned_pc_map_builder = BinnedPointCloudMapBuilder(
             fov=fov,
@@ -349,21 +361,34 @@ class BinnedPointCloudMapTHORSensor(
             map_size_in_cm=map_size_in_cm,
             resolution_in_cm=resolution_in_cm,
             height_bins=height_bins,
+            return_egocentric_local_context=return_egocentric_local_context,
         )
+        self.device = device
 
-        map_space = gym.spaces.Box(
+        big_map_space = gym.spaces.Box(
             low=0,
             high=np.inf,
             shape=self.binned_pc_map_builder.binned_point_cloud_map.shape,
             dtype=np.float32,
         )
+        local_map_space = gym.spaces.Box(
+            low=0,
+            high=np.inf,
+            shape=(self.binned_pc_map_builder.vision_range_in_map_units,) * 2
+            + self.binned_pc_map_builder.binned_point_cloud_map.shape[-1:],
+            dtype=np.float32,
+        )
 
         space_dict = {
-            "egocentric_update": map_space,
+            "egocentric_update": local_map_space,
         }
+        if self.return_egocentric_local_context:
+            space_dict = {
+                "egocentric_local_context": copy.deepcopy(local_map_space),
+            }
         if not ego_only:
-            space_dict["allocentric_update"] = copy.deepcopy(map_space)
-            space_dict["map"] = copy.deepcopy(map_space)
+            space_dict["allocentric_update"] = copy.deepcopy(big_map_space)
+            space_dict["map"] = copy.deepcopy(big_map_space)
 
         observation_space = gym.spaces.Dict(space_dict)
         super().__init__(**prepare_locals_for_super(locals()))
@@ -385,11 +410,18 @@ class BinnedPointCloudMapTHORSensor(
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        e = env.controller.last_event
+        if isinstance(env, ai2thor.controller.Controller):
+            controller = env
+        else:
+            controller = env.controller
+
+        e = controller.last_event
         metadata = e.metadata
 
         if task.num_steps_taken() == 0:
             xz_ranges_dict = self.map_range_sensor.get_observation(env=env, task=task)
+            if self.fov is None:
+                self.binned_pc_map_builder.fov = e.metadata["fov"]
             self.binned_pc_map_builder.reset(
                 min_xyz=np.array(
                     [
@@ -400,8 +432,15 @@ class BinnedPointCloudMapTHORSensor(
                 )
             )
 
+        depth_frame = e.depth_frame
+
+        if self.exclude_agent:
+            depth_frame = depth_frame.copy()
+            assert len(e.instance_masks) > 0
+            depth_frame[~reduce(np.logical_or, e.instance_masks.values())] = np.nan
+
         map_dict = self.binned_pc_map_builder.update(
-            depth_frame=e.depth_frame,
+            depth_frame=depth_frame,
             camera_xyz=np.array(
                 [metadata["cameraPosition"][k] for k in ["x", "y", "z"]]
             ),
@@ -446,7 +485,10 @@ class SemanticMapTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnvironment
 
         def get_map_space(nchannels: int, size: int):
             return gym.spaces.Box(
-                low=0, high=1, shape=(size, size, nchannels), dtype=np.bool,
+                low=0,
+                high=1,
+                shape=(size, size, nchannels),
+                dtype=np.bool,
             )
 
         n = len(self.ordered_object_types)
@@ -454,12 +496,24 @@ class SemanticMapTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnvironment
         big = self.semantic_map_builder.ground_truth_semantic_map.shape[0]
 
         space_dict = {
-            "egocentric_update": get_map_space(nchannels=n, size=small,),
-            "egocentric_mask": get_map_space(nchannels=1, size=small,),
+            "egocentric_update": get_map_space(
+                nchannels=n,
+                size=small,
+            ),
+            "egocentric_mask": get_map_space(
+                nchannels=1,
+                size=small,
+            ),
         }
         if not ego_only:
-            space_dict["explored_mask"] = get_map_space(nchannels=1, size=big,)
-            space_dict["map"] = get_map_space(nchannels=n, size=big,)
+            space_dict["explored_mask"] = get_map_space(
+                nchannels=1,
+                size=big,
+            )
+            space_dict["map"] = get_map_space(
+                nchannels=n,
+                size=big,
+            )
 
         observation_space = gym.spaces.Dict(space_dict)
         super().__init__(**prepare_locals_for_super(locals()))
