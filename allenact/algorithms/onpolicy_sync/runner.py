@@ -866,90 +866,91 @@ class OnPolicyRunner(object):
         for callback in self.callbacks:
             callback.after_save_project_state(base_dir=base_dir)
 
-    def process_valid_package(
+    def _update_keys(
+        self,
+        d: Union[Dict[str, Any], str],
+        tag_if_not_a_loss: str,
+        mode: str,
+        stage_component_uuid: Optional[str] = None,
+    ) -> Union[Dict[str, Any], str]:
+        midfix = "-" if stage_component_uuid is None else f"-{stage_component_uuid}-"
+
+        def _convert(key: str):
+            if key.startswith("losses/"):
+                return f"{mode}{midfix}{key}"
+            else:
+                return f"{mode}{midfix}{tag_if_not_a_loss}/{key}"
+
+        if isinstance(d, str):
+            return _convert(d)
+        return {_convert(k): v for k, v in d.items()}
+
+    def _process_logging_packages(
         self,
         log_writer: Optional[SummaryWriter],
-        pkg: LoggingPackage,
+        pkgs: Union[LoggingPackage, List[LoggingPackage]],
+        last_steps: Optional[int],
+        last_storage_uuid_to_total_experiences: Optional[Dict[str, int]],
+        last_time: Optional[float],
         all_results: Optional[List[Any]] = None,
     ):
-        training_steps = pkg.training_steps
-        checkpoint_file_name = pkg.checkpoint_file_name
-        render = pkg.viz_data
-        task_outputs = pkg.metric_dicts
-
-        num_tasks = pkg.num_non_empty_metrics_dicts_added
-        metric_means = pkg.metrics_tracker.means()
-        callback_metric_means = dict()
-        tasks_callback_data = pkg.task_callback_data
-
-        mode = pkg.mode
-        assert mode == "valid"
-
-        num_tasks_key = f"{mode}-misc/num_tasks_evaled"
-        if log_writer is not None:
-            log_writer.add_scalar(num_tasks_key, num_tasks, training_steps)
-        callback_metric_means[num_tasks_key] = num_tasks
-
-        message = [f"{mode} {training_steps} steps:"]
-        for k in sorted(metric_means.keys()):
-            metrics_key = f"{mode}-metrics/{k}"
-            if log_writer is not None:
-                log_writer.add_scalar(metrics_key, metric_means[k], training_steps)
-            callback_metric_means[metrics_key] = metric_means[k]
-            message.append(f"{k} {metric_means[k]}")
-
-        results = copy.deepcopy(metric_means)
-        results.update({"training_steps": training_steps, "tasks": task_outputs})
-        if all_results is not None:
-            all_results.append(results)
-
-        message.append(f"tasks {num_tasks} checkpoint {checkpoint_file_name}")
-        get_logger().info(" ".join(message))
-
-        for callback in self.callbacks:
-            callback.on_valid_log(
-                metric_means=callback_metric_means,
-                metrics=results,
-                step=training_steps,
-                checkpoint_file_name=checkpoint_file_name,
-                tasks_data=tasks_callback_data,
-            )
-
-        if self.visualizer is not None:
-            self.visualizer.log(
-                log_writer=log_writer,
-                task_outputs=task_outputs,
-                render=render,
-                num_steps=training_steps,
-            )
-
-    def process_train_packages(
-        self,
-        log_writer: Optional[SummaryWriter],
-        pkgs: List[LoggingPackage],
-        last_steps: int,
-        last_storage_uuid_to_total_experiences: Dict[str, int],
-        last_time: float,
-    ):
-        assert self.mode == TRAIN_MODE_STR
-        callback_metric_means = dict()
+        mode = pkgs[0].mode
+        assert all(
+            pkg.mode == mode for pkg in pkgs
+        ), "All logging packages must be the same mode."
+        assert mode == self.mode or (
+            mode == VALID_MODE_STR and self.mode == TRAIN_MODE_STR
+        ), (
+            "Logging package mode must match the logger mode except when training where the logging package may"
+            "be of mode 'valid'."
+        )
+        training = mode == TRAIN_MODE_STR  # Are we logging training packages
 
         current_time = time.time()
 
         training_steps = pkgs[0].training_steps
         storage_uuid_to_total_experiences = pkgs[0].storage_uuid_to_total_experiences
+        callback_metric_means = dict()
 
-        if log_writer is not None:
+        def update_keys_misc(
+            key_or_dict: Union[str, Dict[str, Any]],
+            stage_component_uuid: Optional[str] = None,
+        ):
+            # Important to use mode and not self.mode here
+            return self._update_keys(
+                d=key_or_dict,
+                tag_if_not_a_loss="misc",
+                mode=mode,
+                stage_component_uuid=stage_component_uuid,
+            )
+
+        def update_keys_metric(
+            key_or_dict: Union[str, Dict[str, Any]],
+            stage_component_uuid: Optional[str] = None,
+        ):
+            # Important to use mode and not self.mode here
+            return self._update_keys(
+                d=key_or_dict,
+                tag_if_not_a_loss="metrics",
+                mode=mode,
+                stage_component_uuid=stage_component_uuid,
+            )
+
+        if training and log_writer is not None:
             log_writer.add_scalar(
-                tag="train-misc/pipeline_stage",
+                tag=update_keys_misc("pipeline_stage"),
                 scalar_value=pkgs[0].pipeline_stage,
                 global_step=training_steps,
             )
-        callback_metric_means[f"train-misc/pipeline_stage"] = pkgs[0].pipeline_stage
+        callback_metric_means[update_keys_misc("pipeline_stage")] = pkgs[
+            0
+        ].pipeline_stage
 
         for storage_uuid, val in storage_uuid_to_total_experiences.items():
-            total_experiences_key = f"train-misc/{storage_uuid}_total_experiences"
-            if log_writer is not None:
+            total_experiences_key = update_keys_misc(
+                f"{storage_uuid}_total_experiences"
+            )
+            if training and log_writer is not None:
                 log_writer.add_scalar(
                     tag=total_experiences_key,
                     scalar_value=val,
@@ -957,57 +958,40 @@ class OnPolicyRunner(object):
                 )
             callback_metric_means[total_experiences_key] = val
 
-        def add_prefix(
-            d: Union[Dict[str, Any], str],
-            tag_if_not_a_loss: str,
-            stage_component_uuid: Optional[str],
-        ) -> Union[Dict[str, Any], str]:
-            midfix = (
-                "-" if stage_component_uuid is None else f"-{stage_component_uuid}-"
-            )
-
-            def _convert(key: str):
-                if key.startswith("losses/"):
-                    return f"{self.mode}{midfix}{key}"
-                else:
-                    return f"{self.mode}{midfix}{tag_if_not_a_loss}/{key}"
-
-            if isinstance(d, str):
-                return _convert(d)
-            return {_convert(k): v for k, v in d.items()}
-
-        metrics_and_train_info_tracker = ScalarMeanTracker()
+        metrics_and_info_tracker = ScalarMeanTracker()
         scalar_name_to_total_storage_experience = {}
         storage_uuid_to_stage_component_uuids = defaultdict(lambda: set())
+        metric_dicts_list, render, checkpoint_file_name = [], {}, []
         tasks_callback_data = []
+
         for pkg in pkgs:
-            metrics_and_train_info_tracker.add_scalars(
-                scalars=add_prefix(pkg.metrics_tracker.means(), "metrics", None),
-                n=add_prefix(pkg.metrics_tracker.counts(), "metrics", None),
+            metrics_and_info_tracker.add_scalars(
+                scalars=update_keys_metric(pkg.metrics_tracker.means()),
+                n=update_keys_metric(pkg.metrics_tracker.counts()),
             )
             tasks_callback_data.extend(pkg.task_callback_data)
+            metric_dicts_list.extend(pkg.metric_dicts)
+            if pkg.viz_data is not None:
+                render.update(pkg.viz_data)
+            checkpoint_file_name.append(pkg.checkpoint_file_name)
 
             for (
                 (stage_component_uuid, storage_uuid),
-                train_info_tracker,
-            ) in pkg.train_info_trackers.items():
+                info_tracker,
+            ) in pkg.info_trackers.items():
 
                 storage_uuid_to_stage_component_uuids[storage_uuid].add(
                     stage_component_uuid
                 )
 
-                train_info_means = add_prefix(
-                    train_info_tracker.means(),
-                    tag_if_not_a_loss="misc",
-                    stage_component_uuid=stage_component_uuid,
+                info_means = update_keys_misc(
+                    info_tracker.means(), stage_component_uuid,
                 )
-                train_info_counts = add_prefix(
-                    train_info_tracker.counts(),
-                    tag_if_not_a_loss="misc",
-                    stage_component_uuid=stage_component_uuid,
+                info_counts = update_keys_misc(
+                    info_tracker.counts(), stage_component_uuid,
                 )
-                metrics_and_train_info_tracker.add_scalars(
-                    scalars=train_info_means, n=train_info_counts,
+                metrics_and_info_tracker.add_scalars(
+                    scalars=info_means, n=info_counts,
                 )
 
                 if storage_uuid is None:
@@ -1017,7 +1001,7 @@ class OnPolicyRunner(object):
                     total_exp_for_storage = pkg.storage_uuid_to_total_experiences[
                         storage_uuid
                     ]
-                for scalar_name in train_info_means:
+                for scalar_name in info_means:
                     if scalar_name in scalar_name_to_total_storage_experience:
                         assert (
                             total_exp_for_storage
@@ -1033,137 +1017,115 @@ class OnPolicyRunner(object):
                             scalar_name
                         ] = total_exp_for_storage
 
+        assert all_equal(
+            checkpoint_file_name
+        ), f"All {mode} logging packages must have the same checkpoint_file_name."
+
         message = [
-            f"TRAIN: {training_steps} rollout steps ({pkgs[0].storage_uuid_to_total_experiences})"
+            f"{mode.upper()}: {training_steps} rollout steps ({pkgs[0].storage_uuid_to_total_experiences})"
         ]
-        means = metrics_and_train_info_tracker.means()
-        callback_metric_means.update(means)
+        metrics_and_info_means = metrics_and_info_tracker.means()
+        callback_metric_means.update(metrics_and_info_means)
 
         for k in sorted(
-            means.keys(), key=lambda mean_key: (mean_key.count("/"), mean_key)
+            metrics_and_info_means.keys(),
+            key=lambda mean_key: (mean_key.count("/"), mean_key),
         ):
             if log_writer is not None:
                 log_writer.add_scalar(
                     tag=k,
-                    scalar_value=means[k],
+                    scalar_value=metrics_and_info_means[k],
                     global_step=scalar_name_to_total_storage_experience.get(
                         k, training_steps
                     ),
                 )
             short_key = (
-                "/".join(k.split("/")[1:]) if k.startswith("train-") and "/" in k else k
+                "/".join(k.split("/")[1:])
+                if k.startswith(f"{mode}-") and "/" in k
+                else k
             )
-            message.append(f"{short_key} {means[k]:.3g}")
-        message += [f"elapsed_time {(current_time - last_time):.3g}s"]
+            message.append(f"{short_key} {metrics_and_info_means[k]:.3g}")
 
-        if last_steps > 0:
-            fps = (training_steps - last_steps) / (current_time - last_time)
-            message += [f"approx_fps {fps:.3g}"]
-            approx_fps_key = add_prefix("approx_fps", "misc", None)
-            if log_writer is not None:
-                log_writer.add_scalar(approx_fps_key, fps, training_steps)
-            callback_metric_means[approx_fps_key] = fps
+        if training:
+            # Log information about FPS and EPS (experiences per second, for non-rollout storage).
+            # Not needed during testing or validation.
+            message += [f"elapsed_time {(current_time - last_time):.3g}s"]
 
-        for (
-            storage_uuid,
-            last_total_exp,
-        ) in last_storage_uuid_to_total_experiences.items():
-            if storage_uuid in storage_uuid_to_total_experiences:
-                cur_total_exp = storage_uuid_to_total_experiences[storage_uuid]
-                eps = (cur_total_exp - last_total_exp) / (current_time - last_time)
-                message += [f"{storage_uuid}/approx_eps {eps:.3g}"]
-                for stage_component_uuid in storage_uuid_to_stage_component_uuids[
-                    storage_uuid
-                ]:
-                    approx_eps_key = add_prefix(
-                        f"approx_eps",
-                        "misc",
-                        stage_component_uuid=stage_component_uuid,
-                    )
-                    callback_metric_means[approx_eps_key] = eps
-                    if log_writer is not None:
-                        log_writer.add_scalar(
-                            approx_eps_key, eps, cur_total_exp,
+            if last_steps > 0:
+                fps = (training_steps - last_steps) / (current_time - last_time)
+                message += [f"approx_fps {fps:.3g}"]
+                approx_fps_key = update_keys_misc("approx_fps")
+                if log_writer is not None:
+                    log_writer.add_scalar(approx_fps_key, fps, training_steps)
+                callback_metric_means[approx_fps_key] = fps
+
+            for (
+                storage_uuid,
+                last_total_exp,
+            ) in last_storage_uuid_to_total_experiences.items():
+                if storage_uuid in storage_uuid_to_total_experiences:
+                    cur_total_exp = storage_uuid_to_total_experiences[storage_uuid]
+                    eps = (cur_total_exp - last_total_exp) / (current_time - last_time)
+                    message += [f"{storage_uuid}/approx_eps {eps:.3g}"]
+                    for stage_component_uuid in storage_uuid_to_stage_component_uuids[
+                        storage_uuid
+                    ]:
+                        approx_eps_key = update_keys_misc(
+                            f"approx_eps", stage_component_uuid,
                         )
+                        callback_metric_means[approx_eps_key] = eps
+                        if log_writer is not None:
+                            log_writer.add_scalar(
+                                approx_eps_key, eps, cur_total_exp,
+                            )
 
-        get_logger().info(" ".join(message))
-
-        metrics = []
-        for pkg in pkgs:
-            metrics.extend(pkg.metric_dicts)
-
-        for callback in self.callbacks:
-            callback.on_train_log(
-                metrics=metrics,
-                metric_means=callback_metric_means,
-                step=training_steps,
-                tasks_data=tasks_callback_data,
-            )
-
-        return training_steps, storage_uuid_to_total_experiences, current_time
-
-    def process_test_packages(
-        self,
-        log_writer: Optional[SummaryWriter],
-        pkgs: List[LoggingPackage],
-        all_results: Optional[List[Any]] = None,
-    ):
-        mode = pkgs[0].mode
-        assert mode == TEST_MODE_STR
-
-        training_steps = pkgs[0].training_steps
-
-        all_metrics_tracker = ScalarMeanTracker()
-        metric_dicts_list, render, checkpoint_file_name = [], {}, []
-        tasks_callback_data = []
-        for pkg in pkgs:
-            all_metrics_tracker.add_scalars(
-                scalars=pkg.metrics_tracker.means(), n=pkg.metrics_tracker.counts()
-            )
-            tasks_callback_data.extend(pkg.task_callback_data)
-            metric_dicts_list.extend(pkg.metric_dicts)
-            if pkg.viz_data is not None:
-                render.update(pkg.viz_data)
-            checkpoint_file_name.append(pkg.checkpoint_file_name)
-
-        assert all_equal(checkpoint_file_name)
-
-        message = [f"{mode} {training_steps} steps:"]
-
-        metric_means = all_metrics_tracker.means()
-        callback_metric_means = dict()
-        for k in sorted(metric_means.keys()):
-            metrics_key = f"{mode}-metrics/{k}"
-            if log_writer is not None:
-                log_writer.add_scalar(metrics_key, metric_means[k], training_steps)
-            callback_metric_means[metrics_key] = metric_means[k]
-            message.append(k + f" {metric_means[k]:.3g}")
-
+        metrics_and_info_means_with_metrics_dicts_list = copy.deepcopy(
+            metrics_and_info_means
+        )
+        metrics_and_info_means_with_metrics_dicts_list.update(
+            {"training_steps": training_steps, "tasks": metric_dicts_list}
+        )
         if all_results is not None:
-            results = copy.deepcopy(metric_means)
-            results.update(
-                {"training_steps": training_steps, "tasks": metric_dicts_list}
-            )
-            all_results.append(results)
+            all_results.append(metrics_and_info_means_with_metrics_dicts_list)
 
         num_tasks = sum([pkg.num_non_empty_metrics_dicts_added for pkg in pkgs])
-
-        num_tasks_evaled_key = f"{mode}-misc/num_tasks_evaled"
+        num_tasks_completed_key = update_keys_misc("num_tasks_completed_since_last_log")
         if log_writer is not None:
-            log_writer.add_scalar(num_tasks_evaled_key, num_tasks, training_steps)
-        callback_metric_means[num_tasks_evaled_key] = num_tasks
+            log_writer.add_scalar(num_tasks_completed_key, num_tasks, training_steps)
+        callback_metric_means[num_tasks_completed_key] = num_tasks
 
-        message.append(f"tasks {num_tasks} checkpoint {checkpoint_file_name[0]}")
+        message.append(f"new_tasks_completed {num_tasks}")
+        if not training:
+            message.append(f"checkpoint {checkpoint_file_name[0]}")
+
         get_logger().info(" ".join(message))
 
         for callback in self.callbacks:
-            callback.on_test_log(
-                metric_means=callback_metric_means,
-                metrics=all_results[-1],
-                step=training_steps,
-                checkpoint_file_name=checkpoint_file_name[0],
-                tasks_data=tasks_callback_data,
-            )
+            if mode == TRAIN_MODE_STR:
+                callback.on_train_log(
+                    metrics=metric_dicts_list,
+                    metric_means=callback_metric_means,
+                    step=training_steps,
+                    tasks_data=tasks_callback_data,
+                )
+
+            if mode == VALID_MODE_STR:
+                callback.on_valid_log(
+                    metrics=metrics_and_info_means_with_metrics_dicts_list,
+                    metric_means=callback_metric_means,
+                    step=training_steps,
+                    checkpoint_file_name=checkpoint_file_name[0],
+                    tasks_data=tasks_callback_data,
+                )
+
+            if mode == TEST_MODE_STR:
+                callback.on_test_log(
+                    metrics=metrics_and_info_means_with_metrics_dicts_list,
+                    metric_means=callback_metric_means,
+                    step=training_steps,
+                    checkpoint_file_name=checkpoint_file_name[0],
+                    tasks_data=tasks_callback_data,
+                )
 
         if self.visualizer is not None:
             self.visualizer.log(
@@ -1173,6 +1135,54 @@ class OnPolicyRunner(object):
                 num_steps=training_steps,
             )
 
+        return training_steps, storage_uuid_to_total_experiences, current_time
+
+    def process_valid_package(
+        self,
+        log_writer: Optional[SummaryWriter],
+        pkg: LoggingPackage,
+        all_results: Optional[List[Any]] = None,
+    ):
+        return self._process_logging_packages(
+            log_writer=log_writer,
+            pkgs=[pkg],
+            last_steps=None,
+            last_storage_uuid_to_total_experiences=None,
+            last_time=None,
+            all_results=all_results,
+        )
+
+    def process_train_packages(
+        self,
+        log_writer: Optional[SummaryWriter],
+        pkgs: List[LoggingPackage],
+        last_steps: int,
+        last_storage_uuid_to_total_experiences: Dict[str, int],
+        last_time: float,
+    ):
+        return self._process_logging_packages(
+            log_writer=log_writer,
+            pkgs=pkgs,
+            last_steps=last_steps,
+            last_storage_uuid_to_total_experiences=last_storage_uuid_to_total_experiences,
+            last_time=last_time,
+        )
+
+    def process_test_packages(
+        self,
+        log_writer: Optional[SummaryWriter],
+        pkgs: List[LoggingPackage],
+        all_results: Optional[List[Any]] = None,
+    ):
+        return self._process_logging_packages(
+            log_writer=log_writer,
+            pkgs=pkgs,
+            last_steps=None,
+            last_storage_uuid_to_total_experiences=None,
+            last_time=None,
+            all_results=all_results,
+        )
+
     def log_and_close(
         self,
         start_time_str: str,
@@ -1180,6 +1190,7 @@ class OnPolicyRunner(object):
         test_steps: Sequence[int] = (),
         metrics_file: Optional[str] = None,
     ) -> List[Dict]:
+        ptitle(f"AllenAct-Logging-{self.local_start_time_str}")
         finalized = False
 
         log_writer: Optional[SummaryWriter] = None

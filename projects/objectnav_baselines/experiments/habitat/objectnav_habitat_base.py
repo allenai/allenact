@@ -6,12 +6,12 @@ from abc import ABC
 from typing import Dict, Any, List, Optional, Sequence, Union, Tuple
 
 import gym
-# noinspection PyUnresolvedReferences
-import habitat
 import numpy as np
 import torch
 from torch.distributions.utils import lazy_property
 
+# noinspection PyUnresolvedReferences
+import habitat
 from allenact.base_abstractions.experiment_config import MachineParams
 from allenact.base_abstractions.preprocessor import (
     SensorPreprocessorGraph,
@@ -51,6 +51,7 @@ def create_objectnav_config(
     using_depth: bool,
     training: bool,
     num_episode_sample: int,
+    horizontal_fov: Optional[int] = None,
 ) -> habitat.Config:
     config = get_habitat_config(config_yaml_path)
 
@@ -73,6 +74,11 @@ def create_objectnav_config(
     config.SIMULATOR.DEPTH_SENSOR.HEIGHT = camera_height
     config.SIMULATOR.SEMANTIC_SENSOR.WIDTH = camera_width
     config.SIMULATOR.SEMANTIC_SENSOR.HEIGHT = camera_height
+
+    if horizontal_fov is not None:
+        config.SIMULATOR.RGB_SENSOR.HFOV = horizontal_fov
+        config.SIMULATOR.DEPTH_SENSOR.HFOV = horizontal_fov
+        config.SIMULATOR.SEMANTIC_SENSOR.HFOV = horizontal_fov
 
     assert rotation_degrees == config.SIMULATOR.TURN_ANGLE
     assert step_size == config.SIMULATOR.FORWARD_STEP_SIZE
@@ -204,6 +210,7 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
             num_processes=num_processes,
             camera_width=self.CAMERA_WIDTH,
             camera_height=self.CAMERA_HEIGHT,
+            horizontal_fov=self.HORIZONTAL_FIELD_OF_VIEW,
             using_rgb=any(isinstance(s, RGBSensor) for s in self.SENSORS),
             using_depth=any(isinstance(s, DepthSensor) for s in self.SENSORS),
             training=training,
@@ -299,7 +306,9 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
             scenes_dir = configs[0].DATASET.SCENES_DIR
             memory_use_per_config = []
             for config in configs:
-                assert len(config.DATASET.CONTENT_SCENES) == 1
+                assert (
+                    len(config.DATASET.CONTENT_SCENES) == 1
+                ), config.DATASET.CONTENT_SCENES
                 scene_name = config.DATASET.CONTENT_SCENES[0]
 
                 paths = glob.glob(

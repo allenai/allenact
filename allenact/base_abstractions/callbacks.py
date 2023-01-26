@@ -21,32 +21,35 @@ class Callback:
 
     def on_train_log(
         self,
+        *,
         metrics: List[Dict[str, Any]],
         metric_means: Dict[str, float],
-        step: int,
         tasks_data: List[Any],
+        step: int,
         **kwargs,
     ) -> None:
         """Called once train is supposed to log."""
 
     def on_valid_log(
         self,
+        *,
         metrics: Dict[str, Any],
         metric_means: Dict[str, float],
-        checkpoint_file_name: str,
         tasks_data: List[Any],
         step: int,
+        checkpoint_file_name: str,
         **kwargs,
     ) -> None:
         """Called after validation ends."""
 
     def on_test_log(
         self,
-        checkpoint_file_name: str,
+        *,
         metrics: Dict[str, Any],
         metric_means: Dict[str, float],
         tasks_data: List[Any],
         step: int,
+        checkpoint_file_name: str,
         **kwargs,
     ) -> None:
         """Called after test ends."""

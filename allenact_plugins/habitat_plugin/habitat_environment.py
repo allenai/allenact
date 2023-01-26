@@ -2,15 +2,15 @@
 import os
 from typing import Dict, Union, List, Optional
 
-import habitat
 import numpy as np
+
+import habitat
+from allenact.utils.cache_utils import DynamicDistanceCache
+from allenact.utils.system import get_logger
 from habitat.config import Config
 from habitat.core.dataset import Dataset
 from habitat.core.simulator import Observations, AgentState, ShortestPathPoint
 from habitat.tasks.nav.nav import NavigationEpisode as HabitatNavigationEpisode
-
-from allenact.utils.cache_utils import DynamicDistanceCache
-from allenact.utils.system import get_logger
 
 
 class HabitatEnvironment:

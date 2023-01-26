@@ -32,9 +32,7 @@ THOR_TASK_TYPE = Union[
 ]
 
 
-class RGBSensorThor(
-    RGBSensor[THOR_ENV_TYPE, THOR_TASK_TYPE]
-):
+class RGBSensorThor(RGBSensor[THOR_ENV_TYPE, THOR_TASK_TYPE]):
     """Sensor for RGB images in THOR.
 
     Returns from a running IThorEnvironment instance, the current RGB
