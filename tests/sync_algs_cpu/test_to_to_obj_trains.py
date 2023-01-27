@@ -1,6 +1,7 @@
 import io
 import math
 import os
+import pathlib
 from contextlib import redirect_stdout, redirect_stderr
 from typing import Optional, List, Dict, Any
 
@@ -217,7 +218,10 @@ class TestGoToObjTrains:
         cfg = PPOBabyAIGoToObjTestExperimentConfig()
 
         d = tmpdir / "test_ppo_trains"
-        d.mkdir(parents=True, exist_ok=True)
+        if isinstance(d, pathlib.Path):
+            d.mkdir(parents=True, exist_ok=True)
+        else:
+            d.mkdir()
         output_dir = str(d)
 
         train_runner = OnPolicyRunner(
@@ -317,8 +321,6 @@ class TestGoToObjTrains:
 
 
 if __name__ == "__main__":
-    import pathlib
-
     TestGoToObjTrains().test_ppo_trains(
-        pathlib.Path("experiment_output/testing")
+        pathlib.Path("experiment_output/testing"), using_pytest=True
     )  # type:ignore
