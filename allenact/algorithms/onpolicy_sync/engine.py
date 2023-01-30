@@ -470,6 +470,7 @@ class OnPolicyRLEngine(object):
         visualizer: Optional[VizSuite] = None,
     ):
 
+        keep: Optional[List] = None
         if visualizer is not None or (
             storage_to_initialize is not None
             and any(isinstance(s, RolloutStorage) for s in storage_to_initialize)
@@ -489,7 +490,6 @@ class OnPolicyRLEngine(object):
             observations = {}
             num_samplers = 0
             npaused = 0
-            keep = []
 
         recurrent_memory_specification = (
             self.actor_critic.recurrent_memory_specification

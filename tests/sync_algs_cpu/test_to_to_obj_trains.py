@@ -296,7 +296,7 @@ class TestGoToObjTrains:
             def try_float(f):
                 try:
                     return float(f)
-                except:
+                except ValueError:
                     return f
 
             metrics_and_losses_dict = {
