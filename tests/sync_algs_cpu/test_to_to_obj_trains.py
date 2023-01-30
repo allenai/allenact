@@ -222,20 +222,24 @@ class RedirectOutput:
         self.f = io.StringIO()
         self.redirect_stdout = redirect_stdout(self.f)
         self.redirect_stderr = redirect_stderr(self.f)
-        self.capsys_output = ""
+        # self.capsys_output = ""
+        self.capsys_disabler = None
 
     def get_output(self):
-        return self.f.getvalue() + self.capsys_output
+        return self.f.getvalue() # + self.capsys_output
 
     def __enter__(self):
         if self.capsys is not None:
-            self.capsys.readouterr()  # Clear out any existing output
+            # self.capsys.readouterr()  # Clear out any existing output
+            self.capsys_disabler = self.capsys.disabled()
+            self.capsys_disabler.__enter__()
         self.redirect_stdout.__enter__()
         self.redirect_stderr.__enter__()
 
     def __exit__(self, *args):
         if self.capsys is not None:
-            self.capsys_output = self.capsys.readouterr().out
+            # self.capsys_output = self.capsys.readouterr().out
+            self.capsys_disabler.__exit__(*args)
         self.redirect_stdout.__exit__(*args)
         self.redirect_stderr.__exit__(*args)
 
