@@ -216,36 +216,48 @@ class PPOBabyAIGoToObjTestExperimentConfig(PPOBabyAIGoToObjExperimentConfig):
 # Wrapper context manager to redirect stdout and stderr to a file when potentially
 # using pytest capsys
 class RedirectOutput:
-    def __init__(self, capsys: Optional):
+    def __init__(self, capsys: Optional, capfd: Optional):
         self.capsys = capsys
+        self.capfd = capfd
 
         self.f = io.StringIO()
         self.redirect_stdout = redirect_stdout(self.f)
         self.redirect_stderr = redirect_stderr(self.f)
-        # self.capsys_output = ""
-        self.capsys_disabler = None
+        self.capsys_output = ""
+        self.capfd_output = ""
+        # self.capsys_disabler = None
 
     def get_output(self):
-        return self.f.getvalue() # + self.capsys_output
+        return self.f.getvalue() + self.capsys_output + self.capfd_output
 
     def __enter__(self):
         if self.capsys is not None:
-            # self.capsys.readouterr()  # Clear out any existing output
-            self.capsys_disabler = self.capsys.disabled()
-            self.capsys_disabler.__enter__()
+            self.capsys.readouterr()  # Clear out any existing output
+
+        if self.capfd is not None:
+            self.capfd.readouterr()  # Clear out any existing output
+            # self.capsys_disabler = self.capsys.disabled()
+            # self.capsys_disabler.__enter__()
+
         self.redirect_stdout.__enter__()
         self.redirect_stderr.__enter__()
 
     def __exit__(self, *args):
         if self.capsys is not None:
-            # self.capsys_output = self.capsys.readouterr().out
-            self.capsys_disabler.__exit__(*args)
+            captured = self.capsys.readouterr()
+            self.capsys_output = captured.out + captured.err
+            # self.capsys_disabler.__exit__(*args)
+
+        if self.capfd is not None:
+            captured = self.capfd.readouterr()
+            self.capfd_output = captured.out + captured.err
+
         self.redirect_stdout.__exit__(*args)
         self.redirect_stderr.__exit__(*args)
 
 
 class TestGoToObjTrains:
-    def test_ppo_trains(self, capsys, tmpdir):
+    def test_ppo_trains(self, capfd, tmpdir):
         cfg = PPOBabyAIGoToObjTestExperimentConfig()
 
         d = tmpdir / "test_ppo_trains"
@@ -264,7 +276,7 @@ class TestGoToObjTrains:
             deterministic_cudnn=True,
         )
 
-        output_redirector = RedirectOutput(capsys)
+        output_redirector = RedirectOutput(capsys=None, capfd=capfd)
         with output_redirector:
             start_time_str = train_runner.start_train(
                 max_sampler_processes_per_worker=1
@@ -356,5 +368,5 @@ class TestGoToObjTrains:
 
 if __name__ == "__main__":
     TestGoToObjTrains().test_ppo_trains(
-        pathlib.Path("experiment_output/testing"), using_pytest=True
+        pathlib.Path("experiment_output/testing"), capsys=None, capfd=None
     )  # type:ignore
