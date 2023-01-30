@@ -1,5 +1,6 @@
-from typing import Dict, Optional, List, Any, cast
 import os
+from tempfile import mkdtemp
+from typing import Dict, Optional, List, Any, cast
 
 import gym
 from gym_minigrid.envs import EmptyRandomEnv5x5
@@ -7,7 +8,9 @@ from torch import nn
 from torch import optim
 from torch.optim.lr_scheduler import LambdaLR
 
+from allenact.algorithms.onpolicy_sync.losses.imitation import Imitation
 from allenact.algorithms.onpolicy_sync.losses.ppo import PPO, PPOConfig
+from allenact.algorithms.onpolicy_sync.runner import OnPolicyRunner
 from allenact.base_abstractions.experiment_config import ExperimentConfig, TaskSampler
 from allenact.base_abstractions.sensor import SensorSuite, ExpertActionSensor
 from allenact.utils.experiment_utils import (
@@ -18,9 +21,6 @@ from allenact.utils.experiment_utils import (
 )
 from allenact_plugins.minigrid_plugin.minigrid_sensors import EgocentricMiniGridSensor
 from allenact_plugins.minigrid_plugin.minigrid_tasks import MiniGridTaskSampler
-from allenact.algorithms.onpolicy_sync.losses.imitation import Imitation
-from tempfile import mkdtemp
-from allenact.algorithms.onpolicy_sync.runner import OnPolicyRunner
 from projects.tutorials.minigrid_tutorial_conds import (
     ConditionedMiniGridSimpleConvRNN,
     ConditionedMiniGridTask,
@@ -214,7 +214,7 @@ class TestMiniGridCond:
             max_sampler_processes_per_worker=1,
             inference_expert=True,
         )
-        assert test_results[-1]["ep_length"] < 4
+        assert test_results[-1]["test-metrics/ep_length"] < 4
 
 
 if __name__ == "__main__":

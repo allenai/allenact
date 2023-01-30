@@ -213,8 +213,35 @@ class PPOBabyAIGoToObjTestExperimentConfig(PPOBabyAIGoToObjExperimentConfig):
         return self.test_task_sampler_args(**prepare_locals_for_super(locals()))
 
 
+# Wrapper context manager to redirect stdout and stderr to a file when potentially
+# using pytest capsys
+class RedirectOutput:
+    def __init__(self, capsys: Optional):
+        self.capsys = capsys
+
+        self.f = io.StringIO()
+        self.redirect_stdout = redirect_stdout(self.f)
+        self.redirect_stderr = redirect_stderr(self.f)
+        self.capsys_output = ""
+
+    def get_output(self):
+        return self.f.getvalue() + self.capsys_output
+
+    def __enter__(self):
+        if self.capsys is not None:
+            self.capsys.readouterr()  # Clear out any existing output
+        self.redirect_stdout.__enter__()
+        self.redirect_stderr.__enter__()
+
+    def __exit__(self, *args):
+        if self.capsys is not None:
+            self.capsys_output = self.capsys.readouterr().out
+        self.redirect_stdout.__exit__(*args)
+        self.redirect_stderr.__exit__(*args)
+
+
 class TestGoToObjTrains:
-    def test_ppo_trains(self, tmpdir):
+    def test_ppo_trains(self, capsys, tmpdir):
         cfg = PPOBabyAIGoToObjTestExperimentConfig()
 
         d = tmpdir / "test_ppo_trains"
@@ -233,19 +260,22 @@ class TestGoToObjTrains:
             deterministic_cudnn=True,
         )
 
-        f = io.StringIO()
-        with redirect_stdout(f), redirect_stderr(f):
+        output_redirector = RedirectOutput(capsys)
+        with output_redirector:
             start_time_str = train_runner.start_train(
                 max_sampler_processes_per_worker=1
             )
-        s = f.getvalue()
+        s = output_redirector.get_output()
 
         def extract_final_metrics_from_log(s: str, mode: str):
             lines = s.splitlines()
             lines = [l for l in lines if mode.upper() in l]
-            metrics_and_losses_list = (
-                lines[-1].split(")")[-1].split("[")[0].strip().split(" ")
-            )
+            try:
+                metrics_and_losses_list = (
+                    lines[-1].split(")")[-1].split("[")[0].strip().split(" ")
+                )
+            except IndexError:
+                raise RuntimeError(f"Failed to parse log:\n{s}")
 
             def try_float(f):
                 try:
