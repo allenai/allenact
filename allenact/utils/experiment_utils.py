@@ -834,7 +834,7 @@ class TrainingPipeline:
         )
 
         if self.rollout_storage_uuid is None:
-            get_logger().info(
+            get_logger().warning(
                 f"No rollout storage was specified in the TrainingPipeline. This need not be an issue"
                 f" if you are performing off-policy training but, otherwise, please ensure you have"
                 f" defined a rollout storage in the `named_storages` argument of the TrainingPipeline."
@@ -961,7 +961,7 @@ class TrainingPipeline:
         named_storages = {} if named_storages is None else {**named_storages}
 
         rollout_storages_uuids = cls._get_uuids_of_rollout_storages(named_storages)
-        if len(rollout_storages_uuids) == 0:
+        if len(named_storages) == 0:
             assert (
                 _DEFAULT_ONPOLICY_UUID not in named_storages
             ), f"Storage uuid '{_DEFAULT_ONPOLICY_UUID}' is reserved, please pick a different uuid."
@@ -998,6 +998,19 @@ class TrainingPipeline:
         for ps in self.pipeline_stages:
             for k in ps.storage_uuid_to_steps_taken_in_stage:
                 totals[k] += ps.storage_uuid_to_steps_taken_in_stage[k]
+
+        for k in totals:
+            split = k.split("__")
+            if len(split) == 2 and split[1] in ["valid", "test"]:
+                assert totals[k] == 0, (
+                    "Total experiences should be 0 for validation/test storages, i.e."
+                    " storages who have `__valid` or `__test` as their suffix. These storages"
+                    " will copy their `total_experiences` from the corresponding training"
+                    " storage i.e.:\n"
+                    " 1. the storage without the above suffix if it exists, else\n"
+                    " 2. the total number of steps."
+                )
+                totals[k] = totals.get(split[0], self.total_steps)
 
         return totals
 

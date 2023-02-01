@@ -189,20 +189,20 @@ class OnPolicyRLEngine(object):
 
         self.sensor_preprocessor_graph = None
         self.actor_critic: Optional[ActorCriticModel] = None
-        if self.num_samplers > 0:
-            create_model_kwargs = {}
-            if self.machine_params.sensor_preprocessor_graph is not None:
-                self.sensor_preprocessor_graph = self.machine_params.sensor_preprocessor_graph.to(
-                    self.device
-                )
-                create_model_kwargs[
-                    "sensor_preprocessor_graph"
-                ] = self.sensor_preprocessor_graph
 
-            set_seed(self.seed)
-            self.actor_critic = cast(
-                ActorCriticModel, self.config.create_model(**create_model_kwargs),
-            ).to(self.device)
+        create_model_kwargs = {}
+        if self.machine_params.sensor_preprocessor_graph is not None:
+            self.sensor_preprocessor_graph = self.machine_params.sensor_preprocessor_graph.to(
+                self.device
+            )
+            create_model_kwargs[
+                "sensor_preprocessor_graph"
+            ] = self.sensor_preprocessor_graph
+
+        set_seed(self.seed)
+        self.actor_critic = cast(
+            ActorCriticModel, self.config.create_model(**create_model_kwargs),
+        ).to(self.device)
 
         if initial_model_state_dict is not None:
             if isinstance(initial_model_state_dict, int):
@@ -513,6 +513,8 @@ class OnPolicyRLEngine(object):
 
     @property
     def num_active_samplers(self):
+        if self.vector_tasks is None:
+            return 0
         return self.vector_tasks.num_unpaused_tasks
 
     def act(
@@ -1254,7 +1256,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             seeds = self.worker_seeds(
                 self.num_samplers, None
             )  # use the latest seed for workers and update rng state
-            self.vector_tasks.set_seeds(seeds)
+            if self.vector_tasks is not None:
+                self.vector_tasks.set_seeds(seeds)
 
     def save_error_data(self, batch: Dict[str, Any]) -> str:
         model_path = os.path.join(
@@ -1900,9 +1903,7 @@ class OnPolicyInference(OnPolicyRLEngine):
 
         # Sanity check that we haven't entered an invalid state. During eval the training_pipeline
         # should be only set in this function and always unset at the end of it.
-        assert (
-            self.training_pipeline is None
-        ), (
+        assert self.training_pipeline is None, (
             "`training_pipeline` should be `None` before calling `run_eval`."
             " This is necessary as we want to initialize new storages."
         )
@@ -2295,42 +2296,33 @@ class OnPolicyInference(OnPolicyRLEngine):
                 # )
 
                 if command == "eval":
-                    if self.num_samplers > 0:
-                        if self.mode == VALID_MODE_STR:
-                            # skip to latest using
-                            # 1. there's only consumer in valid
-                            # 2. there's no quit/exit/close message issued by runner nor trainer
-                            ckp_file_path = self.skip_to_latest(
-                                checkpoints_queue=self.checkpoints_queue,
-                                command=command,
-                                data=ckp_file_path,
-                            )
-
-                        if (
-                            visualizer is None
-                            and self.machine_params.visualizer is not None
-                        ):
-                            visualizer = self.machine_params.visualizer
-
-                        eval_package = self.run_eval(
-                            checkpoint_file_path=ckp_file_path,
-                            visualizer=visualizer,
-                            verbose=True,
-                            update_secs=20 if self.mode == TEST_MODE_STR else 5 * 60,
+                    if self.mode == VALID_MODE_STR:
+                        # skip to latest using
+                        # 1. there's only consumer in valid
+                        # 2. there's no quit/exit/close message issued by runner nor trainer
+                        ckp_file_path = self.skip_to_latest(
+                            checkpoints_queue=self.checkpoints_queue,
+                            command=command,
+                            data=ckp_file_path,
                         )
 
-                        self.results_queue.put(eval_package)
+                    if (
+                        visualizer is None
+                        and self.machine_params.visualizer is not None
+                    ):
+                        visualizer = self.machine_params.visualizer
 
-                        if self.is_distributed:
-                            dist.barrier()
-                    else:
-                        self.results_queue.put(
-                            LoggingPackage(
-                                mode=self.mode,
-                                training_steps=None,
-                                storage_uuid_to_total_experiences={},
-                            )
-                        )
+                    eval_package = self.run_eval(
+                        checkpoint_file_path=ckp_file_path,
+                        visualizer=visualizer,
+                        verbose=True,
+                        update_secs=20 if self.mode == TEST_MODE_STR else 5 * 60,
+                    )
+
+                    self.results_queue.put(eval_package)
+
+                    if self.is_distributed:
+                        dist.barrier()
                 elif command in ["quit", "exit", "close"]:
                     finalized = True
                     break
