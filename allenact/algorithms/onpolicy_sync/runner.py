@@ -158,6 +158,7 @@ class OnPolicyRunner(object):
 
     @property
     def running_validation(self):
+        pipeline = self.config.training_pipeline()
         return (
             sum(
                 MachineParams.instance_from(
@@ -165,6 +166,10 @@ class OnPolicyRunner(object):
                 ).nprocesses
             )
             > 0
+            or (
+                pipeline.rollout_storage_uuid is None
+                and len(pipeline.valid_pipeline_stage.loss_names) > 0
+            )
         ) and self.machine_id == 0
 
     @staticmethod
