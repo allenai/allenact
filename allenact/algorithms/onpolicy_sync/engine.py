@@ -1342,6 +1342,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
     def checkpoint_load(
         self, ckpt: Union[str, Dict[str, Any]], restart_pipeline: bool = False
     ) -> Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]]:
+        if restart_pipeline:
+            if "training_pipeline_state_dict" in ckpt:
+                del ckpt["training_pipeline_state_dict"]
+
         ckpt = super().checkpoint_load(ckpt)
 
         if restart_pipeline:
