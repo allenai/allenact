@@ -145,7 +145,11 @@ class OnPolicyRunner(object):
 
         self.save_dir_fmt = save_dir_fmt
 
-        self.callbacks = self.setup_callback_classes(callbacks_paths)
+        self.callbacks_paths = callbacks_paths
+
+    @lazy_property
+    def callbacks(self):
+        return self.setup_callback_classes(self.callbacks_paths)
 
     @property
     def local_start_time_str(self) -> str:
@@ -194,36 +198,70 @@ class OnPolicyRunner(object):
         return mp_ctx
 
     def setup_callback_classes(self, callbacks: Optional[str]) -> Set[Callback]:
-        """Get a list of Callback classes from a comma-separated list of
-        filenames."""
+        """Get a list of Callback classes from a comma-separated list of files, paths,
+        and/or functions.
+
+        After separating the `callbacks` into a list of strings, each string should either
+        be a:
+        1. Name of a function defined on the experiment config that, when called, returns an
+           object with of type `Callback`.
+        2. Path to a python file containing a single class that inherits from `Callback`.
+        3. Module path (e.g. `path.to.module`) where this module contains a single class that
+            inherits from `Callback`.
+        """
         if callbacks == "" or callbacks is None:
             return set()
 
-        setup_dict = dict(name=self.experiment_name, config=self.config, mode=self.mode)
-        callback_classes = set()
+        setup_dict = dict(
+            name=f"{self.experiment_name}/{self.local_start_time_str}",
+            config=self.config,
+            mode=self.mode
+        )
+
+        callback_objects = set()
         files = callbacks.split(",")
         for filename in files:
+            # Check if the `filename` is a function on the config
+            if not any(k in filename for k in [".", "/"]):
+                callback_func = getattr(self.config, filename, None)
+                if callback_func is not None:
+                    callback = callback_func()
+                    callback.setup(**setup_dict)
+                    callback_objects.add(callback)
+                    continue
+
+            # Otherwise find the Callback class in the file or module
             module_path = filename.replace("/", ".")
             if module_path.endswith(".py"):
                 module_path = module_path[:-3]
             module = importlib.import_module(module_path)
             classes = inspect.getmembers(module, inspect.isclass)
 
-            for mod_class in classes:
-                if issubclass(mod_class[1], Callback) and mod_class[1] != Callback:
-                    # NOTE: initialize the callback class
-                    inst_class = mod_class[1]()
-                    inst_class.setup(**setup_dict)
-                    callback_classes.add(inst_class)
+            callback_classes = [
+                mod_class[1]
+                for mod_class in classes
+                if issubclass(mod_class[1], Callback)
+            ]
 
-        return callback_classes
+            assert callback_classes == 1, (
+                f"Expected a single callback class in {filename}, but found {len(callback_classes)}."
+                f" These classes were found: {callback_classes}."
+            )
+
+            for mod_class in callback_classes:
+                # NOTE: initialize the callback class
+                callback = mod_class[1]()
+                callback.setup(**setup_dict)
+                callback_objects.add(callback)
+
+        return callback_objects
 
     def _acquire_unique_local_start_time_string(self) -> str:
         """Creates a (unique) local start time string for this experiment.
 
         Ensures through file locks that the local start time string
         produced is unique. This implies that, if one has many
-        experiments starting in in parallel, at most one will be started
+        experiments starting in parallel, at most one will be started
         every second (as the local start time string only records the
         time up to the current second).
         """
@@ -834,7 +872,7 @@ class OnPolicyRunner(object):
         if self.loaded_config_src_files is not None:
             for src_path in self.loaded_config_src_files:
                 if src_path == CONFIG_KWARGS_STR:
-                    # We also save key-word arguments passed to to the experiment
+                    # We also save key-word arguments passed to the experiment
                     # initializer.
                     save_path = os.path.join(base_dir, "config_kwargs.json")
                     assert not os.path.exists(
@@ -951,10 +989,13 @@ class OnPolicyRunner(object):
             0
         ].pipeline_stage
 
+        storage_uuid_to_total_experiences_key = {}
         for storage_uuid, val in storage_uuid_to_total_experiences.items():
             total_experiences_key = update_keys_misc(
                 f"{storage_uuid}_total_experiences"
             )
+            storage_uuid_to_total_experiences_key[storage_uuid] = total_experiences_key
+
             if training and log_writer is not None:
                 log_writer.add_scalar(
                     tag=total_experiences_key,
@@ -965,6 +1006,7 @@ class OnPolicyRunner(object):
 
         metrics_and_info_tracker = ScalarMeanTracker()
         scalar_name_to_total_storage_experience = {}
+        scalar_name_to_total_experiences_key = {}
         storage_uuid_to_stage_component_uuids = defaultdict(lambda: set())
         metric_dicts_list, render, checkpoint_file_name = [], {}, []
         tasks_callback_data = []
@@ -1021,6 +1063,9 @@ class OnPolicyRunner(object):
                         scalar_name_to_total_storage_experience[
                             scalar_name
                         ] = total_exp_for_storage
+                        scalar_name_to_total_experiences_key[
+                            scalar_name
+                        ] = storage_uuid_to_total_experiences_key[storage_uuid]
 
         assert all_equal(
             checkpoint_file_name
@@ -1079,6 +1124,10 @@ class OnPolicyRunner(object):
                             f"approx_eps", stage_component_uuid,
                         )
                         callback_metric_means[approx_eps_key] = eps
+                        scalar_name_to_total_experiences_key[
+                            approx_eps_key
+                        ] = storage_uuid_to_total_experiences_key[storage_uuid]
+
                         if log_writer is not None:
                             log_writer.add_scalar(
                                 approx_eps_key, eps, cur_total_exp,
@@ -1112,6 +1161,7 @@ class OnPolicyRunner(object):
                     metric_means=callback_metric_means,
                     step=training_steps,
                     tasks_data=tasks_callback_data,
+                    scalar_name_to_total_experiences_key=scalar_name_to_total_experiences_key,
                 )
 
             if mode == VALID_MODE_STR:
@@ -1121,6 +1171,7 @@ class OnPolicyRunner(object):
                     step=training_steps,
                     checkpoint_file_name=checkpoint_file_name[0],
                     tasks_data=tasks_callback_data,
+                    scalar_name_to_total_experiences_key=scalar_name_to_total_experiences_key,
                 )
 
             if mode == TEST_MODE_STR:
@@ -1130,6 +1181,7 @@ class OnPolicyRunner(object):
                     step=training_steps,
                     checkpoint_file_name=checkpoint_file_name[0],
                     tasks_data=tasks_callback_data,
+                    scalar_name_to_total_experiences_key=scalar_name_to_total_experiences_key,
                 )
 
         if self.visualizer is not None:

@@ -1,3 +1,4 @@
+import abc
 from typing import List, Dict, Any, Sequence, Optional
 
 from allenact.base_abstractions.experiment_config import ExperimentConfig
@@ -9,7 +10,7 @@ except ImportError:
     from typing_extensions import Literal
 
 
-class Callback:
+class Callback(abc.ABC):
     def setup(
         self,
         name: str,
@@ -26,6 +27,7 @@ class Callback:
         metric_means: Dict[str, float],
         tasks_data: List[Any],
         step: int,
+        scalar_name_to_total_experiences_key: Dict[str, str],
         **kwargs,
     ) -> None:
         """Called once train is supposed to log."""
@@ -37,6 +39,7 @@ class Callback:
         metric_means: Dict[str, float],
         tasks_data: List[Any],
         step: int,
+        scalar_name_to_total_experiences_key: Dict[str, str],
         checkpoint_file_name: str,
         **kwargs,
     ) -> None:
@@ -49,6 +52,7 @@ class Callback:
         metric_means: Dict[str, float],
         tasks_data: List[Any],
         step: int,
+        scalar_name_to_total_experiences_key: Dict[str, str],
         checkpoint_file_name: str,
         **kwargs,
     ) -> None:
