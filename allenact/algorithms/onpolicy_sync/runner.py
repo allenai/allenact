@@ -198,8 +198,8 @@ class OnPolicyRunner(object):
         return mp_ctx
 
     def setup_callback_classes(self, callbacks: Optional[str]) -> Set[Callback]:
-        """Get a list of Callback classes from a comma-separated list of files, paths,
-        and/or functions.
+        """Get a list of Callback classes from a comma-separated list of files,
+        paths, and/or functions.
 
         After separating the `callbacks` into a list of strings, each string should either
         be a:
@@ -215,7 +215,7 @@ class OnPolicyRunner(object):
         setup_dict = dict(
             name=f"{self.experiment_name}/{self.local_start_time_str}",
             config=self.config,
-            mode=self.mode
+            mode=self.mode,
         )
 
         callback_objects = set()
@@ -1027,9 +1027,10 @@ class OnPolicyRunner(object):
                 info_tracker,
             ) in pkg.info_trackers.items():
 
-                storage_uuid_to_stage_component_uuids[storage_uuid].add(
-                    stage_component_uuid
-                )
+                if stage_component_uuid is not None:
+                    storage_uuid_to_stage_component_uuids[storage_uuid].add(
+                        stage_component_uuid
+                    )
 
                 info_means = update_keys_misc(
                     info_tracker.means(), stage_component_uuid,
@@ -1041,13 +1042,13 @@ class OnPolicyRunner(object):
                     scalars=info_means, n=info_counts,
                 )
 
-                if storage_uuid is None:
-                    assert stage_component_uuid is None
-                    total_exp_for_storage = training_steps
-                else:
-                    total_exp_for_storage = pkg.storage_uuid_to_total_experiences[
-                        storage_uuid
-                    ]
+                total_exp_for_storage = pkg.storage_uuid_to_total_experiences[
+                    storage_uuid
+                ]
+
+                if stage_component_uuid is None:
+                    assert total_exp_for_storage == training_steps
+
                 for scalar_name in info_means:
                     if scalar_name in scalar_name_to_total_storage_experience:
                         assert (

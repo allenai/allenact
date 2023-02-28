@@ -75,7 +75,7 @@ class BinnedPointCloudMapBuilder(object):
         map_size_in_cm: int,
         resolution_in_cm: int,
         height_bins: Sequence[float],
-        return_egocentric_local_context: bool= False,
+        return_egocentric_local_context: bool = False,
         device: torch.device = torch.device("cpu"),
     ):
         assert vision_range_in_cm % resolution_in_cm == 0
@@ -240,10 +240,7 @@ class BinnedPointCloudMapBuilder(object):
                     scaler
                     * (
                         torch.tensor(
-                            [
-                                camera_xyz[0],
-                                camera_xyz[2],
-                            ],
+                            [camera_xyz[0], camera_xyz[2],],
                             dtype=torch.float,
                             device=self.device,
                         ).unsqueeze(-1)
@@ -255,10 +252,7 @@ class BinnedPointCloudMapBuilder(object):
                     [0, 1.0]
                 ).unsqueeze(1).to(self.device)
                 rotation_and_translate_mat = torch.cat(
-                    (
-                        rot_mat,
-                        offset_to_top_of_image + offset_to_center_the_agent,
-                    ),
+                    (rot_mat, offset_to_top_of_image + offset_to_center_the_agent,),
                     dim=1,
                 )
 
@@ -289,9 +283,12 @@ class BinnedPointCloudMapBuilder(object):
                     :vr, (width_div_2 - vr_div_2) : (width_div_2 + vr_div_2), :
                 ]
 
-                to_return["egocentric_local_context"] = egocentric_local_context.cpu().numpy()
+                to_return[
+                    "egocentric_local_context"
+                ] = egocentric_local_context.cpu().numpy()
 
             return to_return
+
     def reset(self, min_xyz: np.ndarray):
         """Reset the map.
 
@@ -559,11 +556,7 @@ class SemanticMapBuilder(object):
                 1
             ).to(self.device)
             rotation_and_translate_mat = torch.cat(
-                (
-                    rot_mat,
-                    offset_to_top_of_image + offset_to_center_the_agent,
-                ),
-                dim=1,
+                (rot_mat, offset_to_top_of_image + offset_to_center_the_agent,), dim=1,
             )
 
             ego_update_and_mask = F.grid_sample(

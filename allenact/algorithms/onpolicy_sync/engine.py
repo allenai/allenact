@@ -1391,13 +1391,25 @@ class OnPolicyTrainer(OnPolicyRLEngine):
     ):
         if self.training_pipeline.current_stage.teacher_forcing is not None:
             assert dist_wrapper_class is None
+
+            def tracking_callback(type: TrackingInfoType, info: Dict[str, Any], n: int):
+                self.tracking_info_list.append(
+                    TrackingInfo(
+                        type=type,
+                        info=info,
+                        n=n,
+                        storage_uuid=self.training_pipeline.rollout_storage_uuid,
+                        stage_component_uuid=None,
+                    )
+                )
+
             dist_wrapper_class = partial(
                 TeacherForcingDistr,
                 action_space=self.actor_critic.action_space,
                 num_active_samplers=self.num_active_samplers,
                 approx_steps=self.approx_steps,
                 teacher_forcing=self.training_pipeline.current_stage.teacher_forcing,
-                tracking_info_list=self.tracking_info_list,
+                tracking_callback=tracking_callback,
             )
 
         actions, actor_critic_output, memory, step_observation = super().act(
@@ -1994,7 +2006,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                 num_active_samplers=None,
                 approx_steps=None,
                 teacher_forcing=None,
-                tracking_info_list=None,
+                tracking_callback=None,
                 always_enforce=True,
             )
         else:

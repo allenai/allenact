@@ -374,14 +374,18 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
                 if storage_name == "observations":
                     # current_data has a step dimension
                     assert time_step >= 0
-                    storage[flatten_name][0][time_step : time_step + 1].copy_(current_data)
+                    storage[flatten_name][0][time_step : time_step + 1].copy_(
+                        current_data
+                    )
                 elif storage_name == "memory":
                     # current_data does not have a step dimension
                     storage[flatten_name][0][time_step].copy_(current_data)
                 else:
                     raise NotImplementedError
             except:
-                get_logger().error(f"Error while inserting data in storage for name {flatten_name}")
+                get_logger().error(
+                    f"Error while inserting data in storage for name {flatten_name}"
+                )
                 raise
 
     def create_tensor_storage(

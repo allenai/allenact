@@ -43,7 +43,7 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
         multiple_beliefs=False,
         beliefs_fusion: Optional[FusionType] = None,
         auxiliary_uuids: Optional[List[str]] = None,
-        auxiliary_model_class = AuxiliaryModel,
+        auxiliary_model_class=AuxiliaryModel,
     ):
         super().__init__(action_space=action_space, observation_space=observation_space)
         self._hidden_size = hidden_size

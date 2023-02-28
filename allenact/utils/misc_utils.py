@@ -336,9 +336,7 @@ def str2bool(v: str):
 
 
 class ForkedPdb(pdb.Pdb):
-    """A Pdb subclass that may be used
-    from a forked multiprocessing child
-    """
+    """A Pdb subclass that may be used from a forked multiprocessing child."""
 
     def interaction(self, *args, **kwargs):
         _stdin = sys.stdin
