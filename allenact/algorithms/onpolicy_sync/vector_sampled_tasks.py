@@ -734,7 +734,7 @@ class VectorSampledTasks:
             self._partition_to_processes(commands),
             self._partition_to_processes(data_list),
         ):
-            write_fn((subcommands, data_list))
+            write_fn((subcommands, subdata_list))
         results = []
         for read_fn in self._connection_read_fns:
             results.extend(read_fn())
