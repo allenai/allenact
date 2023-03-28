@@ -146,6 +146,10 @@ class OnPolicyRLEngine(object):
         self.worker_id = worker_id
         self.num_workers = num_workers
         self.device = torch.device("cpu") if device == -1 else torch.device(device)  # type: ignore
+
+        if self.device != torch.device("cpu"):
+            torch.cuda.set_device(device)
+
         self.distributed_ip = distributed_ip
         self.distributed_port = distributed_port
         self.try_restart_after_task_error = try_restart_after_task_error
@@ -797,6 +801,7 @@ class OnPolicyRLEngine(object):
         ):  # Might occur during testing when all stages are complete
             return 0
         return self.training_pipeline.current_stage.steps_taken_in_stage
+
 
     def compute_losses_track_them_and_backprop(
         self,
