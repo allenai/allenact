@@ -390,7 +390,7 @@ class OnPolicyRLEngine(object):
         ]
 
     def checkpoint_load(
-        self, ckpt: Union[str, Dict[str, Any]]
+        self, ckpt: Union[str, Dict[str, Any]], restart_pipeline: bool
     ) -> Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]]:
         if isinstance(ckpt, str):
             get_logger().info(
@@ -405,7 +405,7 @@ class OnPolicyRLEngine(object):
 
         self.actor_critic.load_state_dict(ckpt["model_state_dict"])  # type:ignore
 
-        if "training_pipeline_state_dict" in ckpt:
+        if "training_pipeline_state_dict" in ckpt and not restart_pipeline:
             self.training_pipeline.load_state_dict(
                 cast(Dict[str, Any], ckpt["training_pipeline_state_dict"])
             )
@@ -1351,14 +1351,14 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             if "training_pipeline_state_dict" in ckpt:
                 del ckpt["training_pipeline_state_dict"]
 
-        ckpt = super().checkpoint_load(ckpt)
+        ckpt = super().checkpoint_load(ckpt, restart_pipeline=restart_pipeline)
 
         if restart_pipeline:
             self.training_pipeline.restart_pipeline()
         else:
             self.seed = cast(int, ckpt["trainer_seed"])
             self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])  # type: ignore
-            if self.lr_scheduler is not None:
+            if self.lr_scheduler is not None and "scheduler_state" in ckpt:
                 self.lr_scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
 
         self.deterministic_seeds()
@@ -1375,9 +1375,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
     @property
     def log_interval(self):
-        return (
-            self.training_pipeline.current_stage.training_settings.metric_accumulate_interval
-        )
+        return self.training_pipeline.current_stage.training_settings.metric_accumulate_interval
 
     @property
     def approx_steps(self):
@@ -1930,7 +1928,7 @@ class OnPolicyInference(OnPolicyRLEngine):
         )
         self.training_pipeline = self.config.training_pipeline()
 
-        ckpt = self.checkpoint_load(checkpoint_file_path)
+        ckpt = self.checkpoint_load(checkpoint_file_path, restart_pipeline=False)
         total_steps = cast(int, ckpt["total_steps"])
 
         eval_pipeline_stage = cast(
