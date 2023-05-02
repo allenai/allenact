@@ -146,6 +146,10 @@ class OnPolicyRLEngine(object):
         self.worker_id = worker_id
         self.num_workers = num_workers
         self.device = torch.device("cpu") if device == -1 else torch.device(device)  # type: ignore
+
+        if self.device != torch.device("cpu"):
+            torch.cuda.set_device(device)
+
         self.distributed_ip = distributed_ip
         self.distributed_port = distributed_port
         self.try_restart_after_task_error = try_restart_after_task_error
