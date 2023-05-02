@@ -913,6 +913,7 @@ class OnPolicyRunner(object):
                 step=training_steps,
                 checkpoint_file_name=checkpoint_file_name,
                 tasks_data=tasks_callback_data,
+                render=render,
             )
 
         if self.visualizer is not None:

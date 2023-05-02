@@ -818,7 +818,7 @@ class VectorSampledTasks:
 
         images = self.command(
             commands=RENDER_COMMAND,
-            data_list=[(args, {"mode": "rgb", **kwargs})] * self.num_unpaused_tasks,
+            data_list=[(args, {"mode": mode, **kwargs})] * self.num_unpaused_tasks,
         )
 
         if mode == "raw_rgb_list":
@@ -831,7 +831,7 @@ class VectorSampledTasks:
             cv2.imshow("vectask", tile[:, :, ::-1])
             cv2.waitKey(1)
             return None
-        elif mode == "rgb_array":
+        elif mode in ["rgb_array", "rgb", "debug"]:
             return tile
         else:
             raise NotImplementedError
