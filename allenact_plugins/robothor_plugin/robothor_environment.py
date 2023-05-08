@@ -191,11 +191,11 @@ class RoboThorEnvironment:
             return self.controller.step(
                 action="GetShortestPathToPoint",
                 position=position,
-                x=target["x"],
-                y=target["y"],
-                z=target["z"],
+                target=target,
                 allowedError=allowedError,
             ).metadata["actionReturn"]["corners"]
+        except ValueError:
+            raise
         except Exception:
             get_logger().debug(
                 "Failed to find path for {} in {}. Start point {}, agent state {}.".format(

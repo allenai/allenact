@@ -556,7 +556,7 @@ class TensorViz1D(AbstractTensorViz):
 class TensorViz2D(AbstractTensorViz):
     def __init__(
         self,
-        rollout_source: Union[str, Sequence[str]] = ("memory", "rnn"),
+        rollout_source: Union[str, Sequence[str]] = ("memory_first_last", "rnn"),
         label: Optional[str] = None,
         figsize: Tuple[float, float] = (10, 10),
         fontsize: float = 5,
@@ -884,6 +884,9 @@ class VizSuite(AbstractViz):
 
                 # Access sub-storage if path not empty
                 if len(path) > 0:
+                    if storage == "memory_first_last":
+                        storage = "memory"
+
                     flattened_name = rollout.unflattened_to_flattened[storage][
                         tuple(path)
                     ]
