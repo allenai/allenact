@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7]
+        python-version: [3.8]
 
     steps:
     - uses: actions/checkout@v2
@@ -28,12 +28,11 @@ jobs:
         python -m pip install --editable="./allenact_plugins[all]"
         python -m pip install pip install -r allenact_plugins/babyai_plugin/extra_requirements.txt # Required as babyai is not on PyPI
         python -m pip install compress_pickle # Needed for some mapping tests
-        python -m pip install -U protobuf==3.20.1 # Required until tensorboardX is fixed: https://github.com/lanpa/tensorboardX/issues/663
         pip list
 
     - name: Test with pytest
       run: |
-        pytest tests
+        pytest --capture=tee-sys tests
 
     - if: always() # Updates the commit status badge to the result of running the tests above
       uses: ouzi-dev/commit-status-updater@v1.1.0

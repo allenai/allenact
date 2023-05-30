@@ -220,6 +220,7 @@ class ResnetTensorNavActorCritic(VisualNavActorCritic):
         goal_dims: int = 32,
         resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
         combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
+        **kwargs,
     ):
         super().__init__(
             action_space=action_space,
@@ -228,6 +229,7 @@ class ResnetTensorNavActorCritic(VisualNavActorCritic):
             multiple_beliefs=multiple_beliefs,
             beliefs_fusion=beliefs_fusion,
             auxiliary_uuids=auxiliary_uuids,
+            **kwargs,
         )
 
         if (
@@ -366,6 +368,7 @@ class ResnetTensorGoalEncoder(nn.Module):
         )
 
     def adapt_input(self, observations):
+        observations = {**observations}
         resnet = observations[self.resnet_uuid]
         goal = observations[self.goal_uuid]
 

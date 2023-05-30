@@ -1,13 +1,13 @@
 import abc
 from collections import OrderedDict
-from typing import Any, Union, Callable, TypeVar, Dict, Optional, cast, List
+from typing import Any, Union, Callable, TypeVar, Dict, Optional, cast, Protocol
 
 import gym
 import torch
 import torch.nn as nn
 from torch.distributions.utils import lazy_property
 
-from allenact.algorithms.onpolicy_sync.misc import TrackingInfoType, TrackingInfo
+from allenact.algorithms.onpolicy_sync.misc import TrackingInfoType
 from allenact.base_abstractions.sensor import AbstractExpertActionSensor as Expert
 from allenact.utils import spaces_utils as su
 from allenact.utils.misc_utils import all_unique
@@ -209,6 +209,11 @@ class SequentialDistr(Distr):
         return res
 
 
+class TrackingCallback(Protocol):
+    def __call__(self, type: TrackingInfoType, info: Dict[str, Any], n: int):
+        ...
+
+
 class TeacherForcingDistr(Distr):
     def __init__(
         self,
@@ -218,7 +223,7 @@ class TeacherForcingDistr(Distr):
         num_active_samplers: Optional[int],
         approx_steps: Optional[int],
         teacher_forcing: Optional[TeacherForcingAnnealingType],
-        tracking_info_list: Optional[List[TrackingInfo]],
+        tracking_callback: Optional[TrackingCallback],
         always_enforce: bool = False,
     ):
         self.distr = distr
@@ -229,7 +234,7 @@ class TeacherForcingDistr(Distr):
         self.num_active_samplers = num_active_samplers
         self.approx_steps = approx_steps
         self.teacher_forcing = teacher_forcing
-        self.tracking_info_list = tracking_info_list
+        self.tracking_callback = tracking_callback
         self.always_enforce = always_enforce
 
         assert (
@@ -336,15 +341,11 @@ class TeacherForcingDistr(Distr):
                 teacher_force_info,
             )
 
-        if self.tracking_info_list is not None and self.num_active_samplers is not None:
-            self.tracking_info_list.append(
-                TrackingInfo(
-                    type=TrackingInfoType.TEACHER_FORCING,
-                    info=teacher_force_info,
-                    n=self.num_active_samplers,
-                    storage_uuid=None,
-                    stage_component_uuid=None,
-                )
+        if self.tracking_callback is not None and self.num_active_samplers is not None:
+            self.tracking_callback(
+                type=TrackingInfoType.TEACHER_FORCING,
+                info=teacher_force_info,
+                n=self.num_active_samplers,
             )
 
         return res

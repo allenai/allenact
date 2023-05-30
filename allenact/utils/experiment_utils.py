@@ -254,7 +254,7 @@ class LoggingPackage:
         self.pipeline_stage = pipeline_stage
 
         self.metrics_tracker = ScalarMeanTracker()
-        self.train_info_trackers: Dict[Tuple[str, str], ScalarMeanTracker] = {}
+        self.info_trackers: Dict[Tuple[str, str], ScalarMeanTracker] = {}
 
         self.metric_dicts: List[Any] = []
         self.viz_data: Optional[Dict[str, List[Dict[str, Any]]]] = None
@@ -296,19 +296,19 @@ class LoggingPackage:
         )
         return True
 
-    def add_train_info_dict(
+    def add_info_dict(
         self,
-        train_info_dict: Dict[str, Union[int, float]],
+        info_dict: Dict[str, Union[int, float]],
         n: int,
         stage_component_uuid: str,
         storage_uuid: str,
     ):
         key = (stage_component_uuid, storage_uuid)
-        if key not in self.train_info_trackers:
-            self.train_info_trackers[key] = ScalarMeanTracker()
+        if key not in self.info_trackers:
+            self.info_trackers[key] = ScalarMeanTracker()
 
         assert n >= 0
-        self.train_info_trackers[key].add_scalars(scalars=train_info_dict, n=n)
+        self.info_trackers[key].add_scalars(scalars=info_dict, n=n)
 
 
 class LinearDecay(object):
@@ -559,8 +559,8 @@ class TrainingSettings:
 
 @attr.s(kw_only=True)
 class StageComponent:
-    """An custom component for a PipelineStage, possibly including overrides to
-    the `TrainingSettings` in from the `TrainingPipeline` and `PipelineStage`.
+    """A custom component for a PipelineStage, possibly including overrides to
+    the `TrainingSettings` from the `TrainingPipeline` and `PipelineStage`.
 
     # Attributes
 
@@ -619,7 +619,7 @@ class PipelineStage:
         occurs. If `early_stopping_criterion` is not `None` then we do not guarantee
         reproducibility when restarting a model from a checkpoint (as the
         `EarlyStoppingCriterion` object may store internal state which is not
-        saved in the checkpoint). Currently AllenAct only supports using early stopping
+        saved in the checkpoint). Currently, AllenAct only supports using early stopping
         criterion when **not** using distributed training.
     training_settings: Instance of `TrainingSettings`.
     training_settings_kwargs: For backwards compatability: arguments to instantiate TrainingSettings when
@@ -798,6 +798,8 @@ class TrainingPipeline:
         should_log: bool = True,
         lr_scheduler_builder: Optional[Builder[_LRScheduler]] = None,  # type: ignore
         training_settings: Optional[TrainingSettings] = None,
+        valid_pipeline_stage: Optional[PipelineStage] = None,
+        test_pipeline_stage: Optional[PipelineStage] = None,
         **training_settings_kwargs,
     ):
         """Initializer.
@@ -831,11 +833,31 @@ class TrainingPipeline:
             rollout_storage_uuid
         )
 
+        if self.rollout_storage_uuid is None:
+            get_logger().warning(
+                f"No rollout storage was specified in the TrainingPipeline. This need not be an issue"
+                f" if you are performing off-policy training but, otherwise, please ensure you have"
+                f" defined a rollout storage in the `named_storages` argument of the TrainingPipeline."
+            )
+
         self.should_log = should_log
 
         self.pipeline_stages = pipeline_stages
-        assert len(self.pipeline_stages) == len(
-            set(id(ps) for ps in pipeline_stages)
+
+        def if_none_then_empty_stage(stage: Optional[PipelineStage]) -> PipelineStage:
+            return (
+                stage
+                if stage is not None
+                else PipelineStage(max_stage_steps=-1, loss_names=[])
+            )
+
+        self.valid_pipeline_stage = if_none_then_empty_stage(valid_pipeline_stage)
+        self.test_pipeline_stage = if_none_then_empty_stage(test_pipeline_stage)
+
+        assert (
+            len(self.pipeline_stages) == len(set(id(ps) for ps in pipeline_stages))
+            and self.valid_pipeline_stage not in self.pipeline_stages
+            and self.test_pipeline_stage not in self.pipeline_stages
         ), (
             "Duplicate `PipelineStage` object instances found in the pipeline stages input"
             " to `TrainingPipeline`. `PipelineStage` objects are not immutable, if you'd"
@@ -843,7 +865,7 @@ class TrainingPipeline:
             " multiple separate instances."
         )
 
-        self._ensure_pipeline_stages_all_have_at_least_one_valid_stage_component()
+        self._ensure_pipeline_stages_all_have_at_least_one_stage_component()
 
         self._current_stage: Optional[PipelineStage] = None
         self.rollout_count = 0
@@ -856,47 +878,58 @@ class TrainingPipeline:
             rollout_storage_uuids = self._get_uuids_of_rollout_storages(
                 self._named_storages
             )
-            assert len(rollout_storage_uuids) == 1, (
+            assert len(rollout_storage_uuids) <= 1, (
                 f"`rollout_storage_uuid` cannot be automatically inferred as there are multiple storages defined"
                 f" (ids: {rollout_storage_uuids}) of type `RolloutStorage`."
             )
-            rollout_storage_uuid = rollout_storage_uuids[0]
-        assert rollout_storage_uuid in self._named_storages
+            rollout_storage_uuid = next(iter(rollout_storage_uuids), None)
+        assert (
+            rollout_storage_uuid is None or rollout_storage_uuid in self._named_storages
+        )
         return rollout_storage_uuid
 
-    def _ensure_pipeline_stages_all_have_at_least_one_valid_stage_component(self):
+    def _ensure_pipeline_stages_all_have_at_least_one_stage_component(self):
         rollout_storages_uuids = self._get_uuids_of_rollout_storages(
             self._named_storages
         )
 
-        for sit, stage in enumerate(self.pipeline_stages):
+        named_pipeline_stages = {
+            f"{i}th": ps for i, ps in enumerate(self.pipeline_stages)
+        }
+
+        named_pipeline_stages["valid"] = self.valid_pipeline_stage
+        named_pipeline_stages["test"] = self.test_pipeline_stage
+
+        for stage_name, stage in named_pipeline_stages.items():
             # Forward default `TrainingSettings` to all `PipelineStage`s settings:
             stage.training_settings.set_defaults(defaults=self.training_settings)
 
             if len(stage.stage_components) == 0:
-                assert len(rollout_storages_uuids) == 1, (
-                    f"In {sit}th pipeline stage: you have several storages specified ({rollout_storages_uuids}) which"
+                assert len(rollout_storages_uuids) <= 1, (
+                    f"In {stage_name} pipeline stage: you have several storages specified ({rollout_storages_uuids}) which"
                     f" are subclasses of `RolloutStorage`. This is only allowed when stage components are explicitly"
                     f" defined in every `PipelineStage` instance. You have `PipelineStage`s for which stage components"
                     f" are not specified."
                 )
-                stage.add_stage_component(
-                    StageComponent(
-                        uuid=rollout_storages_uuids[0],
-                        storage_uuid=rollout_storages_uuids[0],
-                        loss_names=stage.loss_names,
-                        training_settings=TrainingSettings(),
+                if len(rollout_storages_uuids) > 0:
+                    stage.add_stage_component(
+                        StageComponent(
+                            uuid=rollout_storages_uuids[0],
+                            storage_uuid=rollout_storages_uuids[0],
+                            loss_names=stage.loss_names,
+                            training_settings=TrainingSettings(),
+                        )
                     )
-                )
 
             for sc in stage.stage_components:
                 assert sc.storage_uuid in self._named_storages, (
-                    f"In {sit}th pipeline stage: storage with name '{sc.storage_uuid}' not found in collection of"
+                    f"In {stage_name} pipeline stage: storage with name '{sc.storage_uuid}' not found in collection of"
                     f" defined storages names: {list(self._named_storages.keys())}"
                 )
 
             if (
-                self.rollout_storage_uuid
+                self.rollout_storage_uuid is not None
+                and self.rollout_storage_uuid
                 not in stage.storage_uuid_to_steps_taken_in_stage
             ):
                 stage.storage_uuid_to_steps_taken_in_stage[
@@ -928,7 +961,7 @@ class TrainingPipeline:
         named_storages = {} if named_storages is None else {**named_storages}
 
         rollout_storages_uuids = cls._get_uuids_of_rollout_storages(named_storages)
-        if len(rollout_storages_uuids) == 0:
+        if len(named_storages) == 0:
             assert (
                 _DEFAULT_ONPOLICY_UUID not in named_storages
             ), f"Storage uuid '{_DEFAULT_ONPOLICY_UUID}' is reserved, please pick a different uuid."
@@ -966,6 +999,19 @@ class TrainingPipeline:
             for k in ps.storage_uuid_to_steps_taken_in_stage:
                 totals[k] += ps.storage_uuid_to_steps_taken_in_stage[k]
 
+        for k in totals:
+            split = k.split("__")
+            if len(split) == 2 and split[1] in ["valid", "test"]:
+                assert totals[k] == 0, (
+                    "Total experiences should be 0 for validation/test storages, i.e."
+                    " storages who have `__valid` or `__test` as their suffix. These storages"
+                    " will copy their `total_experiences` from the corresponding training"
+                    " storage i.e.:\n"
+                    " 1. the storage without the above suffix if it exists, else\n"
+                    " 2. the total number of steps."
+                )
+                totals[k] = totals.get(split[0], self.total_steps)
+
         return totals
 
     @property
@@ -1000,6 +1046,13 @@ class TrainingPipeline:
     def restart_pipeline(self):
         for ps in self.pipeline_stages:
             ps.reset()
+
+        if self.valid_pipeline_stage:
+            self.valid_pipeline_stage.reset()
+
+        if self.test_pipeline_stage:
+            self.test_pipeline_stage.reset()
+
         self._current_stage = None
         self._refresh_current_stage(force_stage_search_from_start=True)
 
@@ -1042,21 +1095,32 @@ class TrainingPipeline:
         self._refresh_current_stage(force_stage_search_from_start=True)
 
     @property
-    def rollout_storage(self) -> RolloutStorage:
-        return cast(
-            RolloutStorage, self.current_stage_storage[self.rollout_storage_uuid]
+    def rollout_storage(self) -> Optional[RolloutStorage]:
+        if self.rollout_storage_uuid is None:
+            return None
+
+        rs = self._named_storages[self.rollout_storage_uuid]
+        if isinstance(rs, Builder):
+            rs = rs()
+            self._named_storages[self.rollout_storage_uuid] = rs
+
+        return cast(RolloutStorage, rs)
+
+    def get_stage_storage(
+        self, stage: PipelineStage
+    ) -> "OrderedDict[str, ExperienceStorage]":
+        storage_uuids_for_current_stage_set = set(
+            sc.storage_uuid for sc in stage.stage_components
         )
 
-    @property
-    def current_stage_storage(self) -> "OrderedDict[str, ExperienceStorage]":
+        # Always include self.rollout_storage_uuid in the current stage storage (when the uuid is defined)
+        if self.rollout_storage_uuid is not None:
+            storage_uuids_for_current_stage_set.add(self.rollout_storage_uuid)
+
         storage_uuids_for_current_stage = sorted(
-            list(
-                set(sc.storage_uuid for sc in self.current_stage.stage_components)
-                | {
-                    self.rollout_storage_uuid
-                }  # Always include self.rollout_storage_uuid
-            )
+            list(storage_uuids_for_current_stage_set)
         )
+
         for storage_uuid in storage_uuids_for_current_stage:
             if isinstance(self._named_storages[storage_uuid], Builder):
                 self._named_storages[storage_uuid] = cast(
@@ -1066,6 +1130,10 @@ class TrainingPipeline:
         return OrderedDict(
             (k, self._named_storages[k]) for k in storage_uuids_for_current_stage
         )
+
+    @property
+    def current_stage_storage(self) -> "OrderedDict[str, ExperienceStorage]":
+        return self.get_stage_storage(self.current_stage)
 
     def get_loss(self, uuid: str):
         if isinstance(self._named_losses[uuid], Builder):

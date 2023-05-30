@@ -314,7 +314,7 @@ class TemporalDistanceLoss(AuxiliaryLoss):
             np.repeat(locs[:, [1]], 2 * self.num_pairs, axis=-1),  # (M, 2*k)
             np.repeat(locs[:, [2]] + 1, 2 * self.num_pairs, axis=-1),  # (M, 2*k)
         ).reshape(
-            -1, self.num_pairs, 2
+            (-1, self.num_pairs, 2)
         )  # (M, k, 2)
         sampled_pairs_batch = torch.from_numpy(sampled_pairs).to(
             locs_batch

@@ -53,6 +53,7 @@ class BaseBabyAIGoToObjExperimentConfig(BaseBabyAIExperimentConfig, ABC):
         update_repeats: int,
         total_train_steps: int,
         lr: Optional[float] = None,
+        **kwargs,
     ):
         lr = cls.DEFAULT_LR
 
@@ -87,6 +88,7 @@ class BaseBabyAIGoToObjExperimentConfig(BaseBabyAIExperimentConfig, ABC):
             )
             if cls.USE_LR_DECAY
             else None,
+            **kwargs,
         )
 
     @classmethod

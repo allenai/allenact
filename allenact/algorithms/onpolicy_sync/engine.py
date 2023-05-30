@@ -146,6 +146,10 @@ class OnPolicyRLEngine(object):
         self.worker_id = worker_id
         self.num_workers = num_workers
         self.device = torch.device("cpu") if device == -1 else torch.device(device)  # type: ignore
+
+        if self.device != torch.device("cpu"):
+            torch.cuda.set_device(device)
+
         self.distributed_ip = distributed_ip
         self.distributed_port = distributed_port
         self.try_restart_after_task_error = try_restart_after_task_error
@@ -155,7 +159,7 @@ class OnPolicyRLEngine(object):
             TRAIN_MODE_STR,
             VALID_MODE_STR,
             TEST_MODE_STR,
-        ], 'Only "train", "valid", "test" modes supported'
+        ], f"Only {TRAIN_MODE_STR}, {VALID_MODE_STR}, {TEST_MODE_STR}, modes supported"
 
         self.callback_sensors = callback_sensors
         self.deterministic_cudnn = deterministic_cudnn
@@ -189,20 +193,20 @@ class OnPolicyRLEngine(object):
 
         self.sensor_preprocessor_graph = None
         self.actor_critic: Optional[ActorCriticModel] = None
-        if self.num_samplers > 0:
-            create_model_kwargs = {}
-            if self.machine_params.sensor_preprocessor_graph is not None:
-                self.sensor_preprocessor_graph = self.machine_params.sensor_preprocessor_graph.to(
-                    self.device
-                )
-                create_model_kwargs[
-                    "sensor_preprocessor_graph"
-                ] = self.sensor_preprocessor_graph
 
-            set_seed(self.seed)
-            self.actor_critic = cast(
-                ActorCriticModel, self.config.create_model(**create_model_kwargs),
-            ).to(self.device)
+        create_model_kwargs = {}
+        if self.machine_params.sensor_preprocessor_graph is not None:
+            self.sensor_preprocessor_graph = self.machine_params.sensor_preprocessor_graph.to(
+                self.device
+            )
+            create_model_kwargs[
+                "sensor_preprocessor_graph"
+            ] = self.sensor_preprocessor_graph
+
+        set_seed(self.seed)
+        self.actor_critic = cast(
+            ActorCriticModel, self.config.create_model(**create_model_kwargs),
+        ).to(self.device)
 
         if initial_model_state_dict is not None:
             if isinstance(initial_model_state_dict, int):
@@ -271,11 +275,23 @@ class OnPolicyRLEngine(object):
         )
         self._is_closed: bool = False
 
-        self.training_pipeline: Optional[TrainingPipeline] = None
-
-        # Keeping track of metrics during training/inference
+        # Keeping track of metrics and losses during training/inference
         self.single_process_metrics: List = []
         self.single_process_task_callback_data: List = []
+        self.tracking_info_list: List[TrackingInfo] = []
+
+        # Variables that wil only be instantiated in the trainer
+        self.optimizer: Optional[optim.optimizer.Optimizer] = None
+        # noinspection PyProtectedMember
+        self.lr_scheduler: Optional[_LRScheduler] = None
+        self.insufficient_data_for_update: Optional[
+            torch.distributed.PrefixStore
+        ] = None
+
+        # Training pipeline will be instantiated during training and inference.
+        # During inference however, it will be instantiated anew on each run of `run_eval`
+        # and will be set to `None` after the eval run is complete.
+        self.training_pipeline: Optional[TrainingPipeline] = None
 
     @property
     def vector_tasks(
@@ -343,7 +359,7 @@ class OnPolicyRLEngine(object):
             fn = self.config.test_task_sampler_args
         else:
             raise NotImplementedError(
-                "self.mode must be one of `train`, `valid` or `test`."
+                f"self.mode must be one of {TRAIN_MODE_STR}, {VALID_MODE_STR}, or {TEST_MODE_STR}."
             )
 
         if self.is_distributed:
@@ -374,7 +390,7 @@ class OnPolicyRLEngine(object):
         ]
 
     def checkpoint_load(
-        self, ckpt: Union[str, Dict[str, Any]]
+        self, ckpt: Union[str, Dict[str, Any]], restart_pipeline: bool
     ) -> Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]]:
         if isinstance(ckpt, str):
             get_logger().info(
@@ -388,6 +404,11 @@ class OnPolicyRLEngine(object):
         )
 
         self.actor_critic.load_state_dict(ckpt["model_state_dict"])  # type:ignore
+
+        if "training_pipeline_state_dict" in ckpt and not restart_pipeline:
+            self.training_pipeline.load_state_dict(
+                cast(Dict[str, Any], ckpt["training_pipeline_state_dict"])
+            )
 
         return ckpt
 
@@ -452,14 +473,28 @@ class OnPolicyRLEngine(object):
         storage_to_initialize: Optional[Sequence[ExperienceStorage]],
         visualizer: Optional[VizSuite] = None,
     ):
-        observations = self.vector_tasks.get_observations()
 
-        npaused, keep, batch = self.remove_paused(observations)
-        observations = self._preprocess_observations(batch) if len(keep) > 0 else batch
+        keep: Optional[List] = None
+        if visualizer is not None or (
+            storage_to_initialize is not None
+            and any(isinstance(s, RolloutStorage) for s in storage_to_initialize)
+        ):
+            # No rollout storage, thus we are not
+            observations = self.vector_tasks.get_observations()
 
-        assert npaused == 0, f"{npaused} samplers are paused during initialization."
+            npaused, keep, batch = self.remove_paused(observations)
+            observations = (
+                self._preprocess_observations(batch) if len(keep) > 0 else batch
+            )
 
-        num_samplers = len(keep)
+            assert npaused == 0, f"{npaused} samplers are paused during initialization."
+
+            num_samplers = len(keep)
+        else:
+            observations = {}
+            num_samplers = 0
+            npaused = 0
+
         recurrent_memory_specification = (
             self.actor_critic.recurrent_memory_specification
         )
@@ -475,13 +510,15 @@ class OnPolicyRLEngine(object):
                     action_space=self.actor_critic.action_space,
                 )
 
-        if visualizer is not None and len(keep) > 0:
+        if visualizer is not None and num_samplers > 0:
             visualizer.collect(vector_task=self.vector_tasks, alive=keep)
 
         return npaused
 
     @property
     def num_active_samplers(self):
+        if self.vector_tasks is None:
+            return 0
         return self.vector_tasks.num_unpaused_tasks
 
     def act(
@@ -500,6 +537,52 @@ class OnPolicyRLEngine(object):
             actions = distr.sample() if not self.deterministic_agents else distr.mode()
 
         return actions, actor_critic_output, memory, agent_input["observations"]
+
+    def aggregate_and_send_logging_package(
+        self,
+        tracking_info_list: List[TrackingInfo],
+        logging_pkg: Optional[LoggingPackage] = None,
+        send_logging_package: bool = True,
+    ):
+        if logging_pkg is None:
+            logging_pkg = LoggingPackage(
+                mode=self.mode,
+                training_steps=self.training_pipeline.total_steps,
+                pipeline_stage=self.training_pipeline.current_stage_index,
+                storage_uuid_to_total_experiences=self.training_pipeline.storage_uuid_to_total_experiences,
+            )
+
+        self.aggregate_task_metrics(logging_pkg=logging_pkg)
+
+        for callback_dict in self.single_process_task_callback_data:
+            logging_pkg.task_callback_data.append(callback_dict)
+        self.single_process_task_callback_data = []
+
+        for tracking_info in tracking_info_list:
+            if tracking_info.n < 0:
+                get_logger().warning(
+                    f"Obtained a train_info_dict with {tracking_info.n} elements."
+                    f" Full info: ({tracking_info.type}, {tracking_info.info}, {tracking_info.n})."
+                )
+            else:
+                tracking_info_dict = tracking_info.info
+
+                if tracking_info.type == TrackingInfoType.LOSS:
+                    tracking_info_dict = {
+                        f"losses/{k}": v for k, v in tracking_info_dict.items()
+                    }
+
+                logging_pkg.add_info_dict(
+                    info_dict=tracking_info_dict,
+                    n=tracking_info.n,
+                    stage_component_uuid=tracking_info.stage_component_uuid,
+                    storage_uuid=tracking_info.storage_uuid,
+                )
+
+        if send_logging_package:
+            self.results_queue.put(logging_pkg)
+
+        return logging_pkg
 
     @staticmethod
     def _active_memory(memory, keep):
@@ -630,10 +713,6 @@ class OnPolicyRLEngine(object):
         # self.probe(dones, npaused)
 
         if npaused > 0:
-            for s in uuid_to_storage.values():
-                if isinstance(s, RolloutStorage):
-                    s.sampler_select(keep)
-
             if self.mode == TRAIN_MODE_STR:
                 raise NotImplementedError(
                     "When trying to get a new task from a task sampler (using the `.next_task()` method)"
@@ -641,6 +720,10 @@ class OnPolicyRLEngine(object):
                     " (and almost certainly a bug in the implementation of the task sampler or in the "
                     " initialization of the task sampler for training)."
                 )
+
+            for s in uuid_to_storage.values():
+                if isinstance(s, RolloutStorage):
+                    s.sampler_select(keep)
 
         to_add_to_storage = dict(
             observations=self._preprocess_observations(batch)
@@ -671,6 +754,328 @@ class OnPolicyRLEngine(object):
                 visualizer.collect(actor_critic=actor_critic_output)
 
         return npaused
+
+    def distributed_weighted_sum(
+        self,
+        to_share: Union[torch.Tensor, float, int],
+        weight: Union[torch.Tensor, float, int],
+    ):
+        """Weighted sum of scalar across distributed workers."""
+        if self.is_distributed:
+            aggregate = torch.tensor(to_share * weight).to(self.device)
+            dist.all_reduce(aggregate)
+            return aggregate.item()
+        else:
+            if abs(1 - weight) > 1e-5:
+                get_logger().warning(
+                    f"Scaling non-distributed value with weight {weight}"
+                )
+            return torch.tensor(to_share * weight).item()
+
+    def distributed_reduce(
+        self, to_share: Union[torch.Tensor, float, int], op: ReduceOp
+    ):
+        """Weighted sum of scalar across distributed workers."""
+        if self.is_distributed:
+            aggregate = torch.tensor(to_share).to(self.device)
+            dist.all_reduce(aggregate, op=op)
+            return aggregate.item()
+        else:
+            return torch.tensor(to_share).item()
+
+    def backprop_step(
+        self,
+        total_loss: torch.Tensor,
+        max_grad_norm: float,
+        local_to_global_batch_size_ratio: float = 1.0,
+    ):
+        raise NotImplementedError
+
+    def save_error_data(self, batch: Dict[str, Any]):
+        raise NotImplementedError
+
+    @property
+    def step_count(self) -> int:
+        if (
+            self.training_pipeline.current_stage is None
+        ):  # Might occur during testing when all stages are complete
+            return 0
+        return self.training_pipeline.current_stage.steps_taken_in_stage
+
+
+    def compute_losses_track_them_and_backprop(
+        self,
+        stage: PipelineStage,
+        stage_component: StageComponent,
+        storage: ExperienceStorage,
+        skip_backprop: bool = False,
+    ):
+        training = self.mode == TRAIN_MODE_STR
+
+        assert training or skip_backprop
+
+        if training and self.is_distributed:
+            self.insufficient_data_for_update.set(
+                "insufficient_data_for_update", str(0)
+            )
+            dist.barrier(
+                device_ids=None
+                if self.device == torch.device("cpu")
+                else [self.device.index]
+            )
+
+        training_settings = stage_component.training_settings
+
+        loss_names = stage_component.loss_names
+        losses = [self.training_pipeline.get_loss(ln) for ln in loss_names]
+        loss_weights = [stage.uuid_to_loss_weight[ln] for ln in loss_names]
+        loss_update_repeats_list = training_settings.update_repeats
+        if isinstance(loss_update_repeats_list, numbers.Integral):
+            loss_update_repeats_list = [loss_update_repeats_list] * len(loss_names)
+
+        if skip_backprop and isinstance(storage, MiniBatchStorageMixin):
+            if loss_update_repeats_list != [1] * len(loss_names):
+                loss_update_repeats_list = [1] * len(loss_names)
+                get_logger().warning(
+                    "Does not make sense to do multiple updates when"
+                    " skip_backprop is `True` and you are using a storage of type"
+                    " `MiniBatchStorageMixin`. This is likely a problem caused by"
+                    " using a custom valid/test stage component that is inheriting its"
+                    " TrainingSettings from the TrainingPipeline's TrainingSettings. We will override"
+                    " the requested number of updates repeats (which was"
+                    f" {dict(zip(loss_names, loss_update_repeats_list))}) to be 1 for all losses."
+                )
+
+        enough_data_for_update = True
+        for current_update_repeat_index in range(
+            max(loss_update_repeats_list, default=0)
+        ):
+            if isinstance(storage, MiniBatchStorageMixin):
+                batch_iterator = storage.batched_experience_generator(
+                    num_mini_batch=training_settings.num_mini_batch
+                )
+            elif isinstance(storage, StreamingStorageMixin):
+                assert (
+                    training_settings.num_mini_batch is None
+                    or training_settings.num_mini_batch == 1
+                )
+
+                def single_batch_generator(streaming_storage: StreamingStorageMixin):
+                    try:
+                        yield cast(
+                            StreamingStorageMixin, streaming_storage
+                        ).next_batch()
+                    except EOFError:
+                        if not training:
+                            raise
+
+                        if streaming_storage.empty():
+                            yield None
+                        else:
+                            cast(
+                                StreamingStorageMixin, streaming_storage
+                            ).reset_stream()
+                            stage.stage_component_uuid_to_stream_memory[
+                                stage_component.uuid
+                            ].clear()
+                            yield cast(
+                                StreamingStorageMixin, streaming_storage
+                            ).next_batch()
+
+                batch_iterator = single_batch_generator(streaming_storage=storage)
+            else:
+                raise NotImplementedError(
+                    f"Storage {storage} must be a subclass of `MiniBatchStorageMixin` or `StreamingStorageMixin`."
+                )
+
+            for batch in batch_iterator:
+                if batch is None:
+                    # This should only happen in a `StreamingStorageMixin` when it cannot
+                    # generate an initial batch or when we are in testing/validation and
+                    # we've reached the end of the dataset over which to test/validate.
+                    if training:
+                        assert isinstance(storage, StreamingStorageMixin)
+                        get_logger().warning(
+                            f"Worker {self.worker_id}: could not run update in {storage}, potentially because"
+                            f" not enough data has been accumulated to be able to fill an initial batch."
+                        )
+                    else:
+                        pass
+                    enough_data_for_update = False
+
+                if training and self.is_distributed:
+                    self.insufficient_data_for_update.add(
+                        "insufficient_data_for_update",
+                        1 * (not enough_data_for_update),
+                    )
+                    dist.barrier(
+                        device_ids=None
+                        if self.device == torch.device("cpu")
+                        else [self.device.index]
+                    )
+
+                    if (
+                        int(
+                            self.insufficient_data_for_update.get(
+                                "insufficient_data_for_update"
+                            )
+                        )
+                        != 0
+                    ):
+                        enough_data_for_update = False
+                        break
+
+                info: Dict[str, float] = {}
+
+                bsize: Optional[int] = None
+                total_loss: Optional[torch.Tensor] = None
+                actor_critic_output_for_batch: Optional[ActorCriticOutput] = None
+                batch_memory = Memory()
+
+                for loss, loss_name, loss_weight, max_update_repeats_for_loss in zip(
+                    losses, loss_names, loss_weights, loss_update_repeats_list
+                ):
+                    if current_update_repeat_index >= max_update_repeats_for_loss:
+                        continue
+
+                    if isinstance(loss, AbstractActorCriticLoss):
+                        bsize = batch["bsize"]
+
+                        if actor_critic_output_for_batch is None:
+
+                            try:
+                                actor_critic_output_for_batch, _ = self.actor_critic(
+                                    observations=batch["observations"],
+                                    memory=batch["memory"],
+                                    prev_actions=batch["prev_actions"],
+                                    masks=batch["masks"],
+                                )
+                            except ValueError:
+                                save_path = self.save_error_data(batch=batch)
+                                get_logger().error(
+                                    f"Encountered a value error! Likely because of nans in the output/input."
+                                    f" Saving all error information to {save_path}."
+                                )
+                                raise
+
+                        loss_return = loss.loss(
+                            step_count=self.step_count,
+                            batch=batch,
+                            actor_critic_output=actor_critic_output_for_batch,
+                        )
+
+                        per_epoch_info = {}
+                        if len(loss_return) == 2:
+                            current_loss, current_info = loss_return
+                        elif len(loss_return) == 3:
+                            current_loss, current_info, per_epoch_info = loss_return
+                        else:
+                            raise NotImplementedError
+
+                    elif isinstance(loss, GenericAbstractLoss):
+                        loss_output = loss.loss(
+                            model=self.actor_critic,
+                            batch=batch,
+                            batch_memory=batch_memory,
+                            stream_memory=stage.stage_component_uuid_to_stream_memory[
+                                stage_component.uuid
+                            ],
+                        )
+                        current_loss = loss_output.value
+                        current_info = loss_output.info
+                        per_epoch_info = loss_output.per_epoch_info
+                        batch_memory = loss_output.batch_memory
+                        stage.stage_component_uuid_to_stream_memory[
+                            stage_component.uuid
+                        ] = loss_output.stream_memory
+                        bsize = loss_output.bsize
+                    else:
+                        raise NotImplementedError(
+                            f"Loss of type {type(loss)} is not supported. Losses must be subclasses of"
+                            f" `AbstractActorCriticLoss` or `GenericAbstractLoss`."
+                        )
+
+                    if total_loss is None:
+                        total_loss = loss_weight * current_loss
+                    else:
+                        total_loss = total_loss + loss_weight * current_loss
+
+                    for key, value in current_info.items():
+                        info[f"{loss_name}/{key}"] = value
+
+                    if per_epoch_info is not None:
+                        for key, value in per_epoch_info.items():
+                            if max(loss_update_repeats_list, default=0) > 1:
+                                info[
+                                    f"{loss_name}/{key}_epoch{current_update_repeat_index:02d}"
+                                ] = value
+                                info[f"{loss_name}/{key}_combined"] = value
+                            else:
+                                info[f"{loss_name}/{key}"] = value
+
+                assert total_loss is not None, (
+                    f"No {stage_component.uuid} losses specified for training in stage"
+                    f" {self.training_pipeline.current_stage_index}"
+                )
+
+                total_loss_scalar = total_loss.item()
+                info[f"total_loss"] = total_loss_scalar
+
+                self.tracking_info_list.append(
+                    TrackingInfo(
+                        type=TrackingInfoType.LOSS,
+                        info=info,
+                        n=bsize,
+                        storage_uuid=stage_component.storage_uuid,
+                        stage_component_uuid=stage_component.uuid,
+                    )
+                )
+
+                to_track = {
+                    "rollout_epochs": max(loss_update_repeats_list, default=0),
+                    "worker_batch_size": bsize,
+                }
+
+                aggregate_bsize = None
+                if training:
+                    aggregate_bsize = self.distributed_weighted_sum(bsize, 1)
+                    to_track["global_batch_size"] = aggregate_bsize
+                    to_track["lr"] = self.optimizer.param_groups[0]["lr"]
+
+                if training_settings.num_mini_batch is not None:
+                    to_track[
+                        "rollout_num_mini_batch"
+                    ] = training_settings.num_mini_batch
+
+                for k, v in to_track.items():
+                    # We need to set the bsize to 1 for `worker_batch_size` below as we're trying to record the
+                    # average batch size per worker, not the average per worker weighted by the size of the batches
+                    # of those workers.
+                    self.tracking_info_list.append(
+                        TrackingInfo(
+                            type=TrackingInfoType.UPDATE_INFO,
+                            info={k: v},
+                            n=1 if k == "worker_batch_size" else bsize,
+                            storage_uuid=stage_component.storage_uuid,
+                            stage_component_uuid=stage_component.uuid,
+                        )
+                    )
+
+                if not skip_backprop:
+                    self.backprop_step(
+                        total_loss=total_loss,
+                        max_grad_norm=training_settings.max_grad_norm,
+                        local_to_global_batch_size_ratio=bsize / aggregate_bsize,
+                    )
+
+                stage.stage_component_uuid_to_stream_memory[
+                    stage_component.uuid
+                ] = detach_recursively(
+                    input=stage.stage_component_uuid_to_stream_memory[
+                        stage_component.uuid
+                    ],
+                    inplace=True,
+                )
 
     def close(self, verbose=True):
         self._is_closing = True
@@ -821,7 +1226,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.offpolicy_epoch_done = None
 
         # Keeping track of training state
-        self.tracking_info_list: List[TrackingInfo] = []
         self.former_steps: Optional[int] = None
         self.last_log: Optional[int] = None
         self.last_save: Optional[int] = None
@@ -857,7 +1261,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             seeds = self.worker_seeds(
                 self.num_samplers, None
             )  # use the latest seed for workers and update rng state
-            self.vector_tasks.set_seeds(seeds)
+            if self.vector_tasks is not None:
+                self.vector_tasks.set_seeds(seeds)
 
     def save_error_data(self, batch: Dict[str, Any]) -> str:
         model_path = os.path.join(
@@ -888,6 +1293,28 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
                 torch.save(save_dict, model_path)
         return model_path
+
+    def aggregate_and_send_logging_package(
+        self,
+        tracking_info_list: List[TrackingInfo],
+        logging_pkg: Optional[LoggingPackage] = None,
+        send_logging_package: bool = True,
+    ):
+        logging_pkg = super().aggregate_and_send_logging_package(
+            tracking_info_list=tracking_info_list,
+            logging_pkg=logging_pkg,
+            send_logging_package=send_logging_package,
+        )
+
+        if self.mode == TRAIN_MODE_STR:
+            # Technically self.mode should always be "train" here (as this is the training engine),
+            # this conditional is defensive
+            self._last_aggregated_train_task_metrics.add_scalars(
+                scalars=logging_pkg.metrics_tracker.means(),
+                n=logging_pkg.metrics_tracker.counts(),
+            )
+
+        return logging_pkg
 
     def checkpoint_save(self, pipeline_stage_index: Optional[int] = None) -> str:
         model_path = os.path.join(
@@ -920,17 +1347,18 @@ class OnPolicyTrainer(OnPolicyRLEngine):
     def checkpoint_load(
         self, ckpt: Union[str, Dict[str, Any]], restart_pipeline: bool = False
     ) -> Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]]:
-        ckpt = super().checkpoint_load(ckpt)
+        if restart_pipeline:
+            if "training_pipeline_state_dict" in ckpt:
+                del ckpt["training_pipeline_state_dict"]
 
-        self.training_pipeline.load_state_dict(
-            cast(Dict[str, Any], ckpt["training_pipeline_state_dict"])
-        )
+        ckpt = super().checkpoint_load(ckpt, restart_pipeline=restart_pipeline)
+
         if restart_pipeline:
             self.training_pipeline.restart_pipeline()
         else:
             self.seed = cast(int, ckpt["trainer_seed"])
             self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])  # type: ignore
-            if self.lr_scheduler is not None:
+            if self.lr_scheduler is not None and "scheduler_state" in ckpt:
                 self.lr_scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
 
         self.deterministic_seeds()
@@ -942,14 +1370,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         return self.training_pipeline.current_stage.steps_taken_in_stage
 
     @step_count.setter
-    def step_count(self, val: int):
+    def step_count(self, val: int) -> None:
         self.training_pipeline.current_stage.steps_taken_in_stage = val
 
     @property
     def log_interval(self):
-        return (
-            self.training_pipeline.current_stage.training_settings.metric_accumulate_interval
-        )
+        return self.training_pipeline.current_stage.training_settings.metric_accumulate_interval
 
     @property
     def approx_steps(self):
@@ -968,13 +1394,25 @@ class OnPolicyTrainer(OnPolicyRLEngine):
     ):
         if self.training_pipeline.current_stage.teacher_forcing is not None:
             assert dist_wrapper_class is None
+
+            def tracking_callback(type: TrackingInfoType, info: Dict[str, Any], n: int):
+                self.tracking_info_list.append(
+                    TrackingInfo(
+                        type=type,
+                        info=info,
+                        n=n,
+                        storage_uuid=self.training_pipeline.rollout_storage_uuid,
+                        stage_component_uuid=None,
+                    )
+                )
+
             dist_wrapper_class = partial(
                 TeacherForcingDistr,
                 action_space=self.actor_critic.action_space,
                 num_active_samplers=self.num_active_samplers,
                 approx_steps=self.approx_steps,
                 teacher_forcing=self.training_pipeline.current_stage.teacher_forcing,
-                tracking_info_list=self.tracking_info_list,
+                tracking_callback=tracking_callback,
             )
 
         actions, actor_critic_output, memory, step_observation = super().act(
@@ -1015,275 +1453,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         return {"mean": mean, "std": std}
 
-    def distributed_weighted_sum(
-        self,
-        to_share: Union[torch.Tensor, float, int],
-        weight: Union[torch.Tensor, float, int],
-    ):
-        """Weighted sum of scalar across distributed workers."""
-        if self.is_distributed:
-            aggregate = torch.tensor(to_share * weight).to(self.device)
-            dist.all_reduce(aggregate)
-            return aggregate.item()
-        else:
-            if abs(1 - weight) > 1e-5:
-                get_logger().warning(
-                    f"Scaling non-distributed value with weight {weight}"
-                )
-            return torch.tensor(to_share * weight).item()
-
-    def distributed_reduce(
-        self, to_share: Union[torch.Tensor, float, int], op: ReduceOp
-    ):
-        """Weighted sum of scalar across distributed workers."""
-        if self.is_distributed:
-            aggregate = torch.tensor(to_share).to(self.device)
-            dist.all_reduce(aggregate, op=op)
-            return aggregate.item()
-        else:
-            return torch.tensor(to_share).item()
-
-    def update(
-        self,
-        stage: PipelineStage,
-        stage_component: StageComponent,
-        storage: ExperienceStorage,
-    ):
-        if self.is_distributed:
-            self.insufficient_data_for_update.set(
-                "insufficient_data_for_update", str(0)
-            )
-            dist.barrier(
-                device_ids=None
-                if self.device == torch.device("cpu")
-                else [self.device.index]
-            )
-
-        training_settings = stage_component.training_settings
-
-        loss_names = stage_component.loss_names
-        losses = [self.training_pipeline.get_loss(ln) for ln in loss_names]
-        loss_weights = [stage.uuid_to_loss_weight[ln] for ln in loss_names]
-        loss_update_repeats_list = training_settings.update_repeats
-        if isinstance(loss_update_repeats_list, numbers.Integral):
-            loss_update_repeats_list = [loss_update_repeats_list] * len(loss_names)
-
-        enough_data_for_update = True
-        for current_update_repeat_index in range(
-            max(loss_update_repeats_list, default=0)
-        ):
-            if isinstance(storage, MiniBatchStorageMixin):
-                batch_iterator = storage.batched_experience_generator(
-                    num_mini_batch=training_settings.num_mini_batch
-                )
-            elif isinstance(storage, StreamingStorageMixin):
-                assert (
-                    training_settings.num_mini_batch is None
-                    or training_settings.num_mini_batch == 1
-                )
-
-                def single_batch_generator(streaming_storage: StreamingStorageMixin):
-                    try:
-                        yield cast(
-                            StreamingStorageMixin, streaming_storage
-                        ).next_batch()
-                    except EOFError:
-                        if streaming_storage.empty():
-                            yield None
-                        else:
-                            cast(
-                                StreamingStorageMixin, streaming_storage
-                            ).reset_stream()
-                            stage.stage_component_uuid_to_stream_memory[
-                                stage_component.uuid
-                            ].clear()
-                            yield cast(
-                                StreamingStorageMixin, streaming_storage
-                            ).next_batch()
-
-                batch_iterator = single_batch_generator(streaming_storage=storage)
-            else:
-                raise NotImplementedError(
-                    f"Storage {storage} must be a subclass of `MiniBatchStorageMixin` or `StreamingStorageMixin`."
-                )
-
-            for batch in batch_iterator:
-                if batch is None:
-                    # This should only happen in a `StreamingStorageMixin` when it cannot
-                    # generate an initial batch.
-                    assert isinstance(storage, StreamingStorageMixin)
-                    get_logger().warning(
-                        f"Worker {self.worker_id}: could not run update in {storage}, potentially because"
-                        f" not enough data has been accumulated to be able to fill an initial batch."
-                    )
-                    enough_data_for_update = False
-
-                if self.is_distributed:
-                    self.insufficient_data_for_update.add(
-                        "insufficient_data_for_update",
-                        1 * (not enough_data_for_update),
-                    )
-                    dist.barrier(
-                        device_ids=None
-                        if self.device == torch.device("cpu")
-                        else [self.device.index]
-                    )
-
-                    if (
-                        int(
-                            self.insufficient_data_for_update.get(
-                                "insufficient_data_for_update"
-                            )
-                        )
-                        != 0
-                    ):
-                        enough_data_for_update = False
-                        break
-
-                info: Dict[str, float] = {}
-
-                bsize: Optional[int] = None
-                total_loss: Optional[torch.Tensor] = None
-                actor_critic_output_for_batch: Optional[ActorCriticOutput] = None
-                batch_memory = Memory()
-
-                for loss, loss_name, loss_weight, max_update_repeats_for_loss in zip(
-                    losses, loss_names, loss_weights, loss_update_repeats_list
-                ):
-                    if current_update_repeat_index >= max_update_repeats_for_loss:
-                        continue
-
-                    if isinstance(loss, AbstractActorCriticLoss):
-                        bsize = batch["bsize"]
-
-                        if actor_critic_output_for_batch is None:
-
-                            try:
-                                actor_critic_output_for_batch, _ = self.actor_critic(
-                                    observations=batch["observations"],
-                                    memory=batch["memory"],
-                                    prev_actions=batch["prev_actions"],
-                                    masks=batch["masks"],
-                                )
-                            except ValueError:
-                                save_path = self.save_error_data(batch=batch)
-                                get_logger().error(
-                                    f"Encountered a value error! Likely because of nans in the output/input."
-                                    f" Saving all error information to {save_path}."
-                                )
-                                raise
-
-                        loss_return = loss.loss(
-                            step_count=self.step_count,
-                            batch=batch,
-                            actor_critic_output=actor_critic_output_for_batch,
-                        )
-
-                        per_epoch_info = {}
-                        if len(loss_return) == 2:
-                            current_loss, current_info = loss_return
-                        elif len(loss_return) == 3:
-                            current_loss, current_info, per_epoch_info = loss_return
-                        else:
-                            raise NotImplementedError
-
-                    elif isinstance(loss, GenericAbstractLoss):
-                        loss_output = loss.loss(
-                            model=self.actor_critic,
-                            batch=batch,
-                            batch_memory=batch_memory,
-                            stream_memory=stage.stage_component_uuid_to_stream_memory[
-                                stage_component.uuid
-                            ],
-                        )
-                        current_loss = loss_output.value
-                        current_info = loss_output.info
-                        per_epoch_info = loss_output.per_epoch_info
-                        batch_memory = loss_output.batch_memory
-                        stage.stage_component_uuid_to_stream_memory[
-                            stage_component.uuid
-                        ] = loss_output.stream_memory
-                        bsize = loss_output.bsize
-                    else:
-                        raise NotImplementedError(
-                            f"Loss of type {type(loss)} is not supported. Losses must be subclasses of"
-                            f" `AbstractActorCriticLoss` or `GenericAbstractLoss`."
-                        )
-
-                    if total_loss is None:
-                        total_loss = loss_weight * current_loss
-                    else:
-                        total_loss = total_loss + loss_weight * current_loss
-
-                    for key, value in current_info.items():
-                        info[f"{loss_name}/{key}"] = value
-
-                    if per_epoch_info is not None:
-                        for key, value in per_epoch_info.items():
-                            if max(loss_update_repeats_list, default=0) > 1:
-                                info[
-                                    f"{loss_name}/{key}_epoch{current_update_repeat_index:02d}"
-                                ] = value
-                                info[f"{loss_name}/{key}_combined"] = value
-                            else:
-                                info[f"{loss_name}/{key}"] = value
-
-                assert total_loss is not None, (
-                    f"No {stage_component.uuid} losses specified for training in stage"
-                    f" {self.training_pipeline.current_stage_index}"
-                )
-
-                total_loss_scalar = total_loss.item()
-                info[f"total_loss"] = total_loss_scalar
-
-                self.tracking_info_list.append(
-                    TrackingInfo(
-                        type=TrackingInfoType.LOSS,
-                        info=info,
-                        n=bsize,
-                        storage_uuid=stage_component.storage_uuid,
-                        stage_component_uuid=stage_component.uuid,
-                    )
-                )
-
-                aggregate_bsize = self.distributed_weighted_sum(bsize, 1)
-                to_track = {
-                    "lr": self.optimizer.param_groups[0]["lr"],
-                    "rollout_epochs": max(loss_update_repeats_list, default=0),
-                    "global_batch_size": aggregate_bsize,
-                    "worker_batch_size": bsize,
-                }
-                if training_settings.num_mini_batch is not None:
-                    to_track[
-                        "rollout_num_mini_batch"
-                    ] = training_settings.num_mini_batch
-
-                for k, v in to_track.items():
-                    self.tracking_info_list.append(
-                        TrackingInfo(
-                            type=TrackingInfoType.UPDATE_INFO,
-                            info={k: v},
-                            n=bsize,
-                            storage_uuid=stage_component.storage_uuid,
-                            stage_component_uuid=stage_component.uuid,
-                        )
-                    )
-
-                self.backprop_step(
-                    total_loss=total_loss,
-                    max_grad_norm=training_settings.max_grad_norm,
-                    local_to_global_batch_size_ratio=bsize / aggregate_bsize,
-                )
-
-                stage.stage_component_uuid_to_stream_memory[
-                    stage_component.uuid
-                ] = detach_recursively(
-                    input=stage.stage_component_uuid_to_stream_memory[
-                        stage_component.uuid
-                    ],
-                    inplace=True,
-                )
-
     def backprop_step(
         self,
         total_loss: torch.Tensor,
@@ -1317,53 +1486,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
         self.optimizer.step()  # type: ignore
 
-    def aggregate_and_send_logging_package(
-        self, tracking_info_list: List[TrackingInfo]
-    ):
-        logging_pkg = LoggingPackage(
-            mode=self.mode,
-            training_steps=self.training_pipeline.total_steps,
-            pipeline_stage=self.training_pipeline.current_stage_index,
-            storage_uuid_to_total_experiences=self.training_pipeline.storage_uuid_to_total_experiences,
-        )
-
-        self.aggregate_task_metrics(logging_pkg=logging_pkg)
-
-        for callback_dict in self.single_process_task_callback_data:
-            logging_pkg.task_callback_data.append(callback_dict)
-        self.single_process_task_callback_data = []
-
-        if self.mode == TRAIN_MODE_STR:
-            # Technically self.mode should always be "train" here (as this is the training engine),
-            # this conditional is defensive
-            self._last_aggregated_train_task_metrics.add_scalars(
-                scalars=logging_pkg.metrics_tracker.means(),
-                n=logging_pkg.metrics_tracker.counts(),
-            )
-
-        for tracking_info in tracking_info_list:
-            if tracking_info.n < 0:
-                get_logger().warning(
-                    f"Obtained a train_info_dict with {tracking_info.n} elements."
-                    f" Full info: ({tracking_info.type}, {tracking_info.info}, {tracking_info.n})."
-                )
-            else:
-                tracking_info_dict = tracking_info.info
-
-                if tracking_info.type == TrackingInfoType.LOSS:
-                    tracking_info_dict = {
-                        f"losses/{k}": v for k, v in tracking_info_dict.items()
-                    }
-
-                logging_pkg.add_train_info_dict(
-                    train_info_dict=tracking_info_dict,
-                    n=tracking_info.n,
-                    stage_component_uuid=tracking_info.stage_component_uuid,
-                    storage_uuid=tracking_info.storage_uuid,
-                )
-
-        self.results_queue.put(logging_pkg)
-
     def _save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter(
         self, pipeline_stage_index: Optional[int] = None
     ):
@@ -1382,7 +1504,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         rollout_storage = self.training_pipeline.rollout_storage
         uuid_to_storage = self.training_pipeline.current_stage_storage
         self.initialize_storage_and_viz(
-            storage_to_initialize=list(uuid_to_storage.values())
+            storage_to_initialize=cast(
+                List[ExperienceStorage], list(uuid_to_storage.values())
+            )
         )
         self.tracking_info_list.clear()
 
@@ -1486,111 +1610,134 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 for k, v in self.training_pipeline.current_stage_storage.items()
             }
 
-            vector_tasks_already_restarted = False
-            step = -1
-            while step < cur_stage_training_settings.num_steps - 1:
-                step += 1
+            if self.training_pipeline.rollout_storage_uuid is None:
+                # In this case we're not expecting to collect storage experiences, i.e. everything
+                # will be off-policy.
 
-                try:
-                    num_paused = self.collect_step_across_all_task_samplers(
-                        rollout_storage_uuid=self.training_pipeline.rollout_storage_uuid,
-                        uuid_to_storage=uuid_to_storage,
+                # self.step_count is normally updated by the `self.collect_step_across_all_task_samplers`
+                # call below, but since we're not collecting onpolicy experiences, we need to update
+                # it here. The step count here is now just effectively a count of the number of times
+                # we've called `compute_losses_track_them_and_backprop` below.
+                self.step_count += 1
+
+                before_update_info = dict(
+                    next_value=None,
+                    use_gae=cur_stage_training_settings.use_gae,
+                    gamma=cur_stage_training_settings.gamma,
+                    tau=cur_stage_training_settings.gae_lambda,
+                    adv_stats_callback=self.advantage_stats,
+                )
+            else:
+                vector_tasks_already_restarted = False
+                step = -1
+                while step < cur_stage_training_settings.num_steps - 1:
+                    step += 1
+
+                    try:
+                        num_paused = self.collect_step_across_all_task_samplers(
+                            rollout_storage_uuid=self.training_pipeline.rollout_storage_uuid,
+                            uuid_to_storage=uuid_to_storage,
+                        )
+                    except (TimeoutError, EOFError) as e:
+                        if (
+                            not self.try_restart_after_task_error
+                        ) or self.mode != TRAIN_MODE_STR:
+                            # Apparently you can just call `raise` here and doing so will just raise the exception as though
+                            # it was not caught (so the stacktrace isn't messed up)
+                            raise
+                        elif vector_tasks_already_restarted:
+                            raise RuntimeError(
+                                f"[{self.mode} worker {self.worker_id}] `vector_tasks` has timed out twice in the same"
+                                f" rollout. This suggests that this error was not recoverable. Timeout exception:\n{traceback.format_exc()}"
+                            )
+                        else:
+                            get_logger().warning(
+                                f"[{self.mode} worker {self.worker_id}] `vector_tasks` appears to have crashed during"
+                                f" training due to an {type(e).__name__} error. You have set"
+                                f" `try_restart_after_task_error` to `True` so we will attempt to restart these tasks from"
+                                f" the beginning. USE THIS FEATURE AT YOUR OWN"
+                                f" RISK. Exception:\n{traceback.format_exc()}."
+                            )
+                            self.vector_tasks.close()
+                            self._vector_tasks = None
+
+                            vector_tasks_already_restarted = True
+                            for (
+                                storage
+                            ) in self.training_pipeline.current_stage_storage.values():
+                                storage.after_updates()
+                            self.initialize_storage_and_viz(
+                                storage_to_initialize=cast(
+                                    List[ExperienceStorage],
+                                    list(uuid_to_storage.values()),
+                                )
+                            )
+                            step = -1
+                            continue
+
+                    # A more informative error message should already have been thrown in be given in
+                    # `collect_step_across_all_task_samplers` if `num_paused != 0` here but this serves
+                    # as a sanity check.
+                    assert num_paused == 0
+
+                    if self.is_distributed:
+                        # Preempt stragglers
+                        # Each worker will stop collecting steps for the current rollout whenever a
+                        # 100 * distributed_preemption_threshold percentage of workers are finished collecting their
+                        # rollout steps, and we have collected at least 25% but less than 90% of the steps.
+                        num_done = int(self.num_workers_done.get("done"))
+                        if (
+                            num_done
+                            > self.distributed_preemption_threshold * self.num_workers
+                            and 0.25 * cur_stage_training_settings.num_steps
+                            <= step
+                            < 0.9 * cur_stage_training_settings.num_steps
+                        ):
+                            get_logger().debug(
+                                f"[{self.mode} worker {self.worker_id}] Preempted after {step}"
+                                f" steps (out of {cur_stage_training_settings.num_steps})"
+                                f" with {num_done} workers done"
+                            )
+                            break
+
+                with torch.no_grad():
+                    actor_critic_output, _ = self.actor_critic(
+                        **rollout_storage.agent_input_for_next_step()
                     )
-                except (TimeoutError, EOFError) as e:
-                    if (
-                        not self.try_restart_after_task_error
-                    ) or self.mode != TRAIN_MODE_STR:
-                        # Apparently you can just call `raise` here and doing so will just raise the exception as though
-                        # it was not caught (so the stacktrace isn't messed up)
-                        raise
-                    elif vector_tasks_already_restarted:
-                        raise RuntimeError(
-                            f"[{self.mode} worker {self.worker_id}] `vector_tasks` has timed out twice in the same"
-                            f" rollout. This suggests that this error was not recoverable. Timeout exception:\n{traceback.format_exc()}"
-                        )
-                    else:
-                        get_logger().warning(
-                            f"[{self.mode} worker {self.worker_id}] `vector_tasks` appears to have crashed during"
-                            f" training due to an {type(e).__name__} error. You have set"
-                            f" `try_restart_after_task_error` to `True` so we will attempt to restart these tasks from"
-                            f" the beginning. USE THIS FEATURE AT YOUR OWN"
-                            f" RISK. Exception:\n{traceback.format_exc()}."
-                        )
-                        self.vector_tasks.close()
-                        self._vector_tasks = None
 
-                        vector_tasks_already_restarted = True
-                        for (
-                            storage
-                        ) in self.training_pipeline.current_stage_storage.values():
-                            storage.after_updates()
-                        self.initialize_storage_and_viz(
-                            storage_to_initialize=list(uuid_to_storage.values())
-                        )
-                        step = -1
-                        continue
-
-                # A more informative error message should already have been thrown in be given in
-                # `collect_step_across_all_task_samplers` if `num_paused != 0` here but this serves
-                # as a sanity check.
-                assert num_paused == 0
+                self.training_pipeline.rollout_count += 1
 
                 if self.is_distributed:
-                    # Preempt stragglers
-                    # Each worker will stop collecting steps for the current rollout whenever a
-                    # 100 * distributed_preemption_threshold percentage of workers are finished collecting their
-                    # rollout steps, and we have collected at least 25% but less than 90% of the steps.
-                    num_done = int(self.num_workers_done.get("done"))
-                    if (
-                        num_done
-                        > self.distributed_preemption_threshold * self.num_workers
-                        and 0.25 * cur_stage_training_settings.num_steps
-                        <= step
-                        < 0.9 * cur_stage_training_settings.num_steps
-                    ):
-                        get_logger().debug(
-                            f"[{self.mode} worker {self.worker_id}] Preempted after {step}"
-                            f" steps (out of {cur_stage_training_settings.num_steps})"
-                            f" with {num_done} workers done"
-                        )
-                        break
+                    # Mark that a worker is done collecting experience
+                    self.num_workers_done.add("done", 1)
+                    self.num_workers_steps.add(
+                        "steps", self.step_count - self.former_steps
+                    )
 
-            with torch.no_grad():
-                actor_critic_output, _ = self.actor_critic(
-                    **rollout_storage.agent_input_for_next_step()
+                    # Ensure all workers are done before updating step counter
+                    dist.barrier(
+                        device_ids=None
+                        if self.device == torch.device("cpu")
+                        else [self.device.index]
+                    )
+
+                    ndone = int(self.num_workers_done.get("done"))
+                    assert (
+                        ndone == self.num_workers
+                    ), f"# workers done {ndone} != # workers {self.num_workers}"
+
+                    # get the actual step_count
+                    self.step_count = (
+                        int(self.num_workers_steps.get("steps")) + self.former_steps
+                    )
+
+                before_update_info = dict(
+                    next_value=actor_critic_output.values.detach(),
+                    use_gae=cur_stage_training_settings.use_gae,
+                    gamma=cur_stage_training_settings.gamma,
+                    tau=cur_stage_training_settings.gae_lambda,
+                    adv_stats_callback=self.advantage_stats,
                 )
-
-            self.training_pipeline.rollout_count += 1
-
-            if self.is_distributed:
-                # Mark that a worker is done collecting experience
-                self.num_workers_done.add("done", 1)
-                self.num_workers_steps.add("steps", self.step_count - self.former_steps)
-
-                # Ensure all workers are done before updating step counter
-                dist.barrier(
-                    device_ids=None
-                    if self.device == torch.device("cpu")
-                    else [self.device.index]
-                )
-
-                ndone = int(self.num_workers_done.get("done"))
-                assert (
-                    ndone == self.num_workers
-                ), f"# workers done {ndone} != # workers {self.num_workers}"
-
-                # get the actual step_count
-                self.step_count = (
-                    int(self.num_workers_steps.get("steps")) + self.former_steps
-                )
-
-            before_update_info = dict(
-                next_value=actor_critic_output.values.detach(),
-                use_gae=cur_stage_training_settings.use_gae,
-                gamma=cur_stage_training_settings.gamma,
-                tau=cur_stage_training_settings.gae_lambda,
-                adv_stats_callback=self.advantage_stats,
-            )
 
             # Prepare storage for iteration during updates
             for storage in self.training_pipeline.current_stage_storage.values():
@@ -1601,7 +1748,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
                 # before_update = time.time()
 
-                self.update(
+                self.compute_losses_track_them_and_backprop(
                     stage=self.training_pipeline.current_stage,
                     stage_component=sc,
                     storage=component_storage,
@@ -1636,6 +1783,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 change_in_storage_experiences[k] = self.distributed_weighted_sum(
                     to_share=delta, weight=1
                 )
+
             # Then we update `self.training_pipeline.current_stage.storage_uuid_to_steps_taken_in_stage` with the above
             # computed changes.
             for storage_uuid, delta in change_in_storage_experiences.items():
@@ -1678,7 +1826,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 )
                 self.vector_tasks.next_task(force_advance_scene=True)
                 self.initialize_storage_and_viz(
-                    storage_to_initialize=list(uuid_to_storage.values())
+                    storage_to_initialize=cast(
+                        List[ExperienceStorage], list(uuid_to_storage.values())
+                    )
                 )
 
     def train(
@@ -1714,7 +1864,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 if self.worker_id == 0:
                     self.results_queue.put(("train_stopped", 0))
                 get_logger().info(
-                    f"[{self.mode} worker {self.worker_id}]. Training finished successfully."
+                    f"[{self.mode} worker {self.worker_id}] Training finished successfully."
                 )
             else:
                 self.results_queue.put(("train_stopped", 1 + self.worker_id))
@@ -1768,32 +1918,77 @@ class OnPolicyInference(OnPolicyRLEngine):
         update_secs: float = 20.0,
         verbose: bool = False,
     ) -> LoggingPackage:
-        assert self.actor_critic is not None, "called run_eval with no actor_critic"
+        assert self.actor_critic is not None, "called `run_eval` with no actor_critic"
 
-        ckpt = self.checkpoint_load(checkpoint_file_path)
+        # Sanity check that we haven't entered an invalid state. During eval the training_pipeline
+        # should be only set in this function and always unset at the end of it.
+        assert self.training_pipeline is None, (
+            "`training_pipeline` should be `None` before calling `run_eval`."
+            " This is necessary as we want to initialize new storages."
+        )
+        self.training_pipeline = self.config.training_pipeline()
+
+        ckpt = self.checkpoint_load(checkpoint_file_path, restart_pipeline=False)
         total_steps = cast(int, ckpt["total_steps"])
 
-        training_pipeline = self.config.training_pipeline()
-        rollout_storage = training_pipeline.rollout_storage
+        eval_pipeline_stage = cast(
+            PipelineStage,
+            getattr(self.training_pipeline, f"{self.mode}_pipeline_stage"),
+        )
+        assert (
+            len(eval_pipeline_stage.stage_components) <= 1
+        ), "Only one StageComponent is supported during inference."
+        uuid_to_storage = self.training_pipeline.get_stage_storage(eval_pipeline_stage)
+
+        assert len(uuid_to_storage) > 0, (
+            "No storage found for eval pipeline stage, this is a bug in AllenAct,"
+            " please submit an issue on GitHub (https://github.com/allenai/allenact/issues)."
+        )
+
+        uuid_to_rollout_storage = {
+            uuid: storage
+            for uuid, storage in uuid_to_storage.items()
+            if isinstance(storage, RolloutStorage)
+        }
+        uuid_to_non_rollout_storage = {
+            uuid: storage
+            for uuid, storage in uuid_to_storage.items()
+            if not isinstance(storage, RolloutStorage)
+        }
+
+        if len(uuid_to_rollout_storage) > 1 or len(uuid_to_non_rollout_storage) > 1:
+            raise NotImplementedError(
+                "Only one RolloutStorage and non-RolloutStorage object is allowed within an evaluation pipeline stage."
+                " If you'd like to evaluate against multiple storages please"
+                " submit an issue on GitHub (https://github.com/allenai/allenact/issues). For the moment you'll need"
+                " to evaluate against these storages separately."
+            )
+
+        rollout_storage = self.training_pipeline.rollout_storage
 
         if visualizer is not None:
             assert visualizer.empty()
 
         num_paused = self.initialize_storage_and_viz(
-            storage_to_initialize=[rollout_storage], visualizer=visualizer,
+            storage_to_initialize=cast(
+                List[ExperienceStorage], list(uuid_to_storage.values())
+            ),
+            visualizer=visualizer,
         )
         assert num_paused == 0, f"{num_paused} tasks paused when initializing eval"
 
-        num_tasks = sum(
-            self.vector_tasks.command(
-                "sampler_attr", ["length"] * self.num_active_samplers
+        if rollout_storage is not None:
+            num_tasks = sum(
+                self.vector_tasks.command(
+                    "sampler_attr", ["length"] * self.num_active_samplers
+                )
+            ) + (  # We need to add this as the first tasks have already been sampled
+                self.num_active_samplers
             )
-        ) + (  # We need to add this as the first tasks have already been sampled
-            self.num_active_samplers
-        )
-        # get_logger().debug(
-        #     "worker {} number of tasks {}".format(self.worker_id, num_tasks)
-        # )
+        else:
+            num_tasks = 0
+
+        # get_logger().debug("worker {self.worker_id} number of tasks {num_tasks}")
         steps = 0
 
         self.actor_critic.eval()
@@ -1814,7 +2009,7 @@ class OnPolicyInference(OnPolicyRLEngine):
                 num_active_samplers=None,
                 approx_steps=None,
                 teacher_forcing=None,
-                tracking_info_list=None,
+                tracking_callback=None,
                 always_enforce=True,
             )
         else:
@@ -1823,26 +2018,79 @@ class OnPolicyInference(OnPolicyRLEngine):
         logging_pkg = LoggingPackage(
             mode=self.mode,
             training_steps=total_steps,
-            storage_uuid_to_total_experiences={},
+            storage_uuid_to_total_experiences=self.training_pipeline.storage_uuid_to_total_experiences,
+        )
+        should_compute_onpolicy_losses = (
+            len(eval_pipeline_stage.loss_names) > 0
+            and eval_pipeline_stage.stage_components[0].storage_uuid
+            == self.training_pipeline.rollout_storage_uuid
         )
         while self.num_active_samplers > 0:
             frames += self.num_active_samplers
-            self.collect_step_across_all_task_samplers(
-                rollout_storage_uuid=training_pipeline.rollout_storage_uuid,
-                uuid_to_storage={
-                    training_pipeline.rollout_storage_uuid: rollout_storage
-                },
+            num_newly_paused = self.collect_step_across_all_task_samplers(
+                rollout_storage_uuid=self.training_pipeline.rollout_storage_uuid,
+                uuid_to_storage=uuid_to_rollout_storage,
                 visualizer=visualizer,
                 dist_wrapper_class=dist_wrapper_class,
             )
             steps += 1
 
-            if steps % rollout_steps == 0:
-                rollout_storage.after_updates()
+            if should_compute_onpolicy_losses and num_newly_paused > 0:
+                # The `collect_step_across_all_task_samplers` method will automatically drop
+                # parts of the rollout storage that correspond to paused tasks (namely by calling"
+                # `rollout_storage.sampler_select(UNPAUSED_TASK_INDS)`). This makes sense when you don't need to
+                # compute losses for tasks but is a bit limiting here as we're throwing away data before
+                # using it to compute losses. As changing this is non-trivial we'll just warn the user
+                # for now.
+                get_logger().warning(
+                    f"[{self.mode} worker {self.worker_id}] {num_newly_paused * rollout_storage.step} steps"
+                    f" will be dropped when computing losses in evaluation. This is a limitation of the current"
+                    f" implementation of rollout collection in AllenAct. If you'd like to see this"
+                    f" functionality improved please submit an issue on GitHub"
+                    f" (https://github.com/allenai/allenact/issues)."
+                )
+
+            if self.num_active_samplers == 0 or steps % rollout_steps == 0:
+                if should_compute_onpolicy_losses and self.num_active_samplers > 0:
+                    with torch.no_grad():
+                        actor_critic_output, _ = self.actor_critic(
+                            **rollout_storage.agent_input_for_next_step()
+                        )
+                        before_update_info = dict(
+                            next_value=actor_critic_output.values.detach(),
+                            use_gae=eval_pipeline_stage.training_settings.use_gae,
+                            gamma=eval_pipeline_stage.training_settings.gamma,
+                            tau=eval_pipeline_stage.training_settings.gae_lambda,
+                            adv_stats_callback=lambda advantages: {
+                                "mean": advantages.mean(),
+                                "std": advantages.std(),
+                            },
+                        )
+                    # Prepare storage for iteration during loss computation
+                    for storage in uuid_to_rollout_storage.values():
+                        storage.before_updates(**before_update_info)
+
+                    # Compute losses
+                    with torch.no_grad():
+                        for sc in eval_pipeline_stage.stage_components:
+                            self.compute_losses_track_them_and_backprop(
+                                stage=eval_pipeline_stage,
+                                stage_component=sc,
+                                storage=uuid_to_rollout_storage[sc.storage_uuid],
+                                skip_backprop=True,
+                            )
+
+                for storage in uuid_to_rollout_storage.values():
+                    storage.after_updates()
 
             cur_time = time.time()
             if self.num_active_samplers == 0 or cur_time - last_time >= update_secs:
-                self.aggregate_task_metrics(logging_pkg=logging_pkg)
+                logging_pkg = self.aggregate_and_send_logging_package(
+                    tracking_info_list=self.tracking_info_list,
+                    logging_pkg=logging_pkg,
+                    send_logging_package=False,
+                )
+                self.tracking_info_list.clear()
 
                 if verbose:
                     npending: int
@@ -1883,6 +2131,11 @@ class OnPolicyInference(OnPolicyRLEngine):
                                         f"{k} {v:.3g}"
                                         for k, v in logging_pkg.metrics_tracker.means().items()
                                     ],
+                                    *[
+                                        f"{k0[1]}/{k1} {v1:.3g}"
+                                        for k0, v0 in logging_pkg.info_trackers.items()
+                                        for k1, v1 in v0.means().items()
+                                    ],
                                 ]
                             )
                         )
@@ -1890,22 +2143,112 @@ class OnPolicyInference(OnPolicyRLEngine):
                     last_time = cur_time
 
         get_logger().info(
-            f"[{self.mode} worker {self.worker_id}] Evaluation complete, all task samplers paused."
+            f"[{self.mode} worker {self.worker_id}] Task evaluation complete, all task samplers paused."
         )
 
-        self.vector_tasks.resume_all()
-        self.vector_tasks.set_seeds(self.worker_seeds(self.num_samplers, self.seed))
-        self.vector_tasks.reset_all()
+        if rollout_storage is not None:
+            self.vector_tasks.resume_all()
+            self.vector_tasks.set_seeds(self.worker_seeds(self.num_samplers, self.seed))
+            self.vector_tasks.reset_all()
 
-        self.aggregate_task_metrics(logging_pkg=logging_pkg)
-
-        for callback_dict in self.single_process_task_callback_data:
-            logging_pkg.task_callback_data.append(callback_dict)
-        self.single_process_task_callback_data = []
+        logging_pkg = self.aggregate_and_send_logging_package(
+            tracking_info_list=self.tracking_info_list,
+            logging_pkg=logging_pkg,
+            send_logging_package=False,
+        )
+        self.tracking_info_list.clear()
 
         logging_pkg.viz_data = (
             visualizer.read_and_reset() if visualizer is not None else None
         )
+
+        should_compute_offpolicy_losses = (
+            len(eval_pipeline_stage.loss_names) > 0
+            and not should_compute_onpolicy_losses
+        )
+        if should_compute_offpolicy_losses:
+            # In this case we are evaluating a non-rollout storage, e.g. some off-policy data
+            get_logger().info(
+                f"[{self.mode} worker {self.worker_id}] Non-rollout storage detected, will now compute losses"
+                f" using this storage."
+            )
+
+            offpolicy_eval_done = False
+            while not offpolicy_eval_done:
+                before_update_info = dict(
+                    next_value=None,
+                    use_gae=eval_pipeline_stage.training_settings.use_gae,
+                    gamma=eval_pipeline_stage.training_settings.gamma,
+                    tau=eval_pipeline_stage.training_settings.gae_lambda,
+                    adv_stats_callback=lambda advantages: {
+                        "mean": advantages.mean(),
+                        "std": advantages.std(),
+                    },
+                )
+                # Prepare storage for iteration during loss computation
+                for storage in uuid_to_non_rollout_storage.values():
+                    storage.before_updates(**before_update_info)
+
+                # Compute losses
+                assert len(eval_pipeline_stage.stage_components) == 1
+                try:
+                    for sc in eval_pipeline_stage.stage_components:
+                        with torch.no_grad():
+                            self.compute_losses_track_them_and_backprop(
+                                stage=eval_pipeline_stage,
+                                stage_component=sc,
+                                storage=uuid_to_non_rollout_storage[sc.storage_uuid],
+                                skip_backprop=True,
+                            )
+                except EOFError:
+                    offpolicy_eval_done = True
+
+                for storage in uuid_to_non_rollout_storage.values():
+                    storage.after_updates()
+
+                total_bsize = sum(
+                    tif.info.get("worker_batch_size", 0)
+                    for tif in self.tracking_info_list
+                )
+                logging_pkg = self.aggregate_and_send_logging_package(
+                    tracking_info_list=self.tracking_info_list,
+                    logging_pkg=logging_pkg,
+                    send_logging_package=False,
+                )
+                self.tracking_info_list.clear()
+
+                cur_time = time.time()
+                if verbose and (cur_time - last_time >= update_secs):
+                    get_logger().info(
+                        f"[{self.mode} worker {self.worker_id}]"
+                        f" For ckpt {checkpoint_file_path}"
+                        f" {total_bsize / (cur_time - init_time):.1f} its/sec."
+                    )
+                    if logging_pkg.info_trackers != 0:
+                        get_logger().info(
+                            ", ".join(
+                                [
+                                    f"[{self.mode} worker {self.worker_id}]"
+                                    f" num_{self.mode}_iters_complete {total_bsize}",
+                                    *[
+                                        f"{'/'.join(k0)}/{k1} {v1:.3g}"
+                                        for k0, v0 in logging_pkg.info_trackers.items()
+                                        for k1, v1 in v0.means().items()
+                                    ],
+                                ]
+                            )
+                        )
+
+                    last_time = cur_time
+
+        # Call after_updates here to reset all storages
+        for storage in uuid_to_storage.values():
+            storage.after_updates()
+
+        # Set the training pipeline to `None` so that the storages do not
+        # persist across calls to `run_eval`
+        self.training_pipeline = None
+
         logging_pkg.checkpoint_file_name = checkpoint_file_path
 
         return logging_pkg
@@ -1972,42 +2315,33 @@ class OnPolicyInference(OnPolicyRLEngine):
                 # )
 
                 if command == "eval":
-                    if self.num_samplers > 0:
-                        if self.mode == VALID_MODE_STR:
-                            # skip to latest using
-                            # 1. there's only consumer in valid
-                            # 2. there's no quit/exit/close message issued by runner nor trainer
-                            ckp_file_path = self.skip_to_latest(
-                                checkpoints_queue=self.checkpoints_queue,
-                                command=command,
-                                data=ckp_file_path,
-                            )
-
-                        if (
-                            visualizer is None
-                            and self.machine_params.visualizer is not None
-                        ):
-                            visualizer = self.machine_params.visualizer
-
-                        eval_package = self.run_eval(
-                            checkpoint_file_path=ckp_file_path,
-                            visualizer=visualizer,
-                            verbose=True,
-                            update_secs=20 if self.mode == TEST_MODE_STR else 5 * 60,
+                    if self.mode == VALID_MODE_STR:
+                        # skip to latest using
+                        # 1. there's only consumer in valid
+                        # 2. there's no quit/exit/close message issued by runner nor trainer
+                        ckp_file_path = self.skip_to_latest(
+                            checkpoints_queue=self.checkpoints_queue,
+                            command=command,
+                            data=ckp_file_path,
                         )
 
-                        self.results_queue.put(eval_package)
+                    if (
+                        visualizer is None
+                        and self.machine_params.visualizer is not None
+                    ):
+                        visualizer = self.machine_params.visualizer
 
-                        if self.is_distributed:
-                            dist.barrier()
-                    else:
-                        self.results_queue.put(
-                            LoggingPackage(
-                                mode=self.mode,
-                                training_steps=None,
-                                storage_uuid_to_total_experiences={},
-                            )
-                        )
+                    eval_package = self.run_eval(
+                        checkpoint_file_path=ckp_file_path,
+                        visualizer=visualizer,
+                        verbose=True,
+                        update_secs=20 if self.mode == TEST_MODE_STR else 5 * 60,
+                    )
+
+                    self.results_queue.put(eval_package)
+
+                    if self.is_distributed:
+                        dist.barrier()
                 elif command in ["quit", "exit", "close"]:
                     finalized = True
                     break

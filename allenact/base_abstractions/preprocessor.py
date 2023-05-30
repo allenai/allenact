@@ -142,7 +142,7 @@ class SensorPreprocessorGraph:
         )
 
         # ensure dependencies are precomputed
-        self.compute_order = [n for n in nx.dfs_postorder_nodes(g)]
+        self.compute_order = [n for n in nx.dfs_preorder_nodes(g)]
 
     def get(self, uuid: str) -> Preprocessor:
         """Return preprocessor with the given `uuid`.
