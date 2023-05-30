@@ -110,7 +110,7 @@ def _do_setup():
         license="MIT",
         packages=find_packages(include=["allenact", "allenact.*"]),
         install_requires=[
-            "gym>=0.17.0,<0.20.0",
+            "gym==0.17.*", # Newer versions of gym are now broken with updates to setuptools
             "torch>=1.6.0,!=1.8.0,<2.0.0",
             "tensorboardx>=2.1",
             "torchvision>=0.7.0",
