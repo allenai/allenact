@@ -482,7 +482,7 @@ class SemanticMapTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnvironment
 
         def get_map_space(nchannels: int, size: int):
             return gym.spaces.Box(
-                low=0, high=1, shape=(size, size, nchannels), dtype=np.bool,
+                low=0, high=1, shape=(size, size, nchannels), dtype=np.bool_,
             )
 
         n = len(self.ordered_object_types)
@@ -561,6 +561,6 @@ class SemanticMapTHORSensor(Sensor[RoboThorEnvironment, Task[RoboThorEnvironment
                 camera_horizon=metadata["agent"]["cameraHorizon"],
             )
             return {
-                k: map_dict[k] > 0.001 if map_dict[k].dtype != np.bool else map_dict[k]
+                k: map_dict[k] > 0.001 if map_dict[k].dtype != np.bool_ else map_dict[k]
                 for k in self.observation_space.spaces.keys()
             }

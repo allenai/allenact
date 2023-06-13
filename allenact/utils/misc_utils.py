@@ -101,7 +101,7 @@ class NumpyJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.void):
             return None
-        elif isinstance(obj, np.bool):
+        elif isinstance(obj, np.bool_):
             return bool(obj)
         elif isinstance(obj, np.integer):
             return int(obj)
