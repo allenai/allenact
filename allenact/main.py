@@ -2,6 +2,7 @@
 name."""
 
 import os
+import posixpath
 
 if "CUDA_DEVICE_ORDER" not in os.environ:
     # Necessary to order GPUs correctly in some cases
@@ -370,9 +371,7 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, str]]:
     ), "The path '{}' does not seem to exist (your current working directory is '{}').".format(
         args.experiment_base, os.getcwd()
     )
-    rel_base_dir = os.path.relpath(  # Normalizing string representation of path
-        os.path.abspath(args.experiment_base), os.getcwd()
-    )
+    rel_base_dir = posixpath.normpath(args.experiment_base)
     rel_base_dot_path = rel_base_dir.replace("/", ".")
     if rel_base_dot_path == ".":
         rel_base_dot_path = ""
