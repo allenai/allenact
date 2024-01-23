@@ -6,18 +6,39 @@ from projects.babyai_baselines.experiments.go_to_obj.ppo import (
     PPOBabyAIGoToObjExperimentConfig,
 )
 
-expected_results = [
-    {"ep_length": 64, "reward": 0.0, "success": 0.0},
-    {"ep_length": 64, "reward": 0.0, "success": 0.0},
-    {"ep_length": 64, "reward": 0.0, "success": 0.0},
-    {"ep_length": 17, "reward": 0.7646153846153846, "success": 1.0},
-    {"ep_length": 22, "reward": 0.6953846153846154, "success": 1.0},
-    {"ep_length": 64, "reward": 0.0, "success": 0.0},
-    {"ep_length": 64, "reward": 0.0, "success": 0.0},
-    {"ep_length": 64, "reward": 0.0, "success": 0.0},
-    {"ep_length": 64, "reward": 0.0, "success": 0.0},
-    {"ep_length": 64, "reward": 0.0, "success": 0.0},
-]
+from packaging.version import parse
+
+if parse(torch.__version__) >= parse("2.0.0"):
+    expected_results = [
+        {
+            "ep_length": 39,
+            "reward": 0.45999999999999996,
+            "task_info": {},
+            "success": 1.0,
+        },
+        {"ep_length": 64, "reward": 0.0, "task_info": {}, "success": 0.0},
+        {"ep_length": 64, "reward": 0.0, "task_info": {}, "success": 0.0},
+        {"ep_length": 64, "reward": 0.0, "task_info": {}, "success": 0.0},
+        {"ep_length": 64, "reward": 0.0, "task_info": {}, "success": 0.0},
+        {"ep_length": 64, "reward": 0.0, "task_info": {}, "success": 0.0},
+        {"ep_length": 64, "reward": 0.0, "task_info": {}, "success": 0.0},
+        {"ep_length": 64, "reward": 0.0, "task_info": {}, "success": 0.0},
+        {"ep_length": 64, "reward": 0.0, "task_info": {}, "success": 0.0},
+        {"ep_length": 64, "reward": 0.0, "task_info": {}, "success": 0.0},
+    ]
+else:
+    expected_results = [
+        {"ep_length": 64, "reward": 0.0, "success": 0.0},
+        {"ep_length": 64, "reward": 0.0, "success": 0.0},
+        {"ep_length": 64, "reward": 0.0, "success": 0.0},
+        {"ep_length": 17, "reward": 0.7646153846153846, "success": 1.0},
+        {"ep_length": 22, "reward": 0.6953846153846154, "success": 1.0},
+        {"ep_length": 64, "reward": 0.0, "success": 0.0},
+        {"ep_length": 64, "reward": 0.0, "success": 0.0},
+        {"ep_length": 64, "reward": 0.0, "success": 0.0},
+        {"ep_length": 64, "reward": 0.0, "success": 0.0},
+        {"ep_length": 64, "reward": 0.0, "success": 0.0},
+    ]
 
 
 class TestInferenceAgent(object):
@@ -26,7 +47,8 @@ class TestInferenceAgent(object):
 
         exp_config = PPOBabyAIGoToObjExperimentConfig()
         agent = InferenceAgent.from_experiment_config(
-            exp_config=exp_config, device=torch.device("cpu"),
+            exp_config=exp_config,
+            device=torch.device("cpu"),
         )
 
         task_sampler = exp_config.make_sampler_fn(

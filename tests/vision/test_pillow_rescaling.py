@@ -16,7 +16,7 @@ class TestPillowRescaling(object):
         img_path = os.path.join(
             ABS_PATH_OF_TOP_LEVEL_DIR, "docs/img/iTHOR_framework.jpg"
         )
-        img = imageio.imread(img_path)
+        img = imageio.v2.imread(img_path)
         return img
 
     def _get_img_hash(self, img: np.ndarray) -> str:
@@ -44,24 +44,26 @@ class TestPillowRescaling(object):
     def test_scaler_rgb_thor(self):
         thor_img_arr = np.uint8(self._load_thor_img())
 
-        assert (
-            self._get_img_hash(thor_img_arr)
-            == "80ff8a342b4f74966796eee91babde31409d0457"
-        )
+        assert self._get_img_hash(thor_img_arr) in [
+            "80ff8a342b4f74966796eee91babde31409d0457",
+            "eb808b2218ccc2e56144131f9ef596a5c2ae3e2a",
+        ]
 
         img = to_pil(thor_img_arr)
 
         scaler = ScaleBothSides(width=75, height=75)
         scaled_img = np.array(scaler(img))
-        assert (
-            self._get_img_hash(scaled_img) == "2c47057aa188240cb21b2edc39e0f269c1085bac"
-        )
+        assert self._get_img_hash(scaled_img) in [
+            "2c47057aa188240cb21b2edc39e0f269c1085bac",
+            "b5df3cc03f181cb7be07ddd229cac8d1efd5d077",
+        ]
 
         scaler = ScaleBothSides(width=500, height=600)
         scaled_img = np.array(scaler(img))
-        assert (
-            self._get_img_hash(scaled_img) == "faf0be2b9ec9bfd23a1b7b465c86ad961d03c259"
-        )
+        assert self._get_img_hash(scaled_img) in [
+            "faf0be2b9ec9bfd23a1b7b465c86ad961d03c259",
+            "cccddd7f17b59434dcdd0006dceeffbe1a969dc8",
+        ]
 
     def test_scaler_rgb_random(self):
         arr = self._random_rgb_image(width=100, height=100, seed=1)
@@ -86,24 +88,26 @@ class TestPillowRescaling(object):
         thor_depth_arr = 5 * np.float32(self._load_thor_img()).sum(-1)
         thor_depth_arr /= thor_depth_arr.max()
 
-        assert (
-            self._get_img_hash(thor_depth_arr)
-            == "d3c1474400ba57ed78f52cf4ba6a4c2a1d90516c"
-        )
+        assert self._get_img_hash(thor_depth_arr) in [
+            "d3c1474400ba57ed78f52cf4ba6a4c2a1d90516c",
+            "85a18befb2a174403079bf49d149630f829222c2",
+        ]
 
         img = to_pil(thor_depth_arr)
 
         scaler = ScaleBothSides(width=75, height=75)
         scaled_img = np.array(scaler(img))
-        assert (
-            self._get_img_hash(scaled_img) == "6a879beb6bed49021e438c1e3af7a62c428a44d8"
-        )
+        assert self._get_img_hash(scaled_img) in [
+            "6a879beb6bed49021e438c1e3af7a62c428a44d8",
+            "868f1d2b32167bda524ba502158f1ee81c8a24d2",
+        ]
 
         scaler = ScaleBothSides(width=500, height=600)
         scaled_img = np.array(scaler(img))
-        assert (
-            self._get_img_hash(scaled_img) == "79f11fb741ae638afca40125e4c501f54b22cc01"
-        )
+        assert self._get_img_hash(scaled_img) in [
+            "79f11fb741ae638afca40125e4c501f54b22cc01",
+            "2d3012e1cced2942f7368e84bf332241fcf9d7fe",
+        ]
 
     def test_scaler_depth_random(self):
         depth_arr = self._random_depthmap(width=96, height=103, max_depth=5.0, seed=1)
