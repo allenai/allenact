@@ -1,7 +1,6 @@
 """Functions used to initialize and manipulate pytorch models."""
 import hashlib
-from collections import Callable
-from typing import Sequence, Tuple, Union, Optional, Dict, Any
+from typing import Sequence, Tuple, Union, Optional, Dict, Any, Callable
 
 import numpy as np
 import torch

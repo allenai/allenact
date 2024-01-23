@@ -61,15 +61,17 @@ class TestInferenceAgent(object):
             task = task_sampler.next_task()
             observations = task.get_observations()
 
+            actions = []
             while not task.is_done():
                 action = agent.act(observations=observations)
+                actions.append(action)
                 observations = task.step(action).observation
 
             assert all(
                 abs(v - expected_result[k]) < 1e-4
                 for k, v in task.metrics().items()
                 if k != "task_info"
-            )
+            ), f"Failed on task {ind} with actions {actions} and metrics {task.metrics()} (expected={expected_result})."
 
 
 if __name__ == "__main__":
