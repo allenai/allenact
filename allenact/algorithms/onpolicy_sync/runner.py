@@ -240,17 +240,17 @@ class OnPolicyRunner(object):
             callback_classes = [
                 mod_class[1]
                 for mod_class in classes
-                if issubclass(mod_class[1], Callback)
+                if issubclass(mod_class[1], Callback) and mod_class[1] != Callback
             ]
 
-            assert callback_classes == 1, (
+            assert len(callback_classes) == 1, (
                 f"Expected a single callback class in {filename}, but found {len(callback_classes)}."
                 f" These classes were found: {callback_classes}."
             )
 
             for mod_class in callback_classes:
                 # NOTE: initialize the callback class
-                callback = mod_class[1]()
+                callback = mod_class()
                 callback.setup(**setup_dict)
                 callback_objects.add(callback)
 
