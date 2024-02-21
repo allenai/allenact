@@ -1082,7 +1082,7 @@ class OnPolicyRLEngine(object):
                     self.tracking_info_list.append(
                         TrackingInfo(
                             type=TrackingInfoType.UPDATE_INFO,
-                            info={"total_grad_norm": total_grad_norm.item()},
+                            info={"total_grad_norm": total_grad_norm},
                             n=bsize,
                             storage_uuid=stage_component.storage_uuid,
                             stage_component_uuid=stage_component.uuid,
@@ -1512,7 +1512,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 reduction.wait()
 
         if hasattr(self.actor_critic, "compute_total_grad_norm"):
-            total_grad_norm = self.actor_critic.compute_total_grad_norm()
+            total_grad_norm = self.actor_critic.compute_total_grad_norm().item()
         else:
             total_grad_norm = 0.0
 
