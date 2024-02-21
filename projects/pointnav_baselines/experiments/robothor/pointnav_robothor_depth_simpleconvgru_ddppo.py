@@ -14,7 +14,9 @@ from projects.pointnav_baselines.experiments.robothor.pointnav_robothor_base imp
 from projects.pointnav_baselines.mixins import PointNavPPOMixin
 
 
-class PointNavRoboThorRGBPPOExperimentConfig(PointNavRoboThorBaseConfig,):
+class PointNavRoboThorRGBPPOExperimentConfig(
+    PointNavRoboThorBaseConfig,
+):
     """An Point Navigation experiment configuration in RoboTHOR with Depth
     input."""
 

@@ -115,15 +115,17 @@ class PPO(AbstractActorCriticLoss):
                 "action": (action_loss, None),
                 "entropy": (dist_entropy.mul_(-1.0), self.entropy_coef),  # type: ignore
             },
-            {
-                "ratio": ratio,
-                "ratio_clamped": clamped_ratio,
-                "ratio_used": torch.where(
-                    cast(torch.Tensor, use_clamped), clamped_ratio, ratio
-                ),
-            }
-            if self.show_ratios
-            else {},
+            (
+                {
+                    "ratio": ratio,
+                    "ratio_clamped": clamped_ratio,
+                    "ratio_used": torch.where(
+                        cast(torch.Tensor, use_clamped), clamped_ratio, ratio
+                    ),
+                }
+                if self.show_ratios
+                else {}
+            ),
         )
 
     def loss(  # type: ignore
@@ -135,7 +137,9 @@ class PPO(AbstractActorCriticLoss):
         **kwargs
     ):
         losses_per_step, ratio_info = self.loss_per_step(
-            step_count=step_count, batch=batch, actor_critic_output=actor_critic_output,
+            step_count=step_count,
+            batch=batch,
+            actor_critic_output=actor_critic_output,
         )
         losses = {
             key: (loss.mean(), weight)
@@ -210,7 +214,9 @@ class PPOValue(AbstractActorCriticLoss):
 
         return (
             value_loss,
-            {"value": value_loss.item(),},
+            {
+                "value": value_loss.item(),
+            },
         )
 
 

@@ -1,4 +1,5 @@
 """Utility classes and functions for running and designing experiments."""
+
 import abc
 import collections.abc
 import copy
@@ -248,9 +249,9 @@ class LoggingPackage:
         self.mode = mode
 
         self.training_steps: int = training_steps
-        self.storage_uuid_to_total_experiences: Dict[
-            str, int
-        ] = storage_uuid_to_total_experiences
+        self.storage_uuid_to_total_experiences: Dict[str, int] = (
+            storage_uuid_to_total_experiences
+        )
         self.pipeline_stage = pipeline_stage
 
         self.metrics_tracker = ScalarMeanTracker()
@@ -431,7 +432,10 @@ class EarlyStoppingCriterion(abc.ABC):
 
     @abc.abstractmethod
     def __call__(
-        self, stage_steps: int, total_steps: int, training_metrics: ScalarMeanTracker,
+        self,
+        stage_steps: int,
+        total_steps: int,
+        training_metrics: ScalarMeanTracker,
     ) -> bool:
         """Returns `True` if training should be stopped early.
 
@@ -451,7 +455,10 @@ class NeverEarlyStoppingCriterion(EarlyStoppingCriterion):
     """Implementation of `EarlyStoppingCriterion` which never stops early."""
 
     def __call__(
-        self, stage_steps: int, total_steps: int, training_metrics: ScalarMeanTracker,
+        self,
+        stage_steps: int,
+        total_steps: int,
+        training_metrics: ScalarMeanTracker,
     ) -> bool:
         return False
 
@@ -1029,10 +1036,12 @@ class TrainingPipeline:
             train_metrics is not None
             and self.current_stage.early_stopping_criterion is not None
         ):
-            self.current_stage.early_stopping_criterion_met = self.current_stage.early_stopping_criterion(
-                stage_steps=self.current_stage.steps_taken_in_stage,
-                total_steps=self.total_steps,
-                training_metrics=train_metrics,
+            self.current_stage.early_stopping_criterion_met = (
+                self.current_stage.early_stopping_criterion(
+                    stage_steps=self.current_stage.steps_taken_in_stage,
+                    total_steps=self.total_steps,
+                    training_metrics=train_metrics,
+                )
             )
         if self.current_stage.early_stopping_criterion_met:
             get_logger().debug(
@@ -1124,7 +1133,8 @@ class TrainingPipeline:
         for storage_uuid in storage_uuids_for_current_stage:
             if isinstance(self._named_storages[storage_uuid], Builder):
                 self._named_storages[storage_uuid] = cast(
-                    Builder["ExperienceStorage"], self._named_storages[storage_uuid],
+                    Builder["ExperienceStorage"],
+                    self._named_storages[storage_uuid],
                 )()
 
         return OrderedDict(

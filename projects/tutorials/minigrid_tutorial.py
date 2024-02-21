@@ -95,6 +95,7 @@ For pedagogical reasons, we will add methods to this class one at a time below w
 these classes do.  
 """
 
+
 # %%
 class MiniGridTutorialExperimentConfig(ExperimentConfig):
 

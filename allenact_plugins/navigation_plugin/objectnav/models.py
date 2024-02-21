@@ -3,6 +3,7 @@
 Object navigation is currently available as a Task in AI2-THOR and
 Facebook's Habitat.
 """
+
 from typing import Optional, List, Dict, cast, Tuple, Sequence
 
 import gym
@@ -122,7 +123,10 @@ class ObjectNavActorCritic(VisualNavActorCritic):
             good_uuids = [
                 uuid for uuid in [self.rgb_uuid, self.depth_uuid] if uuid is not None
             ]
-            cat_model = CatObservations(ordered_uuids=good_uuids, dim=-1,)
+            cat_model = CatObservations(
+                ordered_uuids=good_uuids,
+                dim=-1,
+            )
             after_cat_size = sum(
                 observation_space[uuid].shape[-1] for uuid in good_uuids
             )
@@ -308,7 +312,8 @@ class ResnetTensorGoalEncoder(nn.Module):
         self.goal_space = observation_spaces.spaces[self.goal_uuid]
         if isinstance(self.goal_space, gym.spaces.Discrete):
             self.embed_goal = nn.Embedding(
-                num_embeddings=self.goal_space.n, embedding_dim=self.goal_embed_dims,
+                num_embeddings=self.goal_space.n,
+                embedding_dim=self.goal_embed_dims,
             )
         elif isinstance(self.goal_space, gym.spaces.Box):
             self.embed_goal = nn.Linear(self.goal_space.shape[-1], self.goal_embed_dims)
@@ -403,7 +408,12 @@ class ResnetTensorGoalEncoder(nn.Module):
             self.compress_resnet(observations),
             self.distribute_target(observations),
         ]
-        x = self.target_obs_combiner(torch.cat(embs, dim=1,))
+        x = self.target_obs_combiner(
+            torch.cat(
+                embs,
+                dim=1,
+            )
+        )
         x = x.reshape(x.size(0), -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
@@ -431,7 +441,8 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         self.goal_space = observation_spaces.spaces[self.goal_uuid]
         if isinstance(self.goal_space, gym.spaces.Discrete):
             self.embed_goal = nn.Embedding(
-                num_embeddings=self.goal_space.n, embedding_dim=self.goal_embed_dims,
+                num_embeddings=self.goal_space.n,
+                embedding_dim=self.goal_embed_dims,
             )
         elif isinstance(self.goal_space, gym.spaces.Box):
             self.embed_goal = nn.Linear(self.goal_space.shape[-1], self.goal_embed_dims)
@@ -550,12 +561,22 @@ class ResnetDualTensorGoalEncoder(nn.Module):
             self.compress_rgb_resnet(observations),
             self.distribute_target(observations),
         ]
-        rgb_x = self.rgb_target_obs_combiner(torch.cat(rgb_embs, dim=1,))
+        rgb_x = self.rgb_target_obs_combiner(
+            torch.cat(
+                rgb_embs,
+                dim=1,
+            )
+        )
         depth_embs = [
             self.compress_depth_resnet(observations),
             self.distribute_target(observations),
         ]
-        depth_x = self.depth_target_obs_combiner(torch.cat(depth_embs, dim=1,))
+        depth_x = self.depth_target_obs_combiner(
+            torch.cat(
+                depth_embs,
+                dim=1,
+            )
+        )
         x = torch.cat([rgb_x, depth_x], dim=1)
         x = x.reshape(x.shape[0], -1)  # flatten
 

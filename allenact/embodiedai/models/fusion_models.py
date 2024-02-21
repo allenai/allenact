@@ -36,7 +36,8 @@ class Fusion(nn.Module):
         obs_embeds = obs_embeds.view(num_steps * num_samplers, -1)
 
         weights = self.get_belief_weights(
-            all_beliefs=all_beliefs, obs_embeds=obs_embeds,  # (T*N, H, K)  # (T*N, Z)
+            all_beliefs=all_beliefs,
+            obs_embeds=obs_embeds,  # (T*N, H, K)  # (T*N, Z)
         ).unsqueeze(
             -1
         )  # (T*N, K, 1)

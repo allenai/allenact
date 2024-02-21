@@ -149,7 +149,9 @@ class Imitation(AbstractActorCriticLoss):
                     ready_actions[group_name] = expert_action
 
                     current_loss, expert_successes = self.group_loss(
-                        cd, expert_action, expert_action_masks,
+                        cd,
+                        expert_action,
+                        expert_action_masks,
                     )
 
                     should_report_loss = (
@@ -204,7 +206,9 @@ class Imitation(AbstractActorCriticLoss):
             )
         return (
             total_loss,
-            {"expert_cross_entropy": total_loss.item(), **losses}
-            if should_report_loss
-            else {},
+            (
+                {"expert_cross_entropy": total_loss.item(), **losses}
+                if should_report_loss
+                else {}
+            ),
         )

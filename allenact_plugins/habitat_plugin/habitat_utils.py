@@ -10,7 +10,8 @@ from habitat import Config
 
 
 def construct_env_configs(
-    config: Config, allow_scene_repeat: bool = False,
+    config: Config,
+    allow_scene_repeat: bool = False,
 ) -> List[Config]:
     """Create list of Habitat Configs for training on multiple processes To
     allow better performance, dataset are split into small ones for each
@@ -62,9 +63,9 @@ def construct_env_configs(
         if len(config.SIMULATOR_GPU_IDS) == 0:
             task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = -1
         else:
-            task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = config.SIMULATOR_GPU_IDS[
-                i % len(config.SIMULATOR_GPU_IDS)
-            ]
+            task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = (
+                config.SIMULATOR_GPU_IDS[i % len(config.SIMULATOR_GPU_IDS)]
+            )
 
         task_config.freeze()
 

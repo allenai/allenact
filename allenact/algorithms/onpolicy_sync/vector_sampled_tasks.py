@@ -376,7 +376,9 @@ class VectorSampledTasks:
                     else:
                         connection_write_fn(
                             sp_vector_sampled_tasks.command_at(
-                                sampler_index=sampler_index, command=command, data=data,
+                                sampler_index=sampler_index,
+                                command=command,
+                                data=data,
                             )
                         )
                 else:
@@ -500,7 +502,9 @@ class VectorSampledTasks:
 
         List of observations for each of the unpaused tasks.
         """
-        return self.call(["get_observations"] * self.num_unpaused_tasks,)
+        return self.call(
+            ["get_observations"] * self.num_unpaused_tasks,
+        )
 
     def command_at(
         self, sampler_index: int, command: str, data: Optional[Any] = None
@@ -689,9 +693,9 @@ class VectorSampledTasks:
         for i in range(
             sampler_index + 1, len(self.sampler_index_to_process_ind_and_subprocess_ind)
         ):
-            other_process_and_sub_process_inds = self.sampler_index_to_process_ind_and_subprocess_ind[
-                i
-            ]
+            other_process_and_sub_process_inds = (
+                self.sampler_index_to_process_ind_and_subprocess_ind[i]
+            )
             if other_process_and_sub_process_inds[0] == process_ind:
                 other_process_and_sub_process_inds[1] -= 1
             else:
@@ -988,9 +992,9 @@ class SingleProcessVectorSampledTasks(object):
                             )
                             if step_result.info is None:
                                 step_result = step_result.clone({"info": {}})
-                            step_result.info[
-                                COMPLETE_TASK_CALLBACK_KEY
-                            ] = task_callback_data
+                            step_result.info[COMPLETE_TASK_CALLBACK_KEY] = (
+                                task_callback_data
+                            )
 
                         if auto_resample_when_done:
                             current_task = task_sampler.next_task()
@@ -1140,7 +1144,9 @@ class SingleProcessVectorSampledTasks(object):
 
         List of observations for each of the unpaused tasks.
         """
-        return self.call(["get_observations"] * self.num_unpaused_tasks,)
+        return self.call(
+            ["get_observations"] * self.num_unpaused_tasks,
+        )
 
     def next_task_at(self, index_process: int) -> List[RLStepResult]:
         """Move to the the next Task from the TaskSampler in index_process

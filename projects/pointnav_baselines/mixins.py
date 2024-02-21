@@ -68,9 +68,9 @@ class PointNavUnfrozenResNetWithGRUActorCriticMixin:
             depth_uuid=depth_uuid,
             goal_sensor_uuid=goal_sensor_uuid,
             # RNN
-            hidden_size=228
-            if self.multiple_beliefs and len(self.auxiliary_uuids) > 1
-            else 512,
+            hidden_size=(
+                228 if self.multiple_beliefs and len(self.auxiliary_uuids) > 1 else 512
+            ),
             num_rnn_layers=1,
             rnn_type="GRU",
             add_prev_actions=self.add_prev_actions,

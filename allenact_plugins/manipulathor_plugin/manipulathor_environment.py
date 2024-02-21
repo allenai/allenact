@@ -140,7 +140,10 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         return controller
 
     def start(
-        self, scene_name: Optional[str], move_mag: float = 0.25, **kwargs,
+        self,
+        scene_name: Optional[str],
+        move_mag: float = 0.25,
+        **kwargs,
     ) -> None:
         """Starts the ai2thor controller if it was previously stopped.
 
@@ -163,7 +166,10 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         self.reset(scene_name=scene_name, move_mag=move_mag, **kwargs)
 
     def reset(
-        self, scene_name: Optional[str], move_mag: float = 0.25, **kwargs,
+        self,
+        scene_name: Optional[str],
+        move_mag: float = 0.25,
+        **kwargs,
     ):
         self._move_mag = move_mag
         self._grid_size = self._move_mag
@@ -225,7 +231,7 @@ class ManipulaTHOREnvironment(IThorEnvironment):
     @classmethod
     def correct_nan_inf(cls, flawed_dict, extra_tag=""):
         corrected_dict = copy.deepcopy(flawed_dict)
-        for (k, v) in corrected_dict.items():
+        for k, v in corrected_dict.items():
             if math.isnan(v) or math.isinf(v):
                 corrected_dict[k] = 0
         return corrected_dict
@@ -275,7 +281,9 @@ class ManipulaTHOREnvironment(IThorEnvironment):
         metadata = self.controller.last_event.metadata["objects"]
         for o in metadata:
             obj_loc_dict[o["objectId"]] = dict(
-                position=o["position"], rotation=o["rotation"], visible=o["visible"],
+                position=o["position"],
+                rotation=o["rotation"],
+                visible=o["visible"],
             )
         return copy.deepcopy(obj_loc_dict)
 

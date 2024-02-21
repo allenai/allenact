@@ -31,7 +31,8 @@ def get_argument_parser():
 
     # noinspection PyTypeChecker
     parser = argparse.ArgumentParser(
-        description="allenact", formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description="allenact",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     parser.add_argument(
@@ -98,7 +99,12 @@ def get_argument_parser():
     )
 
     parser.add_argument(
-        "-s", "--seed", required=False, default=None, type=int, help="random seed",
+        "-s",
+        "--seed",
+        required=False,
+        default=None,
+        type=int,
+        help="random seed",
     )
     parser.add_argument(
         "-b",

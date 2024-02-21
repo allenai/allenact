@@ -28,9 +28,11 @@ class RLStepResult(NamedTuple):
 
     def clone(self, new_info: Dict[str, Any]):
         return RLStepResult(
-            observation=self.observation
-            if "observation" not in new_info
-            else new_info["observation"],
+            observation=(
+                self.observation
+                if "observation" not in new_info
+                else new_info["observation"]
+            ),
             reward=self.reward if "reward" not in new_info else new_info["reward"],
             done=self.done if "done" not in new_info else new_info["done"],
             info=self.info if "info" not in new_info else new_info["info"],
@@ -38,9 +40,9 @@ class RLStepResult(NamedTuple):
 
     def merge(self, other: "RLStepResult"):
         return RLStepResult(
-            observation=self.observation
-            if other.observation is None
-            else other.observation,
+            observation=(
+                self.observation if other.observation is None else other.observation
+            ),
             reward=self.reward if other.reward is None else other.reward,
             done=self.done if other.done is None else other.done,
             info={
@@ -328,11 +330,15 @@ class Memory(Dict):
                 )
                 sliced_tensor = tensor[slice_tuple]
                 res.check_append(
-                    key=key, tensor=sliced_tensor, sampler_dim=self.sampler_dim(key),
+                    key=key,
+                    tensor=sliced_tensor,
+                    sampler_dim=self.sampler_dim(key),
                 )
             else:
                 res.check_append(
-                    key, tensor, self.sampler_dim(key),
+                    key,
+                    tensor,
+                    self.sampler_dim(key),
                 )
 
         return res

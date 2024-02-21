@@ -1,5 +1,6 @@
 """Basic building block torch networks that can be used across a variety of
 tasks."""
+
 from typing import (
     Sequence,
     Dict,
@@ -475,7 +476,8 @@ class RNNStateEncoder(nn.Module):
         nsamplers: int,
         nagents: int,
     ) -> Tuple[
-        torch.FloatTensor, torch.FloatTensor,
+        torch.FloatTensor,
+        torch.FloatTensor,
     ]:
         output_dims = (nsteps, nsamplers) + ((nagents, -1) if obs_agent else (-1,))
         hidden_dims = (self.num_recurrent_layers, nsamplers) + (
@@ -483,7 +485,10 @@ class RNNStateEncoder(nn.Module):
         )
 
         outputs = cast(torch.FloatTensor, outputs.view(*output_dims))
-        hidden_states = cast(torch.FloatTensor, hidden_states.view(*hidden_dims),)
+        hidden_states = cast(
+            torch.FloatTensor,
+            hidden_states.view(*hidden_dims),
+        )
 
         return outputs, hidden_states
 

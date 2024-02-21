@@ -258,9 +258,11 @@ class NavToPartnerRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         )
         res["env_args"] = {
             **self.ENV_ARGS,
-            "x_display": ("0.%d" % devices[process_ind % len(devices)])
-            if devices is not None and len(devices) > 0
-            else None,
+            "x_display": (
+                ("0.%d" % devices[process_ind % len(devices)])
+                if devices is not None and len(devices) > 0
+                else None
+            ),
         }
         return res
 
@@ -283,9 +285,11 @@ class NavToPartnerRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         )
         res["env_args"] = {
             **self.ENV_ARGS,
-            "x_display": ("0.%d" % devices[process_ind % len(devices)])
-            if devices is not None and len(devices) > 0
-            else None,
+            "x_display": (
+                ("0.%d" % devices[process_ind % len(devices)])
+                if devices is not None and len(devices) > 0
+                else None
+            ),
         }
         res["max_tasks"] = 20
         return res
@@ -309,9 +313,11 @@ class NavToPartnerRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         )
         res["env_args"] = {
             **self.ENV_ARGS,
-            "x_display": ("0.%d" % devices[process_ind % len(devices)])
-            if devices is not None and len(devices) > 0
-            else None,
+            "x_display": (
+                ("0.%d" % devices[process_ind % len(devices)])
+                if devices is not None and len(devices) > 0
+                else None
+            ),
         }
         res["max_tasks"] = 4
         return res

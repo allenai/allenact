@@ -1,4 +1,5 @@
 """Utility functions and classes for visualization and logging."""
+
 import os
 from datetime import datetime
 
@@ -23,7 +24,10 @@ class LoggerVisualizer:
         if exp_name == "":
             exp_name = "NoNameExp"
         self.exp_name = exp_name
-        log_dir = os.path.join(exp_name, log_dir,)
+        log_dir = os.path.join(
+            exp_name,
+            log_dir,
+        )
         self.log_dir = log_dir
         os.makedirs(self.log_dir, exist_ok=True)
         self.log_queue = []
@@ -53,7 +57,7 @@ class TestMetricLogger(LoggerVisualizer):
 
     def average_dict(self):
         result = {}
-        for (k, v) in self.total_metric_dict.items():
+        for k, v in self.total_metric_dict.items():
             result[k] = sum(v) / len(v)
         return result
 

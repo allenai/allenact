@@ -41,7 +41,9 @@ class FixedConstantLoss(AbstractActorCriticLoss):
         self.value = value
 
     def loss(  # type: ignore
-        self, *args, **kwargs,
+        self,
+        *args,
+        **kwargs,
     ):
         return self.value, {self.name: self.value}
 

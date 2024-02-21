@@ -39,9 +39,9 @@ class ObjectNavTaskSampler(TaskSampler):
         self.scene_counter: Optional[int] = None
         self.scene_order: Optional[List[str]] = None
         self.scene_id: Optional[int] = None
-        self.scene_period: Optional[
-            Union[str, int]
-        ] = scene_period  # default makes a random choice
+        self.scene_period: Optional[Union[str, int]] = (
+            scene_period  # default makes a random choice
+        )
         self.max_tasks: Optional[int] = None
         self.reset_tasks = max_tasks
 
@@ -174,9 +174,9 @@ class ObjectNavTaskSampler(TaskSampler):
             )
 
         task_info["start_pose"] = copy.copy(pose)
-        task_info[
-            "id"
-        ] = f"{scene}__{'_'.join(list(map(str, self.env.get_key(pose))))}__{task_info['object_type']}"
+        task_info["id"] = (
+            f"{scene}__{'_'.join(list(map(str, self.env.get_key(pose))))}__{task_info['object_type']}"
+        )
 
         self._last_sampled_task = ObjectNaviThorGridTask(
             env=self.env,

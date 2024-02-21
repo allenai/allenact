@@ -173,7 +173,7 @@ class BabyAITaskSampler(TaskSampler):
         else:
             self.env = env_builder()
 
-        self.np_seeded_random_gen, _ = seeding.np_random(random.randint(0, 2 ** 31 - 1))
+        self.np_seeded_random_gen, _ = seeding.np_random(random.randint(0, 2**31 - 1))
         self.num_tasks_generated = 0
 
     @property
@@ -206,7 +206,7 @@ class BabyAITaskSampler(TaskSampler):
                     self.task_seeds_list
                 )
         else:
-            self._last_env_seed = self.np_seeded_random_gen.randint(0, 2 ** 31 - 1)
+            self._last_env_seed = self.np_seeded_random_gen.randint(0, 2**31 - 1)
 
         self.env.seed(self._last_env_seed)
         self.env.saved_seed = self._last_env_seed

@@ -299,7 +299,8 @@ class HandManipulateTutorialExperimentConfig(ExperimentConfig):
             save_interval=save_interval,
             metric_accumulate_interval=metric_accumulate_interval,
             lr_scheduler_builder=Builder(
-                LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps, startp=1, endp=0)},
+                LambdaLR,
+                {"lr_lambda": LinearDecay(steps=ppo_steps, startp=1, endp=0)},
             ),
         )
 
