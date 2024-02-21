@@ -1,4 +1,5 @@
 """Utility classes and functions for sensory inputs used by the models."""
+
 from typing import Any, Union, Optional
 
 import gym

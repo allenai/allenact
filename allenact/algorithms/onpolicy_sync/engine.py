@@ -1,4 +1,5 @@
 """Defines the reinforcement learning `OnPolicyRLEngine`."""
+
 import datetime
 import logging
 import numbers
@@ -200,9 +201,9 @@ class OnPolicyRLEngine(object):
             self.sensor_preprocessor_graph = (
                 self.machine_params.sensor_preprocessor_graph.to(self.device)
             )
-            create_model_kwargs[
-                "sensor_preprocessor_graph"
-            ] = self.sensor_preprocessor_graph
+            create_model_kwargs["sensor_preprocessor_graph"] = (
+                self.sensor_preprocessor_graph
+            )
 
         set_seed(self.seed)
         self.actor_critic = cast(
@@ -264,9 +265,11 @@ class OnPolicyRLEngine(object):
                 world_size=self.num_workers,
                 # During testing, we sometimes found that default timeout was too short
                 # resulting in the run terminating surprisingly, we increase it here.
-                timeout=datetime.timedelta(minutes=3000)
-                if (self.mode == TEST_MODE_STR or DEBUGGING)
-                else dist.default_pg_timeout,
+                timeout=(
+                    datetime.timedelta(minutes=3000)
+                    if (self.mode == TEST_MODE_STR or DEBUGGING)
+                    else dist.default_pg_timeout
+                ),
             )
             self.is_distributed = True
 
@@ -286,9 +289,9 @@ class OnPolicyRLEngine(object):
         self.optimizer: Optional[optim.optimizer.Optimizer] = None
         # noinspection PyProtectedMember
         self.lr_scheduler: Optional[_LRScheduler] = None
-        self.insufficient_data_for_update: Optional[
-            torch.distributed.PrefixStore
-        ] = None
+        self.insufficient_data_for_update: Optional[torch.distributed.PrefixStore] = (
+            None
+        )
 
         # Training pipeline will be instantiated during training and inference.
         # During inference however, it will be instantiated anew on each run of `run_eval`
@@ -328,9 +331,9 @@ class OnPolicyRLEngine(object):
                 make_sampler_fn=self.config.make_sampler_fn,
                 sampler_fn_args=self.get_sampler_fn_args(seeds),
                 callback_sensors=self.callback_sensors,
-                multiprocessing_start_method="forkserver"
-                if self.mp_ctx is None
-                else None,
+                multiprocessing_start_method=(
+                    "forkserver" if self.mp_ctx is None else None
+                ),
                 mp_ctx=self.mp_ctx,
                 max_processes=self.max_sampler_processes_per_worker,
                 read_timeout=DEBUG_VST_TIMEOUT if DEBUGGING else 1 * 60,
@@ -735,9 +738,9 @@ class OnPolicyRLEngine(object):
                     s.sampler_select(keep)
 
         to_add_to_storage = dict(
-            observations=self._preprocess_observations(batch)
-            if len(keep) > 0
-            else batch,
+            observations=(
+                self._preprocess_observations(batch) if len(keep) > 0 else batch
+            ),
             memory=self._active_memory(memory, keep),
             actions=flat_actions[0, keep],
             action_log_probs=actor_critic_output.distributions.log_prob(actions)[
@@ -827,9 +830,9 @@ class OnPolicyRLEngine(object):
                 "insufficient_data_for_update", str(0)
             )
             dist.barrier(
-                device_ids=None
-                if self.device == torch.device("cpu")
-                else [self.device.index]
+                device_ids=(
+                    None if self.device == torch.device("cpu") else [self.device.index]
+                )
             )
 
         training_settings = stage_component.training_settings
@@ -917,9 +920,11 @@ class OnPolicyRLEngine(object):
                         1 * (not enough_data_for_update),
                     )
                     dist.barrier(
-                        device_ids=None
-                        if self.device == torch.device("cpu")
-                        else [self.device.index]
+                        device_ids=(
+                            None
+                            if self.device == torch.device("cpu")
+                            else [self.device.index]
+                        )
                     )
 
                     if (
@@ -1050,9 +1055,9 @@ class OnPolicyRLEngine(object):
                     to_track["lr"] = self.optimizer.param_groups[0]["lr"]
 
                 if training_settings.num_mini_batch is not None:
-                    to_track[
-                        "rollout_num_mini_batch"
-                    ] = training_settings.num_mini_batch
+                    to_track["rollout_num_mini_batch"] = (
+                        training_settings.num_mini_batch
+                    )
 
                 for k, v in to_track.items():
                     # We need to set the bsize to 1 for `worker_batch_size` below as we're trying to record the
@@ -1069,19 +1074,28 @@ class OnPolicyRLEngine(object):
                     )
 
                 if not skip_backprop:
-                    self.backprop_step(
+                    total_grad_norm = self.backprop_step(
                         total_loss=total_loss,
                         max_grad_norm=training_settings.max_grad_norm,
                         local_to_global_batch_size_ratio=bsize / aggregate_bsize,
                     )
+                    self.tracking_info_list.append(
+                        TrackingInfo(
+                            type=TrackingInfoType.UPDATE_INFO,
+                            info={"total_grad_norm": total_grad_norm.item()},
+                            n=bsize,
+                            storage_uuid=stage_component.storage_uuid,
+                            stage_component_uuid=stage_component.uuid,
+                        )
+                    )
 
-                stage.stage_component_uuid_to_stream_memory[
-                    stage_component.uuid
-                ] = detach_recursively(
-                    input=stage.stage_component_uuid_to_stream_memory[
-                        stage_component.uuid
-                    ],
-                    inplace=True,
+                stage.stage_component_uuid_to_stream_memory[stage_component.uuid] = (
+                    detach_recursively(
+                        input=stage.stage_component_uuid_to_stream_memory[
+                            stage_component.uuid
+                        ],
+                        inplace=True,
+                    )
                 )
 
     def close(self, verbose=True):
@@ -1330,9 +1344,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.checkpoints_dir,
             "exp_{}__stage_{:02d}__steps_{:012d}.pt".format(
                 self.experiment_name,
-                self.training_pipeline.current_stage_index
-                if pipeline_stage_index is None
-                else pipeline_stage_index,
+                (
+                    self.training_pipeline.current_stage_index
+                    if pipeline_stage_index is None
+                    else pipeline_stage_index
+                ),
                 self.training_pipeline.total_steps,
             ),
         )
@@ -1495,12 +1511,18 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             for reduction, p in zip(reductions, all_params):
                 reduction.wait()
 
+        if hasattr(self.actor_critic, "compute_total_grad_norm"):
+            total_grad_norm = self.actor_critic.compute_total_grad_norm()
+        else:
+            total_grad_norm = 0.0
+
         nn.utils.clip_grad_norm_(
             self.actor_critic.parameters(),
             max_norm=max_grad_norm,  # type: ignore
         )
 
         self.optimizer.step()  # type: ignore
+        return total_grad_norm
 
     def _save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter(
         self, pipeline_stage_index: Optional[int] = None
@@ -1577,10 +1599,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     )
                 ):
                     self._save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter(
-                        pipeline_stage_index=self.training_pipeline.current_stage_index
-                        - 1
-                        if not training_is_complete
-                        else len(self.training_pipeline.pipeline_stages) - 1
+                        pipeline_stage_index=(
+                            self.training_pipeline.current_stage_index - 1
+                            if not training_is_complete
+                            else len(self.training_pipeline.pipeline_stages) - 1
+                        )
                     )
 
                 # If training is complete, break out
@@ -1615,9 +1638,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_steps.set("steps", str(0))
                 # Ensure all workers are done before incrementing num_workers_{steps, done}
                 dist.barrier(
-                    device_ids=None
-                    if self.device == torch.device("cpu")
-                    else [self.device.index]
+                    device_ids=(
+                        None
+                        if self.device == torch.device("cpu")
+                        else [self.device.index]
+                    )
                 )
 
             self.former_steps = self.step_count
@@ -1732,9 +1757,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
                     # Ensure all workers are done before updating step counter
                     dist.barrier(
-                        device_ids=None
-                        if self.device == torch.device("cpu")
-                        else [self.device.index]
+                        device_ids=(
+                            None
+                            if self.device == torch.device("cpu")
+                            else [self.device.index]
+                        )
                     )
 
                     ndone = int(self.num_workers_done.get("done"))

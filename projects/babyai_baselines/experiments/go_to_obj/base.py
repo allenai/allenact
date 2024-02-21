@@ -83,11 +83,13 @@ class BaseBabyAIGoToObjExperimentConfig(BaseBabyAIExperimentConfig, ABC):
             advance_scene_rollout_period=None,
             should_log=cls.SHOULD_LOG,
             pipeline_stages=pipeline_stages,
-            lr_scheduler_builder=Builder(
-                LambdaLR, {"lr_lambda": LinearDecay(steps=total_train_steps)}  # type: ignore
-            )
-            if cls.USE_LR_DECAY
-            else None,
+            lr_scheduler_builder=(
+                Builder(
+                    LambdaLR, {"lr_lambda": LinearDecay(steps=total_train_steps)}  # type: ignore
+                )
+                if cls.USE_LR_DECAY
+                else None
+            ),
             **kwargs,
         )
 

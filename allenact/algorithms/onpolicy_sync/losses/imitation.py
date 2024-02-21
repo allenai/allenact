@@ -206,7 +206,9 @@ class Imitation(AbstractActorCriticLoss):
             )
         return (
             total_loss,
-            {"expert_cross_entropy": total_loss.item(), **losses}
-            if should_report_loss
-            else {},
+            (
+                {"expert_cross_entropy": total_loss.item(), **losses}
+                if should_report_loss
+                else {}
+            ),
         )

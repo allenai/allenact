@@ -514,21 +514,21 @@ class CPCALoss(AuxiliaryLoss):
             beliefs.device
         )  # (T+k, k, N, 1)
 
-        pred_masks[
-            num_steps - 1 :
-        ] = False  # GRU(b_t, a_{t:t+k-1}) is invalid when t >= T, as we don't have real z_{t+1}
+        pred_masks[num_steps - 1 :] = (
+            False  # GRU(b_t, a_{t:t+k-1}) is invalid when t >= T, as we don't have real z_{t+1}
+        )
         for j in range(1, self.planning_steps + 1):  # for j-step predictions
-            pred_masks[
-                : j - 1, j - 1
-            ] = False  # Remove the upper triangle above the diagnonal (but I think this is unnecessary for valid_masks)
+            pred_masks[: j - 1, j - 1] = (
+                False  # Remove the upper triangle above the diagnonal (but I think this is unnecessary for valid_masks)
+            )
             for n in range(num_sampler):
                 has_zeros_batch = torch.where(masks[:, n] == 0)[0]
                 # in j-step prediction, timesteps z -> z + j are disallowed as those are the first j timesteps of a new episode
                 # z-> z-1 because of pred_masks being offset by 1
                 for z in has_zeros_batch:
-                    pred_masks[
-                        z - 1 : z - 1 + j, j - 1, n
-                    ] = False  # can affect j timesteps
+                    pred_masks[z - 1 : z - 1 + j, j - 1, n] = (
+                        False  # can affect j timesteps
+                    )
 
         # instead of the whole range, we actually are only comparing a window i:i+k for each query/target i - for each, select the appropriate k
         # we essentially gather diagonals from this full mask, t of them, k long

@@ -990,9 +990,9 @@ class SingleProcessVectorSampledTasks(object):
                             )
                             if step_result.info is None:
                                 step_result = step_result.clone({"info": {}})
-                            step_result.info[
-                                COMPLETE_TASK_CALLBACK_KEY
-                            ] = task_callback_data
+                            step_result.info[COMPLETE_TASK_CALLBACK_KEY] = (
+                                task_callback_data
+                            )
 
                         if auto_resample_when_done:
                             current_task = task_sampler.next_task()

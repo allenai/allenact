@@ -732,9 +732,9 @@ class VizSuite(AbstractViz):
             self.actor_critic_source,
         ) = self._setup_sources()
 
-        self.data: Dict[
-            str, List[Dict]
-        ] = {}  # dict of episode id to list of dicts with collected data
+        self.data: Dict[str, List[Dict]] = (
+            {}
+        )  # dict of episode id to list of dicts with collected data
         self.last_it2epid: List[str] = []
 
     def _setup_sources(self):

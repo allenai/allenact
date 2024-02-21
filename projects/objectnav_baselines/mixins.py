@@ -120,9 +120,9 @@ class ResNetPreprocessGRUActorCriticMixin:
             observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             goal_sensor_uuid=goal_sensor_uuid,
             rgb_resnet_preprocessor_uuid="rgb_resnet_imagenet" if has_rgb else None,
-            depth_resnet_preprocessor_uuid="depth_resnet_imagenet"
-            if has_depth
-            else None,
+            depth_resnet_preprocessor_uuid=(
+                "depth_resnet_imagenet" if has_depth else None
+            ),
             hidden_size=512,
             goal_dims=32,
         )
@@ -154,9 +154,9 @@ class ObjectNavUnfrozenResNetWithGRUActorCriticMixin:
             rgb_uuid=rgb_uuid,
             depth_uuid=depth_uuid,
             goal_sensor_uuid=goal_sensor_uuid,
-            hidden_size=192
-            if self.multiple_beliefs and len(self.auxiliary_uuids) > 1
-            else 512,
+            hidden_size=(
+                192 if self.multiple_beliefs and len(self.auxiliary_uuids) > 1 else 512
+            ),
             backbone=self.backbone,
             resnet_baseplanes=32,
             object_type_embedding_dim=32,
@@ -384,9 +384,9 @@ class ObjectNavPPOMixin:
                     loss_weights=[val[1] for val in named_losses.values()],
                 )
             ],
-            lr_scheduler_builder=Builder(
-                LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
-            )
-            if anneal_lr
-            else None,
+            lr_scheduler_builder=(
+                Builder(LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)})
+                if anneal_lr
+                else None
+            ),
         )

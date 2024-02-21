@@ -1,4 +1,5 @@
 """Functions used to initialize and manipulate pytorch models."""
+
 import hashlib
 from typing import Sequence, Tuple, Union, Optional, Dict, Any, Callable
 

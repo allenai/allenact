@@ -114,15 +114,17 @@ class PPO(AbstractActorCriticLoss):
                 "action": (action_loss, None),
                 "entropy": (dist_entropy.mul_(-1.0), self.entropy_coef),  # type: ignore
             },
-            {
-                "ratio": ratio,
-                "ratio_clamped": clamped_ratio,
-                "ratio_used": torch.where(
-                    cast(torch.Tensor, use_clamped), clamped_ratio, ratio
-                ),
-            }
-            if self.show_ratios
-            else {},
+            (
+                {
+                    "ratio": ratio,
+                    "ratio_clamped": clamped_ratio,
+                    "ratio_used": torch.where(
+                        cast(torch.Tensor, use_clamped), clamped_ratio, ratio
+                    ),
+                }
+                if self.show_ratios
+                else {}
+            ),
         )
 
     def loss(  # type: ignore

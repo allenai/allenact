@@ -301,9 +301,9 @@ class IThorEnvironment(object):
                     break
             if not reachable:
                 self.last_action = "TeleportFull"
-                self.last_event.metadata[
-                    "errorMessage"
-                ] = "Target position was not initially reachable."
+                self.last_event.metadata["errorMessage"] = (
+                    "Target position was not initially reachable."
+                )
                 self.last_action_success = False
                 return
         self.controller.step(
@@ -681,9 +681,9 @@ class IThorEnvironment(object):
                     self.teleport_agent_to(**start_location, force_action=True)  # type: ignore
                     self.last_action = action
                     self.last_action_success = False
-                    self.last_event.metadata[
-                        "errorMessage"
-                    ] = "Moved to location outside of initially reachable points."
+                    self.last_event.metadata["errorMessage"] = (
+                        "Moved to location outside of initially reachable points."
+                    )
         elif "RandomizeHideSeekObjects" in action:
             last_position = self.get_agent_location()
             self.controller.step(action_dict)

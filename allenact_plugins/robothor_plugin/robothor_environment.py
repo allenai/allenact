@@ -72,9 +72,9 @@ class RoboThorEnvironment:
 
         self.agent_count = self.config["agentCount"]
 
-        self._extra_teleport_kwargs: Dict[
-            str, Any
-        ] = {}  # Used for backwards compatability with the teleport action
+        self._extra_teleport_kwargs: Dict[str, Any] = (
+            {}
+        )  # Used for backwards compatability with the teleport action
 
     def initialize_grid_dimensions(
         self, reachable_points: Collection[Dict[str, float]]

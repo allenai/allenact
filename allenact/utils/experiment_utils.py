@@ -1,4 +1,5 @@
 """Utility classes and functions for running and designing experiments."""
+
 import abc
 import collections.abc
 import copy
@@ -248,9 +249,9 @@ class LoggingPackage:
         self.mode = mode
 
         self.training_steps: int = training_steps
-        self.storage_uuid_to_total_experiences: Dict[
-            str, int
-        ] = storage_uuid_to_total_experiences
+        self.storage_uuid_to_total_experiences: Dict[str, int] = (
+            storage_uuid_to_total_experiences
+        )
         self.pipeline_stage = pipeline_stage
 
         self.metrics_tracker = ScalarMeanTracker()

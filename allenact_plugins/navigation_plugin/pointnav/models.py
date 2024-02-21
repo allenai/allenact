@@ -3,6 +3,7 @@
 Object navigation is currently available as a Task in AI2-THOR and
 Facebook's Habitat.
 """
+
 from typing import Optional, List, Union, Sequence
 
 import gym

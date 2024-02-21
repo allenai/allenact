@@ -2,6 +2,7 @@
 
 Arm Point Navigation is currently available as a Task in ManipulaTHOR.
 """
+
 from typing import Tuple, Optional
 
 import gym
