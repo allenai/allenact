@@ -721,6 +721,9 @@ class OnPolicyRLEngine(object):
 
         npaused, keep, batch = self.remove_paused(observations)
 
+        if hasattr(self.actor_critic, "sampler_select"):
+            self.actor_critic.sampler_select(keep)
+
         # TODO self.probe(...) can be useful for debugging (we might want to control it from main?)
         # self.probe(dones, npaused)
 
