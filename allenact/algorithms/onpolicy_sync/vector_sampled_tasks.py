@@ -1006,6 +1006,7 @@ class SingleProcessVectorSampledTasks(VectorComms):
         callback_sensor_suite: Optional[SensorSuite] = None,
         auto_resample_when_done: bool = True,
         should_log: bool = True,
+        local_worker_id: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
 
@@ -1019,6 +1020,8 @@ class SingleProcessVectorSampledTasks(VectorComms):
         self._auto_resample_when_done = auto_resample_when_done
 
         self.should_log = should_log
+
+        self.local_worker_id = local_worker_id
 
         self._vector_task_generators: List[Generator] = self._create_generators(
             make_sampler_fn=make_sampler_fn,
@@ -1066,10 +1069,14 @@ class SingleProcessVectorSampledTasks(VectorComms):
         callback_sensor_suite: Optional[SensorSuite],
         auto_resample_when_done: bool,
         should_log: bool,
+        local_worker_id: Optional[int],
     ) -> Generator:
         """Generator for working with Tasks/TaskSampler."""
 
-        task_sampler = make_sampler_fn(**sampler_fn_args)
+        task_sampler_args = {**sampler_fn_args}
+        if local_worker_id is not None:
+            task_sampler_args["thread_id"]: local_worker_id
+        task_sampler = make_sampler_fn(**task_sampler_args)
         current_task = task_sampler.next_task()
 
         if current_task is None:
@@ -1213,6 +1220,7 @@ class SingleProcessVectorSampledTasks(VectorComms):
                 get_logger().info(
                     f"Starting {id}-th SingleProcessVectorSampledTasks generator with args {current_sampler_fn_args}."
                 )
+
             generators.append(
                 self._task_sampling_loop_generator_fn(
                     worker_id=id,
@@ -1221,6 +1229,7 @@ class SingleProcessVectorSampledTasks(VectorComms):
                     callback_sensor_suite=callback_sensor_suite,
                     auto_resample_when_done=self._auto_resample_when_done,
                     should_log=self.should_log,
+                    local_worker_id=self.local_worker_id,
                 )
             )
 
@@ -1649,6 +1658,7 @@ class MultiThreadVectorSampledTasks(VectorComms):
             callback_sensor_suite=callback_sensor_suite,
             auto_resample_when_done=auto_resample_when_done,
             should_log=should_log,
+            local_worker_id=worker_id,
         )
 
         try:
