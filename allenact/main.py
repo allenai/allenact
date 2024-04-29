@@ -31,7 +31,8 @@ def get_argument_parser():
 
     # noinspection PyTypeChecker
     parser = argparse.ArgumentParser(
-        description="allenact", formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description="allenact",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     parser.add_argument(
@@ -98,7 +99,12 @@ def get_argument_parser():
     )
 
     parser.add_argument(
-        "-s", "--seed", required=False, default=None, type=int, help="random seed",
+        "-s",
+        "--seed",
+        required=False,
+        default=None,
+        type=int,
+        help="random seed",
     )
     parser.add_argument(
         "-b",
@@ -173,6 +179,14 @@ def get_argument_parser():
         default=None,
         type=int,
         help="maximal number of sampler processes to spawn for each worker",
+    )
+
+    parser.add_argument(
+        "--use_multi_thread",
+        dest="use_multi_thread",
+        required=False,
+        action="store_true",
+        help="use multi threading with --max_sampler_processes_per_worker",
     )
 
     parser.add_argument(
@@ -478,6 +492,7 @@ def main():
             collect_valid_results=args.collect_valid_results,
             valid_on_initial_weights=args.valid_on_initial_weights,
             try_restart_after_task_error=args.enable_crash_recovery,
+            use_multi_thread=args.use_multi_thread,
         )
     else:
         OnPolicyRunner(
