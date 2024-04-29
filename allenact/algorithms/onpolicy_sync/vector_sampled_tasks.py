@@ -1075,7 +1075,8 @@ class SingleProcessVectorSampledTasks(VectorComms):
 
         task_sampler_args = {**sampler_fn_args}
         if local_worker_id is not None:
-            task_sampler_args["thread_id"]: local_worker_id
+            task_sampler_args["thread_id"] = local_worker_id
+
         task_sampler = make_sampler_fn(**task_sampler_args)
         current_task = task_sampler.next_task()
 
