@@ -953,7 +953,10 @@ class VectorSampledTasks(VectorComms):
     ) -> List[Any]:
         """"""
         return super().command(
-            commands, data_list, partition_fn=kwargs.get("partition_function") or self._partition_to_processes
+            commands,
+            data_list,
+            partition_fn=kwargs.get("partition_function")
+            or self._partition_to_processes,
         )
 
     def call(
@@ -1651,12 +1654,16 @@ class MultiThreadVectorSampledTasks(VectorComms):
         callback_sensor_suite: Optional[SensorSuite],
         auto_resample_when_done: bool,
         should_log: bool,
+        thread_barrier: threading.Barrier,
     ) -> None:
         """process worker for creating and interacting with the
         Tasks/TaskSampler."""
         assert len(sampler_fn_args_list) == 1
 
-        sampler_fn_args_list = [{**cur_kwargs, "thread_id": worker_id} for cur_kwargs in sampler_fn_args_list]
+        sampler_fn_args_list = [
+            {**cur_kwargs, "thread_id": worker_id, "thread_barrier": thread_barrier}
+            for cur_kwargs in sampler_fn_args_list
+        ]
 
         sp_vector_sampled_tasks = SingleProcessVectorSampledTasks(
             make_sampler_fn=make_sampler_fn,
@@ -1732,6 +1739,8 @@ class MultiThreadVectorSampledTasks(VectorComms):
         )
         self._workers = []
 
+        barrier = threading.Barrier(self._num_task_samplers)
+
         id: Union[int, str]
         for id, (worker_conn, parent_conn, current_sampler_fn_args_list) in enumerate(
             zip(worker_connections, parent_connections, sampler_fn_args_list)
@@ -1752,6 +1761,7 @@ class MultiThreadVectorSampledTasks(VectorComms):
                     callback_sensor_suite=callback_sensor_suite,
                     auto_resample_when_done=self._auto_resample_when_done,
                     should_log=self.should_log,
+                    thread_barrier=barrier,
                 ),
             )
 
