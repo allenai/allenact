@@ -1654,6 +1654,7 @@ class MultiThreadVectorSampledTasks(VectorComms):
     ) -> None:
         """process worker for creating and interacting with the
         Tasks/TaskSampler."""
+        assert len(sampler_fn_args_list) == 1
 
         sampler_fn_args_list = [{**cur_kwargs, "thread_id": worker_id} for cur_kwargs in sampler_fn_args_list]
 
