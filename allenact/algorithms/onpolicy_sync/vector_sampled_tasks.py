@@ -682,17 +682,6 @@ class VectorSampledTasks(VectorComms):
         """
         return self._mp_ctx
 
-    # def next_task(self, **kwargs):
-    #     if "force_advance_scene" in kwargs:
-    #         # TODO just send it to the first thread in each process if in multithreading
-    #         self.command_at()
-    #         # TODO just send it to all the rest of subprocesses in each process (this sucks big time)
-    #         return self.command(
-    #             commands=NEXT_TASK_COMMAND, data_list=[kwargs] * self.num_unpaused_tasks
-    #         )
-    #
-    #     return super().next_task(**kwargs)
-
     @staticmethod
     def _task_sampling_loop_worker(
         worker_id: Union[int, str],
