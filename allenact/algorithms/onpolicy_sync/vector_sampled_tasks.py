@@ -1644,13 +1644,14 @@ class MultiThreadVectorSampledTasks(VectorComms):
         auto_resample_when_done: bool,
         should_log: bool,
         thread_barrier: threading.Barrier,
+        thread_num: int,
     ) -> None:
         """process worker for creating and interacting with the
         Tasks/TaskSampler."""
         assert len(sampler_fn_args_list) == 1
 
         sampler_fn_args_list = [
-            {**cur_kwargs, "thread_id": worker_id, "thread_barrier": thread_barrier}
+            {**cur_kwargs, "thread_id": worker_id, "thread_barrier": thread_barrier, "nthread": thread_num}
             for cur_kwargs in sampler_fn_args_list
         ]
 
@@ -1751,6 +1752,7 @@ class MultiThreadVectorSampledTasks(VectorComms):
                     auto_resample_when_done=self._auto_resample_when_done,
                     should_log=self.should_log,
                     thread_barrier=barrier,
+                    thread_num=self._num_task_samplers,
                 ),
             )
 
