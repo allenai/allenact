@@ -1556,7 +1556,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self, pipeline_stage_index: Optional[int] = None
     ):
         self.deterministic_seeds()
-        if self.worker_id == self.first_local_worker_id:
+        # if self.worker_id == self.first_local_worker_id:
+        if self.worker_id == 0:
             model_path = self.checkpoint_save(pipeline_stage_index=pipeline_stage_index)
             if self.checkpoints_queue is not None:
                 self.checkpoints_queue.put(("eval", model_path))
@@ -1593,7 +1594,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             and should_save_checkpoints
             and self.checkpoints_queue is not None
         ):
-            if self.worker_id == self.first_local_worker_id:
+            # if self.worker_id == self.first_local_worker_id:
+            if self.worker_id == 0:
                 model_path = self.checkpoint_save()
                 if self.checkpoints_queue is not None:
                     self.checkpoints_queue.put(("eval", model_path))
