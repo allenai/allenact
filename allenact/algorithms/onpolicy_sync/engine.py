@@ -89,26 +89,6 @@ TRAIN_MODE_STR = "train"
 VALID_MODE_STR = "valid"
 TEST_MODE_STR = "test"
 
-import time
-
-class Profiler:
-    def __init__(self):
-        self.record_items = {}
-
-    def start(self, name):
-        if name not in self.record_items:
-            self.record_items[name] = {"count": 0, "avg_time": 0}
-        self.record_items[name]["start_time"] = time.time()
-
-    def end(self, name):
-        self.record_items[name]["last_time"] = time.time() - self.record_items[name]["start_time"]
-        self.record_items[name]["avg_time"] = (self.record_items[name]["avg_time"] * self.record_items[name]["count"] + self.record_items[name]["last_time"]) / (self.record_items[name]["count"] + 1)
-        self.record_items[name]["count"] += 1
-
-    def print(self):
-        for k, v in self.record_items.items():
-            print(f"{k}: {v['last_time']}s (avg: {v['avg_time']}s)")
-
 
 class OnPolicyRLEngine(object):
     """The reinforcement learning primary controller.
@@ -317,9 +297,6 @@ class OnPolicyRLEngine(object):
         # During inference however, it will be instantiated anew on each run of `run_eval`
         # and will be set to `None` after the eval run is complete.
         self.training_pipeline: Optional[TrainingPipeline] = None
-
-        # Profiler
-        self.profiler: Profiler = Profiler()
 
     @property
     def vector_tasks(
@@ -1601,7 +1578,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     self.checkpoints_queue.put(("eval", model_path))
 
         while True:
-            self.profiler.start("before_rollout")
             pipeline_stage_changed = self.training_pipeline.before_rollout(
                 train_metrics=self._last_aggregated_train_task_metrics
             )  # This is `False` at the very start of training, i.e. pipeline starts with a stage initialized
@@ -1681,9 +1657,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 k: v.total_experiences
                 for k, v in self.training_pipeline.current_stage_storage.items()
             }
-
-            self.profiler.end("before_rollout")
-            self.profiler.start("rollout")
 
             if self.training_pipeline.rollout_storage_uuid is None:
                 # In this case we're not expecting to collect storage experiences, i.e. everything
@@ -1816,20 +1789,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     adv_stats_callback=self.advantage_stats,
                 )
 
-            self.profiler.end("rollout")
-            self.profiler.start("storage_before_update")
-
             # Prepare storage for iteration during updates
             for storage in self.training_pipeline.current_stage_storage.values():
                 storage.before_updates(**before_update_info)
 
-            self.profiler.end("storage_before_update")
-            self.profiler.start("update")
-
             for sc in self.training_pipeline.current_stage.stage_components:
                 component_storage = uuid_to_storage[sc.storage_uuid]
-
-                # before_update = time.time()
 
                 self.compute_losses_track_them_and_backprop(
                     stage=self.training_pipeline.current_stage,
@@ -1837,21 +1802,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     storage=component_storage,
                 )
 
-                # after_update = time.time()
-                # delta = after_update - before_update
-                # get_logger().info(
-                #     f"Worker {self.worker_id}: {sc.uuid} took {delta:.2g}s ({sc.training_settings.update_repeats}"
-                #     f" repeats * {sc.training_settings.num_mini_batch} batches)"
-                # )
-
-            self.profiler.end("update")
-            self.profiler.start("storage_after_update")
-
             for storage in self.training_pipeline.current_stage_storage.values():
                 storage.after_updates()
-
-            self.profiler.end("storage_after_update")
-            self.profiler.start("log_and_others")
 
             # We update the storage step counts saved in
             # `self.training_pipeline.current_stage.storage_uuid_to_steps_taken_in_stage` here rather than with
@@ -1919,9 +1871,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         List[ExperienceStorage], list(uuid_to_storage.values())
                     )
                 )
-
-            self.profiler.end("log_and_others")
-            self.profiler.print()
 
     def train(
         self,
