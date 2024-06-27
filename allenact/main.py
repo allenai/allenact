@@ -286,6 +286,14 @@ def get_argument_parser():
         help="Whether or not to try recovering when a task crashes (use at your own risk).",
     )
 
+    parser.add_argument(
+        "--task_batch_size",
+        dest="task_batch_size",
+        type=int,
+        default=1,
+        help="Makes task_batch_size training tasks be processed as a batch for each instantiated env",
+    )
+
     ### DEPRECATED FLAGS
     parser.add_argument(
         "-t",
@@ -478,6 +486,7 @@ def main():
             collect_valid_results=args.collect_valid_results,
             valid_on_initial_weights=args.valid_on_initial_weights,
             try_restart_after_task_error=args.enable_crash_recovery,
+            task_batch_size=args.task_batch_size,
         )
     else:
         OnPolicyRunner(

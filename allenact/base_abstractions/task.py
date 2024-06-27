@@ -7,7 +7,7 @@
 environment."""
 
 import abc
-from typing import Any, Dict, Generic, List, Optional, Sequence, Tuple, TypeVar, Union
+from typing import Any, Dict, Generic, List, Optional, Sequence, Tuple, TypeVar, Union, final
 
 import gym
 import numpy as np
@@ -16,6 +16,10 @@ from gym.spaces.dict import Dict as SpaceDict
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import Sensor, SensorSuite
 from allenact.utils.misc_utils import deprecated
+
+COMPLETE_TASK_METRICS_KEY = "__AFTER_TASK_METRICS__"
+COMPLETE_TASK_CALLBACK_KEY = "__AFTER_TASK_CALLBACK__"
+
 
 EnvType = TypeVar("EnvType")
 
@@ -350,3 +354,183 @@ class TaskSampler(abc.ABC):
         seed : New seed.
         """
         raise NotImplementedError()
+
+
+class BatchedTask(Generic[EnvType]):
+    """An abstract class defining a batch of goal directed 'tasks.' Agents interact
+    with their environment through a task by taking a `step` after which they
+    receive new observations, rewards, and (potentially) other useful
+    information.
+
+    A BatchedTask is a wrapper around a specific Task
+    and allows for multiple tasks to be simultaneously executed in the same scene.
+
+    This is only to be used during training, and it assumes we are always resampling
+    new tasks upon completion of the current one(s).
+
+    # Attributes
+
+    env : The environment.
+    sensor_suite: Collection of sensors formed from the `sensors` argument in the initializer.
+    task_info : Dictionary of (k, v) pairs defining task goals and other task information.
+    max_steps : The maximum number of steps an agent can take an in the task before it is considered failed.
+    observation_space: The observation space returned on each step from the sensors.
+    tasks: The instantiated Tasks
+    task_sampler: The `TaskSampler` responsible for sampling valid `Task`s.
+    """
+
+    task_sampler: TaskSampler
+    tasks: List[Task]
+    task_classes: List[type(Task)]
+    callback_sensor_suite: Optional[SensorSuite]
+
+    def __init__(
+        self,
+        env: EnvType,
+        sensors: Union[SensorSuite, Sequence[Sensor]],
+        task_info: Dict[str, Any],
+        max_steps: int,
+        task_sampler: TaskSampler,
+        task_classes: List[type(Task)],
+        callback_sensor_suite: Optional[SensorSuite],
+        **kwargs,
+    ) -> None:
+        assert hasattr(task_sampler, "task_batch_size"), "BatchedTask requires task_sampler to contain a `task_batch_size`"
+
+        # Keep a reference to the task sampler
+        self.task_sampler = task_sampler
+
+        self.task_classes = task_classes
+        self.callback_sensor_suite = callback_sensor_suite
+
+        # Instantiate the first actual task from the currently sampled info
+        self.tasks = [task_classes[0](env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, batch_index=0, **kwargs)]
+        self.tasks[0].batch_index = 0
+
+        # If task_batch_size greater than 1, instantiate the rest of tasks (with task_batch_size set to 1)
+        if self.task_sampler.task_batch_size > 1:
+            for it in range(1, self.task_sampler.task_batch_size):
+                self.tasks.append(self.make_new_task(it))
+
+    def make_new_task(self, batch_index):
+        task_batch_size = self.task_sampler.task_batch_size
+        self.task_sampler.task_batch_size = 1
+        try:
+            task = getattr(self.task_sampler.next_task(idx=batch_index), "tasks")[0]
+            task.batch_index = batch_index
+        finally:
+            self.task_sampler.task_batch_size = task_batch_size
+        return task
+
+    @property
+    def observation_space(self):
+        return self.tasks[0].observation_space
+
+    def get_observations(self, **kwargs) -> List[Any]:  #-> Dict[str, Any]:
+        # Render all tasks in batch
+        self.tasks[0].env.render()  # assume this is stored locally in the env class
+
+        # return {"batch_observations": [task.get_observations() for task in self.tasks]}
+        return [task.get_observations() for task in self.tasks]
+
+    @property
+    @abc.abstractmethod
+    def action_space(self) -> gym.Space:
+        return self.tasks[0].action_space
+
+    @abc.abstractmethod
+    def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
+        """Render the current task state.
+
+        Rendered task state can come in any supported modes.
+
+        # Parameters
+
+        mode : The mode in which to render. For example, you might have a 'rgb'
+            mode that renders the agent's egocentric viewpoint or a 'dev' mode
+            returning additional information.
+        args : Extra args.
+        kwargs : Extra kwargs.
+
+        # Returns
+
+        An numpy array corresponding to the requested render.
+        """
+        raise NotImplementedError()
+
+    def step(self, action: Any) -> RLStepResult:
+        srs = self._step(action=action)
+
+        for it, current_task in enumerate(self.tasks):
+            if srs[it].info is None:
+                srs[it] = srs[it].clone({"info": {}})
+
+            if current_task.is_done():
+                metrics = current_task.metrics()
+                if metrics is not None and len(metrics) != 0:
+                    srs[it].info[COMPLETE_TASK_METRICS_KEY] = metrics
+
+                if self.callback_sensor_suite is not None:
+                    task_callback_data = self.callback_sensor_suite.get_observations(
+                        env=current_task.env, task=current_task
+                    )
+                    srs[it].info[
+                        COMPLETE_TASK_CALLBACK_KEY
+                    ] = task_callback_data
+
+                self.tasks[it] = self.make_new_task(it)
+
+        return RLStepResult(
+            observation=self.get_observations(),
+            reward=[sr.reward for sr in srs],
+            done=[sr.done for sr in srs],  # type:ignore
+            info=[sr.info for sr in srs],  # type:ignore
+        )
+
+    @final
+    def _step(self, action: Any) -> List[RLStepResult]:
+        # Prepare all actions
+        actions = []
+        intermediates = []
+        for it, task in enumerate(self.tasks):
+            action_str, intermediate = task._before_env_step(action[it])
+            actions.append(action_str)
+            intermediates.append(intermediate)
+
+        # Step over all tasks
+        self.tasks[0].env.step(actions)
+
+        # Prepare all results (excluding observations)
+        srs = []
+        for it, task in enumerate(self.tasks):
+            sr = task._after_env_step(action[it], actions[it], intermediates[it])
+            srs.append(sr)
+
+        return srs
+
+    def reached_max_steps(self) -> bool:
+        return False
+
+    @abc.abstractmethod
+    def reached_terminal_state(self) -> bool:
+        return False
+
+    def is_done(self) -> bool:
+        return False
+
+    def num_steps_taken(self) -> int:
+        return -1
+
+    @abc.abstractmethod
+    def close(self) -> None:
+        self.tasks[0].close()
+
+    def metrics(self) -> Dict[str, Any]:
+        return {}
+
+    def query_expert(self, **kwargs) -> Tuple[Any, bool]:
+        return None, False
+
+    @property
+    def cumulative_reward(self) -> float:
+        return 0.0
