@@ -407,6 +407,10 @@ class BatchedTask(Generic[EnvType]):
         self.tasks = [task_classes[0](env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, batch_index=0, **kwargs)]
         self.tasks[0].batch_index = 0
 
+        self.frames = None
+        self.depths = None
+        self.segs = None
+
         # If task_batch_size greater than 1, instantiate the rest of tasks (with task_batch_size set to 1)
         if self.task_sampler.task_batch_size > 1:
             for it in range(1, self.task_sampler.task_batch_size):
@@ -428,10 +432,16 @@ class BatchedTask(Generic[EnvType]):
 
     def get_observations(self, **kwargs) -> List[Any]:  #-> Dict[str, Any]:
         # Render all tasks in batch
-        self.tasks[0].env.render()  # assume this is stored locally in the env class
+        self.frames = self.render("rgb")
+        self.depths = self.render("depth")
+        self.segs = self.render("seg")
 
         # return {"batch_observations": [task.get_observations() for task in self.tasks]}
-        return [task.get_observations() for task in self.tasks]
+        return [task.get_observations(
+            frame=self.frames[idx],
+            depth=self.depths[idx],
+            seg=self.segs[idx],
+        ) for idx, task in enumerate(self.tasks)]
 
     @property
     @abc.abstractmethod
@@ -456,7 +466,7 @@ class BatchedTask(Generic[EnvType]):
 
         An numpy array corresponding to the requested render.
         """
-        raise NotImplementedError()
+        return self.tasks[0].env.render(mode=mode, *args, **kwargs)
 
     def step(self, action: Any) -> RLStepResult:
         srs = self._step(action=action)
