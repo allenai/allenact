@@ -392,6 +392,7 @@ class BatchedTask(Generic[EnvType]):
         max_steps: int,
         task_sampler: TaskSampler,
         task_classes: List[type(Task)],
+        state_views: List,
         callback_sensor_suite: Optional[SensorSuite],
         **kwargs,
     ) -> None:
@@ -410,6 +411,7 @@ class BatchedTask(Generic[EnvType]):
         self.frames = None
         self.depths = None
         self.segs = None
+        self.state_views = state_views
 
         # If task_batch_size greater than 1, instantiate the rest of tasks (with task_batch_size set to 1)
         if self.task_sampler.task_batch_size > 1:
@@ -442,6 +444,12 @@ class BatchedTask(Generic[EnvType]):
             depth=self.depths[idx],
             seg=self.segs[idx],
         ) for idx, task in enumerate(self.tasks)]
+
+    def update_state_views(self):
+        for idx, state_view in enumerate(self.state_views):
+            updated_state_view = self.tasks[0].env.call(state_view)
+            for idy, task in enumerate(self.tasks):
+                task.state_views[idx] = updated_state_view[idy]
 
     @property
     @abc.abstractmethod
