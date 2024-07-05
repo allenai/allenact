@@ -245,6 +245,7 @@ class LoggingPackage:
         training_steps: Optional[int],
         storage_uuid_to_total_experiences: Dict[str, int],
         pipeline_stage: Optional[int] = None,
+        checkpoint_file_name: Optional[str] = None,
     ) -> None:
         self.mode = mode
 
@@ -259,7 +260,7 @@ class LoggingPackage:
 
         self.metric_dicts: List[Any] = []
         self.viz_data: Optional[Dict[str, List[Dict[str, Any]]]] = None
-        self.checkpoint_file_name: Optional[str] = None
+        self.checkpoint_file_name: Optional[str] = checkpoint_file_name
         self.task_callback_data: List[Any] = []
 
         self.num_empty_metrics_dicts_added: int = 0

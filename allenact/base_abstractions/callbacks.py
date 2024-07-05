@@ -28,6 +28,7 @@ class Callback(abc.ABC):
         tasks_data: List[Any],
         step: int,
         scalar_name_to_total_experiences_key: Dict[str, str],
+        checkpoint_file_name: str,
         **kwargs,
     ) -> None:
         """Called once train is supposed to log."""

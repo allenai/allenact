@@ -551,6 +551,7 @@ class OnPolicyRLEngine(object):
         tracking_info_list: List[TrackingInfo],
         logging_pkg: Optional[LoggingPackage] = None,
         send_logging_package: bool = True,
+        checkpoint_file_name: Optional[str] = None,
     ):
         if logging_pkg is None:
             logging_pkg = LoggingPackage(
@@ -558,6 +559,7 @@ class OnPolicyRLEngine(object):
                 training_steps=self.training_pipeline.total_steps,
                 pipeline_stage=self.training_pipeline.current_stage_index,
                 storage_uuid_to_total_experiences=self.training_pipeline.storage_uuid_to_total_experiences,
+                checkpoint_file_name=checkpoint_file_name,
             )
 
         self.aggregate_task_metrics(logging_pkg=logging_pkg)
@@ -1327,11 +1329,13 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         tracking_info_list: List[TrackingInfo],
         logging_pkg: Optional[LoggingPackage] = None,
         send_logging_package: bool = True,
+        checkpoint_file_name: Optional[str] = None,
     ):
         logging_pkg = super().aggregate_and_send_logging_package(
             tracking_info_list=tracking_info_list,
             logging_pkg=logging_pkg,
             send_logging_package=send_logging_package,
+            checkpoint_file_name=checkpoint_file_name,
         )
 
         if self.mode == TRAIN_MODE_STR:
@@ -1532,6 +1536,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
     def _save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter(
         self, pipeline_stage_index: Optional[int] = None
     ):
+        model_path = None
         self.deterministic_seeds()
         # if self.worker_id == self.first_local_worker_id:
         if self.worker_id == 0:
@@ -1539,6 +1544,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             if self.checkpoints_queue is not None:
                 self.checkpoints_queue.put(("eval", model_path))
         self.last_save = self.training_pipeline.total_steps
+        return model_path
 
     def run_pipeline(self, valid_on_initial_weights: bool = False):
         cur_stage_training_settings = (
@@ -1835,24 +1841,26 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step(epoch=self.training_pipeline.total_steps)
 
+            # Here we handle saving a checkpoint every `save_interval` steps, saving after
+            # a pipeline stage completes is controlled above
+            checkpoint_file_name = None
+            if should_save_checkpoints and (
+                    self.training_pipeline.total_steps - self.last_save
+                    >= cur_stage_training_settings.save_interval
+            ):
+                checkpoint_file_name = self._save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter()
+                already_saved_checkpoint = True
+
             if (
                 self.training_pipeline.total_steps - self.last_log >= self.log_interval
                 or self.training_pipeline.current_stage.is_complete
             ):
                 self.aggregate_and_send_logging_package(
-                    tracking_info_list=self.tracking_info_list
+                    tracking_info_list=self.tracking_info_list,
+                    checkpoint_file_name=checkpoint_file_name,
                 )
                 self.tracking_info_list.clear()
                 self.last_log = self.training_pipeline.total_steps
-
-            # Here we handle saving a checkpoint every `save_interval` steps, saving after
-            # a pipeline stage completes is controlled above
-            if should_save_checkpoints and (
-                self.training_pipeline.total_steps - self.last_save
-                >= cur_stage_training_settings.save_interval
-            ):
-                self._save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter()
-                already_saved_checkpoint = True
 
             if (
                 cur_stage_training_settings.advance_scene_rollout_period is not None
