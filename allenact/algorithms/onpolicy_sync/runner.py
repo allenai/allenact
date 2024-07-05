@@ -1204,6 +1204,7 @@ class OnPolicyRunner(object):
                     metrics=metric_dicts_list,
                     metric_means=callback_metric_means,
                     step=training_steps,
+                    checkpoint_file_name=checkpoint_file_name[0],
                     tasks_data=tasks_callback_data,
                     scalar_name_to_total_experiences_key=scalar_name_to_total_experiences_key,
                 )
