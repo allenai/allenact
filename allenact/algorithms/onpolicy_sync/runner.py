@@ -1109,9 +1109,16 @@ class OnPolicyRunner(object):
                             storage_uuid_to_total_experiences_key[storage_uuid]
                         )
 
-        assert all_equal(
-            checkpoint_file_name
-        ), f"All {mode} logging packages must have the same checkpoint_file_name."
+        if any(checkpoint_file_name):
+            ckpt_to_store = None
+            for ckpt in checkpoint_file_name:
+                if ckpt is not None:
+                    ckpt_to_store = ckpt
+            assert ckpt_to_store is not None
+            checkpoint_file_name = [ckpt_to_store]
+        # assert all_equal(
+        #     checkpoint_file_name
+        # ), f"All {mode} logging packages must have the same checkpoint_file_name."
 
         message = [
             f"{mode.upper()}: {training_steps} rollout steps ({pkgs[0].storage_uuid_to_total_experiences})"
