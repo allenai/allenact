@@ -39,11 +39,11 @@ class BatchController:
         **kwargs,
     ):
         self.task_batch_size = task_batch_size
-        self.controllers = [IThorEnvironment(**kwargs) for _ in range(task_batch_size)]
+        self.controllers = [IThorEnvironment(**kwargs) for _ in range(max(1, task_batch_size))]
         self._frames = []
 
     def step(self, actions: List[str]):
-        assert len(actions) == self.task_batch_size
+        assert len(actions) == self.task_batch_size or len(actions) == self.task_batch_size + 1
         for controller, action in zip(self.controllers, actions):
             controller.step(action=action if action != "End" else "Pass")
         self._frames = []
@@ -83,8 +83,30 @@ class BatchController:
 
 
 class BatchableObjectNaviThorGridTask(ObjectNaviThorGridTask):
-    def _step(self, action):
-        raise NotImplementedError()
+    # # TODO BEGIN For compatibility with batch_task_size = 0
+    #
+    # batch_index = 0
+    #
+    # def get_observations(self, **kwargs) -> List[Any]:  #-> Dict[str, Any]:
+    #     # Render all tasks in batch
+    #     self._frames = []
+    #     self.env.render()
+    #     obs = super().get_observations()
+    #     self.env._frames = []
+    #     return obs
+    #
+    # def _step(self, action):
+    #     # raise NotImplementedError()
+    #     action_str, interm = self._before_env_step(action)
+    #     self.env.step([action_str])
+    #     self._after_env_step(action, action_str, interm)
+    #     return RLStepResult(
+    #         observation=self.get_observations(),
+    #         reward=self.judge(),
+    #         done=self.is_done(),
+    #         info={"last_action_success": self.last_action_success},
+    #     )
+    # # TODO END For compatibility with batch_task_size = 0
 
     def is_goal_object_visible(self) -> bool:
         """Is the goal object currently visible?"""
@@ -126,8 +148,11 @@ class BatchedObjectNavTaskSampler(ObjectNavTaskSampler):
         if "task_batch_size" in kwargs:
             self.task_batch_size = kwargs["task_batch_size"]
             self.callback_sensor_suite = kwargs["callback_sensor_suite"]
-        kwargs.pop("task_batch_size")
-        kwargs.pop("callback_sensor_suite")
+            kwargs.pop("task_batch_size")
+            kwargs.pop("callback_sensor_suite")
+        else:
+            self.task_batch_size = 0
+            self.callback_sensor_suite = None
         super().__init__(**kwargs)
 
     def _create_environment(self):
@@ -175,16 +200,25 @@ class BatchedObjectNavTaskSampler(ObjectNavTaskSampler):
             "id"
         ] = f"{scene}__{'_'.join(list(map(str, self.env.controllers[idx].get_key(pose))))}__{task_info['object_type']}"
 
-        self._last_sampled_task = BatchedTask(
-            env=self.env,
-            sensors=self.sensors,
-            task_info=task_info,
-            max_steps=self.max_steps,
-            action_space=self._action_space,
-            task_sampler=self,
-            task_classes=[BatchableObjectNaviThorGridTask],
-            callback_sensor_suite=self.callback_sensor_suite,
-        )
+        if self.task_batch_size > 0:
+            self._last_sampled_task = BatchedTask(
+                env=self.env,
+                sensors=self.sensors,
+                task_info=task_info,
+                max_steps=self.max_steps,
+                action_space=self._action_space,
+                task_sampler=self,
+                task_classes=[BatchableObjectNaviThorGridTask],
+                callback_sensor_suite=self.callback_sensor_suite,
+            )
+        else:
+            self._last_sampled_task = BatchableObjectNaviThorGridTask(
+                env=self.env,
+                sensors=self.sensors,
+                task_info=task_info,
+                max_steps=self.max_steps,
+                action_space=self._action_space,
+            )
         return self._last_sampled_task
 
 

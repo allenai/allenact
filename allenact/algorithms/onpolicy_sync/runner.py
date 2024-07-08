@@ -499,7 +499,7 @@ class OnPolicyRunner(object):
         collect_valid_results: bool = False,
         valid_on_initial_weights: bool = False,
         try_restart_after_task_error: bool = False,
-        task_batch_size: int = 1,
+        task_batch_size: int = 0,
     ):
         self._initialize_start_train_or_start_test()
 

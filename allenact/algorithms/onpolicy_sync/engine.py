@@ -122,7 +122,7 @@ class OnPolicyRLEngine(object):
         max_sampler_processes_per_worker: Optional[int] = None,
         initial_model_state_dict: Optional[Union[Dict[str, Any], int]] = None,
         try_restart_after_task_error: bool = False,
-        task_batch_size: int = 1,
+        task_batch_size: int = 0,
         **kwargs,
     ):
         """Initializer.
@@ -485,8 +485,7 @@ class OnPolicyRLEngine(object):
         ):
             # No rollout storage, thus we are not
             observations = self.vector_tasks.get_observations()
-            if self.task_batch_size > 1:
-                # observations = sum([obs["batch_observations"] for obs in observations], [])
+            if self.task_batch_size > 0:
                 observations = sum(observations, [])
 
             npaused, keep, batch = self.remove_paused(observations)
@@ -526,7 +525,7 @@ class OnPolicyRLEngine(object):
     def num_active_samplers(self):
         if self.vector_tasks is None:
             return 0
-        return self.vector_tasks.num_unpaused_tasks * self.task_batch_size
+        return self.vector_tasks.num_unpaused_tasks * max(self.task_batch_size, 1)
 
     def act(
         self,
@@ -673,7 +672,7 @@ class OnPolicyRLEngine(object):
 
         # Convert flattened actions into list of actions and send them
         action_space = self.actor_critic.action_space
-        if self.task_batch_size > 1:
+        if self.task_batch_size > 0:
             action_space = gym.spaces.Tuple((action_space,) * self.task_batch_size)
             new_shape = tuple(flat_actions.shape)[:-2] + (flat_actions.shape[-2] // self.task_batch_size, flat_actions.shape[-1] * self.task_batch_size)
             flat_actions = flat_actions.view(new_shape)
@@ -682,31 +681,31 @@ class OnPolicyRLEngine(object):
             su.action_list(action_space, flat_actions)
         )
 
-        # Save after task completion metrics
-        for step_result in outputs:
-            if step_result.info is not None:
-                if COMPLETE_TASK_METRICS_KEY in step_result.info:
-                    self.single_process_metrics.append(
-                        step_result.info[COMPLETE_TASK_METRICS_KEY]
-                    )
-                    del step_result.info[COMPLETE_TASK_METRICS_KEY]
-                if COMPLETE_TASK_CALLBACK_KEY in step_result.info:
-                    self.single_process_task_callback_data.append(
-                        step_result.info[COMPLETE_TASK_CALLBACK_KEY]
-                    )
-                    del step_result.info[COMPLETE_TASK_CALLBACK_KEY]
-
         rewards: Union[List, torch.Tensor]
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
 
-        if self.task_batch_size > 1:
+        if self.task_batch_size > 0:
             # Each observation, reward, done, info is actually a list of task_batch_size units
             observations = sum(observations, [])
             rewards = sum(rewards, [])
             dones = sum(dones, [])
-            # infos = sum(infos, [])  # unused
+            infos = sum(infos, [])  # unused
             new_shape = tuple(flat_actions.shape)[:-2] + (flat_actions.shape[-2] * self.task_batch_size, flat_actions.shape[-1] // self.task_batch_size)
             flat_actions = flat_actions.view(new_shape)
+
+        # Save after task completion metrics
+        for info in infos:
+            if info is not None:
+                if COMPLETE_TASK_METRICS_KEY in info:
+                    self.single_process_metrics.append(
+                        info[COMPLETE_TASK_METRICS_KEY]
+                    )
+                    del info[COMPLETE_TASK_METRICS_KEY]
+                if COMPLETE_TASK_CALLBACK_KEY in info:
+                    self.single_process_task_callback_data.append(
+                        info[COMPLETE_TASK_CALLBACK_KEY]
+                    )
+                    del info[COMPLETE_TASK_CALLBACK_KEY]
 
         rewards = torch.tensor(
             rewards, dtype=torch.float, device=self.device,  # type:ignore

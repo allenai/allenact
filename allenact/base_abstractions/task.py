@@ -431,6 +431,7 @@ class BatchedTask(Generic[EnvType]):
         self.tasks[0].env.render()  # assume this is stored locally in the env class
 
         # return {"batch_observations": [task.get_observations() for task in self.tasks]}
+        # TODO this could be executed in a thread pool for very large batch sizes
         return [task.get_observations() for task in self.tasks]
 
     @property
@@ -461,11 +462,26 @@ class BatchedTask(Generic[EnvType]):
     def step(self, action: Any) -> RLStepResult:
         srs = self._step(action=action)
 
+        # TODO this could be executed in a thread pool for very large batch sizes
         for it, current_task in enumerate(self.tasks):
             if srs[it].info is None:
                 srs[it] = srs[it].clone({"info": {}})
 
+            # If reward is Sequence, it's assumed to follow the same order imposed by spaces' flatten operation
+            if isinstance(srs[it].reward, Sequence):
+                if isinstance(current_task._total_reward, Sequence):
+                    for it, rew in enumerate(srs[it].reward):
+                        current_task._total_reward[it] += float(rew)
+                else:
+                    current_task._total_reward = [float(r) for r in srs[it].reward]
+            else:
+                current_task._total_reward += float(srs[it].reward)  # type:ignore
+
+            current_task._increment_num_steps_taken()
+
             if current_task.is_done():
+                srs[it] = srs[it].clone({"done": True})
+
                 metrics = current_task.metrics()
                 if metrics is not None and len(metrics) != 0:
                     srs[it].info[COMPLETE_TASK_METRICS_KEY] = metrics
@@ -492,6 +508,7 @@ class BatchedTask(Generic[EnvType]):
         # Prepare all actions
         actions = []
         intermediates = []
+        # TODO this could be executed in a thread pool for very large batch sizes
         for it, task in enumerate(self.tasks):
             action_str, intermediate = task._before_env_step(action[it])
             actions.append(action_str)
@@ -502,6 +519,7 @@ class BatchedTask(Generic[EnvType]):
 
         # Prepare all results (excluding observations)
         srs = []
+        # TODO this could be executed in a thread pool for very large batch sizes
         for it, task in enumerate(self.tasks):
             sr = task._after_env_step(action[it], actions[it], intermediates[it])
             srs.append(sr)

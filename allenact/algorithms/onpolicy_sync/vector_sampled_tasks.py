@@ -159,7 +159,7 @@ class VectorSampledTasks:
         read_timeout: Optional[
             float
         ] = 60,  # Seconds to wait for a task to return a response before timing out
-        task_batch_size: int = 1,
+        task_batch_size: int = 0,
     ) -> None:
 
         self._is_waiting = False
@@ -337,7 +337,7 @@ class VectorSampledTasks:
         should_log: bool,
         child_pipe: Optional[Connection] = None,
         parent_pipe: Optional[Connection] = None,
-        task_batch_size: int = 1,
+        task_batch_size: int = 0,
     ) -> None:
         """process worker for creating and interacting with the
         Tasks/TaskSampler."""
@@ -884,7 +884,7 @@ class SingleProcessVectorSampledTasks(object):
         callback_sensor_suite: Optional[SensorSuite] = None,
         auto_resample_when_done: bool = True,
         should_log: bool = True,
-        task_batch_size: int = 1,
+        task_batch_size: int = 0,
     ) -> None:
 
         self._is_closed = True
@@ -960,12 +960,12 @@ class SingleProcessVectorSampledTasks(object):
         callback_sensor_suite: Optional[SensorSuite],
         auto_resample_when_done: bool,
         should_log: bool,
-        task_batch_size: int = 1,
+        task_batch_size: int = 0,
     ) -> Generator:
         """Generator for working with Tasks/TaskSampler."""
 
         task_sampler_args = {**sampler_fn_args}
-        if task_batch_size > 1:
+        if task_batch_size > 0:
             task_sampler_args["task_batch_size"] = task_batch_size
             task_sampler_args["callback_sensor_suite"] = callback_sensor_suite
             assert auto_resample_when_done, "auto resample should be the expected usage with batched tasks"
@@ -1106,7 +1106,7 @@ class SingleProcessVectorSampledTasks(object):
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args: Sequence[Dict[str, Any]],
         callback_sensor_suite: Optional[SensorSuite],
-        task_batch_size: int = 1,
+        task_batch_size: int = 0,
     ) -> List[Generator]:
 
         generators = []

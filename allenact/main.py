@@ -290,7 +290,7 @@ def get_argument_parser():
         "--task_batch_size",
         dest="task_batch_size",
         type=int,
-        default=1,
+        default=0,
         help="Makes task_batch_size training tasks be processed as a batch for each instantiated env",
     )
 
