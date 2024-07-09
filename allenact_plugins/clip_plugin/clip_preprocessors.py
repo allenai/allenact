@@ -124,9 +124,7 @@ class ClipResNetPreprocessor(Preprocessor):
             processed_chunks = []
             for idx in range(0, n, self.chunk_size):
                 processed_chunks.append(
-                    self.resnet(
-                        x[idx : min(idx + self.chunk_size, n)]
-                    ).float()
+                    self.resnet(x[idx : min(idx + self.chunk_size, n)]).float()
                 )
             x = torch.cat(processed_chunks, dim=0)
         else:

@@ -34,16 +34,19 @@ from allenact.base_abstractions.misc import RLStepResult
 
 class BatchController:
     def __init__(
-        self,
-        task_batch_size: int,
-        **kwargs,
+        self, task_batch_size: int, **kwargs,
     ):
         self.task_batch_size = task_batch_size
-        self.controllers = [IThorEnvironment(**kwargs) for _ in range(max(1, task_batch_size))]
+        self.controllers = [
+            IThorEnvironment(**kwargs) for _ in range(max(1, task_batch_size))
+        ]
         self._frames = []
 
     def step(self, actions: List[str]):
-        assert len(actions) == self.task_batch_size or len(actions) == self.task_batch_size + 1
+        assert (
+            len(actions) == self.task_batch_size
+            or len(actions) == self.task_batch_size + 1
+        )
         for controller, action in zip(self.controllers, actions):
             controller.step(action=action if action != "End" else "Pass")
         self._frames = []
@@ -53,15 +56,12 @@ class BatchController:
         return None
 
     def reset(
-        self,
-        idx: int,
-        scene: str,
+        self, idx: int, scene: str,
     ):
         self.controllers[idx].reset(scene)
 
     def batch_reset(
-        self,
-        scenes: List[str],
+        self, scenes: List[str],
     ):
         for controller, scene in zip(self.controllers, scenes):
             controller.reset(scene)
@@ -106,12 +106,16 @@ class BatchableObjectNaviThorGridTask(ObjectNaviThorGridTask):
             self._success = self.is_goal_object_visible()
             self.last_action_success = self._success
         else:
-            self.last_action_success = self.env.controllers[self.batch_index].last_action_success
+            self.last_action_success = self.env.controllers[
+                self.batch_index
+            ].last_action_success
 
             if (
                 not self.last_action_success
             ) and self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE is not None:
-                self.env.controllers[self.batch_index].update_graph_with_failed_action(failed_action=action_str)
+                self.env.controllers[self.batch_index].update_graph_with_failed_action(
+                    failed_action=action_str
+                )
 
         return RLStepResult(
             observation=None,
@@ -146,9 +150,9 @@ class BatchedObjectNavTaskSampler(ObjectNavTaskSampler):
         scene = self.sample_scene(force_advance_scene)
 
         if self.env is not None:
-            if scene.replace("_physics", "") != self.env.controllers[idx].scene_name.replace(
-                "_physics", ""
-            ):
+            if scene.replace("_physics", "") != self.env.controllers[
+                idx
+            ].scene_name.replace("_physics", ""):
                 self.env.reset(idx, scene)  # type:ignore
         else:
             self.env = self._create_environment()
@@ -170,7 +174,7 @@ class BatchedObjectNavTaskSampler(ObjectNavTaskSampler):
             print(
                 "WARNING",
                 "Scene {} does not contain any"
-                " objects of any of the types {}.".format(scene, self.object_types)
+                " objects of any of the types {}.".format(scene, self.object_types),
             )
 
         task_info["start_pose"] = copy.copy(pose)
@@ -207,9 +211,7 @@ class BatchedRGBSensorThor(RGBSensorThor):
     frame corresponding to the agent's egocentric view.
     """
 
-    def frame_from_env(
-        self, env, task,
-    ) -> np.ndarray:  # type:ignore
+    def frame_from_env(self, env, task,) -> np.ndarray:  # type:ignore
         return env._frames[task.batch_index]
 
 
@@ -222,7 +224,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     # A simple setting, train/valid/test are all the same single scene
     # and we're looking for a single object
     OBJECT_TYPES = ["Tomato"]
-    TRAIN_SCENES = ["FloorPlan1_physics", "FloorPlan2_physics"]
+    TRAIN_SCENES = ["FloorPlan1_physics"]  # , "FloorPlan2_physics"]
     # VALID_SCENES = ["FloorPlan1_physics"]
     # TEST_SCENES = ["FloorPlan1_physics"]
 
@@ -243,16 +245,24 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         self.task_batch_size = kwargs["task_batch_size"]
 
         # Setting up sensors
-        rgb_sensor_class = BatchedRGBSensorThor if self.task_batch_size > 0 else RGBSensorThor
+        rgb_sensor_class = (
+            BatchedRGBSensorThor if self.task_batch_size > 0 else RGBSensorThor
+        )
         self.SENSORS = [
             rgb_sensor_class(
-                height=self.SCREEN_SIZE, width=self.SCREEN_SIZE, use_resnet_normalization=True,
+                height=self.SCREEN_SIZE,
+                width=self.SCREEN_SIZE,
+                use_resnet_normalization=True,
             ),
             GoalObjectTypeThorSensor(object_types=self.OBJECT_TYPES),
         ]
 
     def tag(self):
-        return "BatchedObjectNavThorPPO" if self.task_batch_size > 0 else "ObjectNavThorPPO"
+        return (
+            "BatchedObjectNavThorPPO"
+            if self.task_batch_size > 0
+            else "ObjectNavThorPPO"
+        )
 
     def training_pipeline(self, **kwargs):
         ppo_steps = int(1e6)
@@ -322,7 +332,11 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         )
 
     def make_sampler_fn(self, **kwargs) -> TaskSampler:
-        return BatchedObjectNavTaskSampler(**kwargs) if kwargs.get("task_batch_size", 0) > 0 else ObjectNavTaskSampler(**kwargs)
+        return (
+            BatchedObjectNavTaskSampler(**kwargs)
+            if kwargs.get("task_batch_size", 0) > 0
+            else ObjectNavTaskSampler(**kwargs)
+        )
 
     @staticmethod
     def _partition_inds(n: int, num_parts: int):

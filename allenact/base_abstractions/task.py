@@ -7,7 +7,18 @@
 environment."""
 
 import abc
-from typing import Any, Dict, Generic, List, Optional, Sequence, Tuple, TypeVar, Union, final
+from typing import (
+    Any,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+    final,
+)
 
 import gym
 import numpy as np
@@ -55,7 +66,7 @@ class Task(Generic[EnvType]):
         sensors: Union[SensorSuite, Sequence[Sensor]],
         task_info: Dict[str, Any],
         max_steps: int,
-        **kwargs
+        **kwargs,
     ) -> None:
         self.env = env
         self.sensor_suite = (
@@ -395,7 +406,9 @@ class BatchedTask(Generic[EnvType]):
         callback_sensor_suite: Optional[SensorSuite],
         **kwargs,
     ) -> None:
-        assert hasattr(task_sampler, "task_batch_size"), "BatchedTask requires task_sampler to contain a `task_batch_size`"
+        assert hasattr(
+            task_sampler, "task_batch_size"
+        ), "BatchedTask requires task_sampler to contain a `task_batch_size`"
 
         # Keep a reference to the task sampler
         self.task_sampler = task_sampler
@@ -404,7 +417,16 @@ class BatchedTask(Generic[EnvType]):
         self.callback_sensor_suite = callback_sensor_suite
 
         # Instantiate the first actual task from the currently sampled info
-        self.tasks = [task_classes[0](env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, batch_index=0, **kwargs)]
+        self.tasks = [
+            task_classes[0](
+                env=env,
+                sensors=sensors,
+                task_info=task_info,
+                max_steps=max_steps,
+                batch_index=0,
+                **kwargs,
+            )
+        ]
         self.tasks[0].batch_index = 0
 
         # If task_batch_size greater than 1, instantiate the rest of tasks (with task_batch_size set to 1)
@@ -426,7 +448,7 @@ class BatchedTask(Generic[EnvType]):
     def observation_space(self):
         return self.tasks[0].observation_space
 
-    def get_observations(self, **kwargs) -> List[Any]:  #-> Dict[str, Any]:
+    def get_observations(self, **kwargs) -> List[Any]:  # -> Dict[str, Any]:
         # Render all tasks in batch
         self.tasks[0].env.render()  # assume this is stored locally in the env class
 
@@ -490,9 +512,7 @@ class BatchedTask(Generic[EnvType]):
                     task_callback_data = self.callback_sensor_suite.get_observations(
                         env=current_task.env, task=current_task
                     )
-                    srs[it].info[
-                        COMPLETE_TASK_CALLBACK_KEY
-                    ] = task_callback_data
+                    srs[it].info[COMPLETE_TASK_CALLBACK_KEY] = task_callback_data
 
                 self.tasks[it] = self.make_new_task(it)
 

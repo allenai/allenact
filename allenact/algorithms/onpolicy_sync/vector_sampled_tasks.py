@@ -31,7 +31,11 @@ from setproctitle import setproctitle as ptitle
 
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import SensorSuite, Sensor
-from allenact.base_abstractions.task import TaskSampler, COMPLETE_TASK_METRICS_KEY, COMPLETE_TASK_CALLBACK_KEY
+from allenact.base_abstractions.task import (
+    TaskSampler,
+    COMPLETE_TASK_METRICS_KEY,
+    COMPLETE_TASK_CALLBACK_KEY,
+)
 from allenact.utils.misc_utils import partition_sequence
 from allenact.utils.system import get_logger
 from allenact.utils.tensor_utils import tile_images
@@ -968,7 +972,9 @@ class SingleProcessVectorSampledTasks(object):
         if task_batch_size > 0:
             task_sampler_args["task_batch_size"] = task_batch_size
             task_sampler_args["callback_sensor_suite"] = callback_sensor_suite
-            assert auto_resample_when_done, "auto resample should be the expected usage with batched tasks"
+            assert (
+                auto_resample_when_done
+            ), "auto resample should be the expected usage with batched tasks"
 
         task_sampler = make_sampler_fn(**task_sampler_args)
         current_task = task_sampler.next_task()

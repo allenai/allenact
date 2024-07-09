@@ -49,8 +49,7 @@ class TestInferenceAgent(object):
 
         exp_config = PPOBabyAIGoToObjExperimentConfig()
         agent = InferenceAgent.from_experiment_config(
-            exp_config=exp_config,
-            device=torch.device("cpu"),
+            exp_config=exp_config, device=torch.device("cpu"),
         )
 
         task_sampler = exp_config.make_sampler_fn(

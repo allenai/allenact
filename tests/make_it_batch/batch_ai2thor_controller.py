@@ -4,9 +4,7 @@ from ai2thor.controller import Controller
 
 class BatchController:
     def __init__(
-        self,
-        task_batch_size: int,
-        **kwargs,
+        self, task_batch_size: int, **kwargs,
     ):
         self.task_batch_size = task_batch_size
         self.controllers = [Controller(**kwargs) for _ in range(task_batch_size)]
@@ -18,15 +16,12 @@ class BatchController:
         return self.batch_last_event()
 
     def reset(
-        self,
-        idx: int,
-        scene: str,
+        self, idx: int, scene: str,
     ):
         self.controllers[idx].reset(scene)
 
     def batch_reset(
-        self,
-        scenes: List[str],
+        self, scenes: List[str],
     ):
         for controller, scene in zip(self.controllers, scenes):
             controller.reset(scene)

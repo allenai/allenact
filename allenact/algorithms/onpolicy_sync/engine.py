@@ -18,6 +18,7 @@ import torch.distributions  # type: ignore
 import torch.multiprocessing as mp  # type: ignore
 import torch.nn as nn
 import torch.optim as optim
+
 # noinspection PyProtectedMember
 from torch._C._distributed_c10d import ReduceOp
 
@@ -674,7 +675,10 @@ class OnPolicyRLEngine(object):
         action_space = self.actor_critic.action_space
         if self.task_batch_size > 0:
             action_space = gym.spaces.Tuple((action_space,) * self.task_batch_size)
-            new_shape = tuple(flat_actions.shape)[:-2] + (flat_actions.shape[-2] // self.task_batch_size, flat_actions.shape[-1] * self.task_batch_size)
+            new_shape = tuple(flat_actions.shape)[:-2] + (
+                flat_actions.shape[-2] // self.task_batch_size,
+                flat_actions.shape[-1] * self.task_batch_size,
+            )
             flat_actions = flat_actions.view(new_shape)
 
         outputs: List[RLStepResult] = self.vector_tasks.step(
@@ -718,7 +722,10 @@ class OnPolicyRLEngine(object):
             rewards = sum(rewards, [])
             dones = sum(dones, [])
             # infos = sum(infos, [])  # unused
-            new_shape = tuple(flat_actions.shape)[:-2] + (flat_actions.shape[-2] * self.task_batch_size, flat_actions.shape[-1] // self.task_batch_size)
+            new_shape = tuple(flat_actions.shape)[:-2] + (
+                flat_actions.shape[-2] * self.task_batch_size,
+                flat_actions.shape[-1] // self.task_batch_size,
+            )
             flat_actions = flat_actions.view(new_shape)
 
         rewards = torch.tensor(
@@ -836,7 +843,6 @@ class OnPolicyRLEngine(object):
         ):  # Might occur during testing when all stages are complete
             return 0
         return self.training_pipeline.current_stage.steps_taken_in_stage
-
 
     def compute_losses_track_them_and_backprop(
         self,
@@ -1410,7 +1416,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
     @property
     def log_interval(self):
-        return self.training_pipeline.current_stage.training_settings.metric_accumulate_interval
+        return (
+            self.training_pipeline.current_stage.training_settings.metric_accumulate_interval
+        )
 
     @property
     def approx_steps(self):

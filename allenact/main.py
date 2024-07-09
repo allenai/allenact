@@ -446,7 +446,9 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, str]]:
             config_kwargs, Dict
         ), "`--config_kwargs` must be a json string (or a path to a .json file) that evaluates to a dictionary."
 
-    assert "task_batch_size" not in config_kwargs, "`task_batch_size` is added to the ExperimentConfig's kwargs by AllenAct"
+    assert (
+        "task_batch_size" not in config_kwargs
+    ), "`task_batch_size` is added to the ExperimentConfig's kwargs by AllenAct"
     config_kwargs["task_batch_size"] = args.task_batch_size
 
     config = experiments[0](**config_kwargs)
