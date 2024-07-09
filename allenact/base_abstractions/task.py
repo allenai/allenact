@@ -439,7 +439,7 @@ class BatchedTask(Generic[EnvType]):
                 self.tasks.append(self.make_new_task(it))
 
             # Also, a ThreadPoolExecutor to collect all data (possibly) under IO bottlenecks
-            self.executor = ThreadPoolExecutor()
+            self.executor = ThreadPoolExecutor(max_workers=min(10, self.task_sampler.task_batch_size))
 
             # Also, a mutex to enable underlying task sampler implementations to ensure e.g. only one process
             # resets the sampler when called from a ThreadPoolExecutor (next_task must be thread safe, possibly
@@ -472,6 +472,8 @@ class BatchedTask(Generic[EnvType]):
             res[it] = task.get_observations()
 
         wait([self.executor.submit(obs_extract, it, task) for it, task in enumerate(self.tasks)])
+        # for it, task in enumerate(self.tasks):
+        #     obs_extract(it, task)
 
         return res
 
@@ -546,6 +548,8 @@ class BatchedTask(Generic[EnvType]):
 
         # Ensure completion with wait():
         wait([self.executor.submit(update_after_step, it, current_task) for it, current_task in enumerate(self.tasks)])
+        # for it, current_task in enumerate(self.tasks):
+        #     update_after_step(it, current_task)
 
         return RLStepResult(
             observation=self.get_observations(),
@@ -564,6 +568,8 @@ class BatchedTask(Generic[EnvType]):
             actions[it], intermediates[it] = task._before_env_step(action[it])
 
         wait([self.executor.submit(before_step, it, task) for it, task in enumerate(self.tasks)])
+        # for it, task in enumerate(self.tasks):
+        #     before_step(it, task)
 
         # Step over all tasks
         self.env.step(actions)
@@ -575,6 +581,8 @@ class BatchedTask(Generic[EnvType]):
             srs[it] = task._after_env_step(action[it], actions[it], intermediates[it])
 
         wait([self.executor.submit(after_step, it, task) for it, task in enumerate(self.tasks)])
+        # for it, task in enumerate(self.tasks):
+        #     after_step(it, task)
 
         return srs
 
