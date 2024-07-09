@@ -1518,6 +1518,7 @@ class OnPolicyRunner(object):
                 ckpt_dir = "{}/ckpt-{}.pt".format(eval_dir, steps)
                 shutil.move("tmp/ckpt.pt", ckpt_dir)
                 ckpts_paths.append(ckpt_dir)
+            shutil.rmtree("tmp")
             return ckpts_paths
 
         if os.path.isdir(checkpoint_path_dir_or_pattern):
