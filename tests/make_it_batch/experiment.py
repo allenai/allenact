@@ -83,30 +83,8 @@ class BatchController:
 
 
 class BatchableObjectNaviThorGridTask(ObjectNaviThorGridTask):
-    # # TODO BEGIN For compatibility with batch_task_size = 0
-    #
-    # batch_index = 0
-    #
-    # def get_observations(self, **kwargs) -> List[Any]:  #-> Dict[str, Any]:
-    #     # Render all tasks in batch
-    #     self._frames = []
-    #     self.env.render()
-    #     obs = super().get_observations()
-    #     self.env._frames = []
-    #     return obs
-    #
-    # def _step(self, action):
-    #     # raise NotImplementedError()
-    #     action_str, interm = self._before_env_step(action)
-    #     self.env.step([action_str])
-    #     self._after_env_step(action, action_str, interm)
-    #     return RLStepResult(
-    #         observation=self.get_observations(),
-    #         reward=self.judge(),
-    #         done=self.is_done(),
-    #         info={"last_action_success": self.last_action_success},
-    #     )
-    # # TODO END For compatibility with batch_task_size = 0
+    def _step(self, action):
+        raise NotImplementedError()
 
     def is_goal_object_visible(self) -> bool:
         """Is the goal object currently visible?"""
@@ -156,7 +134,7 @@ class BatchedObjectNavTaskSampler(ObjectNavTaskSampler):
         super().__init__(**kwargs)
 
     def _create_environment(self):
-        env = BatchController(task_batch_size=self.task_batch_size)
+        env = BatchController(task_batch_size=self.task_batch_size, **self.env_args)
         return env
 
     def next_task(
@@ -232,7 +210,6 @@ class BatchedRGBSensorThor(RGBSensorThor):
     def frame_from_env(
         self, env, task,
     ) -> np.ndarray:  # type:ignore
-        assert len(env._frames) > 0
         return env._frames[task.batch_index]
 
 
@@ -255,6 +232,9 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         BatchedRGBSensorThor(
             height=SCREEN_SIZE, width=SCREEN_SIZE, use_resnet_normalization=True,
         ),
+        # RGBSensorThor(
+        #     height=SCREEN_SIZE, width=SCREEN_SIZE, use_resnet_normalization=True,
+        # ),  # For non-batched
         GoalObjectTypeThorSensor(object_types=OBJECT_TYPES),
     ]
 
@@ -345,7 +325,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return BatchedObjectNavTaskSampler(**kwargs)
+        return BatchedObjectNavTaskSampler(**kwargs) if kwargs.get("task_batch_size", 0) > 0 else ObjectNavTaskSampler(**kwargs)
 
     @staticmethod
     def _partition_inds(n: int, num_parts: int):
