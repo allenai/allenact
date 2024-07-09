@@ -418,6 +418,8 @@ class BatchedTask(Generic[EnvType]):
         self.task_classes = task_classes
         self.callback_sensor_suite = callback_sensor_suite
 
+        self.env = env
+
         # Instantiate the first actual task from the currently sampled info
         self.tasks = [
             task_classes[0](
@@ -431,15 +433,23 @@ class BatchedTask(Generic[EnvType]):
         ]
         self.tasks[0].batch_index = 0
 
-        # If task_batch_size greater than 1, instantiate the rest of tasks (with task_batch_size set to 1)
+        # If task_batch_size greater than 0, instantiate the rest of tasks
         if self.task_sampler.task_batch_size > 0:
             for it in range(1, self.task_sampler.task_batch_size):
                 self.tasks.append(self.make_new_task(it))
+
+            # Also, a ThreadPoolExecutor to collect all data (possibly) under IO bottlenecks
             self.executor = ThreadPoolExecutor()
+
+            # Also, a mutex to enable underlying task sampler implementations to ensure e.g. only one process
+            # resets the sampler when called from a ThreadPoolExecutor (next_task must be thread safe, possibly
+            # acquiring/releasing the mutex as needed).
             self.task_sampler.batch_mutex = threading.Lock()
 
     def make_new_task(self, batch_index):
         task_batch_size = self.task_sampler.task_batch_size
+        # `task_batch_size` set to 0 ensures we don't generate new tasks recursively
+        # and avoids instantiating new executors and batch mutex
         self.task_sampler.task_batch_size = 0
         try:
             task = getattr(self.task_sampler.next_task(idx=batch_index), "tasks")[0]
@@ -454,7 +464,7 @@ class BatchedTask(Generic[EnvType]):
 
     def get_observations(self, **kwargs) -> List[Any]:  # -> Dict[str, Any]:
         # Render all tasks in batch
-        self.tasks[0].env.render()  # assume this is stored locally in the env class
+        self.env.render()  # assume this is stored locally in the env class
 
         def obs_extract(t):
             return t.get_observations()
@@ -552,7 +562,7 @@ class BatchedTask(Generic[EnvType]):
         wait([self.executor.submit(before_step, it, task) for it, task in enumerate(self.tasks)])
 
         # Step over all tasks
-        self.tasks[0].env.step(actions)
+        self.env.step(actions)
 
         # Prepare all results (excluding observations)
         srs: List[Optional[RLStepResult]] = [None] * len(self.tasks)
