@@ -226,18 +226,8 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     # VALID_SCENES = ["FloorPlan1_physics"]
     # TEST_SCENES = ["FloorPlan1_physics"]
 
-    # Setting up sensors and basic environment details
+    # Setting basic environment details
     SCREEN_SIZE = 224
-    SENSORS = [
-        BatchedRGBSensorThor(
-            height=SCREEN_SIZE, width=SCREEN_SIZE, use_resnet_normalization=True,
-        ),
-        # RGBSensorThor(
-        #     height=SCREEN_SIZE, width=SCREEN_SIZE, use_resnet_normalization=True,
-        # ),  # For non-batched
-        GoalObjectTypeThorSensor(object_types=OBJECT_TYPES),
-    ]
-
     ENV_ARGS = {
         "player_screen_height": SCREEN_SIZE,
         "player_screen_width": SCREEN_SIZE,
@@ -249,18 +239,28 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     # VALID_SAMPLES_IN_SCENE = 10
     # TEST_SAMPLES_IN_SCENE = 100
 
-    @classmethod
-    def tag(cls):
-        return "BatchedObjectNavThorPPO"
+    def __init__(self, *args, **kwargs):
+        self.task_batch_size = kwargs["task_batch_size"]
 
-    @classmethod
-    def training_pipeline(cls, **kwargs):
+        # Setting up sensors
+        rgb_sensor_class = BatchedRGBSensorThor if self.task_batch_size > 0 else RGBSensorThor
+        self.SENSORS = [
+            rgb_sensor_class(
+                height=self.SCREEN_SIZE, width=self.SCREEN_SIZE, use_resnet_normalization=True,
+            ),
+            GoalObjectTypeThorSensor(object_types=self.OBJECT_TYPES),
+        ]
+
+    def tag(self):
+        return "BatchedObjectNavThorPPO" if self.task_batch_size > 0 else "ObjectNavThorPPO"
+
+    def training_pipeline(self, **kwargs):
         ppo_steps = int(1e6)
         lr = 2.5e-4
         num_mini_batch = 2 if not torch.cuda.is_available() else 6
         update_repeats = 4
-        num_steps = cls.MAX_STEPS
-        metric_accumulate_interval = cls.MAX_STEPS * 1  # Log every 10 max length tasks
+        num_steps = self.MAX_STEPS
+        metric_accumulate_interval = self.MAX_STEPS * 1  # Log every 10 max length tasks
         save_interval = 10000
         gamma = 0.99
         use_gae = True
@@ -281,7 +281,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
-            advance_scene_rollout_period=cls.ADVANCE_SCENE_ROLLOUT_PERIOD,
+            advance_scene_rollout_period=self.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
                 PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps,),
             ],
@@ -290,8 +290,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             ),
         )
 
-    @classmethod
-    def machine_params(cls, mode="train", **kwargs):
+    def machine_params(self, mode="train", **kwargs):
         num_gpus = torch.cuda.device_count()
         has_gpu = num_gpus != 0
 
@@ -309,22 +308,20 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
 
         return MachineParams(nprocesses=nprocesses, devices=gpu_ids,)
 
-    @classmethod
-    def create_model(cls, **kwargs) -> nn.Module:
+    def create_model(self, **kwargs) -> nn.Module:
         return ObjectNavActorCritic(
             action_space=gym.spaces.Discrete(
                 len(ObjectNaviThorGridTask.class_action_names())
             ),
-            observation_space=SensorSuite(cls.SENSORS).observation_spaces,
-            rgb_uuid=cls.SENSORS[0].uuid,
+            observation_space=SensorSuite(self.SENSORS).observation_spaces,
+            rgb_uuid=self.SENSORS[0].uuid,
             depth_uuid=None,
             goal_sensor_uuid="goal_object_type_ind",
             hidden_size=512,
             object_type_embedding_dim=8,
         )
 
-    @classmethod
-    def make_sampler_fn(cls, **kwargs) -> TaskSampler:
+    def make_sampler_fn(self, **kwargs) -> TaskSampler:
         return BatchedObjectNavTaskSampler(**kwargs) if kwargs.get("task_batch_size", 0) > 0 else ObjectNavTaskSampler(**kwargs)
 
     @staticmethod

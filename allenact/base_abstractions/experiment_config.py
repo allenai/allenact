@@ -177,9 +177,7 @@ class FrozenClassVariables(abc.ABCMeta):
                 "Changing the values of class-level attributes is disabled in ExperimentConfig classes.\n"
                 "This is to prevent problems that can occur otherwise when using multiprocessing.\n"
                 "If you wish to change the value of a configuration, please do so for an instance of that"
-                " configuration.\nTriggered by attempting to modify {}".format(
-                    cls.__name__
-                )
+                f" configuration.\nTriggered by attempting to modify {cls.__name__}'s {attr}."
             )
         else:
             super().__setattr__(attr, value)
