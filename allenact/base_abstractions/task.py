@@ -7,6 +7,7 @@
 environment."""
 
 import abc
+import threading
 from typing import (
     Any,
     Dict,
@@ -19,6 +20,7 @@ from typing import (
     Union,
     final,
 )
+from concurrent.futures import ThreadPoolExecutor, wait
 
 import gym
 import numpy as np
@@ -430,13 +432,15 @@ class BatchedTask(Generic[EnvType]):
         self.tasks[0].batch_index = 0
 
         # If task_batch_size greater than 1, instantiate the rest of tasks (with task_batch_size set to 1)
-        if self.task_sampler.task_batch_size > 1:
+        if self.task_sampler.task_batch_size > 0:
             for it in range(1, self.task_sampler.task_batch_size):
                 self.tasks.append(self.make_new_task(it))
+            self.executor = ThreadPoolExecutor()
+            self.task_sampler.batch_mutex = threading.Lock()
 
     def make_new_task(self, batch_index):
         task_batch_size = self.task_sampler.task_batch_size
-        self.task_sampler.task_batch_size = 1
+        self.task_sampler.task_batch_size = 0
         try:
             task = getattr(self.task_sampler.next_task(idx=batch_index), "tasks")[0]
             task.batch_index = batch_index
@@ -452,12 +456,12 @@ class BatchedTask(Generic[EnvType]):
         # Render all tasks in batch
         self.tasks[0].env.render()  # assume this is stored locally in the env class
 
-        # return {"batch_observations": [task.get_observations() for task in self.tasks]}
-        # TODO this could be executed in a thread pool for very large batch sizes
-        return [task.get_observations() for task in self.tasks]
+        def obs_extract(t):
+            return t.get_observations()
+
+        return list(self.executor.map(obs_extract, self.tasks))
 
     @property
-    @abc.abstractmethod
     def action_space(self) -> gym.Space:
         return self.tasks[0].action_space
 
@@ -484,72 +488,85 @@ class BatchedTask(Generic[EnvType]):
     def step(self, action: Any) -> RLStepResult:
         srs = self._step(action=action)
 
-        # TODO this could be executed in a thread pool for very large batch sizes
-        for it, current_task in enumerate(self.tasks):
-            if srs[it].info is None:
-                srs[it] = srs[it].clone({"info": {}})
+        rewards = [None] * len(self.tasks)
+        dones = [None] * len(self.tasks)
+        infos = [None] * len(self.tasks)
+
+        def update_after_step(it, current_task):
+            sr = srs[it]
+
+            info = sr.info or {}
 
             # If reward is Sequence, it's assumed to follow the same order imposed by spaces' flatten operation
-            if isinstance(srs[it].reward, Sequence):
+            if isinstance(sr.reward, Sequence):
                 if isinstance(current_task._total_reward, Sequence):
-                    for it, rew in enumerate(srs[it].reward):
+                    for it, rew in enumerate(sr.reward):
                         current_task._total_reward[it] += float(rew)
                 else:
-                    current_task._total_reward = [float(r) for r in srs[it].reward]
+                    current_task._total_reward = [float(r) for r in sr.reward]
             else:
-                current_task._total_reward += float(srs[it].reward)  # type:ignore
+                current_task._total_reward += float(sr.reward)  # type:ignore
 
             current_task._increment_num_steps_taken()
 
+            done = sr.done
+
             if current_task.is_done():
-                srs[it] = srs[it].clone({"done": True})
+                done = True
 
                 metrics = current_task.metrics()
                 if metrics is not None and len(metrics) != 0:
-                    srs[it].info[COMPLETE_TASK_METRICS_KEY] = metrics
+                    info[COMPLETE_TASK_METRICS_KEY] = metrics
 
                 if self.callback_sensor_suite is not None:
                     task_callback_data = self.callback_sensor_suite.get_observations(
                         env=current_task.env, task=current_task
                     )
-                    srs[it].info[COMPLETE_TASK_CALLBACK_KEY] = task_callback_data
+                    info[COMPLETE_TASK_CALLBACK_KEY] = task_callback_data
 
                 self.tasks[it] = self.make_new_task(it)
 
+            rewards[it] = sr.reward
+            dones[it] = done
+            infos[it] = info
+
+        # Ensure completion with wait():
+        wait([self.executor.submit(update_after_step, it, current_task) for it, current_task in enumerate(self.tasks)])
+
         return RLStepResult(
             observation=self.get_observations(),
-            reward=[sr.reward for sr in srs],
-            done=[sr.done for sr in srs],  # type:ignore
-            info=[sr.info for sr in srs],  # type:ignore
+            reward=rewards,  # type:ignore
+            done=dones,  # type:ignore
+            info=infos,  # type:ignore
         )
 
     @final
     def _step(self, action: Any) -> List[RLStepResult]:
         # Prepare all actions
-        actions = []
-        intermediates = []
-        # TODO this could be executed in a thread pool for very large batch sizes
-        for it, task in enumerate(self.tasks):
-            action_str, intermediate = task._before_env_step(action[it])
-            actions.append(action_str)
-            intermediates.append(intermediate)
+        actions = [None] * len(self.tasks)
+        intermediates = [None] * len(self.tasks)
+
+        def before_step(it, task):
+            actions[it], intermediates[it] = task._before_env_step(action[it])
+
+        wait([self.executor.submit(before_step, it, task) for it, task in enumerate(self.tasks)])
 
         # Step over all tasks
         self.tasks[0].env.step(actions)
 
         # Prepare all results (excluding observations)
-        srs = []
-        # TODO this could be executed in a thread pool for very large batch sizes
-        for it, task in enumerate(self.tasks):
-            sr = task._after_env_step(action[it], actions[it], intermediates[it])
-            srs.append(sr)
+        srs: List[Optional[RLStepResult]] = [None] * len(self.tasks)
+
+        def after_step(it, task):
+            srs[it] = task._after_env_step(action[it], actions[it], intermediates[it])
+
+        wait([self.executor.submit(after_step, it, task) for it, task in enumerate(self.tasks)])
 
         return srs
 
     def reached_max_steps(self) -> bool:
         return False
 
-    @abc.abstractmethod
     def reached_terminal_state(self) -> bool:
         return False
 
@@ -559,8 +576,8 @@ class BatchedTask(Generic[EnvType]):
     def num_steps_taken(self) -> int:
         return -1
 
-    @abc.abstractmethod
     def close(self) -> None:
+        self.executor.shutdown(cancel_futures=True)
         self.tasks[0].close()
 
     def metrics(self) -> Dict[str, Any]:

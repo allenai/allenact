@@ -130,16 +130,17 @@ class BatchedObjectNavTaskSampler(ObjectNavTaskSampler):
         if "task_batch_size" in kwargs:
             self.task_batch_size = kwargs["task_batch_size"]
             self.callback_sensor_suite = kwargs["callback_sensor_suite"]
+            self.use_batched_task = True
             kwargs.pop("task_batch_size")
             kwargs.pop("callback_sensor_suite")
         else:
             self.task_batch_size = 0
             self.callback_sensor_suite = None
+            self.use_batched_task = False
         super().__init__(**kwargs)
 
     def _create_environment(self):
-        env = BatchController(task_batch_size=self.task_batch_size, **self.env_args)
-        return env
+        return BatchController(task_batch_size=self.task_batch_size, **self.env_args)
 
     def next_task(
         self, force_advance_scene: bool = False, idx=0,
@@ -147,7 +148,13 @@ class BatchedObjectNavTaskSampler(ObjectNavTaskSampler):
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
 
+        mutex = getattr(self, "batch_mutex", None)
+
+        if mutex is not None:
+            mutex.acquire()
         scene = self.sample_scene(force_advance_scene)
+        if mutex is not None:
+            mutex.release()
 
         if self.env is not None:
             if scene.replace("_physics", "") != self.env.controllers[
@@ -182,7 +189,7 @@ class BatchedObjectNavTaskSampler(ObjectNavTaskSampler):
             "id"
         ] = f"{scene}__{'_'.join(list(map(str, self.env.controllers[idx].get_key(pose))))}__{task_info['object_type']}"
 
-        if self.task_batch_size > 0:
+        if self.use_batched_task:
             self._last_sampled_task = BatchedTask(
                 env=self.env,
                 sensors=self.sensors,
