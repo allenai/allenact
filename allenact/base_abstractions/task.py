@@ -466,10 +466,14 @@ class BatchedTask(Generic[EnvType]):
         # Render all tasks in batch
         self.env.render()  # assume this is stored locally in the env class
 
-        def obs_extract(t):
-            return t.get_observations()
+        res = [None] * len(self.tasks)
 
-        return list(self.executor.map(obs_extract, self.tasks))
+        def obs_extract(it, task):
+            res[it] = task.get_observations()
+
+        wait([self.executor.submit(obs_extract, it, task) for it, task in enumerate(self.tasks)])
+
+        return res
 
     @property
     def action_space(self) -> gym.Space:
