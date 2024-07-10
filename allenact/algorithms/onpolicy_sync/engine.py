@@ -1549,6 +1549,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.training_pipeline.current_stage.training_settings
         )
 
+        # Change engine attributes that depend on the current stage
+        self.training_pipeline.current_stage.change_engine_attributes(self)
+
         rollout_storage = self.training_pipeline.rollout_storage
         uuid_to_storage = self.training_pipeline.current_stage_storage
         self.initialize_storage_and_viz(
@@ -1641,6 +1644,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     storage_to_initialize=storage_to_initialize,
                 )
                 uuid_to_storage = new_uuid_to_storage
+
+                # Change engine attributes that depend on the current stage
+                self.training_pipeline.current_stage.change_engine_attributes(self)
 
             already_saved_checkpoint = False
 
