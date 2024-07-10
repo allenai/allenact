@@ -45,6 +45,7 @@ from allenact.utils.experiment_utils import (
     ScalarMeanTracker,
     set_deterministic_cudnn,
     set_seed,
+    download_checkpoint_from_wandb,
 )
 from allenact.utils.misc_utils import (
     NumpyJSONEncoder,
@@ -1499,25 +1500,9 @@ class OnPolicyRunner(object):
         approx_ckpt_step_interval: Optional[int] = None,
     ):
         if "wandb://" == checkpoint_path_dir_or_pattern[:8]:
-            import wandb
-            import shutil
             eval_dir = "wandb_ckpts_to_eval/{}".format(self.local_start_time_str)
             os.makedirs(eval_dir, exist_ok=True)
-            api = wandb.Api()
-            run_token = checkpoint_path_dir_or_pattern.split("//")[1]
-            ckpt_steps = checkpoint_path_dir_or_pattern.split("//")[2:]
-            if ckpt_steps[-1] == "":
-                ckpt_steps = ckpt_steps[:-1]
-            ckpts_paths = []
-            for steps in ckpt_steps:
-                ckpt_fn = "{}-step-{}:latest".format(run_token, steps)
-                artifact = api.artifact(ckpt_fn)
-                _ = artifact.download("tmp")
-                ckpt_dir = "{}/ckpt-{}.pt".format(eval_dir, steps)
-                shutil.move("tmp/ckpt.pt", ckpt_dir)
-                ckpts_paths.append(ckpt_dir)
-            shutil.rmtree("tmp")
-            return ckpts_paths
+            return download_checkpoint_from_wandb(checkpoint_path_dir_or_pattern, eval_dir, only_allow_one_ckpt=False)
 
         if os.path.isdir(checkpoint_path_dir_or_pattern):
             # The fragment is a path to a directory, lets use this directory

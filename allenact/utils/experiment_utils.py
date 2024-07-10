@@ -26,6 +26,8 @@ import attr
 import numpy as np
 import torch
 import torch.optim as optim
+import wandb
+import shutil
 
 from allenact.algorithms.offpolicy_sync.losses.abstract_offpolicy_loss import Memory
 from allenact.algorithms.onpolicy_sync.losses.abstract_loss import (
@@ -1186,3 +1188,31 @@ class TrainingPipeline:
             )
             for loss_name in self.current_stage.loss_names
         }
+
+
+def download_checkpoint_from_wandb(checkpoint_path_dir_or_pattern, all_ckpt_dir, only_allow_one_ckpt=False):
+    api = wandb.Api()
+    run_token = checkpoint_path_dir_or_pattern.split("//")[1]
+    ckpt_steps = checkpoint_path_dir_or_pattern.split("//")[2:]
+    if ckpt_steps[-1] == "":
+        ckpt_steps = ckpt_steps[:-1]
+    if not only_allow_one_ckpt:
+        ckpts_paths = []
+        for steps in ckpt_steps:
+            ckpt_fn = "{}-step-{}:latest".format(run_token, steps)
+            artifact = api.artifact(ckpt_fn)
+            _ = artifact.download("tmp")
+            ckpt_dir = "{}/ckpt-{}.pt".format(all_ckpt_dir, steps)
+            shutil.move("tmp/ckpt.pt", ckpt_dir)
+            ckpts_paths.append(ckpt_dir)
+        shutil.rmtree("tmp")
+        return ckpts_paths
+    else:
+        assert len(ckpt_steps) == 1
+        ckpt_fn = "{}-step-{}:latest".format(run_token, steps)
+        artifact = api.artifact(ckpt_fn)
+        _ = artifact.download("tmp")
+        ckpt_dir = "{}/ckpt-{}.pt".format(all_ckpt_dir, steps)
+        shutil.move("tmp/ckpt.pt", ckpt_dir)
+        shutil.rmtree("tmp")
+        return ckpt_dir
