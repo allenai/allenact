@@ -64,9 +64,9 @@ class PointNavTask(Task[RoboThorEnvironment]):
         self._rewards: List[float] = []
         self._distance_to_goal: List[float] = []
         self._metrics = None
-        self.path: List[Any] = (
-            []
-        )  # the initial coordinate will be directly taken from the optimal path
+        self.path: List[
+            Any
+        ] = []  # the initial coordinate will be directly taken from the optimal path
         self.travelled_distance = 0.0
 
         self.task_info["followed_path"] = [self.env.agent_state()]

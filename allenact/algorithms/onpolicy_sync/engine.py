@@ -202,9 +202,9 @@ class OnPolicyRLEngine(object):
             self.sensor_preprocessor_graph = (
                 self.machine_params.sensor_preprocessor_graph.to(self.device)
             )
-            create_model_kwargs["sensor_preprocessor_graph"] = (
-                self.sensor_preprocessor_graph
-            )
+            create_model_kwargs[
+                "sensor_preprocessor_graph"
+            ] = self.sensor_preprocessor_graph
 
         set_seed(self.seed)
         self.actor_critic = cast(
@@ -290,9 +290,9 @@ class OnPolicyRLEngine(object):
         self.optimizer: Optional[optim.optimizer.Optimizer] = None
         # noinspection PyProtectedMember
         self.lr_scheduler: Optional[_LRScheduler] = None
-        self.insufficient_data_for_update: Optional[torch.distributed.PrefixStore] = (
-            None
-        )
+        self.insufficient_data_for_update: Optional[
+            torch.distributed.PrefixStore
+        ] = None
 
         # Training pipeline will be instantiated during training and inference.
         # During inference however, it will be instantiated anew on each run of `run_eval`
@@ -1061,9 +1061,9 @@ class OnPolicyRLEngine(object):
                     to_track["lr"] = self.optimizer.param_groups[0]["lr"]
 
                 if training_settings.num_mini_batch is not None:
-                    to_track["rollout_num_mini_batch"] = (
-                        training_settings.num_mini_batch
-                    )
+                    to_track[
+                        "rollout_num_mini_batch"
+                    ] = training_settings.num_mini_batch
 
                 for k, v in to_track.items():
                     # We need to set the bsize to 1 for `worker_batch_size` below as we're trying to record the
@@ -1095,13 +1095,13 @@ class OnPolicyRLEngine(object):
                         )
                     )
 
-                stage.stage_component_uuid_to_stream_memory[stage_component.uuid] = (
-                    detach_recursively(
-                        input=stage.stage_component_uuid_to_stream_memory[
-                            stage_component.uuid
-                        ],
-                        inplace=True,
-                    )
+                stage.stage_component_uuid_to_stream_memory[
+                    stage_component.uuid
+                ] = detach_recursively(
+                    input=stage.stage_component_uuid_to_stream_memory[
+                        stage_component.uuid
+                    ],
+                    inplace=True,
                 )
 
     def close(self, verbose=True):
@@ -1850,10 +1850,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             # a pipeline stage completes is controlled above
             checkpoint_file_name = None
             if should_save_checkpoints and (
-                    self.training_pipeline.total_steps - self.last_save
-                    >= cur_stage_training_settings.save_interval
+                self.training_pipeline.total_steps - self.last_save
+                >= cur_stage_training_settings.save_interval
             ):
-                checkpoint_file_name = self._save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter()
+                checkpoint_file_name = (
+                    self._save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter()
+                )
                 already_saved_checkpoint = True
 
             if (
@@ -1905,7 +1907,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     checkpoint_file_name = download_checkpoint_from_wandb(
                         checkpoint_path_dir_or_pattern,
                         ckpt_dir,
-                        only_allow_one_ckpt=True
+                        only_allow_one_ckpt=True,
                     )
                 self.checkpoint_load(checkpoint_file_name, restart_pipeline)
 

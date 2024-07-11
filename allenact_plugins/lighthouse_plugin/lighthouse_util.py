@@ -39,9 +39,9 @@ class StopIfNearOptimal(EarlyStoppingCriterion):
                 self.current_pos = 0
                 self.has_filled = True
             else:
-                self.memory[self.current_pos : (self.current_pos + count)] = (
-                    ep_length_ave
-                )
+                self.memory[
+                    self.current_pos : (self.current_pos + count)
+                ] = ep_length_ave
 
                 if self.current_pos + count > n:
                     self.has_filled = True

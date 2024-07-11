@@ -210,7 +210,8 @@ class SequentialDistr(Distr):
 
 
 class TrackingCallback(Protocol):
-    def __call__(self, type: TrackingInfoType, info: Dict[str, Any], n: int): ...
+    def __call__(self, type: TrackingInfoType, info: Dict[str, Any], n: int):
+        ...
 
 
 class TeacherForcingDistr(Distr):

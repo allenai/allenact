@@ -59,9 +59,9 @@ class ObjectNavTaskSampler(TaskSampler):
             self.scene_counter: Optional[int] = None
             self.scene_order: Optional[List[str]] = None
             self.scene_id: Optional[int] = None
-            self.scene_period: Optional[Union[str, int]] = (
-                scene_period  # default makes a random choice
-            )
+            self.scene_period: Optional[
+                Union[str, int]
+            ] = scene_period  # default makes a random choice
             self.max_tasks: Optional[int] = None
             self.reset_tasks = max_tasks
         else:
@@ -564,9 +564,9 @@ class PointNavTaskSampler(TaskSampler):
         self.scene_counter: Optional[int] = None
         self.scene_order: Optional[List[str]] = None
         self.scene_id: Optional[int] = None
-        self.scene_period: Optional[Union[str, int]] = (
-            scene_period  # default makes a random choice
-        )
+        self.scene_period: Optional[
+            Union[str, int]
+        ] = scene_period  # default makes a random choice
         self.max_tasks: Optional[int] = None
         self.reset_tasks = max_tasks
 
@@ -962,9 +962,9 @@ class NavToPartnerTaskSampler(TaskSampler):
         self.scene_counter: Optional[int] = None
         self.scene_order: Optional[List[str]] = None
         self.scene_id: Optional[int] = None
-        self.scene_period: Optional[Union[str, int]] = (
-            scene_period  # default makes a random choice
-        )
+        self.scene_period: Optional[
+            Union[str, int]
+        ] = scene_period  # default makes a random choice
         self.max_tasks: Optional[int] = None
         self.reset_tasks = max_tasks
 

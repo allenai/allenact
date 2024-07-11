@@ -191,13 +191,13 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
                     for sampler_needing_reset_ind in time_ind_to_which_need_instr_reset[
                         time_ind
                     ]:
-                        current_instr_embeddings_list[sampler_needing_reset_ind] = (
-                            unique_instr_embeddings[
-                                reset_multi_ind_to_index[
-                                    (time_ind, sampler_needing_reset_ind)
-                                ]
+                        current_instr_embeddings_list[
+                            sampler_needing_reset_ind
+                        ] = unique_instr_embeddings[
+                            reset_multi_ind_to_index[
+                                (time_ind, sampler_needing_reset_ind)
                             ]
-                        )
+                        ]
 
                     instr_embeddings_list.append(
                         torch.stack(current_instr_embeddings_list, dim=0)
@@ -352,13 +352,13 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
                     for sampler_needing_reset_ind in time_ind_to_which_need_instr_reset[
                         time_ind
                     ]:
-                        current_instr_embeddings_list[sampler_needing_reset_ind] = (
-                            unique_instr_embeddings[
-                                reset_multi_ind_to_index[
-                                    (time_ind, sampler_needing_reset_ind)
-                                ]
+                        current_instr_embeddings_list[
+                            sampler_needing_reset_ind
+                        ] = unique_instr_embeddings[
+                            reset_multi_ind_to_index[
+                                (time_ind, sampler_needing_reset_ind)
                             ]
-                        )
+                        ]
 
                     instr_embeddings_list.append(
                         torch.stack(current_instr_embeddings_list, dim=0)

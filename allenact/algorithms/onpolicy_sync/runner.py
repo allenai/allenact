@@ -1102,12 +1102,12 @@ class OnPolicyRunner(object):
                             f" AllenAct, please report this issue at https://github.com/allenai/allenact/issues."
                         )
                     else:
-                        scalar_name_to_total_storage_experience[scalar_name] = (
-                            total_exp_for_storage
-                        )
-                        scalar_name_to_total_experiences_key[scalar_name] = (
-                            storage_uuid_to_total_experiences_key[storage_uuid]
-                        )
+                        scalar_name_to_total_storage_experience[
+                            scalar_name
+                        ] = total_exp_for_storage
+                        scalar_name_to_total_experiences_key[
+                            scalar_name
+                        ] = storage_uuid_to_total_experiences_key[storage_uuid]
 
         if any(checkpoint_file_name):
             ckpt_to_store = None
@@ -1174,9 +1174,9 @@ class OnPolicyRunner(object):
                             stage_component_uuid,
                         )
                         callback_metric_means[approx_eps_key] = eps
-                        scalar_name_to_total_experiences_key[approx_eps_key] = (
-                            storage_uuid_to_total_experiences_key[storage_uuid]
-                        )
+                        scalar_name_to_total_experiences_key[
+                            approx_eps_key
+                        ] = storage_uuid_to_total_experiences_key[storage_uuid]
 
                         if log_writer is not None:
                             log_writer.add_scalar(
@@ -1502,7 +1502,9 @@ class OnPolicyRunner(object):
         if "wandb://" == checkpoint_path_dir_or_pattern[:8]:
             eval_dir = "wandb_ckpts_to_eval/{}".format(self.local_start_time_str)
             os.makedirs(eval_dir, exist_ok=True)
-            return download_checkpoint_from_wandb(checkpoint_path_dir_or_pattern, eval_dir, only_allow_one_ckpt=False)
+            return download_checkpoint_from_wandb(
+                checkpoint_path_dir_or_pattern, eval_dir, only_allow_one_ckpt=False
+            )
 
         if os.path.isdir(checkpoint_path_dir_or_pattern):
             # The fragment is a path to a directory, lets use this directory
