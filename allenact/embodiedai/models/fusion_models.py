@@ -28,7 +28,6 @@ class Fusion(nn.Module):
         all_beliefs: torch.FloatTensor,  # (T, N, H, K)
         obs_embeds: torch.FloatTensor,  # (T, N, Z)
     ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:  # (T, N, H), (T, N, K)
-
         num_steps, num_samplers, _, _ = all_beliefs.shape
         all_beliefs = all_beliefs.view(
             num_steps * num_samplers, self.hidden_size, self.num_tasks
@@ -36,7 +35,8 @@ class Fusion(nn.Module):
         obs_embeds = obs_embeds.view(num_steps * num_samplers, -1)
 
         weights = self.get_belief_weights(
-            all_beliefs=all_beliefs, obs_embeds=obs_embeds,  # (T*N, H, K)  # (T*N, Z)
+            all_beliefs=all_beliefs,
+            obs_embeds=obs_embeds,  # (T*N, H, K)  # (T*N, Z)
         ).unsqueeze(
             -1
         )  # (T*N, K, 1)
@@ -64,7 +64,6 @@ class AverageFusion(Fusion):
         all_beliefs: torch.FloatTensor,  # (T*N, H, K)
         obs_embeds: torch.FloatTensor,  # (T*N, Z)
     ) -> torch.FloatTensor:  # (T*N, K)
-
         batch_size = all_beliefs.shape[0]
         weights = torch.ones(batch_size, self.num_tasks).to(all_beliefs)
         weights /= self.num_tasks
@@ -88,7 +87,6 @@ class SoftmaxFusion(Fusion):
         all_beliefs: torch.Tensor,  # (T*N, H, K)
         obs_embeds: torch.Tensor,  # (T*N, Z)
     ) -> torch.Tensor:  # (T*N, K)
-
         scores = self.linear(obs_embeds)  # (T*N, K)
         weights = torch.softmax(scores, dim=-1)
         return weights
@@ -109,7 +107,6 @@ class AttentiveFusion(Fusion):
         all_beliefs: torch.Tensor,  # (T*N, H, K)
         obs_embeds: torch.Tensor,  # (T*N, Z)
     ) -> torch.Tensor:  # (T*N, K)
-
         queries = self.linear(obs_embeds).unsqueeze(1)  # (T*N, 1, H)
         scores = torch.bmm(queries, all_beliefs).squeeze(1)  # (T*N, K)
         weights = torch.softmax(

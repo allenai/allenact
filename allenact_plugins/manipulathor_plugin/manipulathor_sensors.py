@@ -20,7 +20,10 @@ from allenact_plugins.manipulathor_plugin.manipulathor_environment import (
 
 
 class DepthSensorThor(
-    DepthSensor[Union[ManipulaTHOREnvironment], Union[Task[ManipulaTHOREnvironment]],]
+    DepthSensor[
+        Union[ManipulaTHOREnvironment],
+        Union[Task[ManipulaTHOREnvironment]],
+    ]
 ):
     """Sensor for Depth images in THOR.
 
@@ -35,7 +38,10 @@ class DepthSensorThor(
 
 
 class NoVisionSensorThor(
-    RGBSensor[Union[ManipulaTHOREnvironment], Union[Task[ManipulaTHOREnvironment]],]
+    RGBSensor[
+        Union[ManipulaTHOREnvironment],
+        Union[Task[ManipulaTHOREnvironment]],
+    ]
 ):
     """Sensor for RGB images in THOR.
 
@@ -108,7 +114,9 @@ class RelativeObjectToGoalSensor(Sensor):
         relative_current_obj = world_coords_to_agent_coords(object_info, agent_state)
         relative_goal_state = world_coords_to_agent_coords(target_state, agent_state)
         relative_distance = diff_position(
-            relative_current_obj, relative_goal_state, absolute=False,
+            relative_current_obj,
+            relative_goal_state,
+            absolute=False,
         )
 
         result = coord_system_transform(relative_distance, self.coord_system)
@@ -161,7 +169,7 @@ class DistanceObjectToGoalSensor(Sensor):
         relative_distance = diff_position(relative_current_obj, relative_goal_state)
         result = state_dict_to_tensor(dict(position=relative_distance))
 
-        result = ((result ** 2).sum() ** 0.5).view(1)
+        result = ((result**2).sum() ** 0.5).view(1)
         return result
 
 
@@ -202,7 +210,9 @@ class RelativeAgentArmToObjectSensor(Sensor):
             hand_state, env.controller.last_event.metadata["agent"]
         )
         relative_distance = diff_position(
-            relative_goal_obj, relative_hand_state, absolute=False,
+            relative_goal_obj,
+            relative_hand_state,
+            absolute=False,
         )
         result = coord_system_transform(relative_distance, self.coord_system)
         return result
@@ -218,7 +228,6 @@ class InitialAgentArmToObjectSensor(Sensor):
     def get_observation(
         self, env: ManipulaTHOREnvironment, task: Task, *args: Any, **kwargs: Any
     ) -> Any:
-
         object_source_location = task.task_info["initial_object_location"]
         initial_hand_state = task.task_info["initial_hand_state"]
 
@@ -257,7 +266,7 @@ class DistanceAgentArmToObjectSensor(Sensor):
         relative_distance = diff_position(relative_goal_obj, relative_hand_state)
         result = state_dict_to_tensor(dict(position=relative_distance))
 
-        result = ((result ** 2).sum() ** 0.5).view(1)
+        result = ((result**2).sum() ** 0.5).view(1)
         return result
 
 

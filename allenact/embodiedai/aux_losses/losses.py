@@ -89,7 +89,6 @@ class AuxiliaryLoss(AbstractActorCriticLoss):
         *args,
         **kwargs,
     ) -> Tuple[torch.Tensor, Dict[str, float]]:
-
         # auxiliary loss
         return self.get_aux_loss(
             **actor_critic_output.extras[self.auxiliary_uuid],
@@ -114,7 +113,10 @@ class AuxiliaryLoss(AbstractActorCriticLoss):
 
 
 def _propagate_final_beliefs_to_all_steps(
-    beliefs: torch.Tensor, masks: torch.Tensor, num_sampler: int, num_steps: int,
+    beliefs: torch.Tensor,
+    masks: torch.Tensor,
+    num_sampler: int,
+    num_steps: int,
 ):
     final_beliefs = torch.zeros_like(beliefs)  # (T, B, *)
     start_locs_list = []
@@ -180,7 +182,10 @@ class InverseDynamicsLoss(AuxiliaryLoss):
         masks = masks.squeeze(-1)  # (T, B)
 
         final_beliefs, _, _ = _propagate_final_beliefs_to_all_steps(
-            beliefs, masks, num_sampler, num_steps,
+            beliefs,
+            masks,
+            num_sampler,
+            num_steps,
         )
 
         ## compute CE loss
@@ -236,7 +241,9 @@ class InverseDynamicsLoss(AuxiliaryLoss):
 
         return (
             avg_loss,
-            {"total": cast(torch.Tensor, avg_loss).item(),},
+            {
+                "total": cast(torch.Tensor, avg_loss).item(),
+            },
         )
 
 
@@ -275,7 +282,10 @@ class TemporalDistanceLoss(AuxiliaryLoss):
             start_locs_list,
             end_locs_list,
         ) = _propagate_final_beliefs_to_all_steps(
-            beliefs, masks, num_sampler, num_steps,
+            beliefs,
+            masks,
+            num_sampler,
+            num_steps,
         )
 
         ## also find the locs_batch of shape (M, 3)
@@ -353,7 +363,9 @@ class TemporalDistanceLoss(AuxiliaryLoss):
 
         return (
             avg_loss,
-            {"total": cast(torch.Tensor, avg_loss).item(),},
+            {
+                "total": cast(torch.Tensor, avg_loss).item(),
+            },
         )
 
 
@@ -682,7 +694,9 @@ class CPCASoftMaxLoss(AuxiliaryLoss):
 
         return (
             avg_multi_class_loss,
-            {"total": cast(torch.Tensor, avg_multi_class_loss).item(),},
+            {
+                "total": cast(torch.Tensor, avg_multi_class_loss).item(),
+            },
         )
 
 

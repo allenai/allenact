@@ -61,7 +61,7 @@ class BaseBabyAIGoToObjExperimentConfig(BaseBabyAIExperimentConfig, ABC):
         metric_accumulate_interval = (
             cls.METRIC_ACCUMULATE_INTERVAL()
         )  # Log every 10 max length tasks
-        save_interval = 2 ** 31
+        save_interval = 2**31
         gamma = 0.99
 
         use_gae = "reinforce_loss" not in named_losses

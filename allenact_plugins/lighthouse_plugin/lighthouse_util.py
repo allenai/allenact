@@ -13,7 +13,10 @@ class StopIfNearOptimal(EarlyStoppingCriterion):
         self.memory: np.ndarray = np.zeros(min_memory_size)
 
     def __call__(
-        self, stage_steps: int, total_steps: int, training_metrics: ScalarMeanTracker,
+        self,
+        stage_steps: int,
+        total_steps: int,
+        training_metrics: ScalarMeanTracker,
     ) -> bool:
         sums = training_metrics.sums()
         counts = training_metrics.counts()

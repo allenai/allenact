@@ -180,7 +180,9 @@ class VisualNavActorCritic(ActorCriticModel[CategoricalDistr]):
         raise NotImplementedError("Obs Encoder Not Implemented")
 
     def fuse_beliefs(
-        self, beliefs_dict: Dict[str, torch.FloatTensor], obs_embeds: torch.FloatTensor,
+        self,
+        beliefs_dict: Dict[str, torch.FloatTensor],
+        obs_embeds: torch.FloatTensor,
     ) -> Tuple[torch.FloatTensor, Optional[torch.FloatTensor]]:
         all_beliefs = torch.stack(list(beliefs_dict.values()), dim=-1)  # (T, N, H, k)
 

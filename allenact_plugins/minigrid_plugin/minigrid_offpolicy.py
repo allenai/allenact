@@ -325,6 +325,9 @@ class MiniGridExpertTrajectoryStorage(ExperienceStorage, StreamingStorageMixin):
 
         self._total_experiences += self.num_samplers * self.rollout_len
         return {
-            key: torch.stack(all_data[key], dim=1,)  # new sampler dim
+            key: torch.stack(
+                all_data[key],
+                dim=1,
+            )  # new sampler dim
             for key in all_data
         }

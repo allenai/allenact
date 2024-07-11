@@ -162,7 +162,6 @@ class VectorSampledTasks:
             float
         ] = 60,  # Seconds to wait for a task to return a response before timing out
     ) -> None:
-
         self._is_waiting = False
         self._is_closed = True
         self.should_log = should_log
@@ -376,7 +375,9 @@ class VectorSampledTasks:
                     else:
                         connection_write_fn(
                             sp_vector_sampled_tasks.command_at(
-                                sampler_index=sampler_index, command=command, data=data,
+                                sampler_index=sampler_index,
+                                command=command,
+                                data=data,
                             )
                         )
                 else:
@@ -500,7 +501,9 @@ class VectorSampledTasks:
 
         List of observations for each of the unpaused tasks.
         """
-        return self.call(["get_observations"] * self.num_unpaused_tasks,)
+        return self.call(
+            ["get_observations"] * self.num_unpaused_tasks,
+        )
 
     def command_at(
         self, sampler_index: int, command: str, data: Optional[Any] = None
@@ -689,9 +692,9 @@ class VectorSampledTasks:
         for i in range(
             sampler_index + 1, len(self.sampler_index_to_process_ind_and_subprocess_ind)
         ):
-            other_process_and_sub_process_inds = self.sampler_index_to_process_ind_and_subprocess_ind[
-                i
-            ]
+            other_process_and_sub_process_inds = (
+                self.sampler_index_to_process_ind_and_subprocess_ind[i]
+            )
             if other_process_and_sub_process_inds[0] == process_ind:
                 other_process_and_sub_process_inds[1] -= 1
             else:
@@ -882,7 +885,6 @@ class SingleProcessVectorSampledTasks(object):
         auto_resample_when_done: bool = True,
         should_log: bool = True,
     ) -> None:
-
         self._is_closed = True
 
         assert (
@@ -1095,7 +1097,6 @@ class SingleProcessVectorSampledTasks(object):
         sampler_fn_args: Sequence[Dict[str, Any]],
         callback_sensor_suite: Optional[SensorSuite],
     ) -> List[Generator]:
-
         generators = []
         for id, current_sampler_fn_args in enumerate(sampler_fn_args):
             if self.should_log:
@@ -1140,7 +1141,9 @@ class SingleProcessVectorSampledTasks(object):
 
         List of observations for each of the unpaused tasks.
         """
-        return self.call(["get_observations"] * self.num_unpaused_tasks,)
+        return self.call(
+            ["get_observations"] * self.num_unpaused_tasks,
+        )
 
     def next_task_at(self, index_process: int) -> List[RLStepResult]:
         """Move to the the next Task from the TaskSampler in index_process

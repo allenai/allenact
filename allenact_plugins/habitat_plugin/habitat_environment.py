@@ -48,7 +48,9 @@ class HabitatEnvironment:
         return self.env.sim.get_agent_state().rotation
 
     def get_shortest_path(
-        self, source_state: AgentState, target_state: AgentState,
+        self,
+        source_state: AgentState,
+        target_state: AgentState,
     ) -> List[ShortestPathPoint]:
         return self.env.sim.action_space_shortest_path(source_state, [target_state])
 

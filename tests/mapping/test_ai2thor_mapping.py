@@ -92,9 +92,16 @@ class TestAI2THORMapSensors(object):
                 RelativePositionChangeTHORSensor(),
                 map_range_sensor,
                 DepthSensorThor(
-                    height=224, width=224, use_normalization=False, uuid="depth",
+                    height=224,
+                    width=224,
+                    use_normalization=False,
+                    uuid="depth",
                 ),
-                BinnedPointCloudMapTHORSensor(fov=FOV, ego_only=False, **map_info,),
+                BinnedPointCloudMapTHORSensor(
+                    fov=FOV,
+                    ego_only=False,
+                    **map_info,
+                ),
                 SemanticMapTHORSensor(
                     fov=FOV,
                     ego_only=False,
@@ -255,14 +262,18 @@ class TestAI2THORMapSensors(object):
 
                     # We can't display all 72 channels in an RGB image so instead we randomly assign
                     # each object a color and then just allow them to overlap each other
-                    colored_semantic_map = SemanticMapBuilder.randomly_color_semantic_map(
-                        semantic_map
+                    colored_semantic_map = (
+                        SemanticMapBuilder.randomly_color_semantic_map(semantic_map)
                     )
 
                     # Here's the full semantic map with nothing masked out because the agent
                     # hasn't seen it yet
-                    colored_semantic_map_no_fog = SemanticMapBuilder.randomly_color_semantic_map(
-                        map_sensors[-1].semantic_map_builder.ground_truth_semantic_map
+                    colored_semantic_map_no_fog = (
+                        SemanticMapBuilder.randomly_color_semantic_map(
+                            map_sensors[
+                                -1
+                            ].semantic_map_builder.ground_truth_semantic_map
+                        )
                     )
 
                     # Uncomment if you wish to visualize the observations:
@@ -321,13 +332,17 @@ class TestAI2THORMapSensors(object):
                 open_x_displays = get_open_x_displays()
             except (AssertionError, IOError):
                 pass
-            walkthrough_task_sampler = WalkthroughRGBMappingPPOExperimentConfig.make_sampler_fn(
-                stage="train",
-                scene_to_allowed_rearrange_inds={s: [0] for s in get_scenes("train")},
-                force_cache_reset=True,
-                allowed_scenes=None,
-                seed=2,
-                x_display=open_x_displays[0] if len(open_x_displays) != 0 else None,
+            walkthrough_task_sampler = (
+                WalkthroughRGBMappingPPOExperimentConfig.make_sampler_fn(
+                    stage="train",
+                    scene_to_allowed_rearrange_inds={
+                        s: [0] for s in get_scenes("train")
+                    },
+                    force_cache_reset=True,
+                    allowed_scenes=None,
+                    seed=2,
+                    x_display=open_x_displays[0] if len(open_x_displays) != 0 else None,
+                )
             )
 
             named_losses = (
@@ -343,7 +358,10 @@ class TestAI2THORMapSensors(object):
                     ckpt_path,
                 )
 
-            state_dict = torch.load(ckpt_path, map_location="cpu",)
+            state_dict = torch.load(
+                ckpt_path,
+                map_location="cpu",
+            )
 
             walkthrough_model = WalkthroughRGBMappingPPOExperimentConfig.create_model()
             walkthrough_model.load_state_dict(state_dict["model_state_dict"])

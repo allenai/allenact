@@ -14,7 +14,6 @@ from projects.gym_baselines.experiments.gym_humanoid_ddppo import GymHumanoidPPO
 
 
 class GymMuJoCoHumanoidConfig(GymHumanoidPPOConfig):
-
     SENSORS = [
         GymMuJoCoSensor(gym_env_name="Humanoid-v2", uuid="gym_mujoco_data"),
     ]

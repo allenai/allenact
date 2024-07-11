@@ -1109,7 +1109,7 @@ class NavToPartnerTaskSampler(TaskSampler):
                 # + ["%4.2f" % pose1["rotation"]["y"]]
                 # + ["%4.2f" % pose2[k] for k in ["x", "y", "z"]]
                 # + ["%4.2f" % pose2["rotation"]["y"]]
-                + ["%d" % random.randint(0, 2 ** 63 - 1)]
+                + ["%d" % random.randint(0, 2**63 - 1)]
             ),
         }
 

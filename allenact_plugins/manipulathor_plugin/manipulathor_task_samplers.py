@@ -30,7 +30,6 @@ from allenact_plugins.manipulathor_plugin.manipulathor_viz import (
 
 
 class AbstractMidLevelArmTaskSampler(TaskSampler):
-
     _TASK_TYPE = Task
 
     def __init__(
@@ -87,7 +86,9 @@ class AbstractMidLevelArmTaskSampler(TaskSampler):
 
     def _create_environment(self, **kwargs) -> ManipulaTHOREnvironment:
         env = ManipulaTHOREnvironment(
-            make_agents_visible=False, object_open_speed=0.05, env_args=self.env_args,
+            make_agents_visible=False,
+            object_open_speed=0.05,
+            env_args=self.env_args,
         )
 
         return env
@@ -127,11 +128,9 @@ class AbstractMidLevelArmTaskSampler(TaskSampler):
 
 
 class SimpleArmPointNavGeneralSampler(AbstractMidLevelArmTaskSampler):
-
     _TASK_TYPE = AbstractPickUpDropOffTask
 
     def __init__(self, **kwargs) -> None:
-
         super(SimpleArmPointNavGeneralSampler, self).__init__(**kwargs)
         self.all_possible_points = []
         for scene in self.scenes:
@@ -323,7 +322,6 @@ class SimpleArmPointNavGeneralSampler(AbstractMidLevelArmTaskSampler):
         return result
 
     def calc_possible_trajectories(self, all_possible_points):
-
         object_to_data_id = {}
 
         for i in range(len(all_possible_points)):
@@ -338,7 +336,6 @@ class ArmPointNavTaskSampler(SimpleArmPointNavGeneralSampler):
     _TASK_TYPE = ArmPointNavTask
 
     def __init__(self, **kwargs) -> None:
-
         super(ArmPointNavTaskSampler, self).__init__(**kwargs)
         possible_initial_locations = (
             "datasets/apnd-dataset/valid_agent_initial_locations.json"

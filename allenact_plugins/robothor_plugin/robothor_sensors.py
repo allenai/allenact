@@ -113,7 +113,7 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
 
     @staticmethod
     def cartesian_to_polar(x, y):
-        rho = np.sqrt(x ** 2 + y ** 2)
+        rho = np.sqrt(x**2 + y**2)
         phi = np.arctan2(y, x)
         return rho, phi
 
@@ -137,7 +137,6 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
         *args: Any,
         **kwargs: Any
     ) -> Any:
-
         agent_state = env.agent_state()
         agent_position = np.array([agent_state[k] for k in ["x", "y", "z"]])
         rotation_world_agent = self.quaternion_from_y_angle(
@@ -151,7 +150,12 @@ class GPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNavTask]):
         )
 
 
-class DepthSensorThor(DepthSensor[THOR_ENV_TYPE, THOR_TASK_TYPE,],):
+class DepthSensorThor(
+    DepthSensor[
+        THOR_ENV_TYPE,
+        THOR_TASK_TYPE,
+    ],
+):
     def __init__(
         self,
         use_resnet_normalization: Optional[bool] = None,

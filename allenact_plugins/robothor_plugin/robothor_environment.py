@@ -53,7 +53,9 @@ class RoboThorEnvironment:
             )
 
         recursive_update(self.config, kwargs)
-        self.controller = Controller(**self.config,)
+        self.controller = Controller(
+            **self.config,
+        )
 
         self.all_metadata_available = all_metadata_available
 

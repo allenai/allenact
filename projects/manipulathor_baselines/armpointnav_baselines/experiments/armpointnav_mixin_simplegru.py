@@ -24,7 +24,6 @@ class ArmPointNavMixInSimpleGRUConfig(ArmPointNavBaseConfig):
 
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
-
         return ArmPointNavBaselineActorCritic(
             action_space=gym.spaces.Discrete(
                 len(cls.TASK_SAMPLER._TASK_TYPE.class_action_names())

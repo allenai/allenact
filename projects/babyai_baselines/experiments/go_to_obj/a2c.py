@@ -19,10 +19,13 @@ class A2CBabyAIGoToObjExperimentConfig(BaseBabyAIGoToObjExperimentConfig):
         a2c_info = cls.rl_loss_default("a2c", steps=total_training_steps)
 
         return cls._training_pipeline(
-            named_losses={"a2c_loss": a2c_info["loss"],},
+            named_losses={
+                "a2c_loss": a2c_info["loss"],
+            },
             pipeline_stages=[
                 PipelineStage(
-                    loss_names=["a2c_loss"], max_stage_steps=total_training_steps,
+                    loss_names=["a2c_loss"],
+                    max_stage_steps=total_training_steps,
                 ),
             ],
             num_mini_batch=a2c_info["num_mini_batch"],

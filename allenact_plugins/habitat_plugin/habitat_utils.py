@@ -10,7 +10,8 @@ from habitat import Config
 
 
 def construct_env_configs(
-    config: Config, allow_scene_repeat: bool = False,
+    config: Config,
+    allow_scene_repeat: bool = False,
 ) -> List[Config]:
     """Create list of Habitat Configs for training on multiple processes To
     allow better performance, dataset are split into small ones for each
@@ -53,7 +54,6 @@ def construct_env_configs(
     assert sum(map(len, scene_splits)) == len(scenes)
 
     for i in range(num_processes):
-
         task_config = config.clone()
         task_config.defrost()
         if len(scenes) > 0:
@@ -62,9 +62,9 @@ def construct_env_configs(
         if len(config.SIMULATOR_GPU_IDS) == 0:
             task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = -1
         else:
-            task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = config.SIMULATOR_GPU_IDS[
-                i % len(config.SIMULATOR_GPU_IDS)
-            ]
+            task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = (
+                config.SIMULATOR_GPU_IDS[i % len(config.SIMULATOR_GPU_IDS)]
+            )
 
         task_config.freeze()
 
@@ -193,7 +193,6 @@ def construct_env_configs_mp3d(config: Config) -> List[Config]:
         # scene_splits = gpu0 + gpu1 + gpu2 + gpu3 + gpu4 + gpu5 + gpu6 + gpu7
 
     for i in range(num_processes):
-
         task_config = config.clone()
         task_config.defrost()
         task_config.DATASET.CONTENT_SCENES = scene_splits[i]

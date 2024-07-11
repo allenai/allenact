@@ -14,7 +14,6 @@ from projects.gym_baselines.experiments.gym_mujoco_ddppo import GymMuJoCoPPOConf
 
 
 class GymMuJoCoInvertedPendulumConfig(GymMuJoCoPPOConfig):
-
     SENSORS = [
         GymMuJoCoSensor(gym_env_name="InvertedPendulum-v2", uuid="gym_mujoco_data"),
     ]

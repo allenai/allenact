@@ -17,6 +17,7 @@ import torch.distributions  # type: ignore
 import torch.multiprocessing as mp  # type: ignore
 import torch.nn as nn
 import torch.optim as optim
+
 # noinspection PyProtectedMember
 from torch._C._distributed_c10d import ReduceOp
 
@@ -196,8 +197,8 @@ class OnPolicyRLEngine(object):
 
         create_model_kwargs = {}
         if self.machine_params.sensor_preprocessor_graph is not None:
-            self.sensor_preprocessor_graph = self.machine_params.sensor_preprocessor_graph.to(
-                self.device
+            self.sensor_preprocessor_graph = (
+                self.machine_params.sensor_preprocessor_graph.to(self.device)
             )
             create_model_kwargs[
                 "sensor_preprocessor_graph"
@@ -205,7 +206,8 @@ class OnPolicyRLEngine(object):
 
         set_seed(self.seed)
         self.actor_critic = cast(
-            ActorCriticModel, self.config.create_model(**create_model_kwargs),
+            ActorCriticModel,
+            self.config.create_model(**create_model_kwargs),
         ).to(self.device)
 
         if initial_model_state_dict is not None:
@@ -343,7 +345,7 @@ class OnPolicyRLEngine(object):
         if initial_seed is not None:
             rstate = random.getstate()
             random.seed(initial_seed)
-        seeds = [random.randint(0, (2 ** 31) - 1) for _ in range(nprocesses)]
+        seeds = [random.randint(0, (2**31) - 1) for _ in range(nprocesses)]
         if initial_seed is not None:
             random.setstate(rstate)
         return seeds
@@ -400,7 +402,8 @@ class OnPolicyRLEngine(object):
             ckpt = torch.load(os.path.abspath(ckpt), map_location="cpu")
 
         ckpt = cast(
-            Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]], ckpt,
+            Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]],
+            ckpt,
         )
 
         self.actor_critic.load_state_dict(ckpt["model_state_dict"])  # type:ignore
@@ -414,7 +417,9 @@ class OnPolicyRLEngine(object):
 
     # aggregates task metrics currently in queue
     def aggregate_task_metrics(
-        self, logging_pkg: LoggingPackage, num_tasks: int = -1,
+        self,
+        logging_pkg: LoggingPackage,
+        num_tasks: int = -1,
     ) -> LoggingPackage:
         if num_tasks > 0:
             if len(self.single_process_metrics) != num_tasks:
@@ -473,7 +478,6 @@ class OnPolicyRLEngine(object):
         storage_to_initialize: Optional[Sequence[ExperienceStorage]],
         visualizer: Optional[VizSuite] = None,
     ):
-
         keep: Optional[List] = None
         if visualizer is not None or (
             storage_to_initialize is not None
@@ -652,7 +656,8 @@ class OnPolicyRLEngine(object):
     ) -> int:
         rollout_storage = cast(RolloutStorage, uuid_to_storage[rollout_storage_uuid])
         actions, actor_critic_output, memory, _ = self.act(
-            rollout_storage=rollout_storage, dist_wrapper_class=dist_wrapper_class,
+            rollout_storage=rollout_storage,
+            dist_wrapper_class=dist_wrapper_class,
         )
 
         # Flatten actions
@@ -687,7 +692,9 @@ class OnPolicyRLEngine(object):
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
 
         rewards = torch.tensor(
-            rewards, dtype=torch.float, device=self.device,  # type:ignore
+            rewards,
+            dtype=torch.float,
+            device=self.device,  # type:ignore
         )
 
         # We want rewards to have dimensions [sampler, reward]
@@ -701,7 +708,9 @@ class OnPolicyRLEngine(object):
         masks = (
             1.0
             - torch.tensor(
-                dones, dtype=torch.float32, device=self.device,  # type:ignore
+                dones,
+                dtype=torch.float32,
+                device=self.device,  # type:ignore
             )
         ).view(
             -1, 1
@@ -801,7 +810,6 @@ class OnPolicyRLEngine(object):
         ):  # Might occur during testing when all stages are complete
             return 0
         return self.training_pipeline.current_stage.steps_taken_in_stage
-
 
     def compute_losses_track_them_and_backprop(
         self,
@@ -942,7 +950,6 @@ class OnPolicyRLEngine(object):
                         bsize = batch["bsize"]
 
                         if actor_critic_output_for_batch is None:
-
                             try:
                                 actor_critic_output_for_batch, _ = self.actor_critic(
                                     observations=batch["observations"],
@@ -1216,8 +1223,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 "offpolicy_epoch_done", self.store
             )
             # Flag for finished worker in current epoch with custom component
-            self.insufficient_data_for_update = torch.distributed.PrefixStore(  # type:ignore
-                "insufficient_data_for_update", self.store
+            self.insufficient_data_for_update = (
+                torch.distributed.PrefixStore(  # type:ignore
+                    "insufficient_data_for_update", self.store
+                )
             )
         else:
             self.num_workers_done = None
@@ -1243,7 +1252,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         if seed is None:
             return seed
         seed = (seed ^ (self.training_pipeline.total_steps + 1)) % (
-            2 ** 31 - 1
+            2**31 - 1
         )  # same seed for all workers
 
         if (not return_same_seed_per_worker) and (
@@ -1375,7 +1384,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
     @property
     def log_interval(self):
-        return self.training_pipeline.current_stage.training_settings.metric_accumulate_interval
+        return (
+            self.training_pipeline.current_stage.training_settings.metric_accumulate_interval
+        )
 
     @property
     def approx_steps(self):
@@ -1416,7 +1427,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             )
 
         actions, actor_critic_output, memory, step_observation = super().act(
-            rollout_storage=rollout_storage, dist_wrapper_class=dist_wrapper_class,
+            rollout_storage=rollout_storage,
+            dist_wrapper_class=dist_wrapper_class,
         )
 
         self.step_count += self.num_active_samplers
@@ -1474,14 +1486,18 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     else:  # local_global_batch_size_tuple is not None, since we're distributed:
                         p.grad = p.grad * local_to_global_batch_size_ratio
                     reductions.append(
-                        dist.all_reduce(p.grad, async_op=True,)  # sum
+                        dist.all_reduce(
+                            p.grad,
+                            async_op=True,
+                        )  # sum
                     )  # synchronize
                     all_params.append(p)
             for reduction, p in zip(reductions, all_params):
                 reduction.wait()
 
         nn.utils.clip_grad_norm_(
-            self.actor_critic.parameters(), max_norm=max_grad_norm,  # type: ignore
+            self.actor_critic.parameters(),
+            max_norm=max_grad_norm,  # type: ignore
         )
 
         self.optimizer.step()  # type: ignore
@@ -2097,7 +2113,8 @@ class OnPolicyInference(OnPolicyRLEngine):
                     lengths: List[int]
                     if self.num_active_samplers > 0:
                         lengths = self.vector_tasks.command(
-                            "sampler_attr", ["length"] * self.num_active_samplers,
+                            "sampler_attr",
+                            ["length"] * self.num_active_samplers,
                         )
                         npending = sum(lengths)
                     else:

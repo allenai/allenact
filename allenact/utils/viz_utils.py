@@ -334,7 +334,9 @@ class AgentViewViz(AbstractViz):
         **other_base_kwargs,
     ):
         super().__init__(
-            label, vector_task_sources=[vector_task_source], **other_base_kwargs,
+            label,
+            vector_task_sources=[vector_task_source],
+            **other_base_kwargs,
         )
         self.max_clip_length = max_clip_length
         self.max_video_length = max_video_length
@@ -388,7 +390,9 @@ class AgentViewViz(AbstractViz):
             vid = self.make_vid(images)
             if vid is not None:
                 log_writer.add_vid(
-                    f"{self.mode}/{self.label}_group{page}", vid, global_step=num_steps,
+                    f"{self.mode}/{self.label}_group{page}",
+                    vid,
+                    global_step=num_steps,
                 )
 
     @staticmethod
@@ -910,7 +914,9 @@ class VizSuite(AbstractViz):
 
                 # Select latest step
                 res = res.narrow(
-                    dim=0, start=rollout_step, length=1,  # step dimension
+                    dim=0,
+                    start=rollout_step,
+                    length=1,  # step dimension
                 )  # 1 x ... x sampler x ...
 
                 # get_logger().debug("basic collect h {}".format(res[..., 0]))
@@ -1056,7 +1062,10 @@ class TensorboardSummarizer:
         self.experiment_to_test_events_paths_map = experiment_to_test_events_paths_map
         train_experiments = set(list(experiment_to_train_events_paths_map.keys()))
         test_experiments = set(list(experiment_to_test_events_paths_map.keys()))
-        assert (train_experiments - test_experiments) in [set(), train_experiments,], (
+        assert (train_experiments - test_experiments) in [
+            set(),
+            train_experiments,
+        ], (
             f"`experiment_to_test_events_paths_map` must have identical keys (experiment names) to those"
             f" in `experiment_to_train_events_paths_map`, or be empty."
             f" Got {train_experiments} train keys and {test_experiments} test keys."

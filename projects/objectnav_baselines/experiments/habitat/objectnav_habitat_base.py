@@ -428,7 +428,9 @@ class ObjectNavHabitatBaseConfig(ObjectNavBaseConfig, ABC):
 
     def make_sampler_fn(self, **kwargs) -> TaskSampler:
         return ObjectNavTaskSampler(
-            task_kwargs={"look_constraints": self.look_constraints,},
+            task_kwargs={
+                "look_constraints": self.look_constraints,
+            },
             **{"failed_end_reward": self.FAILED_END_REWARD, **kwargs},  # type: ignore
         )
 

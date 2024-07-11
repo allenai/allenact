@@ -128,6 +128,7 @@ from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
 # %%
 """Next we define a new experiment config class:"""
 
+
 # %%
 class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     """A Point Navigation experiment configuration in RoboThor."""

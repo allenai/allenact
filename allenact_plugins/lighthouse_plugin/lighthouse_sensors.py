@@ -66,7 +66,10 @@ def get_corner_observation(
             [on_border_value, last_action],
         ),
         axis=0,
-        out=np.zeros((seen_corner_values.shape[0] + 2,), dtype=np.float32,),
+        out=np.zeros(
+            (seen_corner_values.shape[0] + 2,),
+            dtype=np.float32,
+        ),
     )
 
 
@@ -90,7 +93,7 @@ class CornerSensor(Sensor[LightHouseEnvironment, Any]):
         return gym.spaces.Box(
             low=min(LightHouseEnvironment.SPACE_LEVELS),
             high=max(LightHouseEnvironment.SPACE_LEVELS),
-            shape=(2 ** self.world_dim + 2,),
+            shape=(2**self.world_dim + 2,),
             dtype=int,
         )
 
@@ -192,7 +195,7 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
 
     @classmethod
     def output_dim(cls, world_dim: int):
-        return ((3 if world_dim == 1 else 4) ** (2 ** world_dim)) * (
+        return ((3 if world_dim == 1 else 4) ** (2**world_dim)) * (
             2 * world_dim + 1
         ) ** 2
 
@@ -239,7 +242,7 @@ class FactorialDesignCornerSensor(Sensor[LightHouseEnvironment, Any]):
         return (
             [
                 ("s{}".format(i), list(range(3 if world_dim == 1 else 4)))
-                for i in range(2 ** world_dim)
+                for i in range(2**world_dim)
             ]
             + [("b{}".format(i), list(range(2 * world_dim + 1))) for i in range(1)]
             + [("a{}".format(i), list(range(2 * world_dim + 1))) for i in range(1)]

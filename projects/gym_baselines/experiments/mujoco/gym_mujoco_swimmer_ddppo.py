@@ -14,7 +14,6 @@ from projects.gym_baselines.experiments.gym_mujoco_ddppo import GymMuJoCoPPOConf
 
 
 class GymMuJoCoSwimmerConfig(GymMuJoCoPPOConfig):
-
     SENSORS = [
         GymMuJoCoSensor(gym_env_name="Swimmer-v2", uuid="gym_mujoco_data"),
     ]

@@ -44,7 +44,6 @@ from allenact_plugins.manipulathor_plugin.manipulathor_viz import LoggerVisualiz
 
 
 class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
-
     _actions = (
         MOVE_ARM_HEIGHT_P,
         MOVE_ARM_HEIGHT_M,
@@ -138,17 +137,14 @@ class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
             visualizer.log(self.env)
 
     def visualize(self, action_str):
-
         for vizualizer in self.visualizers:
             vizualizer.log(self.env, action_str)
 
     def finish_visualizer(self):
-
         for visualizer in self.visualizers:
             visualizer.finish_episode(self.env, self, self.task_info)
 
     def finish_visualizer_metrics(self, metric_results):
-
         for visualizer in self.visualizers:
             visualizer.finish_episode_metrics(self, self.task_info, metric_results)
 
@@ -164,7 +160,7 @@ class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
         action_success_stat["action_success/total"] = 0.0
 
         seq_len = len(self.action_sequence_and_success)
-        for (action_name, action_success) in self.action_sequence_and_success:
+        for action_name, action_success in self.action_sequence_and_success:
             action_stat["action_stat/" + action_name] += 1.0
             action_success_stat[
                 "action_success/{}".format(action_name)
@@ -319,12 +315,10 @@ class ArmPointNavTask(AbstractPickUpDropOffTask):
         return result
 
     def visualize(self, **kwargs):
-
         for vizualizer in self.visualizers:
             vizualizer.log(self.env, **kwargs)
 
     def _step(self, action: int) -> RLStepResult:
-
         action_str = self.class_action_names()[action]
 
         self._last_action_str = action_str
@@ -341,7 +335,6 @@ class ArmPointNavTask(AbstractPickUpDropOffTask):
 
         # If the object has not been picked up yet and it was picked up in the previous step update parameters to integrate it into reward
         if not self.object_picked_up:
-
             if self.env.is_object_at_low_level_hand(object_id):
                 self.object_picked_up = True
                 self.eplen_pickup = (
@@ -519,7 +512,6 @@ class EasyArmPointNavTask(ArmPointNavTask):
     )
 
     def _step(self, action: int) -> RLStepResult:
-
         action_str = self.class_action_names()[action]
 
         self._last_action_str = action_str
@@ -556,7 +548,6 @@ class EasyArmPointNavTask(ArmPointNavTask):
                 )  # plus one because this step has not been counted yet
 
         if self.object_picked_up:
-
             object_state = self.env.get_object_by_id(object_id)
             goal_state = self.task_info["target_location"]
             goal_achieved = self.object_picked_up and self.obj_state_aproximity(

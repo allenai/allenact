@@ -6,7 +6,6 @@ from allenact.base_abstractions.sensor import Sensor
 
 
 class GymBaseConfig(ExperimentConfig, ABC):
-
     SENSORS: Optional[Sequence[Sensor]] = None
 
     def _get_sampler_args(

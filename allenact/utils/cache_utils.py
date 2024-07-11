@@ -58,7 +58,6 @@ def get_distance(
 def get_distance_to_object(
     cache: Dict[str, Any], pos: Dict[str, float], target_class: str
 ) -> float:
-
     dists = []
     weights = []
     for rounder_func_0 in [math.ceil, math.floor]:

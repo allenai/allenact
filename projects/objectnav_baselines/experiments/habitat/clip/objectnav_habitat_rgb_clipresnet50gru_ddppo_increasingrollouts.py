@@ -82,14 +82,16 @@ class ObjectNavHabitatRGBClipResNet50GRUDDPPOIncreasingLengthExpConfig(
                     loss_names=list(named_losses.keys()),
                     max_stage_steps=batch_steps_1,
                     training_settings=TrainingSettings(
-                        num_steps=64, metric_accumulate_interval=log_interval_med,
+                        num_steps=64,
+                        metric_accumulate_interval=log_interval_med,
                     ),
                 ),
                 PipelineStage(
                     loss_names=list(named_losses.keys()),
                     max_stage_steps=batch_steps_2,
                     training_settings=TrainingSettings(
-                        num_steps=128, metric_accumulate_interval=log_interval_large,
+                        num_steps=128,
+                        metric_accumulate_interval=log_interval_large,
                     ),
                 ),
             ],

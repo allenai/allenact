@@ -1053,7 +1053,6 @@ class OnPolicyRunner(object):
                 (stage_component_uuid, storage_uuid),
                 info_tracker,
             ) in pkg.info_trackers.items():
-
                 if stage_component_uuid is not None:
                     storage_uuid_to_stage_component_uuids[storage_uuid].add(
                         stage_component_uuid
@@ -1313,7 +1312,6 @@ class OnPolicyRunner(object):
                         if pkg_mode == TRAIN_MODE_STR:
                             collected.append(package)
                             if len(collected) >= nworkers:
-
                                 collected = sorted(
                                     collected,
                                     key=lambda pkg: (
@@ -1479,7 +1477,6 @@ class OnPolicyRunner(object):
         checkpoint_path_dir_or_pattern: str,
         approx_ckpt_step_interval: Optional[int] = None,
     ):
-
         if os.path.isdir(checkpoint_path_dir_or_pattern):
             # The fragment is a path to a directory, lets use this directory
             # as the base dir to search for checkpoints

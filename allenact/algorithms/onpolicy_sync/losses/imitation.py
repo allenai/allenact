@@ -149,7 +149,9 @@ class Imitation(AbstractActorCriticLoss):
                     ready_actions[group_name] = expert_action
 
                     current_loss, expert_successes = self.group_loss(
-                        cd, expert_action, expert_action_masks,
+                        cd,
+                        expert_action,
+                        expert_action_masks,
                     )
 
                     should_report_loss = (

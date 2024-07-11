@@ -115,7 +115,6 @@ class ArmPointNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
     def get_relative_distance_embedding(
         self, state_tensor: torch.Tensor
     ) -> torch.FloatTensor:
-
         return self.relative_dist_embedding(state_tensor)
 
     def forward(  # type:ignore

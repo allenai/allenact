@@ -41,7 +41,9 @@ from projects.objectnav_baselines.mixins import (
 
 
 def compute_inv_dyn_action_logits(
-    model, img0, img1,
+    model,
+    img0,
+    img1,
 ):
     rgb_uuid = model.visual_encoder.rgb_uuid
     img0_enc = model.visual_encoder({rgb_uuid: img0.unsqueeze(0)}).squeeze(0)
@@ -216,7 +218,8 @@ class ObjectNavRoboThorVdrTmpRGBExperimentConfig(ObjectNavRoboThorBaseConfig):
                             storage_uuid="discrete_vdr",
                             loss_names=["inv_dyn_vdr"],
                             training_settings=TrainingSettings(
-                                num_mini_batch=1, update_repeats=1,
+                                num_mini_batch=1,
+                                update_repeats=1,
                             ),
                         ),
                     ],
@@ -230,7 +233,9 @@ class ObjectNavRoboThorVdrTmpRGBExperimentConfig(ObjectNavRoboThorBaseConfig):
     def create_model(self, **kwargs) -> nn.Module:
         model = self.model_creation_handler.create_model(**kwargs)
         model.inv_dyn_mlp = nn.Sequential(
-            nn.Linear(1024, 256), nn.ReLU(inplace=True), nn.Linear(256, 6),
+            nn.Linear(1024, 256),
+            nn.ReLU(inplace=True),
+            nn.Linear(256, 6),
         )
         return model
 

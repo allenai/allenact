@@ -123,6 +123,10 @@ class NavToPartnerActorCriticSimpleConvRNN(ActorCriticModel[TupleCategoricalDist
         dists, vals = self.actor_critic(x)
 
         return (
-            ActorCriticOutput(distributions=dists, values=vals, extras={},),
+            ActorCriticOutput(
+                distributions=dists,
+                values=vals,
+                extras={},
+            ),
             memory.set_tensor("rnn", rnn_hidden_states),
         )

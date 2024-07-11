@@ -349,7 +349,10 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self.closest_geo_distance = min(self.closest_geo_distance, geodesic_distance)
 
         return (
-            max(min(rew, max_reward_mag), -max_reward_mag,)
+            max(
+                min(rew, max_reward_mag),
+                -max_reward_mag,
+            )
             * self.reward_configs["shaping_weight"]
         )
 

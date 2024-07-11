@@ -144,7 +144,10 @@ class PointNavRoboThorRGBPPOVizExperimentConfig(PointNavRoboThorRGBPPOExperiment
             mode=mode,
             # Basic 2D trajectory visualizer (task output source):
             base_trajectory=TrajectoryViz(
-                path_to_target_location=("task_info", "target",),
+                path_to_target_location=(
+                    "task_info",
+                    "target",
+                ),
             ),
             # Egocentric view visualizer (vector task source):
             egeocentric=AgentViewViz(
@@ -157,7 +160,9 @@ class PointNavRoboThorRGBPPOVizExperimentConfig(PointNavRoboThorRGBPPOExperiment
             # Same episode mask visualizer (rollout storage source):
             episode_mask=TensorViz1D(rollout_source=("masks",)),
             # Default recurrent memory visualizer (rollout storage source):
-            rnn_memory=TensorViz2D(rollout_source=("memory_first_last", "single_belief")),
+            rnn_memory=TensorViz2D(
+                rollout_source=("memory_first_last", "single_belief")
+            ),
             # Specialized 2D trajectory visualizer (task output source):
             thor_trajectory=ThorViz(
                 figsize=(16, 8),

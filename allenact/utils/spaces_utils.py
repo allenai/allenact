@@ -167,12 +167,16 @@ def flatten_space(space: gym.Space):
     if isinstance(space, gym.MultiBinary):
         return gym.Box(low=0, high=1, shape=(space.n,))
     if isinstance(space, gym.MultiDiscrete):
-        return gym.Box(low=np.zeros_like(space.nvec), high=space.nvec,)
+        return gym.Box(
+            low=np.zeros_like(space.nvec),
+            high=space.nvec,
+        )
     raise NotImplementedError
 
 
 def policy_space(
-    action_space: gym.Space, box_space_to_policy: Callable[[gym.Box], gym.Space] = None,
+    action_space: gym.Space,
+    box_space_to_policy: Callable[[gym.Box], gym.Space] = None,
 ) -> gym.Space:
     if isinstance(action_space, gym.Box):
         if box_space_to_policy is None:
@@ -192,7 +196,10 @@ def policy_space(
     if isinstance(action_space, gym.Dict):
         # policy = dict of sub-policies
         spaces = [
-            (name, policy_space(s, box_space_to_policy),)
+            (
+                name,
+                policy_space(s, box_space_to_policy),
+            )
             for name, s in action_space.spaces.items()
         ]
         return gym.Dict(spaces)

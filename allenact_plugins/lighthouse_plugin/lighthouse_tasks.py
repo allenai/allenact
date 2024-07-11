@@ -161,7 +161,9 @@ class FindGoalLightHouseTask(LightHouseTask):
         **kwargs,
     ) -> Tuple[Any, bool]:
         view_tuple = get_corner_observation(
-            env=self.env, view_radius=expert_view_radius, view_corner_offsets=None,
+            env=self.env,
+            view_radius=expert_view_radius,
+            view_corner_offsets=None,
         )
 
         goal = self.env.GOAL
@@ -195,7 +197,6 @@ class FindGoalLightHouseTask(LightHouseTask):
                 policy = np.array([expert_action == right, expert_action == left])
 
         elif self.env.world_dim == 2:
-
             tl, tr, bl, br, hitting, last_action = view_tuple
 
             wall = self.env.WALL
@@ -359,7 +360,7 @@ class FindGoalLightHouseTaskSampler(TaskSampler):
             )
 
         self.seed: int = int(
-            seed if seed is not None else np.random.randint(0, 2 ** 31 - 1)
+            seed if seed is not None else np.random.randint(0, 2**31 - 1)
         )
         self.np_seeded_random_gen: Optional[np.random.RandomState] = None
         self.set_seed(self.seed)
@@ -382,7 +383,7 @@ class FindGoalLightHouseTaskSampler(TaskSampler):
 
     @property
     def total_unique(self) -> Optional[Union[int, float]]:
-        n = 2 ** self.world_dim
+        n = 2**self.world_dim
         return n if self.num_unique_seeds is None else min(n, self.num_unique_seeds)
 
     @property
@@ -401,7 +402,7 @@ class FindGoalLightHouseTaskSampler(TaskSampler):
             else:
                 seed = self.np_seeded_random_gen.choice(self.task_seeds_list)
         else:
-            seed = self.np_seeded_random_gen.randint(0, 2 ** 31 - 1)
+            seed = self.np_seeded_random_gen.randint(0, 2**31 - 1)
 
         self.num_tasks_generated += 1
 

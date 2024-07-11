@@ -79,7 +79,6 @@ def get_logger() -> logging.Logger:
 
 
 def _human_log_level_to_int(human_log_level):
-
     human_log_level = human_log_level.lower().strip()
     assert human_log_level in HUMAN_LOG_LEVELS, "unknown human_log_level {}".format(
         human_log_level
@@ -170,7 +169,10 @@ def _set_log_formatter():
             datefmt = short_date_format
 
         if add_style_to_logs:
-            formatter = ColoredFormatter(fmt=fmt, datefmt=datefmt,)
+            formatter = ColoredFormatter(
+                fmt=fmt,
+                datefmt=datefmt,
+            )
         else:
             formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
 

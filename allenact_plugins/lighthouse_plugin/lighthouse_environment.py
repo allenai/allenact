@@ -76,7 +76,7 @@ class LightHouseEnvironment(object):
         )
         self.current_position = np.zeros(world_dim, dtype=int)
         self.closest_distance_to_corners = np.full(
-            2 ** world_dim, fill_value=world_radius, dtype=int
+            2**world_dim, fill_value=world_radius, dtype=int
         )
         self.positions: List[Tuple[int, ...]] = [tuple(self.current_position)]
         self.goal_position: Optional[np.ndarray] = None
@@ -84,7 +84,7 @@ class LightHouseEnvironment(object):
 
         self.seed: Optional[int] = None
         self.np_seeded_random_gen: Optional[np.random.RandomState] = None
-        self.set_seed(seed=int(kwargs.get("seed", np.random.randint(0, 2 ** 31 - 1))))
+        self.set_seed(seed=int(kwargs.get("seed", np.random.randint(0, 2**31 - 1))))
 
         self.random_reset()
 

@@ -81,7 +81,6 @@ class EgocentricMiniGridSensor(Sensor[MiniGridEnv, Task[MiniGridEnv]]):
 
 class MiniGridMissionSensor(Sensor[MiniGridEnv, Task[MiniGridEnv]]):
     def __init__(self, instr_len: int, uuid: str = "minigrid_mission", **kwargs: Any):
-
         self.instr_preprocessor = InstructionsPreprocessor(
             model_name="TMP_SENSOR", load_vocab_from=None
         )
@@ -126,7 +125,9 @@ class MiniGridMissionSensor(Sensor[MiniGridEnv, Task[MiniGridEnv]]):
             out = out[: self.instr_len]
         elif n < self.instr_len:
             out = torch.nn.functional.pad(
-                input=out, pad=[0, self.instr_len - n], value=0,
+                input=out,
+                pad=[0, self.instr_len - n],
+                value=0,
             )
 
         return out.long().numpy()

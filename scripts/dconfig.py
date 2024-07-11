@@ -9,7 +9,8 @@ def get_argument_parser():
 
     # noinspection PyTypeChecker
     parser = argparse.ArgumentParser(
-        description="dconfig", formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description="dconfig",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     parser.add_argument(

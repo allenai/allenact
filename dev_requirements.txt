@@ -1,4 +1,4 @@
-black==19.10b0
+black==23.3.0
 ruamel.yaml
 gitpython
 markdown==3.3

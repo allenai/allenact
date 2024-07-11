@@ -29,7 +29,14 @@ class MiniGridTask(Task[CrossingEnv]):
     )
     _CACHED_GRAPHS: Dict[str, nx.DiGraph] = {}
     _NEIGHBOR_OFFSETS = tuple(
-        [(-1, 0, 0), (0, -1, 0), (0, 0, -1), (1, 0, 0), (0, 1, 0), (0, 0, 1),]
+        [
+            (-1, 0, 0),
+            (0, -1, 0),
+            (0, 0, -1),
+            (1, 0, 0),
+            (0, 1, 0),
+            (0, 0, 1),
+        ]
     )
 
     _XY_DIFF_TO_AGENT_DIR = {
@@ -156,7 +163,10 @@ class MiniGridTask(Task[CrossingEnv]):
 
     @classmethod
     def _add_from_to_edge(
-        cls, g: nx.DiGraph, s: Tuple[int, int, int], t: Tuple[int, int, int],
+        cls,
+        g: nx.DiGraph,
+        s: Tuple[int, int, int],
+        t: Tuple[int, int, int],
     ):
         """Adds nodes and corresponding edges to existing nodes.
         This approach avoids adding the same edge multiple times.
@@ -237,7 +247,9 @@ class MiniGridTask(Task[CrossingEnv]):
                     self._add_from_to_edge(graph, s, t)
                     self._add_from_to_edge(graph, t, s)
 
-    def generate_graph(self,) -> nx.DiGraph:
+    def generate_graph(
+        self,
+    ) -> nx.DiGraph:
         """The generated graph is based on the fully observable grid (as the
         expert sees it all).
 
@@ -449,7 +461,7 @@ class MiniGridTaskSampler(TaskSampler):
         self.env = env_class(**env_info)
         self.task_class = task_class
 
-        self.np_seeded_random_gen, _ = seeding.np_random(random.randint(0, 2 ** 31 - 1))
+        self.np_seeded_random_gen, _ = seeding.np_random(random.randint(0, 2**31 - 1))
 
         self.num_tasks_generated = 0
 
@@ -499,7 +511,7 @@ class MiniGridTaskSampler(TaskSampler):
                 repeating = True
             else:
                 self._number_of_steps_taken_with_task_seed = 0
-                self._last_env_seed = self.np_seeded_random_gen.randint(0, 2 ** 31 - 1)
+                self._last_env_seed = self.np_seeded_random_gen.randint(0, 2**31 - 1)
 
         task_has_same_seed_reset = hasattr(self.env, "same_seed_reset")
 
