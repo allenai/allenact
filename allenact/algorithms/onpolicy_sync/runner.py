@@ -1502,7 +1502,7 @@ class OnPolicyRunner(object):
         approx_ckpt_step_interval: Optional[int] = None,
     ):
         if "wandb://" == checkpoint_path_dir_or_pattern[:8]:
-            eval_dir = "wandb_ckpts_to_eval/{}".format(self.local_start_time_str)
+            eval_dir = "/tmp/wandb_ckpts_to_eval/{}".format(self.local_start_time_str)
             os.makedirs(eval_dir, exist_ok=True)
             return download_checkpoint_from_wandb(checkpoint_path_dir_or_pattern, eval_dir, only_allow_one_ckpt=False)
 

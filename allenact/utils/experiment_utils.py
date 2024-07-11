@@ -1201,18 +1201,16 @@ def download_checkpoint_from_wandb(checkpoint_path_dir_or_pattern, all_ckpt_dir,
         for steps in ckpt_steps:
             ckpt_fn = "{}-step-{}:latest".format(run_token, steps)
             artifact = api.artifact(ckpt_fn)
-            _ = artifact.download("tmp")
+            _ = artifact.download("/tmp")
             ckpt_dir = "{}/ckpt-{}.pt".format(all_ckpt_dir, steps)
-            shutil.move("tmp/ckpt.pt", ckpt_dir)
+            shutil.move("/tmp/ckpt.pt", ckpt_dir)
             ckpts_paths.append(ckpt_dir)
-        shutil.rmtree("tmp")
         return ckpts_paths
     else:
         assert len(ckpt_steps) == 1
         ckpt_fn = "{}-step-{}:latest".format(run_token, steps)
         artifact = api.artifact(ckpt_fn)
-        _ = artifact.download("tmp")
+        _ = artifact.download("/tmp")
         ckpt_dir = "{}/ckpt-{}.pt".format(all_ckpt_dir, steps)
-        shutil.move("tmp/ckpt.pt", ckpt_dir)
-        shutil.rmtree("tmp")
+        shutil.move("/tmp/ckpt.pt", ckpt_dir)
         return ckpt_dir
