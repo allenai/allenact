@@ -370,10 +370,10 @@ class TaskSampler(abc.ABC):
 
 
 class BatchedTask(Generic[EnvType]):
-    """An abstract class defining a batch of goal directed 'tasks.' Agents interact
-    with their environment through a task by taking a `step` after which they
-    receive new observations, rewards, and (potentially) other useful
-    information.
+    """An abstract class defining a batch of goal directed 'tasks.' Agents
+    interact with their environment through a task by taking a `step` after
+    which they receive new observations, rewards, and (potentially) other
+    useful information.
 
     A BatchedTask is a wrapper around a specific Task
     and allows for multiple tasks to be simultaneously executed in the same scene.
@@ -439,7 +439,9 @@ class BatchedTask(Generic[EnvType]):
                 self.tasks.append(self.make_new_task(it))
 
             # Also, a ThreadPoolExecutor to collect all data (possibly) under IO bottlenecks
-            self.executor = ThreadPoolExecutor(max_workers=min(10, self.task_sampler.task_batch_size))
+            self.executor = ThreadPoolExecutor(
+                max_workers=min(10, self.task_sampler.task_batch_size)
+            )
 
             # Also, a mutex to enable underlying task sampler implementations to ensure e.g. only one process
             # resets the sampler when called from a ThreadPoolExecutor (next_task must be thread safe, possibly
@@ -471,7 +473,12 @@ class BatchedTask(Generic[EnvType]):
         def obs_extract(it, task):
             res[it] = task.get_observations()
 
-        wait([self.executor.submit(obs_extract, it, task) for it, task in enumerate(self.tasks)])
+        wait(
+            [
+                self.executor.submit(obs_extract, it, task)
+                for it, task in enumerate(self.tasks)
+            ]
+        )
         # for it, task in enumerate(self.tasks):
         #     obs_extract(it, task)
 
@@ -547,7 +554,12 @@ class BatchedTask(Generic[EnvType]):
             infos[it] = info
 
         # Ensure completion with wait():
-        wait([self.executor.submit(update_after_step, it, current_task) for it, current_task in enumerate(self.tasks)])
+        wait(
+            [
+                self.executor.submit(update_after_step, it, current_task)
+                for it, current_task in enumerate(self.tasks)
+            ]
+        )
         # for it, current_task in enumerate(self.tasks):
         #     update_after_step(it, current_task)
 
@@ -567,7 +579,12 @@ class BatchedTask(Generic[EnvType]):
         def before_step(it, task):
             actions[it], intermediates[it] = task._before_env_step(action[it])
 
-        wait([self.executor.submit(before_step, it, task) for it, task in enumerate(self.tasks)])
+        wait(
+            [
+                self.executor.submit(before_step, it, task)
+                for it, task in enumerate(self.tasks)
+            ]
+        )
         # for it, task in enumerate(self.tasks):
         #     before_step(it, task)
 
@@ -580,7 +597,12 @@ class BatchedTask(Generic[EnvType]):
         def after_step(it, task):
             srs[it] = task._after_env_step(action[it], actions[it], intermediates[it])
 
-        wait([self.executor.submit(after_step, it, task) for it, task in enumerate(self.tasks)])
+        wait(
+            [
+                self.executor.submit(after_step, it, task)
+                for it, task in enumerate(self.tasks)
+            ]
+        )
         # for it, task in enumerate(self.tasks):
         #     after_step(it, task)
 
