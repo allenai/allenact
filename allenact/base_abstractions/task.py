@@ -29,6 +29,7 @@ from gym.spaces.dict import Dict as SpaceDict
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import Sensor, SensorSuite
 from allenact.utils.misc_utils import deprecated
+from allenact.utils.system import get_logger
 
 COMPLETE_TASK_METRICS_KEY = "__AFTER_TASK_METRICS__"
 COMPLETE_TASK_CALLBACK_KEY = "__AFTER_TASK_CALLBACK__"
@@ -607,15 +608,18 @@ class BatchedTask(Generic[EnvType]):
         return srs
 
     def reached_max_steps(self) -> bool:
+        get_logger().warning("Unexpected call to `reached_max_steps` in BatchedTask")
         return False
 
     def reached_terminal_state(self) -> bool:
+        get_logger().warning("Unexpected call to `reached_terminal_state` in BatchedTask")
         return False
 
     def is_done(self) -> bool:
         return False
 
     def num_steps_taken(self) -> int:
+        get_logger().warning("Unexpected call to `num_steps_taken` in BatchedTask")
         return -1
 
     def close(self) -> None:
@@ -623,11 +627,14 @@ class BatchedTask(Generic[EnvType]):
         self.tasks[0].close()
 
     def metrics(self) -> Dict[str, Any]:
+        get_logger().warning("Unexpected call to `metrics` in BatchedTask")
         return {}
 
     def query_expert(self, **kwargs) -> Tuple[Any, bool]:
+        get_logger().warning("Unexpected call to `query_expert` in BatchedTask")
         return None, False
 
     @property
     def cumulative_reward(self) -> float:
+        get_logger().warning("Unexpected call to `cumulative_reward` in BatchedTask")
         return 0.0
