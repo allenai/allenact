@@ -1901,14 +1901,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         # noinspection PyBroadException
         try:
             if checkpoint_file_name is not None:
-                if "wandb://" == checkpoint_file_name[:8]:
-                    ckpt_dir = "/tmp/wandb_ckpts"
-                    os.makedirs(ckpt_dir, exist_ok=True)
-                    checkpoint_file_name = download_checkpoint_from_wandb(
-                        checkpoint_file_name,
-                        ckpt_dir,
-                        only_allow_one_ckpt=True
-                    )
                 self.checkpoint_load(checkpoint_file_name, restart_pipeline)
 
             self.run_pipeline(valid_on_initial_weights=valid_on_initial_weights)
