@@ -1905,7 +1905,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     ckpt_dir = "/tmp/wandb_ckpts"
                     os.makedirs(ckpt_dir, exist_ok=True)
                     checkpoint_file_name = download_checkpoint_from_wandb(
-                        checkpoint_path_dir_or_pattern,
+                        checkpoint_file_name,
                         ckpt_dir,
                         only_allow_one_ckpt=True
                     )
