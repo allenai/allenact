@@ -534,14 +534,15 @@ class OnPolicyRunner(object):
 
         worker_ids = self.local_worker_ids(TRAIN_MODE_STR)
 
-        if "wandb://" == checkpoint[:8]:
-            ckpt_dir = "/tmp/wandb_ckpts"
-            os.makedirs(ckpt_dir, exist_ok=True)
-            checkpoint = download_checkpoint_from_wandb(
-                checkpoint,
-                ckpt_dir,
-                only_allow_one_ckpt=True
-            )
+        if checkpoint is not None:
+            if checkpoint[:8] == "wandb://":
+                ckpt_dir = "/tmp/wandb_ckpts"
+                os.makedirs(ckpt_dir, exist_ok=True)
+                checkpoint = download_checkpoint_from_wandb(
+                    checkpoint,
+                    ckpt_dir,
+                    only_allow_one_ckpt=True
+                )
 
         model_hash = None
         for trainer_id in worker_ids:
