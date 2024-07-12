@@ -394,7 +394,6 @@ class BatchedTask(Generic[EnvType]):
 
     task_sampler: TaskSampler
     tasks: List[Task]
-    task_classes: List[type(Task)]
     callback_sensor_suite: Optional[SensorSuite]
 
     def __init__(
@@ -404,7 +403,7 @@ class BatchedTask(Generic[EnvType]):
         task_info: Dict[str, Any],
         max_steps: int,
         task_sampler: TaskSampler,
-        task_classes: List[type(Task)],
+        task_class: type(Task),
         callback_sensor_suite: Optional[SensorSuite],
         **kwargs,
     ) -> None:
@@ -415,14 +414,13 @@ class BatchedTask(Generic[EnvType]):
         # Keep a reference to the task sampler
         self.task_sampler = task_sampler
 
-        self.task_classes = task_classes
         self.callback_sensor_suite = callback_sensor_suite
 
         self.env = env
 
         # Instantiate the first actual task from the currently sampled info
         self.tasks = [
-            task_classes[0](
+            task_class(
                 env=env,
                 sensors=sensors,
                 task_info=task_info,

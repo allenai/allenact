@@ -197,7 +197,7 @@ class BatchedObjectNavTaskSampler(ObjectNavTaskSampler):
                 max_steps=self.max_steps,
                 action_space=self._action_space,
                 task_sampler=self,
-                task_classes=[BatchableObjectNaviThorGridTask],
+                task_class=BatchableObjectNaviThorGridTask,
                 callback_sensor_suite=self.callback_sensor_suite,
             )
         else:
