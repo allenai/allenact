@@ -275,6 +275,16 @@ def get_argument_parser():
     )
 
     parser.add_argument(
+        "--save_ckpt_at_every_host",
+        dest="save_ckpt_at_every_host",
+        action="store_true",
+        required=False,
+        help="if you pass the `--save_ckpt_at_every_host` flag, AllenAct will save checkpoints at every host as the"
+             " the training progresses in distributed training mode.",
+    )
+    parser.set_defaults(save_ckpt_at_every_host=False)
+
+    parser.add_argument(
         "--callbacks",
         dest="callbacks",
         required=False,
@@ -484,6 +494,7 @@ def main():
             collect_valid_results=args.collect_valid_results,
             valid_on_initial_weights=args.valid_on_initial_weights,
             try_restart_after_task_error=args.enable_crash_recovery,
+            save_ckpt_at_every_host=save_ckpt_at_every_host,
         )
     else:
         OnPolicyRunner(

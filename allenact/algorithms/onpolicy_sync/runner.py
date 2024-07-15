@@ -501,6 +501,7 @@ class OnPolicyRunner(object):
         collect_valid_results: bool = False,
         valid_on_initial_weights: bool = False,
         try_restart_after_task_error: bool = False,
+        save_ckpt_at_every_host: bool = False,
     ):
         self._initialize_start_train_or_start_test()
 
@@ -574,6 +575,7 @@ class OnPolicyRunner(object):
                 distributed_preemption_threshold=self.distributed_preemption_threshold,
                 valid_on_initial_weights=valid_on_initial_weights,
                 try_restart_after_task_error=try_restart_after_task_error,
+                save_ckpt_at_every_host=save_ckpt_at_every_host,
             )
             train: BaseProcess = self.mp_ctx.Process(
                 target=self.train_loop,

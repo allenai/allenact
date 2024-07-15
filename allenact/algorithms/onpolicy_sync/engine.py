@@ -66,7 +66,6 @@ from allenact.utils.experiment_utils import (
     TrainingPipeline,
     set_deterministic_cudnn,
     set_seed,
-    download_checkpoint_from_wandb,
 )
 from allenact.utils.system import get_logger
 from allenact.utils.tensor_utils import batch_observations, detach_recursively
@@ -1176,6 +1175,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         max_sampler_processes_per_worker: Optional[int] = None,
         save_ckpt_after_every_pipeline_stage: bool = True,
         first_local_worker_id: int = 0,
+        save_ckpt_at_every_host: bool = False,
         **kwargs,
     ):
         kwargs["mode"] = TRAIN_MODE_STR
@@ -1267,6 +1267,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         )
 
         self.first_local_worker_id = first_local_worker_id
+        self.save_ckpt_at_every_host = save_ckpt_at_every_host
 
     def advance_seed(
         self, seed: Optional[int], return_same_seed_per_worker=False
@@ -1539,8 +1540,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
     ):
         model_path = None
         self.deterministic_seeds()
-        # if self.worker_id == self.first_local_worker_id:
-        if self.worker_id == 0:
+        if (self.save_ckpt_at_every_host and self.worker_id == self.first_local_worker_id) or self.worker_id == 0:
             model_path = self.checkpoint_save(pipeline_stage_index=pipeline_stage_index)
             if self.checkpoints_queue is not None:
                 self.checkpoints_queue.put(("eval", model_path))
@@ -1581,8 +1581,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             and should_save_checkpoints
             and self.checkpoints_queue is not None
         ):
-            # if self.worker_id == self.first_local_worker_id:
-            if self.worker_id == 0:
+            if (self.save_ckpt_at_every_host and self.worker_id == self.first_local_worker_id) or self.worker_id == 0:
                 model_path = self.checkpoint_save()
                 if self.checkpoints_queue is not None:
                     self.checkpoints_queue.put(("eval", model_path))
