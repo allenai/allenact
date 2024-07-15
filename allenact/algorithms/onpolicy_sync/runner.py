@@ -540,9 +540,7 @@ class OnPolicyRunner(object):
                 ckpt_dir = "/tmp/wandb_ckpts"
                 os.makedirs(ckpt_dir, exist_ok=True)
                 checkpoint = download_checkpoint_from_wandb(
-                    checkpoint,
-                    ckpt_dir,
-                    only_allow_one_ckpt=True
+                    checkpoint, ckpt_dir, only_allow_one_ckpt=True
                 )
 
         model_hash = None
@@ -1516,7 +1514,9 @@ class OnPolicyRunner(object):
         if "wandb://" == checkpoint_path_dir_or_pattern[:8]:
             eval_dir = "/tmp/wandb_ckpts_to_eval/{}".format(self.local_start_time_str)
             os.makedirs(eval_dir, exist_ok=True)
-            return download_checkpoint_from_wandb(checkpoint_path_dir_or_pattern, eval_dir, only_allow_one_ckpt=False)
+            return download_checkpoint_from_wandb(
+                checkpoint_path_dir_or_pattern, eval_dir, only_allow_one_ckpt=False
+            )
 
         if os.path.isdir(checkpoint_path_dir_or_pattern):
             # The fragment is a path to a directory, lets use this directory

@@ -1540,7 +1540,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
     ):
         model_path = None
         self.deterministic_seeds()
-        if (self.save_ckpt_at_every_host and self.worker_id == self.first_local_worker_id) or self.worker_id == 0:
+        if (
+            self.save_ckpt_at_every_host
+            and self.worker_id == self.first_local_worker_id
+        ) or self.worker_id == 0:
             model_path = self.checkpoint_save(pipeline_stage_index=pipeline_stage_index)
             if self.checkpoints_queue is not None:
                 self.checkpoints_queue.put(("eval", model_path))
@@ -1581,7 +1584,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             and should_save_checkpoints
             and self.checkpoints_queue is not None
         ):
-            if (self.save_ckpt_at_every_host and self.worker_id == self.first_local_worker_id) or self.worker_id == 0:
+            if (
+                self.save_ckpt_at_every_host
+                and self.worker_id == self.first_local_worker_id
+            ) or self.worker_id == 0:
                 model_path = self.checkpoint_save()
                 if self.checkpoints_queue is not None:
                     self.checkpoints_queue.put(("eval", model_path))
@@ -1851,10 +1857,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             # a pipeline stage completes is controlled above
             checkpoint_file_name = None
             if should_save_checkpoints and (
-                    self.training_pipeline.total_steps - self.last_save
-                    >= cur_stage_training_settings.save_interval
+                self.training_pipeline.total_steps - self.last_save
+                >= cur_stage_training_settings.save_interval
             ):
-                checkpoint_file_name = self._save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter()
+                checkpoint_file_name = (
+                    self._save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter()
+                )
                 already_saved_checkpoint = True
 
             if (

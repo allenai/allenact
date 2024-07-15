@@ -763,7 +763,10 @@ class PipelineStage:
         self.stage_component_uuid_to_stream_memory[stage_component.uuid] = Memory()
 
     def __setattr__(self, key: str, value: Any):
-        if key not in ["training_settings", "callback_to_change_engine_attributes"] and self.training_settings.has_key(key):
+        if key not in [
+            "training_settings",
+            "callback_to_change_engine_attributes",
+        ] and self.training_settings.has_key(key):
             raise NotImplementedError(
                 f"Cannot set {key} in {self.__name__}, update the"
                 f" `training_settings` attribute of {self.__name__} instead."
@@ -1190,7 +1193,9 @@ class TrainingPipeline:
         }
 
 
-def download_checkpoint_from_wandb(checkpoint_path_dir_or_pattern, all_ckpt_dir, only_allow_one_ckpt=False):
+def download_checkpoint_from_wandb(
+    checkpoint_path_dir_or_pattern, all_ckpt_dir, only_allow_one_ckpt=False
+):
     api = wandb.Api()
     run_token = checkpoint_path_dir_or_pattern.split("//")[1]
     ckpt_steps = checkpoint_path_dir_or_pattern.split("//")[2:]

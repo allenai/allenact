@@ -280,7 +280,7 @@ def get_argument_parser():
         action="store_true",
         required=False,
         help="if you pass the `--save_ckpt_at_every_host` flag, AllenAct will save checkpoints at every host as the"
-             " the training progresses in distributed training mode.",
+        " the training progresses in distributed training mode.",
     )
     parser.set_defaults(save_ckpt_at_every_host=False)
 
