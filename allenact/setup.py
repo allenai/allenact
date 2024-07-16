@@ -112,13 +112,13 @@ def _do_setup():
         install_requires=[
             "gym==0.17.*",  # Newer versions of gym are now broken with updates to setuptools
             "torch>=1.6.0,!=1.8.0",
-            "torchvision>=0.7.0",
+            "torchvision>=0.7.0,<=0.16.2",
             "tensorboardx>=2.1",
             "setproctitle",
             "moviepy>=1.0.3",
             "filelock",
             "numpy>=1.19.1",
-            "Pillow>=8.2.0,<9.0.0",
+            "Pillow>=8.2.0,<10.3.0",
             "matplotlib>=3.3.1",
             "networkx",
             "opencv-python",
