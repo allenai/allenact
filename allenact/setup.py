@@ -118,7 +118,7 @@ def _do_setup():
             "moviepy>=1.0.3",
             "filelock",
             "numpy>=1.19.1",
-            "Pillow>=8.2.0",
+            "Pillow>=8.2.0,<=10.2.0",
             "matplotlib>=3.3.1",
             "networkx",
             "opencv-python",
