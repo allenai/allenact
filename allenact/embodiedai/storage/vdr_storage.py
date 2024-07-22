@@ -50,7 +50,9 @@ class InverseDynamicsVDRLoss(GenericAbstractLoss):
         stream_memory: Memory,
     ) -> LossOutput:
         action_logits = self.compute_action_logits_fn(
-            model=model, img0=batch[self.img0_key], img1=batch[self.img1_key],
+            model=model,
+            img0=batch[self.img0_key],
+            img1=batch[self.img1_key],
         )
         loss = F.cross_entropy(action_logits, target=batch[self.action_key])
         return LossOutput(
@@ -163,9 +165,9 @@ class DiscreteVisualDynamicsReplayStorage(ExperienceStorage, MiniBatchStorageMix
             for i, (a, m, action_success) in enumerate(
                 zip(actions, masks, action_successes)
             ):
-                actions_already_sampled_in_ep = self.task_sampler_to_actions_already_sampled[
-                    i
-                ]
+                actions_already_sampled_in_ep = (
+                    self.task_sampler_to_actions_already_sampled[i]
+                )
 
                 if (
                     m != 0

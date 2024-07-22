@@ -35,7 +35,9 @@ class ObjectNaviThorRGBDPPOExperimentConfig(ObjectNaviThorBaseConfig):
             use_normalization=True,
             uuid="depth_lowres",
         ),
-        GoalObjectTypeThorSensor(object_types=ObjectNaviThorBaseConfig.TARGET_TYPES,),
+        GoalObjectTypeThorSensor(
+            object_types=ObjectNaviThorBaseConfig.TARGET_TYPES,
+        ),
     ]
 
     def __init__(self, **kwargs):

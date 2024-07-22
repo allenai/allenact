@@ -28,7 +28,9 @@ class ObjectNaviThorRGBPPOExperimentConfig(ObjectNaviThorBaseConfig):
             use_resnet_normalization=True,
             uuid="rgb_lowres",
         ),
-        GoalObjectTypeThorSensor(object_types=ObjectNaviThorBaseConfig.TARGET_TYPES,),
+        GoalObjectTypeThorSensor(
+            object_types=ObjectNaviThorBaseConfig.TARGET_TYPES,
+        ),
     ]
 
     def __init__(self, **kwargs):

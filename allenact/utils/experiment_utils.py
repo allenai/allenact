@@ -1,4 +1,5 @@
 """Utility classes and functions for running and designing experiments."""
+
 import abc
 import collections.abc
 import copy
@@ -25,6 +26,8 @@ import attr
 import numpy as np
 import torch
 import torch.optim as optim
+import wandb
+import shutil
 
 from allenact.algorithms.offpolicy_sync.losses.abstract_offpolicy_loss import Memory
 from allenact.algorithms.onpolicy_sync.losses.abstract_loss import (
@@ -244,13 +247,14 @@ class LoggingPackage:
         training_steps: Optional[int],
         storage_uuid_to_total_experiences: Dict[str, int],
         pipeline_stage: Optional[int] = None,
+        checkpoint_file_name: Optional[str] = None,
     ) -> None:
         self.mode = mode
 
         self.training_steps: int = training_steps
-        self.storage_uuid_to_total_experiences: Dict[
-            str, int
-        ] = storage_uuid_to_total_experiences
+        self.storage_uuid_to_total_experiences: Dict[str, int] = (
+            storage_uuid_to_total_experiences
+        )
         self.pipeline_stage = pipeline_stage
 
         self.metrics_tracker = ScalarMeanTracker()
@@ -258,7 +262,7 @@ class LoggingPackage:
 
         self.metric_dicts: List[Any] = []
         self.viz_data: Optional[Dict[str, List[Dict[str, Any]]]] = None
-        self.checkpoint_file_name: Optional[str] = None
+        self.checkpoint_file_name: Optional[str] = checkpoint_file_name
         self.task_callback_data: List[Any] = []
 
         self.num_empty_metrics_dicts_added: int = 0
@@ -431,7 +435,10 @@ class EarlyStoppingCriterion(abc.ABC):
 
     @abc.abstractmethod
     def __call__(
-        self, stage_steps: int, total_steps: int, training_metrics: ScalarMeanTracker,
+        self,
+        stage_steps: int,
+        total_steps: int,
+        training_metrics: ScalarMeanTracker,
     ) -> bool:
         """Returns `True` if training should be stopped early.
 
@@ -451,7 +458,10 @@ class NeverEarlyStoppingCriterion(EarlyStoppingCriterion):
     """Implementation of `EarlyStoppingCriterion` which never stops early."""
 
     def __call__(
-        self, stage_steps: int, total_steps: int, training_metrics: ScalarMeanTracker,
+        self,
+        stage_steps: int,
+        total_steps: int,
+        training_metrics: ScalarMeanTracker,
     ) -> bool:
         return False
 
@@ -636,8 +646,11 @@ class PipelineStage:
         stage_components: Optional[Sequence[StageComponent]] = None,
         early_stopping_criterion: Optional[EarlyStoppingCriterion] = None,
         training_settings: Optional[TrainingSettings] = None,
+        callback_to_change_engine_attributes: Optional[Dict[str, Any]] = None,
         **training_settings_kwargs,
     ):
+        self.callback_to_change_engine_attributes = callback_to_change_engine_attributes
+
         # Populate TrainingSettings members
         # THIS MUST COME FIRST IN `__init__` as otherwise `__getattr__` will loop infinitely.
         assert training_settings is None or len(training_settings_kwargs) == 0
@@ -699,6 +712,17 @@ class PipelineStage:
         for memory in self.stage_component_uuid_to_stream_memory.values():
             memory.clear()
 
+    # TODO: Replace Any with the correct type
+    def change_engine_attributes(self, engine: Any):
+        if self.callback_to_change_engine_attributes is not None:
+            for key, value in self.callback_to_change_engine_attributes.items():
+                # check if the engine has the attribute
+                assert hasattr(engine, key)
+
+                func = value["func"]
+                args = value["args"]
+                setattr(engine, key, func(engine, **args))
+
     @property
     def stage_components(self) -> Tuple[StageComponent]:
         return tuple(self._stage_components)
@@ -739,7 +763,10 @@ class PipelineStage:
         self.stage_component_uuid_to_stream_memory[stage_component.uuid] = Memory()
 
     def __setattr__(self, key: str, value: Any):
-        if key != "training_settings" and self.training_settings.has_key(key):
+        if key not in [
+            "training_settings",
+            "callback_to_change_engine_attributes",
+        ] and self.training_settings.has_key(key):
             raise NotImplementedError(
                 f"Cannot set {key} in {self.__name__}, update the"
                 f" `training_settings` attribute of {self.__name__} instead."
@@ -1029,10 +1056,12 @@ class TrainingPipeline:
             train_metrics is not None
             and self.current_stage.early_stopping_criterion is not None
         ):
-            self.current_stage.early_stopping_criterion_met = self.current_stage.early_stopping_criterion(
-                stage_steps=self.current_stage.steps_taken_in_stage,
-                total_steps=self.total_steps,
-                training_metrics=train_metrics,
+            self.current_stage.early_stopping_criterion_met = (
+                self.current_stage.early_stopping_criterion(
+                    stage_steps=self.current_stage.steps_taken_in_stage,
+                    total_steps=self.total_steps,
+                    training_metrics=train_metrics,
+                )
             )
         if self.current_stage.early_stopping_criterion_met:
             get_logger().debug(
@@ -1124,7 +1153,8 @@ class TrainingPipeline:
         for storage_uuid in storage_uuids_for_current_stage:
             if isinstance(self._named_storages[storage_uuid], Builder):
                 self._named_storages[storage_uuid] = cast(
-                    Builder["ExperienceStorage"], self._named_storages[storage_uuid],
+                    Builder["ExperienceStorage"],
+                    self._named_storages[storage_uuid],
                 )()
 
         return OrderedDict(
@@ -1161,3 +1191,32 @@ class TrainingPipeline:
             )
             for loss_name in self.current_stage.loss_names
         }
+
+
+def download_checkpoint_from_wandb(
+    checkpoint_path_dir_or_pattern, all_ckpt_dir, only_allow_one_ckpt=False
+):
+    api = wandb.Api()
+    run_token = checkpoint_path_dir_or_pattern.split("//")[1]
+    ckpt_steps = checkpoint_path_dir_or_pattern.split("//")[2:]
+    if ckpt_steps[-1] == "":
+        ckpt_steps = ckpt_steps[:-1]
+    if not only_allow_one_ckpt:
+        ckpts_paths = []
+        for steps in ckpt_steps:
+            ckpt_fn = "{}-step-{}:latest".format(run_token, steps)
+            artifact = api.artifact(ckpt_fn)
+            _ = artifact.download(all_ckpt_dir)
+            ckpt_dir = "{}/ckpt-{}.pt".format(all_ckpt_dir, steps)
+            shutil.move("{}/ckpt.pt".format(all_ckpt_dir), ckpt_dir)
+            ckpts_paths.append(ckpt_dir)
+        return ckpts_paths
+    else:
+        assert len(ckpt_steps) == 1
+        step = ckpt_steps[0]
+        ckpt_fn = "{}-step-{}:latest".format(run_token, step)
+        artifact = api.artifact(ckpt_fn)
+        _ = artifact.download(all_ckpt_dir)
+        ckpt_dir = "{}/ckpt-{}.pt".format(all_ckpt_dir, step)
+        shutil.move("{}/ckpt.pt".format(all_ckpt_dir), ckpt_dir)
+        return ckpt_dir

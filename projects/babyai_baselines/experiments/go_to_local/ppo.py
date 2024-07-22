@@ -28,10 +28,13 @@ class PPOBabyAIGoToLocalExperimentConfig(BaseBabyAIGoToLocalExperimentConfig):
         ppo_info = cls.rl_loss_default("ppo", steps=total_train_steps)
 
         return cls._training_pipeline(
-            named_losses={"ppo_loss": ppo_info["loss"],},
+            named_losses={
+                "ppo_loss": ppo_info["loss"],
+            },
             pipeline_stages=[
                 PipelineStage(
-                    loss_names=["ppo_loss"], max_stage_steps=total_train_steps,
+                    loss_names=["ppo_loss"],
+                    max_stage_steps=total_train_steps,
                 ),
             ],
             num_mini_batch=ppo_info["num_mini_batch"],

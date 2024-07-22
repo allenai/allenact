@@ -114,7 +114,10 @@ class AuxiliaryLoss(AbstractActorCriticLoss):
 
 
 def _propagate_final_beliefs_to_all_steps(
-    beliefs: torch.Tensor, masks: torch.Tensor, num_sampler: int, num_steps: int,
+    beliefs: torch.Tensor,
+    masks: torch.Tensor,
+    num_sampler: int,
+    num_steps: int,
 ):
     final_beliefs = torch.zeros_like(beliefs)  # (T, B, *)
     start_locs_list = []
@@ -180,7 +183,10 @@ class InverseDynamicsLoss(AuxiliaryLoss):
         masks = masks.squeeze(-1)  # (T, B)
 
         final_beliefs, _, _ = _propagate_final_beliefs_to_all_steps(
-            beliefs, masks, num_sampler, num_steps,
+            beliefs,
+            masks,
+            num_sampler,
+            num_steps,
         )
 
         ## compute CE loss
@@ -236,7 +242,9 @@ class InverseDynamicsLoss(AuxiliaryLoss):
 
         return (
             avg_loss,
-            {"total": cast(torch.Tensor, avg_loss).item(),},
+            {
+                "total": cast(torch.Tensor, avg_loss).item(),
+            },
         )
 
 
@@ -275,7 +283,10 @@ class TemporalDistanceLoss(AuxiliaryLoss):
             start_locs_list,
             end_locs_list,
         ) = _propagate_final_beliefs_to_all_steps(
-            beliefs, masks, num_sampler, num_steps,
+            beliefs,
+            masks,
+            num_sampler,
+            num_steps,
         )
 
         ## also find the locs_batch of shape (M, 3)
@@ -353,7 +364,9 @@ class TemporalDistanceLoss(AuxiliaryLoss):
 
         return (
             avg_loss,
-            {"total": cast(torch.Tensor, avg_loss).item(),},
+            {
+                "total": cast(torch.Tensor, avg_loss).item(),
+            },
         )
 
 
@@ -502,21 +515,21 @@ class CPCALoss(AuxiliaryLoss):
             beliefs.device
         )  # (T+k, k, N, 1)
 
-        pred_masks[
-            num_steps - 1 :
-        ] = False  # GRU(b_t, a_{t:t+k-1}) is invalid when t >= T, as we don't have real z_{t+1}
+        pred_masks[num_steps - 1 :] = (
+            False  # GRU(b_t, a_{t:t+k-1}) is invalid when t >= T, as we don't have real z_{t+1}
+        )
         for j in range(1, self.planning_steps + 1):  # for j-step predictions
-            pred_masks[
-                : j - 1, j - 1
-            ] = False  # Remove the upper triangle above the diagnonal (but I think this is unnecessary for valid_masks)
+            pred_masks[: j - 1, j - 1] = (
+                False  # Remove the upper triangle above the diagnonal (but I think this is unnecessary for valid_masks)
+            )
             for n in range(num_sampler):
                 has_zeros_batch = torch.where(masks[:, n] == 0)[0]
                 # in j-step prediction, timesteps z -> z + j are disallowed as those are the first j timesteps of a new episode
                 # z-> z-1 because of pred_masks being offset by 1
                 for z in has_zeros_batch:
-                    pred_masks[
-                        z - 1 : z - 1 + j, j - 1, n
-                    ] = False  # can affect j timesteps
+                    pred_masks[z - 1 : z - 1 + j, j - 1, n] = (
+                        False  # can affect j timesteps
+                    )
 
         # instead of the whole range, we actually are only comparing a window i:i+k for each query/target i - for each, select the appropriate k
         # we essentially gather diagonals from this full mask, t of them, k long
@@ -682,7 +695,9 @@ class CPCASoftMaxLoss(AuxiliaryLoss):
 
         return (
             avg_multi_class_loss,
-            {"total": cast(torch.Tensor, avg_multi_class_loss).item(),},
+            {
+                "total": cast(torch.Tensor, avg_multi_class_loss).item(),
+            },
         )
 
 

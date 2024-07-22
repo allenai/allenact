@@ -1,5 +1,6 @@
 """Utility classes and functions for calculating the arm relative and absolute
 position."""
+
 from typing import Dict
 
 import numpy as np

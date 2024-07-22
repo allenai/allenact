@@ -87,11 +87,13 @@ class BaseBabyAIGoToLocalExperimentConfig(BaseBabyAIExperimentConfig, ABC):
             should_log=cls.SHOULD_LOG,
             pipeline_stages=pipeline_stages,
             named_storages=named_storages,
-            lr_scheduler_builder=Builder(
-                LambdaLR, {"lr_lambda": LinearDecay(steps=total_train_steps)}  # type: ignore
-            )
-            if cls.USE_LR_DECAY
-            else None,
+            lr_scheduler_builder=(
+                Builder(
+                    LambdaLR, {"lr_lambda": LinearDecay(steps=total_train_steps)}  # type: ignore
+                )
+                if cls.USE_LR_DECAY
+                else None
+            ),
         )
 
     @classmethod

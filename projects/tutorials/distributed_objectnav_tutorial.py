@@ -210,11 +210,23 @@ class DistributedObjectNavRoboThorRGBPPOExperimentConfig(BaseConfig):
         return MultiLinearDecay(
             [
                 # Base learning rate phase for small batch (with linear decay towards 0)
-                LinearDecay(steps=safe_small_batch_steps, startp=1.0, endp=break1,),
+                LinearDecay(
+                    steps=safe_small_batch_steps,
+                    startp=1.0,
+                    endp=break1,
+                ),
                 # Allow the optimizer to adapt its statistics to the changes with a larger learning rate
-                LinearDecay(steps=transition_steps, startp=break1, endp=break2,),
+                LinearDecay(
+                    steps=transition_steps,
+                    startp=break1,
+                    endp=break2,
+                ),
                 # Scaled learning rate phase for large batch (with linear decay towards 0)
-                LinearDecay(steps=large_batch_and_lr_steps, startp=break2, endp=0,),
+                LinearDecay(
+                    steps=large_batch_and_lr_steps,
+                    startp=break2,
+                    endp=0,
+                ),
             ]
         )
 

@@ -14,7 +14,9 @@ class BinnedPointCloudMapLoss(AbstractActorCriticLoss):
     prediction."""
 
     def __init__(
-        self, binned_pc_uuid: str, map_logits_uuid: str,
+        self,
+        binned_pc_uuid: str,
+        map_logits_uuid: str,
     ):
         """Initializer.
 
@@ -135,8 +137,8 @@ class SemanticMapFocalLoss(AbstractActorCriticLoss):
 
         ego_map_gt = ego_map_gt.float()
         total_loss = -(
-            ego_map_gt * (log_p * (one_minus_p ** self.gamma))
-            + (1 - ego_map_gt) * (log_one_minus_p * (p ** self.gamma))
+            ego_map_gt * (log_p * (one_minus_p**self.gamma))
+            + (1 - ego_map_gt) * (log_one_minus_p * (p**self.gamma))
         ).mean()
 
         return (

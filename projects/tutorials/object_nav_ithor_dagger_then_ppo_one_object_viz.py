@@ -34,14 +34,17 @@ class ObjectNavThorDaggerThenPPOVizExperimentConfig(
         self.viz = VizSuite(
             mode=mode,
             base_trajectory=TrajectoryViz(
-                path_to_target_location=None, path_to_rot_degrees=("rotation",),
+                path_to_target_location=None,
+                path_to_rot_degrees=("rotation",),
             ),
             egeocentric=AgentViewViz(max_video_length=100),
             action_probs=ActorViz(figsize=(3.25, 10), fontsize=18),
             taken_action_logprobs=TensorViz1D(),
             episode_mask=TensorViz1D(rollout_source=("masks",)),
             thor_trajectory=ThorViz(
-                path_to_target_location=None, figsize=(8, 8), viz_rows_cols=(448, 448),
+                path_to_target_location=None,
+                figsize=(8, 8),
+                viz_rows_cols=(448, 448),
             ),
         )
 

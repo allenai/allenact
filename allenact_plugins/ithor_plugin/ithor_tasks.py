@@ -214,13 +214,13 @@ class ObjectNaviThorGridTask(Task[IThorEnvironment]):
                             if standing == 1
                         )
 
-                    self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE[
-                        key
-                    ] = locations_from_which_object_is_visible
+                    self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE[key] = (
+                        locations_from_which_object_is_visible
+                    )
 
-                self._subsampled_locations_from_which_obj_visible = self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE[
-                    key
-                ]
+                self._subsampled_locations_from_which_obj_visible = (
+                    self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE[key]
+                )
                 if len(self._subsampled_locations_from_which_obj_visible) > 5:
                     self._subsampled_locations_from_which_obj_visible = random.sample(
                         self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE[key], 5

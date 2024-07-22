@@ -1,4 +1,5 @@
 """Defines the reinforcement learning `OnPolicyRunner`."""
+
 import copy
 import enum
 import glob
@@ -44,6 +45,7 @@ from allenact.utils.experiment_utils import (
     ScalarMeanTracker,
     set_deterministic_cudnn,
     set_seed,
+    download_checkpoint_from_wandb,
 )
 from allenact.utils.misc_utils import (
     NumpyJSONEncoder,
@@ -499,6 +501,7 @@ class OnPolicyRunner(object):
         collect_valid_results: bool = False,
         valid_on_initial_weights: bool = False,
         try_restart_after_task_error: bool = False,
+        save_ckpt_at_every_host: bool = False,
     ):
         self._initialize_start_train_or_start_test()
 
@@ -532,6 +535,14 @@ class OnPolicyRunner(object):
 
         worker_ids = self.local_worker_ids(TRAIN_MODE_STR)
 
+        if checkpoint is not None:
+            if checkpoint[:8] == "wandb://":
+                ckpt_dir = "/tmp/wandb_ckpts"
+                os.makedirs(ckpt_dir, exist_ok=True)
+                checkpoint = download_checkpoint_from_wandb(
+                    checkpoint, ckpt_dir, only_allow_one_ckpt=True
+                )
+
         model_hash = None
         for trainer_id in worker_ids:
             training_kwargs = dict(
@@ -542,9 +553,9 @@ class OnPolicyRunner(object):
                 config=self.config,
                 callback_sensors=self._get_callback_sensors,
                 results_queue=self.queues["results"],
-                checkpoints_queue=self.queues["checkpoints"]
-                if self.running_validation
-                else None,
+                checkpoints_queue=(
+                    self.queues["checkpoints"] if self.running_validation else None
+                ),
                 checkpoints_dir=self.checkpoint_dir(),
                 seed=self.seed,
                 deterministic_cudnn=self.deterministic_cudnn,
@@ -555,13 +566,14 @@ class OnPolicyRunner(object):
                 distributed_port=distributed_port,
                 max_sampler_processes_per_worker=max_sampler_processes_per_worker,
                 save_ckpt_after_every_pipeline_stage=save_ckpt_after_every_pipeline_stage,
-                initial_model_state_dict=initial_model_state_dict
-                if model_hash is None
-                else model_hash,
+                initial_model_state_dict=(
+                    initial_model_state_dict if model_hash is None else model_hash
+                ),
                 first_local_worker_id=worker_ids[0],
                 distributed_preemption_threshold=self.distributed_preemption_threshold,
                 valid_on_initial_weights=valid_on_initial_weights,
                 try_restart_after_task_error=try_restart_after_task_error,
+                save_ckpt_at_every_host=save_ckpt_at_every_host,
             )
             train: BaseProcess = self.mp_ctx.Process(
                 target=self.train_loop,
@@ -782,9 +794,11 @@ class OnPolicyRunner(object):
         self, start_time_str: Optional[str] = None, create_if_none: bool = True
     ):
         path_parts = [
-            self.config.tag()
-            if self.extra_tag == ""
-            else os.path.join(self.config.tag(), self.extra_tag),
+            (
+                self.config.tag()
+                if self.extra_tag == ""
+                else os.path.join(self.config.tag(), self.extra_tag)
+            ),
             start_time_str or self.local_start_time_str,
         ]
         if self.save_dir_fmt == SaveDirFormat.NESTED:
@@ -816,9 +830,11 @@ class OnPolicyRunner(object):
                 )
             path = os.path.join(
                 self.output_dir,
-                self.config.tag()
-                if self.extra_tag == ""
-                else os.path.join(self.config.tag(), self.extra_tag),
+                (
+                    self.config.tag()
+                    if self.extra_tag == ""
+                    else os.path.join(self.config.tag(), self.extra_tag)
+                ),
                 start_time_str,
                 "train_tb",
             )
@@ -827,9 +843,11 @@ class OnPolicyRunner(object):
             path = os.path.join(
                 self.output_dir,
                 "tb",
-                self.config.tag()
-                if self.extra_tag == ""
-                else os.path.join(self.config.tag(), self.extra_tag),
+                (
+                    self.config.tag()
+                    if self.extra_tag == ""
+                    else os.path.join(self.config.tag(), self.extra_tag)
+                ),
                 start_time_str,
             )
             if self.mode == TEST_MODE_STR:
@@ -850,9 +868,11 @@ class OnPolicyRunner(object):
             return os.path.join(
                 self.output_dir,
                 "metrics",
-                self.config.tag()
-                if self.extra_tag == ""
-                else os.path.join(self.config.tag(), self.extra_tag),
+                (
+                    self.config.tag()
+                    if self.extra_tag == ""
+                    else os.path.join(self.config.tag(), self.extra_tag)
+                ),
                 start_time_str,
             )
         else:
@@ -860,9 +880,11 @@ class OnPolicyRunner(object):
 
     def save_project_state(self):
         path_parts = [
-            self.config.tag()
-            if self.extra_tag == ""
-            else os.path.join(self.config.tag(), self.extra_tag),
+            (
+                self.config.tag()
+                if self.extra_tag == ""
+                else os.path.join(self.config.tag(), self.extra_tag)
+            ),
             self.local_start_time_str,
         ]
         if self.save_dir_fmt == SaveDirFormat.NESTED:
@@ -1091,16 +1113,23 @@ class OnPolicyRunner(object):
                             f" AllenAct, please report this issue at https://github.com/allenai/allenact/issues."
                         )
                     else:
-                        scalar_name_to_total_storage_experience[
-                            scalar_name
-                        ] = total_exp_for_storage
-                        scalar_name_to_total_experiences_key[
-                            scalar_name
-                        ] = storage_uuid_to_total_experiences_key[storage_uuid]
+                        scalar_name_to_total_storage_experience[scalar_name] = (
+                            total_exp_for_storage
+                        )
+                        scalar_name_to_total_experiences_key[scalar_name] = (
+                            storage_uuid_to_total_experiences_key[storage_uuid]
+                        )
 
-        assert all_equal(
-            checkpoint_file_name
-        ), f"All {mode} logging packages must have the same checkpoint_file_name."
+        if any(checkpoint_file_name):
+            ckpt_to_store = None
+            for ckpt in checkpoint_file_name:
+                if ckpt is not None:
+                    ckpt_to_store = ckpt
+            assert ckpt_to_store is not None
+            checkpoint_file_name = [ckpt_to_store]
+        # assert all_equal(
+        #     checkpoint_file_name
+        # ), f"All {mode} logging packages must have the same checkpoint_file_name."
 
         message = [
             f"{mode.upper()}: {training_steps} rollout steps ({pkgs[0].storage_uuid_to_total_experiences})"
@@ -1156,9 +1185,9 @@ class OnPolicyRunner(object):
                             stage_component_uuid,
                         )
                         callback_metric_means[approx_eps_key] = eps
-                        scalar_name_to_total_experiences_key[
-                            approx_eps_key
-                        ] = storage_uuid_to_total_experiences_key[storage_uuid]
+                        scalar_name_to_total_experiences_key[approx_eps_key] = (
+                            storage_uuid_to_total_experiences_key[storage_uuid]
+                        )
 
                         if log_writer is not None:
                             log_writer.add_scalar(
@@ -1194,6 +1223,7 @@ class OnPolicyRunner(object):
                     metrics=metric_dicts_list,
                     metric_means=callback_metric_means,
                     step=training_steps,
+                    checkpoint_file_name=checkpoint_file_name[0],
                     tasks_data=tasks_callback_data,
                     scalar_name_to_total_experiences_key=scalar_name_to_total_experiences_key,
                 )
@@ -1358,9 +1388,11 @@ class OnPolicyRunner(object):
                                 self.process_valid_package(
                                     log_writer=log_writer,
                                     pkg=package,
-                                    all_results=eval_results
-                                    if self._collect_valid_results
-                                    else None,
+                                    all_results=(
+                                        eval_results
+                                        if self._collect_valid_results
+                                        else None
+                                    ),
                                 )
 
                                 if metrics_file is not None:
@@ -1479,6 +1511,12 @@ class OnPolicyRunner(object):
         checkpoint_path_dir_or_pattern: str,
         approx_ckpt_step_interval: Optional[int] = None,
     ):
+        if "wandb://" == checkpoint_path_dir_or_pattern[:8]:
+            eval_dir = "/tmp/wandb_ckpts_to_eval/{}".format(self.local_start_time_str)
+            os.makedirs(eval_dir, exist_ok=True)
+            return download_checkpoint_from_wandb(
+                checkpoint_path_dir_or_pattern, eval_dir, only_allow_one_ckpt=False
+            )
 
         if os.path.isdir(checkpoint_path_dir_or_pattern):
             # The fragment is a path to a directory, lets use this directory

@@ -61,7 +61,7 @@ class BaseBabyAIGoToObjExperimentConfig(BaseBabyAIExperimentConfig, ABC):
         metric_accumulate_interval = (
             cls.METRIC_ACCUMULATE_INTERVAL()
         )  # Log every 10 max length tasks
-        save_interval = 2 ** 31
+        save_interval = 2**31
         gamma = 0.99
 
         use_gae = "reinforce_loss" not in named_losses
@@ -83,11 +83,13 @@ class BaseBabyAIGoToObjExperimentConfig(BaseBabyAIExperimentConfig, ABC):
             advance_scene_rollout_period=None,
             should_log=cls.SHOULD_LOG,
             pipeline_stages=pipeline_stages,
-            lr_scheduler_builder=Builder(
-                LambdaLR, {"lr_lambda": LinearDecay(steps=total_train_steps)}  # type: ignore
-            )
-            if cls.USE_LR_DECAY
-            else None,
+            lr_scheduler_builder=(
+                Builder(
+                    LambdaLR, {"lr_lambda": LinearDecay(steps=total_train_steps)}  # type: ignore
+                )
+                if cls.USE_LR_DECAY
+                else None
+            ),
             **kwargs,
         )
 
