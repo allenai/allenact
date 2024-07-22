@@ -1,2 +1,2 @@
-babyai @ git+https://github.com/Lucaweihs/babyai.git@0b450eeb3a2dc7116c67900d51391986bdbb84cd
 networkx
+-e "git+https://github.com/Lucaweihs/babyai.git@0b450eeb3a2dc7116c67900d51391986bdbb84cd#egg=babyai"
