@@ -26,7 +26,10 @@ import attr
 import numpy as np
 import torch
 import torch.optim as optim
-import wandb
+try:
+    import wandb
+except:
+    print("No wandb available")
 import shutil
 
 from allenact.algorithms.offpolicy_sync.losses.abstract_offpolicy_loss import Memory
