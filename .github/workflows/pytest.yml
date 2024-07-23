@@ -26,7 +26,7 @@ jobs:
         python -m pip install pytest wandb
         python -m pip install --editable="./allenact"
         python -m pip install --editable="./allenact_plugins[all]"
-        python -m pip install pip install -r allenact_plugins/babyai_plugin/extra_requirements.txt # Required as babyai is not on PyPI
+        python -m pip install -e "git+https://github.com/Lucaweihs/babyai.git@0b450eeb3a2dc7116c67900d51391986bdbb84cd#egg=babyai"
         python -m pip install compress_pickle # Needed for some mapping tests
         pip list
 
