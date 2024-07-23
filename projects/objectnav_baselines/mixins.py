@@ -120,9 +120,9 @@ class ResNetPreprocessGRUActorCriticMixin:
             observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             goal_sensor_uuid=goal_sensor_uuid,
             rgb_resnet_preprocessor_uuid="rgb_resnet_imagenet" if has_rgb else None,
-            depth_resnet_preprocessor_uuid="depth_resnet_imagenet"
-            if has_depth
-            else None,
+            depth_resnet_preprocessor_uuid=(
+                "depth_resnet_imagenet" if has_depth else None
+            ),
             hidden_size=512,
             goal_dims=32,
         )
@@ -154,9 +154,9 @@ class ObjectNavUnfrozenResNetWithGRUActorCriticMixin:
             rgb_uuid=rgb_uuid,
             depth_uuid=depth_uuid,
             goal_sensor_uuid=goal_sensor_uuid,
-            hidden_size=192
-            if self.multiple_beliefs and len(self.auxiliary_uuids) > 1
-            else 512,
+            hidden_size=(
+                192 if self.multiple_beliefs and len(self.auxiliary_uuids) > 1 else 512
+            ),
             backbone=self.backbone,
             resnet_baseplanes=32,
             object_type_embedding_dim=32,
@@ -199,7 +199,9 @@ class ObjectNavDAggerMixin:
             update_repeats=update_repeats,
             max_grad_norm=max_grad_norm,
             num_steps=num_steps,
-            named_losses={"imitation_loss": Imitation(),},
+            named_losses={
+                "imitation_loss": Imitation(),
+            },
             gamma=gamma,
             use_gae=use_gae,
             gae_lambda=gae_lambda,
@@ -208,18 +210,25 @@ class ObjectNavDAggerMixin:
                 PipelineStage(
                     loss_names=["imitation_loss"],
                     max_stage_steps=tf_steps,
-                    teacher_forcing=LinearDecay(startp=1.0, endp=1.0, steps=tf_steps,),
+                    teacher_forcing=LinearDecay(
+                        startp=1.0,
+                        endp=1.0,
+                        steps=tf_steps,
+                    ),
                 ),
                 PipelineStage(
                     loss_names=["imitation_loss"],
                     max_stage_steps=anneal_steps + il_no_tf_steps,
                     teacher_forcing=LinearDecay(
-                        startp=1.0, endp=0.0, steps=anneal_steps,
+                        startp=1.0,
+                        endp=0.0,
+                        steps=anneal_steps,
                     ),
                 ),
             ],
             lr_scheduler_builder=Builder(
-                LambdaLR, {"lr_lambda": LinearDecay(steps=training_steps)},
+                LambdaLR,
+                {"lr_lambda": LinearDecay(steps=training_steps)},
             ),
         )
 
@@ -236,54 +245,76 @@ def update_with_auxiliary_losses(
     total_aux_losses: Dict[str, Tuple[AbstractActorCriticLoss, float]] = {
         InverseDynamicsLoss.UUID: (
             InverseDynamicsLoss(
-                subsample_rate=0.2, subsample_min_num=10,  # TODO: test its effects
+                subsample_rate=0.2,
+                subsample_min_num=10,  # TODO: test its effects
             ),
             0.05 * aux_loss_total_weight,  # should times 2
         ),
         TemporalDistanceLoss.UUID: (
             TemporalDistanceLoss(
-                num_pairs=8, epsiode_len_min=5,  # TODO: test its effects
+                num_pairs=8,
+                epsiode_len_min=5,  # TODO: test its effects
             ),
             0.2 * aux_loss_total_weight,  # should times 2
         ),
         CPCA1Loss.UUID: (
-            CPCA1Loss(subsample_rate=0.2,),  # TODO: test its effects
+            CPCA1Loss(
+                subsample_rate=0.2,
+            ),  # TODO: test its effects
             0.05 * aux_loss_total_weight,  # should times 2
         ),
         CPCA2Loss.UUID: (
-            CPCA2Loss(subsample_rate=0.2,),  # TODO: test its effects
+            CPCA2Loss(
+                subsample_rate=0.2,
+            ),  # TODO: test its effects
             0.05 * aux_loss_total_weight,  # should times 2
         ),
         CPCA4Loss.UUID: (
-            CPCA4Loss(subsample_rate=0.2,),  # TODO: test its effects
+            CPCA4Loss(
+                subsample_rate=0.2,
+            ),  # TODO: test its effects
             0.05 * aux_loss_total_weight,  # should times 2
         ),
         CPCA8Loss.UUID: (
-            CPCA8Loss(subsample_rate=0.2,),  # TODO: test its effects
+            CPCA8Loss(
+                subsample_rate=0.2,
+            ),  # TODO: test its effects
             0.05 * aux_loss_total_weight,  # should times 2
         ),
         CPCA16Loss.UUID: (
-            CPCA16Loss(subsample_rate=0.2,),  # TODO: test its effects
+            CPCA16Loss(
+                subsample_rate=0.2,
+            ),  # TODO: test its effects
             0.05 * aux_loss_total_weight,  # should times 2
         ),
         CPCA1SoftMaxLoss.UUID: (
-            CPCA1SoftMaxLoss(subsample_rate=1.0,),
+            CPCA1SoftMaxLoss(
+                subsample_rate=1.0,
+            ),
             0.05 * aux_loss_total_weight,  # should times 2
         ),
         CPCA2SoftMaxLoss.UUID: (
-            CPCA2SoftMaxLoss(subsample_rate=1.0,),
+            CPCA2SoftMaxLoss(
+                subsample_rate=1.0,
+            ),
             0.05 * aux_loss_total_weight,  # should times 2
         ),
         CPCA4SoftMaxLoss.UUID: (
-            CPCA4SoftMaxLoss(subsample_rate=1.0,),
+            CPCA4SoftMaxLoss(
+                subsample_rate=1.0,
+            ),
             0.05 * aux_loss_total_weight,  # should times 2
         ),
         CPCA8SoftMaxLoss.UUID: (
-            CPCA8SoftMaxLoss(subsample_rate=1.0,),
+            CPCA8SoftMaxLoss(
+                subsample_rate=1.0,
+            ),
             0.05 * aux_loss_total_weight,  # should times 2
         ),
         CPCA16SoftMaxLoss.UUID: (
-            CPCA16SoftMaxLoss(subsample_rate=1.0,),
+            CPCA16SoftMaxLoss(
+                subsample_rate=1.0,
+            ),
             0.05 * aux_loss_total_weight,  # should times 2
         ),
     }
@@ -353,9 +384,9 @@ class ObjectNavPPOMixin:
                     loss_weights=[val[1] for val in named_losses.values()],
                 )
             ],
-            lr_scheduler_builder=Builder(
-                LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
-            )
-            if anneal_lr
-            else None,
+            lr_scheduler_builder=(
+                Builder(LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)})
+                if anneal_lr
+                else None
+            ),
         )

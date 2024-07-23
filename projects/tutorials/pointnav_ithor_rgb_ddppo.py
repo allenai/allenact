@@ -182,9 +182,9 @@ class PointNaviThorRGBPPOExperimentConfig(ExperimentConfig):
         return MachineParams(
             nprocesses=nprocesses,
             devices=gpu_ids,
-            sampler_devices=sampler_devices
-            if mode == "train"
-            else gpu_ids,  # ignored with > 1 gpu_ids
+            sampler_devices=(
+                sampler_devices if mode == "train" else gpu_ids
+            ),  # ignored with > 1 gpu_ids
             sensor_preprocessor_graph=sensor_preprocessor_graph,
         )
 

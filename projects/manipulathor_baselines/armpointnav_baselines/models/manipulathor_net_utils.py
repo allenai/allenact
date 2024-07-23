@@ -10,7 +10,7 @@ def upshuffle(
     return nn.Sequential(
         nn.Conv2d(
             in_planes,
-            out_planes * upscale_factor ** 2,
+            out_planes * upscale_factor**2,
             kernel_size=kernel_size,
             stride=stride,
             padding=padding,
@@ -26,7 +26,7 @@ def upshufflenorelu(
     return nn.Sequential(
         nn.Conv2d(
             in_planes,
-            out_planes * upscale_factor ** 2,
+            out_planes * upscale_factor**2,
             kernel_size=kernel_size,
             stride=stride,
             padding=padding,
@@ -55,22 +55,31 @@ def conv2d_block(in_planes, out_planes, kernel_size, stride=1, padding=1):
 
 def combine_block_w_do(in_planes, out_planes, dropout=0.0):
     return nn.Sequential(
-        nn.Conv2d(in_planes, out_planes, 1, 1), nn.LeakyReLU(), nn.Dropout(dropout),
+        nn.Conv2d(in_planes, out_planes, 1, 1),
+        nn.LeakyReLU(),
+        nn.Dropout(dropout),
     )
 
 
 def combine_block_no_do(in_planes, out_planes):
-    return nn.Sequential(nn.Conv2d(in_planes, out_planes, 1, 1), nn.LeakyReLU(),)
+    return nn.Sequential(
+        nn.Conv2d(in_planes, out_planes, 1, 1),
+        nn.LeakyReLU(),
+    )
 
 
 def linear_block(in_features, out_features, dropout=0.0):
     return nn.Sequential(
-        nn.Linear(in_features, out_features), nn.LeakyReLU(), nn.Dropout(dropout),
+        nn.Linear(in_features, out_features),
+        nn.LeakyReLU(),
+        nn.Dropout(dropout),
     )
 
 
 def linear_block_norelu(in_features, out_features):
-    return nn.Sequential(nn.Linear(in_features, out_features),)
+    return nn.Sequential(
+        nn.Linear(in_features, out_features),
+    )
 
 
 def input_embedding_net(list_of_feature_sizes, dropout=0.0):

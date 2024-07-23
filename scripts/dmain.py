@@ -142,7 +142,7 @@ if __name__ == "__main__":
     raw_args = get_raw_args()
 
     if args.seed is None:
-        seed = random.randint(0, 2 ** 31 - 1)
+        seed = random.randint(0, 2**31 - 1)
         raw_args.extend(["-s", f"{seed}"])
         get_logger().info(f"Using random seed {seed} in all workers (none was given)")
 

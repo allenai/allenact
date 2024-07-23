@@ -1,4 +1,5 @@
 """Task Samplers for the task of ArmPointNav."""
+
 import json
 import random
 from typing import List, Dict, Optional, Any, Union
@@ -66,9 +67,9 @@ class AbstractMidLevelArmTaskSampler(TaskSampler):
         self.scene_counter: Optional[int] = None
         self.scene_order: Optional[List[str]] = None
         self.scene_id: Optional[int] = None
-        self.scene_period: Optional[
-            Union[str, int]
-        ] = scene_period  # default makes a random choice
+        self.scene_period: Optional[Union[str, int]] = (
+            scene_period  # default makes a random choice
+        )
         self.max_tasks: Optional[int] = None
         self.reset_tasks = max_tasks
 
@@ -87,7 +88,9 @@ class AbstractMidLevelArmTaskSampler(TaskSampler):
 
     def _create_environment(self, **kwargs) -> ManipulaTHOREnvironment:
         env = ManipulaTHOREnvironment(
-            make_agents_visible=False, object_open_speed=0.05, env_args=self.env_args,
+            make_agents_visible=False,
+            object_open_speed=0.05,
+            env_args=self.env_args,
         )
 
         return env

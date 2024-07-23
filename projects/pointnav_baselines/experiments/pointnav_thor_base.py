@@ -107,9 +107,9 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
         return MachineParams(
             nprocesses=nprocesses,
             devices=gpu_ids,
-            sampler_devices=sampler_devices
-            if mode == "train"
-            else gpu_ids,  # ignored with > 1 gpu_ids
+            sampler_devices=(
+                sampler_devices if mode == "train" else gpu_ids
+            ),  # ignored with > 1 gpu_ids
             sensor_preprocessor_graph=sensor_preprocessor_graph,
         )
 
@@ -186,7 +186,10 @@ class PointNavThorBaseConfig(PointNavBaseConfig, ABC):
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
             "rewards_config": self.REWARD_CONFIG,
-            "env_args": {**self.ENV_ARGS, "x_display": x_display,},
+            "env_args": {
+                **self.ENV_ARGS,
+                "x_display": x_display,
+            },
         }
 
     def train_task_sampler_args(

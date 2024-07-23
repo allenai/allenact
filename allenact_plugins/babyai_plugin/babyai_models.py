@@ -191,13 +191,13 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
                     for sampler_needing_reset_ind in time_ind_to_which_need_instr_reset[
                         time_ind
                     ]:
-                        current_instr_embeddings_list[
-                            sampler_needing_reset_ind
-                        ] = unique_instr_embeddings[
-                            reset_multi_ind_to_index[
-                                (time_ind, sampler_needing_reset_ind)
+                        current_instr_embeddings_list[sampler_needing_reset_ind] = (
+                            unique_instr_embeddings[
+                                reset_multi_ind_to_index[
+                                    (time_ind, sampler_needing_reset_ind)
+                                ]
                             ]
-                        ]
+                        )
 
                     instr_embeddings_list.append(
                         torch.stack(current_instr_embeddings_list, dim=0)
@@ -233,16 +233,20 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         }
         return (
             ActorCriticOutput(
-                distributions=CategoricalDistr(logits=self.actor(embedding),),
+                distributions=CategoricalDistr(
+                    logits=self.actor(embedding),
+                ),
                 values=self.critic(embedding),
-                extras=extra_predictions
-                if not self.include_auxiliary_head
-                else {
-                    **extra_predictions,
-                    "auxiliary_distributions": cast(
-                        Any, CategoricalDistr(logits=self.aux(embedding))
-                    ),
-                },
+                extras=(
+                    extra_predictions
+                    if not self.include_auxiliary_head
+                    else {
+                        **extra_predictions,
+                        "auxiliary_distributions": cast(
+                            Any, CategoricalDistr(logits=self.aux(embedding))
+                        ),
+                    }
+                ),
             ),
             torch.stack([r["memory"] for r in results], dim=0),
         )
@@ -348,13 +352,13 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
                     for sampler_needing_reset_ind in time_ind_to_which_need_instr_reset[
                         time_ind
                     ]:
-                        current_instr_embeddings_list[
-                            sampler_needing_reset_ind
-                        ] = unique_instr_embeddings[
-                            reset_multi_ind_to_index[
-                                (time_ind, sampler_needing_reset_ind)
+                        current_instr_embeddings_list[sampler_needing_reset_ind] = (
+                            unique_instr_embeddings[
+                                reset_multi_ind_to_index[
+                                    (time_ind, sampler_needing_reset_ind)
+                                ]
                             ]
-                        ]
+                        )
 
                     instr_embeddings_list.append(
                         torch.stack(current_instr_embeddings_list, dim=0)
@@ -436,14 +440,20 @@ class BabyAIACModelWrapped(babyai.model.ACModel):
         embedding = embedding.view(rollouts_len * nsamplers, -1)
 
         ac_output = ActorCriticOutput(
-            distributions=CategoricalDistr(logits=self.actor(embedding),),
+            distributions=CategoricalDistr(
+                logits=self.actor(embedding),
+            ),
             values=self.critic(embedding),
-            extras=extra_predictions
-            if not self.include_auxiliary_head
-            else {
-                **extra_predictions,
-                "auxiliary_distributions": CategoricalDistr(logits=self.aux(embedding)),
-            },
+            extras=(
+                extra_predictions
+                if not self.include_auxiliary_head
+                else {
+                    **extra_predictions,
+                    "auxiliary_distributions": CategoricalDistr(
+                        logits=self.aux(embedding)
+                    ),
+                }
+            ),
         )
         hidden_states = memory
 
@@ -582,7 +592,10 @@ class BabyAIRecurrentACModel(ActorCriticModel[CategoricalDistr]):
         self.include_auxiliary_head = include_auxiliary_head
 
         self.baby_ai_model = BabyAIACModelWrapped(
-            obs_space={"image": 7 * 7 * 3, "instr": 100,},
+            obs_space={
+                "image": 7 * 7 * 3,
+                "instr": 100,
+            },
             action_space=action_space,
             image_dim=image_dim,
             memory_dim=memory_dim,

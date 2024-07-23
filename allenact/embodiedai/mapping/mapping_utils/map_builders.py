@@ -240,7 +240,10 @@ class BinnedPointCloudMapBuilder(object):
                     scaler
                     * (
                         torch.tensor(
-                            [camera_xyz[0], camera_xyz[2],],
+                            [
+                                camera_xyz[0],
+                                camera_xyz[2],
+                            ],
                             dtype=torch.float,
                             device=self.device,
                         ).unsqueeze(-1)
@@ -252,7 +255,10 @@ class BinnedPointCloudMapBuilder(object):
                     [0, 1.0]
                 ).unsqueeze(1).to(self.device)
                 rotation_and_translate_mat = torch.cat(
-                    (rot_mat, offset_to_top_of_image + offset_to_center_the_agent,),
+                    (
+                        rot_mat,
+                        offset_to_top_of_image + offset_to_center_the_agent,
+                    ),
                     dim=1,
                 )
 
@@ -283,9 +289,9 @@ class BinnedPointCloudMapBuilder(object):
                     :vr, (width_div_2 - vr_div_2) : (width_div_2 + vr_div_2), :
                 ]
 
-                to_return[
-                    "egocentric_local_context"
-                ] = egocentric_local_context.cpu().numpy()
+                to_return["egocentric_local_context"] = (
+                    egocentric_local_context.cpu().numpy()
+                )
 
             return to_return
 
@@ -437,15 +443,15 @@ class SemanticMapBuilder(object):
             if ot in self.object_type_to_index:
                 ind = self.object_type_to_index[ot]
 
-                self.ground_truth_semantic_map[
-                    :, :, ind : (ind + 1)
-                ] = cv2.fillConvexPoly(
-                    img=np.array(
-                        self.ground_truth_semantic_map[:, :, ind : (ind + 1)],
-                        dtype=np.uint8,
-                    ),
-                    points=self._xzs_to_colrows(np.array(object_hull.hull_points)),
-                    color=255,
+                self.ground_truth_semantic_map[:, :, ind : (ind + 1)] = (
+                    cv2.fillConvexPoly(
+                        img=np.array(
+                            self.ground_truth_semantic_map[:, :, ind : (ind + 1)],
+                            dtype=np.uint8,
+                        ),
+                        points=self._xzs_to_colrows(np.array(object_hull.hull_points)),
+                        color=255,
+                    )
                 )
 
     def update(
@@ -556,7 +562,11 @@ class SemanticMapBuilder(object):
                 1
             ).to(self.device)
             rotation_and_translate_mat = torch.cat(
-                (rot_mat, offset_to_top_of_image + offset_to_center_the_agent,), dim=1,
+                (
+                    rot_mat,
+                    offset_to_top_of_image + offset_to_center_the_agent,
+                ),
+                dim=1,
             )
 
             ego_update_and_mask = F.grid_sample(

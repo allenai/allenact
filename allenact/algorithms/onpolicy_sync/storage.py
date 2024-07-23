@@ -121,7 +121,8 @@ class StreamingStorageMixin(abc.ABC):
 class MiniBatchStorageMixin(abc.ABC):
     @abc.abstractmethod
     def batched_experience_generator(
-        self, num_mini_batch: int,
+        self,
+        num_mini_batch: int,
     ) -> Generator[Dict[str, Any], None, None]:
         raise NotImplementedError
 
@@ -183,7 +184,8 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
             self.action_space = action_space
 
             self.memory_first_last: Memory = self.create_memory(
-                spec=self.memory_specification, num_samplers=num_samplers,
+                spec=self.memory_specification,
+                num_samplers=num_samplers,
             ).to(self.device)
             for key in self.memory_specification:
                 self.flattened_to_unflattened["memory"][key] = [key]
@@ -249,7 +251,10 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
         return self._observations_full.slice(dim=0, start=0, stop=self.step + 1)
 
     @staticmethod
-    def create_memory(spec: Optional[FullMemorySpecType], num_samplers: int,) -> Memory:
+    def create_memory(
+        spec: Optional[FullMemorySpecType],
+        num_samplers: int,
+    ) -> Memory:
         if spec is None:
             return Memory()
 
@@ -290,7 +295,9 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
         self.device = device
 
     def insert_observations(
-        self, observations: ObservationType, time_step: int,
+        self,
+        observations: ObservationType,
+        time_step: int,
     ):
         self.insert_tensors(
             storage=self._observations_full,
@@ -300,7 +307,9 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
         )
 
     def insert_memory(
-        self, memory: Optional[Memory], time_step: int,
+        self,
+        memory: Optional[Memory],
+        time_step: int,
     ):
         if memory is None:
             assert len(self.memory_first_last) == 0
@@ -519,7 +528,10 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
     ):
         assert len(kwargs) == 0
         self.compute_returns(
-            next_value=next_value, use_gae=use_gae, gamma=gamma, tau=tau,
+            next_value=next_value,
+            use_gae=use_gae,
+            gamma=gamma,
+            tau=tau,
         )
 
         self._advantages = self.returns[:-1] - self.value_preds[:-1]
@@ -587,7 +599,8 @@ class RolloutBlockStorage(RolloutStorage, MiniBatchStorageMixin):
                 )
 
     def batched_experience_generator(
-        self, num_mini_batch: int,
+        self,
+        num_mini_batch: int,
     ):
         assert self._before_update_called, (
             "self._before_update_called() must be called before"

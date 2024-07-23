@@ -144,7 +144,10 @@ class PointNavRoboThorRGBPPOVizExperimentConfig(PointNavRoboThorRGBPPOExperiment
             mode=mode,
             # Basic 2D trajectory visualizer (task output source):
             base_trajectory=TrajectoryViz(
-                path_to_target_location=("task_info", "target",),
+                path_to_target_location=(
+                    "task_info",
+                    "target",
+                ),
             ),
             # Egocentric view visualizer (vector task source):
             egeocentric=AgentViewViz(

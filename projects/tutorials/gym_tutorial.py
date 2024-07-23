@@ -258,7 +258,11 @@ class GymTutorialExperimentConfig(ExperimentConfig):
         ppo_steps = int(1.2e6)
         return TrainingPipeline(
             named_losses=dict(
-                ppo_loss=PPO(clip_param=0.2, value_loss_coef=0.5, entropy_coef=0.0,),
+                ppo_loss=PPO(
+                    clip_param=0.2,
+                    value_loss_coef=0.5,
+                    entropy_coef=0.0,
+                ),
             ),  # type:ignore
             pipeline_stages=[
                 PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps),
@@ -275,7 +279,8 @@ class GymTutorialExperimentConfig(ExperimentConfig):
             save_interval=200000,
             metric_accumulate_interval=50000,
             lr_scheduler_builder=Builder(
-                LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)},  # type:ignore
+                LambdaLR,
+                {"lr_lambda": LinearDecay(steps=ppo_steps)},  # type:ignore
             ),
         )
 

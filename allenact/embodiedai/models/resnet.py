@@ -39,7 +39,13 @@ class BasicBlock(nn.Module):
     resneXt = False
 
     def __init__(
-        self, inplanes, planes, ngroups, stride=1, downsample=None, cardinality=1,
+        self,
+        inplanes,
+        planes,
+        ngroups,
+        stride=1,
+        downsample=None,
+        cardinality=1,
     ):
         super(BasicBlock, self).__init__()
         self.convs = nn.Sequential(
@@ -105,11 +111,22 @@ class Bottleneck(nn.Module):
     resneXt = False
 
     def __init__(
-        self, inplanes, planes, ngroups, stride=1, downsample=None, cardinality=1,
+        self,
+        inplanes,
+        planes,
+        ngroups,
+        stride=1,
+        downsample=None,
+        cardinality=1,
     ):
         super().__init__()
         self.convs = _build_bottleneck_branch(
-            inplanes, planes, ngroups, stride, self.expansion, groups=cardinality,
+            inplanes,
+            planes,
+            ngroups,
+            stride,
+            self.expansion,
+            groups=cardinality,
         )
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
@@ -130,7 +147,13 @@ class Bottleneck(nn.Module):
 
 class SEBottleneck(Bottleneck):
     def __init__(
-        self, inplanes, planes, ngroups, stride=1, downsample=None, cardinality=1,
+        self,
+        inplanes,
+        planes,
+        ngroups,
+        stride=1,
+        downsample=None,
+        cardinality=1,
     ):
         super().__init__(inplanes, planes, ngroups, stride, downsample, cardinality)
 
@@ -192,7 +215,7 @@ class GroupNormResNet(nn.Module):
         )
 
         self.final_channels = self.inplanes
-        self.final_spatial_compress = 1.0 / (2 ** 5)
+        self.final_spatial_compress = 1.0 / (2**5)
 
     def _make_layer(self, block, ngroups, planes, blocks, stride=1):
         downsample = None
@@ -337,7 +360,7 @@ class GroupNormResNetEncoder(nn.Module):
             )  # fix bug in habitat that uses int()
             after_compression_flat_size = 2048
             num_compression_channels = int(
-                round(after_compression_flat_size / (final_spatial ** 2))
+                round(after_compression_flat_size / (final_spatial**2))
             )
             self.compression = nn.Sequential(
                 nn.Conv2d(
@@ -415,8 +438,21 @@ class GroupNormResNetEncoder(nn.Module):
         x = self.head(x)  # (2048) -> (hidden_size)
 
         if nagents is not None:
-            x = x.reshape((nsteps, nsamplers, nagents,) + x.shape[1:])
+            x = x.reshape(
+                (
+                    nsteps,
+                    nsamplers,
+                    nagents,
+                )
+                + x.shape[1:]
+            )
         else:
-            x = x.reshape((nsteps, nsamplers,) + x.shape[1:])
+            x = x.reshape(
+                (
+                    nsteps,
+                    nsamplers,
+                )
+                + x.shape[1:]
+            )
 
         return x

@@ -31,7 +31,8 @@ def get_argument_parser():
 
     # noinspection PyTypeChecker
     parser = argparse.ArgumentParser(
-        description="allenact", formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description="allenact",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     parser.add_argument(
@@ -98,7 +99,12 @@ def get_argument_parser():
     )
 
     parser.add_argument(
-        "-s", "--seed", required=False, default=None, type=int, help="random seed",
+        "-s",
+        "--seed",
+        required=False,
+        default=None,
+        type=int,
+        help="random seed",
     )
     parser.add_argument(
         "-b",
@@ -267,6 +273,16 @@ def get_argument_parser():
         help="ID for machine in distributed runs. For more details, please follow the"
         " tutorial https://allenact.org/tutorials/distributed-objectnav-tutorial/",
     )
+
+    parser.add_argument(
+        "--save_ckpt_at_every_host",
+        dest="save_ckpt_at_every_host",
+        action="store_true",
+        required=False,
+        help="if you pass the `--save_ckpt_at_every_host` flag, AllenAct will save checkpoints at every host as the"
+        " the training progresses in distributed training mode.",
+    )
+    parser.set_defaults(save_ckpt_at_every_host=False)
 
     parser.add_argument(
         "--callbacks",
@@ -492,6 +508,7 @@ def main():
             valid_on_initial_weights=args.valid_on_initial_weights,
             try_restart_after_task_error=args.enable_crash_recovery,
             task_batch_size=args.task_batch_size,
+            save_ckpt_at_every_host=save_ckpt_at_every_host,
         )
     else:
         OnPolicyRunner(

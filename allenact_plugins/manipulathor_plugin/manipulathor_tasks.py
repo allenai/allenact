@@ -164,7 +164,7 @@ class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
         action_success_stat["action_success/total"] = 0.0
 
         seq_len = len(self.action_sequence_and_success)
-        for (action_name, action_success) in self.action_sequence_and_success:
+        for action_name, action_success in self.action_sequence_and_success:
             action_stat["action_stat/" + action_name] += 1.0
             action_success_stat[
                 "action_success/{}".format(action_name)
@@ -191,9 +191,9 @@ class AbstractPickUpDropOffTask(Task[ManipulaTHOREnvironment]):
 
             # 1. goal object metrics
             final_obj_distance_from_goal = self.obj_distance_from_goal()
-            result[
-                "average/final_obj_distance_from_goal"
-            ] = final_obj_distance_from_goal
+            result["average/final_obj_distance_from_goal"] = (
+                final_obj_distance_from_goal
+            )
             final_arm_distance_from_obj = self.arm_distance_from_obj()
             result["average/final_arm_distance_from_obj"] = final_arm_distance_from_obj
 
@@ -309,12 +309,12 @@ class ArmPointNavTask(AbstractPickUpDropOffTask):
 
         if self.is_done():
             # add disturbance distance metrics
-            result[
-                "disturbance/objects_moved_distance"
-            ] = self.cumulated_disturb_distance_all
-            result[
-                "disturbance/objects_moved_distance_vis"
-            ] = self.cumulated_disturb_distance_visible
+            result["disturbance/objects_moved_distance"] = (
+                self.cumulated_disturb_distance_all
+            )
+            result["disturbance/objects_moved_distance_vis"] = (
+                self.cumulated_disturb_distance_visible
+            )
 
         return result
 

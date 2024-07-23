@@ -101,9 +101,9 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         return dict(
             width=self.CAMERA_WIDTH,
             height=self.CAMERA_HEIGHT,
-            commit_id=self.THOR_COMMIT_ID
-            if not self.headless
-            else ai2thor.build.COMMIT_ID,
+            commit_id=(
+                self.THOR_COMMIT_ID if not self.headless else ai2thor.build.COMMIT_ID
+            ),
             stochastic=True,
             continuousMode=True,
             applyActionNoise=self.STOCHASTIC,
@@ -174,9 +174,9 @@ class ObjectNavThorBaseConfig(ObjectNavBaseConfig, ABC):
         return MachineParams(
             nprocesses=nprocesses,
             devices=devices,
-            sampler_devices=sampler_devices
-            if mode == "train"
-            else devices,  # ignored with > 1 gpu_ids
+            sampler_devices=(
+                sampler_devices if mode == "train" else devices
+            ),  # ignored with > 1 gpu_ids
             sensor_preprocessor_graph=sensor_preprocessor_graph,
         )
 

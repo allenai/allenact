@@ -1,4 +1,5 @@
 """Functions used to initialize and manipulate pytorch models."""
+
 import hashlib
 from typing import Sequence, Tuple, Union, Optional, Dict, Any, Callable
 
@@ -18,7 +19,12 @@ def md5_hash_of_state_dict(state_dict: Dict[str, Any]):
                 p1 = piece[1].data.cpu().numpy()
             else:
                 p1 = piece[1]
-            hashables.append(int(hashlib.md5(p1.tobytes()).hexdigest(), 16,))
+            hashables.append(
+                int(
+                    hashlib.md5(p1.tobytes()).hexdigest(),
+                    16,
+                )
+            )
         else:
             hashables.append(md5_hash_str_as_int(str(piece)))
 
@@ -182,10 +188,21 @@ def compute_cnn_output(
 
     if nagents is not None:
         cnn_output = cnn_output.reshape(
-            (nsteps, nsamplers, nagents,) + cnn_output.shape[1:]
+            (
+                nsteps,
+                nsamplers,
+                nagents,
+            )
+            + cnn_output.shape[1:]
         )
     else:
-        cnn_output = cnn_output.reshape((nsteps, nsamplers,) + cnn_output.shape[1:])
+        cnn_output = cnn_output.reshape(
+            (
+                nsteps,
+                nsamplers,
+            )
+            + cnn_output.shape[1:]
+        )
 
     return cnn_output
 
@@ -233,7 +250,13 @@ class FeatureEmbedding(nn.Module):
             self.fc = nn.Embedding(input_size, output_size)
         else:  # automatically be moved to a device
             self.null_embedding: torch.Tensor
-            self.register_buffer("null_embedding", torch.zeros(0,), persistent=False)
+            self.register_buffer(
+                "null_embedding",
+                torch.zeros(
+                    0,
+                ),
+                persistent=False,
+            )
 
     def forward(self, inputs):
         if self.output_size != 0:

@@ -1,4 +1,5 @@
 """Defines the reinforcement learning `OnPolicyRLEngine`."""
+
 import datetime
 import logging
 import numbers
@@ -200,16 +201,17 @@ class OnPolicyRLEngine(object):
 
         create_model_kwargs = {}
         if self.machine_params.sensor_preprocessor_graph is not None:
-            self.sensor_preprocessor_graph = self.machine_params.sensor_preprocessor_graph.to(
-                self.device
+            self.sensor_preprocessor_graph = (
+                self.machine_params.sensor_preprocessor_graph.to(self.device)
             )
-            create_model_kwargs[
-                "sensor_preprocessor_graph"
-            ] = self.sensor_preprocessor_graph
+            create_model_kwargs["sensor_preprocessor_graph"] = (
+                self.sensor_preprocessor_graph
+            )
 
         set_seed(self.seed)
         self.actor_critic = cast(
-            ActorCriticModel, self.config.create_model(**create_model_kwargs),
+            ActorCriticModel,
+            self.config.create_model(**create_model_kwargs),
         ).to(self.device)
 
         if initial_model_state_dict is not None:
@@ -266,9 +268,11 @@ class OnPolicyRLEngine(object):
                 world_size=self.num_workers,
                 # During testing, we sometimes found that default timeout was too short
                 # resulting in the run terminating surprisingly, we increase it here.
-                timeout=datetime.timedelta(minutes=3000)
-                if (self.mode == TEST_MODE_STR or DEBUGGING)
-                else dist.default_pg_timeout,
+                timeout=(
+                    datetime.timedelta(minutes=3000)
+                    if (self.mode == TEST_MODE_STR or DEBUGGING)
+                    else dist.default_pg_timeout
+                ),
             )
             self.is_distributed = True
 
@@ -288,9 +292,9 @@ class OnPolicyRLEngine(object):
         self.optimizer: Optional[optim.optimizer.Optimizer] = None
         # noinspection PyProtectedMember
         self.lr_scheduler: Optional[_LRScheduler] = None
-        self.insufficient_data_for_update: Optional[
-            torch.distributed.PrefixStore
-        ] = None
+        self.insufficient_data_for_update: Optional[torch.distributed.PrefixStore] = (
+            None
+        )
 
         # Training pipeline will be instantiated during training and inference.
         # During inference however, it will be instantiated anew on each run of `run_eval`
@@ -330,9 +334,9 @@ class OnPolicyRLEngine(object):
                 make_sampler_fn=self.config.make_sampler_fn,
                 sampler_fn_args=self.get_sampler_fn_args(seeds),
                 callback_sensors=self.callback_sensors,
-                multiprocessing_start_method="forkserver"
-                if self.mp_ctx is None
-                else None,
+                multiprocessing_start_method=(
+                    "forkserver" if self.mp_ctx is None else None
+                ),
                 mp_ctx=self.mp_ctx,
                 max_processes=self.max_sampler_processes_per_worker,
                 read_timeout=DEBUG_VST_TIMEOUT if DEBUGGING else 1 * 60,
@@ -348,7 +352,7 @@ class OnPolicyRLEngine(object):
         if initial_seed is not None:
             rstate = random.getstate()
             random.seed(initial_seed)
-        seeds = [random.randint(0, (2 ** 31) - 1) for _ in range(nprocesses)]
+        seeds = [random.randint(0, (2**31) - 1) for _ in range(nprocesses)]
         if initial_seed is not None:
             random.setstate(rstate)
         return seeds
@@ -405,7 +409,8 @@ class OnPolicyRLEngine(object):
             ckpt = torch.load(os.path.abspath(ckpt), map_location="cpu")
 
         ckpt = cast(
-            Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]], ckpt,
+            Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]],
+            ckpt,
         )
 
         self.actor_critic.load_state_dict(ckpt["model_state_dict"])  # type:ignore
@@ -419,7 +424,9 @@ class OnPolicyRLEngine(object):
 
     # aggregates task metrics currently in queue
     def aggregate_task_metrics(
-        self, logging_pkg: LoggingPackage, num_tasks: int = -1,
+        self,
+        logging_pkg: LoggingPackage,
+        num_tasks: int = -1,
     ) -> LoggingPackage:
         if num_tasks > 0:
             if len(self.single_process_metrics) != num_tasks:
@@ -550,6 +557,7 @@ class OnPolicyRLEngine(object):
         tracking_info_list: List[TrackingInfo],
         logging_pkg: Optional[LoggingPackage] = None,
         send_logging_package: bool = True,
+        checkpoint_file_name: Optional[str] = None,
     ):
         if logging_pkg is None:
             logging_pkg = LoggingPackage(
@@ -557,6 +565,7 @@ class OnPolicyRLEngine(object):
                 training_steps=self.training_pipeline.total_steps,
                 pipeline_stage=self.training_pipeline.current_stage_index,
                 storage_uuid_to_total_experiences=self.training_pipeline.storage_uuid_to_total_experiences,
+                checkpoint_file_name=checkpoint_file_name,
             )
 
         self.aggregate_task_metrics(logging_pkg=logging_pkg)
@@ -659,7 +668,8 @@ class OnPolicyRLEngine(object):
     ) -> int:
         rollout_storage = cast(RolloutStorage, uuid_to_storage[rollout_storage_uuid])
         actions, actor_critic_output, memory, _ = self.act(
-            rollout_storage=rollout_storage, dist_wrapper_class=dist_wrapper_class,
+            rollout_storage=rollout_storage,
+            dist_wrapper_class=dist_wrapper_class,
         )
 
         # Flatten actions
@@ -729,7 +739,9 @@ class OnPolicyRLEngine(object):
             flat_actions = flat_actions.view(new_shape)
 
         rewards = torch.tensor(
-            rewards, dtype=torch.float, device=self.device,  # type:ignore
+            rewards,
+            dtype=torch.float,
+            device=self.device,  # type:ignore
         )
 
         # We want rewards to have dimensions [sampler, reward]
@@ -743,13 +755,18 @@ class OnPolicyRLEngine(object):
         masks = (
             1.0
             - torch.tensor(
-                dones, dtype=torch.float32, device=self.device,  # type:ignore
+                dones,
+                dtype=torch.float32,
+                device=self.device,  # type:ignore
             )
         ).view(
             -1, 1
         )  # [sampler, 1]
 
         npaused, keep, batch = self.remove_paused(observations)
+
+        if hasattr(self.actor_critic, "sampler_select"):
+            self.actor_critic.sampler_select(keep)
 
         # TODO self.probe(...) can be useful for debugging (we might want to control it from main?)
         # self.probe(dones, npaused)
@@ -768,9 +785,9 @@ class OnPolicyRLEngine(object):
                     s.sampler_select(keep)
 
         to_add_to_storage = dict(
-            observations=self._preprocess_observations(batch)
-            if len(keep) > 0
-            else batch,
+            observations=(
+                self._preprocess_observations(batch) if len(keep) > 0 else batch
+            ),
             memory=self._active_memory(memory, keep),
             actions=flat_actions[0, keep],
             action_log_probs=actor_critic_output.distributions.log_prob(actions)[
@@ -860,9 +877,9 @@ class OnPolicyRLEngine(object):
                 "insufficient_data_for_update", str(0)
             )
             dist.barrier(
-                device_ids=None
-                if self.device == torch.device("cpu")
-                else [self.device.index]
+                device_ids=(
+                    None if self.device == torch.device("cpu") else [self.device.index]
+                )
             )
 
         training_settings = stage_component.training_settings
@@ -950,9 +967,11 @@ class OnPolicyRLEngine(object):
                         1 * (not enough_data_for_update),
                     )
                     dist.barrier(
-                        device_ids=None
-                        if self.device == torch.device("cpu")
-                        else [self.device.index]
+                        device_ids=(
+                            None
+                            if self.device == torch.device("cpu")
+                            else [self.device.index]
+                        )
                     )
 
                     if (
@@ -1084,9 +1103,9 @@ class OnPolicyRLEngine(object):
                     to_track["lr"] = self.optimizer.param_groups[0]["lr"]
 
                 if training_settings.num_mini_batch is not None:
-                    to_track[
-                        "rollout_num_mini_batch"
-                    ] = training_settings.num_mini_batch
+                    to_track["rollout_num_mini_batch"] = (
+                        training_settings.num_mini_batch
+                    )
 
                 for k, v in to_track.items():
                     # We need to set the bsize to 1 for `worker_batch_size` below as we're trying to record the
@@ -1103,19 +1122,28 @@ class OnPolicyRLEngine(object):
                     )
 
                 if not skip_backprop:
-                    self.backprop_step(
+                    total_grad_norm = self.backprop_step(
                         total_loss=total_loss,
                         max_grad_norm=training_settings.max_grad_norm,
                         local_to_global_batch_size_ratio=bsize / aggregate_bsize,
                     )
+                    self.tracking_info_list.append(
+                        TrackingInfo(
+                            type=TrackingInfoType.UPDATE_INFO,
+                            info={"total_grad_norm": total_grad_norm},
+                            n=bsize,
+                            storage_uuid=stage_component.storage_uuid,
+                            stage_component_uuid=stage_component.uuid,
+                        )
+                    )
 
-                stage.stage_component_uuid_to_stream_memory[
-                    stage_component.uuid
-                ] = detach_recursively(
-                    input=stage.stage_component_uuid_to_stream_memory[
-                        stage_component.uuid
-                    ],
-                    inplace=True,
+                stage.stage_component_uuid_to_stream_memory[stage_component.uuid] = (
+                    detach_recursively(
+                        input=stage.stage_component_uuid_to_stream_memory[
+                            stage_component.uuid
+                        ],
+                        inplace=True,
+                    )
                 )
 
     def close(self, verbose=True):
@@ -1188,6 +1216,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         max_sampler_processes_per_worker: Optional[int] = None,
         save_ckpt_after_every_pipeline_stage: bool = True,
         first_local_worker_id: int = 0,
+        save_ckpt_at_every_host: bool = False,
         **kwargs,
     ):
         kwargs["mode"] = TRAIN_MODE_STR
@@ -1257,8 +1286,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 "offpolicy_epoch_done", self.store
             )
             # Flag for finished worker in current epoch with custom component
-            self.insufficient_data_for_update = torch.distributed.PrefixStore(  # type:ignore
-                "insufficient_data_for_update", self.store
+            self.insufficient_data_for_update = (
+                torch.distributed.PrefixStore(  # type:ignore
+                    "insufficient_data_for_update", self.store
+                )
             )
         else:
             self.num_workers_done = None
@@ -1277,6 +1308,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         )
 
         self.first_local_worker_id = first_local_worker_id
+        self.save_ckpt_at_every_host = save_ckpt_at_every_host
 
     def advance_seed(
         self, seed: Optional[int], return_same_seed_per_worker=False
@@ -1284,7 +1316,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         if seed is None:
             return seed
         seed = (seed ^ (self.training_pipeline.total_steps + 1)) % (
-            2 ** 31 - 1
+            2**31 - 1
         )  # same seed for all workers
 
         if (not return_same_seed_per_worker) and (
@@ -1340,11 +1372,13 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         tracking_info_list: List[TrackingInfo],
         logging_pkg: Optional[LoggingPackage] = None,
         send_logging_package: bool = True,
+        checkpoint_file_name: Optional[str] = None,
     ):
         logging_pkg = super().aggregate_and_send_logging_package(
             tracking_info_list=tracking_info_list,
             logging_pkg=logging_pkg,
             send_logging_package=send_logging_package,
+            checkpoint_file_name=checkpoint_file_name,
         )
 
         if self.mode == TRAIN_MODE_STR:
@@ -1362,9 +1396,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.checkpoints_dir,
             "exp_{}__stage_{:02d}__steps_{:012d}.pt".format(
                 self.experiment_name,
-                self.training_pipeline.current_stage_index
-                if pipeline_stage_index is None
-                else pipeline_stage_index,
+                (
+                    self.training_pipeline.current_stage_index
+                    if pipeline_stage_index is None
+                    else pipeline_stage_index
+                ),
                 self.training_pipeline.total_steps,
             ),
         )
@@ -1459,7 +1495,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             )
 
         actions, actor_critic_output, memory, step_observation = super().act(
-            rollout_storage=rollout_storage, dist_wrapper_class=dist_wrapper_class,
+            rollout_storage=rollout_storage,
+            dist_wrapper_class=dist_wrapper_class,
         )
 
         self.step_count += self.num_active_samplers
@@ -1517,32 +1554,50 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     else:  # local_global_batch_size_tuple is not None, since we're distributed:
                         p.grad = p.grad * local_to_global_batch_size_ratio
                     reductions.append(
-                        dist.all_reduce(p.grad, async_op=True,)  # sum
+                        dist.all_reduce(
+                            p.grad,
+                            async_op=True,
+                        )  # sum
                     )  # synchronize
                     all_params.append(p)
             for reduction, p in zip(reductions, all_params):
                 reduction.wait()
 
+        if hasattr(self.actor_critic, "compute_total_grad_norm"):
+            total_grad_norm = self.actor_critic.compute_total_grad_norm().item()
+        else:
+            total_grad_norm = 0.0
+
         nn.utils.clip_grad_norm_(
-            self.actor_critic.parameters(), max_norm=max_grad_norm,  # type: ignore
+            self.actor_critic.parameters(),
+            max_norm=max_grad_norm,  # type: ignore
         )
 
         self.optimizer.step()  # type: ignore
+        return total_grad_norm
 
     def _save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter(
         self, pipeline_stage_index: Optional[int] = None
     ):
+        model_path = None
         self.deterministic_seeds()
-        if self.worker_id == self.first_local_worker_id:
+        if (
+            self.save_ckpt_at_every_host
+            and self.worker_id == self.first_local_worker_id
+        ) or self.worker_id == 0:
             model_path = self.checkpoint_save(pipeline_stage_index=pipeline_stage_index)
             if self.checkpoints_queue is not None:
                 self.checkpoints_queue.put(("eval", model_path))
         self.last_save = self.training_pipeline.total_steps
+        return model_path
 
     def run_pipeline(self, valid_on_initial_weights: bool = False):
         cur_stage_training_settings = (
             self.training_pipeline.current_stage.training_settings
         )
+
+        # Change engine attributes that depend on the current stage
+        self.training_pipeline.current_stage.change_engine_attributes(self)
 
         rollout_storage = self.training_pipeline.rollout_storage
         uuid_to_storage = self.training_pipeline.current_stage_storage
@@ -1570,7 +1625,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             and should_save_checkpoints
             and self.checkpoints_queue is not None
         ):
-            if self.worker_id == self.first_local_worker_id:
+            if (
+                self.save_ckpt_at_every_host
+                and self.worker_id == self.first_local_worker_id
+            ) or self.worker_id == 0:
                 model_path = self.checkpoint_save()
                 if self.checkpoints_queue is not None:
                     self.checkpoints_queue.put(("eval", model_path))
@@ -1604,10 +1662,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     )
                 ):
                     self._save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter(
-                        pipeline_stage_index=self.training_pipeline.current_stage_index
-                        - 1
-                        if not training_is_complete
-                        else len(self.training_pipeline.pipeline_stages) - 1
+                        pipeline_stage_index=(
+                            self.training_pipeline.current_stage_index - 1
+                            if not training_is_complete
+                            else len(self.training_pipeline.pipeline_stages) - 1
+                        )
                     )
 
                 # If training is complete, break out
@@ -1635,6 +1694,9 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 )
                 uuid_to_storage = new_uuid_to_storage
 
+                # Change engine attributes that depend on the current stage
+                self.training_pipeline.current_stage.change_engine_attributes(self)
+
             already_saved_checkpoint = False
 
             if self.is_distributed:
@@ -1642,9 +1704,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.num_workers_steps.set("steps", str(0))
                 # Ensure all workers are done before incrementing num_workers_{steps, done}
                 dist.barrier(
-                    device_ids=None
-                    if self.device == torch.device("cpu")
-                    else [self.device.index]
+                    device_ids=(
+                        None
+                        if self.device == torch.device("cpu")
+                        else [self.device.index]
+                    )
                 )
 
             self.former_steps = self.step_count
@@ -1759,9 +1823,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
                     # Ensure all workers are done before updating step counter
                     dist.barrier(
-                        device_ids=None
-                        if self.device == torch.device("cpu")
-                        else [self.device.index]
+                        device_ids=(
+                            None
+                            if self.device == torch.device("cpu")
+                            else [self.device.index]
+                        )
                     )
 
                     ndone = int(self.num_workers_done.get("done"))
@@ -1789,20 +1855,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             for sc in self.training_pipeline.current_stage.stage_components:
                 component_storage = uuid_to_storage[sc.storage_uuid]
 
-                # before_update = time.time()
-
                 self.compute_losses_track_them_and_backprop(
                     stage=self.training_pipeline.current_stage,
                     stage_component=sc,
                     storage=component_storage,
                 )
-
-                # after_update = time.time()
-                # delta = after_update - before_update
-                # get_logger().info(
-                #     f"Worker {self.worker_id}: {sc.uuid} took {delta:.2g}s ({sc.training_settings.update_repeats}"
-                #     f" repeats * {sc.training_settings.num_mini_batch} batches)"
-                # )
 
             for storage in self.training_pipeline.current_stage_storage.values():
                 storage.after_updates()
@@ -1837,24 +1894,28 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step(epoch=self.training_pipeline.total_steps)
 
+            # Here we handle saving a checkpoint every `save_interval` steps, saving after
+            # a pipeline stage completes is controlled above
+            checkpoint_file_name = None
+            if should_save_checkpoints and (
+                self.training_pipeline.total_steps - self.last_save
+                >= cur_stage_training_settings.save_interval
+            ):
+                checkpoint_file_name = (
+                    self._save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter()
+                )
+                already_saved_checkpoint = True
+
             if (
                 self.training_pipeline.total_steps - self.last_log >= self.log_interval
                 or self.training_pipeline.current_stage.is_complete
             ):
                 self.aggregate_and_send_logging_package(
-                    tracking_info_list=self.tracking_info_list
+                    tracking_info_list=self.tracking_info_list,
+                    checkpoint_file_name=checkpoint_file_name,
                 )
                 self.tracking_info_list.clear()
                 self.last_log = self.training_pipeline.total_steps
-
-            # Here we handle saving a checkpoint every `save_interval` steps, saving after
-            # a pipeline stage completes is controlled above
-            if should_save_checkpoints and (
-                self.training_pipeline.total_steps - self.last_save
-                >= cur_stage_training_settings.save_interval
-            ):
-                self._save_checkpoint_then_send_checkpoint_for_validation_and_update_last_save_counter()
-                already_saved_checkpoint = True
 
             if (
                 cur_stage_training_settings.advance_scene_rollout_period is not None
@@ -2140,7 +2201,8 @@ class OnPolicyInference(OnPolicyRLEngine):
                     lengths: List[int]
                     if self.num_active_samplers > 0:
                         lengths = self.vector_tasks.command(
-                            "sampler_attr", ["length"] * self.num_active_samplers,
+                            "sampler_attr",
+                            ["length"] * self.num_active_samplers,
                         )
                         npending = sum(lengths)
                     else:

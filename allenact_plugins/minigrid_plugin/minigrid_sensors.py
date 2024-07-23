@@ -126,7 +126,9 @@ class MiniGridMissionSensor(Sensor[MiniGridEnv, Task[MiniGridEnv]]):
             out = out[: self.instr_len]
         elif n < self.instr_len:
             out = torch.nn.functional.pad(
-                input=out, pad=[0, self.instr_len - n], value=0,
+                input=out,
+                pad=[0, self.instr_len - n],
+                value=0,
             )
 
         return out.long().numpy()
