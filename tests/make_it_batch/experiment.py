@@ -274,7 +274,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     def training_pipeline(self, **kwargs):
         ppo_steps = int(1e6)
         lr = 2.5e-4
-        num_mini_batch = 2 if not torch.cuda.is_available() else 6
+        num_mini_batch = self.task_batch_size if not torch.cuda.is_available() else 6
         update_repeats = 4
         num_steps = self.MAX_STEPS
         metric_accumulate_interval = self.MAX_STEPS * 1  # Log every 10 max length tasks
