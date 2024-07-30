@@ -46,6 +46,7 @@ from allenact.algorithms.onpolicy_sync.storage import (
 from allenact.algorithms.onpolicy_sync.vector_sampled_tasks import (
     COMPLETE_TASK_CALLBACK_KEY,
     COMPLETE_TASK_METRICS_KEY,
+    COMPLETE_TASK_TIMEOUT_CORRECTION_KEY,
     SingleProcessVectorSampledTasks,
     VectorSampledTasks,
 )
@@ -681,7 +682,7 @@ class OnPolicyRLEngine(object):
         )
 
         # Save after task completion metrics
-        for step_result in outputs:
+        for index, step_result in enumerate(outputs):
             if step_result.info is not None:
                 if COMPLETE_TASK_METRICS_KEY in step_result.info:
                     self.single_process_metrics.append(
@@ -693,6 +694,10 @@ class OnPolicyRLEngine(object):
                         step_result.info[COMPLETE_TASK_CALLBACK_KEY]
                     )
                     del step_result.info[COMPLETE_TASK_CALLBACK_KEY]
+                if COMPLETE_TASK_TIMEOUT_CORRECTION_KEY in step_result.info:
+                    flat_actions[0, index, 0] = torch.tensor(
+                        step_result.info[COMPLETE_TASK_TIMEOUT_CORRECTION_KEY]
+                    )
 
         rewards: Union[List, torch.Tensor]
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
