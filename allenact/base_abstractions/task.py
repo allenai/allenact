@@ -21,6 +21,7 @@ from typing import (
     final,
 )
 from concurrent.futures import ThreadPoolExecutor, wait
+from contextlib import contextmanager
 
 import gym
 import numpy as np
@@ -405,6 +406,7 @@ class BatchedTask(Generic[EnvType]):
         task_sampler: TaskSampler,
         task_class: type(Task),
         callback_sensor_suite: Optional[SensorSuite],
+        parallel_init_if_any: bool = True,
         parallel_before_step: bool = False,
         parallel_after_step: bool = True,
         parallel_get_observations: bool = True,
@@ -416,59 +418,77 @@ class BatchedTask(Generic[EnvType]):
         ), "BatchedTask requires task_sampler to contain a `task_batch_size`"
 
         # Instantiate the first actual task from the currently sampled info
-        self.tasks = [
-            task_class(
-                env=env,
-                sensors=sensors,
-                task_info=task_info,
-                max_steps=max_steps,
-                batch_index=0,
-                **task_kwargs,
-            )
-        ]
+        self.tasks = [None] * max(task_sampler.task_batch_size, 1)
+        self.tasks[0] = task_class(
+            env=env,
+            sensors=sensors,
+            task_info=task_info,
+            max_steps=max_steps,
+            batch_index=0,
+            **task_kwargs,
+        )
         self.tasks[0].batch_index = 0
 
-        if task_sampler.task_batch_size > 0:
-            # Keep a reference to the task sampler
-            self.task_sampler = task_sampler
+        if task_sampler.task_batch_size == 0:
+            return
 
-            self.callback_sensor_suite = callback_sensor_suite
-            self.env = env
+        # Keep a reference to the task sampler
+        self.task_sampler = task_sampler
 
-            self.parallel_before_step = parallel_before_step
-            self.parallel_after_step = parallel_after_step
-            self.parallel_get_observations = parallel_get_observations
-            self.any_parallel = (
-                parallel_before_step or parallel_after_step or parallel_get_observations
-            )
-            self.thread_pool_size = min(
-                max_thread_pool_size, self.task_sampler.task_batch_size
-            )
+        self.callback_sensor_suite = callback_sensor_suite
+        self.env = env
 
-            # If task_batch_size greater than 0, instantiate the rest of tasks
-            for it in range(1, self.task_sampler.task_batch_size):
-                self.tasks.append(self.make_new_task(it))
+        self.parallel_before_step = parallel_before_step
+        self.parallel_after_step = parallel_after_step
+        self.parallel_get_observations = parallel_get_observations
+        self.any_parallel = (
+            parallel_before_step or parallel_after_step or parallel_get_observations
+        )
+        self.parallel_init = parallel_init_if_any and self.any_parallel
 
-            if self.any_parallel:
-                # Also, a ThreadPoolExecutor to collect all data (possibly) under IO bottlenecks
-                self.executor = ThreadPoolExecutor(max_workers=self.thread_pool_size)
+        self.thread_pool_size = min(
+            max_thread_pool_size, self.task_sampler.task_batch_size
+        )
 
-                # Also, a mutex to enable underlying task sampler implementations to ensure e.g. only one process
-                # resets the sampler when called from a ThreadPoolExecutor (next_task must be thread safe, possibly
-                # acquiring/releasing the mutex as needed).
-                self.task_sampler.batch_mutex = threading.Lock()
+        if self.any_parallel:
+            # Also, a ThreadPoolExecutor to collect all data (possibly) under IO bottlenecks
+            self.executor = ThreadPoolExecutor(max_workers=self.thread_pool_size)
 
-    def make_new_task(self, batch_index):
+            # Also, a mutex to enable underlying task sampler implementations to ensure e.g. only one process
+            # resets the sampler when called from a ThreadPoolExecutor (next_task must be thread safe, possibly
+            # acquiring/releasing the mutex as needed).
+            self.task_sampler.batch_mutex = threading.Lock()
+
+        # after step is the one where we also parallelize instantiating new tasks
+        with self.wrap_with_task_batch_size_0() as true_task_batch_size:  # type:ignore
+            if self.parallel_init:
+                wait(
+                    [
+                        self.executor.submit(self.make_new_task, it)
+                        for it in range(1, true_task_batch_size)
+                    ]
+                )
+            else:
+                # If task_batch_size greater than 0, instantiate the rest of tasks
+                for it in range(1, true_task_batch_size):
+                    self.make_new_task(it)
+
+    @contextmanager
+    def wrap_with_task_batch_size_0(self):
         task_batch_size = self.task_sampler.task_batch_size
+        self.task_sampler.task_batch_size = 0
         # `task_batch_size` set to 0 ensures we don't generate new tasks recursively
         # and avoids instantiating new executors and batch mutex
-        self.task_sampler.task_batch_size = 0
         try:
-            task = getattr(self.task_sampler.next_task(idx=batch_index), "tasks")[0]
-            task.batch_index = batch_index
+            yield task_batch_size
         finally:
             self.task_sampler.task_batch_size = task_batch_size
-        return task
+
+    def make_new_task(self, batch_index):
+        assert self.task_sampler.task_batch_size == 0, "wrap with self.wrap_with_task_batch_size_0"
+        task = getattr(self.task_sampler.next_task(idx=batch_index), "tasks")[0]
+        task.batch_index = batch_index
+        self.tasks[batch_index] = task
 
     @property
     def observation_space(self):
@@ -581,22 +601,23 @@ class BatchedTask(Generic[EnvType]):
                     )
                     info[COMPLETE_TASK_CALLBACK_KEY] = task_callback_data
 
-                self.tasks[it] = self.make_new_task(it)
+                self.make_new_task(it)
 
             rewards[it] = sr.reward
             dones[it] = done
             infos[it] = info
 
-        if self.parallel_after_step:
-            wait(
-                [
-                    self.executor.submit(after_step, it, task)
-                    for it, task in enumerate(self.tasks)
-                ]
-            )
-        else:
-            for it, task in enumerate(self.tasks):
-                after_step(it, task)
+        with self.wrap_with_task_batch_size_0():  # type:ignore
+            if self.parallel_after_step:
+                wait(
+                    [
+                        self.executor.submit(after_step, it, task)
+                        for it, task in enumerate(self.tasks)
+                    ]
+                )
+            else:
+                for it, task in enumerate(self.tasks):
+                    after_step(it, task)
 
         return RLStepResult(
             observation=self.get_observations(),
@@ -624,7 +645,7 @@ class BatchedTask(Generic[EnvType]):
     def close(self) -> None:
         if self.any_parallel:
             self.executor.shutdown(cancel_futures=True)
-        self.tasks[0].close()
+        # self.tasks[0].close()
 
     def metrics(self) -> Dict[str, Any]:
         raise RuntimeError("Unexpected call to `metrics` in BatchedTask")
