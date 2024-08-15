@@ -406,12 +406,12 @@ class BatchedTask(Generic[EnvType]):
         task_sampler: TaskSampler,
         task_class: type(Task),
         callback_sensor_suite: Optional[SensorSuite],
+        batch_index: int,
         parallel_init_if_any: bool = True,
         parallel_before_step: bool = False,
         parallel_after_step: bool = True,
         parallel_get_observations: bool = True,
         max_thread_pool_size: int = 10,
-        batch_index: int = 0,
         **task_kwargs: Any,
     ) -> None:
         assert hasattr(
