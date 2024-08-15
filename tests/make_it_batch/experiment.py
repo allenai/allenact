@@ -83,6 +83,10 @@ class BatchController:
 
 
 class BatchableObjectNaviThorGridTask(ObjectNaviThorGridTask):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.batch_index = kwargs["batch_index"]
+
     def _step(self, action):
         raise NotImplementedError()
 
@@ -199,6 +203,7 @@ class BatchedObjectNavTaskSampler(ObjectNavTaskSampler):
                 task_sampler=self,
                 task_class=BatchableObjectNaviThorGridTask,
                 callback_sensor_suite=self.callback_sensor_suite,
+                batch_index=idx,
             )
         else:
             self._last_sampled_task = BatchableObjectNaviThorGridTask(

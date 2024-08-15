@@ -411,26 +411,35 @@ class BatchedTask(Generic[EnvType]):
         parallel_after_step: bool = True,
         parallel_get_observations: bool = True,
         max_thread_pool_size: int = 10,
+        batch_index: int = 0,
         **task_kwargs: Any,
     ) -> None:
         assert hasattr(
             task_sampler, "task_batch_size"
         ), "BatchedTask requires task_sampler to contain a `task_batch_size`"
 
+        task_batch_size = getattr(task_sampler, "task_batch_size")
+
         # Instantiate the first actual task from the currently sampled info
-        self.tasks = [None] * max(task_sampler.task_batch_size, 1)
+        self.tasks = [None] * max(task_batch_size, 1)
         self.tasks[0] = task_class(
             env=env,
             sensors=sensors,
             task_info=task_info,
             max_steps=max_steps,
-            batch_index=0,
+            batch_index=batch_index,
             **task_kwargs,
         )
-        self.tasks[0].batch_index = 0
 
-        if task_sampler.task_batch_size == 0:
+        if task_batch_size == 0:
             return
+
+        # Check batch_index, before/after env_step available for at least one task
+        assert (
+            getattr(self.tasks[0], "batch_index", None) == batch_index
+        ), "BatchedTask requires wrapped Task to keep the given batch_index"
+        assert hasattr(self.tasks[0], "_before_env_step"), "Wrapped Task required to have `_before_env_step`."
+        assert hasattr(self.tasks[0], "_after_env_step"), "Wrapped Task required to have `_after_env_step`."
 
         # Keep a reference to the task sampler
         self.task_sampler = task_sampler
@@ -446,11 +455,11 @@ class BatchedTask(Generic[EnvType]):
         )
         self.parallel_init = parallel_init_if_any and self.any_parallel
 
-        self.thread_pool_size = min(
-            max_thread_pool_size, self.task_sampler.task_batch_size
-        )
-
         if self.any_parallel:
+            self.thread_pool_size = min(
+                max_thread_pool_size, getattr(task_sampler, "task_batch_size")
+            )
+
             # Also, a ThreadPoolExecutor to collect all data (possibly) under IO bottlenecks
             self.executor = cf.ThreadPoolExecutor(max_workers=self.thread_pool_size)
 
@@ -459,19 +468,9 @@ class BatchedTask(Generic[EnvType]):
             # acquiring/releasing the mutex as needed).
             self.task_sampler.batch_mutex = threading.Lock()
 
-        # after step is the one where we also parallelize instantiating new tasks
+        # Instantiate the rest of tasks
         with self.wrap_with_task_batch_size_0() as true_task_batch_size:  # type:ignore
-            if self.parallel_init:
-                self.wait_for_futures_and_raise_errors(
-                    [
-                        self.executor.submit(self.make_new_task, it)
-                        for it in range(1, true_task_batch_size)
-                    ]
-                )
-            else:
-                # If task_batch_size greater than 0, instantiate the rest of tasks
-                for it in range(1, true_task_batch_size):
-                    self.make_new_task(it)
+            self.execute_stage(self._make_new_task, self.parallel_init, range(1, true_task_batch_size))
 
     @staticmethod
     def wait_for_futures_and_raise_errors(
@@ -486,6 +485,21 @@ class BatchedTask(Generic[EnvType]):
                 raise
         return results
 
+    def execute_stage(self, func, parallel, data_gen):
+        def convert(x):
+            return x if isinstance(x, tuple) else (x,)
+
+        if parallel:
+            self.wait_for_futures_and_raise_errors(
+                [
+                    self.executor.submit(func, *convert(datum))
+                    for datum in data_gen
+                ]
+            )
+        else:
+            for datum in data_gen:
+                func(*convert(datum))
+
     @contextmanager
     def wrap_with_task_batch_size_0(self):
         task_batch_size = self.task_sampler.task_batch_size
@@ -497,10 +511,10 @@ class BatchedTask(Generic[EnvType]):
         finally:
             self.task_sampler.task_batch_size = task_batch_size
 
-    def make_new_task(self, batch_index):
-        assert self.task_sampler.task_batch_size == 0, "wrap with self.wrap_with_task_batch_size_0"
-        task = getattr(self.task_sampler.next_task(idx=batch_index), "tasks")[0]
-        task.batch_index = batch_index
+    def _make_new_task(self, batch_index):
+        # assert getattr(self.task_sampler, "task_batch_size") == 0, "wrap with self.wrap_with_task_batch_size_0"
+        task = getattr(self.task_sampler.next_task(idx=batch_index), "tasks")[0]  # type:ignore
+        assert task.batch_index == batch_index
         self.tasks[batch_index] = task
 
     @property
@@ -516,16 +530,7 @@ class BatchedTask(Generic[EnvType]):
         def obs_extract(it, task):
             res[it] = task.get_observations()
 
-        if self.parallel_get_observations:
-            self.wait_for_futures_and_raise_errors(
-                [
-                    self.executor.submit(obs_extract, it, task)
-                    for it, task in enumerate(self.tasks)
-                ]
-            )
-        else:
-            for it, task in enumerate(self.tasks):
-                obs_extract(it, task)
+        self.execute_stage(obs_extract, self.parallel_get_observations, enumerate(self.tasks))
 
         return res
 
@@ -561,16 +566,7 @@ class BatchedTask(Generic[EnvType]):
         def before_step(it, task):
             env_actions[it], intermediates[it] = task._before_env_step(action[it])
 
-        if self.parallel_before_step:
-            self.wait_for_futures_and_raise_errors(
-                [
-                    self.executor.submit(before_step, it, task)
-                    for it, task in enumerate(self.tasks)
-                ]
-            )
-        else:
-            for it, task in enumerate(self.tasks):
-                before_step(it, task)
+        self.execute_stage(before_step, self.parallel_before_step, enumerate(self.tasks))
 
         # Step over all tasks
         self.env.step(env_actions)
@@ -614,23 +610,14 @@ class BatchedTask(Generic[EnvType]):
                     )
                     info[COMPLETE_TASK_CALLBACK_KEY] = task_callback_data
 
-                self.make_new_task(it)
+                self._make_new_task(it)
 
             rewards[it] = sr.reward
             dones[it] = done
             infos[it] = info
 
         with self.wrap_with_task_batch_size_0():  # type:ignore
-            if self.parallel_after_step:
-                self.wait_for_futures_and_raise_errors(
-                    [
-                        self.executor.submit(after_step, it, task)
-                        for it, task in enumerate(self.tasks)
-                    ]
-                )
-            else:
-                for it, task in enumerate(self.tasks):
-                    after_step(it, task)
+            self.execute_stage(after_step, self.parallel_after_step, enumerate(self.tasks))
 
         return RLStepResult(
             observation=self.get_observations(),
