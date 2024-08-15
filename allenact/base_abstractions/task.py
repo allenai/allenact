@@ -20,7 +20,7 @@ from typing import (
     Union,
     final,
 )
-from concurrent.futures import ThreadPoolExecutor, wait
+import concurrent.futures as cf
 from contextlib import contextmanager
 
 import gym
@@ -452,7 +452,7 @@ class BatchedTask(Generic[EnvType]):
 
         if self.any_parallel:
             # Also, a ThreadPoolExecutor to collect all data (possibly) under IO bottlenecks
-            self.executor = ThreadPoolExecutor(max_workers=self.thread_pool_size)
+            self.executor = cf.ThreadPoolExecutor(max_workers=self.thread_pool_size)
 
             # Also, a mutex to enable underlying task sampler implementations to ensure e.g. only one process
             # resets the sampler when called from a ThreadPoolExecutor (next_task must be thread safe, possibly
@@ -462,7 +462,7 @@ class BatchedTask(Generic[EnvType]):
         # after step is the one where we also parallelize instantiating new tasks
         with self.wrap_with_task_batch_size_0() as true_task_batch_size:  # type:ignore
             if self.parallel_init:
-                wait(
+                self.wait_for_futures_and_raise_errors(
                     [
                         self.executor.submit(self.make_new_task, it)
                         for it in range(1, true_task_batch_size)
@@ -472,6 +472,19 @@ class BatchedTask(Generic[EnvType]):
                 # If task_batch_size greater than 0, instantiate the rest of tasks
                 for it in range(1, true_task_batch_size):
                     self.make_new_task(it)
+
+    @staticmethod
+    def wait_for_futures_and_raise_errors(
+            futures: Sequence[cf.Future],
+    ) -> Sequence[Any]:
+        results = []
+        cf.wait(futures)
+        for future in futures:
+            try:
+                results.append(future.result())  # This will re-raise any exceptions
+            except Exception:
+                raise
+        return results
 
     @contextmanager
     def wrap_with_task_batch_size_0(self):
@@ -504,7 +517,7 @@ class BatchedTask(Generic[EnvType]):
             res[it] = task.get_observations()
 
         if self.parallel_get_observations:
-            wait(
+            self.wait_for_futures_and_raise_errors(
                 [
                     self.executor.submit(obs_extract, it, task)
                     for it, task in enumerate(self.tasks)
@@ -549,7 +562,7 @@ class BatchedTask(Generic[EnvType]):
             env_actions[it], intermediates[it] = task._before_env_step(action[it])
 
         if self.parallel_before_step:
-            wait(
+            self.wait_for_futures_and_raise_errors(
                 [
                     self.executor.submit(before_step, it, task)
                     for it, task in enumerate(self.tasks)
@@ -609,7 +622,7 @@ class BatchedTask(Generic[EnvType]):
 
         with self.wrap_with_task_batch_size_0():  # type:ignore
             if self.parallel_after_step:
-                wait(
+                self.wait_for_futures_and_raise_errors(
                     [
                         self.executor.submit(after_step, it, task)
                         for it, task in enumerate(self.tasks)
