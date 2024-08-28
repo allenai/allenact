@@ -1222,9 +1222,13 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     " feature and we'll be happy to review it."
                 )
 
+        if not hasattr(self.actor_critic, "set_learning_rate_for_specific_parameters"):
+            params = [p for p in self.actor_critic.parameters() if p.requires_grad]
+        else:
+            params = self.actor_critic.set_learning_rate_for_specific_parameters()
         self.optimizer: optim.optimizer.Optimizer = (
             self.training_pipeline.optimizer_builder(
-                params=[p for p in self.actor_critic.parameters() if p.requires_grad]
+                params=params
             )
         )
 
