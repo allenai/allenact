@@ -494,7 +494,7 @@ def main():
             collect_valid_results=args.collect_valid_results,
             valid_on_initial_weights=args.valid_on_initial_weights,
             try_restart_after_task_error=args.enable_crash_recovery,
-            save_ckpt_at_every_host=save_ckpt_at_every_host,
+            save_ckpt_at_every_host=args.save_ckpt_at_every_host,
         )
     else:
         OnPolicyRunner(

@@ -46,6 +46,7 @@ from allenact.algorithms.onpolicy_sync.storage import (
 from allenact.algorithms.onpolicy_sync.vector_sampled_tasks import (
     COMPLETE_TASK_CALLBACK_KEY,
     COMPLETE_TASK_METRICS_KEY,
+    COMPLETE_TASK_TIMEOUT_CORRECTION_KEY,
     SingleProcessVectorSampledTasks,
     VectorSampledTasks,
 )
@@ -681,7 +682,7 @@ class OnPolicyRLEngine(object):
         )
 
         # Save after task completion metrics
-        for step_result in outputs:
+        for index, step_result in enumerate(outputs):
             if step_result.info is not None:
                 if COMPLETE_TASK_METRICS_KEY in step_result.info:
                     self.single_process_metrics.append(
@@ -693,6 +694,10 @@ class OnPolicyRLEngine(object):
                         step_result.info[COMPLETE_TASK_CALLBACK_KEY]
                     )
                     del step_result.info[COMPLETE_TASK_CALLBACK_KEY]
+                if COMPLETE_TASK_TIMEOUT_CORRECTION_KEY in step_result.info:
+                    flat_actions[0, index, 0] = torch.tensor(
+                        step_result.info[COMPLETE_TASK_TIMEOUT_CORRECTION_KEY]
+                    )
 
         rewards: Union[List, torch.Tensor]
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
@@ -1059,7 +1064,11 @@ class OnPolicyRLEngine(object):
                 if training:
                     aggregate_bsize = self.distributed_weighted_sum(bsize, 1)
                     to_track["global_batch_size"] = aggregate_bsize
-                    to_track["lr"] = self.optimizer.param_groups[0]["lr"]
+                    if len(self.optimizer.param_groups) >= 2:
+                        for i, param_group in enumerate(self.optimizer.param_groups):
+                            to_track[f"lr_group_{i}"] = param_group["lr"]
+                    else:
+                        to_track["lr"] = self.optimizer.param_groups[0]["lr"]
 
                 if training_settings.num_mini_batch is not None:
                     to_track["rollout_num_mini_batch"] = (
@@ -1217,9 +1226,13 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     " feature and we'll be happy to review it."
                 )
 
+        if not hasattr(self.actor_critic, "set_learning_rate_for_specific_parameters"):
+            params = [p for p in self.actor_critic.parameters() if p.requires_grad]
+        else:
+            params = self.actor_critic.set_learning_rate_for_specific_parameters()
         self.optimizer: optim.optimizer.Optimizer = (
             self.training_pipeline.optimizer_builder(
-                params=[p for p in self.actor_critic.parameters() if p.requires_grad]
+                params=params
             )
         )
 
