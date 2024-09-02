@@ -1064,7 +1064,11 @@ class OnPolicyRLEngine(object):
                 if training:
                     aggregate_bsize = self.distributed_weighted_sum(bsize, 1)
                     to_track["global_batch_size"] = aggregate_bsize
-                    to_track["lr"] = self.optimizer.param_groups[0]["lr"]
+                    if len(self.optimizer.param_groups) >= 2:
+                        for i, param_group in enumerate(self.optimizer.param_groups):
+                            to_track[f"lr_group_{i}"] = param_group["lr"]
+                    else:
+                        to_track["lr"] = self.optimizer.param_groups[0]["lr"]
 
                 if training_settings.num_mini_batch is not None:
                     to_track["rollout_num_mini_batch"] = (
