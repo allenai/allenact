@@ -71,6 +71,8 @@ from allenact.utils.experiment_utils import (
 from allenact.utils.system import get_logger
 from allenact.utils.tensor_utils import batch_observations, detach_recursively
 from allenact.utils.viz_utils import VizSuite
+from allenact.utils.replay_buffer import StorageAdapter, batchify_tensordicts
+from torchrl.data import ReplayBuffer, LazyMemmapStorage
 
 try:
     # When debugging we don't want to timeout in the VectorSampledTasks
@@ -298,6 +300,9 @@ class OnPolicyRLEngine(object):
         # During inference however, it will be instantiated anew on each run of `run_eval`
         # and will be set to `None` after the eval run is complete.
         self.training_pipeline: Optional[TrainingPipeline] = None
+
+        # [OFFP]
+        self.replay_buffer: Optional[ReplayBuffer] = None
 
     @property
     def vector_tasks(
@@ -831,6 +836,7 @@ class OnPolicyRLEngine(object):
         stage_component: StageComponent,
         storage: ExperienceStorage,
         skip_backprop: bool = False,
+        replay_buffer: Optional[ReplayBuffer] = None,
     ):
         training = self.mode == TRAIN_MODE_STR
 
@@ -876,6 +882,8 @@ class OnPolicyRLEngine(object):
                 batch_iterator = storage.batched_experience_generator(
                     num_mini_batch=training_settings.num_mini_batch
                 )
+            elif storage is None and isinstance(replay_buffer, ReplayBuffer):
+                batch_iterator = replay_buffer
             elif isinstance(storage, StreamingStorageMixin):
                 assert (
                     training_settings.num_mini_batch is None
@@ -910,7 +918,14 @@ class OnPolicyRLEngine(object):
                     f"Storage {storage} must be a subclass of `MiniBatchStorageMixin` or `StreamingStorageMixin`."
                 )
 
-            for batch in batch_iterator:
+            for batch_idx, batch in enumerate(batch_iterator):
+                if isinstance(batch_iterator, ReplayBuffer):
+                    if batch_idx >= training_settings.num_mini_batch:
+                        break
+                    batch = batchify_tensordicts(batch, device=self.device, unsqueeze_dim=0, unsqueeze_first=True, swap_dim_0=0, swap_dim_1=1)
+                    batch["bsize"] = batch["prev_actions"].shape[1]
+                    batch["memory"] = {}
+
                 if batch is None:
                     # This should only happen in a `StreamingStorageMixin` when it cannot
                     # generate an initial batch or when we are in testing/validation and
@@ -1185,6 +1200,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         save_ckpt_after_every_pipeline_stage: bool = True,
         first_local_worker_id: int = 0,
         save_ckpt_at_every_host: bool = False,
+        offpolicy_batch_size: int = 32,
+        replay_buffer_max_size: int = 640,
         **kwargs,
     ):
         kwargs["mode"] = TRAIN_MODE_STR
@@ -1212,6 +1229,16 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self.actor_critic.train()
 
         self.training_pipeline: TrainingPipeline = config.training_pipeline()
+
+        # [OFFP]
+        self.replay_buffer = ReplayBuffer(
+            storage=LazyMemmapStorage(
+                max_size=replay_buffer_max_size,
+                device=torch.device("cpu"),
+                scratch_dir="/tmp/replay_buffer/",
+            ),
+            batch_size=offpolicy_batch_size,
+        )
 
         if self.num_workers != 1:
             # Ensure that we're only using early stopping criterions in the non-distributed setting.
@@ -1823,6 +1850,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             # Prepare storage for iteration during updates
             for storage in self.training_pipeline.current_stage_storage.values():
                 storage.before_updates(**before_update_info)
+
+                adapted_storage = StorageAdapter(storage, torch.device("cpu"))
+                tensordict = adapted_storage.to_tensordict(batch_size=[storage.rewards.shape[1]])
+                self.replay_buffer.extend(tensordict)
 
             for sc in self.training_pipeline.current_stage.stage_components:
                 component_storage = uuid_to_storage[sc.storage_uuid]
