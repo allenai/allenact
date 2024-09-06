@@ -1863,9 +1863,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.compute_losses_track_them_and_backprop(
                     stage=self.training_pipeline.current_stage,
                     stage_component=sc,
-                    storage=component_storage if self.replay_buffer is not None else None,
+                    storage=component_storage if self.replay_buffer is None else None,
                     replay_buffer=self.replay_buffer,
                 )
+
+                if hasattr(self.actor_critic, "update_networks"):
+                    self.actor_critic.update_networks()
 
             for storage in self.training_pipeline.current_stage_storage.values():
                 storage.after_updates()

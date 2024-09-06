@@ -32,7 +32,7 @@ class StorageAdapter:
             "masks": self.rollout_storage.masks[:-1].to(self.device).movedim(0, 1),
             "rewards": self.rollout_storage.rewards.to(self.device).movedim(0, 1),
             "returns": self.rollout_storage.returns[:-1].to(self.device).movedim(0, 1),
-            "value": self.rollout_storage.value_preds[:-1].to(self.device).movedim(0, 1),
+            "values": self.rollout_storage.value_preds[:-1].to(self.device).movedim(0, 1),
             "old_action_log_probs": self.rollout_storage.action_log_probs.to(self.device).movedim(0, 1),
             "adv_targ": self.rollout_storage._advantages.to(self.device).movedim(0, 1),
             "norm_adv_targ": self.rollout_storage._normalized_advantages.to(self.device).movedim(0, 1),
