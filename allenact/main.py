@@ -285,6 +285,24 @@ def get_argument_parser():
     parser.set_defaults(save_ckpt_at_every_host=False)
 
     parser.add_argument(
+        "--offpolicy_batch_size",
+        dest="offpolicy_batch_size",
+        required=False,
+        type=int,
+        default=0,
+        help="Batch size for off-policy training (default: 0, i.e. on-policy training).",
+    )
+
+    parser.add_argument(
+        "--offpolicy_max_batch_size",
+        dest="offpolicy_max_batch_size",
+        required=False,
+        type=int,
+        default=640,
+        help="Max batch size for replay buffer used for off-policy training.",
+    )
+
+    parser.add_argument(
         "--callbacks",
         dest="callbacks",
         required=False,
@@ -495,6 +513,8 @@ def main():
             valid_on_initial_weights=args.valid_on_initial_weights,
             try_restart_after_task_error=args.enable_crash_recovery,
             save_ckpt_at_every_host=args.save_ckpt_at_every_host,
+            offpolicy_batch_size=args.offpolicy_batch_size,
+            offpolicy_max_batch_size=args.offpolicy_max_batch_size,
         )
     else:
         OnPolicyRunner(

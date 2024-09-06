@@ -1200,8 +1200,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         save_ckpt_after_every_pipeline_stage: bool = True,
         first_local_worker_id: int = 0,
         save_ckpt_at_every_host: bool = False,
-        offpolicy_batch_size: int = 32,
-        replay_buffer_max_size: int = 640,
+        offpolicy_batch_size: int = 0,
+        offpolicy_max_batch_size: int = 640,
         **kwargs,
     ):
         kwargs["mode"] = TRAIN_MODE_STR
@@ -1231,14 +1231,15 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         self.training_pipeline: TrainingPipeline = config.training_pipeline()
 
         # [OFFP]
-        self.replay_buffer = ReplayBuffer(
-            storage=LazyMemmapStorage(
-                max_size=replay_buffer_max_size,
-                device=torch.device("cpu"),
-                scratch_dir="/tmp/replay_buffer/",
-            ),
-            batch_size=offpolicy_batch_size,
-        )
+        if offpolicy_batch_size > 0:
+            self.replay_buffer = ReplayBuffer(
+                storage=LazyMemmapStorage(
+                    max_size=offpolicy_max_batch_size,
+                    device=torch.device("cpu"),
+                    scratch_dir="/tmp/replay_buffer/",
+                ),
+                batch_size=offpolicy_batch_size,
+            )
 
         if self.num_workers != 1:
             # Ensure that we're only using early stopping criterions in the non-distributed setting.
@@ -1851,9 +1852,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             for storage in self.training_pipeline.current_stage_storage.values():
                 storage.before_updates(**before_update_info)
 
-                adapted_storage = StorageAdapter(storage, torch.device("cpu"))
-                tensordict = adapted_storage.to_tensordict(batch_size=[storage.rewards.shape[1]])
-                self.replay_buffer.extend(tensordict)
+                if self.replay_buffer is not None:
+                    adapted_storage = StorageAdapter(storage, torch.device("cpu"))
+                    tensordict = adapted_storage.to_tensordict(batch_size=[storage.rewards.shape[1]])
+                    self.replay_buffer.extend(tensordict)
 
             for sc in self.training_pipeline.current_stage.stage_components:
                 component_storage = uuid_to_storage[sc.storage_uuid]
@@ -1861,7 +1863,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.compute_losses_track_them_and_backprop(
                     stage=self.training_pipeline.current_stage,
                     stage_component=sc,
-                    storage=component_storage,
+                    storage=component_storage if self.replay_buffer is not None else None,
+                    replay_buffer=self.replay_buffer,
                 )
 
             for storage in self.training_pipeline.current_stage_storage.values():

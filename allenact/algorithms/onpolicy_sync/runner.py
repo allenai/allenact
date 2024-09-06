@@ -502,6 +502,8 @@ class OnPolicyRunner(object):
         valid_on_initial_weights: bool = False,
         try_restart_after_task_error: bool = False,
         save_ckpt_at_every_host: bool = False,
+        offpolicy_batch_size: Optional[int] = 0,
+        offpolicy_max_batch_size: Optional[int] = 640,
     ):
         self._initialize_start_train_or_start_test()
 
@@ -574,6 +576,8 @@ class OnPolicyRunner(object):
                 valid_on_initial_weights=valid_on_initial_weights,
                 try_restart_after_task_error=try_restart_after_task_error,
                 save_ckpt_at_every_host=save_ckpt_at_every_host,
+                offpolicy_batch_size=offpolicy_batch_size,
+                offpolicy_max_batch_size=offpolicy_max_batch_size,
             )
             train: BaseProcess = self.mp_ctx.Process(
                 target=self.train_loop,
