@@ -1792,6 +1792,13 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         # Each worker will stop collecting steps for the current rollout whenever a
                         # 100 * distributed_preemption_threshold percentage of workers are finished collecting their
                         # rollout steps, and we have collected at least 25% but less than 90% of the steps.
+                        if self.replay_buffer is not None:
+                            if self.replay_buffer.storage.shape is None:
+                                continue
+                            elif self.replay_buffer.storage.shape[0] == 0:
+                                continue
+                            else:
+                                pass
                         num_done = int(self.num_workers_done.get("done"))
                         if (
                             num_done
@@ -1853,9 +1860,10 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 storage.before_updates(**before_update_info)
 
                 if self.replay_buffer is not None:
-                    adapted_storage = StorageAdapter(storage, torch.device("cpu"))
-                    tensordict = adapted_storage.to_tensordict(batch_size=[storage.rewards.shape[1]])
-                    self.replay_buffer.extend(tensordict)
+                    if storage.step == cur_stage_training_settings.num_steps:
+                        adapted_storage = StorageAdapter(storage, torch.device("cpu"))
+                        tensordict = adapted_storage.to_tensordict(batch_size=[storage.rewards.shape[1]])
+                        self.replay_buffer.extend(tensordict)
 
             for sc in self.training_pipeline.current_stage.stage_components:
                 component_storage = uuid_to_storage[sc.storage_uuid]
