@@ -837,6 +837,7 @@ class OnPolicyRLEngine(object):
         storage: ExperienceStorage,
         skip_backprop: bool = False,
         replay_buffer: Optional[ReplayBuffer] = None,
+        update_total_loss: bool = True,
     ):
         training = self.mode == TRAIN_MODE_STR
 
@@ -971,6 +972,17 @@ class OnPolicyRLEngine(object):
                 actor_critic_output_for_batch: Optional[ActorCriticOutput] = None
                 batch_memory = Memory()
 
+                aggregate_bsize = None
+                to_track = {}
+                if training:
+                    aggregate_bsize = self.distributed_weighted_sum(batch["bsize"], 1)
+                    to_track["global_batch_size"] = aggregate_bsize
+                    if len(self.optimizer.param_groups) >= 2:
+                        for i, param_group in enumerate(self.optimizer.param_groups):
+                            to_track[f"lr_group_{i}"] = param_group["lr"]
+                    else:
+                        to_track["lr"] = self.optimizer.param_groups[0]["lr"]
+
                 for loss, loss_name, loss_weight, max_update_repeats_for_loss in zip(
                     losses, loss_names, loss_weights, loss_update_repeats_list
                 ):
@@ -1034,6 +1046,25 @@ class OnPolicyRLEngine(object):
                             f" `AbstractActorCriticLoss` or `GenericAbstractLoss`."
                         )
 
+                    if not skip_backprop and not update_total_loss:
+                        total_grad_norm = self.backprop_step(
+                            total_loss=loss_weight * current_loss,
+                            max_grad_norm=training_settings.max_grad_norm,
+                            local_to_global_batch_size_ratio=bsize / aggregate_bsize,
+                        )
+                        self.tracking_info_list.append(
+                            TrackingInfo(
+                                type=TrackingInfoType.UPDATE_INFO,
+                                info={
+                                    f"{loss_name}_total_gradient_norm": total_grad_norm
+                                },
+                                n=bsize,
+                                storage_uuid=stage_component.storage_uuid,
+                                stage_component_uuid=stage_component.uuid,
+                            )
+                        )
+                        actor_critic_output_for_batch = None
+
                     if total_loss is None:
                         total_loss = loss_weight * current_loss
                     else:
@@ -1070,20 +1101,8 @@ class OnPolicyRLEngine(object):
                     )
                 )
 
-                to_track = {
-                    "rollout_epochs": max(loss_update_repeats_list, default=0),
-                    "worker_batch_size": bsize,
-                }
-
-                aggregate_bsize = None
-                if training:
-                    aggregate_bsize = self.distributed_weighted_sum(bsize, 1)
-                    to_track["global_batch_size"] = aggregate_bsize
-                    if len(self.optimizer.param_groups) >= 2:
-                        for i, param_group in enumerate(self.optimizer.param_groups):
-                            to_track[f"lr_group_{i}"] = param_group["lr"]
-                    else:
-                        to_track["lr"] = self.optimizer.param_groups[0]["lr"]
+                to_track["rollout_epochs"] = max(loss_update_repeats_list, default=0)
+                to_track["worker_batch_size"] = bsize
 
                 if training_settings.num_mini_batch is not None:
                     to_track["rollout_num_mini_batch"] = (
@@ -1104,7 +1123,7 @@ class OnPolicyRLEngine(object):
                         )
                     )
 
-                if not skip_backprop:
+                if not skip_backprop and update_total_loss:
                     total_grad_norm = self.backprop_step(
                         total_loss=total_loss,
                         max_grad_norm=training_settings.max_grad_norm,
@@ -1873,6 +1892,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     stage_component=sc,
                     storage=component_storage if self.replay_buffer is None else None,
                     replay_buffer=self.replay_buffer,
+                    update_total_loss=sc.training_settings.update_total_loss,
                 )
 
                 if hasattr(self.actor_critic, "update_networks"):

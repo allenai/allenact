@@ -527,6 +527,7 @@ class TrainingSettings:
     advance_scene_rollout_period: Optional[int]
     save_interval: Optional[int]
     metric_accumulate_interval: Optional[int]
+    update_total_loss: Optional[bool]
 
     # noinspection PyUnresolvedReferences
     def __init__(
@@ -541,6 +542,7 @@ class TrainingSettings:
         advance_scene_rollout_period: Optional[int] = None,
         save_interval: Optional[int] = None,
         metric_accumulate_interval: Optional[int] = None,
+        update_total_loss: Optional[bool] = None,
     ):
         self._key_to_setting = prepare_locals_for_super(locals(), ignore_kwargs=True)
         self._training_setting_keys = tuple(sorted(self._key_to_setting.keys()))
