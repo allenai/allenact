@@ -1148,6 +1148,10 @@ class OnPolicyRLEngine(object):
                     )
                 )
 
+                if batch_idx == training_settings.num_mini_batch - 1:
+                    if hasattr(self.actor_critic, "update_networks"):
+                        self.actor_critic.update_networks(info)
+
     def close(self, verbose=True):
         self._is_closing = True
 
@@ -1894,9 +1898,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     replay_buffer=self.replay_buffer,
                     update_total_loss=sc.training_settings.update_total_loss,
                 )
-
-                if hasattr(self.actor_critic, "update_networks"):
-                    self.actor_critic.update_networks()
 
             for storage in self.training_pipeline.current_stage_storage.values():
                 storage.after_updates()
