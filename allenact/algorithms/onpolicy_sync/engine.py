@@ -1150,7 +1150,7 @@ class OnPolicyRLEngine(object):
 
                 if batch_idx == training_settings.num_mini_batch - 1:
                     if hasattr(self.actor_critic, "update_networks"):
-                        self.actor_critic.update_networks(info)
+                        self.actor_critic.update_networks(**info)
 
     def close(self, verbose=True):
         self._is_closing = True
