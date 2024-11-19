@@ -1084,11 +1084,38 @@ class NavToPartnerTaskSampler(TaskSampler):
 
             pose1 = self.env.agent_state(0)
             pose2 = self.env.agent_state(1)
+
+            def retry_dist(position: Dict[str, float], object_type: Dict[str, float]):
+                allowed_error = 0.05
+                debug_log = ""
+                d = -1.0
+                while allowed_error < 2.5:
+                    d = self.env.distance_from_point_to_point(
+                        position, object_type, allowed_error
+                    )
+                    if d < 0:
+                        debug_log = (
+                            f"In scene {self.env.scene_name}, could not find a path from {position} to {object_type} with"
+                            f" {allowed_error} error tolerance. Increasing this tolerance to"
+                            f" {2 * allowed_error} any trying again."
+                        )
+                        allowed_error *= 2
+                    else:
+                        break
+                if d < 0:
+                    get_logger().debug(
+                        f"In scene {self.env.scene_name}, could not find a path from {position} to {object_type}"
+                        f" with {allowed_error} error tolerance. Returning a distance of -1."
+                    )
+                elif debug_log != "":
+                    get_logger().debug(debug_log)
+                return d
+
             dist = self.env.distance_cache.find_distance(
                 self.env.scene_name,
                 {k: pose1[k] for k in ["x", "y", "z"]},
                 {k: pose2[k] for k in ["x", "y", "z"]},
-                self.env.distance_from_point_to_point,
+                retry_dist,
             )
 
             too_close_to_target = (
