@@ -3,6 +3,7 @@ from typing import Dict, Tuple, List, Any, Optional, Union, Sequence, cast
 
 import gym
 import numpy as np
+import math
 
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import Sensor
@@ -65,6 +66,7 @@ class ObjectNaviThorGridTask(Task[IThorEnvironment]):
         sensors: List[Sensor],
         task_info: Dict[str, Any],
         max_steps: int,
+        reward_configs: Dict[str, Any],
         **kwargs,
     ) -> None:
         """Initializer.
@@ -74,14 +76,29 @@ class ObjectNaviThorGridTask(Task[IThorEnvironment]):
         super().__init__(
             env=env, sensors=sensors, task_info=task_info, max_steps=max_steps, **kwargs
         )
+
+        self._rewards: List[float] = []
+        self.reward_configs = reward_configs
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self._subsampled_locations_from_which_obj_visible: Optional[
             List[Tuple[float, float, int, int]]
         ] = None
 
+        self._all_metadata_available = env.all_metadata_available
+        self.path: List = (
+            []
+        )  # the initial coordinate will be directly taken from the optimal path
+        self.travelled_distance = 0.0
         self.task_info["followed_path"] = [self.env.get_agent_location()]
         self.task_info["action_names"] = self.class_action_names()
+
+        if self._all_metadata_available:
+            self.last_geodesic_distance = self.env.distance_to_object_type(
+                self.task_info["object_type"]
+            )
+            self.optimal_distance = self.last_geodesic_distance
+            self.closest_geo_distance = self.last_geodesic_distance
 
     @property
     def action_space(self):
@@ -116,13 +133,24 @@ class ObjectNaviThorGridTask(Task[IThorEnvironment]):
             ) and self._CACHED_LOCATIONS_FROM_WHICH_OBJECT_IS_VISIBLE is not None:
                 self.env.update_graph_with_failed_action(failed_action=action_str)
 
-            self.task_info["followed_path"].append(self.env.get_agent_location())
+            pose = self.env.agent_state()
+
+            self.path.append({k: pose[k] for k in ["x", "y", "z"]})
+            self.task_info["followed_path"].append(pose)
+            if len(self.path) > 1:
+                self.travelled_distance += IThorEnvironment.position_dist(
+                    p0=self.path[-1], p1=self.path[-2], ignore_y=True
+                )
+            # self.task_info["followed_path"].append(self.env.get_agent_location())
 
         step_result = RLStepResult(
             observation=self.get_observations(),
             reward=self.judge(),
             done=self.is_done(),
-            info={"last_action_success": self.last_action_success},
+            info={
+                "last_action_success": self.last_action_success,
+                "action": action_str,
+            },
         )
         return step_result
 
@@ -137,15 +165,70 @@ class ObjectNaviThorGridTask(Task[IThorEnvironment]):
             for o in self.env.visible_objects()
         )
 
+    def shaping(self) -> float:
+        rew = 0.0
+
+        if self.reward_configs["shaping_weight"] == 0.0:
+            return rew
+
+        geodesic_distance = self.env.distance_to_object_type(
+            self.task_info["object_type"]
+        )
+
+        # Ensuring the reward magnitude is not greater than the total distance moved
+        max_reward_mag = 0.0
+        if len(self.path) >= 2:
+            p0, p1 = self.path[-2:]
+            max_reward_mag = math.sqrt(
+                (p0["x"] - p1["x"]) ** 2 + (p0["z"] - p1["z"]) ** 2
+            )
+
+        if self.reward_configs.get("positive_only_reward", False):
+            if geodesic_distance > 0.5:
+                rew = max(self.closest_geo_distance - geodesic_distance, 0)
+        else:
+            if (
+                self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5
+            ):  # (robothor limits)
+                rew += self.last_geodesic_distance - geodesic_distance
+
+        self.last_geodesic_distance = geodesic_distance
+        self.closest_geo_distance = min(self.closest_geo_distance, geodesic_distance)
+
+        return (
+            max(
+                min(rew, max_reward_mag),
+                -max_reward_mag,
+            )
+            * self.reward_configs["shaping_weight"]
+        )
+
     def judge(self) -> float:
+        """Judge the last event."""
+        reward = self.reward_configs["step_penalty"]
+
+        reward += self.shaping()
+
+        if self._took_end_action:
+            if self._success:
+                reward += self.reward_configs["goal_success_reward"]
+            else:
+                reward += self.reward_configs["failed_stop_reward"]
+        elif self.num_steps_taken() + 1 >= self.max_steps:
+            reward += self.reward_configs.get("reached_max_steps_reward", 0.0)
+
+        self._rewards.append(float(reward))
+        return float(reward)
+
+    def judge_old(self) -> float:
         """Compute the reward after having taken a step."""
         reward = -0.01
 
         if not self.last_action_success:
-            reward += -0.03
+            reward += -0.00
 
         if self._took_end_action:
-            reward += 1.0 if self._success else -1.0
+            reward += 10.0 if self._success else -0.0
 
         return float(reward)
 
