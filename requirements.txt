@@ -4,7 +4,7 @@ cloudpickle==1.6.0
 cycler==0.10.0
 decorator==4.4.2
 filelock==3.0.12
-future==0.18.2
+future==0.18.3
 gym==0.17.3
 idna==2.10
 imageio==2.9.0
