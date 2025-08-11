@@ -7,7 +7,21 @@
 environment."""
 
 import abc
-from typing import Any, Dict, Generic, List, Optional, Sequence, Tuple, TypeVar, Union
+import threading
+from typing import (
+    Any,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+    final,
+)
+import concurrent.futures as cf
+from contextlib import contextmanager
 
 import gym
 import numpy as np
@@ -16,6 +30,10 @@ from gym.spaces.dict import Dict as SpaceDict
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import Sensor, SensorSuite
 from allenact.utils.misc_utils import deprecated
+
+COMPLETE_TASK_METRICS_KEY = "__AFTER_TASK_METRICS__"
+COMPLETE_TASK_CALLBACK_KEY = "__AFTER_TASK_CALLBACK__"
+
 
 EnvType = TypeVar("EnvType")
 
@@ -51,7 +69,7 @@ class Task(Generic[EnvType]):
         sensors: Union[SensorSuite, Sequence[Sensor]],
         task_info: Dict[str, Any],
         max_steps: int,
-        **kwargs
+        **kwargs,
     ) -> None:
         self.env = env
         self.sensor_suite = (
@@ -350,3 +368,291 @@ class TaskSampler(abc.ABC):
         seed : New seed.
         """
         raise NotImplementedError()
+
+
+class BatchedTask(Generic[EnvType]):
+    """An abstract class defining a batch of goal directed 'tasks.' Agents
+    interact with their environment through a task by taking a `step` after
+    which they receive new observations, rewards, and (potentially) other
+    useful information.
+
+    A BatchedTask is a wrapper around a specific Task
+    and allows for multiple tasks to be simultaneously executed in the same scene.
+
+    This is only to be used during training, and it assumes we are always resampling
+    new tasks upon completion of the current one(s).
+
+    # Attributes
+
+    env : The environment.
+    sensor_suite: Collection of sensors formed from the `sensors` argument in the initializer.
+    task_info : Dictionary of (k, v) pairs defining task goals and other task information.
+    max_steps : The maximum number of steps an agent can take an in the task before it is considered failed.
+    observation_space: The observation space returned on each step from the sensors.
+    tasks: The instantiated Tasks
+    task_sampler: The `TaskSampler` responsible for sampling valid `Task`s.
+    """
+
+    task_sampler: TaskSampler
+    tasks: List[Task]
+    callback_sensor_suite: Optional[SensorSuite]
+
+    def __init__(
+        self,
+        env: EnvType,
+        sensors: Union[SensorSuite, Sequence[Sensor]],
+        task_info: Dict[str, Any],
+        max_steps: int,
+        task_sampler: TaskSampler,
+        task_class: type(Task),
+        callback_sensor_suite: Optional[SensorSuite],
+        batch_index: int,
+        parallel_init_if_any: bool = True,
+        parallel_before_step: bool = False,
+        parallel_after_step: bool = True,
+        parallel_get_observations: bool = True,
+        max_thread_pool_size: int = 10,
+        **task_kwargs: Any,
+    ) -> None:
+        assert hasattr(
+            task_sampler, "task_batch_size"
+        ), "BatchedTask requires task_sampler to contain a `task_batch_size`"
+
+        task_batch_size = getattr(task_sampler, "task_batch_size")
+
+        # Instantiate the first actual task from the currently sampled info
+        self.tasks = [None] * max(task_batch_size, 1)
+        self.tasks[0] = task_class(
+            env=env,
+            sensors=sensors,
+            task_info=task_info,
+            max_steps=max_steps,
+            batch_index=batch_index,
+            **task_kwargs,
+        )
+
+        if task_batch_size == 0:
+            return
+
+        # Check batch_index, before/after env_step available for at least one task
+        assert (
+            getattr(self.tasks[0], "batch_index", None) == batch_index
+        ), "BatchedTask requires wrapped Task to keep the given batch_index"
+        assert hasattr(self.tasks[0], "_before_env_step"), "Wrapped Task required to have `_before_env_step`."
+        assert hasattr(self.tasks[0], "_after_env_step"), "Wrapped Task required to have `_after_env_step`."
+
+        # Keep a reference to the task sampler
+        self.task_sampler = task_sampler
+
+        self.callback_sensor_suite = callback_sensor_suite
+        self.env = env
+
+        self.parallel_before_step = parallel_before_step
+        self.parallel_after_step = parallel_after_step
+        self.parallel_get_observations = parallel_get_observations
+        self.any_parallel = (
+            parallel_before_step or parallel_after_step or parallel_get_observations
+        )
+        self.parallel_init = parallel_init_if_any and self.any_parallel
+
+        if self.any_parallel:
+            self.thread_pool_size = min(
+                max_thread_pool_size, getattr(task_sampler, "task_batch_size")
+            )
+
+            # Also, a ThreadPoolExecutor to collect all data (possibly) under IO bottlenecks
+            self.executor = cf.ThreadPoolExecutor(max_workers=self.thread_pool_size)
+
+            # Also, a mutex to enable underlying task sampler implementations to ensure e.g. only one process
+            # resets the sampler when called from a ThreadPoolExecutor (next_task must be thread safe, possibly
+            # acquiring/releasing the mutex as needed).
+            self.task_sampler.batch_mutex = threading.Lock()
+
+        # Instantiate the rest of tasks
+        with self.wrap_with_task_batch_size_0() as true_task_batch_size:  # type:ignore
+            self.execute_stage(self._make_new_task, self.parallel_init, range(1, true_task_batch_size))
+
+    @staticmethod
+    def wait_for_futures_and_raise_errors(
+            futures: Sequence[cf.Future],
+    ) -> Sequence[Any]:
+        results = []
+        cf.wait(futures)
+        for future in futures:
+            try:
+                results.append(future.result())  # This will re-raise any exceptions
+            except Exception:
+                raise
+        return results
+
+    def execute_stage(self, func, parallel, data_gen):
+        def convert(x):
+            return x if isinstance(x, tuple) else (x,)
+
+        if parallel:
+            self.wait_for_futures_and_raise_errors(
+                [
+                    self.executor.submit(func, *convert(datum))
+                    for datum in data_gen
+                ]
+            )
+        else:
+            for datum in data_gen:
+                func(*convert(datum))
+
+    @contextmanager
+    def wrap_with_task_batch_size_0(self):
+        task_batch_size = self.task_sampler.task_batch_size
+        self.task_sampler.task_batch_size = 0
+        # `task_batch_size` set to 0 ensures we don't generate new tasks recursively
+        # and avoids instantiating new executors and batch mutex
+        try:
+            yield task_batch_size
+        finally:
+            self.task_sampler.task_batch_size = task_batch_size
+
+    def _make_new_task(self, batch_index):
+        # assert getattr(self.task_sampler, "task_batch_size") == 0, "wrap with self.wrap_with_task_batch_size_0"
+        task = getattr(self.task_sampler.next_task(idx=batch_index), "tasks")[0]  # type:ignore
+        assert task.batch_index == batch_index
+        self.tasks[batch_index] = task
+
+    @property
+    def observation_space(self):
+        return self.tasks[0].observation_space
+
+    def get_observations(self, **kwargs) -> List[Any]:  # -> Dict[str, Any]:
+        # Render all tasks in batch
+        self.env.render()  # assume this is stored locally in the env class
+
+        res = [None] * len(self.tasks)
+
+        def obs_extract(it, task):
+            res[it] = task.get_observations()
+
+        self.execute_stage(obs_extract, self.parallel_get_observations, enumerate(self.tasks))
+
+        return res
+
+    @property
+    def action_space(self) -> gym.Space:
+        return self.tasks[0].action_space
+
+    @abc.abstractmethod
+    def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
+        """Render the current task state.
+
+        Rendered task state can come in any supported modes.
+
+        # Parameters
+
+        mode : The mode in which to render. For example, you might have a 'rgb'
+            mode that renders the agent's egocentric viewpoint or a 'dev' mode
+            returning additional information.
+        args : Extra args.
+        kwargs : Extra kwargs.
+
+        # Returns
+
+        An numpy array corresponding to the requested render.
+        """
+        raise NotImplementedError()
+
+    def step(self, action: Any) -> RLStepResult:
+        # Prepare all actions
+        env_actions = [None] * len(self.tasks)
+        intermediates = [None] * len(self.tasks)
+
+        def before_step(it, task):
+            env_actions[it], intermediates[it] = task._before_env_step(action[it])
+
+        self.execute_stage(before_step, self.parallel_before_step, enumerate(self.tasks))
+
+        # Step over all tasks
+        self.env.step(env_actions)
+
+        # Prepare all results (excluding observations)
+        rewards = [None] * len(self.tasks)
+        dones = [None] * len(self.tasks)
+        infos = [None] * len(self.tasks)
+
+        def after_step(it, task):
+            sr = task._after_env_step(action[it], env_actions[it], intermediates[it])
+
+            assert sr.observation is None, "step result observation is to be added by the BatchedTask"
+
+            info = sr.info or {}
+
+            # If reward is Sequence, it's assumed to follow the same order imposed by spaces' flatten operation
+            if isinstance(sr.reward, Sequence):
+                if isinstance(task._total_reward, Sequence):
+                    for it, rew in enumerate(sr.reward):
+                        task._total_reward[it] += float(rew)
+                else:
+                    task._total_reward = [float(r) for r in sr.reward]
+            else:
+                task._total_reward += float(sr.reward)  # type:ignore
+
+            task._increment_num_steps_taken()
+
+            done = sr.done
+
+            if task.is_done():
+                done = True
+
+                metrics = task.metrics()
+                if metrics is not None and len(metrics) != 0:
+                    info[COMPLETE_TASK_METRICS_KEY] = metrics
+
+                if self.callback_sensor_suite is not None:
+                    task_callback_data = self.callback_sensor_suite.get_observations(
+                        env=task.env, task=task
+                    )
+                    info[COMPLETE_TASK_CALLBACK_KEY] = task_callback_data
+
+                self._make_new_task(it)
+
+            rewards[it] = sr.reward
+            dones[it] = done
+            infos[it] = info
+
+        with self.wrap_with_task_batch_size_0():  # type:ignore
+            self.execute_stage(after_step, self.parallel_after_step, enumerate(self.tasks))
+
+        return RLStepResult(
+            observation=self.get_observations(),
+            reward=rewards,  # type:ignore
+            done=dones,  # type:ignore
+            info=infos,  # type:ignore
+        )
+
+    @final
+    def _step(self, action: Any) -> Tuple[List, List, List]:
+        raise RuntimeError("Unexpected call to `_step` in BatchedTask")
+
+    def reached_max_steps(self) -> bool:
+        raise RuntimeError("Unexpected call to `reached_max_steps` in BatchedTask")
+
+    def reached_terminal_state(self) -> bool:
+        raise RuntimeError("Unexpected call to `reached_terminal_state` in BatchedTask")
+
+    def is_done(self) -> bool:
+        return False
+
+    def num_steps_taken(self) -> int:
+        raise RuntimeError("Unexpected call to `num_steps_taken` in BatchedTask")
+
+    def close(self) -> None:
+        if self.any_parallel:
+            self.executor.shutdown(cancel_futures=True)
+        # self.tasks[0].close()
+
+    def metrics(self) -> Dict[str, Any]:
+        raise RuntimeError("Unexpected call to `metrics` in BatchedTask")
+
+    def query_expert(self, **kwargs) -> Tuple[Any, bool]:
+        raise RuntimeError("Unexpected call to `query_expert` in BatchedTask")
+
+    @property
+    def cumulative_reward(self) -> float:
+        raise RuntimeError("Unexpected call to `cumulative_reward` in BatchedTask")

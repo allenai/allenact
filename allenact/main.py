@@ -302,6 +302,14 @@ def get_argument_parser():
         help="Whether or not to try recovering when a task crashes (use at your own risk).",
     )
 
+    parser.add_argument(
+        "--task_batch_size",
+        dest="task_batch_size",
+        type=int,
+        default=0,
+        help="Makes task_batch_size training tasks be processed as a batch for each instantiated env",
+    )
+
     ### DEPRECATED FLAGS
     parser.add_argument(
         "-t",
@@ -454,6 +462,11 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, str]]:
             config_kwargs, Dict
         ), "`--config_kwargs` must be a json string (or a path to a .json file) that evaluates to a dictionary."
 
+    assert (
+        "task_batch_size" not in config_kwargs
+    ), "`task_batch_size` is added to the ExperimentConfig's kwargs by AllenAct"
+    config_kwargs["task_batch_size"] = args.task_batch_size
+
     config = experiments[0](**config_kwargs)
     sources = _config_source(config_type=experiments[0])
     sources[CONFIG_KWARGS_STR] = json.dumps(config_kwargs)
@@ -494,6 +507,7 @@ def main():
             collect_valid_results=args.collect_valid_results,
             valid_on_initial_weights=args.valid_on_initial_weights,
             try_restart_after_task_error=args.enable_crash_recovery,
+            task_batch_size=args.task_batch_size,
             save_ckpt_at_every_host=args.save_ckpt_at_every_host,
         )
     else:

@@ -31,7 +31,11 @@ from setproctitle import setproctitle as ptitle
 
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import SensorSuite, Sensor
-from allenact.base_abstractions.task import TaskSampler
+from allenact.base_abstractions.task import (
+    TaskSampler,
+    COMPLETE_TASK_METRICS_KEY,
+    COMPLETE_TASK_CALLBACK_KEY
+)
 from allenact.utils.misc_utils import partition_sequence
 from allenact.utils.system import get_logger
 from allenact.utils.tensor_utils import tile_images
@@ -46,9 +50,6 @@ except ImportError:
     import multiprocessing as mp  # type: ignore
 
 DEFAULT_MP_CONTEXT_TYPE = "forkserver"
-COMPLETE_TASK_METRICS_KEY = "__AFTER_TASK_METRICS__"
-COMPLETE_TASK_CALLBACK_KEY = "__AFTER_TASK_CALLBACK__"
-COMPLETE_TASK_TIMEOUT_CORRECTION_KEY = "__AFTER_TASK_TIMEOUT_CORRECTION__"
 
 STEP_COMMAND = "step"
 NEXT_TASK_COMMAND = "next_task"
@@ -162,6 +163,7 @@ class VectorSampledTasks:
         read_timeout: Optional[
             float
         ] = 60,  # Seconds to wait for a task to return a response before timing out
+        task_batch_size: int = 0,
     ) -> None:
 
         self._is_waiting = False
@@ -169,6 +171,7 @@ class VectorSampledTasks:
         self.should_log = should_log
         self.max_processes = max_processes
         self.read_timeout = read_timeout
+        self.task_batch_size = task_batch_size
 
         assert (
             sampler_fn_args is not None and len(sampler_fn_args) > 0
@@ -338,6 +341,7 @@ class VectorSampledTasks:
         should_log: bool,
         child_pipe: Optional[Connection] = None,
         parent_pipe: Optional[Connection] = None,
+        task_batch_size: int = 0,
     ) -> None:
         """process worker for creating and interacting with the
         Tasks/TaskSampler."""
@@ -350,6 +354,7 @@ class VectorSampledTasks:
             callback_sensor_suite=callback_sensor_suite,
             auto_resample_when_done=auto_resample_when_done,
             should_log=should_log,
+            task_batch_size=task_batch_size,
         )
 
         if parent_pipe is not None:
@@ -466,6 +471,7 @@ class VectorSampledTasks:
                     should_log=self.should_log,
                     child_pipe=worker_conn,
                     parent_pipe=parent_conn,
+                    task_batch_size=self.task_batch_size,
                 ),
             )
             self._workers.append(ps)
@@ -886,6 +892,7 @@ class SingleProcessVectorSampledTasks(object):
         callback_sensor_suite: Optional[SensorSuite] = None,
         auto_resample_when_done: bool = True,
         should_log: bool = True,
+        task_batch_size: int = 0,
     ) -> None:
 
         self._is_closed = True
@@ -903,6 +910,7 @@ class SingleProcessVectorSampledTasks(object):
             make_sampler_fn=make_sampler_fn,
             sampler_fn_args=[{"mp_ctx": None, **args} for args in sampler_fn_args_list],
             callback_sensor_suite=callback_sensor_suite,
+            task_batch_size=task_batch_size,
         )
 
         self._is_closed = False
@@ -960,10 +968,19 @@ class SingleProcessVectorSampledTasks(object):
         callback_sensor_suite: Optional[SensorSuite],
         auto_resample_when_done: bool,
         should_log: bool,
+        task_batch_size: int = 0,
     ) -> Generator:
         """Generator for working with Tasks/TaskSampler."""
 
-        task_sampler = make_sampler_fn(**sampler_fn_args)
+        task_sampler_args = {**sampler_fn_args}
+        if task_batch_size > 0:
+            task_sampler_args["task_batch_size"] = task_batch_size
+            task_sampler_args["callback_sensor_suite"] = callback_sensor_suite
+            assert (
+                auto_resample_when_done
+            ), "auto resample should be the expected usage with batched tasks"
+
+        task_sampler = make_sampler_fn(**task_sampler_args)
         current_task = task_sampler.next_task()
 
         if current_task is None:
@@ -1099,6 +1116,7 @@ class SingleProcessVectorSampledTasks(object):
         make_sampler_fn: Callable[..., TaskSampler],
         sampler_fn_args: Sequence[Dict[str, Any]],
         callback_sensor_suite: Optional[SensorSuite],
+        task_batch_size: int = 0,
     ) -> List[Generator]:
 
         generators = []
@@ -1115,6 +1133,7 @@ class SingleProcessVectorSampledTasks(object):
                     callback_sensor_suite=callback_sensor_suite,
                     auto_resample_when_done=self._auto_resample_when_done,
                     should_log=self.should_log,
+                    task_batch_size=task_batch_size,
                 )
             )
 

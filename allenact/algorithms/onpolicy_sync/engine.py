@@ -12,6 +12,7 @@ from multiprocessing.context import BaseContext
 from typing import Any, Dict, List, Optional, Sequence, Union, cast
 
 import filelock
+import gym.spaces
 import torch
 import torch.distributed as dist  # type: ignore
 import torch.distributions  # type: ignore
@@ -46,7 +47,6 @@ from allenact.algorithms.onpolicy_sync.storage import (
 from allenact.algorithms.onpolicy_sync.vector_sampled_tasks import (
     COMPLETE_TASK_CALLBACK_KEY,
     COMPLETE_TASK_METRICS_KEY,
-    COMPLETE_TASK_TIMEOUT_CORRECTION_KEY,
     SingleProcessVectorSampledTasks,
     VectorSampledTasks,
 )
@@ -124,6 +124,7 @@ class OnPolicyRLEngine(object):
         max_sampler_processes_per_worker: Optional[int] = None,
         initial_model_state_dict: Optional[Union[Dict[str, Any], int]] = None,
         try_restart_after_task_error: bool = False,
+        task_batch_size: int = 0,
         **kwargs,
     ):
         """Initializer.
@@ -179,6 +180,7 @@ class OnPolicyRLEngine(object):
             or max_sampler_processes_per_worker >= 1
         ), "`max_sampler_processes_per_worker` must be either `None` or a positive integer."
         self.max_sampler_processes_per_worker = max_sampler_processes_per_worker
+        self.task_batch_size = task_batch_size
 
         machine_params = config.machine_params(self.mode)
         self.machine_params: MachineParams
@@ -338,6 +340,7 @@ class OnPolicyRLEngine(object):
                 mp_ctx=self.mp_ctx,
                 max_processes=self.max_sampler_processes_per_worker,
                 read_timeout=DEBUG_VST_TIMEOUT if DEBUGGING else 1 * 60,
+                task_batch_size=self.task_batch_size,
             )
         return self._vector_tasks
 
@@ -490,6 +493,8 @@ class OnPolicyRLEngine(object):
         ):
             # No rollout storage, thus we are not
             observations = self.vector_tasks.get_observations()
+            if self.task_batch_size > 0:
+                observations = sum(observations, [])
 
             npaused, keep, batch = self.remove_paused(observations)
             observations = (
@@ -528,7 +533,7 @@ class OnPolicyRLEngine(object):
     def num_active_samplers(self):
         if self.vector_tasks is None:
             return 0
-        return self.vector_tasks.num_unpaused_tasks
+        return self.vector_tasks.num_unpaused_tasks * max(self.task_batch_size, 1)
 
     def act(
         self,
@@ -677,30 +682,61 @@ class OnPolicyRLEngine(object):
         )
 
         # Convert flattened actions into list of actions and send them
+        action_space = self.actor_critic.action_space
+        if self.task_batch_size > 0:
+            action_space = gym.spaces.Tuple((action_space,) * self.task_batch_size)
+            new_shape = tuple(flat_actions.shape)[:-2] + (
+                flat_actions.shape[-2] // self.task_batch_size,
+                flat_actions.shape[-1] * self.task_batch_size,
+            )
+            flat_actions = flat_actions.view(new_shape)
+
         outputs: List[RLStepResult] = self.vector_tasks.step(
-            su.action_list(self.actor_critic.action_space, flat_actions)
+            su.action_list(action_space, flat_actions)
         )
 
         # Save after task completion metrics
-        for index, step_result in enumerate(outputs):
-            if step_result.info is not None:
-                if COMPLETE_TASK_METRICS_KEY in step_result.info:
-                    self.single_process_metrics.append(
-                        step_result.info[COMPLETE_TASK_METRICS_KEY]
-                    )
-                    del step_result.info[COMPLETE_TASK_METRICS_KEY]
-                if COMPLETE_TASK_CALLBACK_KEY in step_result.info:
-                    self.single_process_task_callback_data.append(
-                        step_result.info[COMPLETE_TASK_CALLBACK_KEY]
-                    )
-                    del step_result.info[COMPLETE_TASK_CALLBACK_KEY]
-                if COMPLETE_TASK_TIMEOUT_CORRECTION_KEY in step_result.info:
-                    flat_actions[0, index, 0] = torch.tensor(
-                        step_result.info[COMPLETE_TASK_TIMEOUT_CORRECTION_KEY]
-                    )
+        if self.task_batch_size == 0:
+            for step_result in outputs:
+                if step_result.info is not None:
+                    if COMPLETE_TASK_METRICS_KEY in step_result.info:
+                        self.single_process_metrics.append(
+                            step_result.info[COMPLETE_TASK_METRICS_KEY]
+                        )
+                        del step_result.info[COMPLETE_TASK_METRICS_KEY]
+                    if COMPLETE_TASK_CALLBACK_KEY in step_result.info:
+                        self.single_process_task_callback_data.append(
+                            step_result.info[COMPLETE_TASK_CALLBACK_KEY]
+                        )
+                        del step_result.info[COMPLETE_TASK_CALLBACK_KEY]
+        else:
+            for batched_step_result in outputs:
+                for info in batched_step_result.info:
+                    if COMPLETE_TASK_METRICS_KEY in info:
+                        self.single_process_metrics.append(
+                            info[COMPLETE_TASK_METRICS_KEY]
+                        )
+                        del info[COMPLETE_TASK_METRICS_KEY]
+                    if COMPLETE_TASK_CALLBACK_KEY in info:
+                        self.single_process_task_callback_data.append(
+                            info[COMPLETE_TASK_CALLBACK_KEY]
+                        )
+                        del info[COMPLETE_TASK_CALLBACK_KEY]
 
         rewards: Union[List, torch.Tensor]
         observations, rewards, dones, infos = [list(x) for x in zip(*outputs)]
+
+        if self.task_batch_size > 0:
+            # Each observation, reward, done, info is actually a list of task_batch_size units
+            observations = sum(observations, [])
+            rewards = sum(rewards, [])
+            dones = sum(dones, [])
+            # infos = sum(infos, [])  # unused
+            new_shape = tuple(flat_actions.shape)[:-2] + (
+                flat_actions.shape[-2] * self.task_batch_size,
+                flat_actions.shape[-1] // self.task_batch_size,
+            )
+            flat_actions = flat_actions.view(new_shape)
 
         rewards = torch.tensor(
             rewards,

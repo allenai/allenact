@@ -101,7 +101,7 @@ class OnPolicyRunner(object):
         self.config = config
         self.output_dir = output_dir
         self.loaded_config_src_files = loaded_config_src_files
-        self.seed = seed if seed is not None else random.randint(0, 2**31 - 1)
+        self.seed = seed if seed is not None else random.randint(0, 2 ** 31 - 1)
         self.deterministic_cudnn = deterministic_cudnn
         self.distributed_preemption_threshold = distributed_preemption_threshold
         if multiprocessing_start_method == "default":
@@ -501,6 +501,7 @@ class OnPolicyRunner(object):
         collect_valid_results: bool = False,
         valid_on_initial_weights: bool = False,
         try_restart_after_task_error: bool = False,
+        task_batch_size: int = 0,
         save_ckpt_at_every_host: bool = False,
     ):
         self._initialize_start_train_or_start_test()
@@ -573,11 +574,11 @@ class OnPolicyRunner(object):
                 distributed_preemption_threshold=self.distributed_preemption_threshold,
                 valid_on_initial_weights=valid_on_initial_weights,
                 try_restart_after_task_error=try_restart_after_task_error,
+                task_batch_size=task_batch_size,
                 save_ckpt_at_every_host=save_ckpt_at_every_host,
             )
             train: BaseProcess = self.mp_ctx.Process(
-                target=self.train_loop,
-                kwargs=training_kwargs,
+                target=self.train_loop, kwargs=training_kwargs,
             )
             try:
                 train.start()
@@ -595,8 +596,7 @@ class OnPolicyRunner(object):
                     model_hash = md5_hash_of_state_dict(initial_model_state_dict)
                     training_kwargs["initial_model_state_dict"] = model_hash
                     train = self.mp_ctx.Process(
-                        target=self.train_loop,
-                        kwargs=training_kwargs,
+                        target=self.train_loop, kwargs=training_kwargs,
                     )
                     train.start()
                 else:
@@ -802,17 +802,9 @@ class OnPolicyRunner(object):
             start_time_str or self.local_start_time_str,
         ]
         if self.save_dir_fmt == SaveDirFormat.NESTED:
-            folder = os.path.join(
-                self.output_dir,
-                *path_parts,
-                "checkpoints",
-            )
+            folder = os.path.join(self.output_dir, *path_parts, "checkpoints",)
         elif self.save_dir_fmt == SaveDirFormat.FLAT:
-            folder = os.path.join(
-                self.output_dir,
-                "checkpoints",
-                *path_parts,
-            )
+            folder = os.path.join(self.output_dir, "checkpoints", *path_parts,)
         else:
             raise NotImplementedError
         if create_if_none:
@@ -859,10 +851,7 @@ class OnPolicyRunner(object):
     def metric_path(self, start_time_str: str) -> str:
         if self.save_dir_fmt == SaveDirFormat.NESTED:
             return os.path.join(
-                self.output_dir,
-                "test",
-                self.config.tag(),
-                start_time_str,
+                self.output_dir, "test", self.config.tag(), start_time_str,
             )
         elif self.save_dir_fmt == SaveDirFormat.FLAT:
             return os.path.join(
@@ -888,17 +877,9 @@ class OnPolicyRunner(object):
             self.local_start_time_str,
         ]
         if self.save_dir_fmt == SaveDirFormat.NESTED:
-            base_dir = os.path.join(
-                self.output_dir,
-                *path_parts,
-                "used_configs",
-            )
+            base_dir = os.path.join(self.output_dir, *path_parts, "used_configs",)
         elif self.save_dir_fmt == SaveDirFormat.FLAT:
-            base_dir = os.path.join(
-                self.output_dir,
-                "used_configs",
-                *path_parts,
-            )
+            base_dir = os.path.join(self.output_dir, "used_configs", *path_parts,)
         else:
             raise NotImplementedError
         os.makedirs(base_dir, exist_ok=True)
@@ -941,8 +922,7 @@ class OnPolicyRunner(object):
                     prefix = "" if k == -1 else f"namecollision{k}__"
                     k += 1
                     dst_path = os.path.join(
-                        base_dir,
-                        f"{prefix}{os.path.basename(src_path)}",
+                        base_dir, f"{prefix}{os.path.basename(src_path)}",
                     )
                     if not os.path.exists(dst_path):
                         os.makedirs(os.path.dirname(dst_path), exist_ok=True)
@@ -1082,16 +1062,13 @@ class OnPolicyRunner(object):
                     )
 
                 info_means = update_keys_misc(
-                    info_tracker.means(),
-                    stage_component_uuid,
+                    info_tracker.means(), stage_component_uuid,
                 )
                 info_counts = update_keys_misc(
-                    info_tracker.counts(),
-                    stage_component_uuid,
+                    info_tracker.counts(), stage_component_uuid,
                 )
                 metrics_and_info_tracker.add_scalars(
-                    scalars=info_means,
-                    n=info_counts,
+                    scalars=info_means, n=info_counts,
                 )
 
                 total_exp_for_storage = pkg.storage_uuid_to_total_experiences[
@@ -1181,8 +1158,7 @@ class OnPolicyRunner(object):
                         storage_uuid
                     ]:
                         approx_eps_key = update_keys_misc(
-                            f"approx_eps",
-                            stage_component_uuid,
+                            f"approx_eps", stage_component_uuid,
                         )
                         callback_metric_means[approx_eps_key] = eps
                         scalar_name_to_total_experiences_key[approx_eps_key] = (
@@ -1191,9 +1167,7 @@ class OnPolicyRunner(object):
 
                         if log_writer is not None:
                             log_writer.add_scalar(
-                                approx_eps_key,
-                                eps,
-                                cur_total_exp,
+                                approx_eps_key, eps, cur_total_exp,
                             )
 
         metrics_and_info_means_with_metrics_dicts_list = copy.deepcopy(
