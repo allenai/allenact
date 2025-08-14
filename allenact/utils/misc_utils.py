@@ -349,3 +349,19 @@ class ForkedPdb(pdb.Pdb):
             pdb.Pdb.interaction(self, *args, **kwargs)
         finally:
             sys.stdin = _stdin
+
+
+@contextmanager
+def temporary_env(var: str, value: Optional[str]):
+    prev = os.environ.get(var)
+    try:
+        if value is None:
+            os.environ.pop(var, None)
+        else:
+            os.environ[var] = value
+        yield
+    finally:
+        if prev is None:
+            os.environ.pop(var, None)
+        else:
+            os.environ[var] = prev
