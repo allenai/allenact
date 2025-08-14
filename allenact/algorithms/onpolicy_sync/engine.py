@@ -71,7 +71,6 @@ from allenact.utils.experiment_utils import (
 from allenact.utils.system import get_logger
 from allenact.utils.tensor_utils import batch_observations, detach_recursively
 from allenact.utils.viz_utils import VizSuite
-from allenact.utils.misc_utils import temporary_env
 
 try:
     # When debugging we don't want to timeout in the VectorSampledTasks
@@ -331,19 +330,18 @@ class OnPolicyRLEngine(object):
             #         sampler_fn_args_list=self.get_sampler_fn_args(seeds),
             #     )
             # else:
-            with temporary_env("CUDA_VISIBLE_DEVICES", ""):
-                self._vector_tasks = VectorSampledTasks(
-                    make_sampler_fn=self.config.make_sampler_fn,
-                    sampler_fn_args=self.get_sampler_fn_args(seeds),
-                    callback_sensors=self.callback_sensors,
-                    multiprocessing_start_method=(
-                        "forkserver" if self.mp_ctx is None else None
-                    ),
-                    mp_ctx=self.mp_ctx,
-                    max_processes=self.max_sampler_processes_per_worker,
-                    read_timeout=DEBUG_VST_TIMEOUT if DEBUGGING else 1 * 60,
-                    task_batch_size=self.task_batch_size,
-                )
+            self._vector_tasks = VectorSampledTasks(
+                make_sampler_fn=self.config.make_sampler_fn,
+                sampler_fn_args=self.get_sampler_fn_args(seeds),
+                callback_sensors=self.callback_sensors,
+                multiprocessing_start_method=(
+                    "forkserver" if self.mp_ctx is None else None
+                ),
+                mp_ctx=self.mp_ctx,
+                max_processes=self.max_sampler_processes_per_worker,
+                read_timeout=DEBUG_VST_TIMEOUT if DEBUGGING else 1 * 60,
+                task_batch_size=self.task_batch_size,
+            )
         return self._vector_tasks
 
     @staticmethod
