@@ -348,6 +348,13 @@ class VectorSampledTasks:
 
         ptitle(f"VectorSampledTask: {worker_id}")
 
+        _orig_lazy_init = torch.cuda._lazy_init
+        def _trace_lazy_init():
+            print(f"[PID {os.getpid()}] {worker_id=} torch.cuda._lazy_init called")
+            traceback.print_stack(limit=25)
+            return _orig_lazy_init()
+        torch.cuda._lazy_init = _trace_lazy_init
+
         sp_vector_sampled_tasks = SingleProcessVectorSampledTasks(
             make_sampler_fn=make_sampler_fn,
             sampler_fn_args_list=sampler_fn_args_list,
