@@ -39,6 +39,7 @@ from allenact.base_abstractions.task import (
 from allenact.utils.misc_utils import partition_sequence
 from allenact.utils.system import get_logger
 from allenact.utils.tensor_utils import tile_images
+from allenact.utils.debug_cuda_tensors import debug_cuda_in_task_sampler
 
 try:
     # Use torch.multiprocessing if we can.
@@ -348,12 +349,12 @@ class VectorSampledTasks:
 
         ptitle(f"VectorSampledTask: {worker_id}")
 
-        _orig_lazy_init = torch.cuda._lazy_init
-        def _trace_lazy_init():
-            print(f"[PID {os.getpid()}] {worker_id=} torch.cuda._lazy_init called")
-            traceback.print_stack(limit=25)
-            return _orig_lazy_init()
-        torch.cuda._lazy_init = _trace_lazy_init
+        # _orig_lazy_init = torch.cuda._lazy_init
+        # def _trace_lazy_init():
+        #     print(f"[PID {os.getpid()}] {worker_id=} torch.cuda._lazy_init called")
+        #     traceback.print_stack(limit=25)
+        #     return _orig_lazy_init()
+        # torch.cuda._lazy_init = _trace_lazy_init
 
         sp_vector_sampled_tasks = SingleProcessVectorSampledTasks(
             make_sampler_fn=make_sampler_fn,
@@ -464,6 +465,8 @@ class VectorSampledTasks:
                 get_logger().info(
                     f"Starting {id}-th VectorSampledTask worker with args {current_sampler_fn_args_list}"
                 )
+
+            debug_cuda_in_task_sampler()
 
             ps = self._mp_ctx.Process(  # type: ignore
                 target=self._task_sampling_loop_worker,
