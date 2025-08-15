@@ -331,7 +331,7 @@ class OnPolicyRLEngine(object):
             #     )
             # else:
             self._vector_tasks = VectorSampledTasks(
-                make_sampler_fn=self.config.make_sampler_fn,
+                make_sampler_fn=self.config.__class__.make_sampler_fn,
                 sampler_fn_args=self.get_sampler_fn_args(seeds),
                 callback_sensors=self.callback_sensors,
                 multiprocessing_start_method=(
