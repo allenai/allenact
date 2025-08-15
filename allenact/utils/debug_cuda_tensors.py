@@ -1,5 +1,7 @@
 from typing import Any, Dict, List, Set
 import inspect
+import sys
+import traceback
 
 import torch
 
@@ -148,12 +150,12 @@ def debug_cuda_in_task_sampler():
     """
     Add this function call to your task sampler creation to debug CUDA usage.
     """
-    import sys
-    import traceback
-    
+
     # Get the calling frame to access local variables
     frame = sys._getframe(1)
     locals_dict = frame.f_locals
+
+    print("In debug_cuda_in_task_sampler", sorted(list(locals_dict.keys())), file=sys.stderr)
 
     # Look for sampler arguments in the calling scope
     potential_args = [
