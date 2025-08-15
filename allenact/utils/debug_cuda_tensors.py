@@ -165,14 +165,21 @@ def debug_cuda_in_task_sampler():
     for arg_name in potential_args:
         if arg_name in locals_dict:
             args = locals_dict[arg_name]
+            if isinstance(args, list):
+                for arg in args:
+                    if isinstance(arg, dict):
+                        print(f"\n🔍 Found {arg_name} in calling scope, checking for CUDA tensors...")
+                        check_sampler_args_for_cuda(arg)
+                        check_specific_objects_for_cuda(arg)
+
             if isinstance(args, dict):
                 print(f"\n🔍 Found {arg_name} in calling scope, checking for CUDA tensors...")
                 check_sampler_args_for_cuda(args)
                 check_specific_objects_for_cuda(args)
-                break
-    else:
-        print("⚠️  Could not find sampler arguments in calling scope")
-        print("Available variables:", list(locals_dict.keys()))
+    #             break
+    # else:
+    #     print("⚠️  Could not find sampler arguments in calling scope")
+    #     print("Available variables:", list(locals_dict.keys()))
 
 
 if __name__ == "__main__":
