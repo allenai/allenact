@@ -26,6 +26,7 @@ import attr
 import numpy as np
 import torch
 import torch.optim as optim
+
 try:
     import wandb
 except:
@@ -276,7 +277,7 @@ class LoggingPackage:
 
     @staticmethod
     def _metrics_dict_is_empty(
-        single_task_metrics_dict: Dict[str, Union[float, int]]
+        single_task_metrics_dict: Dict[str, Union[float, int]],
     ) -> bool:
         return (
             len(single_task_metrics_dict) == 0

@@ -673,7 +673,9 @@ class OnPolicyRLEngine(object):
         )
 
         # Flatten actions
-        flat_actions = su.flatten(self.actor_critic.action_space, actions).cpu()  # actions should not be on GPU
+        flat_actions = su.flatten(
+            self.actor_critic.action_space, actions
+        ).cpu()  # actions should not be on GPU
 
         assert len(flat_actions.shape) == 3, (
             "Distribution samples must include step and task sampler dimensions [step, sampler, ...]. The simplest way"
@@ -1267,9 +1269,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         else:
             params = self.actor_critic.set_learning_rate_for_specific_parameters()
         self.optimizer: optim.optimizer.Optimizer = (
-            self.training_pipeline.optimizer_builder(
-                params=params
-            )
+            self.training_pipeline.optimizer_builder(params=params)
         )
 
         # noinspection PyProtectedMember

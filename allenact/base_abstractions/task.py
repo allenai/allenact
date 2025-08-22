@@ -438,8 +438,12 @@ class BatchedTask(Generic[EnvType]):
         assert (
             getattr(self.tasks[0], "batch_index", None) == batch_index
         ), "BatchedTask requires wrapped Task to keep the given batch_index"
-        assert hasattr(self.tasks[0], "_before_env_step"), "Wrapped Task required to have `_before_env_step`."
-        assert hasattr(self.tasks[0], "_after_env_step"), "Wrapped Task required to have `_after_env_step`."
+        assert hasattr(
+            self.tasks[0], "_before_env_step"
+        ), "Wrapped Task required to have `_before_env_step`."
+        assert hasattr(
+            self.tasks[0], "_after_env_step"
+        ), "Wrapped Task required to have `_after_env_step`."
 
         # Keep a reference to the task sampler
         self.task_sampler = task_sampler
@@ -470,11 +474,13 @@ class BatchedTask(Generic[EnvType]):
 
         # Instantiate the rest of tasks
         with self.wrap_with_task_batch_size_0() as true_task_batch_size:  # type:ignore
-            self.execute_stage(self._make_new_task, self.parallel_init, range(1, true_task_batch_size))
+            self.execute_stage(
+                self._make_new_task, self.parallel_init, range(1, true_task_batch_size)
+            )
 
     @staticmethod
     def wait_for_futures_and_raise_errors(
-            futures: Sequence[cf.Future],
+        futures: Sequence[cf.Future],
     ) -> Sequence[Any]:
         results = []
         cf.wait(futures)
@@ -491,10 +497,7 @@ class BatchedTask(Generic[EnvType]):
 
         if parallel:
             self.wait_for_futures_and_raise_errors(
-                [
-                    self.executor.submit(func, *convert(datum))
-                    for datum in data_gen
-                ]
+                [self.executor.submit(func, *convert(datum)) for datum in data_gen]
             )
         else:
             for datum in data_gen:
@@ -513,7 +516,9 @@ class BatchedTask(Generic[EnvType]):
 
     def _make_new_task(self, batch_index):
         # assert getattr(self.task_sampler, "task_batch_size") == 0, "wrap with self.wrap_with_task_batch_size_0"
-        task = getattr(self.task_sampler.next_task(idx=batch_index), "tasks")[0]  # type:ignore
+        task = getattr(self.task_sampler.next_task(idx=batch_index), "tasks")[
+            0
+        ]  # type:ignore
         assert task.batch_index == batch_index
         self.tasks[batch_index] = task
 
@@ -530,7 +535,9 @@ class BatchedTask(Generic[EnvType]):
         def obs_extract(it, task):
             res[it] = task.get_observations()
 
-        self.execute_stage(obs_extract, self.parallel_get_observations, enumerate(self.tasks))
+        self.execute_stage(
+            obs_extract, self.parallel_get_observations, enumerate(self.tasks)
+        )
 
         return res
 
@@ -566,7 +573,9 @@ class BatchedTask(Generic[EnvType]):
         def before_step(it, task):
             env_actions[it], intermediates[it] = task._before_env_step(action[it])
 
-        self.execute_stage(before_step, self.parallel_before_step, enumerate(self.tasks))
+        self.execute_stage(
+            before_step, self.parallel_before_step, enumerate(self.tasks)
+        )
 
         # Step over all tasks
         self.env.step(env_actions)
@@ -579,7 +588,9 @@ class BatchedTask(Generic[EnvType]):
         def after_step(it, task):
             sr = task._after_env_step(action[it], env_actions[it], intermediates[it])
 
-            assert sr.observation is None, "step result observation is to be added by the BatchedTask"
+            assert (
+                sr.observation is None
+            ), "step result observation is to be added by the BatchedTask"
 
             info = sr.info or {}
 
@@ -617,7 +628,9 @@ class BatchedTask(Generic[EnvType]):
             infos[it] = info
 
         with self.wrap_with_task_batch_size_0():  # type:ignore
-            self.execute_stage(after_step, self.parallel_after_step, enumerate(self.tasks))
+            self.execute_stage(
+                after_step, self.parallel_after_step, enumerate(self.tasks)
+            )
 
         return RLStepResult(
             observation=self.get_observations(),

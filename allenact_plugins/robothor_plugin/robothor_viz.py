@@ -104,7 +104,7 @@ class ThorViz(TrajectoryViz):
 
     @staticmethod
     def iterate_scenes(
-        all_scenes: Sequence[Tuple[str, int, int, int, int]]
+        all_scenes: Sequence[Tuple[str, int, int, int, int]],
     ) -> Generator[str, None, None]:
         for scenes in all_scenes:
             for wall in range(scenes[1], scenes[2] + 1):

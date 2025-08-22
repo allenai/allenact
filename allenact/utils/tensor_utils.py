@@ -145,7 +145,7 @@ def batch_observations(
     """
 
     def dict_from_observation(
-        observation: Dict[str, Any]
+        observation: Dict[str, Any],
     ) -> Dict[str, Union[Dict, List]]:
         batch_dict: DefaultDict = defaultdict(list)
 

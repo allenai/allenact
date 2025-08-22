@@ -34,7 +34,7 @@ from allenact.base_abstractions.sensor import SensorSuite, Sensor
 from allenact.base_abstractions.task import (
     TaskSampler,
     COMPLETE_TASK_METRICS_KEY,
-    COMPLETE_TASK_CALLBACK_KEY
+    COMPLETE_TASK_CALLBACK_KEY,
 )
 from allenact.utils.misc_utils import partition_sequence
 from allenact.utils.system import get_logger

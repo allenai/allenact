@@ -34,7 +34,9 @@ from allenact.base_abstractions.misc import RLStepResult
 
 class BatchController:
     def __init__(
-        self, task_batch_size: int, **kwargs,
+        self,
+        task_batch_size: int,
+        **kwargs,
     ):
         self.task_batch_size = task_batch_size
         self.controllers = [
@@ -56,12 +58,15 @@ class BatchController:
         return None
 
     def reset(
-        self, idx: int, scene: str,
+        self,
+        idx: int,
+        scene: str,
     ):
         self.controllers[idx].reset(scene)
 
     def batch_reset(
-        self, scenes: List[str],
+        self,
+        scenes: List[str],
     ):
         for controller, scene in zip(self.controllers, scenes):
             controller.reset(scene)
@@ -147,7 +152,9 @@ class BatchedObjectNavTaskSampler(ObjectNavTaskSampler):
         return BatchController(task_batch_size=self.task_batch_size, **self.env_args)
 
     def next_task(
-        self, force_advance_scene: bool = False, idx=0,
+        self,
+        force_advance_scene: bool = False,
+        idx=0,
     ) -> Optional[ObjectNaviThorGridTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
@@ -189,9 +196,9 @@ class BatchedObjectNavTaskSampler(ObjectNavTaskSampler):
             )
 
         task_info["start_pose"] = copy.copy(pose)
-        task_info[
-            "id"
-        ] = f"{scene}__{'_'.join(list(map(str, self.env.controllers[idx].get_key(pose))))}__{task_info['object_type']}"
+        task_info["id"] = (
+            f"{scene}__{'_'.join(list(map(str, self.env.controllers[idx].get_key(pose))))}__{task_info['object_type']}"
+        )
 
         if self.use_batched_task:
             self._last_sampled_task = BatchedTask(
@@ -223,7 +230,11 @@ class BatchedRGBSensorThor(RGBSensorThor):
     frame corresponding to the agent's egocentric view.
     """
 
-    def frame_from_env(self, env, task,) -> np.ndarray:  # type:ignore
+    def frame_from_env(
+        self,
+        env,
+        task,
+    ) -> np.ndarray:  # type:ignore
         return env._frames[task.batch_index]
 
 
@@ -305,7 +316,10 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             gae_lambda=gae_lambda,
             advance_scene_rollout_period=self.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
-                PipelineStage(loss_names=["ppo_loss"], max_stage_steps=ppo_steps,),
+                PipelineStage(
+                    loss_names=["ppo_loss"],
+                    max_stage_steps=ppo_steps,
+                ),
             ],
             lr_scheduler_builder=Builder(
                 LambdaLR, {"lr_lambda": LinearDecay(steps=ppo_steps)}
@@ -328,7 +342,10 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
-        return MachineParams(nprocesses=nprocesses, devices=gpu_ids,)
+        return MachineParams(
+            nprocesses=nprocesses,
+            devices=gpu_ids,
+        )
 
     def create_model(self, **kwargs) -> nn.Module:
         return ObjectNavActorCritic(
