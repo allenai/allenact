@@ -29,7 +29,7 @@ tensorboardX==2.1
 torch>=1.6.0,!=1.8.0,<2.0.0
 torchvision>=0.7.0,<0.10.0
 tqdm==4.56.0
-urllib3==1.26.5
+urllib3==2.7.0
 attr
 attrs
 wandb
